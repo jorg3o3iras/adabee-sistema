@@ -4,8 +4,7 @@ import cv2
 import numpy as np
 import base64
 import json
-import mysql.connector
-from mysql.connector import Error
+import sqlite3
 from datetime import datetime
 import os
 
@@ -13,23 +12,92 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO DO BANCO DE DADOS (InfinityFree)
+# BANCO DE DADOS SQLITE
 # ============================================
-DB_CONFIG = {
-    'host': 'sql100.infinityfree.com',
-    'user': 'if0_41652973',
-    'password': 'oTPkZmkzF7Hxm7',
-    'database': 'if0_41652973_adabee',
-    'port': 3306
-}
+DB_PATH = 'adabee.db'
+
+def init_database():
+    """Inicializa o banco de dados SQLite"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Tabela de escolas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS escolas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            endereco TEXT,
+            telefone TEXT,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Tabela de turmas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS turmas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            escola_id INTEGER,
+            nome TEXT NOT NULL,
+            turno TEXT DEFAULT 'Manhã',
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (escola_id) REFERENCES escolas(id)
+        )
+    ''')
+    
+    # Tabela de alunos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS alunos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            turma_id INTEGER,
+            nome TEXT NOT NULL,
+            matricula TEXT,
+            responsavel TEXT,
+            numero_chamada INTEGER,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (turma_id) REFERENCES turmas(id)
+        )
+    ''')
+    
+    # Tabela de provas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS provas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            turma_id INTEGER,
+            titulo TEXT NOT NULL,
+            descricao TEXT,
+            gabarito TEXT,
+            data_prova DATE,
+            valor_nota REAL DEFAULT 10,
+            quantidade_questoes INTEGER,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (turma_id) REFERENCES turmas(id)
+        )
+    ''')
+    
+    # Tabela de correções
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS correcoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prova_id INTEGER,
+            aluno_id INTEGER,
+            respostas TEXT,
+            acertos INTEGER,
+            nota REAL,
+            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (prova_id) REFERENCES provas(id),
+            FOREIGN KEY (aluno_id) REFERENCES alunos(id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+    print("✅ Banco de dados SQLite inicializado!")
+
+# Inicializar banco
+init_database()
 
 def get_db_connection():
-    try:
-        conn = mysql.connector.connect(**DB_CONFIG)
-        return conn
-    except Error as e:
-        print(f"❌ Erro MySQL: {e}")
-        return None
+    return sqlite3.connect(DB_PATH)
 
 # ============================================
 # RECONHECIMENTO DE BOLINHAS
@@ -85,7 +153,7 @@ def detectar_bolinhas(imagem_base64):
         return []
 
 # ============================================
-# ROTAS DA API - COMPLETAS
+# ROTAS DA API
 # ============================================
 
 @app.route('/')
@@ -96,44 +164,45 @@ def index():
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     conn = get_db_connection()
-    if not conn:
-        return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0, 'total_correcoes': 0, 'media_geral': 0})
-    try:
-        cursor = conn.cursor(dictionary=True)
-        stats = {}
-        cursor.execute("SELECT COUNT(*) as total FROM escolas")
-        stats['total_escolas'] = cursor.fetchone()['total']
-        cursor.execute("SELECT COUNT(*) as total FROM turmas")
-        stats['total_turmas'] = cursor.fetchone()['total']
-        cursor.execute("SELECT COUNT(*) as total FROM alunos")
-        stats['total_alunos'] = cursor.fetchone()['total']
-        cursor.execute("SELECT COUNT(*) as total FROM provas")
-        stats['total_provas'] = cursor.fetchone()['total']
-        cursor.execute("SELECT COUNT(*) as total, COALESCE(AVG(nota), 0) as media FROM correcoes")
-        row = cursor.fetchone()
-        stats['total_correcoes'] = row['total'] if row['total'] else 0
-        stats['media_geral'] = round(row['media'], 1) if row['media'] else 0
-        cursor.close()
-        conn.close()
-        return jsonify(stats)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM escolas")
+    total_escolas = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM turmas")
+    total_turmas = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM alunos")
+    total_alunos = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM provas")
+    total_provas = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes")
+    row = cursor.fetchone()
+    total_correcoes = row[0] if row[0] else 0
+    media_geral = round(row[1], 1) if row[1] else 0
+    
+    conn.close()
+    
+    return jsonify({
+        'total_escolas': total_escolas,
+        'total_turmas': total_turmas,
+        'total_alunos': total_alunos,
+        'total_provas': total_provas,
+        'total_correcoes': total_correcoes,
+        'media_geral': media_geral
+    })
 
 # -------------------- ESCOLAS --------------------
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
-    if not conn:
-        return jsonify([])
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, nome, endereco, telefone FROM escolas ORDER BY nome")
-        escolas = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return jsonify(escolas)
-    except Exception as e:
-        return jsonify([])
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nome, endereco, telefone FROM escolas ORDER BY nome")
+    escolas = [{'id': row[0], 'nome': row[1], 'endereco': row[2], 'telefone': row[3]} for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(escolas)
 
 @app.route('/api/escolas', methods=['POST'])
 def criar_escola():
@@ -147,17 +216,13 @@ def criar_escola():
             return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro de conexão com banco'}), 500
-        
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO escolas (nome, endereco, telefone) VALUES (%s, %s, %s)",
+            "INSERT INTO escolas (nome, endereco, telefone) VALUES (?, ?, ?)",
             (nome, endereco, telefone)
         )
         conn.commit()
         escola_id = cursor.lastrowid
-        cursor.close()
         conn.close()
         
         return jsonify({'id': escola_id, 'mensagem': 'Escola criada com sucesso'})
@@ -169,20 +234,26 @@ def criar_escola():
 def listar_turmas():
     escola_id = request.args.get('escola_id')
     conn = get_db_connection()
-    if not conn:
-        return jsonify([])
-    try:
-        cursor = conn.cursor(dictionary=True)
-        if escola_id:
-            cursor.execute("SELECT t.*, e.nome as escola_nome FROM turmas t JOIN escolas e ON t.escola_id = e.id WHERE t.escola_id = %s ORDER BY t.nome", (escola_id,))
-        else:
-            cursor.execute("SELECT t.*, e.nome as escola_nome FROM turmas t JOIN escolas e ON t.escola_id = e.id ORDER BY t.nome")
-        turmas = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return jsonify(turmas)
-    except Exception as e:
-        return jsonify([])
+    cursor = conn.cursor()
+    
+    if escola_id:
+        cursor.execute("""
+            SELECT t.id, t.nome, t.turno, e.nome as escola_nome 
+            FROM turmas t 
+            JOIN escolas e ON t.escola_id = e.id 
+            WHERE t.escola_id = ? ORDER BY t.nome
+        """, (escola_id,))
+    else:
+        cursor.execute("""
+            SELECT t.id, t.nome, t.turno, e.nome as escola_nome 
+            FROM turmas t 
+            JOIN escolas e ON t.escola_id = e.id 
+            ORDER BY t.nome
+        """)
+    
+    turmas = [{'id': row[0], 'nome': row[1], 'turno': row[2], 'escola_nome': row[3]} for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(turmas)
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
@@ -196,17 +267,13 @@ def criar_turma():
             return jsonify({'erro': 'Escola e nome da turma são obrigatórios'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro de conexão com banco'}), 500
-        
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO turmas (escola_id, nome, turno) VALUES (%s, %s, %s)",
+            "INSERT INTO turmas (escola_id, nome, turno) VALUES (?, ?, ?)",
             (escola_id, nome, turno)
         )
         conn.commit()
         turma_id = cursor.lastrowid
-        cursor.close()
         conn.close()
         
         return jsonify({'id': turma_id, 'mensagem': 'Turma criada com sucesso'})
@@ -218,20 +285,27 @@ def criar_turma():
 def listar_alunos():
     turma_id = request.args.get('turma_id')
     conn = get_db_connection()
-    if not conn:
-        return jsonify([])
-    try:
-        cursor = conn.cursor(dictionary=True)
-        if turma_id:
-            cursor.execute("SELECT a.*, t.nome as turma_nome FROM alunos a JOIN turmas t ON a.turma_id = t.id WHERE a.turma_id = %s ORDER BY a.numero_chamada", (turma_id,))
-        else:
-            cursor.execute("SELECT a.*, t.nome as turma_nome FROM alunos a JOIN turmas t ON a.turma_id = t.id ORDER BY a.numero_chamada")
-        alunos = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return jsonify(alunos)
-    except Exception as e:
-        return jsonify([])
+    cursor = conn.cursor()
+    
+    if turma_id:
+        cursor.execute("""
+            SELECT a.id, a.nome, a.matricula, a.responsavel, a.numero_chamada, t.nome as turma_nome 
+            FROM alunos a 
+            JOIN turmas t ON a.turma_id = t.id 
+            WHERE a.turma_id = ? ORDER BY a.numero_chamada
+        """, (turma_id,))
+    else:
+        cursor.execute("""
+            SELECT a.id, a.nome, a.matricula, a.responsavel, a.numero_chamada, t.nome as turma_nome 
+            FROM alunos a 
+            JOIN turmas t ON a.turma_id = t.id 
+            ORDER BY a.numero_chamada
+        """)
+    
+    alunos = [{'id': row[0], 'nome': row[1], 'matricula': row[2], 'responsavel': row[3], 
+               'numero_chamada': row[4], 'turma_nome': row[5]} for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(alunos)
 
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
@@ -247,17 +321,13 @@ def criar_aluno():
             return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro de conexão com banco'}), 500
-        
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO alunos (turma_id, nome, matricula, responsavel, numero_chamada) VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO alunos (turma_id, nome, matricula, responsavel, numero_chamada) VALUES (?, ?, ?, ?, ?)",
             (turma_id, nome, matricula, responsavel, numero_chamada if numero_chamada else None)
         )
         conn.commit()
         aluno_id = cursor.lastrowid
-        cursor.close()
         conn.close()
         
         return jsonify({'id': aluno_id, 'mensagem': 'Aluno cadastrado com sucesso'})
@@ -268,31 +338,26 @@ def criar_aluno():
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     conn = get_db_connection()
-    if not conn:
-        return jsonify([])
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-                   p.valor_nota, p.quantidade_questoes, t.nome as turma_nome, p.turma_id
-            FROM provas p 
-            JOIN turmas t ON p.turma_id = t.id 
-            ORDER BY p.data_prova DESC
-        """)
-        provas = cursor.fetchall()
-        for prova in provas:
-            if prova['gabarito']:
-                try:
-                    prova['gabarito_array'] = json.loads(prova['gabarito'])
-                except:
-                    prova['gabarito_array'] = []
-            else:
-                prova['gabarito_array'] = []
-        cursor.close()
-        conn.close()
-        return jsonify(provas)
-    except Exception as e:
-        return jsonify([])
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+               p.valor_nota, p.quantidade_questoes, t.nome as turma_nome, p.turma_id
+        FROM provas p 
+        JOIN turmas t ON p.turma_id = t.id 
+        ORDER BY p.data_prova DESC
+    """)
+    
+    provas = []
+    for row in cursor.fetchall():
+        gabarito = json.loads(row[3]) if row[3] else []
+        provas.append({
+            'id': row[0], 'titulo': row[1], 'descricao': row[2],
+            'gabarito_array': gabarito, 'data_prova': row[4],
+            'valor_nota': row[5], 'quantidade_questoes': row[6] or len(gabarito),
+            'turma_nome': row[7], 'turma_id': row[8]
+        })
+    conn.close()
+    return jsonify(provas)
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
@@ -310,17 +375,13 @@ def criar_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro de conexão com banco'}), 500
-        
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota))
         conn.commit()
         prova_id = cursor.lastrowid
-        cursor.close()
         conn.close()
         
         return jsonify({'id': prova_id, 'mensagem': 'Prova criada com sucesso'})
@@ -331,16 +392,11 @@ def criar_prova():
 def deletar_prova(prova_id):
     try:
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro de conexão'}), 500
-        
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
-        cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
+        cursor.execute("DELETE FROM correcoes WHERE prova_id = ?", (prova_id,))
+        cursor.execute("DELETE FROM provas WHERE id = ?", (prova_id,))
         conn.commit()
-        cursor.close()
         conn.close()
-        
         return jsonify({'mensagem': 'Prova removida com sucesso'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -358,23 +414,19 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro de conexão com banco'}), 500
+        cursor = conn.cursor()
         
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT gabarito FROM provas WHERE id = %s", (prova_id,))
+        cursor.execute("SELECT gabarito FROM provas WHERE id = ?", (prova_id,))
         prova = cursor.fetchone()
         
         if not prova:
-            cursor.close()
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
-        gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
+        gabarito = json.loads(prova[0]) if prova[0] else []
         respostas_detectadas = detectar_bolinhas(imagem)
         
         if len(respostas_detectadas) == 0:
-            cursor.close()
             conn.close()
             return jsonify({'erro': 'Não foi possível detectar as bolinhas. Tente uma foto melhor.'}), 400
         
@@ -388,15 +440,14 @@ def corrigir_prova():
         
         cursor.execute("""
             INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (prova_id, aluno_id, respostas_json, acertos, nota, datetime.now()))
         conn.commit()
         
-        cursor.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
+        cursor.execute("SELECT nome FROM alunos WHERE id = ?", (aluno_id,))
         aluno = cursor.fetchone()
-        aluno_nome = aluno['nome'] if aluno else 'Aluno'
+        aluno_nome = aluno[0] if aluno else 'Aluno'
         
-        cursor.close()
         conn.close()
         
         return jsonify({
@@ -416,49 +467,42 @@ def corrigir_prova():
 def estatisticas():
     prova_id = request.args.get('prova_id')
     if not prova_id:
-        return jsonify({'erro': 'Prova não informada'}), 400
-    
-    conn = get_db_connection()
-    if not conn:
         return jsonify({'geral': {'total_corrigidas': 0, 'media_nota': 0, 'maior_nota': 0, 'menor_nota': 0}})
     
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT COUNT(*) as total_corrigidas, 
-                   COALESCE(AVG(nota), 0) as media_nota,
-                   COALESCE(MAX(nota), 0) as maior_nota,
-                   COALESCE(MIN(nota), 0) as menor_nota
-            FROM correcoes WHERE prova_id = %s
-        """, (prova_id,))
-        geral = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return jsonify({'geral': geral})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), COALESCE(AVG(nota), 0), COALESCE(MAX(nota), 0), COALESCE(MIN(nota), 0)
+        FROM correcoes WHERE prova_id = ?
+    """, (prova_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    return jsonify({
+        'geral': {
+            'total_corrigidas': row[0] or 0,
+            'media_nota': round(row[1], 1) if row[1] else 0,
+            'maior_nota': round(row[2], 1) if row[2] else 0,
+            'menor_nota': round(row[3], 1) if row[3] else 0
+        }
+    })
 
 @app.route('/api/historico', methods=['GET'])
 def historico():
     conn = get_db_connection()
-    if not conn:
-        return jsonify([])
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
-                   c.acertos, c.nota, c.data_correcao
-            FROM correcoes c
-            JOIN alunos a ON c.aluno_id = a.id
-            JOIN provas p ON c.prova_id = p.id
-            ORDER BY c.data_correcao DESC LIMIT 50
-        """)
-        historico = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return jsonify(historico)
-    except Exception as e:
-        return jsonify([])
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
+               c.acertos, c.nota, c.data_correcao
+        FROM correcoes c
+        JOIN alunos a ON c.aluno_id = a.id
+        JOIN provas p ON c.prova_id = p.id
+        ORDER BY c.data_correcao DESC LIMIT 50
+    """)
+    historico = [{'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2], 
+                  'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]} for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(historico)
 
 @app.route('/api/exportar', methods=['GET'])
 def exportar_resultados():
@@ -467,49 +511,34 @@ def exportar_resultados():
         return jsonify({'erro': 'Prova não informada'}), 400
     
     conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro de conexão'}), 500
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.nome as aluno, a.matricula, c.acertos, c.nota, c.data_correcao
+        FROM correcoes c
+        JOIN alunos a ON c.aluno_id = a.id
+        WHERE c.prova_id = ?
+        ORDER BY c.nota DESC
+    """, (prova_id,))
+    resultados = cursor.fetchall()
+    conn.close()
     
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT a.nome as aluno, a.matricula, c.acertos, c.nota, c.data_correcao
-            FROM correcoes c
-            JOIN alunos a ON c.aluno_id = a.id
-            WHERE c.prova_id = %s
-            ORDER BY c.nota DESC
-        """, (prova_id,))
-        resultados = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        import csv
-        from io import StringIO
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
-        for r in resultados:
-            writer.writerow([r['aluno'], r.get('matricula', ''), r['acertos'], r['nota'], r['data_correcao']])
-        
-        return output.getvalue(), 200, {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
-        }
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+    import csv
+    from io import StringIO
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
+    for r in resultados:
+        writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
+    
+    return output.getvalue(), 200, {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
+    }
 
 # -------------------- UTILIDADES --------------------
 @app.route('/api/ip_info', methods=['GET'])
 def ip_info():
-    import socket
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-    except:
-        ip = "127.0.0.1"
-    return jsonify({'ip': ip, 'porta': 5000, 'url': f'http://{ip}:5000'})
+    return jsonify({'ip': 'render.com', 'porta': 10000, 'url': 'https://adabee-sistema-3.onrender.com'})
 
 @app.route('/api/configuracoes', methods=['GET', 'POST'])
 def configuracoes():
