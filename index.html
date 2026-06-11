@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>AdaBee - Corretor de Gabarito Inteligente</title>
+    <title>AdaBee AI - Corretor Inteligente com Inteligência Artificial</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,11 +19,10 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
-        /* Header */
         .header {
             text-align: center;
             margin-bottom: 30px;
@@ -45,10 +44,9 @@
             margin-top: 5px;
         }
 
-        /* Dashboard Cards */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
@@ -56,7 +54,7 @@
         .dashboard-card {
             background: white;
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             transition: transform 0.2s;
@@ -79,10 +77,9 @@
 
         .dashboard-card .label {
             color: #666;
-            font-size: 14px;
+            font-size: 12px;
         }
 
-        /* Tabs */
         .tabs {
             display: flex;
             gap: 10px;
@@ -92,10 +89,10 @@
 
         .tab-btn {
             flex: 1;
-            padding: 14px 20px;
+            padding: 12px 15px;
             border: none;
             border-radius: 12px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
@@ -109,11 +106,15 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
+        .tab-btn.ai-active {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
         .tab-btn:hover:not(.active) {
             background: rgba(255,255,255,0.3);
         }
 
-        /* Cards */
         .card {
             background: white;
             border-radius: 20px;
@@ -136,7 +137,6 @@
             font-size: 18px;
         }
 
-        /* Forms */
         .form-group {
             margin-bottom: 15px;
         }
@@ -153,7 +153,7 @@
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 14px;
             transition: border-color 0.2s;
         }
 
@@ -168,7 +168,7 @@
             border: none;
             padding: 12px 25px;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.1s, opacity 0.2s;
@@ -199,49 +199,28 @@
             background: linear-gradient(135deg, #6c757d, #495057);
         }
 
-        /* Grids */
+        .btn-ai {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+
         .gabarito-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin: 15px 0;
         }
 
         .gabarito-grid input {
-            text-align: center;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .respostas-grid {
-            display: grid;
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .resposta-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .resposta-item label {
             width: 60px;
-            font-weight: bold;
-            margin: 0;
-        }
-
-        .resposta-item input {
-            flex: 1;
             text-align: center;
+            font-weight: bold;
             text-transform: uppercase;
         }
 
-        /* Camera Area */
         .camera-area {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 15px;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
             cursor: pointer;
             color: white;
@@ -259,7 +238,6 @@
             border: 3px solid #667eea;
         }
 
-        /* Resultados */
         .resultado {
             background: #d4edda;
             color: #155724;
@@ -287,7 +265,6 @@
             color: #0066cc;
         }
 
-        /* Tabelas */
         .table-responsive {
             overflow-x: auto;
         }
@@ -313,7 +290,6 @@
             background: #f8f9fa;
         }
 
-        /* Progresso */
         .progress-bar {
             background: #e0e0e0;
             border-radius: 10px;
@@ -328,7 +304,20 @@
             transition: width 0.5s;
         }
 
-        /* Loading */
+        .confidence-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.5s;
+        }
+
         .loading {
             display: inline-block;
             width: 20px;
@@ -344,27 +333,58 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            .card {
-                padding: 15px;
-            }
-            .dashboard-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .tabs {
-                gap: 5px;
-            }
-            .tab-btn {
-                padding: 10px;
-                font-size: 12px;
-            }
+        .preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
         }
 
-        /* Alertas */
+        .preview-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+        }
+
+        .video-container {
+            position: relative;
+            margin-top: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            max-height: 400px;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .camera-controls button {
+            flex: 1;
+        }
+
+        .badge-aprovado {
+            background: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .badge-reprovado {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
         .alert {
             padding: 12px 15px;
             border-radius: 10px;
@@ -377,42 +397,47 @@
             border: 1px solid #c3e6cb;
         }
 
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .alert-info {
+            background: #e7f3ff;
+            color: #0066cc;
+            border: 1px solid #b8e0ff;
         }
 
-        /* Badges */
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
 
-        .badge-aprovado {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .badge-reprovado {
-            background: #f8d7da;
-            color: #721c24;
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .card {
+                padding: 15px;
+            }
+            .dashboard-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .tabs {
+                gap: 5px;
+            }
+            .tab-btn {
+                font-size: 10px;
+                padding: 8px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
-            <div class="logo">🐝</div>
-            <h1>AdaBee - Corretor de Gabarito</h1>
-            <div class="subtitle">Reconhecimento inteligente de respostas com OpenCV</div>
+            <div class="logo">🐝🧠</div>
+            <h1>AdaBee AI - Corretor Inteligente</h1>
+            <div class="subtitle">Com Inteligência Artificial para máxima precisão</div>
         </div>
 
-        <!-- Dashboard Cards -->
+        <!-- Dashboard -->
         <div class="dashboard-grid" id="dashboard">
             <div class="dashboard-card">
                 <div class="icon">🏫</div>
@@ -449,63 +474,113 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" onclick="mostrarAba('correcao')">📸 Corrigir Prova</button>
-            <button class="tab-btn" onclick="mostrarAba('provas')">📝 Gerenciar Provas</button>
+            <button class="tab-btn" onclick="mostrarAba('treinar')">🧠 Treinar IA</button>
+            <button class="tab-btn" onclick="mostrarAba('provas')">📝 Provas</button>
             <button class="tab-btn" onclick="mostrarAba('alunos')">👨‍🎓 Alunos</button>
             <button class="tab-btn" onclick="mostrarAba('relatorios')">📊 Relatórios</button>
             <button class="tab-btn" onclick="mostrarAba('configuracoes')">⚙️ Configurações</button>
+            <button class="tab-btn" onclick="mostrarAba('gabarito')">📄 Gerar Gabarito</button>
         </div>
 
         <!-- Aba: Correção de Provas -->
         <div id="abaCorrecao">
             <div class="card">
-                <h2>📸 Correção de Prova com Reconhecimento Automático</h2>
+                <h2>📸 Correção de Prova com IA</h2>
                 
+                <div id="statusIA" class="alert alert-info" style="margin-bottom:15px;">
+                    🔍 Verificando status da IA...
+                </div>
+
                 <div class="form-group">
-                    <label>📷 1. Selecione a prova</label>
+                    <label>📝 Selecione a prova</label>
                     <select id="selectProva" onchange="carregarDadosProva()">
                         <option value="">Carregando provas...</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>👨‍🎓 2. Selecione o aluno</label>
+                    <label>👨‍🎓 Selecione o aluno</label>
                     <select id="selectAluno">
                         <option value="">Primeiro selecione a prova</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>📸 3. Tire uma foto da folha de respostas</label>
-                    <div class="camera-area" onclick="document.getElementById('cameraInput').click()">
-                        📷 Clique para tirar foto ou selecionar imagem
+                    <label>📸 Foto da Folha de Respostas</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button type="button" class="btn-success" onclick="abrirCamera()">📷 Abrir Câmera</button>
+                        <button type="button" class="btn-info" onclick="document.getElementById('cameraInput').click()">🖼️ Escolher Foto</button>
                     </div>
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="previewImagem(this)">
+                    <input type="file" id="cameraInput" accept="image/*" style="display:none" onchange="previewImagem(this)">
+                    <div id="videoContainer" class="video-container" style="display:none;">
+                        <video id="video" autoplay playsinline></video>
+                        <div class="camera-controls">
+                            <button onclick="tirarFoto()" class="btn-success">📸 Tirar Foto</button>
+                            <button onclick="fecharCamera()" class="btn-danger">❌ Fechar</button>
+                        </div>
+                    </div>
+                    <canvas id="canvas" style="display:none;"></canvas>
                     <img id="preview" class="preview" style="display:none;">
                 </div>
 
                 <div id="statusReconhecimento" class="status-reconhecimento" style="display:none;">
-                    <div class="loading"></div> Processando imagem com OpenCV...
+                    <div class="loading"></div> Processando imagem com IA e OpenCV...
                 </div>
 
-                <button class="btn-success" onclick="corrigirProva()" style="width:100%; margin-top:15px;">
-                    🔍 CORRIGIR PROVA COM OPENCV
+                <button class="btn-ai" onclick="corrigirProva()" style="width:100%">
+                    🧠 CORRIGIR COM INTELIGÊNCIA ARTIFICIAL
                 </button>
 
                 <div id="resultadoCorrecao"></div>
             </div>
 
             <div class="card">
-                <h3>📖 Como funciona o reconhecimento:</h3>
+                <h3>📖 Como funciona o reconhecimento com IA:</h3>
                 <ul style="margin-left: 20px; color: #666;">
-                    <li>✅ O sistema analisa a foto com OpenCV</li>
-                    <li>✅ Detecta bolinhas usando Hough Circle Transform</li>
-                    <li>✅ Identifica alternativas (A, B, C, D) pela posição</li>
-                    <li>✅ Compara com o gabarito e calcula a nota</li>
-                    <li>✅ Salva automaticamente no histórico</li>
+                    <li>✅ O sistema analisa a foto com OpenCV e corrige perspectiva</li>
+                    <li>✅ Detecta bolinhas usando múltiplas estratégias</li>
+                    <li>✅ IA (Random Forest) classifica se a bolinha está marcada</li>
+                    <li>✅ Barra de confiança mostra a precisão da detecção</li>
+                    <li>✅ Você pode treinar a IA com seus próprios exemplos</li>
                 </ul>
                 <div class="alert alert-info" style="margin-top:15px;">
-                    💡 Dica: Use boa iluminação, folha sem reflexo e mantenha a câmera paralela à folha.
+                    💡 Dica: Use boa iluminação, folha sem reflexo e treine a IA na aba "Treinar IA" para melhores resultados!
                 </div>
+            </div>
+        </div>
+
+        <!-- Aba: Treinar IA -->
+        <div id="abaTreinar" style="display:none;">
+            <div class="card">
+                <h2>🧠 Treinar Inteligência Artificial</h2>
+                <p style="margin-bottom:15px;">Ensine a IA a reconhecer bolinhas marcadas e não marcadas. Quanto mais exemplos, melhor!</p>
+
+                <div class="form-group">
+                    <label>✅ Bolinhas MARCADAS (selecione várias fotos)</label>
+                    <input type="file" id="treinarMarcadas" accept="image/*" multiple>
+                    <div id="previewMarcadas" class="preview-grid"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>❌ Bolinhas NÃO MARCADAS (selecione várias fotos)</label>
+                    <input type="file" id="treinarNaoMarcadas" accept="image/*" multiple>
+                    <div id="previewNaoMarcadas" class="preview-grid"></div>
+                </div>
+
+                <button class="btn-ai" onclick="treinarIA()" style="width:100%">🧠 TREINAR IA AGORA</button>
+                <div id="treinamentoResultado"></div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ Configurações da IA</h2>
+                <div class="form-group">
+                    <label>Usar IA nas correções?</label>
+                    <select id="usarIA" onchange="alternarIA()">
+                        <option value="true">Sim (Recomendado - Melhor precisão)</option>
+                        <option value="false">Não (Apenas OpenCV tradicional)</option>
+                    </select>
+                </div>
+                <button class="btn-info" onclick="verificarStatusIA()">🔍 Verificar Status da IA</button>
             </div>
         </div>
 
@@ -544,6 +619,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label>🔢 Quantidade de Questões</label>
+                    <input type="number" id="qtdQuestoes" value="10" min="1" max="50">
+                </div>
+
+                <div class="form-group">
                     <label>📝 Descrição (opcional)</label>
                     <textarea id="descricaoProva" rows="3" placeholder="Conteúdos abordados..."></textarea>
                 </div>
@@ -551,9 +631,7 @@
                 <div class="form-group">
                     <label>✏️ Gabarito</label>
                     <div class="gabarito-grid" id="gabaritoGrid"></div>
-                    <button type="button" class="btn-secondary" onclick="adicionarQuestaoGabarito()" style="margin-top:10px;">
-                        ➕ Adicionar Questão
-                    </button>
+                    <button type="button" class="btn-secondary" onclick="adicionarQuestaoGabarito()">➕ Adicionar Questão</button>
                 </div>
 
                 <button class="btn-success" onclick="salvarProva()">💾 Salvar Prova</button>
@@ -567,10 +645,27 @@
                             <tr><th>Título</th><th>Turma</th><th>Data</th><th>Questões</th><th>Ações</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="5">Carregando...</td></tr>
+                            <tr><td colspan="5">Carregando...</tr>
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <div class="card">
+                <h2>🔧 Calibrar Sistema (Avançado)</h2>
+                <p>Calibre os limites de detecção para seu tipo específico de gabarito.</p>
+                <div class="form-group">
+                    <label>Envie uma imagem de exemplo do gabarito</label>
+                    <input type="file" id="calibrarInput" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>Prova (opcional - para salvar calibração)</label>
+                    <select id="calibrarProvaSelect">
+                        <option value="">Selecione uma prova (opcional)</option>
+                    </select>
+                </div>
+                <button class="btn-info" onclick="calibrarSistema()">🔧 CALIBRAR SISTEMA</button>
+                <div id="calibrarResultado"></div>
             </div>
         </div>
 
@@ -591,6 +686,11 @@
                     <select id="turmaAluno">
                         <option value="">Selecione a turma</option>
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <label>🔢 Número de Chamada</label>
+                    <input type="number" id="numeroChamada" placeholder="Opcional">
                 </div>
 
                 <div class="form-group">
@@ -622,10 +722,10 @@
                 <div class="table-responsive">
                     <table id="tabelaAlunos">
                         <thead>
-                            <tr><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th></tr>
+                            <tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="4">Carregando...</td></tr>
+                            <tr><td colspan="5">Carregando...</tr>
                         </tbody>
                     </table>
                 </div>
@@ -646,9 +746,7 @@
 
                 <div id="estatisticasContainer"></div>
                 
-                <button class="btn-info" onclick="exportarResultados()" style="margin-top:15px;">
-                    📎 Exportar para Excel
-                </button>
+                <button class="btn-info" onclick="exportarResultados()">📎 Exportar para Excel</button>
             </div>
 
             <div class="card">
@@ -659,7 +757,7 @@
                             <tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Data</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="5">Carregando...</td></tr>
+                            <tr><td colspan="5">Carregando...</tr>
                         </tbody>
                     </table>
                 </div>
@@ -669,9 +767,7 @@
         <!-- Aba: Configurações -->
         <div id="abaConfiguracoes" style="display:none;">
             <div class="card">
-                <h2>🏫 Configurações do Sistema</h2>
-                
-                <h3>Cadastrar Escola</h3>
+                <h2>🏫 Cadastrar Escola</h2>
                 <div class="form-group">
                     <label>Nome da Escola</label>
                     <input type="text" id="novaEscola" placeholder="Nome da escola">
@@ -700,10 +796,6 @@
                     <input type="text" id="nomeTurmaConfig" placeholder="Ex: 3º Ano A">
                 </div>
                 <div class="form-group">
-                    <label>Ano</label>
-                    <input type="number" id="anoTurmaConfig" value="2024">
-                </div>
-                <div class="form-group">
                     <label>Turno</label>
                     <select id="turnoTurmaConfig">
                         <option value="Manhã">Manhã</option>
@@ -712,6 +804,84 @@
                     </select>
                 </div>
                 <button class="btn-success" onclick="salvarTurma()">💾 Salvar Turma</button>
+            </div>
+
+            <div class="card">
+                <h2>📱 Acesso pelo Celular</h2>
+                <div id="ipInfo">Carregando...</div>
+                <div id="qrcode" style="margin: 15px 0;"></div>
+                <button onclick="gerarQRCode()" class="btn-info">🔄 Gerar QR Code</button>
+                <button onclick="copiarUrl()" class="btn-success">📋 Copiar URL</button>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ Ajuste de Sensibilidade do OpenCV</h2>
+                <div class="form-group">
+                    <label>Param1 (Canny edge detection)</label>
+                    <input type="range" id="param1" min="30" max="150" value="80" onchange="atualizarValor('param1')">
+                    <span id="param1_val">80</span>
+                </div>
+                <div class="form-group">
+                    <label>Param2 (Detecção de círculos)</label>
+                    <input type="range" id="param2" min="10" max="50" value="25" onchange="atualizarValor('param2')">
+                    <span id="param2_val">25</span>
+                </div>
+                <div class="form-group">
+                    <label>Raio Mínimo</label>
+                    <input type="range" id="minRadius" min="4" max="15" value="8" onchange="atualizarValor('minRadius')">
+                    <span id="minRadius_val">8</span>
+                </div>
+                <div class="form-group">
+                    <label>Raio Máximo</label>
+                    <input type="range" id="maxRadius" min="15" max="40" value="25" onchange="atualizarValor('maxRadius')">
+                    <span id="maxRadius_val">25</span>
+                </div>
+                <button class="btn-success" onclick="salvarConfiguracoes()">💾 Salvar Configurações</button>
+                <button class="btn-secondary" onclick="restaurarPadrao()" style="margin-left:10px;">🔄 Restaurar Padrão</button>
+            </div>
+        </div>
+
+        <!-- Aba: Gerar Gabarito -->
+        <div id="abaGabarito" style="display:none;">
+            <div class="card">
+                <h2>📄 Gerar Folha de Respostas</h2>
+                
+                <div class="form-group">
+                    <label>🏫 Escola</label>
+                    <select id="escolaGabarito" onchange="carregarTurmasGabarito()">
+                        <option value="">Selecione a escola</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>📚 Turma</label>
+                    <select id="turmaGabarito" onchange="carregarAlunosGabarito()">
+                        <option value="">Selecione a turma</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>👨‍🎓 Aluno</label>
+                    <select id="alunoGabarito">
+                        <option value="">Selecione o aluno</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>📝 Prova</label>
+                    <select id="provaGabarito">
+                        <option value="">Selecione a prova</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>🔢 Número de Questões</label>
+                    <input type="number" id="numQuestoes" value="20" min="1" max="50">
+                </div>
+
+                <button class="btn-success" onclick="gerarGabarito()">📄 GERAR FOLHA DE RESPOSTAS</button>
+                
+                <div id="gabaritoPreview" style="margin-top:20px;"></div>
             </div>
         </div>
     </div>
@@ -722,47 +892,164 @@
         // ============================================
         let fotoBase64 = null;
         let provaSelecionada = null;
+        let stream = null;
+        let ipAtual = '';
         const API_URL = '';
 
         // ============================================
         // INICIALIZAÇÃO
         // ============================================
         window.onload = function() {
+            console.log("🚀 AdaBee AI - Sistema com Inteligência Artificial");
             carregarDashboard();
             carregarEscolas();
             carregarProvas();
             carregarAlunos();
             carregarTodasProvas();
-            
-            // Adicionar 5 questões padrão no gabarito
-            for(let i = 0; i < 5; i++) adicionarQuestaoGabarito();
-            
-            // Carregar selects de configuração
             carregarEscolasConfig();
+            carregarEscolasGabarito();
+            carregarProvasParaCalibrar();
+            carregarProvasRelatorio();
+            carregarHistorico();
+            carregarFiltroTurmas();
+            carregarConfiguracoes();
+            verificarStatusIA();
+            
+            for(let i = 0; i < 5; i++) adicionarQuestaoGabarito();
         };
 
         // ============================================
         // FUNÇÕES DE TABS
         // ============================================
         function mostrarAba(aba) {
-            document.getElementById('abaCorrecao').style.display = aba === 'correcao' ? 'block' : 'none';
-            document.getElementById('abaProvas').style.display = aba === 'provas' ? 'block' : 'none';
-            document.getElementById('abaAlunos').style.display = aba === 'alunos' ? 'block' : 'none';
-            document.getElementById('abaRelatorios').style.display = aba === 'relatorios' ? 'block' : 'none';
-            document.getElementById('abaConfiguracoes').style.display = aba === 'configuracoes' ? 'block' : 'none';
-            
-            const btns = document.querySelectorAll('.tab-btn');
-            btns.forEach(btn => btn.classList.remove('active'));
+            const abas = ['Correcao', 'Treinar', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
+            abas.forEach(a => {
+                let el = document.getElementById('aba' + a);
+                if (el) el.style.display = 'none';
+            });
+            let abaElement = document.getElementById('aba' + aba.charAt(0).toUpperCase() + aba.slice(1));
+            if (abaElement) abaElement.style.display = 'block';
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             if (event && event.target) event.target.classList.add('active');
             
-            // Recarregar dados específicos
-            if (aba === 'relatorios') {
-                carregarProvasRelatorio();
-                carregarHistorico();
+            if (aba === 'relatorios') { carregarProvasRelatorio(); carregarHistorico(); }
+            if (aba === 'alunos') { carregarFiltroTurmas(); carregarAlunos(); }
+            if (aba === 'configuracoes') gerarQRCode();
+        }
+
+        // ============================================
+        // IA E TREINAMENTO
+        // ============================================
+        async function verificarStatusIA() {
+            try {
+                const response = await fetch(`${API_URL}/api/status_ia`);
+                const dados = await response.json();
+                const statusDiv = document.getElementById('statusIA');
+                
+                if (dados.treinada) {
+                    statusDiv.innerHTML = '🧠 <strong>IA treinada e ativa!</strong> As correções serão mais precisas. ✅';
+                    statusDiv.className = 'alert alert-success';
+                } else {
+                    statusDiv.innerHTML = '⚠️ <strong>IA não treinada</strong> - Use a aba "Treinar IA" para melhorar a precisão das correções!';
+                    statusDiv.className = 'alert alert-warning';
+                }
+                
+                if (document.getElementById('usarIA')) {
+                    document.getElementById('usarIA').value = dados.usando_ia ? 'true' : 'false';
+                }
+            } catch (erro) {
+                console.error('Erro ao verificar IA:', erro);
             }
-            if (aba === 'alunos') {
-                carregarFiltroTurmas();
-                carregarAlunos();
+        }
+
+        async function alternarIA() {
+            const usar = document.getElementById('usarIA').value === 'true';
+            try {
+                await fetch(`${API_URL}/api/alternar_ia`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usar_ia: usar })
+                });
+                alert(usar ? '✅ IA ativada!' : '⚠️ IA desativada. Usando OpenCV tradicional.');
+                verificarStatusIA();
+            } catch (erro) {
+                alert('Erro ao alternar IA: ' + erro.message);
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.getElementById('treinarMarcadas')?.addEventListener('change', function(e) {
+            const preview = document.getElementById('previewMarcadas');
+            preview.innerHTML = '';
+            for (let file of e.target.files) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'preview-thumb';
+                preview.appendChild(img);
+            }
+        });
+
+        document.getElementById('treinarNaoMarcadas')?.addEventListener('change', function(e) {
+            const preview = document.getElementById('previewNaoMarcadas');
+            preview.innerHTML = '';
+            for (let file of e.target.files) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'preview-thumb';
+                preview.appendChild(img);
+            }
+        });
+
+        async function treinarIA() {
+            const marcadasInput = document.getElementById('treinarMarcadas');
+            const naoMarcadasInput = document.getElementById('treinarNaoMarcadas');
+
+            if (!marcadasInput.files.length || !naoMarcadasInput.files.length) {
+                alert('❌ Envie pelo menos uma imagem marcada e uma não marcada!');
+                return;
+            }
+
+            document.getElementById('treinamentoResultado').innerHTML = '<div class="loading"></div> Treinando IA... Aguarde.';
+
+            const imagensMarcadas = [];
+            const imagensNaoMarcadas = [];
+
+            for (let file of marcadasInput.files) {
+                imagensMarcadas.push(await fileToBase64(file));
+            }
+
+            for (let file of naoMarcadasInput.files) {
+                imagensNaoMarcadas.push(await fileToBase64(file));
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/treinar_ia`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imagens_marcadas: imagensMarcadas,
+                        imagens_nao_marcadas: imagensNaoMarcadas
+                    })
+                });
+                const dados = await response.json();
+                
+                if (dados.status === 'ok') {
+                    document.getElementById('treinamentoResultado').innerHTML = `<div class="resultado">✅ ${dados.mensagem}</div>`;
+                    verificarStatusIA();
+                } else {
+                    document.getElementById('treinamentoResultado').innerHTML = `<div class="resultado-erro">❌ ${dados.erro}</div>`;
+                }
+            } catch (erro) {
+                document.getElementById('treinamentoResultado').innerHTML = `<div class="resultado-erro">❌ ${erro.message}</div>`;
             }
         }
 
@@ -793,7 +1080,7 @@
                 const response = await fetch(`${API_URL}/api/escolas`);
                 const escolas = await response.json();
                 
-                const selects = ['escolaProva', 'escolaAluno', 'escolaTurmaConfig'];
+                const selects = ['escolaProva', 'escolaAluno', 'escolaTurmaConfig', 'escolaGabarito'];
                 selects.forEach(selectId => {
                     const select = document.getElementById(selectId);
                     if (select) {
@@ -816,13 +1103,15 @@
                 const response = await fetch(`${API_URL}/api/escolas`);
                 const escolas = await response.json();
                 const select = document.getElementById('escolaTurmaConfig');
-                select.innerHTML = '<option value="">Selecione a escola</option>';
-                escolas.forEach(escola => {
-                    const option = document.createElement('option');
-                    option.value = escola.id;
-                    option.textContent = escola.nome;
-                    select.appendChild(option);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a escola</option>';
+                    escolas.forEach(escola => {
+                        const option = document.createElement('option');
+                        option.value = escola.id;
+                        option.textContent = escola.nome;
+                        select.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
             }
@@ -847,7 +1136,7 @@
                 
                 const result = await response.json();
                 if (result.id) {
-                    alert('Escola cadastrada com sucesso!');
+                    alert('✅ Escola cadastrada com sucesso!');
                     document.getElementById('novaEscola').value = '';
                     document.getElementById('enderecoEscola').value = '';
                     document.getElementById('telefoneEscola').value = '';
@@ -870,13 +1159,15 @@
                 const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                 const turmas = await response.json();
                 const select = document.getElementById('turmaProva');
-                select.innerHTML = '<option value="">Selecione a turma</option>';
-                turmas.forEach(turma => {
-                    const option = document.createElement('option');
-                    option.value = turma.id;
-                    option.textContent = turma.nome;
-                    select.appendChild(option);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a turma</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
             }
@@ -890,13 +1181,15 @@
                 const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                 const turmas = await response.json();
                 const select = document.getElementById('turmaAluno');
-                select.innerHTML = '<option value="">Selecione a turma</option>';
-                turmas.forEach(turma => {
-                    const option = document.createElement('option');
-                    option.value = turma.id;
-                    option.textContent = turma.nome;
-                    select.appendChild(option);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a turma</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
             }
@@ -905,7 +1198,6 @@
         async function salvarTurma() {
             const escolaId = document.getElementById('escolaTurmaConfig').value;
             const nome = document.getElementById('nomeTurmaConfig').value;
-            const ano = document.getElementById('anoTurmaConfig').value;
             const turno = document.getElementById('turnoTurmaConfig').value;
             
             if (!escolaId || !nome) {
@@ -917,12 +1209,12 @@
                 const response = await fetch(`${API_URL}/api/turmas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ escola_id: parseInt(escolaId), nome, ano, turno })
+                    body: JSON.stringify({ escola_id: parseInt(escolaId), nome, turno })
                 });
                 
                 const result = await response.json();
                 if (result.id) {
-                    alert('Turma cadastrada com sucesso!');
+                    alert('✅ Turma cadastrada com sucesso!');
                     document.getElementById('nomeTurmaConfig').value = '';
                     carregarEscolasConfig();
                     carregarDashboard();
@@ -945,11 +1237,14 @@
                 const alunos = await response.json();
                 
                 const tbody = document.querySelector('#tabelaAlunos tbody');
+                if (!tbody) return;
+                
                 if (alunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">Nenhum aluno cadastrado</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
                 } else {
                     tbody.innerHTML = alunos.map(aluno => `
                         <tr>
+                            <td>${aluno.numero_chamada || '-'}</td>
                             <td>${aluno.nome}</td>
                             <td>${aluno.matricula || '-'}</td>
                             <td>${aluno.turma_nome || '-'}</td>
@@ -967,13 +1262,15 @@
                 const response = await fetch(`${API_URL}/api/turmas`);
                 const turmas = await response.json();
                 const select = document.getElementById('filtroTurmaAlunos');
-                select.innerHTML = '<option value="">Todas as turmas</option>';
-                turmas.forEach(turma => {
-                    const option = document.createElement('option');
-                    option.value = turma.id;
-                    option.textContent = turma.nome;
-                    select.appendChild(option);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Todas as turmas</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
             }
@@ -984,6 +1281,7 @@
             const nome = document.getElementById('nomeAluno').value;
             const matricula = document.getElementById('matriculaAluno').value;
             const responsavel = document.getElementById('responsavelAluno').value;
+            const numeroChamada = document.getElementById('numeroChamada').value;
             
             if (!turmaId || !nome) {
                 alert('Preencha turma e nome do aluno!');
@@ -994,17 +1292,26 @@
                 const response = await fetch(`${API_URL}/api/alunos`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ turma_id: parseInt(turmaId), nome, matricula, responsavel })
+                    body: JSON.stringify({
+                        turma_id: parseInt(turmaId),
+                        nome: nome,
+                        matricula: matricula,
+                        responsavel: responsavel,
+                        numero_chamada: numeroChamada ? parseInt(numeroChamada) : null
+                    })
                 });
                 
                 const result = await response.json();
                 if (result.id) {
-                    alert('Aluno cadastrado com sucesso!');
+                    alert('✅ Aluno cadastrado com sucesso!');
                     document.getElementById('nomeAluno').value = '';
                     document.getElementById('matriculaAluno').value = '';
                     document.getElementById('responsavelAluno').value = '';
+                    document.getElementById('numeroChamada').value = '';
                     carregarAlunos();
                     carregarDashboard();
+                } else {
+                    alert('Erro: ' + JSON.stringify(result));
                 }
             } catch (erro) {
                 alert('Erro ao salvar: ' + erro.message);
@@ -1019,13 +1326,15 @@
                 const response = await fetch(`${API_URL}/api/provas`);
                 const provas = await response.json();
                 const select = document.getElementById('selectProva');
-                select.innerHTML = '<option value="">Selecione a prova</option>';
-                provas.forEach(prova => {
-                    const option = document.createElement('option');
-                    option.value = prova.id;
-                    option.textContent = `${prova.titulo} - ${prova.data_prova}`;
-                    select.appendChild(option);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a prova</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}`;
+                        select.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro ao carregar provas:', erro);
             }
@@ -1036,16 +1345,18 @@
                 const response = await fetch(`${API_URL}/api/provas`);
                 const provas = await response.json();
                 const tbody = document.querySelector('#tabelaProvas tbody');
+                if (!tbody) return;
+                
                 if (provas.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5">Nenhuma prova cadastrada</td></tr>';
                 } else {
                     tbody.innerHTML = provas.map(prova => `
                         <tr>
-                            <td>${prova.titulo}</td>
+                            <td><strong>${prova.titulo}</strong></td>
                             <td>${prova.turma_nome || '-'}</td>
-                            <td>${prova.data_prora}</td>
-                            <td>${prova.quantidade_questoes} q</td>
-                            <td><button class="btn-secondary" style="padding:5px 10px;" onclick="alert('Prova ID: ${prova.id}')">Ver</button></td>
+                            <td>${prova.data_prova || '-'}</td>
+                            <td>${prova.quantidade_questoes || prova.gabarito?.length || 0}</td>
+                            <td><button class="btn-danger" style="padding:5px 10px;" onclick="excluirProva(${prova.id}, '${prova.titulo.replace(/'/g, "\\'")}')">🗑️ Excluir</button></td>
                         </tr>
                     `).join('');
                 }
@@ -1054,18 +1365,60 @@
             }
         }
         
+        async function excluirProva(id, titulo) {
+            if (confirm(`Excluir a prova "${titulo}"? Isso também apagará todas as correções relacionadas.`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Prova excluída com sucesso!');
+                        carregarTodasProvas();
+                        carregarProvas();
+                        carregarProvasRelatorio();
+                        carregarProvasParaCalibrar();
+                        carregarDashboard();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + erro.erro);
+                    }
+                } catch (erro) {
+                    alert('Erro ao excluir: ' + erro.message);
+                }
+            }
+        }
+        
         async function carregarProvasRelatorio() {
             try {
                 const response = await fetch(`${API_URL}/api/provas`);
                 const provas = await response.json();
                 const select = document.getElementById('selectProvaRelatorio');
-                select.innerHTML = '<option value="">Selecione a prova</option>';
-                provas.forEach(prova => {
-                    const option = document.createElement('option');
-                    option.value = prova.id;
-                    option.textContent = `${prova.titulo} - ${prova.data_prova}`;
-                    select.appendChild(option);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a prova</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+        
+        async function carregarProvasParaCalibrar() {
+            try {
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                const select = document.getElementById('calibrarProvaSelect');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione uma prova (opcional)</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} - ${prova.turma_nome}`;
+                        select.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
             }
@@ -1080,17 +1433,20 @@
                 const provas = await response.json();
                 provaSelecionada = provas.find(p => p.id == provaId);
                 
-                // Carregar alunos da turma
+                if (!provaSelecionada) return;
+                
                 const responseAlunos = await fetch(`${API_URL}/api/alunos?turma_id=${provaSelecionada.turma_id}`);
                 const alunos = await responseAlunos.json();
                 const selectAluno = document.getElementById('selectAluno');
-                selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
-                alunos.forEach(aluno => {
-                    const option = document.createElement('option');
-                    option.value = aluno.id;
-                    option.textContent = aluno.nome;
-                    selectAluno.appendChild(option);
-                });
+                if (selectAluno) {
+                    selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+                    alunos.forEach(aluno => {
+                        const option = document.createElement('option');
+                        option.value = aluno.id;
+                        option.textContent = `${aluno.nome} ${aluno.numero_chamada ? '(Nº ' + aluno.numero_chamada + ')' : ''}`;
+                        selectAluno.appendChild(option);
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
             }
@@ -1098,14 +1454,17 @@
         
         function adicionarQuestaoGabarito() {
             const grid = document.getElementById('gabaritoGrid');
-            const num = grid.children.length + 1;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = `Q${num}`;
-            input.maxLength = 1;
-            input.style.textAlign = 'center';
-            input.style.textTransform = 'uppercase';
-            grid.appendChild(input);
+            if (grid) {
+                const num = grid.children.length + 1;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `Q${num}`;
+                input.maxLength = 1;
+                input.style.width = '60px';
+                input.style.textAlign = 'center';
+                input.style.textTransform = 'uppercase';
+                grid.appendChild(input);
+            }
         }
         
         function obterGabarito() {
@@ -1118,11 +1477,17 @@
             const titulo = document.getElementById('tituloProva').value;
             const dataProva = document.getElementById('dataProva').value;
             const valorNota = document.getElementById('valorProva').value;
-            const descricao = document.getElementById('descricaoProva').value;
+            const quantidadeQuestoes = document.getElementById('qtdQuestoes').value;
+            const descricao = document.getElementById('descricaoProva')?.value || '';
             const gabarito = obterGabarito();
             
             if (!turmaId || !titulo || !dataProva || gabarito.length === 0) {
-                alert('Preencha todos os campos!');
+                alert('❌ Preencha todos os campos!');
+                return;
+            }
+            
+            if (gabarito.length !== parseInt(quantidadeQuestoes)) {
+                alert(`⚠️ O gabarito tem ${gabarito.length} questões, mas você definiu ${quantidadeQuestoes} questões. Ajuste para coincidir.`);
                 return;
             }
             
@@ -1136,13 +1501,14 @@
                         descricao: descricao,
                         gabarito: gabarito,
                         data_prova: dataProva,
-                        valor_nota: parseFloat(valorNota)
+                        valor_nota: parseFloat(valorNota),
+                        quantidade_questoes: parseInt(quantidadeQuestoes)
                     })
                 });
                 
                 const result = await response.json();
                 if (result.id) {
-                    alert('Prova salva com sucesso!');
+                    alert('✅ Prova salva com sucesso!');
                     location.reload();
                 } else {
                     alert('Erro: ' + result.erro);
@@ -1153,17 +1519,92 @@
         }
 
         // ============================================
-        // CORREÇÃO COM RECONHECIMENTO
+        // CALIBRAÇÃO
         // ============================================
+        async function calibrarSistema() {
+            const fileInput = document.getElementById('calibrarInput');
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('⚠️ Selecione uma imagem do gabarito para calibrar!');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                document.getElementById('calibrarResultado').innerHTML = '<div class="loading"></div> Calibrando sistema...';
+                
+                try {
+                    const response = await fetch(`${API_URL}/api/calibrar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            imagem: e.target.result,
+                            prova_id: document.getElementById('calibrarProvaSelect').value || null
+                        })
+                    });
+                    
+                    const dados = await response.json();
+                    
+                    if (dados.erro) {
+                        document.getElementById('calibrarResultado').innerHTML = `<div class="resultado-erro">❌ ${dados.erro}</div>`;
+                    } else {
+                        let html = '<div class="resultado"><strong>✅ Calibração realizada com sucesso!</strong><br><br>';
+                        html += '<strong>Limites calculados:</strong><br>';
+                        for (const [letra, limites] of Object.entries(dados.limites)) {
+                            html += `• ${letra}: ${limites[0]} a ${limites[1]}<br>`;
+                        }
+                        html += `<br>🎯 ${dados.mensagem}</div>`;
+                        document.getElementById('calibrarResultado').innerHTML = html;
+                    }
+                } catch (erro) {
+                    document.getElementById('calibrarResultado').innerHTML = `<div class="resultado-erro">❌ ${erro.message}</div>`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ============================================
+        // CORREÇÃO COM IA
+        // ============================================
+        function abrirCamera() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainer').style.display = 'block';
+            document.getElementById('preview').style.display = 'none';
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(s => {
+                    stream = s;
+                    document.getElementById('video').srcObject = s;
+                })
+                .catch(() => alert("❌ Não foi possível acessar a câmera. Verifique as permissões."));
+        }
+        
+        function tirarFoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            fotoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            document.getElementById('preview').src = fotoBase64;
+            document.getElementById('preview').style.display = 'block';
+            fecharCamera();
+            alert('✅ Foto capturada com sucesso!');
+        }
+        
+        function fecharCamera() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainer').style.display = 'none';
+        }
+        
         function previewImagem(input) {
             const file = input.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const preview = document.getElementById('preview');
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
                     fotoBase64 = e.target.result;
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('preview').style.display = 'block';
                 };
                 reader.readAsDataURL(file);
             }
@@ -1190,7 +1631,7 @@
             
             const btn = event.target;
             const originalText = btn.innerText;
-            btn.innerText = '⏳ Processando imagem com OpenCV...';
+            btn.innerText = '⏳ Processando imagem com IA e OpenCV...';
             btn.disabled = true;
             
             document.getElementById('statusReconhecimento').style.display = 'block';
@@ -1221,6 +1662,7 @@
                                 <li>Certifique-se que as bolinhas estão bem marcadas</li>
                                 <li>Tire a foto paralelamente à folha</li>
                                 <li>Evite sombras sobre a folha</li>
+                                <li>Treine a IA na aba "Treinar IA" para melhor precisão</li>
                             </ul>
                         </div>
                     `;
@@ -1229,12 +1671,18 @@
                     let html = '<div class="resultado">';
                     html += `<h3>📊 RESULTADO DA CORREÇÃO</h3>`;
                     html += `<p><strong>👤 Aluno:</strong> ${dados.aluno}</p>`;
-                    html += `<p><strong>🤖 Respostas detectadas pelo sistema:</strong> <code style="background:#fff;padding:5px;border-radius:5px;">${dados.respostas_detectadas.join(', ')}</code></p>`;
+                    html += `<p><strong>🤖 Respostas detectadas:</strong> <code style="background:#fff;padding:5px;border-radius:5px;">${dados.respostas_detectadas.join(', ')}</code></p>`;
                     html += `<p><strong>✅ Acertos:</strong> ${dados.acertos} de ${dados.total} questões</p>`;
-                    html += `<p><strong>📊 Percentual:</strong> ${dados.percentual}%</p>`;
+                    html += `<p><strong>📊 Percentual de acerto:</strong> ${dados.percentual}%</p>`;
                     html += `<div class="progress-bar" style="margin:10px 0;"><div class="progress-fill" style="width: ${dados.percentual}%;"></div></div>`;
                     html += `<p><strong>🎓 Nota:</strong> <span style="font-size:36px; font-weight:bold;">${dados.nota}</span></p>`;
-                    html += `<p><span class="badge ${aprovado ? 'badge-aprovado' : 'badge-reprovado'}">${aprovado ? '✅ APROVADO' : '❌ REPROVADO'}</span></p>`;
+                    
+                    if (dados.confianca_media) {
+                        html += `<div class="confidence-bar"><div class="confidence-fill" style="width: ${dados.confianca_media}%;"></div></div>`;
+                        html += `<p><strong>🧠 Confiança da IA:</strong> ${dados.confianca_media}%</p>`;
+                    }
+                    
+                    html += `<p><span class="${aprovado ? 'badge-aprovado' : 'badge-reprovado'}">${aprovado ? '✅ APROVADO' : '❌ REPROVADO'}</span></p>`;
                     html += `<hr><h4>📝 Detalhamento por questão:</h4>`;
                     
                     if (dados.correcoes) {
@@ -1244,11 +1692,15 @@
                         });
                     }
                     
-                    html += `<hr><small>🔬 Reconhecimento feito com OpenCV (Hough Circle Transform)</small>`;
+                    if (dados.usando_ia) {
+                        html += `<hr><small>🔬 Reconhecimento feito com <strong>IA (Random Forest)</strong> + OpenCV</small>`;
+                    } else {
+                        html += `<hr><small>🔬 Reconhecimento feito com <strong>OpenCV tradicional</strong> (sem IA)</small>`;
+                    }
+                    
                     html += '</div>';
                     document.getElementById('resultadoCorrecao').innerHTML = html;
                     
-                    // Recarregar dashboard e histórico
                     carregarDashboard();
                     carregarHistorico();
                 }
@@ -1288,7 +1740,7 @@
                 }
                 
                 if (dados.distribuicao && dados.distribuicao.length > 0) {
-                    html += `<h4>Distribuição de notas:</h4><ul>`;
+                    html += `<h4>📊 Distribuição de notas:</h4><ul>`;
                     dados.distribuicao.forEach(d => {
                         html += `<li>${d.faixa}: ${d.quantidade} aluno(s) (${d.percentual}%)</li>`;
                     });
@@ -1308,6 +1760,8 @@
                 const historico = await response.json();
                 
                 const tbody = document.querySelector('#tabelaHistorico tbody');
+                if (!tbody) return;
+                
                 if (historico.length === 0 || historico.erro) {
                     tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada ainda</td></tr>';
                 } else {
@@ -1332,6 +1786,207 @@
                 window.open(`${API_URL}/api/exportar?prova_id=${provaId}`, '_blank');
             } else {
                 alert('Selecione uma prova primeiro!');
+            }
+        }
+
+        // ============================================
+        // GERAR GABARITO
+        // ============================================
+        async function carregarEscolasGabarito() {
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`);
+                const escolas = await response.json();
+                const select = document.getElementById('escolaGabarito');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a escola</option>';
+                    escolas.forEach(escola => {
+                        const option = document.createElement('option');
+                        option.value = escola.id;
+                        option.textContent = escola.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+        
+        async function carregarTurmasGabarito() {
+            const escolaId = document.getElementById('escolaGabarito').value;
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                const select = document.getElementById('turmaGabarito');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a turma</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+        
+        async function carregarAlunosGabarito() {
+            const turmaId = document.getElementById('turmaGabarito').value;
+            if (!turmaId) return;
+            
+            try {
+                const responseAlunos = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await responseAlunos.json();
+                const selectAluno = document.getElementById('alunoGabarito');
+                if (selectAluno) {
+                    selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+                    alunos.forEach(aluno => {
+                        const option = document.createElement('option');
+                        option.value = aluno.id;
+                        option.textContent = `${aluno.nome} ${aluno.numero_chamada ? '(Nº ' + aluno.numero_chamada + ')' : ''}`;
+                        selectAluno.appendChild(option);
+                    });
+                }
+                
+                const responseProvas = await fetch(`${API_URL}/api/provas`);
+                const provas = await responseProvas.json();
+                const selectProva = document.getElementById('provaGabarito');
+                if (selectProva) {
+                    selectProva.innerHTML = '<option value="">Selecione a prova</option>';
+                    provas.filter(p => p.turma_id == turmaId).forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} (${prova.quantidade_questoes || 0} questões)`;
+                        selectProva.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+        
+        async function gerarGabarito() {
+            const escolaId = document.getElementById('escolaGabarito').value;
+            const turmaId = document.getElementById('turmaGabarito').value;
+            const alunoId = document.getElementById('alunoGabarito').value;
+            const provaId = document.getElementById('provaGabarito').value;
+            const numQuestoes = document.getElementById('numQuestoes').value;
+            
+            if (!escolaId || !turmaId || !alunoId || !provaId) {
+                alert('❌ Preencha todos os campos!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        escola_id: parseInt(escolaId),
+                        turma_id: parseInt(turmaId),
+                        aluno_id: parseInt(alunoId),
+                        prova_id: parseInt(provaId),
+                        quantidade_questoes: parseInt(numQuestoes)
+                    })
+                });
+                
+                const dados = await response.json();
+                document.getElementById('gabaritoPreview').innerHTML = `
+                    <h3>📄 Folha de Respostas:</h3>
+                    <img src="${dados.imagem}" style="max-width:100%; margin-top:15px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+                    <div style="margin-top:15px;">
+                        <button onclick="window.open('${dados.imagem}')" class="btn-info">🖨️ Imprimir</button>
+                        <button onclick="window.location.href='${dados.imagem}'" class="btn-success" style="margin-left:10px;">💾 Baixar</button>
+                    </div>
+                `;
+            } catch (erro) {
+                alert('Erro ao gerar: ' + erro.message);
+            }
+        }
+
+        // ============================================
+        // CONFIGURAÇÕES
+        // ============================================
+        async function carregarConfiguracoes() {
+            try {
+                const response = await fetch(`${API_URL}/api/configuracoes`);
+                const config = await response.json();
+                document.getElementById('param1').value = config.param1;
+                document.getElementById('param2').value = config.param2;
+                document.getElementById('minRadius').value = config.minRadius;
+                document.getElementById('maxRadius').value = config.maxRadius;
+                atualizarValor('param1');
+                atualizarValor('param2');
+                atualizarValor('minRadius');
+                atualizarValor('maxRadius');
+            } catch (erro) {
+                console.error('Erro ao carregar configurações:', erro);
+            }
+        }
+        
+        function atualizarValor(id) {
+            const slider = document.getElementById(id);
+            const span = document.getElementById(id + '_val');
+            if (slider && span) span.innerText = slider.value;
+        }
+        
+        async function salvarConfiguracoes() {
+            const config = {
+                param1: parseInt(document.getElementById('param1').value),
+                param2: parseInt(document.getElementById('param2').value),
+                minRadius: parseInt(document.getElementById('minRadius').value),
+                maxRadius: parseInt(document.getElementById('maxRadius').value),
+                preenchimento_minimo: 0.2
+            };
+            
+            try {
+                await fetch(`${API_URL}/api/configuracoes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                alert('✅ Configurações salvas com sucesso!');
+            } catch (erro) {
+                alert('Erro ao salvar: ' + erro.message);
+            }
+        }
+        
+        function restaurarPadrao() {
+            document.getElementById('param1').value = 80;
+            document.getElementById('param2').value = 25;
+            document.getElementById('minRadius').value = 8;
+            document.getElementById('maxRadius').value = 25;
+            atualizarValor('param1');
+            atualizarValor('param2');
+            atualizarValor('minRadius');
+            atualizarValor('maxRadius');
+            salvarConfiguracoes();
+        }
+        
+        async function gerarQRCode() {
+            try {
+                const response = await fetch(`${API_URL}/api/ip_info`);
+                const dados = await response.json();
+                ipAtual = dados.url;
+                document.getElementById('ipInfo').innerHTML = `
+                    <p><strong>📡 IP:</strong> ${dados.ip}:${dados.porta}</p>
+                    <p><strong>🌐 URL:</strong> <a href="${dados.url}" target="_blank">${dados.url}</a></p>
+                `;
+                document.getElementById('qrcode').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(dados.url)}" style="border-radius:12px;">`;
+            } catch (erro) {
+                document.getElementById('ipInfo').innerHTML = '<p class="resultado-erro">❌ Erro ao obter IP</p>';
+            }
+        }
+        
+        function copiarUrl() {
+            if (ipAtual) {
+                navigator.clipboard.writeText(ipAtual);
+                alert('✅ URL copiada para a área de transferência!');
+            } else {
+                alert('⚠️ Gere o QR Code primeiro!');
             }
         }
     </script>
