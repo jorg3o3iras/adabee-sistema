@@ -7,6 +7,8 @@ import json
 import sqlite3
 from datetime import datetime
 import os
+from PIL import Image, ImageDraw, ImageFont
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -692,9 +694,124 @@ def treinar_ia():
 def calibrar():
     return jsonify({'sucesso': True, 'mensagem': 'Calibração realizada', 'limites': {'A': (0,100), 'B': (101,200), 'C': (201,300), 'D': (301,400)}})
 
+# ============================================
+# GERAR GABARITO CORRIGIDO (SEM via.placeholder)
+# ============================================
+
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
-    return jsonify({'imagem': 'https://via.placeholder.com/800x1100?text=Folha+de+Respostas'})
+    try:
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
+        qtd_questoes = dados.get('quantidade_questoes', 20)
+        
+        # Buscar dados no banco
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
+        escola = cursor.fetchone()
+        nome_escola = escola[0] if escola else "ESCOLA"
+        
+        cursor.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
+        turma = cursor.fetchone()
+        nome_turma = turma[0] if turma else "TURMA"
+        
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
+        aluno = cursor.fetchone()
+        nome_aluno = aluno[0] if aluno else "ALUNO"
+        numero = str(aluno[1]) if aluno and aluno[1] else ""
+        
+        cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
+        prova = cursor.fetchone()
+        nome_prova = prova[0] if prova else "PROVA"
+        
+        conn.close()
+        
+        # Criar imagem da folha de respostas
+        largura, altura = 850, 1100
+        img = Image.new('RGB', (largura, altura), color='white')
+        draw = ImageDraw.Draw(img)
+        
+        # Tentar carregar fonte
+        try:
+            font_titulo = ImageFont.truetype("arial.ttf", 22)
+            font_normal = ImageFont.truetype("arial.ttf", 14)
+            font_pequena = ImageFont.truetype("arial.ttf", 11)
+        except:
+            font_titulo = ImageFont.load_default()
+            font_normal = ImageFont.load_default()
+            font_pequena = ImageFont.load_default()
+        
+        # Cabeçalho
+        y = 40
+        draw.text((40, y), f"ESCOLA: {nome_escola}", fill='black', font=font_titulo)
+        y += 35
+        draw.text((40, y), f"TURMA: {nome_turma}", fill='black', font=font_normal)
+        y += 25
+        draw.text((40, y), f"ALUNO(A): {nome_aluno}", fill='black', font=font_normal)
+        draw.text((450, y), f"Nº: {numero}", fill='black', font=font_normal)
+        y += 25
+        draw.text((40, y), f"PROVA: {nome_prova}", fill='black', font=font_normal)
+        y += 25
+        draw.text((40, y), f"DATA: ___/___/______", fill='black', font=font_normal)
+        y += 40
+        
+        draw.line([(40, y), (largura-40, y)], fill='#cccccc', width=2)
+        y += 30
+        
+        # Cabeçalho das colunas
+        draw.text((40, y), "Questão", fill='black', font=font_normal)
+        x_opcao = 140
+        for letra in ['A', 'B', 'C', 'D', 'E']:
+            draw.text((x_opcao, y), letra, fill='black', font=font_normal)
+            x_opcao += 60
+        y += 25
+        draw.line([(40, y), (largura-40, y)], fill='#cccccc', width=1)
+        y += 15
+        
+        # Questões
+        for i in range(1, int(qtd_questoes) + 1):
+            draw.text((40, y), f"{i:2d}.", fill='black', font=font_normal)
+            
+            x_opcao = 135
+            for _ in range(5):
+                x_centro = x_opcao + 12
+                y_centro = y + 12
+                draw.ellipse([(x_centro-10, y_centro-10), (x_centro+10, y_centro+10)], 
+                            outline='black', width=1)
+                x_opcao += 60
+            
+            y += 32
+        
+        # Rodapé com instruções
+        y_rodape = altura - 80
+        draw.text((40, y_rodape), "INSTRUÇÕES:", fill='black', font=font_normal)
+        draw.text((55, y_rodape + 20), "• Preencha COMPLETAMENTE a bolinha da resposta escolhida", fill='#666666', font=font_pequena)
+        draw.text((55, y_rodape + 38), "• Não rasure, não amasse e não dobre a folha", fill='#666666', font=font_pequena)
+        draw.text((55, y_rodape + 56), "• Use caneta preta ou azul", fill='#666666', font=font_pequena)
+        
+        # Borda na folha
+        draw.rectangle([(20, 20), (largura-20, altura-20)], outline='#999999', width=1)
+        
+        # Converter para base64
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+        
+        return jsonify({
+            'imagem': f"data:image/png;base64,{img_base64}",
+            'mensagem': 'Folha de respostas gerada com sucesso!'
+        })
+        
+    except Exception as e:
+        print(f"Erro ao gerar gabarito: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'imagem': '', 'erro': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
