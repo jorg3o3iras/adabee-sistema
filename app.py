@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 import base64
 import json
-import sqlite3
+import mysql.connector
+from mysql.connector import Error
 from datetime import datetime
 import os
 
@@ -12,97 +13,123 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# BANCO DE DADOS SQLITE
+# CONFIGURAÇÃO DO MYSQL (VIA VARIÁVEIS DE AMBIENTE)
 # ============================================
-DB_PATH = 'adabee.db'
+# As variáveis serão configuradas no Render (Environment Variables)
+# NUNCA coloque senhas diretamente no código!
+DB_CONFIG = {
+    'host': os.environ.get('DB_HOST', 'mysql-22b0fe8e-jorge-80ab.d.aivencloud.com'),
+    'port': int(os.environ.get('DB_PORT', 19307)),
+    'user': os.environ.get('DB_USER', 'avnadmin'),
+    'password': os.environ.get('DB_PASSWORD', ''),
+    'database': os.environ.get('DB_NAME', 'defaultdb'),
+    'ssl_disabled': False
+}
+
+def get_db_connection():
+    """Retorna conexão com o MySQL"""
+    try:
+        if not DB_CONFIG['password']:
+            print("❌ Senha do banco não configurada! Configure DB_PASSWORD no Render.")
+            return None
+        conn = mysql.connector.connect(**DB_CONFIG)
+        return conn
+    except Error as e:
+        print(f"❌ Erro MySQL: {e}")
+        return None
 
 def init_database():
-    """Inicializa o banco de dados SQLite"""
-    conn = sqlite3.connect(DB_PATH)
+    """Inicializa o banco de dados criando as tabelas se não existirem"""
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Não foi possível conectar ao MySQL")
+        return
+    
     cursor = conn.cursor()
     
-    # Tabela de escolas
+    # Usar o banco defaultdb
+    cursor.execute("USE defaultdb")
+    
+    # Tabela escolas
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS escolas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            endereco TEXT,
-            telefone TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(200) NOT NULL,
+            endereco VARCHAR(300),
+            telefone VARCHAR(20),
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
-    # Tabela de turmas
+    # Tabela turmas
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS turmas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            escola_id INTEGER,
-            nome TEXT NOT NULL,
-            turno TEXT DEFAULT 'Manhã',
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            escola_id INT,
+            nome VARCHAR(100) NOT NULL,
+            turno VARCHAR(20) DEFAULT 'Manhã',
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (escola_id) REFERENCES escolas(id)
+            FOREIGN KEY (escola_id) REFERENCES escolas(id) ON DELETE CASCADE
         )
     ''')
     
-    # Tabela de alunos
+    # Tabela alunos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS alunos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            turma_id INTEGER,
-            nome TEXT NOT NULL,
-            matricula TEXT,
-            responsavel TEXT,
-            numero_chamada INTEGER,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            turma_id INT,
+            nome VARCHAR(200) NOT NULL,
+            matricula VARCHAR(50),
+            responsavel VARCHAR(200),
+            numero_chamada INT,
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (turma_id) REFERENCES turmas(id)
+            FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE
         )
     ''')
     
-    # Tabela de provas
+    # Tabela provas
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS provas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            turma_id INTEGER,
-            titulo TEXT NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            turma_id INT,
+            titulo VARCHAR(200) NOT NULL,
             descricao TEXT,
             gabarito TEXT,
             data_prova DATE,
-            valor_nota REAL DEFAULT 10,
-            quantidade_questoes INTEGER,
+            valor_nota DECIMAL(5,2) DEFAULT 10,
+            quantidade_questoes INT,
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (turma_id) REFERENCES turmas(id)
+            FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE
         )
     ''')
     
-    # Tabela de correções
+    # Tabela correções
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS correcoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            prova_id INTEGER,
-            aluno_id INTEGER,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            prova_id INT,
+            aluno_id INT,
             respostas TEXT,
-            acertos INTEGER,
-            nota REAL,
+            acertos INT,
+            nota DECIMAL(5,2),
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (prova_id) REFERENCES provas(id),
-            FOREIGN KEY (aluno_id) REFERENCES alunos(id)
+            FOREIGN KEY (prova_id) REFERENCES provas(id) ON DELETE CASCADE,
+            FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE
         )
     ''')
     
     conn.commit()
     conn.close()
-    print("✅ Banco de dados SQLite inicializado!")
+    print("✅ Banco de dados MySQL inicializado!")
 
 # Inicializar banco
 init_database()
 
-def get_db_connection():
-    return sqlite3.connect(DB_PATH)
-
 # ============================================
-# RECONHECIMENTO DE BOLINHAS
+# RECONHECIMENTO DE BOLINHAS COM OPENCV
 # ============================================
 def detectar_bolinhas(imagem_base64):
+    """Detecta bolinhas marcadas no gabarito usando OpenCV"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -164,24 +191,28 @@ def index():
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0, 'total_correcoes': 0, 'media_geral': 0})
     
-    cursor.execute("SELECT COUNT(*) FROM escolas")
-    total_escolas = cursor.fetchone()[0]
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     
-    cursor.execute("SELECT COUNT(*) FROM turmas")
-    total_turmas = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as total FROM escolas")
+    total_escolas = cursor.fetchone()['total']
     
-    cursor.execute("SELECT COUNT(*) FROM alunos")
-    total_alunos = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as total FROM turmas")
+    total_turmas = cursor.fetchone()['total']
     
-    cursor.execute("SELECT COUNT(*) FROM provas")
-    total_provas = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as total FROM alunos")
+    total_alunos = cursor.fetchone()['total']
     
-    cursor.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes")
+    cursor.execute("SELECT COUNT(*) as total FROM provas")
+    total_provas = cursor.fetchone()['total']
+    
+    cursor.execute("SELECT COUNT(*) as total, COALESCE(AVG(nota), 0) as media FROM correcoes")
     row = cursor.fetchone()
-    total_correcoes = row[0] if row[0] else 0
-    media_geral = round(row[1], 1) if row[1] else 0
+    total_correcoes = row['total'] if row['total'] else 0
+    media_geral = round(row['media'], 1) if row['media'] else 0
     
     conn.close()
     
@@ -198,9 +229,13 @@ def dashboard():
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify([])
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     cursor.execute("SELECT id, nome, endereco, telefone FROM escolas ORDER BY nome")
-    escolas = [{'id': row[0], 'nome': row[1], 'endereco': row[2], 'telefone': row[3]} for row in cursor.fetchall()]
+    escolas = cursor.fetchall()
     conn.close()
     return jsonify(escolas)
 
@@ -216,9 +251,13 @@ def criar_escola():
             return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro de conexão com banco'}), 500
+        
         cursor = conn.cursor()
+        cursor.execute("USE defaultdb")
         cursor.execute(
-            "INSERT INTO escolas (nome, endereco, telefone) VALUES (?, ?, ?)",
+            "INSERT INTO escolas (nome, endereco, telefone) VALUES (%s, %s, %s)",
             (nome, endereco, telefone)
         )
         conn.commit()
@@ -234,14 +273,18 @@ def criar_escola():
 def listar_turmas():
     escola_id = request.args.get('escola_id')
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify([])
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     
     if escola_id:
         cursor.execute("""
             SELECT t.id, t.nome, t.turno, e.nome as escola_nome 
             FROM turmas t 
             JOIN escolas e ON t.escola_id = e.id 
-            WHERE t.escola_id = ? ORDER BY t.nome
+            WHERE t.escola_id = %s ORDER BY t.nome
         """, (escola_id,))
     else:
         cursor.execute("""
@@ -251,7 +294,7 @@ def listar_turmas():
             ORDER BY t.nome
         """)
     
-    turmas = [{'id': row[0], 'nome': row[1], 'turno': row[2], 'escola_nome': row[3]} for row in cursor.fetchall()]
+    turmas = cursor.fetchall()
     conn.close()
     return jsonify(turmas)
 
@@ -267,9 +310,13 @@ def criar_turma():
             return jsonify({'erro': 'Escola e nome da turma são obrigatórios'}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro de conexão'}), 500
+        
         cursor = conn.cursor()
+        cursor.execute("USE defaultdb")
         cursor.execute(
-            "INSERT INTO turmas (escola_id, nome, turno) VALUES (?, ?, ?)",
+            "INSERT INTO turmas (escola_id, nome, turno) VALUES (%s, %s, %s)",
             (escola_id, nome, turno)
         )
         conn.commit()
@@ -285,14 +332,18 @@ def criar_turma():
 def listar_alunos():
     turma_id = request.args.get('turma_id')
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify([])
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     
     if turma_id:
         cursor.execute("""
             SELECT a.id, a.nome, a.matricula, a.responsavel, a.numero_chamada, t.nome as turma_nome 
             FROM alunos a 
             JOIN turmas t ON a.turma_id = t.id 
-            WHERE a.turma_id = ? ORDER BY a.numero_chamada
+            WHERE a.turma_id = %s ORDER BY a.numero_chamada
         """, (turma_id,))
     else:
         cursor.execute("""
@@ -302,8 +353,7 @@ def listar_alunos():
             ORDER BY a.numero_chamada
         """)
     
-    alunos = [{'id': row[0], 'nome': row[1], 'matricula': row[2], 'responsavel': row[3], 
-               'numero_chamada': row[4], 'turma_nome': row[5]} for row in cursor.fetchall()]
+    alunos = cursor.fetchall()
     conn.close()
     return jsonify(alunos)
 
@@ -321,9 +371,13 @@ def criar_aluno():
             return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro de conexão'}), 500
+        
         cursor = conn.cursor()
+        cursor.execute("USE defaultdb")
         cursor.execute(
-            "INSERT INTO alunos (turma_id, nome, matricula, responsavel, numero_chamada) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO alunos (turma_id, nome, matricula, responsavel, numero_chamada) VALUES (%s, %s, %s, %s, %s)",
             (turma_id, nome, matricula, responsavel, numero_chamada if numero_chamada else None)
         )
         conn.commit()
@@ -338,7 +392,11 @@ def criar_aluno():
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify([])
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     cursor.execute("""
         SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
                p.valor_nota, p.quantidade_questoes, t.nome as turma_nome, p.turma_id
@@ -347,15 +405,16 @@ def listar_provas():
         ORDER BY p.data_prova DESC
     """)
     
-    provas = []
-    for row in cursor.fetchall():
-        gabarito = json.loads(row[3]) if row[3] else []
-        provas.append({
-            'id': row[0], 'titulo': row[1], 'descricao': row[2],
-            'gabarito_array': gabarito, 'data_prova': row[4],
-            'valor_nota': row[5], 'quantidade_questoes': row[6] or len(gabarito),
-            'turma_nome': row[7], 'turma_id': row[8]
-        })
+    provas = cursor.fetchall()
+    for prova in provas:
+        if prova['gabarito']:
+            try:
+                prova['gabarito_array'] = json.loads(prova['gabarito'])
+            except:
+                prova['gabarito_array'] = []
+        else:
+            prova['gabarito_array'] = []
+    
     conn.close()
     return jsonify(provas)
 
@@ -375,10 +434,14 @@ def criar_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro de conexão'}), 500
+        
         cursor = conn.cursor()
+        cursor.execute("USE defaultdb")
         cursor.execute("""
             INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota))
         conn.commit()
         prova_id = cursor.lastrowid
@@ -392,9 +455,13 @@ def criar_prova():
 def deletar_prova(prova_id):
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro de conexão'}), 500
+        
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM correcoes WHERE prova_id = ?", (prova_id,))
-        cursor.execute("DELETE FROM provas WHERE id = ?", (prova_id,))
+        cursor.execute("USE defaultdb")
+        cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
+        cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
         conn.commit()
         conn.close()
         return jsonify({'mensagem': 'Prova removida com sucesso'})
@@ -414,16 +481,19 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        cursor = conn.cursor()
+        if not conn:
+            return jsonify({'erro': 'Erro de conexão'}), 500
         
-        cursor.execute("SELECT gabarito FROM provas WHERE id = ?", (prova_id,))
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("USE defaultdb")
+        cursor.execute("SELECT gabarito FROM provas WHERE id = %s", (prova_id,))
         prova = cursor.fetchone()
         
         if not prova:
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
-        gabarito = json.loads(prova[0]) if prova[0] else []
+        gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
         respostas_detectadas = detectar_bolinhas(imagem)
         
         if len(respostas_detectadas) == 0:
@@ -440,13 +510,13 @@ def corrigir_prova():
         
         cursor.execute("""
             INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (prova_id, aluno_id, respostas_json, acertos, nota, datetime.now()))
         conn.commit()
         
-        cursor.execute("SELECT nome FROM alunos WHERE id = ?", (aluno_id,))
+        cursor.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cursor.fetchone()
-        aluno_nome = aluno[0] if aluno else 'Aluno'
+        aluno_nome = aluno['nome'] if aluno else 'Aluno'
         
         conn.close()
         
@@ -470,27 +540,29 @@ def estatisticas():
         return jsonify({'geral': {'total_corrigidas': 0, 'media_nota': 0, 'maior_nota': 0, 'menor_nota': 0}})
     
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify({'geral': {}})
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     cursor.execute("""
-        SELECT COUNT(*), COALESCE(AVG(nota), 0), COALESCE(MAX(nota), 0), COALESCE(MIN(nota), 0)
-        FROM correcoes WHERE prova_id = ?
+        SELECT COUNT(*) as total_corrigidas, COALESCE(AVG(nota), 0) as media_nota,
+               COALESCE(MAX(nota), 0) as maior_nota, COALESCE(MIN(nota), 0) as menor_nota
+        FROM correcoes WHERE prova_id = %s
     """, (prova_id,))
-    row = cursor.fetchone()
+    geral = cursor.fetchone()
     conn.close()
     
-    return jsonify({
-        'geral': {
-            'total_corrigidas': row[0] or 0,
-            'media_nota': round(row[1], 1) if row[1] else 0,
-            'maior_nota': round(row[2], 1) if row[2] else 0,
-            'menor_nota': round(row[3], 1) if row[3] else 0
-        }
-    })
+    return jsonify({'geral': geral})
 
 @app.route('/api/historico', methods=['GET'])
 def historico():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify([])
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     cursor.execute("""
         SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
                c.acertos, c.nota, c.data_correcao
@@ -499,8 +571,7 @@ def historico():
         JOIN provas p ON c.prova_id = p.id
         ORDER BY c.data_correcao DESC LIMIT 50
     """)
-    historico = [{'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2], 
-                  'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]} for row in cursor.fetchall()]
+    historico = cursor.fetchall()
     conn.close()
     return jsonify(historico)
 
@@ -511,12 +582,16 @@ def exportar_resultados():
         return jsonify({'erro': 'Prova não informada'}), 400
     
     conn = get_db_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify({'erro': 'Erro de conexão'}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("USE defaultdb")
     cursor.execute("""
         SELECT a.nome as aluno, a.matricula, c.acertos, c.nota, c.data_correcao
         FROM correcoes c
         JOIN alunos a ON c.aluno_id = a.id
-        WHERE c.prova_id = ?
+        WHERE c.prova_id = %s
         ORDER BY c.nota DESC
     """, (prova_id,))
     resultados = cursor.fetchall()
@@ -528,7 +603,7 @@ def exportar_resultados():
     writer = csv.writer(output)
     writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
     for r in resultados:
-        writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
+        writer.writerow([r['aluno'], r.get('matricula', ''), r['acertos'], r['nota'], r['data_correcao']])
     
     return output.getvalue(), 200, {
         'Content-Type': 'text/csv',
