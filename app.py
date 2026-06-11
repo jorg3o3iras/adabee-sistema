@@ -8,15 +8,15 @@ import mysql.connector
 from mysql.connector import Error
 from datetime import datetime
 import os
-import pickle
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+import pickle
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO DO MYSQL (VIA VARIÁVEIS DE AMBIENTE)
+# CONFIGURAÇÃO DO MYSQL
 # ============================================
 DB_CONFIG = {
     'host': os.environ.get('DB_HOST', 'mysql-22b0fe8e-jorge-80ab.d.aivencloud.com'),
@@ -39,7 +39,7 @@ def get_db_connection():
         return None
 
 # ============================================
-# CLASSE DA IA
+# IA COM MODELO PERSISTENTE NO BANCO
 # ============================================
 
 class ClassificadorBolinhasIA:
@@ -47,47 +47,38 @@ class ClassificadorBolinhasIA:
         self.modelo = None
         self.scaler = StandardScaler()
         self.treinado = False
-        self.carregar_modelo()
+        self.carregar_modelo_do_banco()
     
     def extrair_caracteristicas(self, patch):
-        """Extrai características da bolinha para a IA"""
         if patch.size == 0:
             return [0] * 15
         
         caracteristicas = []
         
-        # 1. Percentual de preenchimento
         preenchimento = np.sum(patch < 100) / patch.size
         caracteristicas.append(preenchimento)
         
-        # 2. Média da intensidade
         media = np.mean(patch)
         caracteristicas.append(media / 255.0)
         
-        # 3. Desvio padrão
         desvio = np.std(patch)
         caracteristicas.append(desvio / 255.0)
         
-        # 4. Variância
         variancia = np.var(patch)
         caracteristicas.append(variancia / (255.0 * 255.0))
         
-        # 5. Mínimo
         minimo = np.min(patch)
         caracteristicas.append(minimo / 255.0)
         
-        # 6. Máximo
         maximo = np.max(patch)
         caracteristicas.append(maximo / 255.0)
         
-        # 7. Assimetria (skewness)
         if patch.size > 1:
             skewness = np.mean(((patch - media) / (desvio + 0.01)) ** 3)
             caracteristicas.append(skewness)
         else:
             caracteristicas.append(0)
         
-        # 8-15. Histograma simplificado (8 bins)
         hist = np.histogram(patch, bins=8, range=(0, 255))[0]
         hist_norm = hist / patch.size
         caracteristicas.extend(hist_norm)
@@ -97,10 +88,70 @@ class ClassificadorBolinhasIA:
         
         return caracteristicas
     
+    def salvar_modelo_no_banco(self):
+        if self.modelo is None:
+            return
+        
+        try:
+            # Serializar modelo
+            modelo_bytes = pickle.dumps({'modelo': self.modelo, 'scaler': self.scaler})
+            
+            conn = get_db_connection()
+            if not conn:
+                return
+            
+            cursor = conn.cursor()
+            cursor.execute("USE defaultdb")
+            
+            # Criar tabela de modelo se não existir
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS modelo_ia (
+                    id INT PRIMARY KEY DEFAULT 1,
+                    modelo LONGBLOB,
+                    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Salvar ou atualizar modelo
+            cursor.execute("DELETE FROM modelo_ia WHERE id = 1")
+            cursor.execute("INSERT INTO modelo_ia (id, modelo) VALUES (1, %s)", (modelo_bytes,))
+            conn.commit()
+            conn.close()
+            print("✅ Modelo salvo no banco!")
+        except Exception as e:
+            print(f"Erro ao salvar modelo: {e}")
+    
+    def carregar_modelo_do_banco(self):
+        try:
+            conn = get_db_connection()
+            if not conn:
+                return False
+            
+            cursor = conn.cursor()
+            cursor.execute("USE defaultdb")
+            cursor.execute("SELECT modelo FROM modelo_ia WHERE id = 1")
+            resultado = cursor.fetchone()
+            conn.close()
+            
+            if resultado and resultado[0]:
+                dados = pickle.loads(resultado[0])
+                self.modelo = dados['modelo']
+                self.scaler = dados['scaler']
+                self.treinado = True
+                print("✅ Modelo carregado do banco!")
+                return True
+        except Exception as e:
+            print(f"Erro ao carregar modelo: {e}")
+        
+        return False
+    
     def prever(self, patch):
-        """Prediz se a bolinha está marcada usando IA"""
         if not self.treinado or self.modelo is None:
-            return None, 0.0
+            # Fallback: usar regras simples
+            preenchimento = np.sum(patch < 100) / patch.size if patch.size > 0 else 0
+            marcada = preenchimento > 0.25
+            confianca = min(0.95, preenchimento * 2)
+            return marcada, confianca
         
         caracteristicas = self.extrair_caracteristicas(patch)
         X = self.scaler.transform([caracteristicas])
@@ -109,23 +160,18 @@ class ClassificadorBolinhasIA:
         confianca = proba[1] if marcada else proba[0]
         return marcada, confianca
     
-    def salvar_modelo(self):
-        if self.modelo is not None:
-            with open('modelo_ia.pkl', 'wb') as f:
-                pickle.dump({'modelo': self.modelo, 'scaler': self.scaler}, f)
-    
-    def carregar_modelo(self):
-        try:
-            with open('modelo_ia.pkl', 'rb') as f:
-                dados = pickle.load(f)
-                self.modelo = dados['modelo']
-                self.scaler = dados['scaler']
-                self.treinado = True
-                print("✅ Modelo IA carregado!")
-                return True
-        except:
-            print("⚠️ Modelo IA não encontrado, usando regras")
+    def treinar(self, X, y):
+        if len(X) < 10:
             return False
+        
+        X = np.array(X)
+        self.scaler.fit(X)
+        X_scaled = self.scaler.transform(X)
+        self.modelo = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.modelo.fit(X_scaled, y)
+        self.treinado = True
+        self.salvar_modelo_no_banco()
+        return True
 
 class IAReconhecedor:
     def __init__(self):
@@ -133,7 +179,6 @@ class IAReconhecedor:
         self.usar_ia = True
     
     def detectar_bolinhas(self, imagem_base64):
-        """Detecta bolinhas usando IA"""
         try:
             if ',' in imagem_base64:
                 imagem_base64 = imagem_base64.split(',')[1]
@@ -151,14 +196,12 @@ class IAReconhecedor:
                 nova_largura = int(largura * escala)
                 img = cv2.resize(img, (nova_largura, 1000))
             
-            # Pré-processamento
             cinza = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             cinza = clahe.apply(cinza)
             blur = cv2.GaussianBlur(cinza, (5,5), 0)
             _, binaria = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
             
-            # Detectar círculos
             circles = cv2.HoughCircles(
                 binaria, cv2.HOUGH_GRADIENT, dp=1.2, minDist=25,
                 param1=50, param2=35, minRadius=8, maxRadius=45
@@ -170,7 +213,6 @@ class IAReconhecedor:
             circles = np.round(circles[0, :]).astype(int)
             circles = sorted(circles, key=lambda c: (c[1], c[0]))
             
-            # Calcular regiões das alternativas
             largura_img = img.shape[1]
             regiao = largura_img / 4
             
@@ -185,14 +227,7 @@ class IAReconhecedor:
                 
                 if x2 > x1 and y2 > y1:
                     patch = binaria[y1:y2, x1:x2]
-                    
-                    # Usa IA se disponível, senão usa regras
-                    if self.usar_ia and self.ia.treinado:
-                        marcada, confianca = self.ia.prever(patch)
-                    else:
-                        preenchimento = np.sum(patch < 100) / patch.size if patch.size > 0 else 0
-                        marcada = preenchimento > 0.25
-                        confianca = min(0.95, preenchimento * 2)
+                    marcada, confianca = self.ia.prever(patch)
                     
                     if marcada:
                         if x < regiao:
@@ -215,7 +250,7 @@ class IAReconhecedor:
 reconhecedor = IAReconhecedor()
 
 # ============================================
-# INICIALIZAR BANCO
+# FUNÇÕES DO BANCO
 # ============================================
 
 def init_database():
@@ -277,6 +312,13 @@ def init_database():
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS modelo_ia (
+            id INT PRIMARY KEY DEFAULT 1,
+            modelo LONGBLOB,
+            data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
     conn.close()
     print("✅ Banco inicializado!")
@@ -284,7 +326,7 @@ def init_database():
 init_database()
 
 # ============================================
-# ROTAS
+# ROTAS DA API
 # ============================================
 
 @app.route('/')
@@ -456,7 +498,6 @@ def corrigir_prova():
         
         gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
         
-        # Usar IA para detectar bolinhas
         respostas_detectadas, confianca = reconhecedor.detectar_bolinhas(imagem)
         
         if len(respostas_detectadas) == 0:
@@ -481,7 +522,6 @@ def corrigir_prova():
         
         conn.close()
         
-        # Retornar resultado com indicação do uso da IA
         usando_ia_texto = "IA (Random Forest)" if reconhecedor.usar_ia and reconhecedor.ia.treinado else "regras OpenCV"
         
         return jsonify({
@@ -588,16 +628,13 @@ def treinar_ia():
                 y.append(0)
         
         if len(X) >= 10:
-            X = np.array(X)
-            reconhecedor.ia.scaler.fit(X)
-            X_scaled = reconhecedor.ia.scaler.transform(X)
-            reconhecedor.ia.modelo = RandomForestClassifier(n_estimators=100, random_state=42)
-            reconhecedor.ia.modelo.fit(X_scaled, y)
-            reconhecedor.ia.treinado = True
-            reconhecedor.ia.salvar_modelo()
-            return jsonify({'status': 'ok', 'mensagem': 'IA treinada com sucesso!'})
+            sucesso = reconhecedor.ia.treinar(X, y)
+            if sucesso:
+                return jsonify({'status': 'ok', 'mensagem': '✅ IA treinada com sucesso e salva no banco!'})
+            else:
+                return jsonify({'status': 'erro', 'mensagem': 'Erro no treinamento'})
         else:
-            return jsonify({'status': 'erro', 'mensagem': 'Precisa de pelo menos 5 exemplos de cada tipo'})
+            return jsonify({'status': 'erro', 'mensagem': f'Precisa de pelo menos 10 exemplos (tem {len(X)})'})
     except Exception as e:
         return jsonify({'status': 'erro', 'mensagem': str(e)})
 
