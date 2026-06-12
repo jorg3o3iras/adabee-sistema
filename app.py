@@ -474,7 +474,7 @@ def calibrar():
     return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!', 'limites': {'A': (0,80), 'B': (81,160), 'C': (161,240), 'D': (241,320), 'E': (321,400)}})
 
 # ============================================
-# GERAR GABARITO
+# GERAR GABARITO - CORRIGIDO (ABRE EM NOVA ABA)
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -489,26 +489,28 @@ def gerar_gabarito():
         
         # Buscar dados do banco
         conn = get_db_connection()
+        cursor = conn.cursor()
         
-        conn.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
-        escola = conn.fetchone()
+        cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
+        escola = cursor.fetchone()
         nome_escola = escola[0] if escola else "ESCOLA"
         
-        conn.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
-        turma = conn.fetchone()
+        cursor.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
+        turma = cursor.fetchone()
         nome_turma = turma[0] if turma else "TURMA"
         
-        conn.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
-        aluno = conn.fetchone()
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
+        aluno = cursor.fetchone()
         nome_aluno = aluno[0] if aluno else "ALUNO"
         numero = str(aluno[1]) if aluno and aluno[1] else ""
         
-        conn.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
-        prova = conn.fetchone()
+        cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
+        prova = cursor.fetchone()
         nome_prova = prova[0] if prova else "PROVA"
         
         conn.close()
         
+        # Gerar HTML completo
         html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -516,75 +518,208 @@ def gerar_gabarito():
     <title>Folha de Respostas - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
-        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }}
-        .folha {{ padding: 30px; }}
-        .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #4CAF50; padding-bottom: 15px; }}
-        .header h2 {{ color: #4CAF50; font-size: 24px; }}
-        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
-        .info-item {{ display: flex; gap: 10px; }}
-        .info-label {{ font-weight: bold; color: #555; min-width: 80px; }}
-        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 150px; }}
-        .instrucoes {{ background: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 12px; color: #856404; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th {{ background: #4CAF50; color: white; padding: 10px; text-align: center; }}
-        td {{ padding: 8px; border-bottom: 1px solid #ddd; }}
-        .questao-num {{ font-weight: bold; width: 60px; text-align: center; }}
-        .opcoes {{ display: flex; gap: 20px; justify-content: center; }}
-        .opcao {{ display: inline-flex; align-items: center; gap: 8px; }}
-        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; }}
-        .rodape {{ margin-top: 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 15px; }}
-        .botoes {{ text-align: center; margin: 20px; }}
-        button {{ background: #4CAF50; color: white; border: none; padding: 12px 30px; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 0 10px; }}
-        button.secundario {{ background: #2196F3; }}
-        button:hover {{ opacity: 0.9; }}
-        @media print {{ .botoes {{ display: none; }} .container {{ box-shadow: none; }} }}
+        body {{ 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #f0f2f5;
+            padding: 20px;
+        }}
+        .container {{
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }}
+        .folha {{
+            padding: 30px;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 15px;
+        }}
+        .header h2 {{
+            color: #4CAF50;
+            font-size: 24px;
+        }}
+        .info-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }}
+        .info-item {{
+            display: flex;
+            gap: 10px;
+        }}
+        .info-label {{
+            font-weight: bold;
+            color: #555;
+            min-width: 80px;
+        }}
+        .info-value {{
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            min-width: 150px;
+        }}
+        .instrucoes {{
+            background: #FFF3CD;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #856404;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        th {{
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }}
+        td {{
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }}
+        .questao-num {{
+            font-weight: bold;
+            width: 60px;
+        }}
+        .circulo {{
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #333;
+            border-radius: 50%;
+        }}
+        .botoes {{
+            text-align: center;
+            margin: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }}
+        button {{
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+        }}
+        button:hover {{
+            background: #45a049;
+        }}
+        button.secundario {{
+            background: #2196F3;
+        }}
+        button.secundario:hover {{
+            background: #0b7dda;
+        }}
+        @media print {{
+            body {{
+                background: white;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+            }}
+            .botoes {{
+                display: none;
+            }}
+        }}
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="folha">
-        <div class="header">
-            <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
-            <p>Correção com Inteligência Artificial Gemini</p>
-        </div>
-        <div class="info-grid">
-            <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
-            <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
-            <div class="info-item"><span class="info-label">ALUNO(A):</span><span class="info-value">{nome_aluno}</span></div>
-            <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
-            <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
-            <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
-        </div>
-        <div class="instrucoes">
-            <strong>📌 INSTRUÇÕES IMPORTANTES:</strong><br>
-            • Preencha COMPLETAMENTE a bolinha da resposta escolhida<br>
-            • Use caneta preta ou azul | • Não rasure, não amasse e não dobre a folha
-        </div>
-        <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
+    <div class="container">
+        <div class="folha">
+            <div class="header">
+                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+                <p>Correção com Inteligência Artificial Gemini</p>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO(A):</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
+            </div>
+            
+            <div class="instrucoes">
+                <strong>📌 INSTRUÇÕES IMPORTANTES:</strong><br>
+                • Preencha COMPLETAMENTE a bolinha da resposta escolhida<br>
+                • Use caneta preta ou azul | • Não rasure, não amasse e não dobre a folha
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Questão</th>
+                        <th>A</th>
+                        <th>B</th>
+                        <th>C</th>
+                        <th>D</th>
+                        <th>E</th>
+                    </tr>
+                </thead>
+                <tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
-            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
+            html += f"""
+                    <tr>
+                        <td class="questao-num">{i}</td>
+                        <td><span class="circulo"></span></td>
+                        <td><span class="circulo"></span></td>
+                        <td><span class="circulo"></span></td>
+                        <td><span class="circulo"></span></td>
+                        <td><span class="circulo"></span></td>
+                    </tr>"""
         
-        html += f"""</tbody><tr>
-        <div class="rodape">
-            <strong>AdaBee AI - Tecnologia Gemini</strong><br>
-            Precisão de 95-98% na detecção de respostas
+        html += f"""
+                </tbody>
+            </table>
+            
+            <div class="rodape" style="margin-top:30px; text-align:center; font-size:11px; color:#999; border-top:1px solid #ddd; padding-top:15px;">
+                <strong>AdaBee AI - Tecnologia Gemini</strong><br>
+                Precisão de 95-98% na detecção de respostas
+            </div>
+        </div>
+        <div class="botoes">
+            <button onclick="window.print()">🖨️ IMPRIMIR FOLHA</button>
+            <button class="secundario" onclick="baixarPDF()">💾 SALVAR COMO PDF</button>
         </div>
     </div>
-    <div class="botoes">
-        <button onclick="window.print()">🖨️ IMPRIMIR</button>
-        <button class="secundario" onclick="window.print()">💾 SALVAR COMO PDF</button>
-    </div>
-</div>
+    <script>
+        function baixarPDF() {{
+            window.print();
+        }}
+    </script>
 </body>
 </html>"""
         
-        html_base64 = base64.b64encode(html.encode('utf-8')).decode()
-        return jsonify({'imagem': f"data:text/html;base64,{html_base64}"})
+        # Retornar HTML diretamente (abre em nova aba)
+        return html, 200, {'Content-Type': 'text/html'}
+        
     except Exception as e:
-        print(f"Erro: {e}")
-        return jsonify({'erro': str(e)}), 500
+        print(f"Erro ao gerar gabarito: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"<h3>Erro ao gerar folha de respostas</h3><p>{str(e)}</p>", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
