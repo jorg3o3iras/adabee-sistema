@@ -33,7 +33,7 @@ if GEMINI_API_KEY:
         print(f"❌ Erro ao configurar Gemini: {e}")
 else:
     GEMINI_AVAILABLE = False
-    print("⚠️ Gemini não configurado. Use OpenCV como fallback.")
+    print("⚠️ Gemini não configurado.")
 
 # ============================================
 # BANCO DE DADOS SQLITE
@@ -76,106 +76,54 @@ def init_database():
 init_database()
 
 # ============================================
-# DETECÇÃO COM GEMINI AI (PROMPT OTIMIZADO)
+# DETECÇÃO COM GEMINI AI
 # ============================================
 
 def detectar_com_gemini(imagem_base64):
-    """Usa Google Gemini para detectar respostas com alta precisão"""
+    """Usa Google Gemini para detectar respostas"""
     try:
         if not GEMINI_AVAILABLE:
             return None, 0.0
         
-        # Remover cabeçalho base64
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
         
         imagem_bytes = base64.b64decode(imagem_base64)
         img = Image.open(io.BytesIO(imagem_bytes))
         
-        # PROMPT OTIMIZADO PARA MAIOR PRECISÃO
         prompt = """
-[INSTRUÇÕES ESTRITAS - SIGA EXATAMENTE]
-
-VOCÊ É UM SISTEMA DE CORREÇÃO DE PROVAS. ANALISE A IMAGEM DO CARTÃO RESPOSTA.
-
-REGRAS:
-1. O cartão tem questões numeradas (1, 2, 3...)
-2. Cada questão tem 5 bolinhas: A, B, C, D, E
-3. O aluno preencheu UMA bolinha por questão (mais escura)
-4. As bolinhas não marcadas estão vazias/brancas
-
-TAREFA:
-Liste SOMENTE as letras das respostas marcadas, na ordem das questões.
-
-FORMATO EXATO (OBRIGATÓRIO):
-A, B, C, D, E, A, B, C, D, E
-
-REGRAS DE FORMATAÇÃO:
-- Use SOMENTE letras maiúsculas
-- Separe POR VÍRGULA E ESPAÇO (", ")
-- NÃO use números
-- NÃO use texto explicativo
-- NÃO use pontuação extra
-- NÃO use aspas
-
-EXEMPLO CORRETO para 10 questões:
-A, B, C, A, D, E, B, C, A, D
-
-Se a questão estiver em branco, use "?" no lugar.
-
-Responda APENAS a linha com as letras. NADA MAIS.
-"""
+        Analise esta imagem de cartão resposta.
+        Liste APENAS as letras das respostas marcadas (A, B, C, D ou E).
+        Separe por vírgula. Exemplo: A, B, C, D, A, B, C, D
+        Responda SOMENTE as letras, sem texto adicional.
+        """
         
-        # Enviar para o Gemini
         response = model.generate_content([prompt, img])
         texto = response.text.strip()
         
-        print(f"🤖 Gemini resposta bruta: {texto}")
+        print(f"🤖 Gemini: {texto}")
         
-        # Limpar a resposta - remover tudo que não for letras ou ?
-        texto_limpo = re.sub(r'[^A-E?,]', '', texto.upper())
-        
-        # Processar resposta
         respostas = []
-        for item in texto_limpo.split(','):
-            letra = item.strip()
+        for letra in texto.upper():
             if letra in ['A', 'B', 'C', 'D', 'E']:
                 respostas.append(letra)
-            elif letra == '?':
-                respostas.append('?')
         
-        # Se não conseguiu detectar, tentar extrair letras individuais
-        if len(respostas) == 0:
-            letras_encontradas = re.findall(r'[A-E]', texto.upper())
-            if letras_encontradas:
-                respostas = letras_encontradas[:50]
+        if respostas:
+            print(f"✅ Gemini detectou: {respostas}")
+            return respostas, 95.0
         
-        # Garantir que cada resposta é uma letra válida
-        respostas = [r if r in ['A','B','C','D','E'] else '?' for r in respostas]
-        
-        print(f"✅ Gemini detectou: {respostas}")
-        confianca = 95.0 if len(respostas) > 0 else 0.0
-        return respostas, confianca
+        return None, 0.0
         
     except Exception as e:
         print(f"❌ Erro no Gemini: {e}")
         return None, 0.0
 
-# ============================================
-# DETECÇÃO PRINCIPAL (APENAS GEMINI)
-# ============================================
-
 def detectar_respostas(imagem_base64):
-    """Usa APENAS Gemini AI para detecção"""
-    
+    """Detecta respostas usando Gemini"""
     if GEMINI_AVAILABLE:
         respostas, confianca = detectar_com_gemini(imagem_base64)
         if respostas and len(respostas) > 0:
-            print(f"🎯 Gemini AI - {len(respostas)} respostas detectadas")
             return respostas, confianca
-    
-    # Se Gemini falhar, retorna erro (não usa OpenCV)
-    print("❌ Gemini AI falhou. Verifique a imagem.")
     return [], 0.0
 
 # ============================================
@@ -339,13 +287,11 @@ def corrigir_prova():
         
         if len(respostas_detectadas) == 0:
             conn.close()
-            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida e com boa iluminação.'}), 400
+            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida.'}), 400
         
-        # Alinhar tamanhos - se detectou menos que o gabarito
         while len(respostas_detectadas) < len(gabarito):
             respostas_detectadas.append('?')
         
-        # Calcular acertos
         acertos = 0
         correcoes = []
         for i in range(len(gabarito)):
@@ -353,12 +299,7 @@ def corrigir_prova():
             correta = resposta == gabarito[i] if resposta != '?' else False
             if correta:
                 acertos += 1
-            correcoes.append({
-                'questao': i+1, 
-                'resposta': resposta, 
-                'gabarito': gabarito[i], 
-                'correta': correta
-            })
+            correcoes.append({'questao': i+1, 'resposta': resposta, 'gabarito': gabarito[i], 'correta': correta})
         
         nota = (acertos / len(gabarito)) * 10 if gabarito else 0
         
@@ -467,14 +408,14 @@ def alternar_ia():
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto! Faça o upload da imagem para correção.'})
+    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto!'})
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
-    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!', 'limites': {'A': (0,80), 'B': (81,160), 'C': (161,240), 'D': (241,320), 'E': (321,400)}})
+    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!'})
 
 # ============================================
-# GERAR GABARITO - CORRIGIDO (ABRE EM NOVA ABA)
+# GERAR GABARITO - CORRIGIDO
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -487,7 +428,6 @@ def gerar_gabarito():
         prova_id = dados.get('prova_id')
         qtd_questoes = dados.get('quantidade_questoes', 20)
         
-        # Buscar dados do banco
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -510,7 +450,7 @@ def gerar_gabarito():
         
         conn.close()
         
-        # Gerar HTML completo
+        # Gerar HTML para impressão
         html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -518,208 +458,57 @@ def gerar_gabarito():
     <title>Folha de Respostas - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            background: #f0f2f5;
-            padding: 20px;
-        }}
-        .container {{
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            border-radius: 10px;
-        }}
-        .folha {{
-            padding: 30px;
-        }}
-        .header {{
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 15px;
-        }}
-        .header h2 {{
-            color: #4CAF50;
-            font-size: 24px;
-        }}
-        .info-grid {{
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }}
-        .info-item {{
-            display: flex;
-            gap: 10px;
-        }}
-        .info-label {{
-            font-weight: bold;
-            color: #555;
-            min-width: 80px;
-        }}
-        .info-value {{
-            color: #333;
-            border-bottom: 1px solid #ccc;
-            min-width: 150px;
-        }}
-        .instrucoes {{
-            background: #FFF3CD;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #856404;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        th {{
-            background: #4CAF50;
-            color: white;
-            padding: 10px;
-            text-align: center;
-        }}
-        td {{
-            padding: 8px;
-            text-align: center;
-            border-bottom: 1px solid #ddd;
-        }}
-        .questao-num {{
-            font-weight: bold;
-            width: 60px;
-        }}
-        .circulo {{
-            display: inline-block;
-            width: 22px;
-            height: 22px;
-            border: 2px solid #333;
-            border-radius: 50%;
-        }}
-        .botoes {{
-            text-align: center;
-            margin: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }}
-        button {{
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 0 10px;
-        }}
-        button:hover {{
-            background: #45a049;
-        }}
-        button.secundario {{
-            background: #2196F3;
-        }}
-        button.secundario:hover {{
-            background: #0b7dda;
-        }}
-        @media print {{
-            body {{
-                background: white;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-            }}
-            .botoes {{
-                display: none;
-            }}
-        }}
+        body {{ font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }}
+        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }}
+        .folha {{ padding: 30px; }}
+        .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #4CAF50; padding-bottom: 15px; }}
+        .header h2 {{ color: #4CAF50; }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(2,1fr); gap: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+        .info-item {{ display: flex; gap: 10px; }}
+        .info-label {{ font-weight: bold; min-width: 80px; }}
+        .instrucoes {{ background: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 12px; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #4CAF50; color: white; padding: 10px; }}
+        td {{ padding: 8px; text-align: center; border-bottom: 1px solid #ddd; }}
+        .questao-num {{ font-weight: bold; width: 60px; }}
+        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; }}
+        .botoes {{ text-align: center; margin: 20px; }}
+        button {{ background: #4CAF50; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; margin: 0 10px; }}
+        @media print {{ .botoes {{ display: none; }} }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="folha">
-            <div class="header">
-                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
-                <p>Correção com Inteligência Artificial Gemini</p>
-            </div>
-            
-            <div class="info-grid">
-                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
-                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
-                <div class="info-item"><span class="info-label">ALUNO(A):</span><span class="info-value">{nome_aluno}</span></div>
-                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
-                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
-                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
-            </div>
-            
-            <div class="instrucoes">
-                <strong>📌 INSTRUÇÕES IMPORTANTES:</strong><br>
-                • Preencha COMPLETAMENTE a bolinha da resposta escolhida<br>
-                • Use caneta preta ou azul | • Não rasure, não amasse e não dobre a folha
-            </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>Questão</th>
-                        <th>A</th>
-                        <th>B</th>
-                        <th>C</th>
-                        <th>D</th>
-                        <th>E</th>
-                    </tr>
-                </thead>
-                <tbody>"""
+<div class="container">
+    <div class="folha">
+        <div class="header"><h2>🐝🧠 FOLHA DE RESPOSTAS - Gemini AI</h2></div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">ESCOLA:</span> {nome_escola}</div>
+            <div class="info-item"><span class="info-label">TURMA:</span> {nome_turma}</div>
+            <div class="info-item"><span class="info-label">ALUNO:</span> {nome_aluno}</div>
+            <div class="info-item"><span class="info-label">Nº:</span> {numero}</div>
+            <div class="info-item"><span class="info-label">PROVA:</span> {nome_prova}</div>
+            <div class="info-item"><span class="info-label">DATA:</span> ___/___/______</div>
+        </div>
+        <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha da resposta escolhida. Use caneta preta ou azul.</div>
+        <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
-            html += f"""
-                    <tr>
-                        <td class="questao-num">{i}</td>
-                        <td><span class="circulo"></span></td>
-                        <td><span class="circulo"></span></td>
-                        <td><span class="circulo"></span></td>
-                        <td><span class="circulo"></span></td>
-                        <td><span class="circulo"></span></td>
-                    </tr>"""
+            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
         
-        html += f"""
-                </tbody>
-            </table>
-            
-            <div class="rodape" style="margin-top:30px; text-align:center; font-size:11px; color:#999; border-top:1px solid #ddd; padding-top:15px;">
-                <strong>AdaBee AI - Tecnologia Gemini</strong><br>
-                Precisão de 95-98% na detecção de respostas
-            </div>
-        </div>
-        <div class="botoes">
-            <button onclick="window.print()">🖨️ IMPRIMIR FOLHA</button>
-            <button class="secundario" onclick="baixarPDF()">💾 SALVAR COMO PDF</button>
-        </div>
+        html += f"""</tbody></table>
+        <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button><button onclick="baixarPDF()">💾 SALVAR PDF</button></div>
     </div>
-    <script>
-        function baixarPDF() {{
-            window.print();
-        }}
-    </script>
+</div>
+<script>function baixarPDF(){{window.print();}}</script>
 </body>
 </html>"""
         
-        # Retornar HTML diretamente (abre em nova aba)
+        # Retornar HTML diretamente
         return html, 200, {'Content-Type': 'text/html'}
         
     except Exception as e:
-        print(f"Erro ao gerar gabarito: {e}")
-        import traceback
-        traceback.print_exc()
-        return f"<h3>Erro ao gerar folha de respostas</h3><p>{str(e)}</p>", 500
+        print(f"Erro: {e}")
+        return f"<h3>Erro: {str(e)}</h3>", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
