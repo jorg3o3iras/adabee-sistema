@@ -76,11 +76,11 @@ def init_database():
 init_database()
 
 # ============================================
-# DETECÇÃO COM GEMINI AI
+# DETECÇÃO COM GEMINI AI - PROMPT MELHORADO
 # ============================================
 
 def detectar_com_gemini(imagem_base64):
-    """Usa Google Gemini para detectar respostas"""
+    """Usa Google Gemini para detectar respostas com alta precisão"""
     try:
         if not GEMINI_AVAILABLE:
             return None, 0.0
@@ -91,27 +91,64 @@ def detectar_com_gemini(imagem_base64):
         imagem_bytes = base64.b64decode(imagem_base64)
         img = Image.open(io.BytesIO(imagem_bytes))
         
+        # PROMPT DETALHADO E ESPECÍFICO
         prompt = """
-        Analise esta imagem de cartão resposta.
-        Liste APENAS as letras das respostas marcadas (A, B, C, D ou E).
-        Separe por vírgula. Exemplo: A, B, C, D, A, B, C, D
-        Responda SOMENTE as letras, sem texto adicional.
-        """
+[INSTRUÇÕES] Você é um sistema de correção de provas.
+
+ANALISE A IMAGEM DO CARTÃO RESPOSTA:
+- A imagem contém uma folha de respostas
+- Cada questão tem 5 bolinhas: A, B, C, D, E
+- As bolinhas estão em ordem horizontal
+- O aluno marcou UMA bolinha por questão (deixou mais escura)
+- Bolinhas não marcadas estão vazias/brancas
+
+SUA TAREFA:
+Liste APENAS as letras das bolinhas marcadas, na ordem das questões (da 1 até o final)
+
+FORMATO DE RESPOSTA (OBRIGATÓRIO):
+A, B, C, D, A, B, C, D, E, A
+
+REGRAS:
+- Use apenas letras maiúsculas (A, B, C, D, E)
+- Separe por vírgula e espaço
+- NÃO adicione números
+- NÃO adicione explicações
+- NÃO adicione pontuação extra
+- Se não conseguir identificar uma questão, use "?"
+
+Responda SOMENTE a lista de letras. NADA MAIS.
+"""
         
-        response = model.generate_content([prompt, img])
+        # Chamar Gemini com temperatura baixa para mais precisão
+        response = model.generate_content(
+            [prompt, img],
+            generation_config={
+                "temperature": 0.0,
+                "top_p": 0.9,
+            }
+        )
         texto = response.text.strip()
         
-        print(f"🤖 Gemini: {texto}")
+        print(f"🤖 Gemini resposta bruta: {texto}")
         
+        # Extrair apenas letras de A a E
         respostas = []
-        for letra in texto.upper():
-            if letra in ['A', 'B', 'C', 'D', 'E']:
-                respostas.append(letra)
+        letras_encontradas = re.findall(r'[A-E]', texto.upper())
         
-        if respostas:
-            print(f"✅ Gemini detectou: {respostas}")
+        if letras_encontradas:
+            respostas = letras_encontradas
+            print(f"✅ Gemini detectou: {len(respostas)} respostas - {respostas}")
             return respostas, 95.0
         
+        # Fallback: tentar extrair qualquer letra
+        todas_letras = re.findall(r'[A-Z]', texto.upper())
+        letras_validas = [l for l in todas_letras if l in ['A','B','C','D','E']]
+        if letras_validas:
+            print(f"✅ Gemini detectou (fallback): {letras_validas}")
+            return letras_validas, 85.0
+        
+        print("❌ Gemini não detectou nenhuma letra válida")
+        print(f"📝 Texto completo do Gemini: {texto}")
         return None, 0.0
         
     except Exception as e:
@@ -125,6 +162,38 @@ def detectar_respostas(imagem_base64):
         if respostas and len(respostas) > 0:
             return respostas, confianca
     return [], 0.0
+
+# ============================================
+# ROTA DE TESTE PARA VER O QUE O GEMINI VÊ
+# ============================================
+
+@app.route('/api/testar_gemini', methods=['POST'])
+def testar_gemini():
+    """Endpoint para diagnosticar o que o Gemini está vendo"""
+    try:
+        dados = request.json
+        imagem = dados.get('imagem')
+        
+        if not imagem:
+            return jsonify({'erro': 'Imagem não fornecida'}), 400
+        
+        if ',' in imagem:
+            imagem = imagem.split(',')[1]
+        
+        imagem_bytes = base64.b64decode(imagem)
+        img = Image.open(io.BytesIO(imagem_bytes))
+        
+        # Prompt simples para diagnóstico
+        prompt = "Descreva o que você vê nesta imagem. Liste todas as letras A, B, C, D, E que você identificar, na ordem em que aparecem."
+        
+        response = model.generate_content([prompt, img])
+        
+        return jsonify({
+            'resposta_bruta': response.text,
+            'sucesso': True
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e), 'sucesso': False}), 500
 
 # ============================================
 # ROTAS DA API
@@ -287,7 +356,7 @@ def corrigir_prova():
         
         if len(respostas_detectadas) == 0:
             conn.close()
-            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida.'}), 400
+            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida com boa iluminação.'}), 400
         
         while len(respostas_detectadas) < len(gabarito):
             respostas_detectadas.append('?')
@@ -408,14 +477,14 @@ def alternar_ia():
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto!'})
+    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto! Faça o upload da imagem para correção.'})
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
-    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!'})
+    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!', 'limites': {'A': (0,80), 'B': (81,160), 'C': (161,240), 'D': (241,320), 'E': (321,400)}})
 
 # ============================================
-# GERAR GABARITO - CORRIGIDO
+# GERAR GABARITO
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -450,7 +519,6 @@ def gerar_gabarito():
         
         conn.close()
         
-        # Gerar HTML para impressão
         html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -495,7 +563,7 @@ def gerar_gabarito():
         for i in range(1, int(qtd_questoes) + 1):
             html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
         
-        html += f"""</tbody></table>
+        html += f"""</tbody><table>
         <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button><button onclick="baixarPDF()">💾 SALVAR PDF</button></div>
     </div>
 </div>
@@ -503,7 +571,6 @@ def gerar_gabarito():
 </body>
 </html>"""
         
-        # Retornar HTML diretamente
         return html, 200, {'Content-Type': 'text/html'}
         
     except Exception as e:
