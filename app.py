@@ -512,6 +512,7 @@ def calibrar():
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
+@app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
         dados = request.json
@@ -544,7 +545,12 @@ def gerar_gabarito():
         
         conn.close()
         
-        # HTML melhorado com círculos maiores e mais visíveis
+        # Limitar para caber em uma página (máximo 30 questões por página)
+        if int(qtd_questoes) > 30:
+            qtd_questoes = 30
+            print("⚠️ Limitado a 30 questões para caber em uma página")
+        
+        # HTML otimizado para caber em UMA página
         html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -555,7 +561,7 @@ def gerar_gabarito():
         body {{ 
             font-family: 'Segoe UI', Arial, sans-serif; 
             background: #f0f2f5;
-            padding: 20px;
+            padding: 15px;
         }}
         .container {{
             max-width: 1000px;
@@ -565,52 +571,52 @@ def gerar_gabarito():
             border-radius: 10px;
         }}
         .folha {{
-            padding: 30px;
+            padding: 20px;
         }}
         .header {{
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
             border-bottom: 3px solid #4CAF50;
-            padding-bottom: 15px;
+            padding-bottom: 10px;
         }}
         .header h2 {{
             color: #4CAF50;
-            font-size: 24px;
+            font-size: 20px;
         }}
         .header p {{
             color: #666;
-            font-size: 12px;
+            font-size: 10px;
         }}
         .info-grid {{
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 15px;
             background: #f9f9f9;
-            padding: 15px;
+            padding: 10px;
             border-radius: 8px;
+            font-size: 12px;
         }}
         .info-item {{
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }}
         .info-label {{
             font-weight: bold;
             color: #555;
-            min-width: 80px;
+            min-width: 70px;
         }}
         .info-value {{
             color: #333;
             border-bottom: 1px solid #ccc;
-            min-width: 150px;
-            padding: 0 5px;
+            min-width: 120px;
         }}
         .instrucoes {{
             background: #FFF3CD;
-            padding: 12px;
+            padding: 8px;
             border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 13px;
+            margin-bottom: 15px;
+            font-size: 10px;
             color: #856404;
             text-align: center;
         }}
@@ -621,23 +627,24 @@ def gerar_gabarito():
         th {{
             background: #4CAF50;
             color: white;
-            padding: 12px;
+            padding: 6px;
             text-align: center;
             font-weight: bold;
+            font-size: 12px;
         }}
         td {{
-            padding: 10px;
+            padding: 6px;
             border-bottom: 1px solid #ddd;
         }}
         .questao-num {{
             font-weight: bold;
-            width: 70px;
+            width: 50px;
             text-align: center;
-            font-size: 16px;
+            font-size: 12px;
         }}
         .opcoes {{
             display: flex;
-            gap: 35px;
+            gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
         }}
@@ -645,35 +652,33 @@ def gerar_gabarito():
             display: inline-flex;
             flex-direction: column;
             align-items: center;
-            gap: 5px;
-            cursor: pointer;
-            min-width: 55px;
+            gap: 3px;
+            min-width: 45px;
         }}
         .circulo {{
             display: inline-block;
-            width: 32px;
-            height: 32px;
-            border: 3px solid #333;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #333;
             border-radius: 50%;
             background: white;
-            transition: all 0.2s;
         }}
         .opcao span:last-child {{
             font-weight: bold;
-            font-size: 16px;
+            font-size: 11px;
         }}
         .rodape {{
-            margin-top: 30px;
+            margin-top: 15px;
             text-align: center;
-            font-size: 11px;
+            font-size: 9px;
             color: #999;
             border-top: 1px solid #ddd;
-            padding-top: 15px;
+            padding-top: 10px;
         }}
         .botoes {{
             text-align: center;
-            margin: 20px;
-            padding: 15px;
+            margin: 15px;
+            padding: 10px;
             background: #f8f9fa;
             border-radius: 8px;
         }}
@@ -681,9 +686,9 @@ def gerar_gabarito():
             background: #4CAF50;
             color: white;
             border: none;
-            padding: 12px 30px;
+            padding: 10px 25px;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
             margin: 0 10px;
         }}
@@ -714,7 +719,7 @@ def gerar_gabarito():
                 border-bottom: none;
             }}
             .circulo {{
-                border: 2px solid #000;
+                border: 1.5px solid #000;
             }}
         }}
     </style>
@@ -724,31 +729,27 @@ def gerar_gabarito():
         <div class="folha">
             <div class="header">
                 <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
-                <p>Sistema de Correção Inteligente - Marque APENAS uma bolinha por questão</p>
+                <p>Sistema de Correção Inteligente</p>
             </div>
             
             <div class="info-grid">
                 <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
                 <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
-                <div class="info-item"><span class="info-label">ALUNO(A):</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
                 <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
                 <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
                 <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
             </div>
             
             <div class="instrucoes">
-                <strong>📌 INSTRUÇÕES IMPORTANTES:</strong><br>
-                • Preencha COMPLETAMENTE a bolinha da resposta escolhida (deixe toda PRETA)<br>
-                • Use caneta PRETA ou AZUL ESCURA<br>
-                • Não rasure, não amasse e não dobre a folha<br>
-                • Cada questão tem apenas UMA resposta correta (A, B, C, D ou E)
+                <strong>📌 INSTRUÇÕES:</strong> Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.
             </div>
             
             <table>
                 <thead>
                     <tr>
-                        <th>Questão</th>
-                        <th colspan="5">Respostas (A, B, C, D, E)</th>
+                        <th>Q</th>
+                        <th colspan="5">RESPOSTAS (A, B, C, D, E)</th>
                     </tr>
                 </thead>
                 <tbody>"""
@@ -788,13 +789,12 @@ def gerar_gabarito():
             </table>
             
             <div class="rodape">
-                <strong>AdaBee AI - Corretor Inteligente</strong><br>
-                Certifique-se de preencher completamente a bolinha escolhida
+                <strong>AdaBee AI</strong> - Preencha completamente a bolinha | Use caneta PRETA
             </div>
         </div>
         <div class="botoes">
             <button onclick="window.print()">🖨️ IMPRIMIR</button>
-            <button class="secundario" onclick="baixarPDF()">💾 SALVAR COMO PDF</button>
+            <button class="secundario" onclick="baixarPDF()">💾 SALVAR PDF</button>
         </div>
     </div>
     <script>
@@ -802,21 +802,17 @@ def gerar_gabarito():
             window.print();
         }}
         
-        // Permitir marcar apenas uma opção por linha
+        // Marcar apenas uma opção por linha
         document.querySelectorAll('.opcoes').forEach(grupo => {{
             const opcoes = grupo.querySelectorAll('.opcao');
             opcoes.forEach(opcao => {{
                 opcao.addEventListener('click', function() {{
-                    // Limpar todas da mesma linha
                     opcoes.forEach(opt => {{
-                        const circulo = opt.querySelector('.circulo');
-                        circulo.style.backgroundColor = 'white';
-                        circulo.style.border = '3px solid #333';
+                        opt.querySelector('.circulo').style.backgroundColor = 'white';
+                        opt.querySelector('.circulo').style.border = '2px solid #333';
                     }});
-                    // Marcar esta
-                    const circulo = this.querySelector('.circulo');
-                    circulo.style.backgroundColor = 'black';
-                    circulo.style.border = '3px solid black';
+                    this.querySelector('.circulo').style.backgroundColor = 'black';
+                    this.querySelector('.circulo').style.border = '2px solid black';
                 }});
             }});
         }});
