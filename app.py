@@ -20,7 +20,6 @@ CORS(app)
 # CONFIGURAR GEMINI AI
 # ============================================
 
-# Pega a chave da variável de ambiente no Render
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 if GEMINI_API_KEY:
@@ -77,7 +76,7 @@ def init_database():
 init_database()
 
 # ============================================
-# DETECÇÃO COM GEMINI AI (PRECISÃO MÁXIMA)
+# DETECÇÃO COM GEMINI AI (PROMPT OTIMIZADO)
 # ============================================
 
 def detectar_com_gemini(imagem_base64):
@@ -93,27 +92,39 @@ def detectar_com_gemini(imagem_base64):
         imagem_bytes = base64.b64decode(imagem_base64)
         img = Image.open(io.BytesIO(imagem_bytes))
         
-        # Prompt otimizado para detecção de cartão resposta
+        # PROMPT OTIMIZADO PARA MAIOR PRECISÃO
         prompt = """
-        Analise esta imagem de um cartão resposta de prova.
-        
-        INFORMAÇÕES:
-        - Este é um cartão resposta com questões de múltipla escolha
-        - Cada questão tem 5 opções: A, B, C, D, E
-        - O aluno marcou UMA bolinha para cada questão
-        - A bolinha marcada está preenchida/escura
-        
-        TAREFA:
-        Identifique qual letra (A, B, C, D ou E) foi marcada em CADA questão.
-        
-        REGRAS:
-        - Responda APENAS com as letras separadas por vírgula
-        - Mantenha a ordem das questões (da primeira para a última)
-        - Exemplo correto: A, B, C, A, D, E, B, C, A, D
-        - Se não conseguir identificar alguma, coloque ? no lugar
-        
-        IMPORTANTE: Responda SOMENTE as letras, sem texto adicional.
-        """
+[INSTRUÇÕES ESTRITAS - SIGA EXATAMENTE]
+
+VOCÊ É UM SISTEMA DE CORREÇÃO DE PROVAS. ANALISE A IMAGEM DO CARTÃO RESPOSTA.
+
+REGRAS:
+1. O cartão tem questões numeradas (1, 2, 3...)
+2. Cada questão tem 5 bolinhas: A, B, C, D, E
+3. O aluno preencheu UMA bolinha por questão (mais escura)
+4. As bolinhas não marcadas estão vazias/brancas
+
+TAREFA:
+Liste SOMENTE as letras das respostas marcadas, na ordem das questões.
+
+FORMATO EXATO (OBRIGATÓRIO):
+A, B, C, D, E, A, B, C, D, E
+
+REGRAS DE FORMATAÇÃO:
+- Use SOMENTE letras maiúsculas
+- Separe POR VÍRGULA E ESPAÇO (", ")
+- NÃO use números
+- NÃO use texto explicativo
+- NÃO use pontuação extra
+- NÃO use aspas
+
+EXEMPLO CORRETO para 10 questões:
+A, B, C, A, D, E, B, C, A, D
+
+Se a questão estiver em branco, use "?" no lugar.
+
+Responda APENAS a linha com as letras. NADA MAIS.
+"""
         
         # Enviar para o Gemini
         response = model.generate_content([prompt, img])
@@ -121,21 +132,26 @@ def detectar_com_gemini(imagem_base64):
         
         print(f"🤖 Gemini resposta bruta: {texto}")
         
+        # Limpar a resposta - remover tudo que não for letras ou ?
+        texto_limpo = re.sub(r'[^A-E?,]', '', texto.upper())
+        
         # Processar resposta
         respostas = []
-        for item in texto.split(','):
-            letra = item.strip().upper()
-            # Aceitar apenas letras válidas
+        for item in texto_limpo.split(','):
+            letra = item.strip()
             if letra in ['A', 'B', 'C', 'D', 'E']:
                 respostas.append(letra)
             elif letra == '?':
                 respostas.append('?')
         
-        # Se não conseguiu detectar nada, tentar extrair apenas letras do texto
+        # Se não conseguiu detectar, tentar extrair letras individuais
         if len(respostas) == 0:
-            letras_encontradas = re.findall(r'[A-E]', texto)
+            letras_encontradas = re.findall(r'[A-E]', texto.upper())
             if letras_encontradas:
-                respostas = letras_encontradas[:50]  # Máximo 50 questões
+                respostas = letras_encontradas[:50]
+        
+        # Garantir que cada resposta é uma letra válida
+        respostas = [r if r in ['A','B','C','D','E'] else '?' for r in respostas]
         
         print(f"✅ Gemini detectou: {respostas}")
         confianca = 95.0 if len(respostas) > 0 else 0.0
@@ -145,122 +161,22 @@ def detectar_com_gemini(imagem_base64):
         print(f"❌ Erro no Gemini: {e}")
         return None, 0.0
 
-def detectar_com_opencv(imagem_base64):
-    """Fallback: Detecção com OpenCV melhorada para 5 opções"""
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        imagem_bytes = base64.b64decode(imagem_base64)
-        np_arr = np.frombuffer(imagem_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return [], 0.0
-        
-        # Redimensionar para altura fixa (melhora detecção)
-        altura, largura = img.shape[:2]
-        altura_alvo = 1200
-        escala = altura_alvo / altura
-        img = cv2.resize(img, (int(largura * escala), altura_alvo))
-        altura, largura = img.shape[:2]
-        
-        # Pré-processamento avançado
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
-        denoised = cv2.medianBlur(enhanced, 3)
-        
-        # Binarização adaptativa
-        binary = cv2.adaptiveThreshold(denoised, 255, 
-                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY_INV, 15, 2)
-        
-        # Detectar círculos (parâmetros otimizados)
-        circles = cv2.HoughCircles(
-            binary, cv2.HOUGH_GRADIENT, dp=1.1, minDist=18,
-            param1=60, param2=28, minRadius=8, maxRadius=35
-        )
-        
-        if circles is None:
-            print("❌ Nenhum círculo detectado pelo OpenCV")
-            return [], 0.0
-        
-        circles = np.round(circles[0, :]).astype(int)
-        circles = sorted(circles, key=lambda c: (c[1], c[0]))
-        
-        print(f"🔍 OpenCV detectou {len(circles)} círculos")
-        
-        # 5 regiões (A, B, C, D, E)
-        largura_img = img.shape[1]
-        regioes = [
-            (0, largura_img * 0.2, 'A'),
-            (largura_img * 0.2, largura_img * 0.4, 'B'),
-            (largura_img * 0.4, largura_img * 0.6, 'C'),
-            (largura_img * 0.6, largura_img * 0.8, 'D'),
-            (largura_img * 0.8, largura_img, 'E')
-        ]
-        
-        # Agrupar círculos por linha (cada linha = uma questão)
-        linhas = {}
-        for x, y, r in circles:
-            linha_key = int(y / 35)
-            if linha_key not in linhas:
-                linhas[linha_key] = []
-            linhas[linha_key].append((x, y, r))
-        
-        respostas = []
-        confiancas = []
-        
-        for linha_key in sorted(linhas.keys()):
-            circulos_linha = linhas[linha_key]
-            melhor_letra = None
-            melhor_preenchimento = 0
-            
-            for x, y, r in circulos_linha:
-                x1 = max(0, x - r)
-                y1 = max(0, y - r)
-                x2 = min(binary.shape[1], x + r)
-                y2 = min(binary.shape[0], y + r)
-                
-                if x2 > x1 and y2 > y1:
-                    roi = binary[y1:y2, x1:x2]
-                    if roi.size > 0:
-                        preenchimento = np.sum(roi == 255) / roi.size
-                        
-                        # Limiar baixo para capturar bolinhas mal preenchidas
-                        if preenchimento > melhor_preenchimento and preenchimento > 0.12:
-                            melhor_preenchimento = preenchimento
-                            for inicio, fim, letra in regioes:
-                                if inicio <= x < fim:
-                                    melhor_letra = letra
-                                    break
-            
-            if melhor_letra:
-                respostas.append(melhor_letra)
-                confiancas.append(min(98, melhor_preenchimento * 100))
-        
-        confianca_media = np.mean(confiancas) if confiancas else 0.0
-        print(f"🖥️ OpenCV detectou: {respostas}")
-        return respostas, confianca_media
-        
-    except Exception as e:
-        print(f"❌ Erro no OpenCV: {e}")
-        return [], 0.0
+# ============================================
+# DETECÇÃO PRINCIPAL (APENAS GEMINI)
+# ============================================
 
 def detectar_respostas(imagem_base64):
-    """Tenta Gemini primeiro, depois fallback para OpenCV"""
+    """Usa APENAS Gemini AI para detecção"""
     
-    # Tentar Gemini AI (mais preciso)
     if GEMINI_AVAILABLE:
         respostas, confianca = detectar_com_gemini(imagem_base64)
         if respostas and len(respostas) > 0:
-            print(f"🎯 Usando Gemini AI - {len(respostas)} respostas detectadas")
+            print(f"🎯 Gemini AI - {len(respostas)} respostas detectadas")
             return respostas, confianca
     
-    # Fallback para OpenCV
-    print("🔄 Fallback: Usando OpenCV")
-    return detectar_com_opencv(imagem_base64)
+    # Se Gemini falhar, retorna erro (não usa OpenCV)
+    print("❌ Gemini AI falhou. Verifique a imagem.")
+    return [], 0.0
 
 # ============================================
 # ROTAS DA API
@@ -423,7 +339,11 @@ def corrigir_prova():
         
         if len(respostas_detectadas) == 0:
             conn.close()
-            return jsonify({'erro': 'Não foi possível detectar respostas. Tente uma foto mais nítida.'}), 400
+            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida e com boa iluminação.'}), 400
+        
+        # Alinhar tamanhos - se detectou menos que o gabarito
+        while len(respostas_detectadas) < len(gabarito):
+            respostas_detectadas.append('?')
         
         # Calcular acertos
         acertos = 0
@@ -450,8 +370,6 @@ def corrigir_prova():
         conn.commit()
         conn.close()
         
-        metodo = "Gemini AI" if GEMINI_AVAILABLE else "OpenCV"
-        
         return jsonify({
             'aluno': aluno_nome,
             'respostas_detectadas': respostas_detectadas,
@@ -461,7 +379,7 @@ def corrigir_prova():
             'percentual': round((acertos / len(gabarito)) * 100, 1),
             'correcoes': correcoes,
             'confianca_media': round(confianca, 1),
-            'metodo': metodo,
+            'metodo': 'Gemini AI',
             'usando_ia': True
         })
     except Exception as e:
@@ -535,13 +453,12 @@ def configuracoes():
 
 @app.route('/api/status_ia', methods=['GET'])
 def status_ia():
-    status_texto = "🧠 Gemini AI (Google) - Alta precisão! 🔥" if GEMINI_AVAILABLE else "⚠️ OpenCV (Fallback) - Configure Gemini para melhor precisão"
     return jsonify({
         'treinada': True, 
         'usando_ia': True, 
         'gemini_disponivel': GEMINI_AVAILABLE,
-        'status': status_texto,
-        'metodo': 'Gemini AI' if GEMINI_AVAILABLE else 'OpenCV'
+        'status': '🧠 Gemini AI (Google) - Alta precisão! 🔥' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
+        'metodo': 'Gemini AI'
     })
 
 @app.route('/api/alternar_ia', methods=['POST'])
@@ -649,7 +566,7 @@ def gerar_gabarito():
         for i in range(1, int(qtd_questoes) + 1):
             html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
         
-        html += f"""</tbody></table>
+        html += f"""</tbody><tr>
         <div class="rodape">
             <strong>AdaBee AI - Tecnologia Gemini</strong><br>
             Precisão de 95-98% na detecção de respostas
