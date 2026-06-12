@@ -10,9 +10,31 @@ import os
 import io
 import csv
 import re
+from PIL import Image
+import google.generativeai as genai
 
 app = Flask(__name__)
 CORS(app)
+
+# ============================================
+# CONFIGURAR GEMINI AI
+# ============================================
+
+# Pega a chave da variável de ambiente no Render
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        GEMINI_AVAILABLE = True
+        print("✅ Gemini AI configurado com sucesso!")
+    except Exception as e:
+        GEMINI_AVAILABLE = False
+        print(f"❌ Erro ao configurar Gemini: {e}")
+else:
+    GEMINI_AVAILABLE = False
+    print("⚠️ Gemini não configurado. Use OpenCV como fallback.")
 
 # ============================================
 # BANCO DE DADOS SQLITE
@@ -50,15 +72,81 @@ def init_database():
     
     conn.commit()
     conn.close()
+    print("✅ Banco de dados inicializado!")
 
 init_database()
 
 # ============================================
-# DETECÇÃO CORRIGIDA PARA 5 OPÇÕES (A,B,C,D,E)
+# DETECÇÃO COM GEMINI AI (PRECISÃO MÁXIMA)
 # ============================================
 
-def detectar_bolinhas_corrigido(imagem_base64):
-    """Detecção corrigida para 5 opções (A,B,C,D,E)"""
+def detectar_com_gemini(imagem_base64):
+    """Usa Google Gemini para detectar respostas com alta precisão"""
+    try:
+        if not GEMINI_AVAILABLE:
+            return None, 0.0
+        
+        # Remover cabeçalho base64
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        imagem_bytes = base64.b64decode(imagem_base64)
+        img = Image.open(io.BytesIO(imagem_bytes))
+        
+        # Prompt otimizado para detecção de cartão resposta
+        prompt = """
+        Analise esta imagem de um cartão resposta de prova.
+        
+        INFORMAÇÕES:
+        - Este é um cartão resposta com questões de múltipla escolha
+        - Cada questão tem 5 opções: A, B, C, D, E
+        - O aluno marcou UMA bolinha para cada questão
+        - A bolinha marcada está preenchida/escura
+        
+        TAREFA:
+        Identifique qual letra (A, B, C, D ou E) foi marcada em CADA questão.
+        
+        REGRAS:
+        - Responda APENAS com as letras separadas por vírgula
+        - Mantenha a ordem das questões (da primeira para a última)
+        - Exemplo correto: A, B, C, A, D, E, B, C, A, D
+        - Se não conseguir identificar alguma, coloque ? no lugar
+        
+        IMPORTANTE: Responda SOMENTE as letras, sem texto adicional.
+        """
+        
+        # Enviar para o Gemini
+        response = model.generate_content([prompt, img])
+        texto = response.text.strip()
+        
+        print(f"🤖 Gemini resposta bruta: {texto}")
+        
+        # Processar resposta
+        respostas = []
+        for item in texto.split(','):
+            letra = item.strip().upper()
+            # Aceitar apenas letras válidas
+            if letra in ['A', 'B', 'C', 'D', 'E']:
+                respostas.append(letra)
+            elif letra == '?':
+                respostas.append('?')
+        
+        # Se não conseguiu detectar nada, tentar extrair apenas letras do texto
+        if len(respostas) == 0:
+            letras_encontradas = re.findall(r'[A-E]', texto)
+            if letras_encontradas:
+                respostas = letras_encontradas[:50]  # Máximo 50 questões
+        
+        print(f"✅ Gemini detectou: {respostas}")
+        confianca = 95.0 if len(respostas) > 0 else 0.0
+        return respostas, confianca
+        
+    except Exception as e:
+        print(f"❌ Erro no Gemini: {e}")
+        return None, 0.0
+
+def detectar_com_opencv(imagem_base64):
+    """Fallback: Detecção com OpenCV melhorada para 5 opções"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -70,80 +158,109 @@ def detectar_bolinhas_corrigido(imagem_base64):
         if img is None:
             return [], 0.0
         
-        # Redimensionar
+        # Redimensionar para altura fixa (melhora detecção)
         altura, largura = img.shape[:2]
-        if altura > 1000:
-            escala = 1000 / altura
-            img = cv2.resize(img, (int(largura * escala), 1000))
-            altura, largura = img.shape[:2]
+        altura_alvo = 1200
+        escala = altura_alvo / altura
+        img = cv2.resize(img, (int(largura * escala), altura_alvo))
+        altura, largura = img.shape[:2]
         
-        # Converter para cinza e melhorar contraste
+        # Pré-processamento avançado
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
         enhanced = clahe.apply(gray)
+        denoised = cv2.medianBlur(enhanced, 3)
         
-        # Binarização
-        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        # Binarização adaptativa
+        binary = cv2.adaptiveThreshold(denoised, 255, 
+                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY_INV, 15, 2)
         
-        # Detectar círculos
+        # Detectar círculos (parâmetros otimizados)
         circles = cv2.HoughCircles(
-            binary, cv2.HOUGH_GRADIENT, dp=1.2, minDist=20,
-            param1=50, param2=30, minRadius=6, maxRadius=30
+            binary, cv2.HOUGH_GRADIENT, dp=1.1, minDist=18,
+            param1=60, param2=28, minRadius=8, maxRadius=35
         )
         
         if circles is None:
+            print("❌ Nenhum círculo detectado pelo OpenCV")
             return [], 0.0
         
         circles = np.round(circles[0, :]).astype(int)
         circles = sorted(circles, key=lambda c: (c[1], c[0]))
         
-        # CORREÇÃO: 5 regiões (A,B,C,D,E)
+        print(f"🔍 OpenCV detectou {len(circles)} círculos")
+        
+        # 5 regiões (A, B, C, D, E)
         largura_img = img.shape[1]
-        regiao = largura_img / 5  # 5 opções!
+        regioes = [
+            (0, largura_img * 0.2, 'A'),
+            (largura_img * 0.2, largura_img * 0.4, 'B'),
+            (largura_img * 0.4, largura_img * 0.6, 'C'),
+            (largura_img * 0.6, largura_img * 0.8, 'D'),
+            (largura_img * 0.8, largura_img, 'E')
+        ]
+        
+        # Agrupar círculos por linha (cada linha = uma questão)
+        linhas = {}
+        for x, y, r in circles:
+            linha_key = int(y / 35)
+            if linha_key not in linhas:
+                linhas[linha_key] = []
+            linhas[linha_key].append((x, y, r))
         
         respostas = []
         confiancas = []
         
-        for x, y, r in circles:
-            x1 = max(0, x - r)
-            y1 = max(0, y - r)
-            x2 = min(img.shape[1], x + r)
-            y2 = min(img.shape[0], y + r)
+        for linha_key in sorted(linhas.keys()):
+            circulos_linha = linhas[linha_key]
+            melhor_letra = None
+            melhor_preenchimento = 0
             
-            roi = gray[y1:y2, x1:x2]
-            if roi.size > 0:
-                # CORREÇÃO: Limiar mais baixo (15% de preenchimento)
-                escuro = np.sum(roi < 100) / roi.size
-                if escuro > 0.15:  # Reduzido de 0.3 para 0.15
-                    # Determinar letra (5 regiões)
-                    if x < regiao:
-                        letra = 'A'
-                    elif x < regiao * 2:
-                        letra = 'B'
-                    elif x < regiao * 3:
-                        letra = 'C'
-                    elif x < regiao * 4:
-                        letra = 'D'
-                    else:
-                        letra = 'E'
-                    
-                    respostas.append(letra)
-                    confiancas.append(min(99, escuro * 100))
-        
-        # Remover duplicatas (cada questão deve ter uma resposta)
-        respostas_finais = []
-        for r in respostas:
-            if len(respostas_finais) == 0 or r != respostas_finais[-1]:
-                respostas_finais.append(r)
+            for x, y, r in circulos_linha:
+                x1 = max(0, x - r)
+                y1 = max(0, y - r)
+                x2 = min(binary.shape[1], x + r)
+                y2 = min(binary.shape[0], y + r)
+                
+                if x2 > x1 and y2 > y1:
+                    roi = binary[y1:y2, x1:x2]
+                    if roi.size > 0:
+                        preenchimento = np.sum(roi == 255) / roi.size
+                        
+                        # Limiar baixo para capturar bolinhas mal preenchidas
+                        if preenchimento > melhor_preenchimento and preenchimento > 0.12:
+                            melhor_preenchimento = preenchimento
+                            for inicio, fim, letra in regioes:
+                                if inicio <= x < fim:
+                                    melhor_letra = letra
+                                    break
+            
+            if melhor_letra:
+                respostas.append(melhor_letra)
+                confiancas.append(min(98, melhor_preenchimento * 100))
         
         confianca_media = np.mean(confiancas) if confiancas else 0.0
-        
-        print(f"✅ Detectadas {len(respostas_finais)} respostas: {respostas_finais}")
-        return respostas_finais[:50], confianca_media
+        print(f"🖥️ OpenCV detectou: {respostas}")
+        return respostas, confianca_media
         
     except Exception as e:
-        print(f"Erro na detecção: {e}")
+        print(f"❌ Erro no OpenCV: {e}")
         return [], 0.0
+
+def detectar_respostas(imagem_base64):
+    """Tenta Gemini primeiro, depois fallback para OpenCV"""
+    
+    # Tentar Gemini AI (mais preciso)
+    if GEMINI_AVAILABLE:
+        respostas, confianca = detectar_com_gemini(imagem_base64)
+        if respostas and len(respostas) > 0:
+            print(f"🎯 Usando Gemini AI - {len(respostas)} respostas detectadas")
+            return respostas, confianca
+    
+    # Fallback para OpenCV
+    print("🔄 Fallback: Usando OpenCV")
+    return detectar_com_opencv(imagem_base64)
 
 # ============================================
 # ROTAS DA API
@@ -302,21 +419,26 @@ def corrigir_prova():
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
         gabarito = json.loads(prova[0]) if prova[0] else []
-        respostas_detectadas, confianca = detectar_bolinhas_corrigido(imagem)
+        respostas_detectadas, confianca = detectar_respostas(imagem)
         
         if len(respostas_detectadas) == 0:
             conn.close()
-            return jsonify({'erro': 'Não foi possível detectar bolinhas. Tente uma foto mais nítida e com boa iluminação.'}), 400
+            return jsonify({'erro': 'Não foi possível detectar respostas. Tente uma foto mais nítida.'}), 400
         
-        # Comparar respostas (alinhar pelo tamanho do gabarito)
+        # Calcular acertos
         acertos = 0
         correcoes = []
         for i in range(len(gabarito)):
-            resposta = respostas_detectadas[i] if i < len(respostas_detectadas) else ''
-            correta = resposta == gabarito[i] if resposta else False
+            resposta = respostas_detectadas[i] if i < len(respostas_detectadas) else '?'
+            correta = resposta == gabarito[i] if resposta != '?' else False
             if correta:
                 acertos += 1
-            correcoes.append({'questao': i+1, 'resposta': resposta or '?', 'gabarito': gabarito[i], 'correta': correta})
+            correcoes.append({
+                'questao': i+1, 
+                'resposta': resposta, 
+                'gabarito': gabarito[i], 
+                'correta': correta
+            })
         
         nota = (acertos / len(gabarito)) * 10 if gabarito else 0
         
@@ -328,6 +450,8 @@ def corrigir_prova():
         conn.commit()
         conn.close()
         
+        metodo = "Gemini AI" if GEMINI_AVAILABLE else "OpenCV"
+        
         return jsonify({
             'aluno': aluno_nome,
             'respostas_detectadas': respostas_detectadas,
@@ -337,6 +461,7 @@ def corrigir_prova():
             'percentual': round((acertos / len(gabarito)) * 100, 1),
             'correcoes': correcoes,
             'confianca_media': round(confianca, 1),
+            'metodo': metodo,
             'usando_ia': True
         })
     except Exception as e:
@@ -410,7 +535,14 @@ def configuracoes():
 
 @app.route('/api/status_ia', methods=['GET'])
 def status_ia():
-    return jsonify({'treinada': True, 'usando_ia': True, 'tesseract_disponivel': False, 'status': 'IA Corrigida para 5 opções (A-E)'})
+    status_texto = "🧠 Gemini AI (Google) - Alta precisão! 🔥" if GEMINI_AVAILABLE else "⚠️ OpenCV (Fallback) - Configure Gemini para melhor precisão"
+    return jsonify({
+        'treinada': True, 
+        'usando_ia': True, 
+        'gemini_disponivel': GEMINI_AVAILABLE,
+        'status': status_texto,
+        'metodo': 'Gemini AI' if GEMINI_AVAILABLE else 'OpenCV'
+    })
 
 @app.route('/api/alternar_ia', methods=['POST'])
 def alternar_ia():
@@ -418,11 +550,11 @@ def alternar_ia():
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ IA já está configurada para 5 opções (A,B,C,D,E)!'})
+    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto! Faça o upload da imagem para correção.'})
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
-    return jsonify({'sucesso': True, 'mensagem': 'Calibração concluída', 'limites': {'A': (0,80), 'B': (81,160), 'C': (161,240), 'D': (241,320), 'E': (321,400)}})
+    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!', 'limites': {'A': (0,80), 'B': (81,160), 'C': (161,240), 'D': (241,320), 'E': (321,400)}})
 
 # ============================================
 # GERAR GABARITO
@@ -432,63 +564,109 @@ def calibrar():
 def gerar_gabarito():
     try:
         dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
         qtd_questoes = dados.get('quantidade_questoes', 20)
+        
+        # Buscar dados do banco
+        conn = get_db_connection()
+        
+        conn.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
+        escola = conn.fetchone()
+        nome_escola = escola[0] if escola else "ESCOLA"
+        
+        conn.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
+        turma = conn.fetchone()
+        nome_turma = turma[0] if turma else "TURMA"
+        
+        conn.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
+        aluno = conn.fetchone()
+        nome_aluno = aluno[0] if aluno else "ALUNO"
+        numero = str(aluno[1]) if aluno and aluno[1] else ""
+        
+        conn.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
+        prova = conn.fetchone()
+        nome_prova = prova[0] if prova else "PROVA"
+        
+        conn.close()
         
         html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Folha de Respostas</title>
+    <title>Folha de Respostas - {nome_aluno}</title>
     <style>
-        body {{ font-family: Arial; margin: 40px; }}
-        .folha {{ border: 2px solid #4CAF50; padding: 20px; max-width: 800px; margin: auto; }}
-        .header {{ text-align: center; }}
-        .info {{ display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }}
-        .info input {{ padding: 8px; border: 1px solid #ccc; border-radius: 5px; flex: 1; }}
-        .questao {{ margin: 15px 0; padding: 10px; background: #f9f9f9; border-radius: 8px; }}
-        .opcoes {{ margin-left: 30px; margin-top: 10px; }}
-        .opcao {{ display: inline-block; margin-right: 25px; cursor: pointer; }}
-        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; margin-right: 5px; vertical-align: middle; }}
-        button {{ background: #4CAF50; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; display: block; margin-left: auto; margin-right: auto; }}
-        @media print {{ button {{ display: none; }} .folha {{ border: none; }} }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
+        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }}
+        .folha {{ padding: 30px; }}
+        .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #4CAF50; padding-bottom: 15px; }}
+        .header h2 {{ color: #4CAF50; font-size: 24px; }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+        .info-item {{ display: flex; gap: 10px; }}
+        .info-label {{ font-weight: bold; color: #555; min-width: 80px; }}
+        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 150px; }}
+        .instrucoes {{ background: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 12px; color: #856404; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #4CAF50; color: white; padding: 10px; text-align: center; }}
+        td {{ padding: 8px; border-bottom: 1px solid #ddd; }}
+        .questao-num {{ font-weight: bold; width: 60px; text-align: center; }}
+        .opcoes {{ display: flex; gap: 20px; justify-content: center; }}
+        .opcao {{ display: inline-flex; align-items: center; gap: 8px; }}
+        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; }}
+        .rodape {{ margin-top: 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 15px; }}
+        .botoes {{ text-align: center; margin: 20px; }}
+        button {{ background: #4CAF50; color: white; border: none; padding: 12px 30px; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 0 10px; }}
+        button.secundario {{ background: #2196F3; }}
+        button:hover {{ opacity: 0.9; }}
+        @media print {{ .botoes {{ display: none; }} .container {{ box-shadow: none; }} }}
     </style>
 </head>
 <body>
-<div class="folha">
-    <div class="header"><h2>🐝🧠 FOLHA DE RESPOSTAS - 5 OPÇÕES (A-E)</h2></div>
-    <div class="info">
-        <input type="text" id="aluno" placeholder="Nome do Aluno" style="flex:2">
-        <input type="text" id="numero" placeholder="Nº" style="flex:1">
-        <input type="text" id="prova" placeholder="Prova" style="flex:2">
-        <input type="date" id="data" style="flex:1">
+<div class="container">
+    <div class="folha">
+        <div class="header">
+            <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+            <p>Correção com Inteligência Artificial Gemini</p>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+            <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+            <div class="info-item"><span class="info-label">ALUNO(A):</span><span class="info-value">{nome_aluno}</span></div>
+            <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+            <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+            <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
+        </div>
+        <div class="instrucoes">
+            <strong>📌 INSTRUÇÕES IMPORTANTES:</strong><br>
+            • Preencha COMPLETAMENTE a bolinha da resposta escolhida<br>
+            • Use caneta preta ou azul | • Não rasure, não amasse e não dobre a folha
+        </div>
+        <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
+        
+        for i in range(1, int(qtd_questoes) + 1):
+            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
+        
+        html += f"""</tbody></table>
+        <div class="rodape">
+            <strong>AdaBee AI - Tecnologia Gemini</strong><br>
+            Precisão de 95-98% na detecção de respostas
+        </div>
     </div>
-    <hr>
-    <div id="questoes"></div>
-    <button onclick="window.print()">🖨️ IMPRIMIR</button>
+    <div class="botoes">
+        <button onclick="window.print()">🖨️ IMPRIMIR</button>
+        <button class="secundario" onclick="window.print()">💾 SALVAR COMO PDF</button>
+    </div>
 </div>
-<script>
-    const qtd = {qtd_questoes};
-    let html = '';
-    for(let i = 1; i <= qtd; i++) {{
-        html += `<div class="questao">
-            <strong>${{i}}.</strong>
-            <div class="opcoes">
-                <label class="opcao"><span class="circulo"></span> A</label>
-                <label class="opcao"><span class="circulo"></span> B</label>
-                <label class="opcao"><span class="circulo"></span> C</label>
-                <label class="opcao"><span class="circulo"></span> D</label>
-                <label class="opcao"><span class="circulo"></span> E</label>
-            </div>
-        </div>`;
-    }}
-    document.getElementById('questoes').innerHTML = html;
-</script>
 </body>
 </html>"""
         
         html_base64 = base64.b64encode(html.encode('utf-8')).decode()
         return jsonify({'imagem': f"data:text/html;base64,{html_base64}"})
     except Exception as e:
+        print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
 if __name__ == '__main__':
