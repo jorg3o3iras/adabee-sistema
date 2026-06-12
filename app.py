@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR GEMINI AI - CORRIGIDO
+# CONFIGURAR GEMINI AI
 # ============================================
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -25,7 +25,7 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        # CORRIGIDO: usando gemini-1.5-pro (disponível)
+        # Modelo correto e disponível
         model = genai.GenerativeModel('gemini-1.5-pro')
         GEMINI_AVAILABLE = True
         print("✅ Gemini AI configurado com sucesso!")
@@ -77,79 +77,47 @@ def init_database():
 init_database()
 
 # ============================================
-# DETECÇÃO COM GEMINI AI - PROMPT MELHORADO
+# DETECÇÃO COM GEMINI AI - VERSÃO SIMPLIFICADA
 # ============================================
 
 def detectar_com_gemini(imagem_base64):
-    """Usa Google Gemini para detectar respostas com alta precisão"""
+    """Usa Google Gemini para detectar respostas"""
     try:
         if not GEMINI_AVAILABLE:
             return None, 0.0
         
+        # Limpar base64
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
         
         imagem_bytes = base64.b64decode(imagem_base64)
         img = Image.open(io.BytesIO(imagem_bytes))
         
-        # PROMPT DETALHADO E ESPECÍFICO
-        prompt = """
-[INSTRUÇÕES] Você é um sistema de correção de provas.
-
-ANALISE A IMAGEM DO CARTÃO RESPOSTA:
-- A imagem contém uma folha de respostas
-- Cada questão tem 5 bolinhas: A, B, C, D, E
-- As bolinhas estão em ordem horizontal
-- O aluno marcou UMA bolinha por questão (deixou mais escura)
-- Bolinhas não marcadas estão vazias/brancas
-
-SUA TAREFA:
-Liste APENAS as letras das bolinhas marcadas, na ordem das questões (da 1 até o final)
-
-FORMATO DE RESPOSTA (OBRIGATÓRIO):
-A, B, C, D, A, B, C, D, E, A
-
-REGRAS:
-- Use apenas letras maiúsculas (A, B, C, D, E)
-- Separe por vírgula e espaço
-- NÃO adicione números
-- NÃO adicione explicações
-- NÃO adicione pontuação extra
-- Se não conseguir identificar uma questão, use "?"
-
-Responda SOMENTE a lista de letras. NADA MAIS.
-"""
+        # Reduzir tamanho para processamento mais rápido
+        img.thumbnail((1024, 1024))
         
-        # Chamar Gemini com temperatura baixa para mais precisão
-        response = model.generate_content(
-            [prompt, img],
-            generation_config={
-                "temperature": 0.0,
-                "top_p": 0.9,
-            }
-        )
-        texto = response.text.strip()
+        # Prompt simples e direto
+        prompt = """Observe esta imagem. É uma folha de respostas.
+        Diga apenas as letras A, B, C, D, E que estão marcadas, na ordem em que aparecem.
+        Exemplo de resposta: A, B, C, D, A, B, C, D
+        Não adicione explicações. Se não vir nenhuma, responda: VAZIO"""
         
-        print(f"🤖 Gemini resposta bruta: {texto}")
+        response = model.generate_content([prompt, img])
+        texto = response.text.strip().upper()
         
-        # Extrair apenas letras de A a E
+        print(f"🤖 Gemini respondeu: {texto}")
+        
+        # Extrair letras A-E
         respostas = []
-        letras_encontradas = re.findall(r'[A-E]', texto.upper())
+        for char in texto:
+            if char in ['A', 'B', 'C', 'D', 'E']:
+                respostas.append(char)
         
-        if letras_encontradas:
-            respostas = letras_encontradas
-            print(f"✅ Gemini detectou: {len(respostas)} respostas - {respostas}")
-            return respostas, 95.0
+        if respostas:
+            print(f"✅ Detectadas {len(respostas)} respostas: {respostas}")
+            return respostas, 90.0
         
-        # Fallback: tentar extrair qualquer letra
-        todas_letras = re.findall(r'[A-Z]', texto.upper())
-        letras_validas = [l for l in todas_letras if l in ['A','B','C','D','E']]
-        if letras_validas:
-            print(f"✅ Gemini detectou (fallback): {letras_validas}")
-            return letras_validas, 85.0
-        
-        print("❌ Gemini não detectou nenhuma letra válida")
-        print(f"📝 Texto completo do Gemini: {texto}")
+        print("❌ Nenhuma letra detectada")
         return None, 0.0
         
     except Exception as e:
@@ -165,12 +133,12 @@ def detectar_respostas(imagem_base64):
     return [], 0.0
 
 # ============================================
-# ROTA DE TESTE PARA VER O QUE O GEMINI VÊ
+# ROTA DE TESTE PARA DIAGNÓSTICO
 # ============================================
 
 @app.route('/api/testar_gemini', methods=['POST'])
 def testar_gemini():
-    """Endpoint para diagnosticar o que o Gemini está vendo"""
+    """Endpoint para diagnosticar o Gemini"""
     try:
         dados = request.json
         imagem = dados.get('imagem')
@@ -178,14 +146,16 @@ def testar_gemini():
         if not imagem:
             return jsonify({'erro': 'Imagem não fornecida'}), 400
         
+        # Limpar base64
         if ',' in imagem:
             imagem = imagem.split(',')[1]
         
         imagem_bytes = base64.b64decode(imagem)
         img = Image.open(io.BytesIO(imagem_bytes))
+        img.thumbnail((800, 800))
         
-        # Prompt simples para diagnóstico
-        prompt = "Descreva o que você vê nesta imagem. Liste todas as letras A, B, C, D, E que você identificar, na ordem em que aparecem."
+        # Prompt de diagnóstico
+        prompt = "Descreva brevemente o que você vê nesta imagem. Liste as letras se houver."
         
         response = model.generate_content([prompt, img])
         
@@ -197,7 +167,7 @@ def testar_gemini():
         return jsonify({'erro': str(e), 'sucesso': False}), 500
 
 # ============================================
-# ROTAS DA API
+# ROTAS PRINCIPAIS DA API
 # ============================================
 
 @app.route('/')
@@ -229,7 +199,7 @@ def dashboard():
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
-    escolas = [dict(row) for row in conn.execute("SELECT id, nome, endereco, telefone FROM escolas ORDER BY nome").fetchall()]
+    escolas = [dict(row) for row in conn.execute("SELECT id, nome FROM escolas ORDER BY nome").fetchall()]
     conn.close()
     return jsonify(escolas)
 
@@ -238,8 +208,7 @@ def criar_escola():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO escolas (nome, endereco, telefone) VALUES (?, ?, ?)", 
-                   (dados['nome'], dados.get('endereco', ''), dados.get('telefone', '')))
+    cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (dados['nome'],))
     conn.commit()
     conn.close()
     return jsonify({'id': cursor.lastrowid})
@@ -249,9 +218,9 @@ def listar_turmas():
     escola_id = request.args.get('escola_id')
     conn = get_db_connection()
     if escola_id:
-        turmas = [dict(row) for row in conn.execute("SELECT id, nome, turno FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,)).fetchall()]
+        turmas = [dict(row) for row in conn.execute("SELECT id, nome FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,)).fetchall()]
     else:
-        turmas = [dict(row) for row in conn.execute("SELECT id, nome, turno FROM turmas ORDER BY nome").fetchall()]
+        turmas = [dict(row) for row in conn.execute("SELECT id, nome FROM turmas ORDER BY nome").fetchall()]
     conn.close()
     return jsonify(turmas)
 
@@ -260,8 +229,7 @@ def criar_turma():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO turmas (escola_id, nome, turno) VALUES (?, ?, ?)", 
-                   (dados['escola_id'], dados['nome'], dados.get('turno', 'Manhã')))
+    cursor.execute("INSERT INTO turmas (escola_id, nome) VALUES (?, ?)", (dados['escola_id'], dados['nome']))
     conn.commit()
     conn.close()
     return jsonify({'id': cursor.lastrowid})
@@ -271,14 +239,9 @@ def listar_alunos():
     turma_id = request.args.get('turma_id')
     conn = get_db_connection()
     if turma_id:
-        alunos = [dict(row) for row in conn.execute("""
-            SELECT a.id, a.nome, a.matricula, a.responsavel, a.numero_chamada, t.nome as turma_nome 
-            FROM alunos a JOIN turmas t ON a.turma_id = t.id 
-            WHERE a.turma_id = ? ORDER BY a.numero_chamada""", (turma_id,)).fetchall()]
+        alunos = [dict(row) for row in conn.execute("SELECT id, nome, numero_chamada FROM alunos WHERE turma_id = ? ORDER BY numero_chamada", (turma_id,)).fetchall()]
     else:
-        alunos = [dict(row) for row in conn.execute("""
-            SELECT a.id, a.nome, a.matricula, a.responsavel, a.numero_chamada, t.nome as turma_nome 
-            FROM alunos a JOIN turmas t ON a.turma_id = t.id ORDER BY a.numero_chamada""").fetchall()]
+        alunos = [dict(row) for row in conn.execute("SELECT id, nome, numero_chamada FROM alunos ORDER BY numero_chamada").fetchall()]
     conn.close()
     return jsonify(alunos)
 
@@ -287,8 +250,8 @@ def criar_aluno():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, responsavel, numero_chamada) VALUES (?, ?, ?, ?, ?)", 
-                   (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('responsavel', ''), dados.get('numero_chamada')))
+    cursor.execute("INSERT INTO alunos (turma_id, nome, numero_chamada) VALUES (?, ?, ?)", 
+                   (dados['turma_id'], dados['nome'], dados.get('numero_chamada')))
     conn.commit()
     conn.close()
     return jsonify({'id': cursor.lastrowid})
@@ -298,15 +261,14 @@ def listar_provas():
     conn = get_db_connection()
     provas = []
     for row in conn.execute("""
-        SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-               p.valor_nota, p.quantidade_questoes, t.nome as turma_nome, p.turma_id
+        SELECT p.id, p.titulo, p.gabarito, p.data_prova, p.quantidade_questoes, t.nome as turma_nome, p.turma_id
         FROM provas p JOIN turmas t ON p.turma_id = t.id ORDER BY p.data_prova DESC
     """):
         provas.append({
-            'id': row[0], 'titulo': row[1], 'descricao': row[2],
-            'gabarito_array': json.loads(row[3]) if row[3] else [],
-            'data_prova': row[4], 'valor_nota': row[5], 'quantidade_questoes': row[6] or len(json.loads(row[3]) if row[3] else []),
-            'turma_nome': row[7], 'turma_id': row[8]
+            'id': row[0], 'titulo': row[1],
+            'gabarito_array': json.loads(row[2]) if row[2] else [],
+            'data_prova': row[3], 'quantidade_questoes': row[4],
+            'turma_nome': row[5], 'turma_id': row[6]
         })
     conn.close()
     return jsonify(provas)
@@ -317,10 +279,9 @@ def criar_prova():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (dados['turma_id'], dados['titulo'], dados.get('descricao', ''), 
-          json.dumps(dados['gabarito']), len(dados['gabarito']), dados['data_prova'], dados.get('valor_nota', 10)))
+        INSERT INTO provas (turma_id, titulo, gabarito, quantidade_questoes, data_prova)
+        VALUES (?, ?, ?, ?, ?)
+    """, (dados['turma_id'], dados['titulo'], json.dumps(dados['gabarito']), len(dados['gabarito']), dados['data_prova']))
     conn.commit()
     conn.close()
     return jsonify({'id': cursor.lastrowid})
@@ -346,7 +307,7 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        prova = conn.execute("SELECT gabarito, quantidade_questoes FROM provas WHERE id = ?", (prova_id,)).fetchone()
+        prova = conn.execute("SELECT gabarito FROM provas WHERE id = ?", (prova_id,)).fetchone()
         
         if not prova:
             conn.close()
@@ -357,8 +318,9 @@ def corrigir_prova():
         
         if len(respostas_detectadas) == 0:
             conn.close()
-            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida com boa iluminação.'}), 400
+            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida.'}), 400
         
+        # Alinhar tamanhos
         while len(respostas_detectadas) < len(gabarito):
             respostas_detectadas.append('?')
         
@@ -369,7 +331,12 @@ def corrigir_prova():
             correta = resposta == gabarito[i] if resposta != '?' else False
             if correta:
                 acertos += 1
-            correcoes.append({'questao': i+1, 'resposta': resposta, 'gabarito': gabarito[i], 'correta': correta})
+            correcoes.append({
+                'questao': i+1, 
+                'resposta': resposta, 
+                'gabarito': gabarito[i], 
+                'correta': correta
+            })
         
         nota = (acertos / len(gabarito)) * 10 if gabarito else 0
         
@@ -394,7 +361,7 @@ def corrigir_prova():
             'usando_ia': True
         })
     except Exception as e:
-        print(f"Erro na correção: {e}")
+        print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/estatisticas', methods=['GET'])
@@ -404,14 +371,12 @@ def estatisticas():
         return jsonify({'geral': {}})
     
     conn = get_db_connection()
-    row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0), COALESCE(MAX(nota), 0), COALESCE(MIN(nota), 0) FROM correcoes WHERE prova_id = ?", (prova_id,)).fetchone()
+    row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes WHERE prova_id = ?", (prova_id,)).fetchone()
     conn.close()
     
     return jsonify({'geral': {
         'total_corrigidas': row[0] or 0,
-        'media_nota': round(row[1], 1),
-        'maior_nota': round(row[2], 1),
-        'menor_nota': round(row[3], 1)
+        'media_nota': round(row[1], 1) if row[1] else 0
     }})
 
 @app.route('/api/historico', methods=['GET'])
@@ -437,7 +402,7 @@ def exportar_resultados():
     conn = get_db_connection()
     resultados = conn.execute("""
         SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao
-        FROM correcoes c JOIN alunos a ON c.aluno_id = a.id WHERE c.prova_id = ? ORDER BY c.nota DESC
+        FROM correcoes c JOIN alunos a ON c.aluno_id = a.id WHERE c.prova_id = ?
     """, (prova_id,)).fetchall()
     conn.close()
     
@@ -459,7 +424,7 @@ def ip_info():
 @app.route('/api/configuracoes', methods=['GET', 'POST'])
 def configuracoes():
     if request.method == 'GET':
-        return jsonify({'param1': 80, 'param2': 25, 'minRadius': 8, 'maxRadius': 25})
+        return jsonify({'param1': 80, 'param2': 25})
     return jsonify({'mensagem': 'ok'})
 
 @app.route('/api/status_ia', methods=['GET'])
@@ -468,7 +433,7 @@ def status_ia():
         'treinada': True, 
         'usando_ia': True, 
         'gemini_disponivel': GEMINI_AVAILABLE,
-        'status': '🧠 Gemini AI (Google) - Alta precisão! 🔥' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
+        'status': '🧠 Gemini AI ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
         'metodo': 'Gemini AI'
     })
 
@@ -478,11 +443,11 @@ def alternar_ia():
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto! Faça o upload da imagem para correção.'})
+    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto!'})
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
-    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!', 'limites': {'A': (0,80), 'B': (81,160), 'C': (161,240), 'D': (241,320), 'E': (321,400)}})
+    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!'})
 
 # ============================================
 # GERAR GABARITO
@@ -492,50 +457,20 @@ def calibrar():
 def gerar_gabarito():
     try:
         dados = request.json
-        escola_id = dados.get('escola_id')
-        turma_id = dados.get('turma_id')
-        aluno_id = dados.get('aluno_id')
-        prova_id = dados.get('prova_id')
         qtd_questoes = dados.get('quantidade_questoes', 20)
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
-        escola = cursor.fetchone()
-        nome_escola = escola[0] if escola else "ESCOLA"
-        
-        cursor.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
-        turma = cursor.fetchone()
-        nome_turma = turma[0] if turma else "TURMA"
-        
-        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
-        aluno = cursor.fetchone()
-        nome_aluno = aluno[0] if aluno else "ALUNO"
-        numero = str(aluno[1]) if aluno and aluno[1] else ""
-        
-        cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
-        prova = cursor.fetchone()
-        nome_prova = prova[0] if prova else "PROVA"
-        
-        conn.close()
         
         html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Folha de Respostas - {nome_aluno}</title>
+    <title>Folha de Respostas</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }}
-        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }}
+        body {{ font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
+        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 10px; }}
         .folha {{ padding: 30px; }}
-        .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #4CAF50; padding-bottom: 15px; }}
+        .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #4CAF50; }}
         .header h2 {{ color: #4CAF50; }}
-        .info-grid {{ display: grid; grid-template-columns: repeat(2,1fr); gap: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
-        .info-item {{ display: flex; gap: 10px; }}
-        .info-label {{ font-weight: bold; min-width: 80px; }}
-        .instrucoes {{ background: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 12px; }}
         table {{ width: 100%; border-collapse: collapse; }}
         th {{ background: #4CAF50; color: white; padding: 10px; }}
         td {{ padding: 8px; text-align: center; border-bottom: 1px solid #ddd; }}
@@ -549,33 +484,22 @@ def gerar_gabarito():
 <body>
 <div class="container">
     <div class="folha">
-        <div class="header"><h2>🐝🧠 FOLHA DE RESPOSTAS - Gemini AI</h2></div>
-        <div class="info-grid">
-            <div class="info-item"><span class="info-label">ESCOLA:</span> {nome_escola}</div>
-            <div class="info-item"><span class="info-label">TURMA:</span> {nome_turma}</div>
-            <div class="info-item"><span class="info-label">ALUNO:</span> {nome_aluno}</div>
-            <div class="info-item"><span class="info-label">Nº:</span> {numero}</div>
-            <div class="info-item"><span class="info-label">PROVA:</span> {nome_prova}</div>
-            <div class="info-item"><span class="info-label">DATA:</span> ___/___/______</div>
-        </div>
-        <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha da resposta escolhida. Use caneta preta ou azul.</div>
+        <div class="header"><h2>🐝🧠 FOLHA DE RESPOSTAS</h2></div>
         <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
-            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</table>"
+            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
         
         html += f"""</tbody></table>
-        <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button><button onclick="baixarPDF()">💾 SALVAR PDF</button></div>
+        <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button></div>
     </div>
 </div>
-<script>function baixarPDF(){{window.print();}}</script>
 </body>
 </html>"""
         
         return html, 200, {'Content-Type': 'text/html'}
         
     except Exception as e:
-        print(f"Erro: {e}")
         return f"<h3>Erro: {str(e)}</h3>", 500
 
 if __name__ == '__main__':
