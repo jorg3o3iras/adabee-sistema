@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR GEMINI AI - MODELO CORRETO (ATUALIZADO 2025)
+# CONFIGURAR GEMINI AI - MODELOS CORRETOS (2025)
 # ============================================
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -26,13 +26,13 @@ if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # MODELOS MAIS RECENTES E DISPONÍVEIS (ordem de prioridade)
+        # MODELOS QUE REALMENTE FUNCIONAM (baseado na lista disponível)
         modelos_tentar = [
-            'gemini-2.0-flash-exp',      # Mais recente
-            'gemini-1.5-pro',             # Estável
-            'gemini-1.5-flash',           # Rápido
-            'models/gemini-2.0-flash-exp',
-            'models/gemini-1.5-pro-latest',
+            'models/gemini-2.0-flash',      # ✅ Estável e rápido
+            'models/gemini-2.5-flash',      # ✅ Mais novo
+            'models/gemini-2.5-pro',        # ✅ Mais potente
+            'models/gemini-flash-latest',   # ✅ Última versão
+            'models/gemini-pro-latest',     # ✅ Pro latest
         ]
         
         model = None
@@ -44,14 +44,14 @@ if GEMINI_API_KEY:
                 print(f"✅ Modelo carregado: {modelo_nome}")
                 break
             except Exception as e:
-                print(f"⚠️ Falha ao carregar {modelo_nome}: {e}")
+                print(f"⚠️ Falha em {modelo_nome}: {e}")
                 continue
         
         if model is None:
             raise Exception("Nenhum modelo disponível")
         
         GEMINI_AVAILABLE = True
-        print(f"✅ Gemini AI configurado com sucesso! Modelo: {modelo_usado}")
+        print(f"✅ Gemini AI configurado! Modelo: {modelo_usado}")
     except Exception as e:
         GEMINI_AVAILABLE = False
         print(f"❌ Erro ao configurar Gemini: {e}")
@@ -100,7 +100,7 @@ def init_database():
 init_database()
 
 # ============================================
-# DETECÇÃO COM GEMINI AI - VERSÃO MELHORADA
+# DETECÇÃO COM GEMINI AI - VERSÃO OTIMIZADA
 # ============================================
 
 def detectar_com_gemini(imagem_base64):
@@ -119,12 +119,12 @@ def detectar_com_gemini(imagem_base64):
         # Reduzir tamanho para processamento mais rápido
         img.thumbnail((1024, 1024))
         
-        # Prompt melhorado para detecção de bolinhas
+        # Prompt otimizado para detecção
         prompt = """[SISTEMA DE CORREÇÃO DE PROVAS]
 
 ANALISE ESTA IMAGEM:
 - É uma folha de respostas com questões numeradas
-- Cada questão tem bolinhas para A, B, C, D, E
+- Cada questão tem 5 bolinhas: A, B, C, D, E
 - O aluno marcou UMA bolinha por questão (a mais escura)
 
 TAREFA:
@@ -145,20 +145,16 @@ Responda SOMENTE a lista de letras."""
         response = model.generate_content([prompt, img])
         texto = response.text.strip().upper()
         
-        print(f"🤖 Gemini respondeu: {texto[:200]}...")  # Mostra só início
+        print(f"🤖 Gemini respondeu: {texto[:200]}")
         
         # Extrair letras A-E
-        respostas = []
-        for char in texto:
-            if char in ['A', 'B', 'C', 'D', 'E']:
-                respostas.append(char)
+        respostas = re.findall(r'[A-E]', texto)
         
-        # Se encontrou pelo menos uma letra
-        if len(respostas) >= 5:  # Pelo menos 5 questões detectadas
-            print(f"✅ Detectadas {len(respostas)} respostas: {respostas[:20]}...")
+        if len(respostas) >= 5:
+            print(f"✅ Detectadas {len(respostas)} respostas")
             return respostas, 90.0
         elif len(respostas) > 0:
-            print(f"⚠️ Poucas respostas detectadas: {respostas}")
+            print(f"⚠️ Apenas {len(respostas)} respostas detectadas")
             return respostas, 70.0
         
         print("❌ Nenhuma letra detectada")
@@ -190,7 +186,6 @@ def testar_gemini():
         if not imagem:
             return jsonify({'erro': 'Imagem não fornecida'}), 400
         
-        # Limpar base64
         if ',' in imagem:
             imagem = imagem.split(',')[1]
         
@@ -198,8 +193,7 @@ def testar_gemini():
         img = Image.open(io.BytesIO(imagem_bytes))
         img.thumbnail((800, 800))
         
-        # Prompt de diagnóstico
-        prompt = "Descreva o que você vê nesta imagem. Mencione as letras A, B, C, D, E se aparecerem."
+        prompt = "Descreva o que você vê nesta imagem. Liste as letras A, B, C, D, E se aparecerem."
         
         response = model.generate_content([prompt, img])
         
@@ -421,7 +415,7 @@ def corrigir_prova():
             'percentual': round((acertos / len(gabarito)) * 100, 1),
             'correcoes': correcoes,
             'confianca_media': round(confianca, 1),
-            'metodo': 'Gemini AI 2.0',
+            'metodo': 'Gemini AI',
             'usando_ia': True
         })
     except Exception as e:
@@ -497,8 +491,8 @@ def status_ia():
         'treinada': True, 
         'usando_ia': True, 
         'gemini_disponivel': GEMINI_AVAILABLE,
-        'status': '🧠 Gemini AI 2.0 ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
-        'metodo': 'Gemini AI 2.0'
+        'status': '🧠 Gemini AI ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
+        'metodo': 'Gemini AI'
     })
 
 @app.route('/api/alternar_ia', methods=['POST'])
@@ -507,7 +501,7 @@ def alternar_ia():
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI 2.0 está pronto!'})
+    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto!'})
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
@@ -552,7 +546,7 @@ def gerar_gabarito():
         <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
-            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
+            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "<tr>"
         
         html += f"""</tbody></table>
         <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button></div>
