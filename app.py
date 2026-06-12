@@ -508,56 +508,326 @@ def calibrar():
     return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!'})
 
 # ============================================
-# GERAR GABARITO
+# GERAR GABARITO - VERSÃO MELHORADA (COM BOLINHAS MAIORES E INSTRUÇÕES)
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
         dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
         qtd_questoes = dados.get('quantidade_questoes', 20)
         
+        # Buscar dados do banco
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
+        escola = cursor.fetchone()
+        nome_escola = escola[0] if escola else "ESCOLA"
+        
+        cursor.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
+        turma = cursor.fetchone()
+        nome_turma = turma[0] if turma else "TURMA"
+        
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
+        aluno = cursor.fetchone()
+        nome_aluno = aluno[0] if aluno else "ALUNO"
+        numero = str(aluno[1]) if aluno and aluno[1] else ""
+        
+        cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
+        prova = cursor.fetchone()
+        nome_prova = prova[0] if prova else "PROVA"
+        
+        conn.close()
+        
+        # HTML melhorado com círculos maiores e mais visíveis
         html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Folha de Respostas</title>
+    <title>Folha de Respostas - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
-        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 10px; }}
-        .folha {{ padding: 30px; }}
-        .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #4CAF50; }}
-        .header h2 {{ color: #4CAF50; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th {{ background: #4CAF50; color: white; padding: 10px; }}
-        td {{ padding: 8px; text-align: center; border-bottom: 1px solid #ddd; }}
-        .questao-num {{ font-weight: bold; width: 60px; }}
-        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; }}
-        .botoes {{ text-align: center; margin: 20px; }}
-        button {{ background: #4CAF50; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; margin: 0 10px; }}
-        @media print {{ .botoes {{ display: none; }} }}
+        body {{ 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #f0f2f5;
+            padding: 20px;
+        }}
+        .container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }}
+        .folha {{
+            padding: 30px;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 15px;
+        }}
+        .header h2 {{
+            color: #4CAF50;
+            font-size: 24px;
+        }}
+        .header p {{
+            color: #666;
+            font-size: 12px;
+        }}
+        .info-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+        }}
+        .info-item {{
+            display: flex;
+            gap: 10px;
+        }}
+        .info-label {{
+            font-weight: bold;
+            color: #555;
+            min-width: 80px;
+        }}
+        .info-value {{
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            min-width: 150px;
+            padding: 0 5px;
+        }}
+        .instrucoes {{
+            background: #FFF3CD;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #856404;
+            text-align: center;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        th {{
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+        }}
+        td {{
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }}
+        .questao-num {{
+            font-weight: bold;
+            width: 70px;
+            text-align: center;
+            font-size: 16px;
+        }}
+        .opcoes {{
+            display: flex;
+            gap: 35px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }}
+        .opcao {{
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            min-width: 55px;
+        }}
+        .circulo {{
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            background: white;
+            transition: all 0.2s;
+        }}
+        .opcao span:last-child {{
+            font-weight: bold;
+            font-size: 16px;
+        }}
+        .rodape {{
+            margin-top: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }}
+        .botoes {{
+            text-align: center;
+            margin: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }}
+        button {{
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+        }}
+        button:hover {{
+            background: #45a049;
+        }}
+        button.secundario {{
+            background: #2196F3;
+        }}
+        button.secundario:hover {{
+            background: #0b7dda;
+        }}
+        @media print {{
+            body {{
+                background: white;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+            }}
+            .botoes {{
+                display: none;
+            }}
+            .info-value {{
+                border-bottom: none;
+            }}
+            .circulo {{
+                border: 2px solid #000;
+            }}
+        }}
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="folha">
-        <div class="header"><h2>🐝🧠 FOLHA DE RESPOSTAS</h2></div>
-        <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
+    <div class="container">
+        <div class="folha">
+            <div class="header">
+                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+                <p>Sistema de Correção Inteligente - Marque APENAS uma bolinha por questão</p>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO(A):</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
+            </div>
+            
+            <div class="instrucoes">
+                <strong>📌 INSTRUÇÕES IMPORTANTES:</strong><br>
+                • Preencha COMPLETAMENTE a bolinha da resposta escolhida (deixe toda PRETA)<br>
+                • Use caneta PRETA ou AZUL ESCURA<br>
+                • Não rasure, não amasse e não dobre a folha<br>
+                • Cada questão tem apenas UMA resposta correta (A, B, C, D ou E)
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Questão</th>
+                        <th colspan="5">Respostas (A, B, C, D, E)</th>
+                    </tr>
+                </thead>
+                <tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
-            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "<tr>"
+            html += f"""
+                    <tr>
+                        <td class="questao-num">{i}</td>
+                        <td colspan="5" style="text-align:center">
+                            <div class="opcoes">
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>A</span>
+                                </label>
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>B</span>
+                                </label>
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>C</span>
+                                </label>
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>D</span>
+                                </label>
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>E</span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>"""
         
-        html += f"""</tbody></table>
-        <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button></div>
+        html += f"""
+                </tbody>
+            </table>
+            
+            <div class="rodape">
+                <strong>AdaBee AI - Corretor Inteligente</strong><br>
+                Certifique-se de preencher completamente a bolinha escolhida
+            </div>
+        </div>
+        <div class="botoes">
+            <button onclick="window.print()">🖨️ IMPRIMIR</button>
+            <button class="secundario" onclick="baixarPDF()">💾 SALVAR COMO PDF</button>
+        </div>
     </div>
-</div>
+    <script>
+        function baixarPDF() {{
+            window.print();
+        }}
+        
+        // Permitir marcar apenas uma opção por linha
+        document.querySelectorAll('.opcoes').forEach(grupo => {{
+            const opcoes = grupo.querySelectorAll('.opcao');
+            opcoes.forEach(opcao => {{
+                opcao.addEventListener('click', function() {{
+                    // Limpar todas da mesma linha
+                    opcoes.forEach(opt => {{
+                        const circulo = opt.querySelector('.circulo');
+                        circulo.style.backgroundColor = 'white';
+                        circulo.style.border = '3px solid #333';
+                    }});
+                    // Marcar esta
+                    const circulo = this.querySelector('.circulo');
+                    circulo.style.backgroundColor = 'black';
+                    circulo.style.border = '3px solid black';
+                }});
+            }});
+        }});
+    </script>
 </body>
 </html>"""
         
         return html, 200, {'Content-Type': 'text/html'}
         
     except Exception as e:
+        print(f"Erro: {e}")
         return f"<h3>Erro: {str(e)}</h3>", 500
 
 if __name__ == '__main__':
