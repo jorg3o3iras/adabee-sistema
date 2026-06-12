@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR GEMINI AI
+# CONFIGURAR GEMINI AI - MODELO CORRETO
 # ============================================
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -25,8 +25,28 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        # Modelo correto e disponível
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        
+        # LISTA DE MODELOS DISPONÍVEIS (tentar até funcionar)
+        modelos_tentar = [
+            'gemini-1.5-flash',
+            'gemini-1.5-pro',
+            'models/gemini-1.5-flash-latest',
+            'models/gemini-1.5-pro-latest',
+        ]
+        
+        model = None
+        for modelo_nome in modelos_tentar:
+            try:
+                model = genai.GenerativeModel(modelo_nome)
+                print(f"✅ Modelo carregado: {modelo_nome}")
+                break
+            except Exception as e:
+                print(f"⚠️ Falha ao carregar {modelo_nome}: {e}")
+                continue
+        
+        if model is None:
+            raise Exception("Nenhum modelo disponível")
+        
         GEMINI_AVAILABLE = True
         print("✅ Gemini AI configurado com sucesso!")
     except Exception as e:
@@ -53,18 +73,18 @@ def init_database():
     cursor = conn.cursor()
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, endereco TEXT, telefone TEXT)''')
+        id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, escola_id INTEGER, nome TEXT NOT NULL, turno TEXT DEFAULT 'Manhã')''')
+        id INTEGER PRIMARY KEY AUTOINCREMENT, escola_id INTEGER, nome TEXT NOT NULL)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER, nome TEXT NOT NULL, matricula TEXT, 
-        responsavel TEXT, numero_chamada INTEGER)''')
+        id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER, nome TEXT NOT NULL, 
+        matricula TEXT, numero_chamada INTEGER)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER, titulo TEXT NOT NULL, descricao TEXT,
-        gabarito TEXT, data_prova DATE, valor_nota REAL DEFAULT 10, quantidade_questoes INTEGER)''')
+        id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER, titulo TEXT NOT NULL,
+        gabarito TEXT, data_prova DATE, quantidade_questoes INTEGER)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, prova_id INTEGER, aluno_id INTEGER, 
@@ -94,7 +114,7 @@ def detectar_com_gemini(imagem_base64):
         img = Image.open(io.BytesIO(imagem_bytes))
         
         # Reduzir tamanho para processamento mais rápido
-        img.thumbnail((1024, 1024))
+        img.thumbnail((800, 800))
         
         # Prompt simples e direto
         prompt = """Observe esta imagem. É uma folha de respostas.
@@ -155,7 +175,7 @@ def testar_gemini():
         img.thumbnail((800, 800))
         
         # Prompt de diagnóstico
-        prompt = "Descreva brevemente o que você vê nesta imagem. Liste as letras se houver."
+        prompt = "Descreva brevemente o que você vê nesta imagem. Liste as letras A, B, C, D, E se houver."
         
         response = model.generate_content([prompt, img])
         
