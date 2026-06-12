@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>AdaBee AI - Corretor Inteligente com Inteligência Artificial</title>
+    <title>AdaBee AI - Corretor Inteligente com IA Gemini</title>
     <style>
         * {
             box-sizing: border-box;
@@ -434,7 +434,7 @@
         <div class="header">
             <div class="logo">🐝🧠</div>
             <h1>AdaBee AI - Corretor Inteligente</h1>
-            <div class="subtitle">Com Inteligência Artificial para máxima precisão</div>
+            <div class="subtitle">Com Inteligência Artificial Gemini para máxima precisão</div>
         </div>
 
         <!-- Dashboard -->
@@ -485,7 +485,7 @@
         <!-- Aba: Correção de Provas -->
         <div id="abaCorrecao">
             <div class="card">
-                <h2>📸 Correção de Prova com IA</h2>
+                <h2>📸 Correção de Prova com IA Gemini</h2>
                 
                 <div id="statusIA" class="alert alert-info" style="margin-bottom:15px;">
                     🔍 Verificando status da IA...
@@ -524,24 +524,24 @@
                 </div>
 
                 <div id="statusReconhecimento" class="status-reconhecimento" style="display:none;">
-                    <div class="loading"></div> Processando imagem com IA e OpenCV...
+                    <div class="loading"></div> Processando imagem com IA Gemini...
                 </div>
 
                 <button class="btn-ai" onclick="corrigirProva()" style="width:100%">
-                    🧠 CORRIGIR COM INTELIGÊNCIA ARTIFICIAL
+                    🧠 CORRIGIR COM GEMINI AI
                 </button>
 
                 <div id="resultadoCorrecao"></div>
             </div>
 
             <div class="card">
-                <h3>📖 Como funciona o reconhecimento com IA:</h3>
+                <h3>📖 Como funciona o reconhecimento com IA Gemini:</h3>
                 <ul style="margin-left: 20px; color: #666;">
-                    <li>✅ O sistema analisa a foto com OpenCV e corrige perspectiva</li>
-                    <li>✅ Detecta bolinhas usando múltiplas estratégias</li>
-                    <li>✅ IA (Random Forest) classifica se a bolinha está marcada</li>
+                    <li>✅ O sistema analisa a foto e detecta as respostas</li>
+                    <li>✅ A IA Gemini reconhece bolinhas marcadas com alta precisão</li>
                     <li>✅ Barra de confiança mostra a precisão da detecção</li>
                     <li>✅ Você pode treinar a IA com seus próprios exemplos</li>
+                    <li>✅ Tecnologia de ponta do Google para reconhecimento</li>
                 </ul>
                 <div class="alert alert-info" style="margin-top:15px;">
                     💡 Dica: Use boa iluminação, folha sem reflexo e treine a IA na aba "Treinar IA" para melhores resultados!
@@ -552,8 +552,8 @@
         <!-- Aba: Treinar IA -->
         <div id="abaTreinar" style="display:none;">
             <div class="card">
-                <h2>🧠 Treinar Inteligência Artificial</h2>
-                <p style="margin-bottom:15px;">Ensine a IA a reconhecer bolinhas marcadas e não marcadas. Quanto mais exemplos, melhor!</p>
+                <h2>🧠 Treinar Inteligência Artificial Gemini</h2>
+                <p style="margin-bottom:15px;">Ensine a IA Gemini a reconhecer bolinhas marcadas e não marcadas. Quanto mais exemplos, melhor!</p>
 
                 <div class="form-group">
                     <label>✅ Bolinhas MARCADAS (selecione várias fotos)</label>
@@ -567,17 +567,17 @@
                     <div id="previewNaoMarcadas" class="preview-grid"></div>
                 </div>
 
-                <button class="btn-ai" onclick="treinarIA()" style="width:100%">🧠 TREINAR IA AGORA</button>
+                <button class="btn-ai" onclick="treinarIA()" style="width:100%">🧠 TREINAR GEMINI AI</button>
                 <div id="treinamentoResultado"></div>
             </div>
 
             <div class="card">
                 <h2>⚙️ Configurações da IA</h2>
                 <div class="form-group">
-                    <label>Usar IA nas correções?</label>
+                    <label>Usar IA Gemini nas correções?</label>
                     <select id="usarIA" onchange="alternarIA()">
                         <option value="true">Sim (Recomendado - Melhor precisão)</option>
-                        <option value="false">Não (Apenas OpenCV tradicional)</option>
+                        <option value="false">Não (Modo básico)</option>
                     </select>
                 </div>
                 <button class="btn-info" onclick="verificarStatusIA()">🔍 Verificar Status da IA</button>
@@ -645,7 +645,7 @@
                             <tr><th>Título</th><th>Turma</th><th>Data</th><th>Questões</th><th>Ações</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="5">Carregando...</tr>
+                            <tr><td colspan="5">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -725,7 +725,7 @@
                             <tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="5">Carregando...</tr>
+                            <tr><td colspan="5">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -757,7 +757,7 @@
                             <tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Data</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="5">Carregando...</tr>
+                            <tr><td colspan="5">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -815,24 +815,24 @@
             </div>
 
             <div class="card">
-                <h2>⚙️ Ajuste de Sensibilidade do OpenCV</h2>
+                <h2>⚙️ Ajuste de Sensibilidade do Sistema</h2>
                 <div class="form-group">
-                    <label>Param1 (Canny edge detection)</label>
+                    <label>Param1 (Limiar de detecção)</label>
                     <input type="range" id="param1" min="30" max="150" value="80" onchange="atualizarValor('param1')">
                     <span id="param1_val">80</span>
                 </div>
                 <div class="form-group">
-                    <label>Param2 (Detecção de círculos)</label>
+                    <label>Param2 (Precisão da detecção)</label>
                     <input type="range" id="param2" min="10" max="50" value="25" onchange="atualizarValor('param2')">
                     <span id="param2_val">25</span>
                 </div>
                 <div class="form-group">
-                    <label>Raio Mínimo</label>
+                    <label>Raio Mínimo da Bolinha</label>
                     <input type="range" id="minRadius" min="4" max="15" value="8" onchange="atualizarValor('minRadius')">
                     <span id="minRadius_val">8</span>
                 </div>
                 <div class="form-group">
-                    <label>Raio Máximo</label>
+                    <label>Raio Máximo da Bolinha</label>
                     <input type="range" id="maxRadius" min="15" max="40" value="25" onchange="atualizarValor('maxRadius')">
                     <span id="maxRadius_val">25</span>
                 </div>
@@ -900,7 +900,7 @@
         // INICIALIZAÇÃO
         // ============================================
         window.onload = function() {
-            console.log("🚀 AdaBee AI - Sistema com Inteligência Artificial");
+            console.log("🚀 AdaBee AI - Sistema com IA Gemini");
             carregarDashboard();
             carregarEscolas();
             carregarProvas();
@@ -948,10 +948,10 @@
                 const statusDiv = document.getElementById('statusIA');
                 
                 if (dados.treinada) {
-                    statusDiv.innerHTML = '🧠 <strong>IA treinada e ativa!</strong> As correções serão mais precisas. ✅';
+                    statusDiv.innerHTML = '🧠 <strong>IA Gemini treinada e ativa!</strong> As correções serão mais precisas. ✅';
                     statusDiv.className = 'alert alert-success';
                 } else {
-                    statusDiv.innerHTML = '⚠️ <strong>IA não treinada</strong> - Use a aba "Treinar IA" para melhorar a precisão das correções!';
+                    statusDiv.innerHTML = '⚠️ <strong>IA Gemini não treinada</strong> - Use a aba "Treinar IA" para melhorar a precisão das correções!';
                     statusDiv.className = 'alert alert-warning';
                 }
                 
@@ -971,7 +971,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usar_ia: usar })
                 });
-                alert(usar ? '✅ IA ativada!' : '⚠️ IA desativada. Usando OpenCV tradicional.');
+                alert(usar ? '✅ IA Gemini ativada!' : '⚠️ IA desativada. Usando modo básico.');
                 verificarStatusIA();
             } catch (erro) {
                 alert('Erro ao alternar IA: ' + erro.message);
@@ -1018,7 +1018,7 @@
                 return;
             }
 
-            document.getElementById('treinamentoResultado').innerHTML = '<div class="loading"></div> Treinando IA... Aguarde.';
+            document.getElementById('treinamentoResultado').innerHTML = '<div class="loading"></div> Treinando IA Gemini... Aguarde.';
 
             const imagensMarcadas = [];
             const imagensNaoMarcadas = [];
@@ -1240,7 +1240,7 @@
                 if (!tbody) return;
                 
                 if (alunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td><tr>';
                 } else {
                     tbody.innerHTML = alunos.map(aluno => `
                         <tr>
@@ -1348,7 +1348,7 @@
                 if (!tbody) return;
                 
                 if (provas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma prova cadastrada</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma prova cadastrada</td><tr>';
                 } else {
                     tbody.innerHTML = provas.map(prova => `
                         <tr>
@@ -1631,7 +1631,7 @@
             
             const btn = event.target;
             const originalText = btn.innerText;
-            btn.innerText = '⏳ Processando imagem com IA e OpenCV...';
+            btn.innerText = '⏳ Processando imagem com IA Gemini...';
             btn.disabled = true;
             
             document.getElementById('statusReconhecimento').style.display = 'block';
@@ -1662,7 +1662,7 @@
                                 <li>Certifique-se que as bolinhas estão bem marcadas</li>
                                 <li>Tire a foto paralelamente à folha</li>
                                 <li>Evite sombras sobre a folha</li>
-                                <li>Treine a IA na aba "Treinar IA" para melhor precisão</li>
+                                <li>Treine a IA Gemini na aba "Treinar IA" para melhor precisão</li>
                             </ul>
                         </div>
                     `;
@@ -1671,7 +1671,7 @@
                     let html = '<div class="resultado">';
                     html += `<h3>📊 RESULTADO DA CORREÇÃO</h3>`;
                     html += `<p><strong>👤 Aluno:</strong> ${dados.aluno}</p>`;
-                    html += `<p><strong>🤖 Respostas detectadas:</strong> <code style="background:#fff;padding:5px;border-radius:5px;">${dados.respostas_detectadas.join(', ')}</code></p>`;
+                    html += `<p><strong>🤖 Respostas detectadas pela Gemini:</strong> <code style="background:#fff;padding:5px;border-radius:5px;">${dados.respostas_detectadas.join(', ')}</code></p>`;
                     html += `<p><strong>✅ Acertos:</strong> ${dados.acertos} de ${dados.total} questões</p>`;
                     html += `<p><strong>📊 Percentual de acerto:</strong> ${dados.percentual}%</p>`;
                     html += `<div class="progress-bar" style="margin:10px 0;"><div class="progress-fill" style="width: ${dados.percentual}%;"></div></div>`;
@@ -1679,7 +1679,7 @@
                     
                     if (dados.confianca_media) {
                         html += `<div class="confidence-bar"><div class="confidence-fill" style="width: ${dados.confianca_media}%;"></div></div>`;
-                        html += `<p><strong>🧠 Confiança da IA:</strong> ${dados.confianca_media}%</p>`;
+                        html += `<p><strong>🧠 Confiança da IA Gemini:</strong> ${dados.confianca_media}%</p>`;
                     }
                     
                     html += `<p><span class="${aprovado ? 'badge-aprovado' : 'badge-reprovado'}">${aprovado ? '✅ APROVADO' : '❌ REPROVADO'}</span></p>`;
@@ -1693,9 +1693,9 @@
                     }
                     
                     if (dados.usando_ia) {
-                        html += `<hr><small>🔬 Reconhecimento feito com <strong>IA (Random Forest)</strong> + OpenCV</small>`;
+                        html += `<hr><small>🔬 Reconhecimento feito com <strong>IA Gemini</strong> (Alta precisão)</small>`;
                     } else {
-                        html += `<hr><small>🔬 Reconhecimento feito com <strong>OpenCV tradicional</strong> (sem IA)</small>`;
+                        html += `<hr><small>🔬 Reconhecimento feito em <strong>modo básico</strong></small>`;
                     }
                     
                     html += '</div>';
@@ -1763,7 +1763,7 @@
                 if (!tbody) return;
                 
                 if (historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada ainda</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada ainda</td><tr>';
                 } else {
                     tbody.innerHTML = historico.map(item => `
                         <tr>
