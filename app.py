@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR GEMINI AI
+# CONFIGURAR GEMINI AI - CORRIGIDO
 # ============================================
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -25,7 +25,8 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # CORRIGIDO: usando gemini-1.5-pro (disponível)
+        model = genai.GenerativeModel('gemini-1.5-pro')
         GEMINI_AVAILABLE = True
         print("✅ Gemini AI configurado com sucesso!")
     except Exception as e:
@@ -561,9 +562,9 @@ def gerar_gabarito():
         <table><thead><tr><th>Questão</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead><tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
-            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</tr>"
+            html += f"<tr><td class='questao-num'>{i}</td>" + "".join([f"<td style='text-align:center'><span class='circulo'></span></td>" for _ in range(5)]) + "</table>"
         
-        html += f"""</tbody><table>
+        html += f"""</tbody></table>
         <div class="botoes"><button onclick="window.print()">🖨️ IMPRIMIR</button><button onclick="baixarPDF()">💾 SALVAR PDF</button></div>
     </div>
 </div>
