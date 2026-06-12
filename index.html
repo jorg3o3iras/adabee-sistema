@@ -1868,44 +1868,52 @@
             }
         }
         
-        async function gerarGabarito() {
-            const escolaId = document.getElementById('escolaGabarito').value;
-            const turmaId = document.getElementById('turmaGabarito').value;
-            const alunoId = document.getElementById('alunoGabarito').value;
-            const provaId = document.getElementById('provaGabarito').value;
-            const numQuestoes = document.getElementById('numQuestoes').value;
-            
-            if (!escolaId || !turmaId || !alunoId || !provaId) {
-                alert('❌ Preencha todos os campos!');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        escola_id: parseInt(escolaId),
-                        turma_id: parseInt(turmaId),
-                        aluno_id: parseInt(alunoId),
-                        prova_id: parseInt(provaId),
-                        quantidade_questoes: parseInt(numQuestoes)
-                    })
-                });
-                
-                const dados = await response.json();
-                document.getElementById('gabaritoPreview').innerHTML = `
-                    <h3>📄 Folha de Respostas:</h3>
-                    <img src="${dados.imagem}" style="max-width:100%; margin-top:15px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-                    <div style="margin-top:15px;">
-                        <button onclick="window.open('${dados.imagem}')" class="btn-info">🖨️ Imprimir</button>
-                        <button onclick="window.location.href='${dados.imagem}'" class="btn-success" style="margin-left:10px;">💾 Baixar</button>
-                    </div>
-                `;
-            } catch (erro) {
-                alert('Erro ao gerar: ' + erro.message);
-            }
+       async function gerarGabarito() {
+    const escolaId = document.getElementById('escolaGabarito').value;
+    const turmaId = document.getElementById('turmaGabarito').value;
+    const alunoId = document.getElementById('alunoGabarito').value;
+    const provaId = document.getElementById('provaGabarito').value;
+    const numQuestoes = document.getElementById('numQuestoes').value;
+    
+    if (!escolaId || !turmaId || !alunoId || !provaId) {
+        alert('❌ Preencha todos os campos!');
+        return;
+    }
+    
+    const previewDiv = document.getElementById('gabaritoPreview');
+    previewDiv.innerHTML = '<div class="loading"></div> Gerando folha de respostas...';
+    
+    try {
+        const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                escola_id: parseInt(escolaId),
+                turma_id: parseInt(turmaId),
+                aluno_id: parseInt(alunoId),
+                prova_id: parseInt(provaId),
+                quantidade_questoes: parseInt(numQuestoes)
+            })
+        });
+        
+        if (response.ok) {
+            const html = await response.text();
+            const novaAba = window.open();
+            novaAba.document.write(html);
+            novaAba.document.close();
+            previewDiv.innerHTML = `
+                <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                    ✅ Folha de respostas gerada com sucesso!<br>
+                    <small>Uma nova aba foi aberta. Clique em "IMPRIMIR" ou "SALVAR PDF".</small>
+                </div>
+            `;
+        } else {
+            previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro ao gerar folha de respostas</div>`;
         }
+    } catch (erro) {
+        previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro: ${erro.message}</div>`;
+    }
+}
 
         // ============================================
         // CONFIGURAÇÕES
