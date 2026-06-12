@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR GEMINI AI - MODELO CORRETO
+# CONFIGURAR GEMINI AI - MODELO CORRETO (ATUALIZADO 2025)
 # ============================================
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -26,18 +26,21 @@ if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # LISTA DE MODELOS DISPONÍVEIS (tentar até funcionar)
+        # MODELOS MAIS RECENTES E DISPONÍVEIS (ordem de prioridade)
         modelos_tentar = [
-            'gemini-1.5-flash',
-            'gemini-1.5-pro',
-            'models/gemini-1.5-flash-latest',
+            'gemini-2.0-flash-exp',      # Mais recente
+            'gemini-1.5-pro',             # Estável
+            'gemini-1.5-flash',           # Rápido
+            'models/gemini-2.0-flash-exp',
             'models/gemini-1.5-pro-latest',
         ]
         
         model = None
+        modelo_usado = None
         for modelo_nome in modelos_tentar:
             try:
                 model = genai.GenerativeModel(modelo_nome)
+                modelo_usado = modelo_nome
                 print(f"✅ Modelo carregado: {modelo_nome}")
                 break
             except Exception as e:
@@ -48,7 +51,7 @@ if GEMINI_API_KEY:
             raise Exception("Nenhum modelo disponível")
         
         GEMINI_AVAILABLE = True
-        print("✅ Gemini AI configurado com sucesso!")
+        print(f"✅ Gemini AI configurado com sucesso! Modelo: {modelo_usado}")
     except Exception as e:
         GEMINI_AVAILABLE = False
         print(f"❌ Erro ao configurar Gemini: {e}")
@@ -97,7 +100,7 @@ def init_database():
 init_database()
 
 # ============================================
-# DETECÇÃO COM GEMINI AI - VERSÃO SIMPLIFICADA
+# DETECÇÃO COM GEMINI AI - VERSÃO MELHORADA
 # ============================================
 
 def detectar_com_gemini(imagem_base64):
@@ -114,18 +117,35 @@ def detectar_com_gemini(imagem_base64):
         img = Image.open(io.BytesIO(imagem_bytes))
         
         # Reduzir tamanho para processamento mais rápido
-        img.thumbnail((800, 800))
+        img.thumbnail((1024, 1024))
         
-        # Prompt simples e direto
-        prompt = """Observe esta imagem. É uma folha de respostas.
-        Diga apenas as letras A, B, C, D, E que estão marcadas, na ordem em que aparecem.
-        Exemplo de resposta: A, B, C, D, A, B, C, D
-        Não adicione explicações. Se não vir nenhuma, responda: VAZIO"""
+        # Prompt melhorado para detecção de bolinhas
+        prompt = """[SISTEMA DE CORREÇÃO DE PROVAS]
+
+ANALISE ESTA IMAGEM:
+- É uma folha de respostas com questões numeradas
+- Cada questão tem bolinhas para A, B, C, D, E
+- O aluno marcou UMA bolinha por questão (a mais escura)
+
+TAREFA:
+Liste APENAS as letras das bolinhas marcadas, na ordem das questões (da 1 até o final)
+
+FORMATO OBRIGATÓRIO:
+A, B, C, D, A, B, C, D, E, A
+
+REGRAS:
+- Use SOMENTE letras maiúsculas
+- Separe por vírgula e espaço
+- NÃO adicione explicações
+- NÃO adicione números
+- Se não conseguir ver, responda: NENHUMA
+
+Responda SOMENTE a lista de letras."""
         
         response = model.generate_content([prompt, img])
         texto = response.text.strip().upper()
         
-        print(f"🤖 Gemini respondeu: {texto}")
+        print(f"🤖 Gemini respondeu: {texto[:200]}...")  # Mostra só início
         
         # Extrair letras A-E
         respostas = []
@@ -133,9 +153,13 @@ def detectar_com_gemini(imagem_base64):
             if char in ['A', 'B', 'C', 'D', 'E']:
                 respostas.append(char)
         
-        if respostas:
-            print(f"✅ Detectadas {len(respostas)} respostas: {respostas}")
+        # Se encontrou pelo menos uma letra
+        if len(respostas) >= 5:  # Pelo menos 5 questões detectadas
+            print(f"✅ Detectadas {len(respostas)} respostas: {respostas[:20]}...")
             return respostas, 90.0
+        elif len(respostas) > 0:
+            print(f"⚠️ Poucas respostas detectadas: {respostas}")
+            return respostas, 70.0
         
         print("❌ Nenhuma letra detectada")
         return None, 0.0
@@ -175,7 +199,7 @@ def testar_gemini():
         img.thumbnail((800, 800))
         
         # Prompt de diagnóstico
-        prompt = "Descreva brevemente o que você vê nesta imagem. Liste as letras A, B, C, D, E se houver."
+        prompt = "Descreva o que você vê nesta imagem. Mencione as letras A, B, C, D, E se aparecerem."
         
         response = model.generate_content([prompt, img])
         
@@ -185,6 +209,26 @@ def testar_gemini():
         })
     except Exception as e:
         return jsonify({'erro': str(e), 'sucesso': False}), 500
+
+# ============================================
+# ROTA PARA LISTAR MODELOS DISPONÍVEIS
+# ============================================
+
+@app.route('/api/listar_modelos', methods=['GET'])
+def listar_modelos():
+    """Lista os modelos Gemini disponíveis"""
+    try:
+        if not GEMINI_AVAILABLE:
+            return jsonify({'erro': 'Gemini não configurado'}), 400
+        
+        modelos = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                modelos.append(m.name)
+        
+        return jsonify({'modelos_disponiveis': modelos})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS PRINCIPAIS DA API
@@ -338,7 +382,7 @@ def corrigir_prova():
         
         if len(respostas_detectadas) == 0:
             conn.close()
-            return jsonify({'erro': 'Gemini não conseguiu detectar as respostas. Tente uma foto mais nítida.'}), 400
+            return jsonify({'erro': 'Não foi possível detectar as respostas. Tente uma foto mais nítida.'}), 400
         
         # Alinhar tamanhos
         while len(respostas_detectadas) < len(gabarito):
@@ -377,7 +421,7 @@ def corrigir_prova():
             'percentual': round((acertos / len(gabarito)) * 100, 1),
             'correcoes': correcoes,
             'confianca_media': round(confianca, 1),
-            'metodo': 'Gemini AI',
+            'metodo': 'Gemini AI 2.0',
             'usando_ia': True
         })
     except Exception as e:
@@ -453,8 +497,8 @@ def status_ia():
         'treinada': True, 
         'usando_ia': True, 
         'gemini_disponivel': GEMINI_AVAILABLE,
-        'status': '🧠 Gemini AI ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
-        'metodo': 'Gemini AI'
+        'status': '🧠 Gemini AI 2.0 ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
+        'metodo': 'Gemini AI 2.0'
     })
 
 @app.route('/api/alternar_ia', methods=['POST'])
@@ -463,7 +507,7 @@ def alternar_ia():
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto!'})
+    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI 2.0 está pronto!'})
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
