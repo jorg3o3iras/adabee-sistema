@@ -1,1066 +1,1585 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-import cv2
-import numpy as np
-import base64
-import json
-import sqlite3
-from datetime import datetime
-import os
-import io
-import csv
-import re
-from PIL import Image
-import google.generativeai as genai
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
-app = Flask(__name__)
-CORS(app)
-
-# ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE
-# ============================================
-
-# URL CORRETA DO SUPABASE
-SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
-
-def get_db_connection():
-    """Conecta ao Supabase"""
-    try:
-        conn = psycopg2.connect(
-            SUPABASE_URL,
-            cursor_factory=RealDictCursor,
-            connect_timeout=15,
-            keepalives=1,
-            keepalives_idle=30,
-            keepalives_interval=10,
-            keepalives_count=3
-        )
-        print("✅ Conectado ao Supabase!")
-        return conn
-    except Exception as e:
-        print(f"❌ ERRO ao conectar: {e}")
-        raise e
-
-def init_database():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Criar tabela escolas
-        cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
-            id SERIAL PRIMARY KEY, 
-            nome TEXT NOT NULL, 
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Criar tabela turmas
-        cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
-            id SERIAL PRIMARY KEY, 
-            escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-            nome TEXT NOT NULL, 
-            serie TEXT DEFAULT '1º Ano', 
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Criar tabela alunos (SEM responsavel)
-        cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
-            id SERIAL PRIMARY KEY, 
-            turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-            nome TEXT NOT NULL, 
-            matricula TEXT, 
-            numero_chamada INTEGER,
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Criar tabela provas
-        cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-            id SERIAL PRIMARY KEY, 
-            turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-            titulo TEXT NOT NULL, 
-            descricao TEXT, 
-            gabarito TEXT, 
-            data_prova DATE,
-            valor_nota REAL DEFAULT 10, 
-            quantidade_questoes INTEGER, 
-            tipo_questoes TEXT DEFAULT '4',
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Criar tabela correcoes
-        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
-            id SERIAL PRIMARY KEY, 
-            prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-            respostas TEXT, 
-            acertos INTEGER, 
-            nota REAL, 
-            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Criar tabela correcoes_redacao
-        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
-            id SERIAL PRIMARY KEY, 
-            prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-            texto TEXT, 
-            nota REAL, 
-            feedback TEXT, 
-            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        conn.commit()
-        conn.close()
-        print("✅ Banco de dados inicializado com sucesso!")
-    except Exception as e:
-        print(f"❌ Erro ao inicializar banco: {e}")
-
-# Inicializar banco
-try:
-    init_database()
-except Exception as e:
-    print(f"❌ Erro na inicialização: {e}")
-
-# ============================================
-# CONFIGURAR GEMINI AI
-# ============================================
-
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-
-if GEMINI_API_KEY:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('models/gemini-2.0-flash')
-        GEMINI_AVAILABLE = True
-        print("✅ Gemini AI configurado!")
-    except Exception as e:
-        GEMINI_AVAILABLE = False
-        print(f"❌ Erro ao configurar Gemini: {e}")
-else:
-    GEMINI_AVAILABLE = False
-    print("⚠️ Gemini não configurado.")
-
-# ============================================
-# ROTAS PRINCIPAIS
-# ============================================
-
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/api/teste', methods=['GET'])
-def teste():
-    try:
-        conn = get_db_connection()
-        conn.close()
-        return jsonify({
-            'mensagem': 'Servidor funcionando!',
-            'status': 'ok',
-            'banco': 'PostgreSQL (Supabase)',
-            'gemini': GEMINI_AVAILABLE
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS DE ESCOLAS
-# ============================================
-
-@app.route('/api/escolas', methods=['GET'])
-def listar_escolas():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
-        escolas = [{'id': row['id'], 'nome': row['nome']} for row in cursor.fetchall()]
-        conn.close()
-        return jsonify(escolas)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/escolas', methods=['POST'])
-def criar_escola():
-    try:
-        dados = request.json
-        nome = dados.get('nome')
-        if not nome:
-            return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
-        escola_id = cursor.fetchone()['id']
-        conn.commit()
-        conn.close()
-        
-        return jsonify({'id': escola_id, 'mensagem': f'Escola "{nome}" cadastrada com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/escolas/<int:escola_id>', methods=['DELETE'])
-def deletar_escola(escola_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Escola excluída com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS DE TURMAS
-# ============================================
-
-@app.route('/api/turmas', methods=['GET'])
-def listar_turmas():
-    try:
-        escola_id = request.args.get('escola_id')
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        if escola_id:
-            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
-        else:
-            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
-        
-        turmas = [{'id': row['id'], 'escola_id': row['escola_id'], 'nome': row['nome'], 'serie': row['serie']} for row in cursor.fetchall()]
-        conn.close()
-        return jsonify(turmas)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/turmas', methods=['POST'])
-def criar_turma():
-    try:
-        dados = request.json
-        escola_id = dados.get('escola_id')
-        nome = dados.get('nome')
-        serie = dados.get('serie', '1º Ano')
-        
-        if not escola_id or not nome:
-            return jsonify({'erro': 'Escola e nome da turma são obrigatórios'}), 400
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
-                       (escola_id, nome, serie))
-        turma_id = cursor.fetchone()['id']
-        conn.commit()
-        conn.close()
-        return jsonify({'id': turma_id})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/turmas/<int:turma_id>', methods=['DELETE'])
-def deletar_turma(turma_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Turma excluída com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS DE ALUNOS (CORRIGIDAS - SEM RESPONSAVEL)
-# ============================================
-
-@app.route('/api/alunos', methods=['GET'])
-def listar_alunos():
-    try:
-        turma_id = request.args.get('turma_id')
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        if turma_id:
-            cursor.execute("""
-                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
-                FROM alunos a 
-                LEFT JOIN turmas t ON a.turma_id = t.id
-                WHERE a.turma_id = %s 
-                ORDER BY a.numero_chamada
-            """, (turma_id,))
-        else:
-            cursor.execute("""
-                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
-                FROM alunos a 
-                LEFT JOIN turmas t ON a.turma_id = t.id
-                ORDER BY a.numero_chamada
-            """)
-        
-        alunos = [{
-            'id': row['id'], 
-            'turma_id': row['turma_id'], 
-            'nome': row['nome'], 
-            'matricula': row['matricula'], 
-            'numero_chamada': row['numero_chamada'],
-            'turma_nome': row['turma_nome']
-        } for row in cursor.fetchall()]
-        
-        conn.close()
-        return jsonify(alunos)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/alunos', methods=['POST'])
-def criar_aluno():
-    try:
-        dados = request.json
-        turma_id = dados.get('turma_id')
-        nome = dados.get('nome')
-        matricula = dados.get('matricula', '')
-        numero_chamada = dados.get('numero_chamada')
-        
-        if not turma_id or not nome:
-            return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) 
-            VALUES (%s, %s, %s, %s) 
-            RETURNING id
-        """, (turma_id, nome, matricula, numero_chamada))
-        
-        aluno_id = cursor.fetchone()['id']
-        conn.commit()
-        conn.close()
-        return jsonify({'id': aluno_id, 'mensagem': 'Aluno cadastrado com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/alunos/<int:aluno_id>', methods=['DELETE'])
-def deletar_aluno(aluno_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Aluno excluído com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS DE PROVAS
-# ============================================
-
-@app.route('/api/provas', methods=['GET'])
-def listar_provas():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
-                   t.nome as turma_nome, p.turma_id
-            FROM provas p 
-            LEFT JOIN turmas t ON p.turma_id = t.id 
-            ORDER BY p.data_prova DESC
-        """)
-        
-        provas = []
-        for row in cursor.fetchall():
-            provas.append({
-                'id': row['id'], 
-                'titulo': row['titulo'], 
-                'descricao': row['descricao'],
-                'gabarito_array': json.loads(row['gabarito']) if row['gabarito'] else [],
-                'data_prova': row['data_prova'], 
-                'valor_nota': row['valor_nota'],
-                'quantidade_questoes': row['quantidade_questoes'] or 0,
-                'tipo_questoes': row['tipo_questoes'] or '4',
-                'turma_nome': row['turma_nome'], 
-                'turma_id': row['turma_id']
-            })
-        conn.close()
-        return jsonify(provas)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/provas', methods=['POST'])
-def criar_prova():
-    try:
-        dados = request.json
-        turma_id = dados.get('turma_id')
-        titulo = dados.get('titulo')
-        descricao = dados.get('descricao', '')
-        gabarito = dados.get('gabarito', [])
-        data_prova = dados.get('data_prova')
-        valor_nota = dados.get('valor_nota', 10)
-        tipo_questoes = dados.get('tipo_questoes', '4')
-        
-        if not turma_id or not titulo or not data_prova:
-            return jsonify({'erro': 'Dados incompletos'}), 400
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) 
-            RETURNING id
-        """, (
-            turma_id, titulo, descricao,
-            json.dumps(gabarito), len(gabarito),
-            data_prova, valor_nota, tipo_questoes
-        ))
-        prova_id = cursor.fetchone()['id']
-        conn.commit()
-        conn.close()
-        return jsonify({'id': prova_id})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
-def deletar_prova(prova_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
-        cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Prova excluída com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# CORREÇÃO DE PROVAS
-# ============================================
-
-def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
-    try:
-        if not GEMINI_AVAILABLE:
-            return [], 0.0
-        
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        imagem_bytes = base64.b64decode(imagem_base64)
-        img = Image.open(io.BytesIO(imagem_bytes))
-        img.thumbnail((1024, 1024))
-        
-        opcoes = 'ABCDE'[:num_opcoes]
-        opcoes_str = ', '.join(list(opcoes))
-        
-        prompt = f"""[SISTEMA DE CORREÇÃO DE PROVAS]
-
-ANALISE ESTA IMAGEM:
-- É uma folha de respostas com questões numeradas
-- Cada questão tem {num_opcoes} bolinhas: {opcoes_str}
-- O aluno marcou UMA bolinha por questão (a mais escura)
-
-TAREFA:
-Liste APENAS as letras das bolinhas marcadas, na ordem das questões.
-
-FORMATO OBRIGATÓRIO (exemplo para 10 questões):
-A, B, C, A, B, C, A, B, C, D
-
-REGRAS:
-- Use SOMENTE letras maiúsculas ({opcoes_str})
-- Separe por vírgula e espaço
-- NÃO adicione explicações
-- Se não conseguir ver, responda: NENHUMA
-
-Responda SOMENTE a lista de letras."""
-        
-        response = model.generate_content([prompt, img])
-        texto = response.text.strip().upper()
-        
-        print(f"🤖 Gemini respondeu: {texto[:200]}")
-        
-        letras_validas = set(opcoes)
-        respostas = [c for c in texto if c in letras_validas]
-        
-        if len(respostas) >= 3:
-            print(f"✅ Detectadas {len(respostas)} respostas")
-            return respostas, 90.0
-        elif len(respostas) > 0:
-            return respostas, 70.0
-        
-        return None, 0.0
-        
-    except Exception as e:
-        print(f"❌ Erro no Gemini: {e}")
-        return None, 0.0
-
-@app.route('/api/corrigir', methods=['POST'])
-def corrigir_prova():
-    try:
-        dados = request.json
-        imagem = dados.get('imagem')
-        prova_id = dados.get('prova_id')
-        aluno_id = dados.get('aluno_id')
-        
-        if not imagem or not prova_id or not aluno_id:
-            return jsonify({'erro': 'Dados incompletos'}), 400
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT gabarito, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
-        prova = cursor.fetchone()
-        
-        if not prova:
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-        
-        gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
-        tipo_questoes = int(prova['tipo_questoes'] or 4)
-        
-        respostas_detectadas, confianca = detectar_respostas_gemini(imagem, tipo_questoes)
-        
-        if not respostas_detectadas:
-            conn.close()
-            return jsonify({'erro': 'Não foi possível detectar as respostas.'}), 400
-        
-        while len(respostas_detectadas) < len(gabarito):
-            respostas_detectadas.append('?')
-        
-        acertos = 0
-        correcoes = []
-        for i in range(len(gabarito)):
-            resposta = respostas_detectadas[i] if i < len(respostas_detectadas) else '?'
-            correta = resposta == gabarito[i] if resposta != '?' else False
-            if correta:
-                acertos += 1
-            correcoes.append({
-                'questao': i+1, 
-                'resposta': resposta, 
-                'gabarito': gabarito[i], 
-                'correta': correta
-            })
-        
-        nota = (acertos / len(gabarito)) * 10 if gabarito else 0
-        
-        cursor.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
-        aluno = cursor.fetchone()
-        aluno_nome = aluno['nome'] if aluno else 'Aluno'
-        
-        cursor.execute("""
-            INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao) 
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now()))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            'aluno': aluno_nome,
-            'respostas_detectadas': respostas_detectadas,
-            'acertos': acertos,
-            'total': len(gabarito),
-            'nota': round(nota, 1),
-            'percentual': round((acertos / len(gabarito)) * 100, 1),
-            'correcoes': correcoes,
-            'confianca_media': round(confianca, 1),
-            'tipo_questoes': tipo_questoes,
-            'metodo': 'Gemini AI'
-        })
-    except Exception as e:
-        print(f"Erro: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# CORREÇÃO DE REDAÇÃO
-# ============================================
-
-@app.route('/api/corrigir_redacao', methods=['POST'])
-def corrigir_redacao():
-    try:
-        dados = request.json
-        imagem = dados.get('imagem')
-        texto = dados.get('texto')
-        prova_id = dados.get('prova_id')
-        aluno_id = dados.get('aluno_id')
-        
-        if not imagem and not texto:
-            return jsonify({'erro': 'Forneça imagem ou texto da redação'}), 400
-        
-        if not GEMINI_AVAILABLE:
-            return jsonify({'erro': 'Gemini AI não está disponível'}), 500
-        
-        # Extrair texto da imagem se não houver texto
-        if imagem and not texto:
-            if ',' in imagem:
-                imagem = imagem.split(',')[1]
-            imagem_bytes = base64.b64decode(imagem)
-            img = Image.open(io.BytesIO(imagem_bytes))
-            img.thumbnail((1024, 1024))
-            
-            prompt = """[SISTEMA DE CORREÇÃO DE REDAÇÃO]
-            
-            Leia a redação da imagem e transcreva o texto completo.
-            Mantenha a formatação e parágrafos originais.
-            Responda APENAS com o texto transcrito."""
-            
-            response = model.generate_content([prompt, img])
-            texto = response.text
-        elif texto:
-            texto = texto
-        else:
-            return jsonify({'erro': 'Não foi possível obter o texto da redação'}), 400
-        
-        # Corrigir a redação
-        prompt = f"""[SISTEMA DE CORREÇÃO DE REDAÇÃO]
-
-TEXTO DA REDAÇÃO:
-{texto}
-
-ANÁLISE:
-1. Avalie a redação quanto a:
-   - Coerência e coesão
-   - Clareza e organização
-   - Vocabulário e gramática
-   - Conteúdo e argumentação
-   - Criatividade
-
-2. Atribua uma nota de 0 a 10.
-
-3. Dê um conceito: Excelente, Bom, Regular, Insuficiente
-
-4. Forneça feedback detalhado.
-
-FORMATO DE RESPOSTA:
-NOTA: [valor]
-CONCEITO: [conceito]
-FEEDBACK: [feedback detalhado com sugestões de melhoria]"""
-
-        response = model.generate_content(prompt)
-        resultado = response.text
-        
-        # Extrair nota e conceito
-        nota_match = re.search(r'NOTA:\s*([\d.]+)', resultado, re.IGNORECASE)
-        nota = float(nota_match.group(1)) if nota_match else 0
-        
-        conceito_match = re.search(r'CONCEITO:\s*([A-Za-záéíóúâêôçãõ]+)', resultado, re.IGNORECASE)
-        conceito = conceito_match.group(1) if conceito_match else 'Não avaliado'
-        
-        feedback_match = re.search(r'FEEDBACK:\s*(.*?)(?=$)', resultado, re.DOTALL | re.IGNORECASE)
-        feedback = feedback_match.group(1).strip() if feedback_match else resultado
-        
-        # Salvar no banco se tiver prova e aluno
-        if prova_id and aluno_id:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (prova_id, aluno_id, texto, nota, feedback, datetime.now()))
-            conn.commit()
-            conn.close()
-        
-        return jsonify({
-            'nota': round(nota, 1),
-            'conceito': conceito,
-            'feedback': feedback,
-            'texto_original': texto,
-            'metodo': 'Gemini AI'
-        })
-        
-    except Exception as e:
-        print(f"Erro: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# GERAR GABARITO
-# ============================================
-
-@app.route('/api/gerar_gabarito', methods=['POST'])
-def gerar_gabarito():
-    try:
-        dados = request.json
-        escola_id = dados.get('escola_id')
-        turma_id = dados.get('turma_id')
-        aluno_id = dados.get('aluno_id')
-        prova_id = dados.get('prova_id')
-        qtd_questoes = dados.get('quantidade_questoes', 20)
-        tipo_questoes = dados.get('tipo_questoes', '4')
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
-        escola = cursor.fetchone()
-        nome_escola = escola['nome'] if escola else "ESCOLA"
-        
-        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
-        turma = cursor.fetchone()
-        nome_turma = turma['nome'] if turma else "TURMA"
-        serie = turma['serie'] if turma else "1º Ano"
-        
-        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
-        aluno = cursor.fetchone()
-        nome_aluno = aluno['nome'] if aluno else "ALUNO"
-        numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
-        
-        cursor.execute("SELECT titulo FROM provas WHERE id = %s", (prova_id,))
-        prova = cursor.fetchone()
-        nome_prova = prova['titulo'] if prova else "PROVA"
-        
-        conn.close()
-        
-        if tipo_questoes == '3':
-            opcoes = ['A', 'B', 'C']
-            titulo_opcoes = "3 OPÇÕES (A, B, C)"
-        else:
-            opcoes = ['A', 'B', 'C', 'D']
-            titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
-        
-        if int(qtd_questoes) > 30:
-            qtd_questoes = 30
-        
-        html = f"""<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Folha de Respostas - {nome_aluno}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AdaBee AI - Corretor Inteligente com IA Gemini</title>
     <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
-        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; }}
-        .folha {{ padding: 20px; }}
-        .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
-        .header h2 {{ color: #4CAF50; font-size: 20px; }}
-        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; }}
-        .info-item {{ display: flex; gap: 8px; }}
-        .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
-        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
-        .instrucoes {{ background: #FFF3CD; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 10px; text-align: center; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th {{ background: #4CAF50; color: white; padding: 6px; text-align: center; font-size: 12px; }}
-        td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
-        .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
-        .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
-        .opcao {{ display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 45px; }}
-        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; background: white; }}
-        .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
-        .rodape {{ margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
-        .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
-        button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
-        button:hover {{ background: #45a049; }}
-        button.secundario {{ background: #2196F3; }}
-        @media print {{ body {{ background: white; padding: 0; margin: 0; }} .container {{ box-shadow: none; }} .botoes {{ display: none; }} }}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .logo { font-size: 60px; margin-bottom: 10px; }
+        h1 { color: white; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .subtitle { color: rgba(255,255,255,0.9); margin-top: 5px; }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .dashboard-card:hover { transform: translateY(-3px); }
+        .dashboard-card .icon { font-size: 35px; margin-bottom: 10px; }
+        .dashboard-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+        .dashboard-card .label { color: #666; font-size: 12px; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .tab-btn.active { background: white; color: #667eea; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.3); }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 22px;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        .card h3 { color: #555; margin: 15px 0 10px 0; font-size: 18px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #667eea; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-success { background: linear-gradient(135deg, #28a745, #20c997); }
+        .btn-danger { background: linear-gradient(135deg, #dc3545, #fd7e14); }
+        .btn-info { background: linear-gradient(135deg, #17a2b8, #6f42c1); }
+        .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); }
+        .btn-ai { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .btn-redacao { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .btn-excluir { background: #dc3545; padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+        .btn-excluir:hover { background: #c82333; }
+        .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .gabarito-grid input { width: 60px; text-align: center; font-weight: bold; text-transform: uppercase; }
+        .preview { max-width: 100%; border-radius: 12px; margin-top: 15px; border: 3px solid #667eea; }
+        .resultado { background: #d4edda; color: #155724; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .resultado-erro { background: #f8d7da; color: #721c24; }
+        .resultado-redacao { background: #fce4ec; color: #880e4f; padding: 20px; border-radius: 12px; margin-top: 20px; white-space: pre-wrap; }
+        .status-reconhecimento {
+            background: #e7f3ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            color: #0066cc;
+        }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; }
+        tr:hover { background: #f8f9fa; }
+        .progress-bar { background: #e0e0e0; border-radius: 10px; height: 10px; overflow: hidden; }
+        .progress-fill { background: linear-gradient(135deg, #28a745, #20c997); height: 100%; border-radius: 10px; transition: width 0.5s; }
+        .confidence-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+        .confidence-fill { height: 100%; background: linear-gradient(90deg, #28a745, #20c997); transition: width 0.5s; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .preview-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #667eea; }
+        .video-container { position: relative; margin-top: 15px; border-radius: 12px; overflow: hidden; background: #000; }
+        video { width: 100%; max-height: 400px; }
+        .camera-controls { display: flex; gap: 10px; margin-top: 10px; }
+        .camera-controls button { flex: 1; }
+        .badge-aprovado { background: #d4edda; color: #155724; padding: 5px 10px; border-radius: 20px; }
+        .badge-reprovado { background: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 20px; }
+        .badge-3opcoes { background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .badge-4opcoes { background: #d1ecf1; color: #0c5460; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .alert { padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-info { background: #e7f3ff; color: #0066cc; border: 1px solid #b8e0ff; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .acoes-cell { display: flex; gap: 5px; flex-wrap: wrap; }
+        .btn-pequeno { padding: 4px 10px; font-size: 11px; border-radius: 5px; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .card { padding: 15px; }
+            .dashboard-grid { grid-template-columns: repeat(3, 1fr); }
+            .tabs { gap: 5px; }
+            .tab-btn { font-size: 10px; padding: 8px; }
+            .acoes-cell { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="folha">
-            <div class="header">
-                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
-                <p>{titulo_opcoes} - {serie}</p>
-            </div>
-            <div class="info-grid">
-                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
-                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
-                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
-                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
-                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
-                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
-            </div>
-            <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.</div>
-            <table>
-                <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
-                <tbody>"""
-        
-        for i in range(1, int(qtd_questoes) + 1):
-            html += f"""
-                    <tr>
-                        <td class="questao-num">{i}</td>
-                        <td colspan="{len(opcoes)}" style="text-align:center">
-                            <div class="opcoes">"""
-            for opcao in opcoes:
-                html += f"""
-                                <label class="opcao">
-                                    <span class="circulo"></span>
-                                    <span>{opcao}</span>
-                                </label>"""
-            html += """
-                            </div>
-                        </td>
-                    </tr>"""
-        
-        html += f"""
-                </tbody>
-            </table>
-            <div class="rodape">AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA</div>
+        <div class="header">
+            <div class="logo">🐝🧠</div>
+            <h1>AdaBee AI - Corretor Inteligente</h1>
+            <div class="subtitle">Com Inteligência Artificial Gemini para máxima precisão</div>
         </div>
-        <div class="botoes">
-            <button onclick="window.print()">🖨️ IMPRIMIR</button>
-            <button class="secundario" onclick="baixarPDF()">💾 SALVAR PDF</button>
+
+        <div class="dashboard-grid" id="dashboard">
+            <div class="dashboard-card"><div class="icon">🏫</div><div class="value" id="totalEscolas">-</div><div class="label">Escolas</div></div>
+            <div class="dashboard-card"><div class="icon">📚</div><div class="value" id="totalTurmas">-</div><div class="label">Turmas</div></div>
+            <div class="dashboard-card"><div class="icon">👨‍🎓</div><div class="value" id="totalAlunos">-</div><div class="label">Alunos</div></div>
+            <div class="dashboard-card"><div class="icon">📝</div><div class="value" id="totalProvas">-</div><div class="label">Provas</div></div>
+            <div class="dashboard-card"><div class="icon">✅</div><div class="value" id="totalCorrecoes">-</div><div class="label">Correções</div></div>
+            <div class="dashboard-card"><div class="icon">⭐</div><div class="value" id="mediaGeral">-</div><div class="label">Média Geral</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="mostrarAba('correcao')">📸 Corrigir Prova</button>
+            <button class="tab-btn" onclick="mostrarAba('redacao')">✍️ Corrigir Redação</button>
+            <button class="tab-btn" onclick="mostrarAba('treinar')">🧠 Treinar IA</button>
+            <button class="tab-btn" onclick="mostrarAba('provas')">📝 Provas</button>
+            <button class="tab-btn" onclick="mostrarAba('alunos')">👨‍🎓 Alunos</button>
+            <button class="tab-btn" onclick="mostrarAba('relatorios')">📊 Relatórios</button>
+            <button class="tab-btn" onclick="mostrarAba('configuracoes')">⚙️ Configurações</button>
+            <button class="tab-btn" onclick="mostrarAba('gabarito')">📄 Gerar Gabarito</button>
+        </div>
+
+        <!-- Aba: Correção de Provas -->
+        <div id="abaCorrecao">
+            <div class="card">
+                <h2>📸 Correção de Prova com IA Gemini</h2>
+                <div id="statusIA" class="alert alert-info">🔍 Verificando status da IA...</div>
+                <div class="form-group">
+                    <label>📝 Selecione a prova</label>
+                    <select id="selectProva" onchange="carregarDadosProva()"><option value="">Carregando provas...</option></select>
+                </div>
+                <div class="form-group">
+                    <label>👨‍🎓 Selecione o aluno</label>
+                    <select id="selectAluno"><option value="">Primeiro selecione a prova</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📸 Foto da Folha de Respostas</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn-success" onclick="abrirCamera()">📷 Abrir Câmera</button>
+                        <button type="button" class="btn-info" onclick="document.getElementById('cameraInput').click()">🖼️ Escolher Foto</button>
+                    </div>
+                    <input type="file" id="cameraInput" accept="image/*" style="display:none" onchange="previewImagem(this)">
+                    <div id="videoContainer" class="video-container" style="display:none;">
+                        <video id="video" autoplay playsinline></video>
+                        <div class="camera-controls">
+                            <button onclick="tirarFoto()" class="btn-success">📸 Tirar Foto</button>
+                            <button onclick="fecharCamera()" class="btn-danger">❌ Fechar</button>
+                        </div>
+                    </div>
+                    <canvas id="canvas" style="display:none;"></canvas>
+                    <img id="preview" class="preview" style="display:none;">
+                </div>
+                <div id="statusReconhecimento" class="status-reconhecimento" style="display:none;">
+                    <div class="loading"></div> Processando imagem com IA Gemini...
+                </div>
+                <button class="btn-ai" onclick="corrigirProva()" style="width:100%">🧠 CORRIGIR COM GEMINI AI</button>
+                <div id="resultadoCorrecao"></div>
+            </div>
+        </div>
+
+        <!-- Aba: Correção de Redação -->
+        <div id="abaRedacao" style="display:none;">
+            <div class="card">
+                <h2>✍️ Correção de Redação com IA Gemini</h2>
+                <div id="statusIA_redacao" class="alert alert-info">🔍 Verificando status da IA...</div>
+                <div class="form-group">
+                    <label>📝 Selecione a prova (opcional)</label>
+                    <select id="selectProvaRedacao"><option value="">Nenhuma (correção avulsa)</option></select>
+                </div>
+                <div class="form-group">
+                    <label>👨‍🎓 Selecione o aluno (opcional)</label>
+                    <select id="selectAlunoRedacao"><option value="">Nenhum (correção avulsa)</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📸 Foto da Redação</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn-success" onclick="abrirCameraRedacao()">📷 Tirar Foto da Redação</button>
+                        <button type="button" class="btn-info" onclick="document.getElementById('cameraInputRedacao').click()">🖼️ Escolher Imagem</button>
+                    </div>
+                    <input type="file" id="cameraInputRedacao" accept="image/*" style="display:none" onchange="previewImagemRedacao(this)">
+                    <div id="videoContainerRedacao" class="video-container" style="display:none;">
+                        <video id="videoRedacao" autoplay playsinline></video>
+                        <div class="camera-controls">
+                            <button onclick="tirarFotoRedacao()" class="btn-success">📸 Tirar Foto</button>
+                            <button onclick="fecharCameraRedacao()" class="btn-danger">❌ Fechar</button>
+                        </div>
+                    </div>
+                    <canvas id="canvasRedacao" style="display:none;"></canvas>
+                    <img id="previewRedacao" class="preview" style="display:none;">
+                </div>
+                <div class="form-group">
+                    <label>📝 Ou digite o texto (opcional)</label>
+                    <textarea id="textoRedacao" rows="5" placeholder="Digite ou cole o texto aqui..." style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:10px; font-size:14px;"></textarea>
+                </div>
+                <div id="statusRedacao" class="status-reconhecimento" style="display:none;">
+                    <div class="loading"></div> Analisando redação com Gemini AI...
+                </div>
+                <button class="btn-redacao" onclick="corrigirRedacao()" style="width:100%">✍️ CORRIGIR REDAÇÃO COM GEMINI AI</button>
+                <div id="resultadoRedacao"></div>
+            </div>
+        </div>
+
+        <!-- Aba: Treinar IA -->
+        <div id="abaTreinar" style="display:none;">
+            <div class="card">
+                <h2>🧠 Treinar IA Gemini</h2>
+                <p style="margin-bottom:15px;">Ensine a IA Gemini a reconhecer bolinhas marcadas e não marcadas.</p>
+                <div class="form-group">
+                    <label>✅ Bolinhas MARCADAS</label>
+                    <input type="file" id="treinarMarcadas" accept="image/*" multiple>
+                    <div id="previewMarcadas" class="preview-grid"></div>
+                </div>
+                <div class="form-group">
+                    <label>❌ Bolinhas NÃO MARCADAS</label>
+                    <input type="file" id="treinarNaoMarcadas" accept="image/*" multiple>
+                    <div id="previewNaoMarcadas" class="preview-grid"></div>
+                </div>
+                <button class="btn-ai" onclick="treinarIA()" style="width:100%">🧠 TREINAR GEMINI AI</button>
+                <div id="treinamentoResultado"></div>
+            </div>
+            <div class="card">
+                <h2>⚙️ Configurações da IA</h2>
+                <div class="form-group">
+                    <label>Usar IA Gemini?</label>
+                    <select id="usarIA" onchange="alternarIA()">
+                        <option value="true">Sim (Recomendado)</option>
+                        <option value="false">Não (Modo básico)</option>
+                    </select>
+                </div>
+                <button class="btn-info" onclick="verificarStatusIA()">🔍 Verificar Status</button>
+            </div>
+        </div>
+
+        <!-- Aba: Provas -->
+        <div id="abaProvas" style="display:none;">
+            <div class="card">
+                <h2>📝 Criar Nova Prova</h2>
+                <div class="form-group">
+                    <label>🏫 Escola</label>
+                    <select id="escolaProva" onchange="carregarTurmasProva()"><option value="">Selecione a escola</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📚 Turma</label>
+                    <select id="turmaProva"><option value="">Selecione a turma</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📝 Título da Prova</label>
+                    <input type="text" id="tituloProva" placeholder="Ex: Prova Matemática - 1º Bimestre">
+                </div>
+                <div class="form-group">
+                    <label>📅 Data da Prova</label>
+                    <input type="date" id="dataProva">
+                </div>
+                <div class="form-group">
+                    <label>💰 Valor da Prova</label>
+                    <input type="number" id="valorProva" value="10" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label>🔢 Quantidade de Questões</label>
+                    <input type="number" id="qtdQuestoes" value="10" min="1" max="50">
+                </div>
+                <div class="form-group">
+                    <label>📝 Tipo de Prova</label>
+                    <select id="tipoProva">
+                        <option value="3">1º Ano - 3 Opções (A, B, C)</option>
+                        <option value="4" selected>2º Ano em diante - 4 Opções (A, B, C, D)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📝 Descrição (opcional)</label>
+                    <textarea id="descricaoProva" rows="3" placeholder="Conteúdos abordados..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>✏️ Gabarito</label>
+                    <div class="gabarito-grid" id="gabaritoGrid"></div>
+                    <button type="button" class="btn-secondary" onclick="adicionarQuestaoGabarito()">➕ Adicionar Questão</button>
+                </div>
+                <button class="btn-success" onclick="salvarProva()">💾 Salvar Prova</button>
+            </div>
+            <div class="card">
+                <h2>📋 Provas Cadastradas</h2>
+                <div class="table-responsive">
+                    <table id="tabelaProvas">
+                        <thead><tr><th>Título</th><th>Turma</th><th>Tipo</th><th>Data</th><th>Questões</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="6">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba: Alunos (SEM RESPONSAVEL) -->
+        <div id="abaAlunos" style="display:none;">
+            <div class="card">
+                <h2>👨‍🎓 Cadastrar Aluno</h2>
+                <div class="form-group">
+                    <label>🏫 Escola</label>
+                    <select id="escolaAluno" onchange="carregarTurmasAluno()"><option value="">Selecione a escola</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📚 Turma</label>
+                    <select id="turmaAluno"><option value="">Selecione a turma</option></select>
+                </div>
+                <div class="form-group">
+                    <label>🔢 Número de Chamada</label>
+                    <input type="number" id="numeroChamada" placeholder="Opcional">
+                </div>
+                <div class="form-group">
+                    <label>👤 Nome do Aluno</label>
+                    <input type="text" id="nomeAluno" placeholder="Nome completo">
+                </div>
+                <div class="form-group">
+                    <label>🔢 Matrícula</label>
+                    <input type="text" id="matriculaAluno" placeholder="Número de matrícula">
+                </div>
+                <button class="btn-success" onclick="salvarAluno()">💾 Cadastrar Aluno</button>
+            </div>
+            <div class="card">
+                <h2>📋 Lista de Alunos</h2>
+                <div class="form-group">
+                    <label>Filtrar por turma</label>
+                    <select id="filtroTurmaAlunos" onchange="carregarAlunos()"><option value="">Todas as turmas</option></select>
+                </div>
+                <div class="table-responsive">
+                    <table id="tabelaAlunos">
+                        <thead><tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba: Relatórios -->
+        <div id="abaRelatorios" style="display:none;">
+            <div class="card">
+                <h2>📊 Estatísticas da Prova</h2>
+                <div class="form-group">
+                    <label>Selecione a prova</label>
+                    <select id="selectProvaRelatorio" onchange="carregarEstatisticas()"><option value="">Selecione uma prova</option></select>
+                </div>
+                <div id="estatisticasContainer"></div>
+                <button class="btn-info" onclick="exportarResultados()">📎 Exportar para Excel</button>
+            </div>
+            <div class="card">
+                <h2>📜 Histórico de Correções</h2>
+                <div class="table-responsive">
+                    <table id="tabelaHistorico">
+                        <thead><tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Data</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba: Configurações -->
+        <div id="abaConfiguracoes" style="display:none;">
+            <div class="card">
+                <h2>🏫 Cadastrar Escola</h2>
+                <div class="form-group">
+                    <label>Nome da Escola</label>
+                    <input type="text" id="novaEscola" placeholder="Nome da escola">
+                </div>
+                <button class="btn-success" onclick="salvarEscola()">💾 Salvar Escola</button>
+            </div>
+            <div class="card">
+                <h2>🏫 Escolas Cadastradas</h2>
+                <div class="table-responsive">
+                    <table id="tabelaEscolas">
+                        <thead><tr><th>ID</th><th>Nome</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="3">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📚 Cadastrar Turma</h3>
+                <div class="form-group">
+                    <label>Escola</label>
+                    <select id="escolaTurmaConfig"><option value="">Selecione a escola</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Nome da Turma</label>
+                    <input type="text" id="nomeTurmaConfig" placeholder="Ex: 3º Ano A">
+                </div>
+                <div class="form-group">
+                    <label>Série</label>
+                    <select id="serieTurmaConfig">
+                        <option value="1º Ano">1º Ano (3 opções)</option>
+                        <option value="2º Ano" selected>2º Ano (4 opções)</option>
+                        <option value="3º Ano">3º Ano (4 opções)</option>
+                        <option value="4º Ano">4º Ano (4 opções)</option>
+                        <option value="5º Ano">5º Ano (4 opções)</option>
+                    </select>
+                </div>
+                <button class="btn-success" onclick="salvarTurma()">💾 Salvar Turma</button>
+            </div>
+            <div class="card">
+                <h3>📚 Turmas Cadastradas</h3>
+                <div class="table-responsive">
+                    <table id="tabelaTurmas">
+                        <thead><tr><th>ID</th><th>Escola</th><th>Nome</th><th>Série</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📱 Acesso pelo Celular</h2>
+                <div id="ipInfo">Carregando...</div>
+                <div id="qrcode" style="margin: 15px 0;"></div>
+                <button onclick="gerarQRCode()" class="btn-info">🔄 Gerar QR Code</button>
+                <button onclick="copiarUrl()" class="btn-success">📋 Copiar URL</button>
+            </div>
+            <div class="card">
+                <h2>⚙️ Ajustes</h2>
+                <div class="form-group">
+                    <label>Param1</label>
+                    <input type="range" id="param1" min="30" max="150" value="80" onchange="atualizarValor('param1')">
+                    <span id="param1_val">80</span>
+                </div>
+                <div class="form-group">
+                    <label>Param2</label>
+                    <input type="range" id="param2" min="10" max="50" value="25" onchange="atualizarValor('param2')">
+                    <span id="param2_val">25</span>
+                </div>
+                <button class="btn-success" onclick="salvarConfiguracoes()">💾 Salvar Configurações</button>
+                <button class="btn-secondary" onclick="restaurarPadrao()" style="margin-left:10px;">🔄 Restaurar Padrão</button>
+            </div>
+        </div>
+
+        <!-- Aba: Gerar Gabarito -->
+        <div id="abaGabarito" style="display:none;">
+            <div class="card">
+                <h2>📄 Gerar Folha de Respostas</h2>
+                <div class="form-group">
+                    <label>🏫 Escola</label>
+                    <select id="escolaGabarito" onchange="carregarTurmasGabarito()"><option value="">Selecione a escola</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📚 Turma</label>
+                    <select id="turmaGabarito" onchange="carregarAlunosGabarito()"><option value="">Selecione a turma</option></select>
+                </div>
+                <div class="form-group">
+                    <label>👨‍🎓 Aluno</label>
+                    <select id="alunoGabarito"><option value="">Selecione o aluno</option></select>
+                </div>
+                <div class="form-group">
+                    <label>📝 Prova</label>
+                    <select id="provaGabarito"><option value="">Selecione a prova</option></select>
+                </div>
+                <div class="form-group">
+                    <label>🔢 Número de Questões</label>
+                    <input type="number" id="numQuestoes" value="20" min="1" max="30">
+                </div>
+                <button class="btn-success" onclick="gerarGabarito()">📄 GERAR FOLHA DE RESPOSTAS</button>
+                <div id="gabaritoPreview" style="margin-top:20px;"></div>
+            </div>
         </div>
     </div>
+
     <script>
-        function baixarPDF() {{ window.print(); }}
-        document.querySelectorAll('.opcoes').forEach(grupo => {{
-            const opcoes = grupo.querySelectorAll('.opcao');
-            opcoes.forEach(opcao => {{
-                opcao.addEventListener('click', function() {{
-                    opcoes.forEach(opt => {{
-                        opt.querySelector('.circulo').style.backgroundColor = 'white';
-                        opt.querySelector('.circulo').style.border = '2px solid #333';
-                    }});
-                    this.querySelector('.circulo').style.backgroundColor = 'black';
-                    this.querySelector('.circulo').style.border = '2px solid black';
-                }});
-            }});
-        }});
+        // ============================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================
+        let fotoBase64 = null;
+        let fotoRedacaoBase64 = null;
+        let provaSelecionada = null;
+        let stream = null;
+        let streamRedacao = null;
+        let ipAtual = '';
+        const API_URL = '';
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        window.onload = function() {
+            console.log("🚀 AdaBee AI - Sistema com IA Gemini");
+            carregarDashboard();
+            carregarEscolas();
+            carregarProvas();
+            carregarAlunos();
+            carregarTodasProvas();
+            carregarEscolasConfig();
+            carregarEscolasGabarito();
+            carregarProvasRelatorio();
+            carregarProvasRedacao();
+            carregarHistorico();
+            carregarFiltroTurmas();
+            carregarConfiguracoes();
+            carregarListaEscolas();
+            carregarListaTurmas();
+            verificarStatusIA();
+            for(let i = 0; i < 5; i++) adicionarQuestaoGabarito();
+        };
+
+        function mostrarAba(aba) {
+            const abas = ['Correcao', 'Redacao', 'Treinar', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
+            abas.forEach(a => {
+                let el = document.getElementById('aba' + a);
+                if (el) el.style.display = 'none';
+            });
+            let abaElement = document.getElementById('aba' + aba.charAt(0).toUpperCase() + aba.slice(1));
+            if (abaElement) abaElement.style.display = 'block';
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (event && event.target) event.target.classList.add('active');
+            if (aba === 'relatorios') { carregarProvasRelatorio(); carregarHistorico(); }
+            if (aba === 'alunos') { carregarFiltroTurmas(); carregarAlunos(); }
+            if (aba === 'configuracoes') { gerarQRCode(); carregarListaEscolas(); carregarListaTurmas(); }
+            if (aba === 'redacao') { carregarProvasRedacao(); carregarAlunosRedacao(); }
+            if (aba === 'provas') { carregarTodasProvas(); }
+        }
+
+        // ============================================
+        // IA E TREINAMENTO
+        // ============================================
+        async function verificarStatusIA() {
+            try {
+                const response = await fetch(`${API_URL}/api/status_ia`);
+                const dados = await response.json();
+                const statusDiv = document.getElementById('statusIA');
+                const statusRedacao = document.getElementById('statusIA_redacao');
+                const msg = dados.gemini_disponivel ? 
+                    '🧠 <strong>IA Gemini ativa!</strong> Correções com alta precisão. ✅' :
+                    '⚠️ <strong>IA Gemini não configurada</strong> - Configure a chave API.';
+                if (statusDiv) { statusDiv.innerHTML = msg; statusDiv.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning'; }
+                if (statusRedacao) { statusRedacao.innerHTML = msg; statusRedacao.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning'; }
+                if (document.getElementById('usarIA')) {
+                    document.getElementById('usarIA').value = dados.usando_ia ? 'true' : 'false';
+                }
+            } catch (erro) {
+                console.error('Erro ao verificar IA:', erro);
+            }
+        }
+
+        async function alternarIA() {
+            const usar = document.getElementById('usarIA').value === 'true';
+            try {
+                await fetch(`${API_URL}/api/alternar_ia`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usar_ia: usar })
+                });
+                alert(usar ? '✅ IA Gemini ativada!' : '⚠️ IA desativada.');
+                verificarStatusIA();
+            } catch (erro) {
+                alert('Erro ao alternar IA: ' + erro.message);
+            }
+        }
+
+        async function treinarIA() {
+            alert('🧠 Gemini AI já está treinado e pronto para uso!');
+        }
+
+        // ============================================
+        // CORREÇÃO DE REDAÇÃO
+        // ============================================
+        async function carregarProvasRedacao() {
+            try {
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                const select = document.getElementById('selectProvaRedacao');
+                if (select) {
+                    select.innerHTML = '<option value="">Nenhuma (correção avulsa)</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+
+        async function carregarAlunosRedacao() {
+            try {
+                const response = await fetch(`${API_URL}/api/alunos`);
+                const alunos = await response.json();
+                const select = document.getElementById('selectAlunoRedacao');
+                if (select) {
+                    select.innerHTML = '<option value="">Nenhum (correção avulsa)</option>';
+                    alunos.forEach(aluno => {
+                        const option = document.createElement('option');
+                        option.value = aluno.id;
+                        option.textContent = `${aluno.nome} ${aluno.numero_chamada ? '(Nº ' + aluno.numero_chamada + ')' : ''}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+
+        function abrirCameraRedacao() {
+            if (streamRedacao) streamRedacao.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainerRedacao').style.display = 'block';
+            document.getElementById('previewRedacao').style.display = 'none';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(s => { streamRedacao = s; document.getElementById('videoRedacao').srcObject = s; })
+                .catch(() => alert("❌ Não foi possível acessar a câmera."));
+        }
+
+        function tirarFotoRedacao() {
+            const video = document.getElementById('videoRedacao');
+            const canvas = document.getElementById('canvasRedacao');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            fotoRedacaoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            document.getElementById('previewRedacao').src = fotoRedacaoBase64;
+            document.getElementById('previewRedacao').style.display = 'block';
+            fecharCameraRedacao();
+            alert('✅ Foto da redação capturada!');
+        }
+
+        function fecharCameraRedacao() {
+            if (streamRedacao) streamRedacao.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainerRedacao').style.display = 'none';
+        }
+
+        function previewImagemRedacao(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoRedacaoBase64 = e.target.result;
+                    document.getElementById('previewRedacao').src = e.target.result;
+                    document.getElementById('previewRedacao').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function corrigirRedacao() {
+            const provaId = document.getElementById('selectProvaRedacao').value;
+            const alunoId = document.getElementById('selectAlunoRedacao').value;
+            const texto = document.getElementById('textoRedacao').value;
+            
+            if (!fotoRedacaoBase64 && (!texto || texto.trim().length < 5)) {
+                alert('❌ Tire uma foto da redação OU digite o texto!');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ Analisando redação com Gemini AI...';
+            btn.disabled = true;
+            document.getElementById('statusRedacao').style.display = 'block';
+            document.getElementById('resultadoRedacao').innerHTML = '';
+            
+            try {
+                const body = {};
+                if (provaId) body.prova_id = parseInt(provaId);
+                if (alunoId) body.aluno_id = parseInt(alunoId);
+                
+                if (fotoRedacaoBase64) {
+                    let imagemData = fotoRedacaoBase64;
+                    if (imagemData.includes(',')) imagemData = imagemData.split(',')[1];
+                    body.imagem = imagemData;
+                } else {
+                    body.texto = texto;
+                }
+                
+                const response = await fetch(`${API_URL}/api/corrigir_redacao`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const dados = await response.json();
+                
+                if (dados.erro) {
+                    document.getElementById('resultadoRedacao').innerHTML = `<div class="resultado resultado-erro">❌ ${dados.erro}</div>`;
+                } else {
+                    let conceito = dados.conceito || 'Não avaliado';
+                    let nota = dados.nota || 0;
+                    let corConceito = '#6c757d';
+                    if (conceito.toLowerCase().includes('excelente')) corConceito = '#28a745';
+                    else if (conceito.toLowerCase().includes('bom')) corConceito = '#17a2b8';
+                    else if (conceito.toLowerCase().includes('regular')) corConceito = '#ffc107';
+                    else if (conceito.toLowerCase().includes('insuficiente')) corConceito = '#dc3545';
+                    
+                    document.getElementById('resultadoRedacao').innerHTML = `
+                        <div class="resultado" style="background: #f8f9fa;">
+                            <h3>📝 RESULTADO DA CORREÇÃO</h3>
+                            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin:15px 0;">
+                                <div style="text-align:center;">
+                                    <span style="font-size:48px; font-weight:bold; color:#667eea;">${nota}</span>
+                                    <span style="font-size:18px; color:#666;">/ 10</span>
+                                </div>
+                                <div style="text-align:center; padding:8px 20px; border-radius:20px; background:${corConceito}; color:white; font-weight:bold; font-size:18px;">
+                                    ${conceito}
+                                </div>
+                            </div>
+                            <hr>
+                            <div style="white-space:pre-wrap; font-size:14px; line-height:1.8;">${dados.feedback}</div>
+                            <hr>
+                            <small>🔬 Correção feita com <strong>Gemini AI</strong> - ${dados.metodo || 'Imagem'}</small>
+                        </div>
+                    `;
+                    carregarDashboard();
+                    carregarHistorico();
+                }
+            } catch (erro) {
+                document.getElementById('resultadoRedacao').innerHTML = `<div class="resultado resultado-erro">❌ Erro: ${erro.message}</div>`;
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+                document.getElementById('statusRedacao').style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // DASHBOARD, ESCOLAS, TURMAS, ALUNOS, PROVAS
+        // ============================================
+        async function carregarDashboard() {
+            try {
+                const response = await fetch(`${API_URL}/api/dashboard`);
+                const dados = await response.json();
+                document.getElementById('totalEscolas').innerText = dados.total_escolas || 0;
+                document.getElementById('totalTurmas').innerText = dados.total_turmas || 0;
+                document.getElementById('totalAlunos').innerText = dados.total_alunos || 0;
+                document.getElementById('totalProvas').innerText = dados.total_provas || 0;
+                document.getElementById('totalCorrecoes').innerText = dados.total_correcoes || 0;
+                document.getElementById('mediaGeral').innerText = dados.media_geral || 0;
+            } catch (erro) { console.error('Erro ao carregar dashboard:', erro); }
+        }
+
+        // ============================================
+        // ESCOLAS - LISTAR E EXCLUIR
+        // ============================================
+        async function carregarEscolas() {
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`);
+                const escolas = await response.json();
+                const selects = ['escolaProva', 'escolaAluno', 'escolaTurmaConfig', 'escolaGabarito'];
+                selects.forEach(selectId => {
+                    const select = document.getElementById(selectId);
+                    if (select) {
+                        select.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(escola => {
+                            const option = document.createElement('option');
+                            option.value = escola.id;
+                            option.textContent = escola.nome;
+                            select.appendChild(option);
+                        });
+                    }
+                });
+            } catch (erro) { console.error('Erro ao carregar escolas:', erro); }
+        }
+
+        async function carregarListaEscolas() {
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`);
+                const escolas = await response.json();
+                const tbody = document.querySelector('#tabelaEscolas tbody');
+                if (!tbody) return;
+                if (escolas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">Nenhuma escola cadastrada</td></tr>';
+                } else {
+                    tbody.innerHTML = escolas.map(escola => `
+                        <tr>
+                            <td>${escola.id}</td>
+                            <td>${escola.nome}</td>
+                            <td>
+                                <button class="btn-excluir btn-pequeno" onclick="excluirEscola(${escola.id}, '${escola.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function excluirEscola(id, nome) {
+            if (confirm(`Excluir a escola "${nome}"? Isso também excluirá todas as turmas e alunos vinculados.`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/escolas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Escola excluída!');
+                        carregarListaEscolas();
+                        carregarEscolas();
+                        carregarDashboard();
+                        carregarListaTurmas();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
+        }
+
+        async function salvarEscola() {
+            const nome = document.getElementById('novaEscola').value;
+            if (!nome) { alert('Digite o nome da escola!'); return; }
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                const result = await response.json();
+                if (result.id) {
+                    alert('✅ Escola cadastrada!');
+                    document.getElementById('novaEscola').value = '';
+                    carregarEscolas();
+                    carregarListaEscolas();
+                    carregarDashboard();
+                }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+        }
+
+        // ============================================
+        // TURMAS - LISTAR E EXCLUIR
+        // ============================================
+        async function carregarEscolasConfig() {
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`);
+                const escolas = await response.json();
+                const select = document.getElementById('escolaTurmaConfig');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a escola</option>';
+                    escolas.forEach(escola => {
+                        const option = document.createElement('option');
+                        option.value = escola.id;
+                        option.textContent = escola.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function carregarListaTurmas() {
+            try {
+                const response = await fetch(`${API_URL}/api/turmas`);
+                const turmas = await response.json();
+                const tbody = document.querySelector('#tabelaTurmas tbody');
+                if (!tbody) return;
+                if (turmas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma turma cadastrada</td></tr>';
+                } else {
+                    const escolasResponse = await fetch(`${API_URL}/api/escolas`);
+                    const escolas = await escolasResponse.json();
+                    const escolaMap = {};
+                    escolas.forEach(e => escolaMap[e.id] = e.nome);
+                    
+                    tbody.innerHTML = turmas.map(turma => `
+                        <tr>
+                            <td>${turma.id}</td>
+                            <td>${escolaMap[turma.escola_id] || 'N/A'}</td>
+                            <td>${turma.nome}</td>
+                            <td>${turma.serie || '1º Ano'}</td>
+                            <td>
+                                <button class="btn-excluir btn-pequeno" onclick="excluirTurma(${turma.id}, '${turma.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function excluirTurma(id, nome) {
+            if (confirm(`Excluir a turma "${nome}"? Isso também excluirá todos os alunos vinculados.`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Turma excluída!');
+                        carregarListaTurmas();
+                        carregarDashboard();
+                        carregarFiltroTurmas();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
+        }
+
+        async function carregarTurmasProva() {
+            const escolaId = document.getElementById('escolaProva').value;
+            if (!escolaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                const select = document.getElementById('turmaProva');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a turma</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function carregarTurmasAluno() {
+            const escolaId = document.getElementById('escolaAluno').value;
+            if (!escolaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                const select = document.getElementById('turmaAluno');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a turma</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function salvarTurma() {
+            const escolaId = document.getElementById('escolaTurmaConfig').value;
+            const nome = document.getElementById('nomeTurmaConfig').value;
+            const serie = document.getElementById('serieTurmaConfig').value;
+            if (!escolaId || !nome) { alert('Preencha todos os campos!'); return; }
+            try {
+                const response = await fetch(`${API_URL}/api/turmas`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ escola_id: parseInt(escolaId), nome, serie })
+                });
+                const result = await response.json();
+                if (result.id) {
+                    alert('✅ Turma cadastrada!');
+                    document.getElementById('nomeTurmaConfig').value = '';
+                    carregarEscolasConfig();
+                    carregarListaTurmas();
+                    carregarDashboard();
+                }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+        }
+
+        // ============================================
+        // ALUNOS - LISTAR E EXCLUIR (SEM RESPONSAVEL)
+        // ============================================
+        async function carregarAlunos() {
+            const turmaId = document.getElementById('filtroTurmaAlunos')?.value;
+            let url = `${API_URL}/api/alunos`;
+            if (turmaId) url += `?turma_id=${turmaId}`;
+            try {
+                const response = await fetch(url);
+                const alunos = await response.json();
+                const tbody = document.querySelector('#tabelaAlunos tbody');
+                if (!tbody) return;
+                if (alunos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
+                } else {
+                    tbody.innerHTML = alunos.map(aluno => `
+                        <tr>
+                            <td>${aluno.numero_chamada || '-'}</td>
+                            <td>${aluno.nome}</td>
+                            <td>${aluno.matricula || '-'}</td>
+                            <td>${aluno.turma_nome || '-'}</td>
+                            <td>
+                                <button class="btn-excluir btn-pequeno" onclick="excluirAluno(${aluno.id}, '${aluno.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (erro) { console.error('Erro ao carregar alunos:', erro); }
+        }
+
+        async function excluirAluno(id, nome) {
+            if (confirm(`Excluir o aluno "${nome}"?`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Aluno excluído!');
+                        carregarAlunos();
+                        carregarDashboard();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
+        }
+
+        async function carregarFiltroTurmas() {
+            try {
+                const response = await fetch(`${API_URL}/api/turmas`);
+                const turmas = await response.json();
+                const select = document.getElementById('filtroTurmaAlunos');
+                if (select) {
+                    select.innerHTML = '<option value="">Todas as turmas</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function salvarAluno() {
+            const turmaId = document.getElementById('turmaAluno').value;
+            const nome = document.getElementById('nomeAluno').value;
+            const matricula = document.getElementById('matriculaAluno').value;
+            const numeroChamada = document.getElementById('numeroChamada').value;
+            
+            if (!turmaId || !nome) { 
+                alert('Preencha turma e nome do aluno!'); 
+                return; 
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/alunos`, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        turma_id: parseInt(turmaId), 
+                        nome: nome, 
+                        matricula: matricula,
+                        numero_chamada: numeroChamada ? parseInt(numeroChamada) : null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.id) {
+                    alert('✅ Aluno cadastrado!');
+                    document.getElementById('nomeAluno').value = '';
+                    document.getElementById('matriculaAluno').value = '';
+                    document.getElementById('numeroChamada').value = '';
+                    carregarAlunos();
+                    carregarDashboard();
+                } else { 
+                    alert('Erro: ' + JSON.stringify(result)); 
+                }
+            } catch (erro) { 
+                alert('Erro ao salvar: ' + erro.message); 
+            }
+        }
+
+        // ============================================
+        // PROVAS
+        // ============================================
+        async function carregarProvas() {
+            try {
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                const select = document.getElementById('selectProva');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a prova</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        const tipo = prova.tipo_questoes == '3' ? ' (3 opções)' : ' (4 opções)';
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}${tipo}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro ao carregar provas:', erro); }
+        }
+
+        async function carregarTodasProvas() {
+            try {
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                const tbody = document.querySelector('#tabelaProvas tbody');
+                if (!tbody) return;
+                if (provas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">Nenhuma prova cadastrada</td></tr>';
+                } else {
+                    tbody.innerHTML = provas.map(prova => {
+                        const tipoBadge = prova.tipo_questoes == '3' ? 
+                            '<span class="badge-3opcoes">3 opções (A,B,C)</span>' : 
+                            '<span class="badge-4opcoes">4 opções (A,B,C,D)</span>';
+                        return `
+                            <tr>
+                                <td><strong>${prova.titulo}</strong></td>
+                                <td>${prova.turma_nome || '-'}</td>
+                                <td>${tipoBadge}</td>
+                                <td>${prova.data_prova || '-'}</td>
+                                <td>${prova.quantidade_questoes || prova.gabarito_array?.length || 0}</td>
+                                <td>
+                                    <button class="btn-excluir btn-pequeno" onclick="excluirProva(${prova.id}, '${prova.titulo.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function excluirProva(id, titulo) {
+            if (confirm(`Excluir a prova "${titulo}"?`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Prova excluída!');
+                        carregarTodasProvas();
+                        carregarProvas();
+                        carregarProvasRelatorio();
+                        carregarProvasRedacao();
+                        carregarDashboard();
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
+        }
+
+        async function carregarProvasRelatorio() {
+            try {
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                const select = document.getElementById('selectProvaRelatorio');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a prova</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function carregarDadosProva() {
+            const provaId = document.getElementById('selectProva').value;
+            if (!provaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                provaSelecionada = provas.find(p => p.id == provaId);
+                if (!provaSelecionada) return;
+                const responseAlunos = await fetch(`${API_URL}/api/alunos?turma_id=${provaSelecionada.turma_id}`);
+                const alunos = await responseAlunos.json();
+                const selectAluno = document.getElementById('selectAluno');
+                if (selectAluno) {
+                    selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+                    alunos.forEach(aluno => {
+                        const option = document.createElement('option');
+                        option.value = aluno.id;
+                        option.textContent = `${aluno.nome} ${aluno.numero_chamada ? '(Nº ' + aluno.numero_chamada + ')' : ''}`;
+                        selectAluno.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        function adicionarQuestaoGabarito() {
+            const grid = document.getElementById('gabaritoGrid');
+            if (grid) {
+                const num = grid.children.length + 1;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `Q${num}`;
+                input.maxLength = 1;
+                input.style.width = '60px';
+                input.style.textAlign = 'center';
+                input.style.textTransform = 'uppercase';
+                grid.appendChild(input);
+            }
+        }
+
+        function obterGabarito() {
+            const inputs = document.querySelectorAll('#gabaritoGrid input');
+            return Array.from(inputs).map(i => i.value.toUpperCase()).filter(v => v);
+        }
+
+        async function salvarProva() {
+            const turmaId = document.getElementById('turmaProva').value;
+            const titulo = document.getElementById('tituloProva').value;
+            const dataProva = document.getElementById('dataProva').value;
+            const valorNota = document.getElementById('valorProva').value;
+            const quantidadeQuestoes = document.getElementById('qtdQuestoes').value;
+            const descricao = document.getElementById('descricaoProva')?.value || '';
+            const tipoQuestoes = document.getElementById('tipoProva').value;
+            const gabarito = obterGabarito();
+            if (!turmaId || !titulo || !dataProva || gabarito.length === 0) {
+                alert('❌ Preencha todos os campos!'); return;
+            }
+            if (gabarito.length !== parseInt(quantidadeQuestoes)) {
+                alert(`⚠️ O gabarito tem ${gabarito.length} questões, mas você definiu ${quantidadeQuestoes} questões.`);
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/api/provas`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        turma_id: parseInt(turmaId), titulo, descricao, gabarito, data_prova,
+                        valor_nota: parseFloat(valorNota), quantidade_questoes: parseInt(quantidadeQuestoes),
+                        tipo_questoes: tipoQuestoes
+                    })
+                });
+                const result = await response.json();
+                if (result.id) { alert('✅ Prova salva!'); location.reload(); } else { alert('Erro: ' + result.erro); }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+        }
+
+        // ============================================
+        // CORREÇÃO COM IA
+        // ============================================
+        function abrirCamera() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainer').style.display = 'block';
+            document.getElementById('preview').style.display = 'none';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(s => { stream = s; document.getElementById('video').srcObject = s; })
+                .catch(() => alert("❌ Não foi possível acessar a câmera."));
+        }
+
+        function tirarFoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            fotoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            document.getElementById('preview').src = fotoBase64;
+            document.getElementById('preview').style.display = 'block';
+            fecharCamera();
+            alert('✅ Foto capturada!');
+        }
+
+        function fecharCamera() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainer').style.display = 'none';
+        }
+
+        function previewImagem(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoBase64 = e.target.result;
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('preview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function corrigirProva() {
+            const provaId = document.getElementById('selectProva').value;
+            const alunoId = document.getElementById('selectAluno').value;
+            if (!fotoBase64) { alert('❌ Primeiro tire uma foto!'); return; }
+            if (!provaId) { alert('❌ Selecione a prova!'); return; }
+            if (!alunoId) { alert('❌ Selecione o aluno!'); return; }
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ Processando...';
+            btn.disabled = true;
+            document.getElementById('statusReconhecimento').style.display = 'block';
+            document.getElementById('resultadoCorrecao').innerHTML = '';
+            try {
+                const response = await fetch(`${API_URL}/api/corrigir`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imagem: fotoBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) })
+                });
+                const dados = await response.json();
+                if (dados.erro) {
+                    document.getElementById('resultadoCorrecao').innerHTML = `
+                        <div class="resultado resultado-erro"><strong>❌ Erro:</strong><br>${dados.erro}</div>`;
+                } else {
+                    const aprovado = dados.nota >= 6;
+                    let html = '<div class="resultado">';
+                    html += `<h3>📊 RESULTADO</h3>`;
+                    html += `<p><strong>👤 Aluno:</strong> ${dados.aluno}</p>`;
+                    html += `<p><strong>🤖 Respostas:</strong> ${dados.respostas_detectadas.join(', ')}</p>`;
+                    html += `<p><strong>✅ Acertos:</strong> ${dados.acertos} de ${dados.total}</p>`;
+                    html += `<p><strong>📊 Percentual:</strong> ${dados.percentual}%</p>`;
+                    html += `<div class="progress-bar"><div class="progress-fill" style="width: ${dados.percentual}%;"></div></div>`;
+                    html += `<p><strong>🎓 Nota:</strong> <span style="font-size:36px; font-weight:bold;">${dados.nota}</span></p>`;
+                    if (dados.confianca_media) {
+                        html += `<div class="confidence-bar"><div class="confidence-fill" style="width: ${dados.confianca_media}%;"></div></div>`;
+                        html += `<p><strong>🧠 Confiança:</strong> ${dados.confianca_media}%</p>`;
+                    }
+                    html += `<p><span class="${aprovado ? 'badge-aprovado' : 'badge-reprovado'}">${aprovado ? '✅ APROVADO' : '❌ REPROVADO'}</span></p>`;
+                    html += `<hr><h4>📝 Detalhamento:</h4>`;
+                    if (dados.correcoes) {
+                        dados.correcoes.forEach(q => {
+                            html += `<p>Questão ${q.questao}: Resposta: <strong>${q.resposta || '?'}</strong> | Gabarito: <strong>${q.gabarito}</strong> ${q.correta ? '✅' : '❌'}</p>`;
+                        });
+                    }
+                    html += `<hr><small>🔬 ${dados.tipo_questoes == 3 ? '3 opções (A, B, C)' : '4 opções (A, B, C, D)'} - Gemini AI</small>`;
+                    html += '</div>';
+                    document.getElementById('resultadoCorrecao').innerHTML = html;
+                    carregarDashboard(); carregarHistorico();
+                }
+            } catch (erro) {
+                document.getElementById('resultadoCorrecao').innerHTML = `<div class="resultado resultado-erro">❌ Erro: ${erro.message}</div>`;
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+                document.getElementById('statusReconhecimento').style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // RELATÓRIOS E ESTATÍSTICAS
+        // ============================================
+        async function carregarEstatisticas() {
+            const provaId = document.getElementById('selectProvaRelatorio').value;
+            if (!provaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/estatisticas?prova_id=${provaId}`);
+                const dados = await response.json();
+                let html = '<div class="resultado resultado-info"><h4>📈 Estatísticas</h4>';
+                if (dados.geral) {
+                    html += `<p>📝 Corrigidas: <strong>${dados.geral.total_corrigidas || 0}</strong></p>`;
+                    html += `<p>⭐ Média: <strong>${parseFloat(dados.geral.media_nota || 0).toFixed(1)}</strong></p>`;
+                    html += `<p>🏆 Maior nota: <strong>${parseFloat(dados.geral.maior_nota || 0).toFixed(1)}</strong></p>`;
+                    html += `<p>📉 Menor nota: <strong>${parseFloat(dados.geral.menor_nota || 0).toFixed(1)}</strong></p>`;
+                }
+                html += '</div>';
+                document.getElementById('estatisticasContainer').innerHTML = html;
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function carregarHistorico() {
+            try {
+                const response = await fetch(`${API_URL}/api/historico`);
+                const historico = await response.json();
+                const tbody = document.querySelector('#tabelaHistorico tbody');
+                if (!tbody) return;
+                if (historico.length === 0 || historico.erro) {
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada</td></tr>';
+                } else {
+                    tbody.innerHTML = historico.map(item => `
+                        <tr>
+                            <td>${item.aluno_nome}</td>
+                            <td>${item.prova_titulo}</td>
+                            <td>${item.acertos}</td>
+                            <td>${item.nota}</td>
+                            <td>${new Date(item.data_correcao).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        function exportarResultados() {
+            const provaId = document.getElementById('selectProvaRelatorio').value;
+            if (provaId) { window.open(`${API_URL}/api/exportar?prova_id=${provaId}`, '_blank'); } else { alert('Selecione uma prova!'); }
+        }
+
+        // ============================================
+        // GERAR GABARITO
+        // ============================================
+        async function carregarEscolasGabarito() {
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`);
+                const escolas = await response.json();
+                const select = document.getElementById('escolaGabarito');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a escola</option>';
+                    escolas.forEach(escola => {
+                        const option = document.createElement('option');
+                        option.value = escola.id;
+                        option.textContent = escola.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function carregarTurmasGabarito() {
+            const escolaId = document.getElementById('escolaGabarito').value;
+            if (!escolaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                const select = document.getElementById('turmaGabarito');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione a turma</option>';
+                    turmas.forEach(turma => {
+                        const option = document.createElement('option');
+                        option.value = turma.id;
+                        option.textContent = turma.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function carregarAlunosGabarito() {
+            const turmaId = document.getElementById('turmaGabarito').value;
+            if (!turmaId) return;
+            try {
+                const responseAlunos = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await responseAlunos.json();
+                const selectAluno = document.getElementById('alunoGabarito');
+                if (selectAluno) {
+                    selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+                    alunos.forEach(aluno => {
+                        const option = document.createElement('option');
+                        option.value = aluno.id;
+                        option.textContent = `${aluno.nome} ${aluno.numero_chamada ? '(Nº ' + aluno.numero_chamada + ')' : ''}`;
+                        selectAluno.appendChild(option);
+                    });
+                }
+                const responseProvas = await fetch(`${API_URL}/api/provas`);
+                const provas = await responseProvas.json();
+                const selectProva = document.getElementById('provaGabarito');
+                if (selectProva) {
+                    selectProva.innerHTML = '<option value="">Selecione a prova</option>';
+                    provas.filter(p => p.turma_id == turmaId).forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} (${prova.quantidade_questoes || 0} questões)`;
+                        selectProva.appendChild(option);
+                    });
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function gerarGabarito() {
+            const escolaId = document.getElementById('escolaGabarito').value;
+            const turmaId = document.getElementById('turmaGabarito').value;
+            const alunoId = document.getElementById('alunoGabarito').value;
+            const provaId = document.getElementById('provaGabarito').value;
+            const numQuestoes = document.getElementById('numQuestoes').value;
+            if (!escolaId || !turmaId || !alunoId || !provaId) {
+                alert('❌ Preencha todos os campos!'); return;
+            }
+            const previewDiv = document.getElementById('gabaritoPreview');
+            previewDiv.innerHTML = '<div class="loading"></div> Gerando...';
+            try {
+                const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        escola_id: parseInt(escolaId), turma_id: parseInt(turmaId),
+                        aluno_id: parseInt(alunoId), prova_id: parseInt(provaId),
+                        quantidade_questoes: parseInt(numQuestoes)
+                    })
+                });
+                if (response.ok) {
+                    const html = await response.text();
+                    const novaAba = window.open();
+                    novaAba.document.write(html);
+                    novaAba.document.close();
+                    previewDiv.innerHTML = `
+                        <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                            ✅ Folha gerada!<br>
+                            <small>Nova aba aberta. Clique em "IMPRIMIR" ou "SALVAR PDF".</small>
+                        </div>
+                    `;
+                } else {
+                    previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro ao gerar</div>`;
+                }
+            } catch (erro) { previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro: ${erro.message}</div>`; }
+        }
+
+        // ============================================
+        // CONFIGURAÇÕES
+        // ============================================
+        async function carregarConfiguracoes() {
+            try {
+                const response = await fetch(`${API_URL}/api/configuracoes`);
+                const config = await response.json();
+                document.getElementById('param1').value = config.param1;
+                document.getElementById('param2').value = config.param2;
+                atualizarValor('param1'); atualizarValor('param2');
+            } catch (erro) { console.error('Erro ao carregar configurações:', erro); }
+        }
+
+        function atualizarValor(id) {
+            const slider = document.getElementById(id);
+            const span = document.getElementById(id + '_val');
+            if (slider && span) span.innerText = slider.value;
+        }
+
+        async function salvarConfiguracoes() {
+            const config = {
+                param1: parseInt(document.getElementById('param1').value),
+                param2: parseInt(document.getElementById('param2').value),
+            };
+            try {
+                await fetch(`${API_URL}/api/configuracoes`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                alert('✅ Configurações salvas!');
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+        }
+
+        function restaurarPadrao() {
+            document.getElementById('param1').value = 80;
+            document.getElementById('param2').value = 25;
+            atualizarValor('param1'); atualizarValor('param2');
+            salvarConfiguracoes();
+        }
+
+        async function gerarQRCode() {
+            try {
+                const response = await fetch(`${API_URL}/api/ip_info`);
+                const dados = await response.json();
+                ipAtual = dados.url;
+                document.getElementById('ipInfo').innerHTML = `
+                    <p><strong>📡 IP:</strong> ${dados.ip}:${dados.porta}</p>
+                    <p><strong>🌐 URL:</strong> <a href="${dados.url}" target="_blank">${dados.url}</a></p>
+                `;
+                document.getElementById('qrcode').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(dados.url)}" style="border-radius:12px;">`;
+            } catch (erro) {
+                document.getElementById('ipInfo').innerHTML = '<p class="resultado-erro">❌ Erro ao obter IP</p>';
+            }
+        }
+
+        function copiarUrl() {
+            if (ipAtual) {
+                navigator.clipboard.writeText(ipAtual);
+                alert('✅ URL copiada!');
+            } else {
+                alert('⚠️ Gere o QR Code primeiro!');
+            }
+        }
     </script>
 </body>
-</html>"""
-        
-        return html, 200, {'Content-Type': 'text/html'}
-        
-    except Exception as e:
-        print(f"Erro: {e}")
-        return f"<h3>Erro: {str(e)}</h3>", 500
-
-# ============================================
-# DEMAIS ROTAS
-# ============================================
-
-@app.route('/api/dashboard', methods=['GET'])
-def dashboard():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT COUNT(*) FROM escolas")
-        total_escolas = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM turmas")
-        total_turmas = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM alunos")
-        total_alunos = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM provas")
-        total_provas = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes")
-        row = cursor.fetchone()
-        
-        conn.close()
-        return jsonify({
-            'total_escolas': total_escolas,
-            'total_turmas': total_turmas,
-            'total_alunos': total_alunos,
-            'total_provas': total_provas,
-            'total_correcoes': row[0] or 0,
-            'media_geral': round(row[1], 1) if row[1] else 0
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/historico', methods=['GET'])
-def historico():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
-                   c.acertos, c.nota, c.data_correcao
-            FROM correcoes c 
-            JOIN alunos a ON c.aluno_id = a.id 
-            JOIN provas p ON c.prova_id = p.id
-            ORDER BY c.data_correcao DESC 
-            LIMIT 50
-        """)
-        
-        historico = [{
-            'id': row[0], 
-            'aluno_nome': row[1], 
-            'prova_titulo': row[2],
-            'acertos': row[3], 
-            'nota': round(row[4], 1), 
-            'data_correcao': row[5]
-        } for row in cursor.fetchall()]
-        
-        conn.close()
-        return jsonify(historico)
-    except Exception as e:
-        return jsonify([])
-
-@app.route('/api/estatisticas', methods=['GET'])
-def estatisticas():
-    prova_id = request.args.get('prova_id')
-    if not prova_id:
-        return jsonify({'erro': 'Prova não informada'}), 400
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_corrigidas,
-                COALESCE(AVG(nota), 0) as media_nota,
-                COALESCE(MAX(nota), 0) as maior_nota,
-                COALESCE(MIN(nota), 0) as menor_nota
-            FROM correcoes 
-            WHERE prova_id = %s
-        """, (prova_id,))
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        return jsonify({
-            'geral': {
-                'total_corrigidas': row[0] or 0,
-                'media_nota': round(row[1], 1) if row[1] else 0,
-                'maior_nota': round(row[2], 1) if row[2] else 0,
-                'menor_nota': round(row[3], 1) if row[3] else 0
-            }
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/status_ia', methods=['GET'])
-def status_ia():
-    return jsonify({
-        'treinada': True,
-        'usando_ia': True,
-        'gemini_disponivel': GEMINI_AVAILABLE,
-        'status': '🧠 Gemini AI ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
-        'metodo': 'Gemini AI',
-        'banco': 'PostgreSQL (Supabase)'
-    })
-
-@app.route('/api/exportar', methods=['GET'])
-def exportar_resultados():
-    prova_id = request.args.get('prova_id')
-    if not prova_id:
-        return jsonify({'erro': 'Prova não informada'}), 400
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao
-            FROM correcoes c 
-            JOIN alunos a ON c.aluno_id = a.id 
-            WHERE c.prova_id = %s
-        """, (prova_id,))
-        
-        resultados = cursor.fetchall()
-        conn.close()
-        
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
-        for r in resultados:
-            writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
-        
-        return output.getvalue(), 200, {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
-        }
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/ip_info', methods=['GET'])
-def ip_info():
-    return jsonify({
-        'ip': 'render.com', 
-        'porta': 10000, 
-        'url': 'https://adabee-sistema-3.onrender.com'
-    })
-
-@app.route('/api/configuracoes', methods=['GET', 'POST'])
-def configuracoes():
-    if request.method == 'GET':
-        return jsonify({'param1': 80, 'param2': 25})
-    return jsonify({'mensagem': 'ok'})
-
-@app.route('/api/alternar_ia', methods=['POST'])
-def alternar_ia():
-    return jsonify({'usando_ia': True})
-
-@app.route('/api/treinar_ia', methods=['POST'])
-def treinar_ia():
-    return jsonify({'status': 'ok', 'mensagem': '✅ Gemini AI está pronto!'})
-
-@app.route('/api/calibrar', methods=['POST'])
-def calibrar():
-    return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!'})
-
-@app.route('/api/testar_gemini', methods=['POST'])
-def testar_gemini():
-    try:
-        dados = request.json
-        imagem = dados.get('imagem')
-        if not imagem:
-            return jsonify({'erro': 'Imagem não fornecida'}), 400
-        if ',' in imagem:
-            imagem = imagem.split(',')[1]
-        imagem_bytes = base64.b64decode(imagem)
-        img = Image.open(io.BytesIO(imagem_bytes))
-        img.thumbnail((800, 800))
-        prompt = "Descreva o que você vê nesta imagem. Liste as letras A, B, C, D, E se aparecerem."
-        response = model.generate_content([prompt, img])
-        return jsonify({'resposta_bruta': response.text, 'sucesso': True})
-    except Exception as e:
-        return jsonify({'erro': str(e), 'sucesso': False}), 500
-
-@app.route('/api/diagnosticar_banco', methods=['GET'])
-def diagnosticar_banco():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 as teste")
-        row = cursor.fetchone()
-        conn.close()
-        return jsonify({
-            'status': 'sucesso',
-            'banco': 'PostgreSQL (Supabase)',
-            'detalhes': {
-                'teste_query': 'OK',
-                'conexao': 'Estabelecida com sucesso'
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'erro',
-            'banco': 'Não conectado',
-            'detalhes': {'erro': str(e)}
-        }), 500
-
-@app.route('/api/testar_conexao', methods=['GET'])
-def testar_conexao():
-    try:
-        conn = get_db_connection()
-        conn.close()
-        return jsonify({
-            'conectado': True,
-            'banco': 'PostgreSQL (Supabase)',
-            'mensagem': '✅ Conectado ao Supabase!'
-        })
-    except Exception as e:
-        return jsonify({
-            'conectado': False,
-            'erro': str(e)
-        }), 500
-
-# ============================================
-# ERROR HANDLERS
-# ============================================
-
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({
-        'erro': 'Rota não encontrada',
-        'mensagem': 'Verifique se a URL está correta'
-    }), 404
-
-@app.errorhandler(500)
-def internal_error(e):
-    return jsonify({
-        'erro': 'Erro interno do servidor',
-        'mensagem': str(e)
-    }), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+</html>
