@@ -64,14 +64,13 @@ def init_database():
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela alunos
+        # Criar tabela alunos (SEM responsavel)
         cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
             id SERIAL PRIMARY KEY, 
             turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
             nome TEXT NOT NULL, 
             matricula TEXT, 
             numero_chamada INTEGER,
-            responsavel TEXT,
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
@@ -268,7 +267,7 @@ def deletar_turma(turma_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE ALUNOS
+# ROTAS DE ALUNOS (CORRIGIDAS - SEM RESPONSAVEL)
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -280,7 +279,7 @@ def listar_alunos():
         
         if turma_id:
             cursor.execute("""
-                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, a.responsavel, t.nome as turma_nome
+                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
                 FROM alunos a 
                 LEFT JOIN turmas t ON a.turma_id = t.id
                 WHERE a.turma_id = %s 
@@ -288,7 +287,7 @@ def listar_alunos():
             """, (turma_id,))
         else:
             cursor.execute("""
-                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, a.responsavel, t.nome as turma_nome
+                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
                 FROM alunos a 
                 LEFT JOIN turmas t ON a.turma_id = t.id
                 ORDER BY a.numero_chamada
@@ -300,7 +299,6 @@ def listar_alunos():
             'nome': row['nome'], 
             'matricula': row['matricula'], 
             'numero_chamada': row['numero_chamada'],
-            'responsavel': row['responsavel'],
             'turma_nome': row['turma_nome']
         } for row in cursor.fetchall()]
         
@@ -317,7 +315,6 @@ def criar_aluno():
         nome = dados.get('nome')
         matricula = dados.get('matricula', '')
         numero_chamada = dados.get('numero_chamada')
-        responsavel = dados.get('responsavel', '')
         
         if not turma_id or not nome:
             return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
@@ -325,10 +322,10 @@ def criar_aluno():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada, responsavel) 
-            VALUES (%s, %s, %s, %s, %s) 
+            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) 
+            VALUES (%s, %s, %s, %s) 
             RETURNING id
-        """, (turma_id, nome, matricula, numero_chamada, responsavel))
+        """, (turma_id, nome, matricula, numero_chamada))
         
         aluno_id = cursor.fetchone()['id']
         conn.commit()
