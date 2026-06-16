@@ -5,52 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>AdaBee AI - Corretor Inteligente com IA Gemini</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            font-size: 60px;
-            margin-bottom: 10px;
-        }
-
-        h1 {
-            color: white;
-            font-size: 28px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .subtitle {
-            color: rgba(255,255,255,0.9);
-            margin-top: 5px;
-        }
-
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .logo { font-size: 60px; margin-bottom: 10px; }
+        h1 { color: white; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .subtitle { color: rgba(255,255,255,0.9); margin-top: 5px; }
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
-
         .dashboard-card {
             background: white;
             border-radius: 15px;
@@ -59,34 +31,16 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             transition: transform 0.2s;
         }
-
-        .dashboard-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .dashboard-card .icon {
-            font-size: 35px;
-            margin-bottom: 10px;
-        }
-
-        .dashboard-card .value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .dashboard-card .label {
-            color: #666;
-            font-size: 12px;
-        }
-
+        .dashboard-card:hover { transform: translateY(-3px); }
+        .dashboard-card .icon { font-size: 35px; margin-bottom: 10px; }
+        .dashboard-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+        .dashboard-card .label { color: #666; font-size: 12px; }
         .tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
-
         .tab-btn {
             flex: 1;
             padding: 12px 15px;
@@ -99,22 +53,8 @@
             background: rgba(255,255,255,0.2);
             color: white;
         }
-
-        .tab-btn.active {
-            background: white;
-            color: #667eea;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .tab-btn.ai-active {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
-        }
-
-        .tab-btn:hover:not(.active) {
-            background: rgba(255,255,255,0.3);
-        }
-
+        .tab-btn.active { background: white; color: #667eea; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.3); }
         .card {
             background: white;
             border-radius: 20px;
@@ -122,7 +62,6 @@
             margin-bottom: 20px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
-
         .card h2 {
             color: #333;
             margin-bottom: 20px;
@@ -130,24 +69,9 @@
             border-left: 4px solid #667eea;
             padding-left: 15px;
         }
-
-        .card h3 {
-            color: #555;
-            margin: 15px 0 10px 0;
-            font-size: 18px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #555;
-        }
-
+        .card h3 { color: #555; margin: 15px 0 10px 0; font-size: 18px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
         input, select, textarea {
             width: 100%;
             padding: 12px 15px;
@@ -156,12 +80,7 @@
             font-size: 14px;
             transition: border-color 0.2s;
         }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #667eea; }
         button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -173,102 +92,20 @@
             cursor: pointer;
             transition: transform 0.1s, opacity 0.2s;
         }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #28a745, #20c997);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545, #fd7e14);
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #17a2b8, #6f42c1);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d, #495057);
-        }
-
-        .btn-ai {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-        }
-
-        .btn-redacao {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .gabarito-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .gabarito-grid input {
-            width: 60px;
-            text-align: center;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .camera-area {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            color: white;
-            transition: transform 0.2s;
-        }
-
-        .camera-area:hover {
-            transform: scale(1.02);
-        }
-
-        .preview {
-            max-width: 100%;
-            border-radius: 12px;
-            margin-top: 15px;
-            border: 3px solid #667eea;
-        }
-
-        .resultado {
-            background: #d4edda;
-            color: #155724;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-        }
-
-        .resultado-erro {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .resultado-info {
-            background: #e7f3ff;
-            color: #0066cc;
-        }
-
-        .resultado-redacao {
-            background: #fce4ec;
-            color: #880e4f;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-            white-space: pre-wrap;
-        }
-
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-success { background: linear-gradient(135deg, #28a745, #20c997); }
+        .btn-danger { background: linear-gradient(135deg, #dc3545, #fd7e14); }
+        .btn-info { background: linear-gradient(135deg, #17a2b8, #6f42c1); }
+        .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); }
+        .btn-ai { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .btn-redacao { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .gabarito-grid input { width: 60px; text-align: center; font-weight: bold; text-transform: uppercase; }
+        .preview { max-width: 100%; border-radius: 12px; margin-top: 15px; border: 3px solid #667eea; }
+        .resultado { background: #d4edda; color: #155724; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .resultado-erro { background: #f8d7da; color: #721c24; }
+        .resultado-redacao { background: #fce4ec; color: #880e4f; padding: 20px; border-radius: 12px; margin-top: 20px; white-space: pre-wrap; }
         .status-reconhecimento {
             background: #e7f3ff;
             padding: 12px;
@@ -277,60 +114,15 @@
             text-align: center;
             color: #0066cc;
         }
-
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #555;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .progress-bar {
-            background: #e0e0e0;
-            border-radius: 10px;
-            height: 10px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.5s;
-        }
-
-        .confidence-bar {
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #28a745, #20c997);
-            transition: width 0.5s;
-        }
-
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; }
+        tr:hover { background: #f8f9fa; }
+        .progress-bar { background: #e0e0e0; border-radius: 10px; height: 10px; overflow: hidden; }
+        .progress-fill { background: linear-gradient(135deg, #28a745, #20c997); height: 100%; border-radius: 10px; transition: width 0.5s; }
+        .confidence-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+        .confidence-fill { height: 100%; background: linear-gradient(90deg, #28a745, #20c997); transition: width 0.5s; }
         .loading {
             display: inline-block;
             width: 20px;
@@ -340,121 +132,30 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .preview-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .preview-thumb {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 2px solid #667eea;
-        }
-
-        .video-container {
-            position: relative;
-            margin-top: 15px;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-        }
-
-        video {
-            width: 100%;
-            max-height: 400px;
-        }
-
-        .camera-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .camera-controls button {
-            flex: 1;
-        }
-
-        .badge-aprovado {
-            background: #d4edda;
-            color: #155724;
-            padding: 5px 10px;
-            border-radius: 20px;
-        }
-
-        .badge-reprovado {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 5px 10px;
-            border-radius: 20px;
-        }
-
-        .badge-3opcoes {
-            background: #fff3cd;
-            color: #856404;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-        }
-
-        .badge-4opcoes {
-            background: #d1ecf1;
-            color: #0c5460;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-        }
-
-        .alert {
-            padding: 12px 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-info {
-            background: #e7f3ff;
-            color: #0066cc;
-            border: 1px solid #b8e0ff;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-
+        .preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .preview-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #667eea; }
+        .video-container { position: relative; margin-top: 15px; border-radius: 12px; overflow: hidden; background: #000; }
+        video { width: 100%; max-height: 400px; }
+        .camera-controls { display: flex; gap: 10px; margin-top: 10px; }
+        .camera-controls button { flex: 1; }
+        .badge-aprovado { background: #d4edda; color: #155724; padding: 5px 10px; border-radius: 20px; }
+        .badge-reprovado { background: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 20px; }
+        .badge-3opcoes { background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .badge-4opcoes { background: #d1ecf1; color: #0c5460; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .alert { padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-info { background: #e7f3ff; color: #0066cc; border: 1px solid #b8e0ff; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            .card {
-                padding: 15px;
-            }
-            .dashboard-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            .tabs {
-                gap: 5px;
-            }
-            .tab-btn {
-                font-size: 10px;
-                padding: 8px;
-            }
+            body { padding: 10px; }
+            .card { padding: 15px; }
+            .dashboard-grid { grid-template-columns: repeat(3, 1fr); }
+            .tabs { gap: 5px; }
+            .tab-btn { font-size: 10px; padding: 8px; }
         }
     </style>
 </head>
@@ -466,41 +167,15 @@
             <div class="subtitle">Com Inteligência Artificial Gemini para máxima precisão</div>
         </div>
 
-        <!-- Dashboard -->
         <div class="dashboard-grid" id="dashboard">
-            <div class="dashboard-card">
-                <div class="icon">🏫</div>
-                <div class="value" id="totalEscolas">-</div>
-                <div class="label">Escolas</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="icon">📚</div>
-                <div class="value" id="totalTurmas">-</div>
-                <div class="label">Turmas</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="icon">👨‍🎓</div>
-                <div class="value" id="totalAlunos">-</div>
-                <div class="label">Alunos</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="icon">📝</div>
-                <div class="value" id="totalProvas">-</div>
-                <div class="label">Provas</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="icon">✅</div>
-                <div class="value" id="totalCorrecoes">-</div>
-                <div class="label">Correções</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="icon">⭐</div>
-                <div class="value" id="mediaGeral">-</div>
-                <div class="label">Média Geral</div>
-            </div>
+            <div class="dashboard-card"><div class="icon">🏫</div><div class="value" id="totalEscolas">-</div><div class="label">Escolas</div></div>
+            <div class="dashboard-card"><div class="icon">📚</div><div class="value" id="totalTurmas">-</div><div class="label">Turmas</div></div>
+            <div class="dashboard-card"><div class="icon">👨‍🎓</div><div class="value" id="totalAlunos">-</div><div class="label">Alunos</div></div>
+            <div class="dashboard-card"><div class="icon">📝</div><div class="value" id="totalProvas">-</div><div class="label">Provas</div></div>
+            <div class="dashboard-card"><div class="icon">✅</div><div class="value" id="totalCorrecoes">-</div><div class="label">Correções</div></div>
+            <div class="dashboard-card"><div class="icon">⭐</div><div class="value" id="mediaGeral">-</div><div class="label">Média Geral</div></div>
         </div>
 
-        <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" onclick="mostrarAba('correcao')">📸 Corrigir Prova</button>
             <button class="tab-btn" onclick="mostrarAba('redacao')">✍️ Corrigir Redação</button>
@@ -516,25 +191,15 @@
         <div id="abaCorrecao">
             <div class="card">
                 <h2>📸 Correção de Prova com IA Gemini</h2>
-                
-                <div id="statusIA" class="alert alert-info" style="margin-bottom:15px;">
-                    🔍 Verificando status da IA...
-                </div>
-
+                <div id="statusIA" class="alert alert-info">🔍 Verificando status da IA...</div>
                 <div class="form-group">
                     <label>📝 Selecione a prova</label>
-                    <select id="selectProva" onchange="carregarDadosProva()">
-                        <option value="">Carregando provas...</option>
-                    </select>
+                    <select id="selectProva" onchange="carregarDadosProva()"><option value="">Carregando provas...</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>👨‍🎓 Selecione o aluno</label>
-                    <select id="selectAluno">
-                        <option value="">Primeiro selecione a prova</option>
-                    </select>
+                    <select id="selectAluno"><option value="">Primeiro selecione a prova</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>📸 Foto da Folha de Respostas</label>
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -552,153 +217,115 @@
                     <canvas id="canvas" style="display:none;"></canvas>
                     <img id="preview" class="preview" style="display:none;">
                 </div>
-
                 <div id="statusReconhecimento" class="status-reconhecimento" style="display:none;">
                     <div class="loading"></div> Processando imagem com IA Gemini...
                 </div>
-
-                <button class="btn-ai" onclick="corrigirProva()" style="width:100%">
-                    🧠 CORRIGIR COM GEMINI AI
-                </button>
-
+                <button class="btn-ai" onclick="corrigirProva()" style="width:100%">🧠 CORRIGIR COM GEMINI AI</button>
                 <div id="resultadoCorrecao"></div>
-            </div>
-
-            <div class="card">
-                <h3>📖 Como funciona o reconhecimento com IA Gemini:</h3>
-                <ul style="margin-left: 20px; color: #666;">
-                    <li>✅ O sistema analisa a foto e detecta as respostas</li>
-                    <li>✅ A IA Gemini reconhece bolinhas marcadas com alta precisão</li>
-                    <li>✅ Suporte para 3 opções (1º Ano) ou 4 opções (2º Ano em diante)</li>
-                    <li>✅ Barra de confiança mostra a precisão da detecção</li>
-                    <li>✅ Tecnologia de ponta do Google para reconhecimento</li>
-                </ul>
-                <div class="alert alert-info" style="margin-top:15px;">
-                    💡 Dica: Use boa iluminação, folha sem reflexo e folha bem preenchida!
-                </div>
             </div>
         </div>
 
         <!-- Aba: Correção de Redação -->
         <div id="abaRedacao" style="display:none;">
             <div class="card">
-                <h2>✍️ Correção de Redação / Texto com Gemini AI</h2>
-                
-                <div id="statusIA_redacao" class="alert alert-info" style="margin-bottom:15px;">
-                    🔍 Verificando status da IA...
-                </div>
-
+                <h2>✍️ Correção de Redação com IA Gemini</h2>
+                <div id="statusIA_redacao" class="alert alert-info">🔍 Verificando status da IA...</div>
                 <div class="form-group">
                     <label>📝 Selecione a prova (opcional)</label>
-                    <select id="selectProvaRedacao">
-                        <option value="">Nenhuma (correção avulsa)</option>
-                    </select>
+                    <select id="selectProvaRedacao"><option value="">Nenhuma (correção avulsa)</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>👨‍🎓 Selecione o aluno (opcional)</label>
-                    <select id="selectAlunoRedacao">
-                        <option value="">Nenhum (correção avulsa)</option>
-                    </select>
+                    <select id="selectAlunoRedacao"><option value="">Nenhum (correção avulsa)</option></select>
                 </div>
-
                 <div class="form-group">
-                    <label>📝 Digite o texto para correção</label>
-                    <textarea id="textoRedacao" rows="10" placeholder="Digite ou cole o texto aqui..." style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:10px; font-size:14px;"></textarea>
+                    <label>📸 Foto da Redação</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button type="button" class="btn-success" onclick="abrirCameraRedacao()">📷 Tirar Foto da Redação</button>
+                        <button type="button" class="btn-info" onclick="document.getElementById('cameraInputRedacao').click()">🖼️ Escolher Imagem</button>
+                    </div>
+                    <input type="file" id="cameraInputRedacao" accept="image/*" style="display:none" onchange="previewImagemRedacao(this)">
+                    <div id="videoContainerRedacao" class="video-container" style="display:none;">
+                        <video id="videoRedacao" autoplay playsinline></video>
+                        <div class="camera-controls">
+                            <button onclick="tirarFotoRedacao()" class="btn-success">📸 Tirar Foto</button>
+                            <button onclick="fecharCameraRedacao()" class="btn-danger">❌ Fechar</button>
+                        </div>
+                    </div>
+                    <canvas id="canvasRedacao" style="display:none;"></canvas>
+                    <img id="previewRedacao" class="preview" style="display:none;">
                 </div>
-
-                <button class="btn-redacao" onclick="corrigirRedacao()" style="width:100%">
-                    ✍️ CORRIGIR REDAÇÃO COM GEMINI AI
-                </button>
-
+                <div class="form-group">
+                    <label>📝 Ou digite o texto (opcional)</label>
+                    <textarea id="textoRedacao" rows="5" placeholder="Digite ou cole o texto aqui..." style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:10px; font-size:14px;"></textarea>
+                </div>
+                <div id="statusRedacao" class="status-reconhecimento" style="display:none;">
+                    <div class="loading"></div> Analisando redação com Gemini AI...
+                </div>
+                <button class="btn-redacao" onclick="corrigirRedacao()" style="width:100%">✍️ CORRIGIR REDAÇÃO COM GEMINI AI</button>
                 <div id="resultadoRedacao"></div>
-            </div>
-
-            <div class="card">
-                <h3>📖 Como funciona a correção de redação:</h3>
-                <ul style="margin-left: 20px; color: #666;">
-                    <li>✅ O Gemini AI analisa o texto automaticamente</li>
-                    <li>✅ Gera uma nota de 0 a 10</li>
-                    <li>✅ Fornece feedback detalhado (pontos fortes e fracos)</li>
-                    <li>✅ Sugere melhorias para o texto</li>
-                </ul>
             </div>
         </div>
 
         <!-- Aba: Treinar IA -->
         <div id="abaTreinar" style="display:none;">
             <div class="card">
-                <h2>🧠 Treinar Inteligência Artificial Gemini</h2>
-                <p style="margin-bottom:15px;">Ensine a IA Gemini a reconhecer bolinhas marcadas e não marcadas. Quanto mais exemplos, melhor!</p>
-
+                <h2>🧠 Treinar IA Gemini</h2>
+                <p style="margin-bottom:15px;">Ensine a IA Gemini a reconhecer bolinhas marcadas e não marcadas.</p>
                 <div class="form-group">
-                    <label>✅ Bolinhas MARCADAS (selecione várias fotos)</label>
+                    <label>✅ Bolinhas MARCADAS</label>
                     <input type="file" id="treinarMarcadas" accept="image/*" multiple>
                     <div id="previewMarcadas" class="preview-grid"></div>
                 </div>
-
                 <div class="form-group">
-                    <label>❌ Bolinhas NÃO MARCADAS (selecione várias fotos)</label>
+                    <label>❌ Bolinhas NÃO MARCADAS</label>
                     <input type="file" id="treinarNaoMarcadas" accept="image/*" multiple>
                     <div id="previewNaoMarcadas" class="preview-grid"></div>
                 </div>
-
                 <button class="btn-ai" onclick="treinarIA()" style="width:100%">🧠 TREINAR GEMINI AI</button>
                 <div id="treinamentoResultado"></div>
             </div>
-
             <div class="card">
                 <h2>⚙️ Configurações da IA</h2>
                 <div class="form-group">
-                    <label>Usar IA Gemini nas correções?</label>
+                    <label>Usar IA Gemini?</label>
                     <select id="usarIA" onchange="alternarIA()">
-                        <option value="true">Sim (Recomendado - Melhor precisão)</option>
+                        <option value="true">Sim (Recomendado)</option>
                         <option value="false">Não (Modo básico)</option>
                     </select>
                 </div>
-                <button class="btn-info" onclick="verificarStatusIA()">🔍 Verificar Status da IA</button>
+                <button class="btn-info" onclick="verificarStatusIA()">🔍 Verificar Status</button>
             </div>
         </div>
 
-        <!-- Aba: Gerenciar Provas -->
+        <!-- Aba: Provas -->
         <div id="abaProvas" style="display:none;">
             <div class="card">
                 <h2>📝 Criar Nova Prova</h2>
-                
                 <div class="form-group">
                     <label>🏫 Escola</label>
-                    <select id="escolaProva" onchange="carregarTurmasProva()">
-                        <option value="">Selecione a escola</option>
-                    </select>
+                    <select id="escolaProva" onchange="carregarTurmasProva()"><option value="">Selecione a escola</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>📚 Turma</label>
-                    <select id="turmaProva">
-                        <option value="">Selecione a turma</option>
-                    </select>
+                    <select id="turmaProva"><option value="">Selecione a turma</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>📝 Título da Prova</label>
                     <input type="text" id="tituloProva" placeholder="Ex: Prova Matemática - 1º Bimestre">
                 </div>
-
                 <div class="form-group">
                     <label>📅 Data da Prova</label>
                     <input type="date" id="dataProva">
                 </div>
-
                 <div class="form-group">
                     <label>💰 Valor da Prova</label>
                     <input type="number" id="valorProva" value="10" step="0.5">
                 </div>
-
                 <div class="form-group">
                     <label>🔢 Quantidade de Questões</label>
                     <input type="number" id="qtdQuestoes" value="10" min="1" max="50">
                 </div>
-
                 <div class="form-group">
                     <label>📝 Tipo de Prova</label>
                     <select id="tipoProva">
@@ -706,50 +333,25 @@
                         <option value="4" selected>2º Ano em diante - 4 Opções (A, B, C, D)</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label>📝 Descrição (opcional)</label>
                     <textarea id="descricaoProva" rows="3" placeholder="Conteúdos abordados..."></textarea>
                 </div>
-
                 <div class="form-group">
                     <label>✏️ Gabarito</label>
                     <div class="gabarito-grid" id="gabaritoGrid"></div>
                     <button type="button" class="btn-secondary" onclick="adicionarQuestaoGabarito()">➕ Adicionar Questão</button>
                 </div>
-
                 <button class="btn-success" onclick="salvarProva()">💾 Salvar Prova</button>
             </div>
-
             <div class="card">
                 <h2>📋 Provas Cadastradas</h2>
                 <div class="table-responsive">
                     <table id="tabelaProvas">
-                        <thead>
-                            <tr><th>Título</th><th>Turma</th><th>Tipo</th><th>Data</th><th>Questões</th><th>Ações</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="6">Carregando...</td></tr>
-                        </tbody>
+                        <thead><tr><th>Título</th><th>Turma</th><th>Tipo</th><th>Data</th><th>Questões</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="6">Carregando...</td></tr></tbody>
                     </table>
                 </div>
-            </div>
-
-            <div class="card">
-                <h2>🔧 Calibrar Sistema (Avançado)</h2>
-                <p>Calibre os limites de detecção para seu tipo específico de gabarito.</p>
-                <div class="form-group">
-                    <label>Envie uma imagem de exemplo do gabarito</label>
-                    <input type="file" id="calibrarInput" accept="image/*">
-                </div>
-                <div class="form-group">
-                    <label>Prova (opcional - para salvar calibração)</label>
-                    <select id="calibrarProvaSelect">
-                        <option value="">Selecione uma prova (opcional)</option>
-                    </select>
-                </div>
-                <button class="btn-info" onclick="calibrarSistema()">🔧 CALIBRAR SISTEMA</button>
-                <div id="calibrarResultado"></div>
             </div>
         </div>
 
@@ -757,60 +359,38 @@
         <div id="abaAlunos" style="display:none;">
             <div class="card">
                 <h2>👨‍🎓 Cadastrar Aluno</h2>
-                
                 <div class="form-group">
                     <label>🏫 Escola</label>
-                    <select id="escolaAluno" onchange="carregarTurmasAluno()">
-                        <option value="">Selecione a escola</option>
-                    </select>
+                    <select id="escolaAluno" onchange="carregarTurmasAluno()"><option value="">Selecione a escola</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>📚 Turma</label>
-                    <select id="turmaAluno">
-                        <option value="">Selecione a turma</option>
-                    </select>
+                    <select id="turmaAluno"><option value="">Selecione a turma</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>🔢 Número de Chamada</label>
                     <input type="number" id="numeroChamada" placeholder="Opcional">
                 </div>
-
                 <div class="form-group">
                     <label>👤 Nome do Aluno</label>
                     <input type="text" id="nomeAluno" placeholder="Nome completo">
                 </div>
-
                 <div class="form-group">
                     <label>🔢 Matrícula</label>
                     <input type="text" id="matriculaAluno" placeholder="Número de matrícula">
                 </div>
-
-                <div class="form-group">
-                    <label>👪 Responsável</label>
-                    <input type="text" id="responsavelAluno" placeholder="Nome do responsável">
-                </div>
-
                 <button class="btn-success" onclick="salvarAluno()">💾 Cadastrar Aluno</button>
             </div>
-
             <div class="card">
                 <h2>📋 Lista de Alunos</h2>
                 <div class="form-group">
                     <label>Filtrar por turma</label>
-                    <select id="filtroTurmaAlunos" onchange="carregarAlunos()">
-                        <option value="">Todas as turmas</option>
-                    </select>
+                    <select id="filtroTurmaAlunos" onchange="carregarAlunos()"><option value="">Todas as turmas</option></select>
                 </div>
                 <div class="table-responsive">
                     <table id="tabelaAlunos">
-                        <thead>
-                            <tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="5">Carregando...</td></tr>
-                        </tbody>
+                        <thead><tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -820,29 +400,19 @@
         <div id="abaRelatorios" style="display:none;">
             <div class="card">
                 <h2>📊 Estatísticas da Prova</h2>
-                
                 <div class="form-group">
                     <label>Selecione a prova</label>
-                    <select id="selectProvaRelatorio" onchange="carregarEstatisticas()">
-                        <option value="">Selecione uma prova</option>
-                    </select>
+                    <select id="selectProvaRelatorio" onchange="carregarEstatisticas()"><option value="">Selecione uma prova</option></select>
                 </div>
-
                 <div id="estatisticasContainer"></div>
-                
                 <button class="btn-info" onclick="exportarResultados()">📎 Exportar para Excel</button>
             </div>
-
             <div class="card">
                 <h2>📜 Histórico de Correções</h2>
                 <div class="table-responsive">
                     <table id="tabelaHistorico">
-                        <thead>
-                            <tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Data</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="5">Carregando...</td></tr>
-                        </tbody>
+                        <thead><tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Data</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -858,14 +428,11 @@
                 </div>
                 <button class="btn-success" onclick="salvarEscola()">💾 Salvar Escola</button>
             </div>
-
             <div class="card">
                 <h3>📚 Cadastrar Turma</h3>
                 <div class="form-group">
                     <label>Escola</label>
-                    <select id="escolaTurmaConfig">
-                        <option value="">Selecione a escola</option>
-                    </select>
+                    <select id="escolaTurmaConfig"><option value="">Selecione a escola</option></select>
                 </div>
                 <div class="form-group">
                     <label>Nome da Turma</label>
@@ -883,7 +450,6 @@
                 </div>
                 <button class="btn-success" onclick="salvarTurma()">💾 Salvar Turma</button>
             </div>
-
             <div class="card">
                 <h2>📱 Acesso pelo Celular</h2>
                 <div id="ipInfo">Carregando...</div>
@@ -891,28 +457,17 @@
                 <button onclick="gerarQRCode()" class="btn-info">🔄 Gerar QR Code</button>
                 <button onclick="copiarUrl()" class="btn-success">📋 Copiar URL</button>
             </div>
-
             <div class="card">
-                <h2>⚙️ Ajuste de Sensibilidade do Sistema</h2>
+                <h2>⚙️ Ajustes</h2>
                 <div class="form-group">
-                    <label>Param1 (Limiar de detecção)</label>
+                    <label>Param1</label>
                     <input type="range" id="param1" min="30" max="150" value="80" onchange="atualizarValor('param1')">
                     <span id="param1_val">80</span>
                 </div>
                 <div class="form-group">
-                    <label>Param2 (Precisão da detecção)</label>
+                    <label>Param2</label>
                     <input type="range" id="param2" min="10" max="50" value="25" onchange="atualizarValor('param2')">
                     <span id="param2_val">25</span>
-                </div>
-                <div class="form-group">
-                    <label>Raio Mínimo da Bolinha</label>
-                    <input type="range" id="minRadius" min="4" max="15" value="8" onchange="atualizarValor('minRadius')">
-                    <span id="minRadius_val">8</span>
-                </div>
-                <div class="form-group">
-                    <label>Raio Máximo da Bolinha</label>
-                    <input type="range" id="maxRadius" min="15" max="40" value="25" onchange="atualizarValor('maxRadius')">
-                    <span id="maxRadius_val">25</span>
                 </div>
                 <button class="btn-success" onclick="salvarConfiguracoes()">💾 Salvar Configurações</button>
                 <button class="btn-secondary" onclick="restaurarPadrao()" style="margin-left:10px;">🔄 Restaurar Padrão</button>
@@ -923,42 +478,27 @@
         <div id="abaGabarito" style="display:none;">
             <div class="card">
                 <h2>📄 Gerar Folha de Respostas</h2>
-                
                 <div class="form-group">
                     <label>🏫 Escola</label>
-                    <select id="escolaGabarito" onchange="carregarTurmasGabarito()">
-                        <option value="">Selecione a escola</option>
-                    </select>
+                    <select id="escolaGabarito" onchange="carregarTurmasGabarito()"><option value="">Selecione a escola</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>📚 Turma</label>
-                    <select id="turmaGabarito" onchange="carregarAlunosGabarito()">
-                        <option value="">Selecione a turma</option>
-                    </select>
+                    <select id="turmaGabarito" onchange="carregarAlunosGabarito()"><option value="">Selecione a turma</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>👨‍🎓 Aluno</label>
-                    <select id="alunoGabarito">
-                        <option value="">Selecione o aluno</option>
-                    </select>
+                    <select id="alunoGabarito"><option value="">Selecione o aluno</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>📝 Prova</label>
-                    <select id="provaGabarito">
-                        <option value="">Selecione a prova</option>
-                    </select>
+                    <select id="provaGabarito"><option value="">Selecione a prova</option></select>
                 </div>
-
                 <div class="form-group">
                     <label>🔢 Número de Questões</label>
                     <input type="number" id="numQuestoes" value="20" min="1" max="30">
                 </div>
-
                 <button class="btn-success" onclick="gerarGabarito()">📄 GERAR FOLHA DE RESPOSTAS</button>
-                
                 <div id="gabaritoPreview" style="margin-top:20px;"></div>
             </div>
         </div>
@@ -969,8 +509,10 @@
         // VARIÁVEIS GLOBAIS
         // ============================================
         let fotoBase64 = null;
+        let fotoRedacaoBase64 = null;
         let provaSelecionada = null;
         let stream = null;
+        let streamRedacao = null;
         let ipAtual = '';
         const API_URL = '';
 
@@ -986,20 +528,15 @@
             carregarTodasProvas();
             carregarEscolasConfig();
             carregarEscolasGabarito();
-            carregarProvasParaCalibrar();
             carregarProvasRelatorio();
             carregarProvasRedacao();
             carregarHistorico();
             carregarFiltroTurmas();
             carregarConfiguracoes();
             verificarStatusIA();
-            
             for(let i = 0; i < 5; i++) adicionarQuestaoGabarito();
         };
 
-        // ============================================
-        // FUNÇÕES DE TABS
-        // ============================================
         function mostrarAba(aba) {
             const abas = ['Correcao', 'Redacao', 'Treinar', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
             abas.forEach(a => {
@@ -1008,10 +545,8 @@
             });
             let abaElement = document.getElementById('aba' + aba.charAt(0).toUpperCase() + aba.slice(1));
             if (abaElement) abaElement.style.display = 'block';
-
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             if (event && event.target) event.target.classList.add('active');
-            
             if (aba === 'relatorios') { carregarProvasRelatorio(); carregarHistorico(); }
             if (aba === 'alunos') { carregarFiltroTurmas(); carregarAlunos(); }
             if (aba === 'configuracoes') gerarQRCode();
@@ -1027,20 +562,11 @@
                 const dados = await response.json();
                 const statusDiv = document.getElementById('statusIA');
                 const statusRedacao = document.getElementById('statusIA_redacao');
-                
                 const msg = dados.gemini_disponivel ? 
                     '🧠 <strong>IA Gemini ativa!</strong> Correções com alta precisão. ✅' :
                     '⚠️ <strong>IA Gemini não configurada</strong> - Configure a chave API.';
-                
-                if (statusDiv) {
-                    statusDiv.innerHTML = msg;
-                    statusDiv.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning';
-                }
-                if (statusRedacao) {
-                    statusRedacao.innerHTML = msg;
-                    statusRedacao.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning';
-                }
-                
+                if (statusDiv) { statusDiv.innerHTML = msg; statusDiv.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning'; }
+                if (statusRedacao) { statusRedacao.innerHTML = msg; statusRedacao.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning'; }
                 if (document.getElementById('usarIA')) {
                     document.getElementById('usarIA').value = dados.usando_ia ? 'true' : 'false';
                 }
@@ -1105,27 +631,78 @@
             }
         }
 
+        // ============================================
+        // CORREÇÃO DE REDAÇÃO (COM FOTO OU TEXTO)
+        // ============================================
+        function abrirCameraRedacao() {
+            if (streamRedacao) streamRedacao.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainerRedacao').style.display = 'block';
+            document.getElementById('previewRedacao').style.display = 'none';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(s => { streamRedacao = s; document.getElementById('videoRedacao').srcObject = s; })
+                .catch(() => alert("❌ Não foi possível acessar a câmera."));
+        }
+
+        function tirarFotoRedacao() {
+            const video = document.getElementById('videoRedacao');
+            const canvas = document.getElementById('canvasRedacao');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            fotoRedacaoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            document.getElementById('previewRedacao').src = fotoRedacaoBase64;
+            document.getElementById('previewRedacao').style.display = 'block';
+            fecharCameraRedacao();
+            alert('✅ Foto da redação capturada!');
+        }
+
+        function fecharCameraRedacao() {
+            if (streamRedacao) streamRedacao.getTracks().forEach(t => t.stop());
+            document.getElementById('videoContainerRedacao').style.display = 'none';
+        }
+
+        function previewImagemRedacao(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoRedacaoBase64 = e.target.result;
+                    document.getElementById('previewRedacao').src = e.target.result;
+                    document.getElementById('previewRedacao').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         async function corrigirRedacao() {
-            const texto = document.getElementById('textoRedacao').value;
             const provaId = document.getElementById('selectProvaRedacao').value;
             const alunoId = document.getElementById('selectAlunoRedacao').value;
+            const texto = document.getElementById('textoRedacao').value;
             
-            if (!texto || texto.trim().length < 5) {
-                alert('❌ Digite um texto com pelo menos 5 caracteres!');
+            if (!fotoRedacaoBase64 && (!texto || texto.trim().length < 5)) {
+                alert('❌ Tire uma foto da redação OU digite o texto!');
                 return;
             }
             
             const btn = event.target;
             const originalText = btn.innerText;
-            btn.innerText = '⏳ Corrigindo texto com Gemini AI...';
+            btn.innerText = '⏳ Analisando redação com Gemini AI...';
             btn.disabled = true;
-            
-            document.getElementById('resultadoRedacao').innerHTML = '<div class="loading"></div> Analisando texto...';
+            document.getElementById('statusRedacao').style.display = 'block';
+            document.getElementById('resultadoRedacao').innerHTML = '';
             
             try {
-                const body = { texto: texto };
+                const body = {};
                 if (provaId) body.prova_id = parseInt(provaId);
                 if (alunoId) body.aluno_id = parseInt(alunoId);
+                
+                if (fotoRedacaoBase64) {
+                    let imagemData = fotoRedacaoBase64;
+                    if (imagemData.includes(',')) imagemData = imagemData.split(',')[1];
+                    body.imagem = imagemData;
+                } else {
+                    body.texto = texto;
+                }
                 
                 const response = await fetch(`${API_URL}/api/corrigir_redacao`, {
                     method: 'POST',
@@ -1136,56 +713,66 @@
                 const dados = await response.json();
                 
                 if (dados.erro) {
-                    document.getElementById('resultadoRedacao').innerHTML = `
-                        <div class="resultado resultado-erro">❌ ${dados.erro}</div>
-                    `;
+                    document.getElementById('resultadoRedacao').innerHTML = `<div class="resultado resultado-erro">❌ ${dados.erro}</div>`;
                 } else {
+                    let conceito = dados.conceito || 'Não avaliado';
+                    let nota = dados.nota || 0;
+                    let corConceito = '#6c757d';
+                    if (conceito.toLowerCase().includes('excelente')) corConceito = '#28a745';
+                    else if (conceito.toLowerCase().includes('bom')) corConceito = '#17a2b8';
+                    else if (conceito.toLowerCase().includes('regular')) corConceito = '#ffc107';
+                    else if (conceito.toLowerCase().includes('insuficiente')) corConceito = '#dc3545';
+                    
                     document.getElementById('resultadoRedacao').innerHTML = `
-                        <div class="resultado-redacao">
+                        <div class="resultado" style="background: #f8f9fa;">
                             <h3>📝 RESULTADO DA CORREÇÃO</h3>
-                            <p><strong>🎓 Nota:</strong> <span style="font-size:36px; font-weight:bold;">${dados.nota}</span></p>
+                            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin:15px 0;">
+                                <div style="text-align:center;">
+                                    <span style="font-size:48px; font-weight:bold; color:#667eea;">${nota}</span>
+                                    <span style="font-size:18px; color:#666;">/ 10</span>
+                                </div>
+                                <div style="text-align:center; padding:8px 20px; border-radius:20px; background:${corConceito}; color:white; font-weight:bold; font-size:18px;">
+                                    ${conceito}
+                                </div>
+                            </div>
                             <hr>
-                            <div style="white-space:pre-wrap;">${dados.feedback}</div>
+                            <div style="white-space:pre-wrap; font-size:14px; line-height:1.8;">${dados.feedback}</div>
+                            <hr>
+                            <small>🔬 Correção feita com <strong>Gemini AI</strong> - ${dados.metodo || 'Imagem'}</small>
                         </div>
                     `;
+                    carregarDashboard();
+                    carregarHistorico();
                 }
             } catch (erro) {
-                document.getElementById('resultadoRedacao').innerHTML = `
-                    <div class="resultado resultado-erro">❌ Erro: ${erro.message}</div>
-                `;
+                document.getElementById('resultadoRedacao').innerHTML = `<div class="resultado resultado-erro">❌ Erro: ${erro.message}</div>`;
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
+                document.getElementById('statusRedacao').style.display = 'none';
             }
         }
 
         // ============================================
-        // DASHBOARD
+        // DASHBOARD, ESCOLAS, TURMAS, ALUNOS, PROVAS
         // ============================================
         async function carregarDashboard() {
             try {
                 const response = await fetch(`${API_URL}/api/dashboard`);
                 const dados = await response.json();
-                
                 document.getElementById('totalEscolas').innerText = dados.total_escolas || 0;
                 document.getElementById('totalTurmas').innerText = dados.total_turmas || 0;
                 document.getElementById('totalAlunos').innerText = dados.total_alunos || 0;
                 document.getElementById('totalProvas').innerText = dados.total_provas || 0;
                 document.getElementById('totalCorrecoes').innerText = dados.total_correcoes || 0;
                 document.getElementById('mediaGeral').innerText = dados.media_geral || 0;
-            } catch (erro) {
-                console.error('Erro ao carregar dashboard:', erro);
-            }
+            } catch (erro) { console.error('Erro ao carregar dashboard:', erro); }
         }
 
-        // ============================================
-        // ESCOLAS
-        // ============================================
         async function carregarEscolas() {
             try {
                 const response = await fetch(`${API_URL}/api/escolas`);
                 const escolas = await response.json();
-                
                 const selects = ['escolaProva', 'escolaAluno', 'escolaTurmaConfig', 'escolaGabarito'];
                 selects.forEach(selectId => {
                     const select = document.getElementById(selectId);
@@ -1199,11 +786,9 @@
                         });
                     }
                 });
-            } catch (erro) {
-                console.error('Erro ao carregar escolas:', erro);
-            }
+            } catch (erro) { console.error('Erro ao carregar escolas:', erro); }
         }
-        
+
         async function carregarEscolasConfig() {
             try {
                 const response = await fetch(`${API_URL}/api/escolas`);
@@ -1218,45 +803,29 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
-        }
-        
-        async function salvarEscola() {
-            const nome = document.getElementById('novaEscola').value;
-            
-            if (!nome) {
-                alert('Digite o nome da escola!');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_URL}/api/escolas`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome })
-                });
-                
-                const result = await response.json();
-                if (result.id) {
-                    alert('✅ Escola cadastrada com sucesso!');
-                    document.getElementById('novaEscola').value = '';
-                    carregarEscolas();
-                    carregarDashboard();
-                }
-            } catch (erro) {
-                alert('Erro ao salvar: ' + erro.message);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
 
-        // ============================================
-        // TURMAS
-        // ============================================
+        async function salvarEscola() {
+            const nome = document.getElementById('novaEscola').value;
+            if (!nome) { alert('Digite o nome da escola!'); return; }
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                const result = await response.json();
+                if (result.id) {
+                    alert('✅ Escola cadastrada!');
+                    document.getElementById('novaEscola').value = '';
+                    carregarEscolas(); carregarDashboard();
+                }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+        }
+
         async function carregarTurmasProva() {
             const escolaId = document.getElementById('escolaProva').value;
             if (!escolaId) return;
-            
             try {
                 const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                 const turmas = await response.json();
@@ -1270,15 +839,12 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function carregarTurmasAluno() {
             const escolaId = document.getElementById('escolaAluno').value;
             if (!escolaId) return;
-            
             try {
                 const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                 const turmas = await response.json();
@@ -1292,55 +858,37 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function salvarTurma() {
             const escolaId = document.getElementById('escolaTurmaConfig').value;
             const nome = document.getElementById('nomeTurmaConfig').value;
             const serie = document.getElementById('serieTurmaConfig').value;
-            
-            if (!escolaId || !nome) {
-                alert('Preencha todos os campos!');
-                return;
-            }
-            
+            if (!escolaId || !nome) { alert('Preencha todos os campos!'); return; }
             try {
                 const response = await fetch(`${API_URL}/api/turmas`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ escola_id: parseInt(escolaId), nome, serie })
                 });
-                
                 const result = await response.json();
                 if (result.id) {
-                    alert('✅ Turma cadastrada com sucesso!');
+                    alert('✅ Turma cadastrada!');
                     document.getElementById('nomeTurmaConfig').value = '';
-                    carregarEscolasConfig();
-                    carregarDashboard();
+                    carregarEscolasConfig(); carregarDashboard();
                 }
-            } catch (erro) {
-                alert('Erro ao salvar: ' + erro.message);
-            }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
         }
 
-        // ============================================
-        // ALUNOS
-        // ============================================
         async function carregarAlunos() {
             const turmaId = document.getElementById('filtroTurmaAlunos')?.value;
             let url = `${API_URL}/api/alunos`;
             if (turmaId) url += `?turma_id=${turmaId}`;
-            
             try {
                 const response = await fetch(url);
                 const alunos = await response.json();
-                
                 const tbody = document.querySelector('#tabelaAlunos tbody');
                 if (!tbody) return;
-                
                 if (alunos.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
                 } else {
@@ -1354,11 +902,9 @@
                         </tr>
                     `).join('');
                 }
-            } catch (erro) {
-                console.error('Erro ao carregar alunos:', erro);
-            }
+            } catch (erro) { console.error('Erro ao carregar alunos:', erro); }
         }
-        
+
         async function carregarFiltroTurmas() {
             try {
                 const response = await fetch(`${API_URL}/api/turmas`);
@@ -1373,51 +919,34 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function salvarAluno() {
             const turmaId = document.getElementById('turmaAluno').value;
             const nome = document.getElementById('nomeAluno').value;
             const matricula = document.getElementById('matriculaAluno').value;
             const responsavel = document.getElementById('responsavelAluno').value;
             const numeroChamada = document.getElementById('numeroChamada').value;
-            
-            if (!turmaId || !nome) {
-                alert('Preencha turma e nome do aluno!');
-                return;
-            }
-            
+            if (!turmaId || !nome) { alert('Preencha turma e nome do aluno!'); return; }
             try {
                 const response = await fetch(`${API_URL}/api/alunos`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        turma_id: parseInt(turmaId),
-                        nome: nome,
-                        matricula: matricula,
-                        responsavel: responsavel,
+                        turma_id: parseInt(turmaId), nome, matricula, responsavel,
                         numero_chamada: numeroChamada ? parseInt(numeroChamada) : null
                     })
                 });
-                
                 const result = await response.json();
                 if (result.id) {
-                    alert('✅ Aluno cadastrado com sucesso!');
+                    alert('✅ Aluno cadastrado!');
                     document.getElementById('nomeAluno').value = '';
                     document.getElementById('matriculaAluno').value = '';
                     document.getElementById('responsavelAluno').value = '';
                     document.getElementById('numeroChamada').value = '';
-                    carregarAlunos();
-                    carregarDashboard();
-                } else {
-                    alert('Erro: ' + JSON.stringify(result));
-                }
-            } catch (erro) {
-                alert('Erro ao salvar: ' + erro.message);
-            }
+                    carregarAlunos(); carregarDashboard();
+                } else { alert('Erro: ' + JSON.stringify(result)); }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
         }
 
         // ============================================
@@ -1438,18 +967,15 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro ao carregar provas:', erro);
-            }
+            } catch (erro) { console.error('Erro ao carregar provas:', erro); }
         }
-        
+
         async function carregarTodasProvas() {
             try {
                 const response = await fetch(`${API_URL}/api/provas`);
                 const provas = await response.json();
                 const tbody = document.querySelector('#tabelaProvas tbody');
                 if (!tbody) return;
-                
                 if (provas.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6">Nenhuma prova cadastrada</td></tr>';
                 } else {
@@ -1469,30 +995,22 @@
                         `;
                     }).join('');
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function excluirProva(id, titulo) {
             if (confirm(`Excluir a prova "${titulo}"?`)) {
                 try {
                     const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
                     if (response.ok) {
                         alert('✅ Prova excluída!');
-                        carregarTodasProvas();
-                        carregarProvas();
-                        carregarProvasRelatorio();
-                        carregarProvasParaCalibrar();
-                        carregarProvasRedacao();
-                        carregarDashboard();
+                        carregarTodasProvas(); carregarProvas(); carregarProvasRelatorio();
+                        carregarProvasRedacao(); carregarDashboard();
                     }
-                } catch (erro) {
-                    alert('Erro ao excluir: ' + erro.message);
-                }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
             }
         }
-        
+
         async function carregarProvasRelatorio() {
             try {
                 const response = await fetch(`${API_URL}/api/provas`);
@@ -1507,41 +1025,17 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
-        async function carregarProvasParaCalibrar() {
-            try {
-                const response = await fetch(`${API_URL}/api/provas`);
-                const provas = await response.json();
-                const select = document.getElementById('calibrarProvaSelect');
-                if (select) {
-                    select.innerHTML = '<option value="">Selecione uma prova (opcional)</option>';
-                    provas.forEach(prova => {
-                        const option = document.createElement('option');
-                        option.value = prova.id;
-                        option.textContent = `${prova.titulo} - ${prova.turma_nome}`;
-                        select.appendChild(option);
-                    });
-                }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
-        }
-        
+
         async function carregarDadosProva() {
             const provaId = document.getElementById('selectProva').value;
             if (!provaId) return;
-            
             try {
                 const response = await fetch(`${API_URL}/api/provas`);
                 const provas = await response.json();
                 provaSelecionada = provas.find(p => p.id == provaId);
-                
                 if (!provaSelecionada) return;
-                
                 const responseAlunos = await fetch(`${API_URL}/api/alunos?turma_id=${provaSelecionada.turma_id}`);
                 const alunos = await responseAlunos.json();
                 const selectAluno = document.getElementById('selectAluno');
@@ -1554,11 +1048,9 @@
                         selectAluno.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         function adicionarQuestaoGabarito() {
             const grid = document.getElementById('gabaritoGrid');
             if (grid) {
@@ -1573,12 +1065,12 @@
                 grid.appendChild(input);
             }
         }
-        
+
         function obterGabarito() {
             const inputs = document.querySelectorAll('#gabaritoGrid input');
             return Array.from(inputs).map(i => i.value.toUpperCase()).filter(v => v);
         }
-        
+
         async function salvarProva() {
             const turmaId = document.getElementById('turmaProva').value;
             const titulo = document.getElementById('tituloProva').value;
@@ -1588,88 +1080,25 @@
             const descricao = document.getElementById('descricaoProva')?.value || '';
             const tipoQuestoes = document.getElementById('tipoProva').value;
             const gabarito = obterGabarito();
-            
             if (!turmaId || !titulo || !dataProva || gabarito.length === 0) {
-                alert('❌ Preencha todos os campos!');
-                return;
+                alert('❌ Preencha todos os campos!'); return;
             }
-            
             if (gabarito.length !== parseInt(quantidadeQuestoes)) {
                 alert(`⚠️ O gabarito tem ${gabarito.length} questões, mas você definiu ${quantidadeQuestoes} questões.`);
                 return;
             }
-            
             try {
                 const response = await fetch(`${API_URL}/api/provas`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        turma_id: parseInt(turmaId),
-                        titulo: titulo,
-                        descricao: descricao,
-                        gabarito: gabarito,
-                        data_prova: dataProva,
-                        valor_nota: parseFloat(valorNota),
-                        quantidade_questoes: parseInt(quantidadeQuestoes),
+                        turma_id: parseInt(turmaId), titulo, descricao, gabarito, data_prova,
+                        valor_nota: parseFloat(valorNota), quantidade_questoes: parseInt(quantidadeQuestoes),
                         tipo_questoes: tipoQuestoes
                     })
                 });
-                
                 const result = await response.json();
-                if (result.id) {
-                    alert('✅ Prova salva com sucesso!');
-                    location.reload();
-                } else {
-                    alert('Erro: ' + result.erro);
-                }
-            } catch (erro) {
-                alert('Erro ao salvar: ' + erro.message);
-            }
-        }
-
-        // ============================================
-        // CALIBRAÇÃO
-        // ============================================
-        async function calibrarSistema() {
-            const fileInput = document.getElementById('calibrarInput');
-            if (!fileInput.files || !fileInput.files[0]) {
-                alert('⚠️ Selecione uma imagem do gabarito para calibrar!');
-                return;
-            }
-            
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                document.getElementById('calibrarResultado').innerHTML = '<div class="loading"></div> Calibrando sistema...';
-                
-                try {
-                    const response = await fetch(`${API_URL}/api/calibrar`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            imagem: e.target.result,
-                            prova_id: document.getElementById('calibrarProvaSelect').value || null
-                        })
-                    });
-                    
-                    const dados = await response.json();
-                    
-                    if (dados.erro) {
-                        document.getElementById('calibrarResultado').innerHTML = `<div class="resultado-erro">❌ ${dados.erro}</div>`;
-                    } else {
-                        let html = '<div class="resultado"><strong>✅ Calibração realizada com sucesso!</strong><br><br>';
-                        html += '<strong>Limites calculados:</strong><br>';
-                        for (const [letra, limites] of Object.entries(dados.limites)) {
-                            html += `• ${letra}: ${limites[0]} a ${limites[1]}<br>`;
-                        }
-                        html += `<br>🎯 ${dados.mensagem}</div>`;
-                        document.getElementById('calibrarResultado').innerHTML = html;
-                    }
-                } catch (erro) {
-                    document.getElementById('calibrarResultado').innerHTML = `<div class="resultado-erro">❌ ${erro.message}</div>`;
-                }
-            };
-            reader.readAsDataURL(file);
+                if (result.id) { alert('✅ Prova salva!'); location.reload(); } else { alert('Erro: ' + result.erro); }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
         }
 
         // ============================================
@@ -1679,15 +1108,11 @@
             if (stream) stream.getTracks().forEach(t => t.stop());
             document.getElementById('videoContainer').style.display = 'block';
             document.getElementById('preview').style.display = 'none';
-            
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(s => {
-                    stream = s;
-                    document.getElementById('video').srcObject = s;
-                })
-                .catch(() => alert("❌ Não foi possível acessar a câmera. Verifique as permissões."));
+                .then(s => { stream = s; document.getElementById('video').srcObject = s; })
+                .catch(() => alert("❌ Não foi possível acessar a câmera."));
         }
-        
+
         function tirarFoto() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
@@ -1698,14 +1123,14 @@
             document.getElementById('preview').src = fotoBase64;
             document.getElementById('preview').style.display = 'block';
             fecharCamera();
-            alert('✅ Foto capturada com sucesso!');
+            alert('✅ Foto capturada!');
         }
-        
+
         function fecharCamera() {
             if (stream) stream.getTracks().forEach(t => t.stop());
             document.getElementById('videoContainer').style.display = 'none';
         }
-        
+
         function previewImagem(input) {
             const file = input.files[0];
             if (file) {
@@ -1718,102 +1143,56 @@
                 reader.readAsDataURL(file);
             }
         }
-        
+
         async function corrigirProva() {
             const provaId = document.getElementById('selectProva').value;
             const alunoId = document.getElementById('selectAluno').value;
-            
-            if (!fotoBase64) {
-                alert('❌ Primeiro tire uma foto da folha de respostas!');
-                return;
-            }
-            
-            if (!provaId) {
-                alert('❌ Selecione a prova!');
-                return;
-            }
-            
-            if (!alunoId) {
-                alert('❌ Selecione o aluno!');
-                return;
-            }
-            
+            if (!fotoBase64) { alert('❌ Primeiro tire uma foto!'); return; }
+            if (!provaId) { alert('❌ Selecione a prova!'); return; }
+            if (!alunoId) { alert('❌ Selecione o aluno!'); return; }
             const btn = event.target;
             const originalText = btn.innerText;
-            btn.innerText = '⏳ Processando imagem com IA Gemini...';
+            btn.innerText = '⏳ Processando...';
             btn.disabled = true;
-            
             document.getElementById('statusReconhecimento').style.display = 'block';
             document.getElementById('resultadoCorrecao').innerHTML = '';
-            
             try {
                 const response = await fetch(`${API_URL}/api/corrigir`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imagem: fotoBase64,
-                        prova_id: parseInt(provaId),
-                        aluno_id: parseInt(alunoId)
-                    })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imagem: fotoBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) })
                 });
-                
                 const dados = await response.json();
-                
                 if (dados.erro) {
                     document.getElementById('resultadoCorrecao').innerHTML = `
-                        <div class="resultado resultado-erro">
-                            <strong>❌ Erro no reconhecimento:</strong><br>
-                            ${dados.erro}<br><br>
-                            <strong>📸 Dicas para melhorar:</strong>
-                            <ul>
-                                <li>Use boa iluminação (luz natural ou flash)</li>
-                                <li>Mantenha a folha sem reflexo</li>
-                                <li>Certifique-se que as bolinhas estão bem marcadas</li>
-                                <li>Tire a foto paralelamente à folha</li>
-                                <li>Evite sombras sobre a folha</li>
-                            </ul>
-                        </div>
-                    `;
+                        <div class="resultado resultado-erro"><strong>❌ Erro:</strong><br>${dados.erro}</div>`;
                 } else {
                     const aprovado = dados.nota >= 6;
                     let html = '<div class="resultado">';
-                    html += `<h3>📊 RESULTADO DA CORREÇÃO</h3>`;
+                    html += `<h3>📊 RESULTADO</h3>`;
                     html += `<p><strong>👤 Aluno:</strong> ${dados.aluno}</p>`;
-                    html += `<p><strong>🤖 Respostas detectadas pela Gemini:</strong> <code style="background:#fff;padding:5px;border-radius:5px;">${dados.respostas_detectadas.join(', ')}</code></p>`;
-                    html += `<p><strong>✅ Acertos:</strong> ${dados.acertos} de ${dados.total} questões</p>`;
-                    html += `<p><strong>📊 Percentual de acerto:</strong> ${dados.percentual}%</p>`;
-                    html += `<div class="progress-bar" style="margin:10px 0;"><div class="progress-fill" style="width: ${dados.percentual}%;"></div></div>`;
+                    html += `<p><strong>🤖 Respostas:</strong> ${dados.respostas_detectadas.join(', ')}</p>`;
+                    html += `<p><strong>✅ Acertos:</strong> ${dados.acertos} de ${dados.total}</p>`;
+                    html += `<p><strong>📊 Percentual:</strong> ${dados.percentual}%</p>`;
+                    html += `<div class="progress-bar"><div class="progress-fill" style="width: ${dados.percentual}%;"></div></div>`;
                     html += `<p><strong>🎓 Nota:</strong> <span style="font-size:36px; font-weight:bold;">${dados.nota}</span></p>`;
-                    
                     if (dados.confianca_media) {
                         html += `<div class="confidence-bar"><div class="confidence-fill" style="width: ${dados.confianca_media}%;"></div></div>`;
-                        html += `<p><strong>🧠 Confiança da IA Gemini:</strong> ${dados.confianca_media}%</p>`;
+                        html += `<p><strong>🧠 Confiança:</strong> ${dados.confianca_media}%</p>`;
                     }
-                    
                     html += `<p><span class="${aprovado ? 'badge-aprovado' : 'badge-reprovado'}">${aprovado ? '✅ APROVADO' : '❌ REPROVADO'}</span></p>`;
-                    html += `<hr><h4>📝 Detalhamento por questão:</h4>`;
-                    
+                    html += `<hr><h4>📝 Detalhamento:</h4>`;
                     if (dados.correcoes) {
                         dados.correcoes.forEach(q => {
-                            const status = q.correta ? '✅' : '❌';
-                            html += `<p>Questão ${q.questao}: Resposta: <strong>${q.resposta || '?'}</strong> | Gabarito: <strong>${q.gabarito}</strong> ${status}</p>`;
+                            html += `<p>Questão ${q.questao}: Resposta: <strong>${q.resposta || '?'}</strong> | Gabarito: <strong>${q.gabarito}</strong> ${q.correta ? '✅' : '❌'}</p>`;
                         });
                     }
-                    
                     html += `<hr><small>🔬 ${dados.tipo_questoes == 3 ? '3 opções (A, B, C)' : '4 opções (A, B, C, D)'} - Gemini AI</small>`;
                     html += '</div>';
                     document.getElementById('resultadoCorrecao').innerHTML = html;
-                    
-                    carregarDashboard();
-                    carregarHistorico();
+                    carregarDashboard(); carregarHistorico();
                 }
             } catch (erro) {
-                document.getElementById('resultadoCorrecao').innerHTML = `
-                    <div class="resultado resultado-erro">
-                        ❌ Erro de conexão: ${erro.message}<br>
-                        Verifique se o servidor está rodando.
-                    </div>
-                `;
+                document.getElementById('resultadoCorrecao').innerHTML = `<div class="resultado resultado-erro">❌ Erro: ${erro.message}</div>`;
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -1827,37 +1206,29 @@
         async function carregarEstatisticas() {
             const provaId = document.getElementById('selectProvaRelatorio').value;
             if (!provaId) return;
-            
             try {
                 const response = await fetch(`${API_URL}/api/estatisticas?prova_id=${provaId}`);
                 const dados = await response.json();
-                
-                let html = '<div class="resultado resultado-info">';
-                html += `<h4>📈 Estatísticas da Prova</h4>`;
+                let html = '<div class="resultado resultado-info"><h4>📈 Estatísticas</h4>';
                 if (dados.geral) {
-                    html += `<p>📝 Provas corrigidas: <strong>${dados.geral.total_corrigidas || 0}</strong></p>`;
-                    html += `<p>⭐ Média da turma: <strong>${parseFloat(dados.geral.media_nota || 0).toFixed(1)}</strong></p>`;
+                    html += `<p>📝 Corrigidas: <strong>${dados.geral.total_corrigidas || 0}</strong></p>`;
+                    html += `<p>⭐ Média: <strong>${parseFloat(dados.geral.media_nota || 0).toFixed(1)}</strong></p>`;
                     html += `<p>🏆 Maior nota: <strong>${parseFloat(dados.geral.maior_nota || 0).toFixed(1)}</strong></p>`;
                     html += `<p>📉 Menor nota: <strong>${parseFloat(dados.geral.menor_nota || 0).toFixed(1)}</strong></p>`;
                 }
-                
                 html += '</div>';
                 document.getElementById('estatisticasContainer').innerHTML = html;
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function carregarHistorico() {
             try {
                 const response = await fetch(`${API_URL}/api/historico`);
                 const historico = await response.json();
-                
                 const tbody = document.querySelector('#tabelaHistorico tbody');
                 if (!tbody) return;
-                
                 if (historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada ainda</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada</td></tr>';
                 } else {
                     tbody.innerHTML = historico.map(item => `
                         <tr>
@@ -1869,18 +1240,12 @@
                         </tr>
                     `).join('');
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         function exportarResultados() {
             const provaId = document.getElementById('selectProvaRelatorio').value;
-            if (provaId) {
-                window.open(`${API_URL}/api/exportar?prova_id=${provaId}`, '_blank');
-            } else {
-                alert('Selecione uma prova primeiro!');
-            }
+            if (provaId) { window.open(`${API_URL}/api/exportar?prova_id=${provaId}`, '_blank'); } else { alert('Selecione uma prova!'); }
         }
 
         // ============================================
@@ -1900,15 +1265,12 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function carregarTurmasGabarito() {
             const escolaId = document.getElementById('escolaGabarito').value;
             if (!escolaId) return;
-            
             try {
                 const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                 const turmas = await response.json();
@@ -1922,15 +1284,12 @@
                         select.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function carregarAlunosGabarito() {
             const turmaId = document.getElementById('turmaGabarito').value;
             if (!turmaId) return;
-            
             try {
                 const responseAlunos = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
                 const alunos = await responseAlunos.json();
@@ -1944,7 +1303,6 @@
                         selectAluno.appendChild(option);
                     });
                 }
-                
                 const responseProvas = await fetch(`${API_URL}/api/provas`);
                 const provas = await responseProvas.json();
                 const selectProva = document.getElementById('provaGabarito');
@@ -1957,39 +1315,29 @@
                         selectProva.appendChild(option);
                     });
                 }
-            } catch (erro) {
-                console.error('Erro:', erro);
-            }
+            } catch (erro) { console.error('Erro:', erro); }
         }
-        
+
         async function gerarGabarito() {
             const escolaId = document.getElementById('escolaGabarito').value;
             const turmaId = document.getElementById('turmaGabarito').value;
             const alunoId = document.getElementById('alunoGabarito').value;
             const provaId = document.getElementById('provaGabarito').value;
             const numQuestoes = document.getElementById('numQuestoes').value;
-            
             if (!escolaId || !turmaId || !alunoId || !provaId) {
-                alert('❌ Preencha todos os campos!');
-                return;
+                alert('❌ Preencha todos os campos!'); return;
             }
-            
             const previewDiv = document.getElementById('gabaritoPreview');
-            previewDiv.innerHTML = '<div class="loading"></div> Gerando folha de respostas...';
-            
+            previewDiv.innerHTML = '<div class="loading"></div> Gerando...';
             try {
                 const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        escola_id: parseInt(escolaId),
-                        turma_id: parseInt(turmaId),
-                        aluno_id: parseInt(alunoId),
-                        prova_id: parseInt(provaId),
+                        escola_id: parseInt(escolaId), turma_id: parseInt(turmaId),
+                        aluno_id: parseInt(alunoId), prova_id: parseInt(provaId),
                         quantidade_questoes: parseInt(numQuestoes)
                     })
                 });
-                
                 if (response.ok) {
                     const html = await response.text();
                     const novaAba = window.open();
@@ -1997,16 +1345,14 @@
                     novaAba.document.close();
                     previewDiv.innerHTML = `
                         <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
-                            ✅ Folha de respostas gerada com sucesso!<br>
-                            <small>Uma nova aba foi aberta. Clique em "IMPRIMIR" ou "SALVAR PDF".</small>
+                            ✅ Folha gerada!<br>
+                            <small>Nova aba aberta. Clique em "IMPRIMIR" ou "SALVAR PDF".</small>
                         </div>
                     `;
                 } else {
-                    previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro ao gerar folha de respostas</div>`;
+                    previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro ao gerar</div>`;
                 }
-            } catch (erro) {
-                previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro: ${erro.message}</div>`;
-            }
+            } catch (erro) { previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro: ${erro.message}</div>`; }
         }
 
         // ============================================
@@ -2018,56 +1364,37 @@
                 const config = await response.json();
                 document.getElementById('param1').value = config.param1;
                 document.getElementById('param2').value = config.param2;
-                document.getElementById('minRadius').value = config.minRadius;
-                document.getElementById('maxRadius').value = config.maxRadius;
-                atualizarValor('param1');
-                atualizarValor('param2');
-                atualizarValor('minRadius');
-                atualizarValor('maxRadius');
-            } catch (erro) {
-                console.error('Erro ao carregar configurações:', erro);
-            }
+                atualizarValor('param1'); atualizarValor('param2');
+            } catch (erro) { console.error('Erro ao carregar configurações:', erro); }
         }
-        
+
         function atualizarValor(id) {
             const slider = document.getElementById(id);
             const span = document.getElementById(id + '_val');
             if (slider && span) span.innerText = slider.value;
         }
-        
+
         async function salvarConfiguracoes() {
             const config = {
                 param1: parseInt(document.getElementById('param1').value),
                 param2: parseInt(document.getElementById('param2').value),
-                minRadius: parseInt(document.getElementById('minRadius').value),
-                maxRadius: parseInt(document.getElementById('maxRadius').value),
-                preenchimento_minimo: 0.2
             };
-            
             try {
                 await fetch(`${API_URL}/api/configuracoes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
-                alert('✅ Configurações salvas com sucesso!');
-            } catch (erro) {
-                alert('Erro ao salvar: ' + erro.message);
-            }
+                alert('✅ Configurações salvas!');
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
         }
-        
+
         function restaurarPadrao() {
             document.getElementById('param1').value = 80;
             document.getElementById('param2').value = 25;
-            document.getElementById('minRadius').value = 8;
-            document.getElementById('maxRadius').value = 25;
-            atualizarValor('param1');
-            atualizarValor('param2');
-            atualizarValor('minRadius');
-            atualizarValor('maxRadius');
+            atualizarValor('param1'); atualizarValor('param2');
             salvarConfiguracoes();
         }
-        
+
         async function gerarQRCode() {
             try {
                 const response = await fetch(`${API_URL}/api/ip_info`);
@@ -2082,7 +1409,7 @@
                 document.getElementById('ipInfo').innerHTML = '<p class="resultado-erro">❌ Erro ao obter IP</p>';
             }
         }
-        
+
         function copiarUrl() {
             if (ipAtual) {
                 navigator.clipboard.writeText(ipAtual);
