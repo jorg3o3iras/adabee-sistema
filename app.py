@@ -19,16 +19,24 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - APENAS SUPABASE
+# CONFIGURAR BANCO DE DADOS - SUPABASE COM SSL
 # ============================================
 
-# URL FIXA DO SUPABASE
-SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres'
+# URL FIXA DO SUPABASE COM sslmode=require
+SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require'
 
 def get_db_connection():
-    """Retorna conexão com PostgreSQL (Supabase)"""
+    """Retorna conexão com PostgreSQL (Supabase) com SSL"""
     try:
-        conn = psycopg2.connect(SUPABASE_URL, cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(
+            SUPABASE_URL,
+            cursor_factory=RealDictCursor,
+            connect_timeout=15,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3
+        )
         print("✅ Conectado ao Supabase!")
         return conn
     except Exception as e:
@@ -54,7 +62,7 @@ def init_database():
     )''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-        id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+        id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
         titulo TEXT NOT NULL, descricao TEXT, gabarito TEXT, data_prova DATE,
         valor_nota REAL DEFAULT 10, quantidade_questoes INTEGER, tipo_questoes TEXT DEFAULT '4',
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -363,7 +371,7 @@ def listar_turmas():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/turmas', methods=['POST'])
+@app.route('/api/turmas', methods(['POST'])
 def criar_turma():
     try:
         dados = request.json
