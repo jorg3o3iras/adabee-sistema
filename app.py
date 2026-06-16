@@ -40,7 +40,7 @@ def get_db_connection():
         print("✅ Conectado ao Supabase via POOLER (IPv4)!")
         return conn
     except Exception as e:
-        print(f"❌ ERRO ao conectar Supabase: {e}")
+        print(f"❌ ERRO: {e}")
         raise e
 
 def init_database():
@@ -692,7 +692,7 @@ def exportar_resultados():
         'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
     }
 
-@app.route('/api/ip_info', methods(['GET'])
+@app.route('/api/ip_info', methods=['GET'])
 def ip_info():
     return jsonify({'ip': 'render.com', 'porta': 10000, 'url': 'https://adabee-sistema-3.onrender.com'})
 
