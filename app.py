@@ -19,14 +19,14 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE (POOLER)
+# CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
-# URL DO POOLER (IPv4) - PORTA 6543
-SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@aws-0-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
+# URL CORRETA DO SUPABASE (com sua senha codificada)
+SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require'
 
 def get_db_connection():
-    """Conecta ao Supabase via POOLER (IPv4)"""
+    """Conecta ao Supabase"""
     try:
         conn = psycopg2.connect(
             SUPABASE_URL,
@@ -37,7 +37,7 @@ def get_db_connection():
             keepalives_interval=10,
             keepalives_count=3
         )
-        print("✅ Conectado ao Supabase via POOLER (IPv4)!")
+        print("✅ Conectado ao Supabase!")
         return conn
     except Exception as e:
         print(f"❌ ERRO: {e}")
@@ -150,7 +150,7 @@ def testar_conexao():
         return jsonify({
             'conectado': True,
             'banco': 'PostgreSQL (Supabase)',
-            'mensagem': '✅ Conectado ao Supabase via POOLER!'
+            'mensagem': '✅ Conectado ao Supabase!'
         })
     except Exception as e:
         return jsonify({
