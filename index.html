@@ -100,6 +100,8 @@
         .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); }
         .btn-ai { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
         .btn-redacao { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .btn-excluir { background: #dc3545; padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+        .btn-excluir:hover { background: #c82333; }
         .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
         .gabarito-grid input { width: 60px; text-align: center; font-weight: bold; text-transform: uppercase; }
         .preview { max-width: 100%; border-radius: 12px; margin-top: 15px; border: 3px solid #667eea; }
@@ -150,12 +152,15 @@
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-info { background: #e7f3ff; color: #0066cc; border: 1px solid #b8e0ff; }
         .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .acoes-cell { display: flex; gap: 5px; flex-wrap: wrap; }
+        .btn-pequeno { padding: 4px 10px; font-size: 11px; border-radius: 5px; }
         @media (max-width: 768px) {
             body { padding: 10px; }
             .card { padding: 15px; }
             .dashboard-grid { grid-template-columns: repeat(3, 1fr); }
             .tabs { gap: 5px; }
             .tab-btn { font-size: 10px; padding: 8px; }
+            .acoes-cell { flex-direction: column; }
         }
     </style>
 </head>
@@ -202,7 +207,7 @@
                 </div>
                 <div class="form-group">
                     <label>📸 Foto da Folha de Respostas</label>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
                         <button type="button" class="btn-success" onclick="abrirCamera()">📷 Abrir Câmera</button>
                         <button type="button" class="btn-info" onclick="document.getElementById('cameraInput').click()">🖼️ Escolher Foto</button>
                     </div>
@@ -240,7 +245,7 @@
                 </div>
                 <div class="form-group">
                     <label>📸 Foto da Redação</label>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
                         <button type="button" class="btn-success" onclick="abrirCameraRedacao()">📷 Tirar Foto da Redação</button>
                         <button type="button" class="btn-info" onclick="document.getElementById('cameraInputRedacao').click()">🖼️ Escolher Imagem</button>
                     </div>
@@ -379,6 +384,10 @@
                     <label>🔢 Matrícula</label>
                     <input type="text" id="matriculaAluno" placeholder="Número de matrícula">
                 </div>
+                <div class="form-group">
+                    <label>👤 Responsável</label>
+                    <input type="text" id="responsavelAluno" placeholder="Nome do responsável">
+                </div>
                 <button class="btn-success" onclick="salvarAluno()">💾 Cadastrar Aluno</button>
             </div>
             <div class="card">
@@ -389,8 +398,8 @@
                 </div>
                 <div class="table-responsive">
                     <table id="tabelaAlunos">
-                        <thead><tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th></tr></thead>
-                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+                        <thead><tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="6">Carregando...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -429,6 +438,15 @@
                 <button class="btn-success" onclick="salvarEscola()">💾 Salvar Escola</button>
             </div>
             <div class="card">
+                <h2>🏫 Escolas Cadastradas</h2>
+                <div class="table-responsive">
+                    <table id="tabelaEscolas">
+                        <thead><tr><th>ID</th><th>Nome</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="3">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
                 <h3>📚 Cadastrar Turma</h3>
                 <div class="form-group">
                     <label>Escola</label>
@@ -449,6 +467,15 @@
                     </select>
                 </div>
                 <button class="btn-success" onclick="salvarTurma()">💾 Salvar Turma</button>
+            </div>
+            <div class="card">
+                <h3>📚 Turmas Cadastradas</h3>
+                <div class="table-responsive">
+                    <table id="tabelaTurmas">
+                        <thead><tr><th>ID</th><th>Escola</th><th>Nome</th><th>Série</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
             </div>
             <div class="card">
                 <h2>📱 Acesso pelo Celular</h2>
@@ -533,6 +560,8 @@
             carregarHistorico();
             carregarFiltroTurmas();
             carregarConfiguracoes();
+            carregarListaEscolas();
+            carregarListaTurmas();
             verificarStatusIA();
             for(let i = 0; i < 5; i++) adicionarQuestaoGabarito();
         };
@@ -549,8 +578,9 @@
             if (event && event.target) event.target.classList.add('active');
             if (aba === 'relatorios') { carregarProvasRelatorio(); carregarHistorico(); }
             if (aba === 'alunos') { carregarFiltroTurmas(); carregarAlunos(); }
-            if (aba === 'configuracoes') gerarQRCode();
+            if (aba === 'configuracoes') { gerarQRCode(); carregarListaEscolas(); carregarListaTurmas(); }
             if (aba === 'redacao') { carregarProvasRedacao(); carregarAlunosRedacao(); }
+            if (aba === 'provas') { carregarTodasProvas(); }
         }
 
         // ============================================
@@ -588,6 +618,10 @@
             } catch (erro) {
                 alert('Erro ao alternar IA: ' + erro.message);
             }
+        }
+
+        async function treinarIA() {
+            alert('🧠 Gemini AI já está treinado e pronto para uso!');
         }
 
         // ============================================
@@ -631,9 +665,6 @@
             }
         }
 
-        // ============================================
-        // CORREÇÃO DE REDAÇÃO (COM FOTO OU TEXTO)
-        // ============================================
         function abrirCameraRedacao() {
             if (streamRedacao) streamRedacao.getTracks().forEach(t => t.stop());
             document.getElementById('videoContainerRedacao').style.display = 'block';
@@ -769,6 +800,9 @@
             } catch (erro) { console.error('Erro ao carregar dashboard:', erro); }
         }
 
+        // ============================================
+        // ESCOLAS - LISTAR E EXCLUIR
+        // ============================================
         async function carregarEscolas() {
             try {
                 const response = await fetch(`${API_URL}/api/escolas`);
@@ -789,6 +823,68 @@
             } catch (erro) { console.error('Erro ao carregar escolas:', erro); }
         }
 
+        async function carregarListaEscolas() {
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`);
+                const escolas = await response.json();
+                const tbody = document.querySelector('#tabelaEscolas tbody');
+                if (!tbody) return;
+                if (escolas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">Nenhuma escola cadastrada</td></tr>';
+                } else {
+                    tbody.innerHTML = escolas.map(escola => `
+                        <tr>
+                            <td>${escola.id}</td>
+                            <td>${escola.nome}</td>
+                            <td>
+                                <button class="btn-excluir btn-pequeno" onclick="excluirEscola(${escola.id}, '${escola.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function excluirEscola(id, nome) {
+            if (confirm(`Excluir a escola "${nome}"? Isso também excluirá todas as turmas e alunos vinculados.`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/escolas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Escola excluída!');
+                        carregarListaEscolas();
+                        carregarEscolas();
+                        carregarDashboard();
+                        carregarListaTurmas();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
+        }
+
+        async function salvarEscola() {
+            const nome = document.getElementById('novaEscola').value;
+            if (!nome) { alert('Digite o nome da escola!'); return; }
+            try {
+                const response = await fetch(`${API_URL}/api/escolas`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                const result = await response.json();
+                if (result.id) {
+                    alert('✅ Escola cadastrada!');
+                    document.getElementById('novaEscola').value = '';
+                    carregarEscolas();
+                    carregarListaEscolas();
+                    carregarDashboard();
+                }
+            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+        }
+
+        // ============================================
+        // TURMAS - LISTAR E EXCLUIR
+        // ============================================
         async function carregarEscolasConfig() {
             try {
                 const response = await fetch(`${API_URL}/api/escolas`);
@@ -806,21 +902,51 @@
             } catch (erro) { console.error('Erro:', erro); }
         }
 
-        async function salvarEscola() {
-            const nome = document.getElementById('novaEscola').value;
-            if (!nome) { alert('Digite o nome da escola!'); return; }
+        async function carregarListaTurmas() {
             try {
-                const response = await fetch(`${API_URL}/api/escolas`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome })
-                });
-                const result = await response.json();
-                if (result.id) {
-                    alert('✅ Escola cadastrada!');
-                    document.getElementById('novaEscola').value = '';
-                    carregarEscolas(); carregarDashboard();
+                const response = await fetch(`${API_URL}/api/turmas`);
+                const turmas = await response.json();
+                const tbody = document.querySelector('#tabelaTurmas tbody');
+                if (!tbody) return;
+                if (turmas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma turma cadastrada</td></tr>';
+                } else {
+                    // Buscar nomes das escolas
+                    const escolasResponse = await fetch(`${API_URL}/api/escolas`);
+                    const escolas = await escolasResponse.json();
+                    const escolaMap = {};
+                    escolas.forEach(e => escolaMap[e.id] = e.nome);
+                    
+                    tbody.innerHTML = turmas.map(turma => `
+                        <tr>
+                            <td>${turma.id}</td>
+                            <td>${escolaMap[turma.escola_id] || 'N/A'}</td>
+                            <td>${turma.nome}</td>
+                            <td>${turma.serie || '1º Ano'}</td>
+                            <td>
+                                <button class="btn-excluir btn-pequeno" onclick="excluirTurma(${turma.id}, '${turma.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </td>
+                        </tr>
+                    `).join('');
                 }
-            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+            } catch (erro) { console.error('Erro:', erro); }
+        }
+
+        async function excluirTurma(id, nome) {
+            if (confirm(`Excluir a turma "${nome}"? Isso também excluirá todos os alunos vinculados.`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Turma excluída!');
+                        carregarListaTurmas();
+                        carregarDashboard();
+                        carregarFiltroTurmas();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
         }
 
         async function carregarTurmasProva() {
@@ -875,11 +1001,16 @@
                 if (result.id) {
                     alert('✅ Turma cadastrada!');
                     document.getElementById('nomeTurmaConfig').value = '';
-                    carregarEscolasConfig(); carregarDashboard();
+                    carregarEscolasConfig();
+                    carregarListaTurmas();
+                    carregarDashboard();
                 }
             } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
         }
 
+        // ============================================
+        // ALUNOS - LISTAR E EXCLUIR
+        // ============================================
         async function carregarAlunos() {
             const turmaId = document.getElementById('filtroTurmaAlunos')?.value;
             let url = `${API_URL}/api/alunos`;
@@ -890,7 +1021,7 @@
                 const tbody = document.querySelector('#tabelaAlunos tbody');
                 if (!tbody) return;
                 if (alunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6">Nenhum aluno cadastrado</td></tr>';
                 } else {
                     tbody.innerHTML = alunos.map(aluno => `
                         <tr>
@@ -899,10 +1030,29 @@
                             <td>${aluno.matricula || '-'}</td>
                             <td>${aluno.turma_nome || '-'}</td>
                             <td>${aluno.responsavel || '-'}</td>
+                            <td>
+                                <button class="btn-excluir btn-pequeno" onclick="excluirAluno(${aluno.id}, '${aluno.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                            </td>
                         </tr>
                     `).join('');
                 }
             } catch (erro) { console.error('Erro ao carregar alunos:', erro); }
+        }
+
+        async function excluirAluno(id, nome) {
+            if (confirm(`Excluir o aluno "${nome}"?`)) {
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('✅ Aluno excluído!');
+                        carregarAlunos();
+                        carregarDashboard();
+                    } else {
+                        const erro = await response.json();
+                        alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    }
+                } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
+            }
         }
 
         async function carregarFiltroTurmas() {
@@ -944,7 +1094,8 @@
                     document.getElementById('matriculaAluno').value = '';
                     document.getElementById('responsavelAluno').value = '';
                     document.getElementById('numeroChamada').value = '';
-                    carregarAlunos(); carregarDashboard();
+                    carregarAlunos();
+                    carregarDashboard();
                 } else { alert('Erro: ' + JSON.stringify(result)); }
             } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
         }
@@ -989,8 +1140,10 @@
                                 <td>${prova.turma_nome || '-'}</td>
                                 <td>${tipoBadge}</td>
                                 <td>${prova.data_prova || '-'}</td>
-                                <td>${prova.quantidade_questoes || prova.gabarito?.length || 0}</td>
-                                <td><button class="btn-danger" style="padding:5px 10px;" onclick="excluirProva(${prova.id}, '${prova.titulo.replace(/'/g, "\\'")}')">🗑️ Excluir</button></td>
+                                <td>${prova.quantidade_questoes || prova.gabarito_array?.length || 0}</td>
+                                <td>
+                                    <button class="btn-excluir btn-pequeno" onclick="excluirProva(${prova.id}, '${prova.titulo.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                                </td>
                             </tr>
                         `;
                     }).join('');
@@ -1004,8 +1157,11 @@
                     const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
                     if (response.ok) {
                         alert('✅ Prova excluída!');
-                        carregarTodasProvas(); carregarProvas(); carregarProvasRelatorio();
-                        carregarProvasRedacao(); carregarDashboard();
+                        carregarTodasProvas();
+                        carregarProvas();
+                        carregarProvasRelatorio();
+                        carregarProvasRedacao();
+                        carregarDashboard();
                     }
                 } catch (erro) { alert('Erro ao excluir: ' + erro.message); }
             }
