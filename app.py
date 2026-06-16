@@ -817,6 +817,37 @@ def testar_gemini():
     except Exception as e:
         return jsonify({'erro': str(e), 'sucesso': False}), 500
 
+# ============================================
+# ROTA DE TESTE E FALLBACK PARA ERROR 404
+# ============================================
+
+@app.route('/api/teste', methods=['GET'])
+def teste():
+    """Rota simples para testar se o servidor está rodando"""
+    return jsonify({
+        'mensagem': 'Servidor funcionando!',
+        'status': 'ok',
+        'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite',
+        'gemini': GEMINI_AVAILABLE,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.errorhandler(404)
+def not_found(e):
+    """Retorna erro 404 em JSON"""
+    return jsonify({
+        'erro': 'Rota não encontrada',
+        'mensagem': 'Verifique se a URL está correta'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    """Retorna erro 500 em JSON"""
+    return jsonify({
+        'erro': 'Erro interno do servidor',
+        'mensagem': str(e)
+    }), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
