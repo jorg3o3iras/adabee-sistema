@@ -19,71 +19,117 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE COM SSL
+# CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
-SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require'
+# URLs alternativas (tenta até funcionar)
+SUPABASE_URLS = [
+    # URL do pooler (recomendado)
+    'postgresql://postgres:hdUiT-HuQG%3FpF3%25@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require',
+    # URL direta com SSL
+    'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require',
+    # URL direta sem SSL
+    'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres',
+]
 
 def get_db_connection():
-    """Retorna conexão com PostgreSQL (Supabase) com SSL"""
-    try:
-        conn = psycopg2.connect(
-            SUPABASE_URL,
-            cursor_factory=RealDictCursor,
-            connect_timeout=15,
-            keepalives=1,
-            keepalives_idle=30,
-            keepalives_interval=10,
-            keepalives_count=3
-        )
-        print("✅ Conectado ao Supabase!")
-        return conn
-    except Exception as e:
-        print(f"❌ Erro ao conectar Supabase: {e}")
-        raise e
+    """Retorna conexão com PostgreSQL (Supabase) - tenta várias URLs"""
+    for url in SUPABASE_URLS:
+        try:
+            conn = psycopg2.connect(
+                url,
+                cursor_factory=RealDictCursor,
+                connect_timeout=10
+            )
+            print(f"✅ Conectado ao Supabase!")
+            return conn
+        except Exception as e:
+            print(f"⚠️ Falha na conexão: {e}")
+            continue
+    
+    # Se todas falharem, tenta SQLite como fallback
+    print("⚠️ Todas as conexões PostgreSQL falharam. Usando SQLite.")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DB_PATH = os.path.join(BASE_DIR, 'adabee.db')
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_database():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
-        id SERIAL PRIMARY KEY, nome TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
+    # Verificar se é PostgreSQL
+    is_postgres = 'psycopg2' in str(type(conn))
     
-    cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
-        id SERIAL PRIMARY KEY, escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-        nome TEXT NOT NULL, serie TEXT DEFAULT '1º Ano', criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
-        id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-        nome TEXT NOT NULL, matricula TEXT, numero_chamada INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-        id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-        titulo TEXT NOT NULL, descricao TEXT, gabarito TEXT, data_prova DATE,
-        valor_nota REAL DEFAULT 10, quantidade_questoes INTEGER, tipo_questoes TEXT DEFAULT '4',
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
-        id SERIAL PRIMARY KEY, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-        aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-        respostas TEXT, acertos INTEGER, nota REAL, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
-        id SERIAL PRIMARY KEY, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-        aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-        texto TEXT, nota REAL, feedback TEXT, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
+    if is_postgres:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
+            id SERIAL PRIMARY KEY, nome TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
+            id SERIAL PRIMARY KEY, escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL, serie TEXT DEFAULT '1º Ano', criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
+            id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL, matricula TEXT, numero_chamada INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
+            id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            titulo TEXT NOT NULL, descricao TEXT, gabarito TEXT, data_prova DATE,
+            valor_nota REAL DEFAULT 10, quantidade_questoes INTEGER, tipo_questoes TEXT DEFAULT '4',
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
+            id SERIAL PRIMARY KEY, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+            respostas TEXT, acertos INTEGER, nota REAL, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
+            id SERIAL PRIMARY KEY, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+            texto TEXT, nota REAL, feedback TEXT, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+    else:
+        # SQLite
+        cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL, serie TEXT DEFAULT '1º Ano', criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL, matricula TEXT, numero_chamada INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            titulo TEXT NOT NULL, descricao TEXT, gabarito TEXT, data_prova DATE,
+            valor_nota REAL DEFAULT 10, quantidade_questoes INTEGER, tipo_questoes TEXT DEFAULT '4',
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+            respostas TEXT, acertos INTEGER, nota REAL, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+            texto TEXT, nota REAL, feedback TEXT, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
     
     conn.commit()
     conn.close()
     print("✅ Banco de dados inicializado!")
 
-init_database()
+# Inicializar banco
+try:
+    init_database()
+except Exception as e:
+    print(f"⚠️ Erro ao inicializar banco: {e}")
+    print("🔄 Tentando continuar mesmo assim...")
 
 # ============================================
 # CONFIGURAR GEMINI AI
@@ -320,7 +366,12 @@ def listar_escolas():
         cursor = conn.cursor()
         cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
         resultados = cursor.fetchall()
-        escolas = [{'id': row['id'], 'nome': row['nome']} for row in resultados]
+        escolas = []
+        for row in resultados:
+            if 'psycopg2' in str(type(conn)):
+                escolas.append({'id': row['id'], 'nome': row['nome']})
+            else:
+                escolas.append({'id': row[0], 'nome': row[1]})
         conn.close()
         return jsonify(escolas)
     except Exception as e:
@@ -337,8 +388,14 @@ def criar_escola():
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
-        escola_id = cursor.fetchone()['id']
+        
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
+            escola_id = cursor.fetchone()['id']
+        else:
+            cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (nome,))
+            escola_id = cursor.lastrowid
+        
         conn.commit()
         conn.close()
         
@@ -360,11 +417,18 @@ def listar_turmas():
         escola_id = request.args.get('escola_id')
         conn = get_db_connection()
         cursor = conn.cursor()
-        if escola_id:
-            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+        if 'psycopg2' in str(type(conn)):
+            if escola_id:
+                cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+            else:
+                cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
+            turmas = [{'id': row['id'], 'escola_id': row['escola_id'], 'nome': row['nome'], 'serie': row['serie']} for row in cursor.fetchall()]
         else:
-            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
-        turmas = [{'id': row['id'], 'escola_id': row['escola_id'], 'nome': row['nome'], 'serie': row['serie']} for row in cursor.fetchall()]
+            if escola_id:
+                cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,))
+            else:
+                cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
+            turmas = [{'id': row[0], 'escola_id': row[1], 'nome': row[2], 'serie': row[3]} for row in cursor.fetchall()]
         conn.close()
         return jsonify(turmas)
     except Exception as e:
@@ -376,9 +440,16 @@ def criar_turma():
         dados = request.json
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
-                       (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
-        turma_id = cursor.fetchone()['id']
+        
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
+                           (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
+            turma_id = cursor.fetchone()['id']
+        else:
+            cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (?, ?, ?)", 
+                           (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
+            turma_id = cursor.lastrowid
+        
         conn.commit()
         conn.close()
         return jsonify({'id': turma_id})
@@ -395,11 +466,19 @@ def listar_alunos():
         turma_id = request.args.get('turma_id')
         conn = get_db_connection()
         cursor = conn.cursor()
-        if turma_id:
-            cursor.execute("SELECT id, turma_id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = %s ORDER BY numero_chamada", (turma_id,))
+        
+        if 'psycopg2' in str(type(conn)):
+            if turma_id:
+                cursor.execute("SELECT id, turma_id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = %s ORDER BY numero_chamada", (turma_id,))
+            else:
+                cursor.execute("SELECT id, turma_id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada")
+            alunos = [{'id': row['id'], 'turma_id': row['turma_id'], 'nome': row['nome'], 'matricula': row['matricula'], 'numero_chamada': row['numero_chamada']} for row in cursor.fetchall()]
         else:
-            cursor.execute("SELECT id, turma_id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada")
-        alunos = [{'id': row['id'], 'turma_id': row['turma_id'], 'nome': row['nome'], 'matricula': row['matricula'], 'numero_chamada': row['numero_chamada']} for row in cursor.fetchall()]
+            if turma_id:
+                cursor.execute("SELECT id, turma_id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = ? ORDER BY numero_chamada", (turma_id,))
+            else:
+                cursor.execute("SELECT id, turma_id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada")
+            alunos = [{'id': row[0], 'turma_id': row[1], 'nome': row[2], 'matricula': row[3], 'numero_chamada': row[4]} for row in cursor.fetchall()]
         conn.close()
         return jsonify(alunos)
     except Exception as e:
@@ -411,9 +490,16 @@ def criar_aluno():
         dados = request.json
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id",
-                       (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
-        aluno_id = cursor.fetchone()['id']
+        
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id",
+                           (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
+            aluno_id = cursor.fetchone()['id']
+        else:
+            cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (?, ?, ?, ?)",
+                           (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
+            aluno_id = cursor.lastrowid
+        
         conn.commit()
         conn.close()
         return jsonify({'id': aluno_id})
@@ -429,23 +515,41 @@ def listar_provas():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
-                   t.nome as turma_nome, p.turma_id
-            FROM provas p JOIN turmas t ON p.turma_id = t.id 
-            ORDER BY p.data_prova DESC
-        """)
-        provas = []
-        for row in cursor.fetchall():
-            provas.append({
-                'id': row['id'], 'titulo': row['titulo'], 'descricao': row['descricao'],
-                'gabarito_array': json.loads(row['gabarito']) if row['gabarito'] else [],
-                'data_prova': row['data_prova'], 'valor_nota': row['valor_nota'],
-                'quantidade_questoes': row['quantidade_questoes'] or len(json.loads(row['gabarito']) if row['gabarito'] else []),
-                'tipo_questoes': row['tipo_questoes'] or '4',
-                'turma_nome': row['turma_nome'], 'turma_id': row['turma_id']
-            })
+        
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("""
+                SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                       p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
+                       t.nome as turma_nome, p.turma_id
+                FROM provas p JOIN turmas t ON p.turma_id = t.id 
+                ORDER BY p.data_prova DESC
+            """)
+            provas = []
+            for row in cursor.fetchall():
+                provas.append({
+                    'id': row['id'], 'titulo': row['titulo'], 'descricao': row['descricao'],
+                    'gabarito_array': json.loads(row['gabarito']) if row['gabarito'] else [],
+                    'data_prova': row['data_prova'], 'valor_nota': row['valor_nota'],
+                    'quantidade_questoes': row['quantidade_questoes'] or 0,
+                    'tipo_questoes': row['tipo_questoes'] or '4',
+                    'turma_nome': row['turma_nome'], 'turma_id': row['turma_id']
+                })
+        else:
+            for row in conn.execute("""
+                SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                       p.valor_nota, p.quantidade_questoes, p.tipo_questoes,
+                       t.nome as turma_nome, p.turma_id
+                FROM provas p JOIN turmas t ON p.turma_id = t.id 
+                ORDER BY p.data_prova DESC
+            """):
+                provas.append({
+                    'id': row[0], 'titulo': row[1], 'descricao': row[2],
+                    'gabarito_array': json.loads(row[3]) if row[3] else [],
+                    'data_prova': row[4], 'valor_nota': row[5],
+                    'quantidade_questoes': row[6] or 0,
+                    'tipo_questoes': row[7] or '4',
+                    'turma_nome': row[8], 'turma_id': row[9]
+                })
         conn.close()
         return jsonify(provas)
     except Exception as e:
@@ -457,16 +561,30 @@ def criar_prova():
         dados = request.json
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        """, (
-            dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
-            json.dumps(dados['gabarito']), len(dados['gabarito']),
-            dados['data_prova'], dados.get('valor_nota', 10),
-            dados.get('tipo_questoes', '4')
-        ))
-        prova_id = cursor.fetchone()['id']
+        
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("""
+                INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+            """, (
+                dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+                json.dumps(dados['gabarito']), len(dados['gabarito']),
+                dados['data_prova'], dados.get('valor_nota', 10),
+                dados.get('tipo_questoes', '4')
+            ))
+            prova_id = cursor.fetchone()['id']
+        else:
+            cursor.execute("""
+                INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+                json.dumps(dados['gabarito']), len(dados['gabarito']),
+                dados['data_prova'], dados.get('valor_nota', 10),
+                dados.get('tipo_questoes', '4')
+            ))
+            prova_id = cursor.lastrowid
+        
         conn.commit()
         conn.close()
         return jsonify({'id': prova_id})
@@ -477,8 +595,12 @@ def criar_prova():
 def deletar_prova(prova_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
-    cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
+    if 'psycopg2' in str(type(conn)):
+        cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
+        cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
+    else:
+        cursor.execute("DELETE FROM correcoes WHERE prova_id = ?", (prova_id,))
+        cursor.execute("DELETE FROM provas WHERE id = ?", (prova_id,))
     conn.commit()
     conn.close()
     return jsonify({'mensagem': 'ok'})
@@ -499,14 +621,20 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        prova = conn.execute("SELECT gabarito, tipo_questoes FROM provas WHERE id = %s", (prova_id,)).fetchone()
-        
-        if not prova:
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-        
-        gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
-        tipo_questoes = int(prova['tipo_questoes'] or 4)
+        if 'psycopg2' in str(type(conn)):
+            prova = conn.execute("SELECT gabarito, tipo_questoes FROM provas WHERE id = %s", (prova_id,)).fetchone()
+            if not prova:
+                conn.close()
+                return jsonify({'erro': 'Prova não encontrada'}), 404
+            gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
+            tipo_questoes = int(prova['tipo_questoes'] or 4)
+        else:
+            prova = conn.execute("SELECT gabarito, tipo_questoes FROM provas WHERE id = ?", (prova_id,)).fetchone()
+            if not prova:
+                conn.close()
+                return jsonify({'erro': 'Prova não encontrada'}), 404
+            gabarito = json.loads(prova[0]) if prova[0] else []
+            tipo_questoes = int(prova[1] or 4)
         
         respostas_detectadas, confianca = detectar_respostas_gemini(imagem, tipo_questoes)
         
@@ -533,11 +661,19 @@ def corrigir_prova():
         
         nota = (acertos / len(gabarito)) * 10 if gabarito else 0
         
-        aluno = conn.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,)).fetchone()
-        aluno_nome = aluno['nome'] if aluno else 'Aluno'
+        if 'psycopg2' in str(type(conn)):
+            aluno = conn.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,)).fetchone()
+            aluno_nome = aluno['nome'] if aluno else 'Aluno'
+        else:
+            aluno = conn.execute("SELECT nome FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
+            aluno_nome = aluno[0] if aluno else 'Aluno'
         
-        conn.execute("INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now()))
+        if 'psycopg2' in str(type(conn)):
+            conn.execute("INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao) VALUES (%s, %s, %s, %s, %s, %s)",
+                         (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now()))
+        else:
+            conn.execute("INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao) VALUES (?, ?, ?, ?, ?, ?)",
+                         (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now()))
         conn.commit()
         conn.close()
         
@@ -575,23 +711,42 @@ def gerar_gabarito():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
-        escola = cursor.fetchone()
-        nome_escola = escola['nome'] if escola else "ESCOLA"
-        
-        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
-        turma = cursor.fetchone()
-        nome_turma = turma['nome'] if turma else "TURMA"
-        serie = turma['serie'] if turma else "1º Ano"
-        
-        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
-        aluno = cursor.fetchone()
-        nome_aluno = aluno['nome'] if aluno else "ALUNO"
-        numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
-        
-        cursor.execute("SELECT titulo FROM provas WHERE id = %s", (prova_id,))
-        prova = cursor.fetchone()
-        nome_prova = prova['titulo'] if prova else "PROVA"
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
+            escola = cursor.fetchone()
+            nome_escola = escola['nome'] if escola else "ESCOLA"
+            
+            cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
+            turma = cursor.fetchone()
+            nome_turma = turma['nome'] if turma else "TURMA"
+            serie = turma['serie'] if turma else "1º Ano"
+            
+            cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
+            aluno = cursor.fetchone()
+            nome_aluno = aluno['nome'] if aluno else "ALUNO"
+            numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
+            
+            cursor.execute("SELECT titulo FROM provas WHERE id = %s", (prova_id,))
+            prova = cursor.fetchone()
+            nome_prova = prova['titulo'] if prova else "PROVA"
+        else:
+            cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
+            escola = cursor.fetchone()
+            nome_escola = escola[0] if escola else "ESCOLA"
+            
+            cursor.execute("SELECT nome, serie FROM turmas WHERE id = ?", (turma_id,))
+            turma = cursor.fetchone()
+            nome_turma = turma[0] if turma else "TURMA"
+            serie = turma[1] if turma else "1º Ano"
+            
+            cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
+            aluno = cursor.fetchone()
+            nome_aluno = aluno[0] if aluno else "ALUNO"
+            numero = str(aluno[1]) if aluno and aluno[1] else ""
+            
+            cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
+            prova = cursor.fetchone()
+            nome_prova = prova[0] if prova else "PROVA"
         
         conn.close()
         
@@ -718,12 +873,18 @@ def gerar_gabarito():
 def dashboard():
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-        total_escolas = conn.execute("SELECT COUNT(*) FROM escolas").fetchone()[0]
-        total_turmas = conn.execute("SELECT COUNT(*) FROM turmas").fetchone()[0]
-        total_alunos = conn.execute("SELECT COUNT(*) FROM alunos").fetchone()[0]
-        total_provas = conn.execute("SELECT COUNT(*) FROM provas").fetchone()[0]
-        row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes").fetchone()
+        if 'psycopg2' in str(type(conn)):
+            total_escolas = conn.execute("SELECT COUNT(*) FROM escolas").fetchone()[0]
+            total_turmas = conn.execute("SELECT COUNT(*) FROM turmas").fetchone()[0]
+            total_alunos = conn.execute("SELECT COUNT(*) FROM alunos").fetchone()[0]
+            total_provas = conn.execute("SELECT COUNT(*) FROM provas").fetchone()[0]
+            row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes").fetchone()
+        else:
+            total_escolas = conn.execute("SELECT COUNT(*) FROM escolas").fetchone()[0]
+            total_turmas = conn.execute("SELECT COUNT(*) FROM turmas").fetchone()[0]
+            total_alunos = conn.execute("SELECT COUNT(*) FROM alunos").fetchone()[0]
+            total_provas = conn.execute("SELECT COUNT(*) FROM provas").fetchone()[0]
+            row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes").fetchone()
         conn.close()
         return jsonify({
             'total_escolas': total_escolas,
@@ -741,15 +902,26 @@ def historico():
     try:
         conn = get_db_connection()
         historico = []
-        for row in conn.execute("""
-            SELECT c.id, a.nome, p.titulo, c.acertos, c.nota, c.data_correcao
-            FROM correcoes c JOIN alunos a ON c.aluno_id = a.id JOIN provas p ON c.prova_id = p.id
-            ORDER BY c.data_correcao DESC LIMIT 50
-        """):
-            historico.append({
-                'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2],
-                'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]
-            })
+        if 'psycopg2' in str(type(conn)):
+            for row in conn.execute("""
+                SELECT c.id, a.nome, p.titulo, c.acertos, c.nota, c.data_correcao
+                FROM correcoes c JOIN alunos a ON c.aluno_id = a.id JOIN provas p ON c.prova_id = p.id
+                ORDER BY c.data_correcao DESC LIMIT 50
+            """):
+                historico.append({
+                    'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2],
+                    'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]
+                })
+        else:
+            for row in conn.execute("""
+                SELECT c.id, a.nome, p.titulo, c.acertos, c.nota, c.data_correcao
+                FROM correcoes c JOIN alunos a ON c.aluno_id = a.id JOIN provas p ON c.prova_id = p.id
+                ORDER BY c.data_correcao DESC LIMIT 50
+            """):
+                historico.append({
+                    'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2],
+                    'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]
+                })
         conn.close()
         return jsonify(historico)
     except Exception as e:
@@ -772,16 +944,25 @@ def exportar_resultados():
     if not prova_id:
         return jsonify({'erro': 'Prova não informada'}), 400
     conn = get_db_connection()
-    resultados = conn.execute("""
-        SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao
-        FROM correcoes c JOIN alunos a ON c.aluno_id = a.id WHERE c.prova_id = %s
-    """, (prova_id,)).fetchall()
+    if 'psycopg2' in str(type(conn)):
+        resultados = conn.execute("""
+            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao
+            FROM correcoes c JOIN alunos a ON c.aluno_id = a.id WHERE c.prova_id = %s
+        """, (prova_id,)).fetchall()
+    else:
+        resultados = conn.execute("""
+            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao
+            FROM correcoes c JOIN alunos a ON c.aluno_id = a.id WHERE c.prova_id = ?
+        """, (prova_id,)).fetchall()
     conn.close()
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
     for r in resultados:
-        writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
+        if 'psycopg2' in str(type(conn)):
+            writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
+        else:
+            writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
     return output.getvalue(), 200, {
         'Content-Type': 'text/csv',
         'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
@@ -831,12 +1012,10 @@ def testar_gemini():
 # ROTA DE TESTE
 # ============================================
 
-@app.route('/api/teste', methods=['GET'])
+@app.route('/api/teste', methods(['GET'])
 def teste():
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
         conn.close()
         return jsonify({
             'mensagem': 'Servidor funcionando!',
