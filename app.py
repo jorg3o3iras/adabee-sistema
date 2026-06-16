@@ -22,7 +22,6 @@ CORS(app)
 # CONFIGURAR BANCO DE DADOS (PostgreSQL ou SQLite)
 # ============================================
 
-# Tenta conectar ao PostgreSQL (Render), se falhar usa SQLite
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
 def get_db_connection():
@@ -34,7 +33,6 @@ def get_db_connection():
         except Exception as e:
             print(f"⚠️ PostgreSQL indisponível: {e}")
     
-    # Fallback para SQLite
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DB_PATH = os.path.join(BASE_DIR, 'adabee.db')
     conn = sqlite3.connect(DB_PATH)
@@ -42,70 +40,40 @@ def get_db_connection():
     return conn
 
 def init_database():
-    """Inicializa o banco de dados com as tabelas necessárias"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Tabela escolas
     cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
-        id SERIAL PRIMARY KEY,
-        nome TEXT NOT NULL,
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id SERIAL PRIMARY KEY, nome TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
-    # Tabela turmas
     cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
-        id SERIAL PRIMARY KEY,
-        escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-        nome TEXT NOT NULL,
-        serie TEXT DEFAULT '1º Ano',
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id SERIAL PRIMARY KEY, escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+        nome TEXT NOT NULL, serie TEXT DEFAULT '1º Ano', criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
-    # Tabela alunos
     cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
-        id SERIAL PRIMARY KEY,
-        turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-        nome TEXT NOT NULL,
-        matricula TEXT,
-        numero_chamada INTEGER,
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+        nome TEXT NOT NULL, matricula TEXT, numero_chamada INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
-    # Tabela provas
     cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-        id SERIAL PRIMARY KEY,
-        turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-        titulo TEXT NOT NULL,
-        descricao TEXT,
-        gabarito TEXT,
-        data_prova DATE,
-        valor_nota REAL DEFAULT 10,
-        quantidade_questoes INTEGER,
-        tipo_questoes TEXT DEFAULT '4', -- '3' para 3 opções, '4' para 4 opções
+        id SERIAL PRIMARY KEY, turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+        titulo TEXT NOT NULL, descricao TEXT, gabarito TEXT, data_prova DATE,
+        valor_nota REAL DEFAULT 10, quantidade_questoes INTEGER, tipo_questoes TEXT DEFAULT '4',
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
-    # Tabela correções (múltipla escolha)
     cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
-        id SERIAL PRIMARY KEY,
-        prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+        id SERIAL PRIMARY KEY, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
         aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-        respostas TEXT,
-        acertos INTEGER,
-        nota REAL,
-        data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        respostas TEXT, acertos INTEGER, nota REAL, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
-    # Tabela correções de redação
     cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
-        id SERIAL PRIMARY KEY,
-        prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+        id SERIAL PRIMARY KEY, prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
         aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-        texto TEXT,
-        nota REAL,
-        feedback TEXT,
-        data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        texto TEXT, nota REAL, feedback TEXT, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
     conn.commit()
@@ -157,7 +125,6 @@ else:
 # ============================================
 
 def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
-    """Detecta respostas usando Gemini com número variável de opções"""
     try:
         if not GEMINI_AVAILABLE:
             return [], 0.0
@@ -169,7 +136,6 @@ def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
         img = Image.open(io.BytesIO(imagem_bytes))
         img.thumbnail((1024, 1024))
         
-        # Gerar lista de opções baseado no número
         opcoes = 'ABCDE'[:num_opcoes]
         opcoes_str = ', '.join(list(opcoes))
         
@@ -199,7 +165,6 @@ Responda SOMENTE a lista de letras."""
         
         print(f"🤖 Gemini respondeu: {texto[:200]}")
         
-        # Extrair letras válidas
         letras_validas = set(opcoes)
         respostas = [c for c in texto if c in letras_validas]
         
@@ -215,39 +180,131 @@ Responda SOMENTE a lista de letras."""
         print(f"❌ Erro no Gemini: {e}")
         return None, 0.0
 
-def corrigir_redacao(texto, criterios=None):
-    """Corrige uma redação/texto pequeno usando Gemini"""
+# ============================================
+# CORREÇÃO DE REDAÇÃO POR IMAGEM OU TEXTO
+# ============================================
+
+@app.route('/api/corrigir_redacao', methods=['POST'])
+def corrigir_redacao_api():
     try:
-        if not GEMINI_AVAILABLE or not texto:
-            return None, "Gemini não disponível"
+        dados = request.json
+        imagem = dados.get('imagem')
+        texto = dados.get('texto')
+        prova_id = dados.get('prova_id')
+        aluno_id = dados.get('aluno_id')
         
-        prompt = f"""Corrija a seguinte redação/texto:
+        if not GEMINI_AVAILABLE:
+            return jsonify({'erro': 'Gemini AI não disponível'}), 400
+        
+        # CORREÇÃO POR IMAGEM (FOTO DA REDAÇÃO)
+        if imagem:
+            if ',' in imagem:
+                imagem = imagem.split(',')[1]
+            
+            imagem_bytes = base64.b64decode(imagem)
+            img = Image.open(io.BytesIO(imagem_bytes))
+            img.thumbnail((1024, 1024))
+            
+            prompt = """[SISTEMA DE CORREÇÃO DE REDAÇÃO]
+
+ANALISE ESTA IMAGEM DE UMA REDAÇÃO ESCRITA À MÃO.
+
+CRITÉRIOS DE AVALIAÇÃO:
+1. Estrutura e organização do texto
+2. Coerência e coesão
+3. Ortografia e gramática
+4. Desenvolvimento do tema
+5. Criatividade e originalidade
+
+TAREFA:
+Analise a redação da imagem e forneça:
+1. NOTA: (0 a 10)
+2. CONCEITO: (Excelente, Bom, Regular, Insuficiente)
+3. FEEDBACK: (Pontos fortes e fracos)
+4. SUGESTÕES: (Melhorias)
+
+Formato de resposta:
+NOTA: [nota]
+CONCEITO: [conceito]
+FEEDBACK: [feedback detalhado]
+SUGESTÕES: [sugestões]
+"""
+            
+            response = model.generate_content([prompt, img])
+            resultado = response.text.strip()
+            
+            # Extrair nota
+            nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
+            nota = float(nota_match.group(1)) if nota_match else 0.0
+            nota = min(10, max(0, nota))
+            
+            # Extrair conceito
+            conceito_match = re.search(r'CONCEITO:\s*([A-Za-záéíóúãõç]+)', resultado)
+            conceito = conceito_match.group(1) if conceito_match else "Não avaliado"
+            
+            # Salvar no banco
+            if prova_id and aluno_id:
+                conn = get_db_connection()
+                conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, nota, feedback, data_correcao) VALUES (?, ?, ?, ?, ?)",
+                             (prova_id, aluno_id, nota, resultado, datetime.now()))
+                conn.commit()
+                conn.close()
+            
+            return jsonify({
+                'nota': round(nota, 1),
+                'conceito': conceito,
+                'feedback': resultado,
+                'sucesso': True,
+                'metodo': 'Imagem'
+            })
+        
+        # CORREÇÃO POR TEXTO (FALLBACK)
+        elif texto and len(texto.strip()) > 5:
+            prompt = f"""Corrija a seguinte redação:
 
 "{texto}"
 
-Análise:
-1. Nota (0 a 10)
-2. Feedback (pontos fortes e fracos)
-3. Sugestões de melhoria
+CRITÉRIOS: Estrutura, Coerência, Ortografia, Desenvolvimento do tema.
 
-Responda APENAS com: NOTA: X | FEEDBACK: ... | SUGESTÕES: ..."""
+Responda:
+NOTA: (0 a 10)
+CONCEITO: (Excelente/Bom/Regular/Insuficiente)
+FEEDBACK: (pontos fortes e fracos)
+SUGESTÕES: (melhorias)
+"""
+            
+            response = model.generate_content(prompt)
+            resultado = response.text.strip()
+            
+            nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
+            nota = float(nota_match.group(1)) if nota_match else 0.0
+            nota = min(10, max(0, nota))
+            
+            conceito_match = re.search(r'CONCEITO:\s*([A-Za-záéíóúãõç]+)', resultado)
+            conceito = conceito_match.group(1) if conceito_match else "Não avaliado"
+            
+            if prova_id and aluno_id:
+                conn = get_db_connection()
+                conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao) VALUES (?, ?, ?, ?, ?, ?)",
+                             (prova_id, aluno_id, texto, nota, resultado, datetime.now()))
+                conn.commit()
+                conn.close()
+            
+            return jsonify({
+                'nota': round(nota, 1),
+                'conceito': conceito,
+                'feedback': resultado,
+                'sucesso': True,
+                'metodo': 'Texto'
+            })
         
-        response = model.generate_content(prompt)
-        resultado = response.text.strip()
-        
-        # Extrair nota
-        nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
-        nota = float(nota_match.group(1)) if nota_match else 0.0
-        nota = min(10, max(0, nota))
-        
-        return nota, resultado
+        return jsonify({'erro': 'Forneça uma imagem ou texto para correção'}), 400
         
     except Exception as e:
-        print(f"❌ Erro na correção: {e}")
-        return 0.0, f"Erro: {e}"
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DA API
+# DEMAIS ROTAS (ESCOLAS, TURMAS, ALUNOS, PROVAS, CORREÇÃO)
 # ============================================
 
 @app.route('/')
@@ -255,7 +312,6 @@ def index():
     return send_from_directory('.', 'index.html')
 
 # ---------- ESCOLAS ----------
-
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
@@ -273,14 +329,16 @@ def criar_escola():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (dados['nome'],)) if 'psycopg2' in str(type(conn)) else cursor.execute("INSERT INTO escolas (nome) VALUES (?) RETURNING id", (dados['nome'],))
+    if 'psycopg2' in str(type(conn)):
+        cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (dados['nome'],))
+    else:
+        cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (dados['nome'],))
     conn.commit()
     escola_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
     return jsonify({'id': escola_id})
 
 # ---------- TURMAS ----------
-
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
     escola_id = request.args.get('escola_id')
@@ -305,14 +363,18 @@ def criar_turma():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
+    if 'psycopg2' in str(type(conn)):
+        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
+                       (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
+    else:
+        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (?, ?, ?)", 
+                       (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
     conn.commit()
     turma_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
     return jsonify({'id': turma_id})
 
 # ---------- ALUNOS ----------
-
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
     turma_id = request.args.get('turma_id')
@@ -337,14 +399,18 @@ def criar_aluno():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id", (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
+    if 'psycopg2' in str(type(conn)):
+        cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id",
+                       (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
+    else:
+        cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (?, ?, ?, ?)",
+                       (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
     conn.commit()
     aluno_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
     return jsonify({'id': aluno_id})
 
 # ---------- PROVAS ----------
-
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     conn = get_db_connection()
@@ -383,15 +449,26 @@ def criar_prova():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-    """, (
-        dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
-        json.dumps(dados['gabarito']), len(dados['gabarito']),
-        dados['data_prova'], dados.get('valor_nota', 10),
-        dados.get('tipo_questoes', '4')
-    ))
+    if 'psycopg2' in str(type(conn)):
+        cursor.execute("""
+            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (
+            dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+            json.dumps(dados['gabarito']), len(dados['gabarito']),
+            dados['data_prova'], dados.get('valor_nota', 10),
+            dados.get('tipo_questoes', '4')
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+            json.dumps(dados['gabarito']), len(dados['gabarito']),
+            dados['data_prova'], dados.get('valor_nota', 10),
+            dados.get('tipo_questoes', '4')
+        ))
     conn.commit()
     prova_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
@@ -408,7 +485,6 @@ def deletar_prova(prova_id):
     return jsonify({'mensagem': 'ok'})
 
 # ---------- CORREÇÃO DE MÚLTIPLA ESCOLHA ----------
-
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_prova():
     try:
@@ -430,14 +506,12 @@ def corrigir_prova():
         gabarito = json.loads(prova[0]) if prova[0] else []
         tipo_questoes = int(prova[1] or 4)
         
-        # Detectar respostas
         respostas_detectadas, confianca = detectar_respostas_gemini(imagem, tipo_questoes)
         
         if not respostas_detectadas:
             conn.close()
             return jsonify({'erro': 'Não foi possível detectar as respostas.'}), 400
         
-        # Alinhar tamanhos
         while len(respostas_detectadas) < len(gabarito):
             respostas_detectadas.append('?')
         
@@ -481,38 +555,7 @@ def corrigir_prova():
         print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ---------- CORREÇÃO DE REDAÇÃO ----------
-
-@app.route('/api/corrigir_redacao', methods=['POST'])
-def corrigir_redacao_api():
-    try:
-        dados = request.json
-        texto = dados.get('texto')
-        prova_id = dados.get('prova_id')
-        aluno_id = dados.get('aluno_id')
-        
-        if not texto:
-            return jsonify({'erro': 'Texto não fornecido'}), 400
-        
-        nota, feedback = corrigir_redacao(texto)
-        
-        if prova_id and aluno_id:
-            conn = get_db_connection()
-            conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao) VALUES (?, ?, ?, ?, ?, ?)",
-                         (prova_id, aluno_id, texto, nota, feedback, datetime.now()))
-            conn.commit()
-            conn.close()
-        
-        return jsonify({
-            'nota': round(nota, 1),
-            'feedback': feedback,
-            'sucesso': True
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
 # ---------- GERAR GABARITO ----------
-
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
@@ -524,7 +567,6 @@ def gerar_gabarito():
         qtd_questoes = dados.get('quantidade_questoes', 20)
         tipo_questoes = dados.get('tipo_questoes', '4')
         
-        # Buscar dados do banco
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
@@ -547,7 +589,6 @@ def gerar_gabarito():
         
         conn.close()
         
-        # Determinar opções baseado na série
         if tipo_questoes == '3':
             opcoes = ['A', 'B', 'C']
             titulo_opcoes = "3 OPÇÕES (A, B, C)"
@@ -555,11 +596,9 @@ def gerar_gabarito():
             opcoes = ['A', 'B', 'C', 'D']
             titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
         
-        # Limitar a 30 questões por página
         if int(qtd_questoes) > 30:
             qtd_questoes = 30
         
-        # Gerar HTML
         html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -567,105 +606,30 @@ def gerar_gabarito():
     <title>Folha de Respostas - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            background: #f0f2f5;
-            padding: 15px;
-        }}
-        .container {{
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            border-radius: 10px;
-        }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
+        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; }}
         .folha {{ padding: 20px; }}
-        .header {{
-            text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 10px;
-        }}
+        .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
         .header h2 {{ color: #4CAF50; font-size: 20px; }}
-        .header p {{ color: #666; font-size: 10px; }}
-        .info-grid {{
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-            background: #f9f9f9;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 12px;
-        }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; }}
         .info-item {{ display: flex; gap: 8px; }}
         .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
         .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
-        .instrucoes {{
-            background: #FFF3CD;
-            padding: 8px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            font-size: 10px;
-            color: #856404;
-            text-align: center;
-        }}
+        .instrucoes {{ background: #FFF3CD; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 10px; text-align: center; }}
         table {{ width: 100%; border-collapse: collapse; }}
-        th {{
-            background: #4CAF50;
-            color: white;
-            padding: 6px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-        }}
+        th {{ background: #4CAF50; color: white; padding: 6px; text-align: center; font-size: 12px; }}
         td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
         .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
         .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
-        .opcao {{
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            min-width: 45px;
-        }}
-        .circulo {{
-            display: inline-block;
-            width: 22px;
-            height: 22px;
-            border: 2px solid #333;
-            border-radius: 50%;
-            background: white;
-        }}
+        .opcao {{ display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 45px; }}
+        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; background: white; }}
         .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
-        .rodape {{
-            margin-top: 15px;
-            text-align: center;
-            font-size: 9px;
-            color: #999;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-        }}
+        .rodape {{ margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
         .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
-        button {{
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            margin: 0 10px;
-        }}
+        button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
         button:hover {{ background: #45a049; }}
         button.secundario {{ background: #2196F3; }}
-        button.secundario:hover {{ background: #0b7dda; }}
-        @media print {{
-            body {{ background: white; padding: 0; margin: 0; }}
-            .container {{ box-shadow: none; margin: 0; padding: 0; }}
-            .botoes {{ display: none; }}
-            .info-value {{ border-bottom: none; }}
-        }}
+        @media print {{ body {{ background: white; padding: 0; margin: 0; }} .container {{ box-shadow: none; }} .botoes {{ display: none; }} }}
     </style>
 </head>
 <body>
@@ -675,7 +639,6 @@ def gerar_gabarito():
                 <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
                 <p>{titulo_opcoes} - {serie}</p>
             </div>
-            
             <div class="info-grid">
                 <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
                 <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
@@ -684,18 +647,9 @@ def gerar_gabarito():
                 <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
                 <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
             </div>
-            
-            <div class="instrucoes">
-                <strong>📌 INSTRUÇÕES:</strong> Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.
-            </div>
-            
+            <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.</div>
             <table>
-                <thead>
-                    <tr>
-                        <th>Q</th>
-                        <th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
                 <tbody>"""
         
         for i in range(1, int(qtd_questoes) + 1):
@@ -718,10 +672,7 @@ def gerar_gabarito():
         html += f"""
                 </tbody>
             </table>
-            
-            <div class="rodape">
-                <strong>AdaBee AI</strong> - Preencha completamente a bolinha | Use caneta PRETA
-            </div>
+            <div class="rodape">AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA</div>
         </div>
         <div class="botoes">
             <button onclick="window.print()">🖨️ IMPRIMIR</button>
@@ -730,7 +681,6 @@ def gerar_gabarito():
     </div>
     <script>
         function baixarPDF() {{ window.print(); }}
-        
         document.querySelectorAll('.opcoes').forEach(grupo => {{
             const opcoes = grupo.querySelectorAll('.opcao');
             opcoes.forEach(opcao => {{
@@ -754,8 +704,7 @@ def gerar_gabarito():
         print(f"Erro: {e}")
         return f"<h3>Erro: {str(e)}</h3>", 500
 
-# ---------- OUTRAS ROTAS ----------
-
+# ---------- DEMAIS ROTAS ----------
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     try:
@@ -766,7 +715,6 @@ def dashboard():
         total_provas = conn.execute("SELECT COUNT(*) FROM provas").fetchone()[0]
         row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes").fetchone()
         conn.close()
-        
         return jsonify({
             'total_escolas': total_escolas,
             'total_turmas': total_turmas,
@@ -813,20 +761,17 @@ def exportar_resultados():
     prova_id = request.args.get('prova_id')
     if not prova_id:
         return jsonify({'erro': 'Prova não informada'}), 400
-    
     conn = get_db_connection()
     resultados = conn.execute("""
         SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao
         FROM correcoes c JOIN alunos a ON c.aluno_id = a.id WHERE c.prova_id = ?
     """, (prova_id,)).fetchall()
     conn.close()
-    
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
     for r in resultados:
         writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
-    
     return output.getvalue(), 200, {
         'Content-Type': 'text/csv',
         'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
@@ -859,20 +804,15 @@ def testar_gemini():
     try:
         dados = request.json
         imagem = dados.get('imagem')
-        
         if not imagem:
             return jsonify({'erro': 'Imagem não fornecida'}), 400
-        
         if ',' in imagem:
             imagem = imagem.split(',')[1]
-        
         imagem_bytes = base64.b64decode(imagem)
         img = Image.open(io.BytesIO(imagem_bytes))
         img.thumbnail((800, 800))
-        
         prompt = "Descreva o que você vê nesta imagem. Liste as letras A, B, C, D, E se aparecerem."
         response = model.generate_content([prompt, img])
-        
         return jsonify({'resposta_bruta': response.text, 'sucesso': True})
     except Exception as e:
         return jsonify({'erro': str(e), 'sucesso': False}), 500
