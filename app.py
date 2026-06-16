@@ -19,10 +19,16 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS (PostgreSQL ou SQLite)
+# CONFIGURAR BANCO DE DADOS
 # ============================================
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+# Se não tiver DATABASE_URL, usar SQLite
+if not DATABASE_URL:
+    print("⚠️ DATABASE_URL não configurada. Usando SQLite.")
+else:
+    print(f"✅ DATABASE_URL configurada: {DATABASE_URL[:30]}...")
 
 def get_db_connection():
     """Retorna conexão com o banco de dados (PostgreSQL ou SQLite)"""
@@ -43,6 +49,7 @@ def init_database():
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Criar tabelas
     cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
         id SERIAL PRIMARY KEY, nome TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
@@ -121,6 +128,52 @@ else:
     print("⚠️ Gemini não configurado.")
 
 # ============================================
+# ROTAS DE DIAGNÓSTICO
+# ============================================
+
+@app.route('/api/diagnostico', methods=['GET'])
+def diagnostico():
+    """Diagnóstico completo do sistema"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar tabelas
+        tabelas = []
+        try:
+            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+            tabelas = [row[0] for row in cursor.fetchall()]
+        except:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tabelas = [row[0] for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        # Contar registros
+        total_escolas = 0
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM escolas")
+            total_escolas = cursor.fetchone()[0]
+            conn.close()
+        except:
+            pass
+        
+        return jsonify({
+            'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite',
+            'gemini_ativa': GEMINI_AVAILABLE,
+            'tabelas': tabelas,
+            'total_escolas': total_escolas,
+            'url_configurada': bool(os.environ.get('DATABASE_URL'))
+        })
+    except Exception as e:
+        return jsonify({
+            'erro': str(e),
+            'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'
+        }), 500
+
+# ============================================
 # DETECÇÃO DE RESPOSTAS COM GEMINI
 # ============================================
 
@@ -181,7 +234,7 @@ Responda SOMENTE a lista de letras."""
         return None, 0.0
 
 # ============================================
-# CORREÇÃO DE REDAÇÃO POR IMAGEM OU TEXTO
+# CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -196,7 +249,6 @@ def corrigir_redacao_api():
         if not GEMINI_AVAILABLE:
             return jsonify({'erro': 'Gemini AI não disponível'}), 400
         
-        # CORREÇÃO POR IMAGEM (FOTO DA REDAÇÃO)
         if imagem:
             if ',' in imagem:
                 imagem = imagem.split(',')[1]
@@ -233,16 +285,13 @@ SUGESTÕES: [sugestões]
             response = model.generate_content([prompt, img])
             resultado = response.text.strip()
             
-            # Extrair nota
             nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
             nota = float(nota_match.group(1)) if nota_match else 0.0
             nota = min(10, max(0, nota))
             
-            # Extrair conceito
             conceito_match = re.search(r'CONCEITO:\s*([A-Za-záéíóúãõç]+)', resultado)
             conceito = conceito_match.group(1) if conceito_match else "Não avaliado"
             
-            # Salvar no banco
             if prova_id and aluno_id:
                 conn = get_db_connection()
                 conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, nota, feedback, data_correcao) VALUES (?, ?, ?, ?, ?)",
@@ -258,7 +307,6 @@ SUGESTÕES: [sugestões]
                 'metodo': 'Imagem'
             })
         
-        # CORREÇÃO POR TEXTO (FALLBACK)
         elif texto and len(texto.strip()) > 5:
             prompt = f"""Corrija a seguinte redação:
 
@@ -304,7 +352,7 @@ SUGESTÕES: (melhorias)
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# DEMAIS ROTAS (ESCOLAS, TURMAS, ALUNOS, PROVAS, CORREÇÃO)
+# ROTAS PRINCIPAIS
 # ============================================
 
 @app.route('/')
@@ -314,165 +362,199 @@ def index():
 # ---------- ESCOLAS ----------
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
-    conn = get_db_connection()
-    if 'psycopg2' in str(type(conn)):
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
-        escolas = cursor.fetchall()
-    else:
-        escolas = [dict(row) for row in conn.execute("SELECT id, nome FROM escolas ORDER BY nome").fetchall()]
-    conn.close()
-    return jsonify(escolas)
+    try:
+        conn = get_db_connection()
+        if 'psycopg2' in str(type(conn)):
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
+            escolas = cursor.fetchall()
+        else:
+            escolas = [dict(row) for row in conn.execute("SELECT id, nome FROM escolas ORDER BY nome").fetchall()]
+        conn.close()
+        return jsonify(escolas)
+    except Exception as e:
+        print(f"❌ Erro ao listar escolas: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/escolas', methods=['POST'])
 def criar_escola():
-    dados = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if 'psycopg2' in str(type(conn)):
-        cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (dados['nome'],))
-    else:
-        cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (dados['nome'],))
-    conn.commit()
-    escola_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
-    conn.close()
-    return jsonify({'id': escola_id})
+    try:
+        dados = request.json
+        nome = dados.get('nome')
+        if not nome:
+            return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
+        else:
+            cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (nome,))
+        
+        conn.commit()
+        escola_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
+        conn.close()
+        
+        print(f"✅ Escola cadastrada: ID {escola_id} - Nome: {nome}")
+        return jsonify({'id': escola_id, 'mensagem': 'Escola criada com sucesso'})
+    except Exception as e:
+        print(f"❌ Erro ao criar escola: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 # ---------- TURMAS ----------
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
-    escola_id = request.args.get('escola_id')
-    conn = get_db_connection()
-    if 'psycopg2' in str(type(conn)):
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        if escola_id:
-            cursor.execute("SELECT id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+    try:
+        escola_id = request.args.get('escola_id')
+        conn = get_db_connection()
+        if 'psycopg2' in str(type(conn)):
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            if escola_id:
+                cursor.execute("SELECT id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+            else:
+                cursor.execute("SELECT id, nome, serie FROM turmas ORDER BY nome")
+            turmas = cursor.fetchall()
         else:
-            cursor.execute("SELECT id, nome, serie FROM turmas ORDER BY nome")
-        turmas = cursor.fetchall()
-    else:
-        if escola_id:
-            turmas = [dict(row) for row in conn.execute("SELECT id, nome, serie FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,)).fetchall()]
-        else:
-            turmas = [dict(row) for row in conn.execute("SELECT id, nome, serie FROM turmas ORDER BY nome").fetchall()]
-    conn.close()
-    return jsonify(turmas)
+            if escola_id:
+                turmas = [dict(row) for row in conn.execute("SELECT id, nome, serie FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,)).fetchall()]
+            else:
+                turmas = [dict(row) for row in conn.execute("SELECT id, nome, serie FROM turmas ORDER BY nome").fetchall()]
+        conn.close()
+        return jsonify(turmas)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
-    dados = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if 'psycopg2' in str(type(conn)):
-        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
-                       (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
-    else:
-        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (?, ?, ?)", 
-                       (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
-    conn.commit()
-    turma_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
-    conn.close()
-    return jsonify({'id': turma_id})
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
+                           (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
+        else:
+            cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (?, ?, ?)", 
+                           (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
+        conn.commit()
+        turma_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
+        conn.close()
+        return jsonify({'id': turma_id})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ---------- ALUNOS ----------
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    turma_id = request.args.get('turma_id')
-    conn = get_db_connection()
-    if 'psycopg2' in str(type(conn)):
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        if turma_id:
-            cursor.execute("SELECT id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = %s ORDER BY numero_chamada", (turma_id,))
+    try:
+        turma_id = request.args.get('turma_id')
+        conn = get_db_connection()
+        if 'psycopg2' in str(type(conn)):
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            if turma_id:
+                cursor.execute("SELECT id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = %s ORDER BY numero_chamada", (turma_id,))
+            else:
+                cursor.execute("SELECT id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada")
+            alunos = cursor.fetchall()
         else:
-            cursor.execute("SELECT id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada")
-        alunos = cursor.fetchall()
-    else:
-        if turma_id:
-            alunos = [dict(row) for row in conn.execute("SELECT id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = ? ORDER BY numero_chamada", (turma_id,)).fetchall()]
-        else:
-            alunos = [dict(row) for row in conn.execute("SELECT id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada").fetchall()]
-    conn.close()
-    return jsonify(alunos)
+            if turma_id:
+                alunos = [dict(row) for row in conn.execute("SELECT id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = ? ORDER BY numero_chamada", (turma_id,)).fetchall()]
+            else:
+                alunos = [dict(row) for row in conn.execute("SELECT id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada").fetchall()]
+        conn.close()
+        return jsonify(alunos)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
-    dados = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if 'psycopg2' in str(type(conn)):
-        cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id",
-                       (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
-    else:
-        cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (?, ?, ?, ?)",
-                       (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
-    conn.commit()
-    aluno_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
-    conn.close()
-    return jsonify({'id': aluno_id})
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id",
+                           (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
+        else:
+            cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (?, ?, ?, ?)",
+                           (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
+        conn.commit()
+        aluno_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
+        conn.close()
+        return jsonify({'id': aluno_id})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ---------- PROVAS ----------
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
-    conn = get_db_connection()
-    if 'psycopg2' in str(type(conn)):
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
-            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
-                   t.nome as turma_nome, p.turma_id
-            FROM provas p JOIN turmas t ON p.turma_id = t.id 
-            ORDER BY p.data_prova DESC
-        """)
-        provas = cursor.fetchall()
-    else:
-        provas = []
-        for row in conn.execute("""
-            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes,
-                   t.nome as turma_nome, p.turma_id
-            FROM provas p JOIN turmas t ON p.turma_id = t.id 
-            ORDER BY p.data_prova DESC
-        """):
-            provas.append({
-                'id': row[0], 'titulo': row[1], 'descricao': row[2],
-                'gabarito_array': json.loads(row[3]) if row[3] else [],
-                'data_prova': row[4], 'valor_nota': row[5],
-                'quantidade_questoes': row[6] or len(json.loads(row[3]) if row[3] else []),
-                'tipo_questoes': row[7] or '4',
-                'turma_nome': row[8], 'turma_id': row[9]
-            })
-    conn.close()
-    return jsonify(provas)
+    try:
+        conn = get_db_connection()
+        if 'psycopg2' in str(type(conn)):
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("""
+                SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                       p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
+                       t.nome as turma_nome, p.turma_id
+                FROM provas p JOIN turmas t ON p.turma_id = t.id 
+                ORDER BY p.data_prova DESC
+            """)
+            provas = cursor.fetchall()
+        else:
+            provas = []
+            for row in conn.execute("""
+                SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                       p.valor_nota, p.quantidade_questoes, p.tipo_questoes,
+                       t.nome as turma_nome, p.turma_id
+                FROM provas p JOIN turmas t ON p.turma_id = t.id 
+                ORDER BY p.data_prova DESC
+            """):
+                provas.append({
+                    'id': row[0], 'titulo': row[1], 'descricao': row[2],
+                    'gabarito_array': json.loads(row[3]) if row[3] else [],
+                    'data_prova': row[4], 'valor_nota': row[5],
+                    'quantidade_questoes': row[6] or len(json.loads(row[3]) if row[3] else []),
+                    'tipo_questoes': row[7] or '4',
+                    'turma_nome': row[8], 'turma_id': row[9]
+                })
+        conn.close()
+        return jsonify(provas)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
-    dados = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if 'psycopg2' in str(type(conn)):
-        cursor.execute("""
-            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        """, (
-            dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
-            json.dumps(dados['gabarito']), len(dados['gabarito']),
-            dados['data_prova'], dados.get('valor_nota', 10),
-            dados.get('tipo_questoes', '4')
-        ))
-    else:
-        cursor.execute("""
-            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
-            json.dumps(dados['gabarito']), len(dados['gabarito']),
-            dados['data_prova'], dados.get('valor_nota', 10),
-            dados.get('tipo_questoes', '4')
-        ))
-    conn.commit()
-    prova_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
-    conn.close()
-    return jsonify({'id': prova_id})
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if 'psycopg2' in str(type(conn)):
+            cursor.execute("""
+                INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+            """, (
+                dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+                json.dumps(dados['gabarito']), len(dados['gabarito']),
+                dados['data_prova'], dados.get('valor_nota', 10),
+                dados.get('tipo_questoes', '4')
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+                json.dumps(dados['gabarito']), len(dados['gabarito']),
+                dados['data_prova'], dados.get('valor_nota', 10),
+                dados.get('tipo_questoes', '4')
+            ))
+        conn.commit()
+        prova_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
+        conn.close()
+        return jsonify({'id': prova_id})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
 def deletar_prova(prova_id):
@@ -484,7 +566,7 @@ def deletar_prova(prova_id):
     conn.close()
     return jsonify({'mensagem': 'ok'})
 
-# ---------- CORREÇÃO DE MÚLTIPLA ESCOLHA ----------
+# ---------- CORREÇÃO DE PROVAS ----------
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_prova():
     try:
@@ -818,23 +900,39 @@ def testar_gemini():
         return jsonify({'erro': str(e), 'sucesso': False}), 500
 
 # ============================================
-# ROTA DE TESTE E FALLBACK PARA ERROR 404
+# ROTA DE TESTE
 # ============================================
 
 @app.route('/api/teste', methods=['GET'])
 def teste():
     """Rota simples para testar se o servidor está rodando"""
-    return jsonify({
-        'mensagem': 'Servidor funcionando!',
-        'status': 'ok',
-        'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite',
-        'gemini': GEMINI_AVAILABLE,
-        'timestamp': datetime.now().isoformat()
-    })
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        conn.close()
+        return jsonify({
+            'mensagem': 'Servidor funcionando!',
+            'status': 'ok',
+            'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite',
+            'gemini': GEMINI_AVAILABLE,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'mensagem': 'Servidor funcionando, mas banco com problemas',
+            'status': 'erro',
+            'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite',
+            'gemini': GEMINI_AVAILABLE,
+            'erro': str(e)
+        })
+
+# ============================================
+# FALLBACK PARA ERROR 404
+# ============================================
 
 @app.errorhandler(404)
 def not_found(e):
-    """Retorna erro 404 em JSON"""
     return jsonify({
         'erro': 'Rota não encontrada',
         'mensagem': 'Verifique se a URL está correta'
@@ -842,7 +940,6 @@ def not_found(e):
 
 @app.errorhandler(500)
 def internal_error(e):
-    """Retorna erro 500 em JSON"""
     return jsonify({
         'erro': 'Erro interno do servidor',
         'mensagem': str(e)
