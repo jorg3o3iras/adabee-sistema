@@ -360,7 +360,7 @@
             </div>
         </div>
 
-        <!-- Aba: Alunos (SEM RESPONSAVEL) -->
+        <!-- Aba: Alunos -->
         <div id="abaAlunos" style="display:none;">
             <div class="card">
                 <h2>👨‍🎓 Cadastrar Aluno</h2>
@@ -1004,7 +1004,7 @@
         }
 
         // ============================================
-        // ALUNOS - LISTAR E EXCLUIR (SEM RESPONSAVEL)
+        // ALUNOS - LISTAR E EXCLUIR
         // ============================================
         async function carregarAlunos() {
             const turmaId = document.getElementById('filtroTurmaAlunos')?.value;
@@ -1107,7 +1107,7 @@
         }
 
         // ============================================
-        // PROVAS
+        // PROVAS - CORRIGIDO
         // ============================================
         async function carregarProvas() {
             try {
@@ -1233,6 +1233,9 @@
             return Array.from(inputs).map(i => i.value.toUpperCase()).filter(v => v);
         }
 
+        // ============================================
+        // SALVAR PROVA - CORRIGIDO
+        // ============================================
         async function salvarProva() {
             const turmaId = document.getElementById('turmaProva').value;
             const titulo = document.getElementById('tituloProva').value;
@@ -1242,25 +1245,58 @@
             const descricao = document.getElementById('descricaoProva')?.value || '';
             const tipoQuestoes = document.getElementById('tipoProva').value;
             const gabarito = obterGabarito();
-            if (!turmaId || !titulo || !dataProva || gabarito.length === 0) {
-                alert('❌ Preencha todos os campos!'); return;
-            }
+            
+            // Validações
+            if (!turmaId) { alert('❌ Selecione uma turma!'); return; }
+            if (!titulo) { alert('❌ Digite o título da prova!'); return; }
+            if (!dataProva) { alert('❌ Selecione a data da prova!'); return; }
+            if (gabarito.length === 0) { alert('❌ Preencha o gabarito!'); return; }
+            
             if (gabarito.length !== parseInt(quantidadeQuestoes)) {
                 alert(`⚠️ O gabarito tem ${gabarito.length} questões, mas você definiu ${quantidadeQuestoes} questões.`);
                 return;
             }
+            
             try {
                 const response = await fetch(`${API_URL}/api/provas`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        turma_id: parseInt(turmaId), titulo, descricao, gabarito, data_prova,
-                        valor_nota: parseFloat(valorNota), quantidade_questoes: parseInt(quantidadeQuestoes),
+                        turma_id: parseInt(turmaId), 
+                        titulo: titulo, 
+                        descricao: descricao, 
+                        gabarito: gabarito, 
+                        data_prova: dataProva,
+                        valor_nota: parseFloat(valorNota), 
+                        quantidade_questoes: parseInt(quantidadeQuestoes),
                         tipo_questoes: tipoQuestoes
                     })
                 });
+                
                 const result = await response.json();
-                if (result.id) { alert('✅ Prova salva!'); location.reload(); } else { alert('Erro: ' + result.erro); }
-            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+                
+                if (result.id) { 
+                    alert('✅ Prova salva com sucesso!'); 
+                    // Recarregar listas
+                    carregarTodasProvas();
+                    carregarProvas();
+                    carregarProvasRelatorio();
+                    carregarProvasRedacao();
+                    carregarDashboard();
+                    
+                    // Limpar formulário
+                    document.getElementById('tituloProva').value = '';
+                    document.getElementById('descricaoProva').value = '';
+                    document.getElementById('dataProva').value = '';
+                    document.getElementById('gabaritoGrid').innerHTML = '';
+                    for(let i = 0; i < 5; i++) adicionarQuestaoGabarito();
+                    
+                } else { 
+                    alert('❌ Erro ao salvar: ' + (result.erro || 'Erro desconhecido')); 
+                }
+            } catch (erro) { 
+                alert('❌ Erro ao salvar: ' + erro.message); 
+            }
         }
 
         // ============================================
