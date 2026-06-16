@@ -340,6 +340,7 @@ def listar_escolas():
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/escolas', methods=['POST'])
+@app.route('/api/escolas', methods=['POST'])
 def criar_escola():
     try:
         dados = request.json
@@ -353,12 +354,20 @@ def criar_escola():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        if DATABASE_URL:
+        # Tentativa 1: Com RETURNING
+        try:
             cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
-            escola_id = cursor.fetchone()['id']
-        else:
-            cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (nome,))
-            escola_id = cursor.lastrowid
+            escola_id = cursor.fetchone()[0]
+        except:
+            # Tentativa 2: Sem RETURNING (SQLite)
+            try:
+                cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (nome,))
+                escola_id = cursor.lastrowid
+            except:
+                # Tentativa 3: Com currval (PostgreSQL)
+                cursor.execute("INSERT INTO escolas (nome) VALUES (%s)", (nome,))
+                cursor.execute("SELECT lastval()")
+                escola_id = cursor.fetchone()[0]
         
         conn.commit()
         conn.close()
@@ -368,11 +377,15 @@ def criar_escola():
             'id': escola_id,
             'mensagem': f'Escola "{nome}" cadastrada com sucesso!'
         })
+        
     except Exception as e:
-        print(f"❌ Erro ao cadastrar escola: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
+        print(f"❌ ERRO: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'erro': str(e),
+            'tipo': type(e).__name__
+        }), 500# ============================================
 # ROTAS DE TURMAS (CORRIGIDAS)
 # ============================================
 
