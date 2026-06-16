@@ -64,7 +64,7 @@ def init_database():
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela alunos (CORRIGIDA: adicionado campo responsavel)
+        # Criar tabela alunos
         cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
             id SERIAL PRIMARY KEY, 
             turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
@@ -75,7 +75,7 @@ def init_database():
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela provas (CORRIGIDA: referência para turmas)
+        # Criar tabela provas
         cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
             id SERIAL PRIMARY KEY, 
             turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
@@ -143,7 +143,7 @@ else:
     print("⚠️ Gemini não configurado.")
 
 # ============================================
-# ROTAS
+# ROTAS PRINCIPAIS
 # ============================================
 
 @app.route('/')
@@ -199,6 +199,18 @@ def criar_escola():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/escolas/<int:escola_id>', methods=['DELETE'])
+def deletar_escola(escola_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Escola excluída com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 # ============================================
 # ROTAS DE TURMAS
 # ============================================
@@ -243,8 +255,20 @@ def criar_turma():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/turmas/<int:turma_id>', methods=['DELETE'])
+def deletar_turma(turma_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Turma excluída com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 # ============================================
-# ROTAS DE ALUNOS (CORRIGIDAS)
+# ROTAS DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -313,8 +337,20 @@ def criar_aluno():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/alunos/<int:aluno_id>', methods=['DELETE'])
+def deletar_aluno(aluno_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Aluno excluído com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 # ============================================
-# ROTAS DE PROVAS (CORRIGIDAS)
+# ROTAS DE PROVAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -631,6 +667,159 @@ FEEDBACK: [feedback detalhado com sugestões de melhoria]"""
     except Exception as e:
         print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# GERAR GABARITO
+# ============================================
+
+@app.route('/api/gerar_gabarito', methods=['POST'])
+def gerar_gabarito():
+    try:
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
+        qtd_questoes = dados.get('quantidade_questoes', 20)
+        tipo_questoes = dados.get('tipo_questoes', '4')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
+        escola = cursor.fetchone()
+        nome_escola = escola['nome'] if escola else "ESCOLA"
+        
+        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
+        turma = cursor.fetchone()
+        nome_turma = turma['nome'] if turma else "TURMA"
+        serie = turma['serie'] if turma else "1º Ano"
+        
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
+        aluno = cursor.fetchone()
+        nome_aluno = aluno['nome'] if aluno else "ALUNO"
+        numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
+        
+        cursor.execute("SELECT titulo FROM provas WHERE id = %s", (prova_id,))
+        prova = cursor.fetchone()
+        nome_prova = prova['titulo'] if prova else "PROVA"
+        
+        conn.close()
+        
+        if tipo_questoes == '3':
+            opcoes = ['A', 'B', 'C']
+            titulo_opcoes = "3 OPÇÕES (A, B, C)"
+        else:
+            opcoes = ['A', 'B', 'C', 'D']
+            titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
+        
+        if int(qtd_questoes) > 30:
+            qtd_questoes = 30
+        
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Folha de Respostas - {nome_aluno}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
+        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; }}
+        .folha {{ padding: 20px; }}
+        .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
+        .header h2 {{ color: #4CAF50; font-size: 20px; }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; }}
+        .info-item {{ display: flex; gap: 8px; }}
+        .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
+        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
+        .instrucoes {{ background: #FFF3CD; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 10px; text-align: center; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #4CAF50; color: white; padding: 6px; text-align: center; font-size: 12px; }}
+        td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
+        .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
+        .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
+        .opcao {{ display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 45px; }}
+        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; background: white; }}
+        .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
+        .rodape {{ margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
+        .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
+        button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
+        button:hover {{ background: #45a049; }}
+        button.secundario {{ background: #2196F3; }}
+        @media print {{ body {{ background: white; padding: 0; margin: 0; }} .container {{ box-shadow: none; }} .botoes {{ display: none; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="folha">
+            <div class="header">
+                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+                <p>{titulo_opcoes} - {serie}</p>
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
+            </div>
+            <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.</div>
+            <table>
+                <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
+                <tbody>"""
+        
+        for i in range(1, int(qtd_questoes) + 1):
+            html += f"""
+                    <tr>
+                        <td class="questao-num">{i}</td>
+                        <td colspan="{len(opcoes)}" style="text-align:center">
+                            <div class="opcoes">"""
+            for opcao in opcoes:
+                html += f"""
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>{opcao}</span>
+                                </label>"""
+            html += """
+                            </div>
+                        </td>
+                    </tr>"""
+        
+        html += f"""
+                </tbody>
+            </table>
+            <div class="rodape">AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA</div>
+        </div>
+        <div class="botoes">
+            <button onclick="window.print()">🖨️ IMPRIMIR</button>
+            <button class="secundario" onclick="baixarPDF()">💾 SALVAR PDF</button>
+        </div>
+    </div>
+    <script>
+        function baixarPDF() {{ window.print(); }}
+        document.querySelectorAll('.opcoes').forEach(grupo => {{
+            const opcoes = grupo.querySelectorAll('.opcao');
+            opcoes.forEach(opcao => {{
+                opcao.addEventListener('click', function() {{
+                    opcoes.forEach(opt => {{
+                        opt.querySelector('.circulo').style.backgroundColor = 'white';
+                        opt.querySelector('.circulo').style.border = '2px solid #333';
+                    }});
+                    this.querySelector('.circulo').style.backgroundColor = 'black';
+                    this.querySelector('.circulo').style.border = '2px solid black';
+                }});
+            }});
+        }});
+    </script>
+</body>
+</html>"""
+        
+        return html, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        print(f"Erro: {e}")
+        return f"<h3>Erro: {str(e)}</h3>", 500
 
 # ============================================
 # DEMAIS ROTAS
