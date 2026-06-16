@@ -360,7 +360,7 @@
             </div>
         </div>
 
-        <!-- Aba: Alunos -->
+        <!-- Aba: Alunos (SEM RESPONSAVEL) -->
         <div id="abaAlunos" style="display:none;">
             <div class="card">
                 <h2>👨‍🎓 Cadastrar Aluno</h2>
@@ -384,10 +384,6 @@
                     <label>🔢 Matrícula</label>
                     <input type="text" id="matriculaAluno" placeholder="Número de matrícula">
                 </div>
-                <div class="form-group">
-                    <label>👤 Responsável</label>
-                    <input type="text" id="responsavelAluno" placeholder="Nome do responsável">
-                </div>
                 <button class="btn-success" onclick="salvarAluno()">💾 Cadastrar Aluno</button>
             </div>
             <div class="card">
@@ -398,8 +394,8 @@
                 </div>
                 <div class="table-responsive">
                     <table id="tabelaAlunos">
-                        <thead><tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Responsável</th><th>Ações</th></tr></thead>
-                        <tbody><tr><td colspan="6">Carregando...</td></tr></tbody>
+                        <thead><tr><th>Nº</th><th>Nome</th><th>Matrícula</th><th>Turma</th><th>Ações</th></tr></thead>
+                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -911,7 +907,6 @@
                 if (turmas.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5">Nenhuma turma cadastrada</td></tr>';
                 } else {
-                    // Buscar nomes das escolas
                     const escolasResponse = await fetch(`${API_URL}/api/escolas`);
                     const escolas = await escolasResponse.json();
                     const escolaMap = {};
@@ -1009,7 +1004,7 @@
         }
 
         // ============================================
-        // ALUNOS - LISTAR E EXCLUIR
+        // ALUNOS - LISTAR E EXCLUIR (SEM RESPONSAVEL)
         // ============================================
         async function carregarAlunos() {
             const turmaId = document.getElementById('filtroTurmaAlunos')?.value;
@@ -1021,7 +1016,7 @@
                 const tbody = document.querySelector('#tabelaAlunos tbody');
                 if (!tbody) return;
                 if (alunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6">Nenhum aluno cadastrado</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
                 } else {
                     tbody.innerHTML = alunos.map(aluno => `
                         <tr>
@@ -1029,7 +1024,6 @@
                             <td>${aluno.nome}</td>
                             <td>${aluno.matricula || '-'}</td>
                             <td>${aluno.turma_nome || '-'}</td>
-                            <td>${aluno.responsavel || '-'}</td>
                             <td>
                                 <button class="btn-excluir btn-pequeno" onclick="excluirAluno(${aluno.id}, '${aluno.nome.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
                             </td>
@@ -1076,28 +1070,40 @@
             const turmaId = document.getElementById('turmaAluno').value;
             const nome = document.getElementById('nomeAluno').value;
             const matricula = document.getElementById('matriculaAluno').value;
-            const responsavel = document.getElementById('responsavelAluno').value;
             const numeroChamada = document.getElementById('numeroChamada').value;
-            if (!turmaId || !nome) { alert('Preencha turma e nome do aluno!'); return; }
+            
+            if (!turmaId || !nome) { 
+                alert('Preencha turma e nome do aluno!'); 
+                return; 
+            }
+            
             try {
                 const response = await fetch(`${API_URL}/api/alunos`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        turma_id: parseInt(turmaId), nome, matricula, responsavel,
+                        turma_id: parseInt(turmaId), 
+                        nome: nome, 
+                        matricula: matricula,
                         numero_chamada: numeroChamada ? parseInt(numeroChamada) : null
                     })
                 });
+                
                 const result = await response.json();
+                
                 if (result.id) {
                     alert('✅ Aluno cadastrado!');
                     document.getElementById('nomeAluno').value = '';
                     document.getElementById('matriculaAluno').value = '';
-                    document.getElementById('responsavelAluno').value = '';
                     document.getElementById('numeroChamada').value = '';
                     carregarAlunos();
                     carregarDashboard();
-                } else { alert('Erro: ' + JSON.stringify(result)); }
-            } catch (erro) { alert('Erro ao salvar: ' + erro.message); }
+                } else { 
+                    alert('Erro: ' + JSON.stringify(result)); 
+                }
+            } catch (erro) { 
+                alert('Erro ao salvar: ' + erro.message); 
+            }
         }
 
         // ============================================
