@@ -109,6 +109,36 @@ else:
     print("⚠️ Gemini não configurado.")
 
 # ============================================
+# ROTA DE DIAGNÓSTICO DO BANCO
+# ============================================
+
+@app.route('/api/diagnosticar_banco', methods=['GET'])
+def diagnosticar_banco():
+    """Rota para diagnosticar a conexão com o banco de dados"""
+    resultado = {
+        'status': 'desconhecido',
+        'banco': 'Não conectado',
+        'detalhes': {}
+    }
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 as teste")
+        row = cursor.fetchone()
+        
+        resultado['status'] = 'sucesso'
+        resultado['banco'] = 'PostgreSQL (Supabase)'
+        resultado['detalhes']['teste_query'] = 'OK'
+        resultado['detalhes']['conexao'] = 'Estabelecida com sucesso'
+        
+        conn.close()
+        return jsonify(resultado)
+    except Exception as e:
+        resultado['status'] = 'erro'
+        resultado['detalhes']['erro'] = str(e)
+        return jsonify(resultado), 500
+
+# ============================================
 # ROTA DE TESTE DE CONEXÃO
 # ============================================
 
