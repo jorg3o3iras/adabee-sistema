@@ -22,8 +22,8 @@ CORS(app)
 # CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
+# APENAS URLs DIRETAS (sem pooler)
 SUPABASE_URLS = [
-    'postgresql://postgres:hdUiT-HuQG%3FpF3%25@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require',
     'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require',
     'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres',
 ]
@@ -34,7 +34,11 @@ def get_db_connection():
             conn = psycopg2.connect(
                 url,
                 cursor_factory=RealDictCursor,
-                connect_timeout=10
+                connect_timeout=15,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=3
             )
             print(f"✅ Conectado ao Supabase!")
             return conn
@@ -887,7 +891,7 @@ def dashboard():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/historico', methods=['GET'])
+@app.route('/api/historico', methods(['GET'])
 def historico():
     try:
         conn = get_db_connection()
@@ -999,7 +1003,7 @@ def testar_gemini():
         return jsonify({'erro': str(e), 'sucesso': False}), 500
 
 # ============================================
-# ROTA DE TESTE (CORRIGIDA)
+# ROTA DE TESTE
 # ============================================
 
 @app.route('/api/teste', methods=['GET'])
