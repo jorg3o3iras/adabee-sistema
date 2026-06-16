@@ -203,6 +203,10 @@
             background: linear-gradient(135deg, #ff6b6b, #ee5a24);
         }
 
+        .btn-redacao {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
         .gabarito-grid {
             display: flex;
             flex-wrap: wrap;
@@ -254,6 +258,15 @@
         .resultado-info {
             background: #e7f3ff;
             color: #0066cc;
+        }
+
+        .resultado-redacao {
+            background: #fce4ec;
+            color: #880e4f;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            white-space: pre-wrap;
         }
 
         .status-reconhecimento {
@@ -385,6 +398,22 @@
             border-radius: 20px;
         }
 
+        .badge-3opcoes {
+            background: #fff3cd;
+            color: #856404;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
+        .badge-4opcoes {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
         .alert {
             padding: 12px 15px;
             border-radius: 10px;
@@ -474,6 +503,7 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" onclick="mostrarAba('correcao')">📸 Corrigir Prova</button>
+            <button class="tab-btn" onclick="mostrarAba('redacao')">✍️ Corrigir Redação</button>
             <button class="tab-btn" onclick="mostrarAba('treinar')">🧠 Treinar IA</button>
             <button class="tab-btn" onclick="mostrarAba('provas')">📝 Provas</button>
             <button class="tab-btn" onclick="mostrarAba('alunos')">👨‍🎓 Alunos</button>
@@ -539,13 +569,59 @@
                 <ul style="margin-left: 20px; color: #666;">
                     <li>✅ O sistema analisa a foto e detecta as respostas</li>
                     <li>✅ A IA Gemini reconhece bolinhas marcadas com alta precisão</li>
+                    <li>✅ Suporte para 3 opções (1º Ano) ou 4 opções (2º Ano em diante)</li>
                     <li>✅ Barra de confiança mostra a precisão da detecção</li>
-                    <li>✅ Você pode treinar a IA com seus próprios exemplos</li>
                     <li>✅ Tecnologia de ponta do Google para reconhecimento</li>
                 </ul>
                 <div class="alert alert-info" style="margin-top:15px;">
-                    💡 Dica: Use boa iluminação, folha sem reflexo e treine a IA na aba "Treinar IA" para melhores resultados!
+                    💡 Dica: Use boa iluminação, folha sem reflexo e folha bem preenchida!
                 </div>
+            </div>
+        </div>
+
+        <!-- Aba: Correção de Redação -->
+        <div id="abaRedacao" style="display:none;">
+            <div class="card">
+                <h2>✍️ Correção de Redação / Texto com Gemini AI</h2>
+                
+                <div id="statusIA_redacao" class="alert alert-info" style="margin-bottom:15px;">
+                    🔍 Verificando status da IA...
+                </div>
+
+                <div class="form-group">
+                    <label>📝 Selecione a prova (opcional)</label>
+                    <select id="selectProvaRedacao">
+                        <option value="">Nenhuma (correção avulsa)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>👨‍🎓 Selecione o aluno (opcional)</label>
+                    <select id="selectAlunoRedacao">
+                        <option value="">Nenhum (correção avulsa)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>📝 Digite o texto para correção</label>
+                    <textarea id="textoRedacao" rows="10" placeholder="Digite ou cole o texto aqui..." style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:10px; font-size:14px;"></textarea>
+                </div>
+
+                <button class="btn-redacao" onclick="corrigirRedacao()" style="width:100%">
+                    ✍️ CORRIGIR REDAÇÃO COM GEMINI AI
+                </button>
+
+                <div id="resultadoRedacao"></div>
+            </div>
+
+            <div class="card">
+                <h3>📖 Como funciona a correção de redação:</h3>
+                <ul style="margin-left: 20px; color: #666;">
+                    <li>✅ O Gemini AI analisa o texto automaticamente</li>
+                    <li>✅ Gera uma nota de 0 a 10</li>
+                    <li>✅ Fornece feedback detalhado (pontos fortes e fracos)</li>
+                    <li>✅ Sugere melhorias para o texto</li>
+                </ul>
             </div>
         </div>
 
@@ -624,6 +700,14 @@
                 </div>
 
                 <div class="form-group">
+                    <label>📝 Tipo de Prova</label>
+                    <select id="tipoProva">
+                        <option value="3">1º Ano - 3 Opções (A, B, C)</option>
+                        <option value="4" selected>2º Ano em diante - 4 Opções (A, B, C, D)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label>📝 Descrição (opcional)</label>
                     <textarea id="descricaoProva" rows="3" placeholder="Conteúdos abordados..."></textarea>
                 </div>
@@ -642,10 +726,10 @@
                 <div class="table-responsive">
                     <table id="tabelaProvas">
                         <thead>
-                            <tr><th>Título</th><th>Turma</th><th>Data</th><th>Questões</th><th>Ações</th></tr>
+                            <tr><th>Título</th><th>Turma</th><th>Tipo</th><th>Data</th><th>Questões</th><th>Ações</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="5">Carregando...</td></tr>
+                            <tr><td colspan="6">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -772,14 +856,6 @@
                     <label>Nome da Escola</label>
                     <input type="text" id="novaEscola" placeholder="Nome da escola">
                 </div>
-                <div class="form-group">
-                    <label>Endereço</label>
-                    <input type="text" id="enderecoEscola" placeholder="Endereço">
-                </div>
-                <div class="form-group">
-                    <label>Telefone</label>
-                    <input type="text" id="telefoneEscola" placeholder="Telefone">
-                </div>
                 <button class="btn-success" onclick="salvarEscola()">💾 Salvar Escola</button>
             </div>
 
@@ -796,11 +872,13 @@
                     <input type="text" id="nomeTurmaConfig" placeholder="Ex: 3º Ano A">
                 </div>
                 <div class="form-group">
-                    <label>Turno</label>
-                    <select id="turnoTurmaConfig">
-                        <option value="Manhã">Manhã</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Noite">Noite</option>
+                    <label>Série</label>
+                    <select id="serieTurmaConfig">
+                        <option value="1º Ano">1º Ano (3 opções)</option>
+                        <option value="2º Ano" selected>2º Ano (4 opções)</option>
+                        <option value="3º Ano">3º Ano (4 opções)</option>
+                        <option value="4º Ano">4º Ano (4 opções)</option>
+                        <option value="5º Ano">5º Ano (4 opções)</option>
                     </select>
                 </div>
                 <button class="btn-success" onclick="salvarTurma()">💾 Salvar Turma</button>
@@ -876,7 +954,7 @@
 
                 <div class="form-group">
                     <label>🔢 Número de Questões</label>
-                    <input type="number" id="numQuestoes" value="20" min="1" max="50">
+                    <input type="number" id="numQuestoes" value="20" min="1" max="30">
                 </div>
 
                 <button class="btn-success" onclick="gerarGabarito()">📄 GERAR FOLHA DE RESPOSTAS</button>
@@ -910,6 +988,7 @@
             carregarEscolasGabarito();
             carregarProvasParaCalibrar();
             carregarProvasRelatorio();
+            carregarProvasRedacao();
             carregarHistorico();
             carregarFiltroTurmas();
             carregarConfiguracoes();
@@ -922,7 +1001,7 @@
         // FUNÇÕES DE TABS
         // ============================================
         function mostrarAba(aba) {
-            const abas = ['Correcao', 'Treinar', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
+            const abas = ['Correcao', 'Redacao', 'Treinar', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
             abas.forEach(a => {
                 let el = document.getElementById('aba' + a);
                 if (el) el.style.display = 'none';
@@ -936,6 +1015,7 @@
             if (aba === 'relatorios') { carregarProvasRelatorio(); carregarHistorico(); }
             if (aba === 'alunos') { carregarFiltroTurmas(); carregarAlunos(); }
             if (aba === 'configuracoes') gerarQRCode();
+            if (aba === 'redacao') { carregarProvasRedacao(); carregarAlunosRedacao(); }
         }
 
         // ============================================
@@ -946,13 +1026,19 @@
                 const response = await fetch(`${API_URL}/api/status_ia`);
                 const dados = await response.json();
                 const statusDiv = document.getElementById('statusIA');
+                const statusRedacao = document.getElementById('statusIA_redacao');
                 
-                if (dados.treinada) {
-                    statusDiv.innerHTML = '🧠 <strong>IA Gemini treinada e ativa!</strong> As correções serão mais precisas. ✅';
-                    statusDiv.className = 'alert alert-success';
-                } else {
-                    statusDiv.innerHTML = '⚠️ <strong>IA Gemini não treinada</strong> - Use a aba "Treinar IA" para melhorar a precisão das correções!';
-                    statusDiv.className = 'alert alert-warning';
+                const msg = dados.gemini_disponivel ? 
+                    '🧠 <strong>IA Gemini ativa!</strong> Correções com alta precisão. ✅' :
+                    '⚠️ <strong>IA Gemini não configurada</strong> - Configure a chave API.';
+                
+                if (statusDiv) {
+                    statusDiv.innerHTML = msg;
+                    statusDiv.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning';
+                }
+                if (statusRedacao) {
+                    statusRedacao.innerHTML = msg;
+                    statusRedacao.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning';
                 }
                 
                 if (document.getElementById('usarIA')) {
@@ -971,85 +1057,105 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usar_ia: usar })
                 });
-                alert(usar ? '✅ IA Gemini ativada!' : '⚠️ IA desativada. Usando modo básico.');
+                alert(usar ? '✅ IA Gemini ativada!' : '⚠️ IA desativada.');
                 verificarStatusIA();
             } catch (erro) {
                 alert('Erro ao alternar IA: ' + erro.message);
             }
         }
 
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        document.getElementById('treinarMarcadas')?.addEventListener('change', function(e) {
-            const preview = document.getElementById('previewMarcadas');
-            preview.innerHTML = '';
-            for (let file of e.target.files) {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.className = 'preview-thumb';
-                preview.appendChild(img);
-            }
-        });
-
-        document.getElementById('treinarNaoMarcadas')?.addEventListener('change', function(e) {
-            const preview = document.getElementById('previewNaoMarcadas');
-            preview.innerHTML = '';
-            for (let file of e.target.files) {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.className = 'preview-thumb';
-                preview.appendChild(img);
-            }
-        });
-
-        async function treinarIA() {
-            const marcadasInput = document.getElementById('treinarMarcadas');
-            const naoMarcadasInput = document.getElementById('treinarNaoMarcadas');
-
-            if (!marcadasInput.files.length || !naoMarcadasInput.files.length) {
-                alert('❌ Envie pelo menos uma imagem marcada e uma não marcada!');
-                return;
-            }
-
-            document.getElementById('treinamentoResultado').innerHTML = '<div class="loading"></div> Treinando IA Gemini... Aguarde.';
-
-            const imagensMarcadas = [];
-            const imagensNaoMarcadas = [];
-
-            for (let file of marcadasInput.files) {
-                imagensMarcadas.push(await fileToBase64(file));
-            }
-
-            for (let file of naoMarcadasInput.files) {
-                imagensNaoMarcadas.push(await fileToBase64(file));
-            }
-
+        // ============================================
+        // CORREÇÃO DE REDAÇÃO
+        // ============================================
+        async function carregarProvasRedacao() {
             try {
-                const response = await fetch(`${API_URL}/api/treinar_ia`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imagens_marcadas: imagensMarcadas,
-                        imagens_nao_marcadas: imagensNaoMarcadas
-                    })
-                });
-                const dados = await response.json();
-                
-                if (dados.status === 'ok') {
-                    document.getElementById('treinamentoResultado').innerHTML = `<div class="resultado">✅ ${dados.mensagem}</div>`;
-                    verificarStatusIA();
-                } else {
-                    document.getElementById('treinamentoResultado').innerHTML = `<div class="resultado-erro">❌ ${dados.erro}</div>`;
+                const response = await fetch(`${API_URL}/api/provas`);
+                const provas = await response.json();
+                const select = document.getElementById('selectProvaRedacao');
+                if (select) {
+                    select.innerHTML = '<option value="">Nenhuma (correção avulsa)</option>';
+                    provas.forEach(prova => {
+                        const option = document.createElement('option');
+                        option.value = prova.id;
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}`;
+                        select.appendChild(option);
+                    });
                 }
             } catch (erro) {
-                document.getElementById('treinamentoResultado').innerHTML = `<div class="resultado-erro">❌ ${erro.message}</div>`;
+                console.error('Erro:', erro);
+            }
+        }
+
+        async function carregarAlunosRedacao() {
+            try {
+                const response = await fetch(`${API_URL}/api/alunos`);
+                const alunos = await response.json();
+                const select = document.getElementById('selectAlunoRedacao');
+                if (select) {
+                    select.innerHTML = '<option value="">Nenhum (correção avulsa)</option>';
+                    alunos.forEach(aluno => {
+                        const option = document.createElement('option');
+                        option.value = aluno.id;
+                        option.textContent = `${aluno.nome} ${aluno.numero_chamada ? '(Nº ' + aluno.numero_chamada + ')' : ''}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro:', erro);
+            }
+        }
+
+        async function corrigirRedacao() {
+            const texto = document.getElementById('textoRedacao').value;
+            const provaId = document.getElementById('selectProvaRedacao').value;
+            const alunoId = document.getElementById('selectAlunoRedacao').value;
+            
+            if (!texto || texto.trim().length < 5) {
+                alert('❌ Digite um texto com pelo menos 5 caracteres!');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ Corrigindo texto com Gemini AI...';
+            btn.disabled = true;
+            
+            document.getElementById('resultadoRedacao').innerHTML = '<div class="loading"></div> Analisando texto...';
+            
+            try {
+                const body = { texto: texto };
+                if (provaId) body.prova_id = parseInt(provaId);
+                if (alunoId) body.aluno_id = parseInt(alunoId);
+                
+                const response = await fetch(`${API_URL}/api/corrigir_redacao`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const dados = await response.json();
+                
+                if (dados.erro) {
+                    document.getElementById('resultadoRedacao').innerHTML = `
+                        <div class="resultado resultado-erro">❌ ${dados.erro}</div>
+                    `;
+                } else {
+                    document.getElementById('resultadoRedacao').innerHTML = `
+                        <div class="resultado-redacao">
+                            <h3>📝 RESULTADO DA CORREÇÃO</h3>
+                            <p><strong>🎓 Nota:</strong> <span style="font-size:36px; font-weight:bold;">${dados.nota}</span></p>
+                            <hr>
+                            <div style="white-space:pre-wrap;">${dados.feedback}</div>
+                        </div>
+                    `;
+                }
+            } catch (erro) {
+                document.getElementById('resultadoRedacao').innerHTML = `
+                    <div class="resultado resultado-erro">❌ Erro: ${erro.message}</div>
+                `;
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         }
 
@@ -1119,8 +1225,6 @@
         
         async function salvarEscola() {
             const nome = document.getElementById('novaEscola').value;
-            const endereco = document.getElementById('enderecoEscola').value;
-            const telefone = document.getElementById('telefoneEscola').value;
             
             if (!nome) {
                 alert('Digite o nome da escola!');
@@ -1131,15 +1235,13 @@
                 const response = await fetch(`${API_URL}/api/escolas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome, endereco, telefone })
+                    body: JSON.stringify({ nome })
                 });
                 
                 const result = await response.json();
                 if (result.id) {
                     alert('✅ Escola cadastrada com sucesso!');
                     document.getElementById('novaEscola').value = '';
-                    document.getElementById('enderecoEscola').value = '';
-                    document.getElementById('telefoneEscola').value = '';
                     carregarEscolas();
                     carregarDashboard();
                 }
@@ -1198,7 +1300,7 @@
         async function salvarTurma() {
             const escolaId = document.getElementById('escolaTurmaConfig').value;
             const nome = document.getElementById('nomeTurmaConfig').value;
-            const turno = document.getElementById('turnoTurmaConfig').value;
+            const serie = document.getElementById('serieTurmaConfig').value;
             
             if (!escolaId || !nome) {
                 alert('Preencha todos os campos!');
@@ -1209,7 +1311,7 @@
                 const response = await fetch(`${API_URL}/api/turmas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ escola_id: parseInt(escolaId), nome, turno })
+                    body: JSON.stringify({ escola_id: parseInt(escolaId), nome, serie })
                 });
                 
                 const result = await response.json();
@@ -1240,7 +1342,7 @@
                 if (!tbody) return;
                 
                 if (alunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td><tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno cadastrado</td></tr>';
                 } else {
                     tbody.innerHTML = alunos.map(aluno => `
                         <tr>
@@ -1331,7 +1433,8 @@
                     provas.forEach(prova => {
                         const option = document.createElement('option');
                         option.value = prova.id;
-                        option.textContent = `${prova.titulo} - ${prova.data_prova}`;
+                        const tipo = prova.tipo_questoes == '3' ? ' (3 opções)' : ' (4 opções)';
+                        option.textContent = `${prova.titulo} - ${prova.data_prova}${tipo}`;
                         select.appendChild(option);
                     });
                 }
@@ -1348,17 +1451,23 @@
                 if (!tbody) return;
                 
                 if (provas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma prova cadastrada</td><tr>';
+                    tbody.innerHTML = '<tr><td colspan="6">Nenhuma prova cadastrada</td></tr>';
                 } else {
-                    tbody.innerHTML = provas.map(prova => `
-                        <tr>
-                            <td><strong>${prova.titulo}</strong></td>
-                            <td>${prova.turma_nome || '-'}</td>
-                            <td>${prova.data_prova || '-'}</td>
-                            <td>${prova.quantidade_questoes || prova.gabarito?.length || 0}</td>
-                            <td><button class="btn-danger" style="padding:5px 10px;" onclick="excluirProva(${prova.id}, '${prova.titulo.replace(/'/g, "\\'")}')">🗑️ Excluir</button></td>
-                        </tr>
-                    `).join('');
+                    tbody.innerHTML = provas.map(prova => {
+                        const tipoBadge = prova.tipo_questoes == '3' ? 
+                            '<span class="badge-3opcoes">3 opções (A,B,C)</span>' : 
+                            '<span class="badge-4opcoes">4 opções (A,B,C,D)</span>';
+                        return `
+                            <tr>
+                                <td><strong>${prova.titulo}</strong></td>
+                                <td>${prova.turma_nome || '-'}</td>
+                                <td>${tipoBadge}</td>
+                                <td>${prova.data_prova || '-'}</td>
+                                <td>${prova.quantidade_questoes || prova.gabarito?.length || 0}</td>
+                                <td><button class="btn-danger" style="padding:5px 10px;" onclick="excluirProva(${prova.id}, '${prova.titulo.replace(/'/g, "\\'")}')">🗑️ Excluir</button></td>
+                            </tr>
+                        `;
+                    }).join('');
                 }
             } catch (erro) {
                 console.error('Erro:', erro);
@@ -1366,19 +1475,17 @@
         }
         
         async function excluirProva(id, titulo) {
-            if (confirm(`Excluir a prova "${titulo}"? Isso também apagará todas as correções relacionadas.`)) {
+            if (confirm(`Excluir a prova "${titulo}"?`)) {
                 try {
                     const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
                     if (response.ok) {
-                        alert('✅ Prova excluída com sucesso!');
+                        alert('✅ Prova excluída!');
                         carregarTodasProvas();
                         carregarProvas();
                         carregarProvasRelatorio();
                         carregarProvasParaCalibrar();
+                        carregarProvasRedacao();
                         carregarDashboard();
-                    } else {
-                        const erro = await response.json();
-                        alert('Erro: ' + erro.erro);
                     }
                 } catch (erro) {
                     alert('Erro ao excluir: ' + erro.message);
@@ -1479,6 +1586,7 @@
             const valorNota = document.getElementById('valorProva').value;
             const quantidadeQuestoes = document.getElementById('qtdQuestoes').value;
             const descricao = document.getElementById('descricaoProva')?.value || '';
+            const tipoQuestoes = document.getElementById('tipoProva').value;
             const gabarito = obterGabarito();
             
             if (!turmaId || !titulo || !dataProva || gabarito.length === 0) {
@@ -1487,7 +1595,7 @@
             }
             
             if (gabarito.length !== parseInt(quantidadeQuestoes)) {
-                alert(`⚠️ O gabarito tem ${gabarito.length} questões, mas você definiu ${quantidadeQuestoes} questões. Ajuste para coincidir.`);
+                alert(`⚠️ O gabarito tem ${gabarito.length} questões, mas você definiu ${quantidadeQuestoes} questões.`);
                 return;
             }
             
@@ -1502,7 +1610,8 @@
                         gabarito: gabarito,
                         data_prova: dataProva,
                         valor_nota: parseFloat(valorNota),
-                        quantidade_questoes: parseInt(quantidadeQuestoes)
+                        quantidade_questoes: parseInt(quantidadeQuestoes),
+                        tipo_questoes: tipoQuestoes
                     })
                 });
                 
@@ -1662,7 +1771,6 @@
                                 <li>Certifique-se que as bolinhas estão bem marcadas</li>
                                 <li>Tire a foto paralelamente à folha</li>
                                 <li>Evite sombras sobre a folha</li>
-                                <li>Treine a IA Gemini na aba "Treinar IA" para melhor precisão</li>
                             </ul>
                         </div>
                     `;
@@ -1692,12 +1800,7 @@
                         });
                     }
                     
-                    if (dados.usando_ia) {
-                        html += `<hr><small>🔬 Reconhecimento feito com <strong>IA Gemini</strong> (Alta precisão)</small>`;
-                    } else {
-                        html += `<hr><small>🔬 Reconhecimento feito em <strong>modo básico</strong></small>`;
-                    }
-                    
+                    html += `<hr><small>🔬 ${dados.tipo_questoes == 3 ? '3 opções (A, B, C)' : '4 opções (A, B, C, D)'} - Gemini AI</small>`;
                     html += '</div>';
                     document.getElementById('resultadoCorrecao').innerHTML = html;
                     
@@ -1736,15 +1839,6 @@
                     html += `<p>⭐ Média da turma: <strong>${parseFloat(dados.geral.media_nota || 0).toFixed(1)}</strong></p>`;
                     html += `<p>🏆 Maior nota: <strong>${parseFloat(dados.geral.maior_nota || 0).toFixed(1)}</strong></p>`;
                     html += `<p>📉 Menor nota: <strong>${parseFloat(dados.geral.menor_nota || 0).toFixed(1)}</strong></p>`;
-                    html += `<p>📊 Desvio padrão: <strong>${parseFloat(dados.geral.desvio_padrao || 0).toFixed(1)}</strong></p>`;
-                }
-                
-                if (dados.distribuicao && dados.distribuicao.length > 0) {
-                    html += `<h4>📊 Distribuição de notas:</h4><ul>`;
-                    dados.distribuicao.forEach(d => {
-                        html += `<li>${d.faixa}: ${d.quantidade} aluno(s) (${d.percentual}%)</li>`;
-                    });
-                    html += `</ul>`;
                 }
                 
                 html += '</div>';
@@ -1763,7 +1857,7 @@
                 if (!tbody) return;
                 
                 if (historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada ainda</td><tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada ainda</td></tr>';
                 } else {
                     tbody.innerHTML = historico.map(item => `
                         <tr>
@@ -1868,52 +1962,52 @@
             }
         }
         
-       async function gerarGabarito() {
-    const escolaId = document.getElementById('escolaGabarito').value;
-    const turmaId = document.getElementById('turmaGabarito').value;
-    const alunoId = document.getElementById('alunoGabarito').value;
-    const provaId = document.getElementById('provaGabarito').value;
-    const numQuestoes = document.getElementById('numQuestoes').value;
-    
-    if (!escolaId || !turmaId || !alunoId || !provaId) {
-        alert('❌ Preencha todos os campos!');
-        return;
-    }
-    
-    const previewDiv = document.getElementById('gabaritoPreview');
-    previewDiv.innerHTML = '<div class="loading"></div> Gerando folha de respostas...';
-    
-    try {
-        const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                escola_id: parseInt(escolaId),
-                turma_id: parseInt(turmaId),
-                aluno_id: parseInt(alunoId),
-                prova_id: parseInt(provaId),
-                quantidade_questoes: parseInt(numQuestoes)
-            })
-        });
-        
-        if (response.ok) {
-            const html = await response.text();
-            const novaAba = window.open();
-            novaAba.document.write(html);
-            novaAba.document.close();
-            previewDiv.innerHTML = `
-                <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
-                    ✅ Folha de respostas gerada com sucesso!<br>
-                    <small>Uma nova aba foi aberta. Clique em "IMPRIMIR" ou "SALVAR PDF".</small>
-                </div>
-            `;
-        } else {
-            previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro ao gerar folha de respostas</div>`;
+        async function gerarGabarito() {
+            const escolaId = document.getElementById('escolaGabarito').value;
+            const turmaId = document.getElementById('turmaGabarito').value;
+            const alunoId = document.getElementById('alunoGabarito').value;
+            const provaId = document.getElementById('provaGabarito').value;
+            const numQuestoes = document.getElementById('numQuestoes').value;
+            
+            if (!escolaId || !turmaId || !alunoId || !provaId) {
+                alert('❌ Preencha todos os campos!');
+                return;
+            }
+            
+            const previewDiv = document.getElementById('gabaritoPreview');
+            previewDiv.innerHTML = '<div class="loading"></div> Gerando folha de respostas...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        escola_id: parseInt(escolaId),
+                        turma_id: parseInt(turmaId),
+                        aluno_id: parseInt(alunoId),
+                        prova_id: parseInt(provaId),
+                        quantidade_questoes: parseInt(numQuestoes)
+                    })
+                });
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    const novaAba = window.open();
+                    novaAba.document.write(html);
+                    novaAba.document.close();
+                    previewDiv.innerHTML = `
+                        <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                            ✅ Folha de respostas gerada com sucesso!<br>
+                            <small>Uma nova aba foi aberta. Clique em "IMPRIMIR" ou "SALVAR PDF".</small>
+                        </div>
+                    `;
+                } else {
+                    previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro ao gerar folha de respostas</div>`;
+                }
+            } catch (erro) {
+                previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro: ${erro.message}</div>`;
+            }
         }
-    } catch (erro) {
-        previewDiv.innerHTML = `<div class="resultado-erro">❌ Erro: ${erro.message}</div>`;
-    }
-}
 
         // ============================================
         // CONFIGURAÇÕES
@@ -1992,7 +2086,7 @@
         function copiarUrl() {
             if (ipAtual) {
                 navigator.clipboard.writeText(ipAtual);
-                alert('✅ URL copiada para a área de transferência!');
+                alert('✅ URL copiada!');
             } else {
                 alert('⚠️ Gere o QR Code primeiro!');
             }
