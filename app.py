@@ -19,14 +19,14 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE (FORÇADO)
+# CONFIGURAR BANCO DE DADOS - SUPABASE (POOLER)
 # ============================================
 
-# URL CORRETA DO SUPABASE
-SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require'
+# URL DO POOLER (IPv4) - PORTA 6543
+SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@aws-0-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
 
 def get_db_connection():
-    """FORÇA conexão com Supabase - SEM FALLBACK para SQLite"""
+    """Conecta ao Supabase via POOLER (IPv4)"""
     try:
         conn = psycopg2.connect(
             SUPABASE_URL,
@@ -37,14 +37,13 @@ def get_db_connection():
             keepalives_interval=10,
             keepalives_count=3
         )
-        print("✅ Conectado ao Supabase!")
+        print("✅ Conectado ao Supabase via POOLER (IPv4)!")
         return conn
     except Exception as e:
         print(f"❌ ERRO ao conectar Supabase: {e}")
-        raise e  # NÃO USA SQLITE
+        raise e
 
 def init_database():
-    """Cria as tabelas se não existirem"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -85,34 +84,10 @@ def init_database():
     conn.close()
     print("✅ Banco de dados inicializado!")
 
-# Inicializar banco
 try:
     init_database()
 except Exception as e:
     print(f"❌ Erro ao inicializar banco: {e}")
-    print("🔄 Verifique se o Supabase está ativo e a URL está correta.")
-
-# ============================================
-# ROTA DE TESTE DE CONEXÃO
-# ============================================
-
-@app.route('/api/testar_conexao', methods=['GET'])
-def testar_conexao():
-    """Testa a conexão com o Supabase"""
-    try:
-        conn = get_db_connection()
-        is_postgres = 'psycopg2' in str(type(conn))
-        conn.close()
-        return jsonify({
-            'conectado': is_postgres,
-            'banco': 'PostgreSQL (Supabase)' if is_postgres else 'SQLite',
-            'mensagem': '✅ Conectado ao Supabase!' if is_postgres else '❌ Usando SQLite'
-        })
-    except Exception as e:
-        return jsonify({
-            'conectado': False,
-            'erro': str(e)
-        }), 500
 
 # ============================================
 # CONFIGURAR GEMINI AI
@@ -123,212 +98,35 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        modelos_tentar = [
-            'models/gemini-2.0-flash',
-            'models/gemini-2.5-flash',
-            'models/gemini-2.5-pro',
-            'models/gemini-flash-latest',
-        ]
-        
-        model = None
-        for modelo_nome in modelos_tentar:
-            try:
-                model = genai.GenerativeModel(modelo_nome)
-                print(f"✅ Modelo carregado: {modelo_nome}")
-                break
-            except Exception as e:
-                print(f"⚠️ Falha em {modelo_nome}: {e}")
-                continue
-        
-        if model is None:
-            raise Exception("Nenhum modelo disponível")
-        
+        model = genai.GenerativeModel('models/gemini-2.0-flash')
         GEMINI_AVAILABLE = True
         print("✅ Gemini AI configurado!")
     except Exception as e:
         GEMINI_AVAILABLE = False
-        print(f"❌ Erro ao configurar Gemini: {e}")
+        print(f"❌ Erro: {e}")
 else:
     GEMINI_AVAILABLE = False
     print("⚠️ Gemini não configurado.")
 
 # ============================================
-# DETECÇÃO DE RESPOSTAS COM GEMINI
+# ROTA DE TESTE DE CONEXÃO
 # ============================================
 
-def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
+@app.route('/api/testar_conexao', methods=['GET'])
+def testar_conexao():
     try:
-        if not GEMINI_AVAILABLE:
-            return [], 0.0
-        
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        imagem_bytes = base64.b64decode(imagem_base64)
-        img = Image.open(io.BytesIO(imagem_bytes))
-        img.thumbnail((1024, 1024))
-        
-        opcoes = 'ABCDE'[:num_opcoes]
-        opcoes_str = ', '.join(list(opcoes))
-        
-        prompt = f"""[SISTEMA DE CORREÇÃO DE PROVAS]
-
-ANALISE ESTA IMAGEM:
-- É uma folha de respostas com questões numeradas
-- Cada questão tem {num_opcoes} bolinhas: {opcoes_str}
-- O aluno marcou UMA bolinha por questão (a mais escura)
-
-TAREFA:
-Liste APENAS as letras das bolinhas marcadas, na ordem das questões.
-
-FORMATO OBRIGATÓRIO (exemplo para 10 questões):
-A, B, C, A, B, C, A, B, C, D
-
-REGRAS:
-- Use SOMENTE letras maiúsculas ({opcoes_str})
-- Separe por vírgula e espaço
-- NÃO adicione explicações
-- Se não conseguir ver, responda: NENHUMA
-
-Responda SOMENTE a lista de letras."""
-        
-        response = model.generate_content([prompt, img])
-        texto = response.text.strip().upper()
-        
-        print(f"🤖 Gemini respondeu: {texto[:200]}")
-        
-        letras_validas = set(opcoes)
-        respostas = [c for c in texto if c in letras_validas]
-        
-        if len(respostas) >= 3:
-            print(f"✅ Detectadas {len(respostas)} respostas")
-            return respostas, 90.0
-        elif len(respostas) > 0:
-            return respostas, 70.0
-        
-        return None, 0.0
-        
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'conectado': True,
+            'banco': 'PostgreSQL (Supabase)',
+            'mensagem': '✅ Conectado ao Supabase via POOLER!'
+        })
     except Exception as e:
-        print(f"❌ Erro no Gemini: {e}")
-        return None, 0.0
-
-# ============================================
-# CORREÇÃO DE REDAÇÃO
-# ============================================
-
-@app.route('/api/corrigir_redacao', methods=['POST'])
-def corrigir_redacao_api():
-    try:
-        dados = request.json
-        imagem = dados.get('imagem')
-        texto = dados.get('texto')
-        prova_id = dados.get('prova_id')
-        aluno_id = dados.get('aluno_id')
-        
-        if not GEMINI_AVAILABLE:
-            return jsonify({'erro': 'Gemini AI não disponível'}), 400
-        
-        if imagem:
-            if ',' in imagem:
-                imagem = imagem.split(',')[1]
-            
-            imagem_bytes = base64.b64decode(imagem)
-            img = Image.open(io.BytesIO(imagem_bytes))
-            img.thumbnail((1024, 1024))
-            
-            prompt = """[SISTEMA DE CORREÇÃO DE REDAÇÃO]
-
-ANALISE ESTA IMAGEM DE UMA REDAÇÃO ESCRITA À MÃO.
-
-CRITÉRIOS DE AVALIAÇÃO:
-1. Estrutura e organização do texto
-2. Coerência e coesão
-3. Ortografia e gramática
-4. Desenvolvimento do tema
-5. Criatividade e originalidade
-
-TAREFA:
-Analise a redação da imagem e forneça:
-1. NOTA: (0 a 10)
-2. CONCEITO: (Excelente, Bom, Regular, Insuficiente)
-3. FEEDBACK: (Pontos fortes e fracos)
-4. SUGESTÕES: (Melhorias)
-
-Formato de resposta:
-NOTA: [nota]
-CONCEITO: [conceito]
-FEEDBACK: [feedback detalhado]
-SUGESTÕES: [sugestões]
-"""
-            
-            response = model.generate_content([prompt, img])
-            resultado = response.text.strip()
-            
-            nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
-            nota = float(nota_match.group(1)) if nota_match else 0.0
-            nota = min(10, max(0, nota))
-            
-            conceito_match = re.search(r'CONCEITO:\s*([A-Za-záéíóúãõç]+)', resultado)
-            conceito = conceito_match.group(1) if conceito_match else "Não avaliado"
-            
-            if prova_id and aluno_id:
-                conn = get_db_connection()
-                conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, nota, feedback, data_correcao) VALUES (%s, %s, %s, %s, %s)",
-                             (prova_id, aluno_id, nota, resultado, datetime.now()))
-                conn.commit()
-                conn.close()
-            
-            return jsonify({
-                'nota': round(nota, 1),
-                'conceito': conceito,
-                'feedback': resultado,
-                'sucesso': True,
-                'metodo': 'Imagem'
-            })
-        
-        elif texto and len(texto.strip()) > 5:
-            prompt = f"""Corrija a seguinte redação:
-
-"{texto}"
-
-CRITÉRIOS: Estrutura, Coerência, Ortografia, Desenvolvimento do tema.
-
-Responda:
-NOTA: (0 a 10)
-CONCEITO: (Excelente/Bom/Regular/Insuficiente)
-FEEDBACK: (pontos fortes e fracos)
-SUGESTÕES: (melhorias)
-"""
-            
-            response = model.generate_content(prompt)
-            resultado = response.text.strip()
-            
-            nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
-            nota = float(nota_match.group(1)) if nota_match else 0.0
-            nota = min(10, max(0, nota))
-            
-            conceito_match = re.search(r'CONCEITO:\s*([A-Za-záéíóúãõç]+)', resultado)
-            conceito = conceito_match.group(1) if conceito_match else "Não avaliado"
-            
-            if prova_id and aluno_id:
-                conn = get_db_connection()
-                conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao) VALUES (%s, %s, %s, %s, %s, %s)",
-                             (prova_id, aluno_id, texto, nota, resultado, datetime.now()))
-                conn.commit()
-                conn.close()
-            
-            return jsonify({
-                'nota': round(nota, 1),
-                'conceito': conceito,
-                'feedback': resultado,
-                'sucesso': True,
-                'metodo': 'Texto'
-            })
-        
-        return jsonify({'erro': 'Forneça uma imagem ou texto para correção'}), 400
-        
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+        return jsonify({
+            'conectado': False,
+            'erro': str(e)
+        }), 500
 
 # ============================================
 # ROTAS PRINCIPAIS
@@ -337,6 +135,32 @@ SUGESTÕES: (melhorias)
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
+
+@app.route('/api/teste', methods=['GET'])
+def teste():
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'mensagem': 'Servidor funcionando!',
+            'status': 'ok',
+            'banco': 'PostgreSQL (Supabase)',
+            'gemini': GEMINI_AVAILABLE
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/banco_atual', methods=['GET'])
+def banco_atual():
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'banco': 'PostgreSQL (Supabase)',
+            'mensagem': '✅ Conectado ao Supabase!'
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE ESCOLAS
@@ -348,12 +172,10 @@ def listar_escolas():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
-        resultados = cursor.fetchall()
-        escolas = [{'id': row['id'], 'nome': row['nome']} for row in resultados]
+        escolas = [{'id': row['id'], 'nome': row['nome']} for row in cursor.fetchall()]
         conn.close()
         return jsonify(escolas)
     except Exception as e:
-        print(f"❌ Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/escolas', methods=['POST'])
@@ -376,7 +198,6 @@ def criar_escola():
             'mensagem': f'Escola "{nome}" cadastrada com sucesso!'
         })
     except Exception as e:
-        print(f"❌ Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -515,6 +336,62 @@ def deletar_prova(prova_id):
 # ============================================
 # CORREÇÃO DE PROVAS
 # ============================================
+
+def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
+    try:
+        if not GEMINI_AVAILABLE:
+            return [], 0.0
+        
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        imagem_bytes = base64.b64decode(imagem_base64)
+        img = Image.open(io.BytesIO(imagem_bytes))
+        img.thumbnail((1024, 1024))
+        
+        opcoes = 'ABCDE'[:num_opcoes]
+        opcoes_str = ', '.join(list(opcoes))
+        
+        prompt = f"""[SISTEMA DE CORREÇÃO DE PROVAS]
+
+ANALISE ESTA IMAGEM:
+- É uma folha de respostas com questões numeradas
+- Cada questão tem {num_opcoes} bolinhas: {opcoes_str}
+- O aluno marcou UMA bolinha por questão (a mais escura)
+
+TAREFA:
+Liste APENAS as letras das bolinhas marcadas, na ordem das questões.
+
+FORMATO OBRIGATÓRIO (exemplo para 10 questões):
+A, B, C, A, B, C, A, B, C, D
+
+REGRAS:
+- Use SOMENTE letras maiúsculas ({opcoes_str})
+- Separe por vírgula e espaço
+- NÃO adicione explicações
+- Se não conseguir ver, responda: NENHUMA
+
+Responda SOMENTE a lista de letras."""
+        
+        response = model.generate_content([prompt, img])
+        texto = response.text.strip().upper()
+        
+        print(f"🤖 Gemini respondeu: {texto[:200]}")
+        
+        letras_validas = set(opcoes)
+        respostas = [c for c in texto if c in letras_validas]
+        
+        if len(respostas) >= 3:
+            print(f"✅ Detectadas {len(respostas)} respostas")
+            return respostas, 90.0
+        elif len(respostas) > 0:
+            return respostas, 70.0
+        
+        return None, 0.0
+        
+    except Exception as e:
+        print(f"❌ Erro no Gemini: {e}")
+        return None, 0.0
 
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_prova():
@@ -815,7 +692,7 @@ def exportar_resultados():
         'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
     }
 
-@app.route('/api/ip_info', methods=['GET'])
+@app.route('/api/ip_info', methods(['GET'])
 def ip_info():
     return jsonify({'ip': 'render.com', 'porta': 10000, 'url': 'https://adabee-sistema-3.onrender.com'})
 
@@ -854,44 +731,6 @@ def testar_gemini():
         return jsonify({'resposta_bruta': response.text, 'sucesso': True})
     except Exception as e:
         return jsonify({'erro': str(e), 'sucesso': False}), 500
-
-# ============================================
-# ROTA DE TESTE
-# ============================================
-
-@app.route('/api/teste', methods=['GET'])
-def teste():
-    try:
-        conn = get_db_connection()
-        conn.close()
-        return jsonify({
-            'mensagem': 'Servidor funcionando!',
-            'status': 'ok',
-            'banco': 'PostgreSQL (Supabase)',
-            'gemini': GEMINI_AVAILABLE,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        return jsonify({
-            'mensagem': 'Erro no servidor',
-            'status': 'erro',
-            'banco': 'PostgreSQL (Supabase)',
-            'gemini': GEMINI_AVAILABLE,
-            'erro': str(e)
-        }), 500
-
-@app.route('/api/banco_atual', methods=['GET'])
-def banco_atual():
-    try:
-        conn = get_db_connection()
-        is_postgres = 'psycopg2' in str(type(conn))
-        conn.close()
-        return jsonify({
-            'banco': 'PostgreSQL (Supabase)' if is_postgres else 'SQLite',
-            'mensagem': f'Usando {"PostgreSQL (Supabase)" if is_postgres else "SQLite"}'
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # FALLBACK PARA ERROR 404
