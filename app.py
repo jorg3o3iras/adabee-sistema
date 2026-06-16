@@ -22,18 +22,13 @@ CORS(app)
 # CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
-# URLs alternativas (tenta até funcionar)
 SUPABASE_URLS = [
-    # URL do pooler (recomendado)
     'postgresql://postgres:hdUiT-HuQG%3FpF3%25@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require',
-    # URL direta com SSL
     'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require',
-    # URL direta sem SSL
     'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres',
 ]
 
 def get_db_connection():
-    """Retorna conexão com PostgreSQL (Supabase) - tenta várias URLs"""
     for url in SUPABASE_URLS:
         try:
             conn = psycopg2.connect(
@@ -47,7 +42,6 @@ def get_db_connection():
             print(f"⚠️ Falha na conexão: {e}")
             continue
     
-    # Se todas falharem, tenta SQLite como fallback
     print("⚠️ Todas as conexões PostgreSQL falharam. Usando SQLite.")
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DB_PATH = os.path.join(BASE_DIR, 'adabee.db')
@@ -59,7 +53,6 @@ def init_database():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Verificar se é PostgreSQL
     is_postgres = 'psycopg2' in str(type(conn))
     
     if is_postgres:
@@ -91,7 +84,6 @@ def init_database():
             texto TEXT, nota REAL, feedback TEXT, data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
     else:
-        # SQLite
         cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
             id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
@@ -124,12 +116,10 @@ def init_database():
     conn.close()
     print("✅ Banco de dados inicializado!")
 
-# Inicializar banco
 try:
     init_database()
 except Exception as e:
     print(f"⚠️ Erro ao inicializar banco: {e}")
-    print("🔄 Tentando continuar mesmo assim...")
 
 # ============================================
 # CONFIGURAR GEMINI AI
@@ -1009,10 +999,10 @@ def testar_gemini():
         return jsonify({'erro': str(e), 'sucesso': False}), 500
 
 # ============================================
-# ROTA DE TESTE
+# ROTA DE TESTE (CORRIGIDA)
 # ============================================
 
-@app.route('/api/teste', methods(['GET'])
+@app.route('/api/teste', methods=['GET'])
 def teste():
     try:
         conn = get_db_connection()
@@ -1031,7 +1021,7 @@ def teste():
             'banco': 'PostgreSQL (Supabase)',
             'gemini': GEMINI_AVAILABLE,
             'erro': str(e)
-        })
+        }), 500
 
 @app.route('/api/banco_atual', methods=['GET'])
 def banco_atual():
