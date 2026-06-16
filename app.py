@@ -22,7 +22,6 @@ CORS(app)
 # CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
-# URL CORRETA DO SUPABASE
 SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
 
 def get_db_connection():
@@ -48,14 +47,12 @@ def init_database():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Criar tabela escolas
         cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
             id SERIAL PRIMARY KEY, 
             nome TEXT NOT NULL, 
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela turmas
         cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
             id SERIAL PRIMARY KEY, 
             escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
@@ -64,7 +61,6 @@ def init_database():
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela alunos (SEM responsavel)
         cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
             id SERIAL PRIMARY KEY, 
             turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
@@ -74,7 +70,6 @@ def init_database():
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela provas
         cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
             id SERIAL PRIMARY KEY, 
             turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
@@ -88,7 +83,6 @@ def init_database():
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela correcoes
         cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
             id SERIAL PRIMARY KEY, 
             prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
@@ -99,7 +93,6 @@ def init_database():
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Criar tabela correcoes_redacao
         cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
             id SERIAL PRIMARY KEY, 
             prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
@@ -267,7 +260,7 @@ def deletar_turma(turma_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE ALUNOS (CORRIGIDAS - SEM RESPONSAVEL)
+# ROTAS DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -347,7 +340,7 @@ def deletar_aluno(aluno_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE PROVAS
+# ROTAS DE PROVAS - CORRIGIDAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -395,8 +388,15 @@ def criar_prova():
         valor_nota = dados.get('valor_nota', 10)
         tipo_questoes = dados.get('tipo_questoes', '4')
         
-        if not turma_id or not titulo or not data_prova:
-            return jsonify({'erro': 'Dados incompletos'}), 400
+        # VALIDAÇÃO CORRIGIDA
+        if not turma_id:
+            return jsonify({'erro': 'Turma é obrigatória'}), 400
+        if not titulo:
+            return jsonify({'erro': 'Título da prova é obrigatório'}), 400
+        if not data_prova:
+            return jsonify({'erro': 'Data da prova é obrigatória'}), 400
+        if not gabarito or len(gabarito) == 0:
+            return jsonify({'erro': 'Gabarito é obrigatório'}), 400
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -412,8 +412,9 @@ def criar_prova():
         prova_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        return jsonify({'id': prova_id})
+        return jsonify({'id': prova_id, 'mensagem': 'Prova criada com sucesso!'})
     except Exception as e:
+        print(f"Erro ao criar prova: {e}")
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
@@ -583,7 +584,6 @@ def corrigir_redacao():
         if not GEMINI_AVAILABLE:
             return jsonify({'erro': 'Gemini AI não está disponível'}), 500
         
-        # Extrair texto da imagem se não houver texto
         if imagem and not texto:
             if ',' in imagem:
                 imagem = imagem.split(',')[1]
@@ -604,7 +604,6 @@ def corrigir_redacao():
         else:
             return jsonify({'erro': 'Não foi possível obter o texto da redação'}), 400
         
-        # Corrigir a redação
         prompt = f"""[SISTEMA DE CORREÇÃO DE REDAÇÃO]
 
 TEXTO DA REDAÇÃO:
@@ -632,7 +631,6 @@ FEEDBACK: [feedback detalhado com sugestões de melhoria]"""
         response = model.generate_content(prompt)
         resultado = response.text
         
-        # Extrair nota e conceito
         nota_match = re.search(r'NOTA:\s*([\d.]+)', resultado, re.IGNORECASE)
         nota = float(nota_match.group(1)) if nota_match else 0
         
@@ -642,7 +640,6 @@ FEEDBACK: [feedback detalhado com sugestões de melhoria]"""
         feedback_match = re.search(r'FEEDBACK:\s*(.*?)(?=$)', resultado, re.DOTALL | re.IGNORECASE)
         feedback = feedback_match.group(1).strip() if feedback_match else resultado
         
-        # Salvar no banco se tiver prova e aluno
         if prova_id and aluno_id:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -819,7 +816,7 @@ def gerar_gabarito():
         return f"<h3>Erro: {str(e)}</h3>", 500
 
 # ============================================
-# DEMAIS ROTAS
+# DEMAIS ROTAS - CORRIGIDAS
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -829,16 +826,20 @@ def dashboard():
         cursor = conn.cursor()
         
         cursor.execute("SELECT COUNT(*) FROM escolas")
-        total_escolas = cursor.fetchone()[0]
+        row = cursor.fetchone()
+        total_escolas = row['count'] if row else 0
         
         cursor.execute("SELECT COUNT(*) FROM turmas")
-        total_turmas = cursor.fetchone()[0]
+        row = cursor.fetchone()
+        total_turmas = row['count'] if row else 0
         
         cursor.execute("SELECT COUNT(*) FROM alunos")
-        total_alunos = cursor.fetchone()[0]
+        row = cursor.fetchone()
+        total_alunos = row['count'] if row else 0
         
         cursor.execute("SELECT COUNT(*) FROM provas")
-        total_provas = cursor.fetchone()[0]
+        row = cursor.fetchone()
+        total_provas = row['count'] if row else 0
         
         cursor.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes")
         row = cursor.fetchone()
@@ -849,10 +850,11 @@ def dashboard():
             'total_turmas': total_turmas,
             'total_alunos': total_alunos,
             'total_provas': total_provas,
-            'total_correcoes': row[0] or 0,
-            'media_geral': round(row[1], 1) if row[1] else 0
+            'total_correcoes': row['count'] if row else 0,
+            'media_geral': round(row['coalesce'], 1) if row and row['coalesce'] else 0
         })
     except Exception as e:
+        print(f"Erro no dashboard: {e}")
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/historico', methods=['GET'])
@@ -871,12 +873,12 @@ def historico():
         """)
         
         historico = [{
-            'id': row[0], 
-            'aluno_nome': row[1], 
-            'prova_titulo': row[2],
-            'acertos': row[3], 
-            'nota': round(row[4], 1), 
-            'data_correcao': row[5]
+            'id': row['id'], 
+            'aluno_nome': row['aluno_nome'], 
+            'prova_titulo': row['prova_titulo'],
+            'acertos': row['acertos'], 
+            'nota': round(row['nota'], 1), 
+            'data_correcao': row['data_correcao']
         } for row in cursor.fetchall()]
         
         conn.close()
@@ -908,10 +910,10 @@ def estatisticas():
         
         return jsonify({
             'geral': {
-                'total_corrigidas': row[0] or 0,
-                'media_nota': round(row[1], 1) if row[1] else 0,
-                'maior_nota': round(row[2], 1) if row[2] else 0,
-                'menor_nota': round(row[3], 1) if row[3] else 0
+                'total_corrigidas': row['total_corrigidas'] if row else 0,
+                'media_nota': round(row['media_nota'], 1) if row else 0,
+                'maior_nota': round(row['maior_nota'], 1) if row else 0,
+                'menor_nota': round(row['menor_nota'], 1) if row else 0
             }
         })
     except Exception as e:
@@ -951,7 +953,7 @@ def exportar_resultados():
         writer = csv.writer(output)
         writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data'])
         for r in resultados:
-            writer.writerow([r[0], r[1] or '', r[2], r[3], r[4]])
+            writer.writerow([r['nome'], r['matricula'] or '', r['acertos'], r['nota'], r['data_correcao']])
         
         return output.getvalue(), 200, {
             'Content-Type': 'text/csv',
