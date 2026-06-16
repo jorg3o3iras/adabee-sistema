@@ -23,7 +23,7 @@ CORS(app)
 # ============================================
 
 # URL CORRETA DO SUPABASE (com sua senha codificada)
-SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require'
+SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
 
 def get_db_connection():
     """Conecta ao Supabase"""
