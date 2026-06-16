@@ -12,12 +12,110 @@ import csv
 import re
 from PIL import Image
 import google.generativeai as genai
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAR GEMINI AI - MODELOS CORRETOS (2025)
+# CONFIGURAR BANCO DE DADOS (PostgreSQL ou SQLite)
+# ============================================
+
+# Tenta conectar ao PostgreSQL (Render), se falhar usa SQLite
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+def get_db_connection():
+    """Retorna conexão com o banco de dados (PostgreSQL ou SQLite)"""
+    if DATABASE_URL:
+        try:
+            conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+            return conn
+        except Exception as e:
+            print(f"⚠️ PostgreSQL indisponível: {e}")
+    
+    # Fallback para SQLite
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DB_PATH = os.path.join(BASE_DIR, 'adabee.db')
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_database():
+    """Inicializa o banco de dados com as tabelas necessárias"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Tabela escolas
+    cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
+        id SERIAL PRIMARY KEY,
+        nome TEXT NOT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Tabela turmas
+    cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
+        id SERIAL PRIMARY KEY,
+        escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+        nome TEXT NOT NULL,
+        serie TEXT DEFAULT '1º Ano',
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Tabela alunos
+    cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
+        id SERIAL PRIMARY KEY,
+        turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+        nome TEXT NOT NULL,
+        matricula TEXT,
+        numero_chamada INTEGER,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Tabela provas
+    cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
+        id SERIAL PRIMARY KEY,
+        turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+        titulo TEXT NOT NULL,
+        descricao TEXT,
+        gabarito TEXT,
+        data_prova DATE,
+        valor_nota REAL DEFAULT 10,
+        quantidade_questoes INTEGER,
+        tipo_questoes TEXT DEFAULT '4', -- '3' para 3 opções, '4' para 4 opções
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Tabela correções (múltipla escolha)
+    cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
+        id SERIAL PRIMARY KEY,
+        prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+        aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+        respostas TEXT,
+        acertos INTEGER,
+        nota REAL,
+        data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    # Tabela correções de redação
+    cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
+        id SERIAL PRIMARY KEY,
+        prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+        aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+        texto TEXT,
+        nota REAL,
+        feedback TEXT,
+        data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    conn.commit()
+    conn.close()
+    print("✅ Banco de dados inicializado!")
+
+init_database()
+
+# ============================================
+# CONFIGURAR GEMINI AI
 # ============================================
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -25,22 +123,17 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        
-        # MODELOS QUE REALMENTE FUNCIONAM (baseado na lista disponível)
         modelos_tentar = [
-            'models/gemini-2.0-flash',      # ✅ Estável e rápido
-            'models/gemini-2.5-flash',      # ✅ Mais novo
-            'models/gemini-2.5-pro',        # ✅ Mais potente
-            'models/gemini-flash-latest',   # ✅ Última versão
-            'models/gemini-pro-latest',     # ✅ Pro latest
+            'models/gemini-2.0-flash',
+            'models/gemini-2.5-flash',
+            'models/gemini-2.5-pro',
+            'models/gemini-flash-latest',
         ]
         
         model = None
-        modelo_usado = None
         for modelo_nome in modelos_tentar:
             try:
                 model = genai.GenerativeModel(modelo_nome)
-                modelo_usado = modelo_nome
                 print(f"✅ Modelo carregado: {modelo_nome}")
                 break
             except Exception as e:
@@ -51,7 +144,7 @@ if GEMINI_API_KEY:
             raise Exception("Nenhum modelo disponível")
         
         GEMINI_AVAILABLE = True
-        print(f"✅ Gemini AI configurado! Modelo: {modelo_usado}")
+        print("✅ Gemini AI configurado!")
     except Exception as e:
         GEMINI_AVAILABLE = False
         print(f"❌ Erro ao configurar Gemini: {e}")
@@ -60,84 +153,43 @@ else:
     print("⚠️ Gemini não configurado.")
 
 # ============================================
-# BANCO DE DADOS SQLITE
+# DETECÇÃO DE RESPOSTAS COM GEMINI
 # ============================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'adabee.db')
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_database():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL)''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, escola_id INTEGER, nome TEXT NOT NULL)''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER, nome TEXT NOT NULL, 
-        matricula TEXT, numero_chamada INTEGER)''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, turma_id INTEGER, titulo TEXT NOT NULL,
-        gabarito TEXT, data_prova DATE, quantidade_questoes INTEGER)''')
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, prova_id INTEGER, aluno_id INTEGER, 
-        respostas TEXT, acertos INTEGER, nota REAL, data_correcao TIMESTAMP)''')
-    
-    conn.commit()
-    conn.close()
-    print("✅ Banco de dados inicializado!")
-
-init_database()
-
-# ============================================
-# DETECÇÃO COM GEMINI AI - VERSÃO OTIMIZADA
-# ============================================
-
-def detectar_com_gemini(imagem_base64):
-    """Usa Google Gemini para detectar respostas"""
+def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
+    """Detecta respostas usando Gemini com número variável de opções"""
     try:
         if not GEMINI_AVAILABLE:
-            return None, 0.0
+            return [], 0.0
         
-        # Limpar base64
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
         
         imagem_bytes = base64.b64decode(imagem_base64)
         img = Image.open(io.BytesIO(imagem_bytes))
-        
-        # Reduzir tamanho para processamento mais rápido
         img.thumbnail((1024, 1024))
         
-        # Prompt otimizado para detecção
-        prompt = """[SISTEMA DE CORREÇÃO DE PROVAS]
+        # Gerar lista de opções baseado no número
+        opcoes = 'ABCDE'[:num_opcoes]
+        opcoes_str = ', '.join(list(opcoes))
+        
+        prompt = f"""[SISTEMA DE CORREÇÃO DE PROVAS]
 
 ANALISE ESTA IMAGEM:
 - É uma folha de respostas com questões numeradas
-- Cada questão tem 5 bolinhas: A, B, C, D, E
+- Cada questão tem {num_opcoes} bolinhas: {opcoes_str}
 - O aluno marcou UMA bolinha por questão (a mais escura)
 
 TAREFA:
-Liste APENAS as letras das bolinhas marcadas, na ordem das questões (da 1 até o final)
+Liste APENAS as letras das bolinhas marcadas, na ordem das questões.
 
-FORMATO OBRIGATÓRIO:
-A, B, C, D, A, B, C, D, E, A
+FORMATO OBRIGATÓRIO (exemplo para 10 questões):
+A, B, C, A, B, C, A, B, C, D
 
 REGRAS:
-- Use SOMENTE letras maiúsculas
+- Use SOMENTE letras maiúsculas ({opcoes_str})
 - Separe por vírgula e espaço
 - NÃO adicione explicações
-- NÃO adicione números
 - Se não conseguir ver, responda: NENHUMA
 
 Responda SOMENTE a lista de letras."""
@@ -147,117 +199,72 @@ Responda SOMENTE a lista de letras."""
         
         print(f"🤖 Gemini respondeu: {texto[:200]}")
         
-        # Extrair letras A-E
-        respostas = re.findall(r'[A-E]', texto)
+        # Extrair letras válidas
+        letras_validas = set(opcoes)
+        respostas = [c for c in texto if c in letras_validas]
         
-        if len(respostas) >= 5:
+        if len(respostas) >= 3:
             print(f"✅ Detectadas {len(respostas)} respostas")
             return respostas, 90.0
         elif len(respostas) > 0:
-            print(f"⚠️ Apenas {len(respostas)} respostas detectadas")
             return respostas, 70.0
         
-        print("❌ Nenhuma letra detectada")
         return None, 0.0
         
     except Exception as e:
         print(f"❌ Erro no Gemini: {e}")
         return None, 0.0
 
-def detectar_respostas(imagem_base64):
-    """Detecta respostas usando Gemini"""
-    if GEMINI_AVAILABLE:
-        respostas, confianca = detectar_com_gemini(imagem_base64)
-        if respostas and len(respostas) > 0:
-            return respostas, confianca
-    return [], 0.0
-
-# ============================================
-# ROTA DE TESTE PARA DIAGNÓSTICO
-# ============================================
-
-@app.route('/api/testar_gemini', methods=['POST'])
-def testar_gemini():
-    """Endpoint para diagnosticar o Gemini"""
+def corrigir_redacao(texto, criterios=None):
+    """Corrige uma redação/texto pequeno usando Gemini"""
     try:
-        dados = request.json
-        imagem = dados.get('imagem')
+        if not GEMINI_AVAILABLE or not texto:
+            return None, "Gemini não disponível"
         
-        if not imagem:
-            return jsonify({'erro': 'Imagem não fornecida'}), 400
+        prompt = f"""Corrija a seguinte redação/texto:
+
+"{texto}"
+
+Análise:
+1. Nota (0 a 10)
+2. Feedback (pontos fortes e fracos)
+3. Sugestões de melhoria
+
+Responda APENAS com: NOTA: X | FEEDBACK: ... | SUGESTÕES: ..."""
         
-        if ',' in imagem:
-            imagem = imagem.split(',')[1]
+        response = model.generate_content(prompt)
+        resultado = response.text.strip()
         
-        imagem_bytes = base64.b64decode(imagem)
-        img = Image.open(io.BytesIO(imagem_bytes))
-        img.thumbnail((800, 800))
+        # Extrair nota
+        nota_match = re.search(r'NOTA:\s*(\d+(?:\.\d+)?)', resultado)
+        nota = float(nota_match.group(1)) if nota_match else 0.0
+        nota = min(10, max(0, nota))
         
-        prompt = "Descreva o que você vê nesta imagem. Liste as letras A, B, C, D, E se aparecerem."
+        return nota, resultado
         
-        response = model.generate_content([prompt, img])
-        
-        return jsonify({
-            'resposta_bruta': response.text,
-            'sucesso': True
-        })
     except Exception as e:
-        return jsonify({'erro': str(e), 'sucesso': False}), 500
+        print(f"❌ Erro na correção: {e}")
+        return 0.0, f"Erro: {e}"
 
 # ============================================
-# ROTA PARA LISTAR MODELOS DISPONÍVEIS
-# ============================================
-
-@app.route('/api/listar_modelos', methods=['GET'])
-def listar_modelos():
-    """Lista os modelos Gemini disponíveis"""
-    try:
-        if not GEMINI_AVAILABLE:
-            return jsonify({'erro': 'Gemini não configurado'}), 400
-        
-        modelos = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                modelos.append(m.name)
-        
-        return jsonify({'modelos_disponiveis': modelos})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS PRINCIPAIS DA API
+# ROTAS DA API
 # ============================================
 
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
 
-@app.route('/api/dashboard', methods=['GET'])
-def dashboard():
-    try:
-        conn = get_db_connection()
-        total_escolas = conn.execute("SELECT COUNT(*) FROM escolas").fetchone()[0]
-        total_turmas = conn.execute("SELECT COUNT(*) FROM turmas").fetchone()[0]
-        total_alunos = conn.execute("SELECT COUNT(*) FROM alunos").fetchone()[0]
-        total_provas = conn.execute("SELECT COUNT(*) FROM provas").fetchone()[0]
-        row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes").fetchone()
-        conn.close()
-        
-        return jsonify({
-            'total_escolas': total_escolas,
-            'total_turmas': total_turmas,
-            'total_alunos': total_alunos,
-            'total_provas': total_provas,
-            'total_correcoes': row[0] or 0,
-            'media_geral': round(row[1], 1) if row[1] else 0
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+# ---------- ESCOLAS ----------
 
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
-    escolas = [dict(row) for row in conn.execute("SELECT id, nome FROM escolas ORDER BY nome").fetchall()]
+    if 'psycopg2' in str(type(conn)):
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
+        escolas = cursor.fetchall()
+    else:
+        escolas = [dict(row) for row in conn.execute("SELECT id, nome FROM escolas ORDER BY nome").fetchall()]
     conn.close()
     return jsonify(escolas)
 
@@ -266,19 +273,30 @@ def criar_escola():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO escolas (nome) VALUES (?)", (dados['nome'],))
+    cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (dados['nome'],)) if 'psycopg2' in str(type(conn)) else cursor.execute("INSERT INTO escolas (nome) VALUES (?) RETURNING id", (dados['nome'],))
     conn.commit()
+    escola_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
-    return jsonify({'id': cursor.lastrowid})
+    return jsonify({'id': escola_id})
+
+# ---------- TURMAS ----------
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
     escola_id = request.args.get('escola_id')
     conn = get_db_connection()
-    if escola_id:
-        turmas = [dict(row) for row in conn.execute("SELECT id, nome FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,)).fetchall()]
+    if 'psycopg2' in str(type(conn)):
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        if escola_id:
+            cursor.execute("SELECT id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+        else:
+            cursor.execute("SELECT id, nome, serie FROM turmas ORDER BY nome")
+        turmas = cursor.fetchall()
     else:
-        turmas = [dict(row) for row in conn.execute("SELECT id, nome FROM turmas ORDER BY nome").fetchall()]
+        if escola_id:
+            turmas = [dict(row) for row in conn.execute("SELECT id, nome, serie FROM turmas WHERE escola_id = ? ORDER BY nome", (escola_id,)).fetchall()]
+        else:
+            turmas = [dict(row) for row in conn.execute("SELECT id, nome, serie FROM turmas ORDER BY nome").fetchall()]
     conn.close()
     return jsonify(turmas)
 
@@ -287,19 +305,30 @@ def criar_turma():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO turmas (escola_id, nome) VALUES (?, ?)", (dados['escola_id'], dados['nome']))
+    cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", (dados['escola_id'], dados['nome'], dados.get('serie', '1º Ano')))
     conn.commit()
+    turma_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
-    return jsonify({'id': cursor.lastrowid})
+    return jsonify({'id': turma_id})
+
+# ---------- ALUNOS ----------
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
     turma_id = request.args.get('turma_id')
     conn = get_db_connection()
-    if turma_id:
-        alunos = [dict(row) for row in conn.execute("SELECT id, nome, numero_chamada FROM alunos WHERE turma_id = ? ORDER BY numero_chamada", (turma_id,)).fetchall()]
+    if 'psycopg2' in str(type(conn)):
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        if turma_id:
+            cursor.execute("SELECT id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = %s ORDER BY numero_chamada", (turma_id,))
+        else:
+            cursor.execute("SELECT id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada")
+        alunos = cursor.fetchall()
     else:
-        alunos = [dict(row) for row in conn.execute("SELECT id, nome, numero_chamada FROM alunos ORDER BY numero_chamada").fetchall()]
+        if turma_id:
+            alunos = [dict(row) for row in conn.execute("SELECT id, nome, matricula, numero_chamada FROM alunos WHERE turma_id = ? ORDER BY numero_chamada", (turma_id,)).fetchall()]
+        else:
+            alunos = [dict(row) for row in conn.execute("SELECT id, nome, matricula, numero_chamada FROM alunos ORDER BY numero_chamada").fetchall()]
     conn.close()
     return jsonify(alunos)
 
@@ -308,26 +337,44 @@ def criar_aluno():
     dados = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO alunos (turma_id, nome, numero_chamada) VALUES (?, ?, ?)", 
-                   (dados['turma_id'], dados['nome'], dados.get('numero_chamada')))
+    cursor.execute("INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) VALUES (%s, %s, %s, %s) RETURNING id", (dados['turma_id'], dados['nome'], dados.get('matricula', ''), dados.get('numero_chamada')))
     conn.commit()
+    aluno_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
-    return jsonify({'id': cursor.lastrowid})
+    return jsonify({'id': aluno_id})
+
+# ---------- PROVAS ----------
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     conn = get_db_connection()
-    provas = []
-    for row in conn.execute("""
-        SELECT p.id, p.titulo, p.gabarito, p.data_prova, p.quantidade_questoes, t.nome as turma_nome, p.turma_id
-        FROM provas p JOIN turmas t ON p.turma_id = t.id ORDER BY p.data_prova DESC
-    """):
-        provas.append({
-            'id': row[0], 'titulo': row[1],
-            'gabarito_array': json.loads(row[2]) if row[2] else [],
-            'data_prova': row[3], 'quantidade_questoes': row[4],
-            'turma_nome': row[5], 'turma_id': row[6]
-        })
+    if 'psycopg2' in str(type(conn)):
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
+                   t.nome as turma_nome, p.turma_id
+            FROM provas p JOIN turmas t ON p.turma_id = t.id 
+            ORDER BY p.data_prova DESC
+        """)
+        provas = cursor.fetchall()
+    else:
+        provas = []
+        for row in conn.execute("""
+            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes,
+                   t.nome as turma_nome, p.turma_id
+            FROM provas p JOIN turmas t ON p.turma_id = t.id 
+            ORDER BY p.data_prova DESC
+        """):
+            provas.append({
+                'id': row[0], 'titulo': row[1], 'descricao': row[2],
+                'gabarito_array': json.loads(row[3]) if row[3] else [],
+                'data_prova': row[4], 'valor_nota': row[5],
+                'quantidade_questoes': row[6] or len(json.loads(row[3]) if row[3] else []),
+                'tipo_questoes': row[7] or '4',
+                'turma_nome': row[8], 'turma_id': row[9]
+            })
     conn.close()
     return jsonify(provas)
 
@@ -337,21 +384,30 @@ def criar_prova():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO provas (turma_id, titulo, gabarito, quantidade_questoes, data_prova)
-        VALUES (?, ?, ?, ?, ?)
-    """, (dados['turma_id'], dados['titulo'], json.dumps(dados['gabarito']), len(dados['gabarito']), dados['data_prova']))
+        INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+    """, (
+        dados['turma_id'], dados['titulo'], dados.get('descricao', ''),
+        json.dumps(dados['gabarito']), len(dados['gabarito']),
+        dados['data_prova'], dados.get('valor_nota', 10),
+        dados.get('tipo_questoes', '4')
+    ))
     conn.commit()
+    prova_id = cursor.fetchone()[0] if hasattr(cursor, 'fetchone') else cursor.lastrowid
     conn.close()
-    return jsonify({'id': cursor.lastrowid})
+    return jsonify({'id': prova_id})
 
 @app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
 def deletar_prova(prova_id):
     conn = get_db_connection()
-    conn.execute("DELETE FROM correcoes WHERE prova_id = ?", (prova_id,))
-    conn.execute("DELETE FROM provas WHERE id = ?", (prova_id,))
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
+    cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
     conn.commit()
     conn.close()
     return jsonify({'mensagem': 'ok'})
+
+# ---------- CORREÇÃO DE MÚLTIPLA ESCOLHA ----------
 
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_prova():
@@ -365,18 +421,21 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        prova = conn.execute("SELECT gabarito FROM provas WHERE id = ?", (prova_id,)).fetchone()
+        prova = conn.execute("SELECT gabarito, tipo_questoes FROM provas WHERE id = ?", (prova_id,)).fetchone()
         
         if not prova:
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
         gabarito = json.loads(prova[0]) if prova[0] else []
-        respostas_detectadas, confianca = detectar_respostas(imagem)
+        tipo_questoes = int(prova[1] or 4)
         
-        if len(respostas_detectadas) == 0:
+        # Detectar respostas
+        respostas_detectadas, confianca = detectar_respostas_gemini(imagem, tipo_questoes)
+        
+        if not respostas_detectadas:
             conn.close()
-            return jsonify({'erro': 'Não foi possível detectar as respostas. Tente uma foto mais nítida.'}), 400
+            return jsonify({'erro': 'Não foi possível detectar as respostas.'}), 400
         
         # Alinhar tamanhos
         while len(respostas_detectadas) < len(gabarito):
@@ -415,41 +474,339 @@ def corrigir_prova():
             'percentual': round((acertos / len(gabarito)) * 100, 1),
             'correcoes': correcoes,
             'confianca_media': round(confianca, 1),
-            'metodo': 'Gemini AI',
-            'usando_ia': True
+            'tipo_questoes': tipo_questoes,
+            'metodo': 'Gemini AI'
         })
     except Exception as e:
         print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/estatisticas', methods=['GET'])
-def estatisticas():
-    prova_id = request.args.get('prova_id')
-    if not prova_id:
-        return jsonify({'geral': {}})
-    
-    conn = get_db_connection()
-    row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes WHERE prova_id = ?", (prova_id,)).fetchone()
-    conn.close()
-    
-    return jsonify({'geral': {
-        'total_corrigidas': row[0] or 0,
-        'media_nota': round(row[1], 1) if row[1] else 0
-    }})
+# ---------- CORREÇÃO DE REDAÇÃO ----------
+
+@app.route('/api/corrigir_redacao', methods=['POST'])
+def corrigir_redacao_api():
+    try:
+        dados = request.json
+        texto = dados.get('texto')
+        prova_id = dados.get('prova_id')
+        aluno_id = dados.get('aluno_id')
+        
+        if not texto:
+            return jsonify({'erro': 'Texto não fornecido'}), 400
+        
+        nota, feedback = corrigir_redacao(texto)
+        
+        if prova_id and aluno_id:
+            conn = get_db_connection()
+            conn.execute("INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao) VALUES (?, ?, ?, ?, ?, ?)",
+                         (prova_id, aluno_id, texto, nota, feedback, datetime.now()))
+            conn.commit()
+            conn.close()
+        
+        return jsonify({
+            'nota': round(nota, 1),
+            'feedback': feedback,
+            'sucesso': True
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+# ---------- GERAR GABARITO ----------
+
+@app.route('/api/gerar_gabarito', methods=['POST'])
+def gerar_gabarito():
+    try:
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
+        qtd_questoes = dados.get('quantidade_questoes', 20)
+        tipo_questoes = dados.get('tipo_questoes', '4')
+        
+        # Buscar dados do banco
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
+        escola = cursor.fetchone()
+        nome_escola = escola[0] if escola else "ESCOLA"
+        
+        cursor.execute("SELECT nome, serie FROM turmas WHERE id = ?", (turma_id,))
+        turma = cursor.fetchone()
+        nome_turma = turma[0] if turma else "TURMA"
+        serie = turma[1] if turma and turma[1] else "1º Ano"
+        
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
+        aluno = cursor.fetchone()
+        nome_aluno = aluno[0] if aluno else "ALUNO"
+        numero = str(aluno[1]) if aluno and aluno[1] else ""
+        
+        cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
+        prova = cursor.fetchone()
+        nome_prova = prova[0] if prova else "PROVA"
+        
+        conn.close()
+        
+        # Determinar opções baseado na série
+        if tipo_questoes == '3':
+            opcoes = ['A', 'B', 'C']
+            titulo_opcoes = "3 OPÇÕES (A, B, C)"
+        else:
+            opcoes = ['A', 'B', 'C', 'D']
+            titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
+        
+        # Limitar a 30 questões por página
+        if int(qtd_questoes) > 30:
+            qtd_questoes = 30
+        
+        # Gerar HTML
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Folha de Respostas - {nome_aluno}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #f0f2f5;
+            padding: 15px;
+        }}
+        .container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }}
+        .folha {{ padding: 20px; }}
+        .header {{
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }}
+        .header h2 {{ color: #4CAF50; font-size: 20px; }}
+        .header p {{ color: #666; font-size: 10px; }}
+        .info-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }}
+        .info-item {{ display: flex; gap: 8px; }}
+        .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
+        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
+        .instrucoes {{
+            background: #FFF3CD;
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 10px;
+            color: #856404;
+            text-align: center;
+        }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{
+            background: #4CAF50;
+            color: white;
+            padding: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }}
+        td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
+        .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
+        .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
+        .opcao {{
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            min-width: 45px;
+        }}
+        .circulo {{
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            background: white;
+        }}
+        .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
+        .rodape {{
+            margin-top: 15px;
+            text-align: center;
+            font-size: 9px;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }}
+        .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
+        button {{
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 0 10px;
+        }}
+        button:hover {{ background: #45a049; }}
+        button.secundario {{ background: #2196F3; }}
+        button.secundario:hover {{ background: #0b7dda; }}
+        @media print {{
+            body {{ background: white; padding: 0; margin: 0; }}
+            .container {{ box-shadow: none; margin: 0; padding: 0; }}
+            .botoes {{ display: none; }}
+            .info-value {{ border-bottom: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="folha">
+            <div class="header">
+                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+                <p>{titulo_opcoes} - {serie}</p>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
+            </div>
+            
+            <div class="instrucoes">
+                <strong>📌 INSTRUÇÕES:</strong> Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Q</th>
+                        <th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th>
+                    </tr>
+                </thead>
+                <tbody>"""
+        
+        for i in range(1, int(qtd_questoes) + 1):
+            html += f"""
+                    <tr>
+                        <td class="questao-num">{i}</td>
+                        <td colspan="{len(opcoes)}" style="text-align:center">
+                            <div class="opcoes">"""
+            for opcao in opcoes:
+                html += f"""
+                                <label class="opcao">
+                                    <span class="circulo"></span>
+                                    <span>{opcao}</span>
+                                </label>"""
+            html += """
+                            </div>
+                        </td>
+                    </tr>"""
+        
+        html += f"""
+                </tbody>
+            </table>
+            
+            <div class="rodape">
+                <strong>AdaBee AI</strong> - Preencha completamente a bolinha | Use caneta PRETA
+            </div>
+        </div>
+        <div class="botoes">
+            <button onclick="window.print()">🖨️ IMPRIMIR</button>
+            <button class="secundario" onclick="baixarPDF()">💾 SALVAR PDF</button>
+        </div>
+    </div>
+    <script>
+        function baixarPDF() {{ window.print(); }}
+        
+        document.querySelectorAll('.opcoes').forEach(grupo => {{
+            const opcoes = grupo.querySelectorAll('.opcao');
+            opcoes.forEach(opcao => {{
+                opcao.addEventListener('click', function() {{
+                    opcoes.forEach(opt => {{
+                        opt.querySelector('.circulo').style.backgroundColor = 'white';
+                        opt.querySelector('.circulo').style.border = '2px solid #333';
+                    }});
+                    this.querySelector('.circulo').style.backgroundColor = 'black';
+                    this.querySelector('.circulo').style.border = '2px solid black';
+                }});
+            }});
+        }});
+    </script>
+</body>
+</html>"""
+        
+        return html, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        print(f"Erro: {e}")
+        return f"<h3>Erro: {str(e)}</h3>", 500
+
+# ---------- OUTRAS ROTAS ----------
+
+@app.route('/api/dashboard', methods=['GET'])
+def dashboard():
+    try:
+        conn = get_db_connection()
+        total_escolas = conn.execute("SELECT COUNT(*) FROM escolas").fetchone()[0]
+        total_turmas = conn.execute("SELECT COUNT(*) FROM turmas").fetchone()[0]
+        total_alunos = conn.execute("SELECT COUNT(*) FROM alunos").fetchone()[0]
+        total_provas = conn.execute("SELECT COUNT(*) FROM provas").fetchone()[0]
+        row = conn.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes").fetchone()
+        conn.close()
+        
+        return jsonify({
+            'total_escolas': total_escolas,
+            'total_turmas': total_turmas,
+            'total_alunos': total_alunos,
+            'total_provas': total_provas,
+            'total_correcoes': row[0] or 0,
+            'media_geral': round(row[1], 1) if row[1] else 0
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/historico', methods=['GET'])
 def historico():
-    conn = get_db_connection()
-    historico = []
-    for row in conn.execute("""
-        SELECT c.id, a.nome, p.titulo, c.acertos, c.nota, c.data_correcao
-        FROM correcoes c JOIN alunos a ON c.aluno_id = a.id JOIN provas p ON c.prova_id = p.id
-        ORDER BY c.data_correcao DESC LIMIT 50
-    """):
-        historico.append({'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2], 
-                          'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]})
-    conn.close()
-    return jsonify(historico)
+    try:
+        conn = get_db_connection()
+        historico = []
+        for row in conn.execute("""
+            SELECT c.id, a.nome, p.titulo, c.acertos, c.nota, c.data_correcao
+            FROM correcoes c JOIN alunos a ON c.aluno_id = a.id JOIN provas p ON c.prova_id = p.id
+            ORDER BY c.data_correcao DESC LIMIT 50
+        """):
+            historico.append({
+                'id': row[0], 'aluno_nome': row[1], 'prova_titulo': row[2],
+                'acertos': row[3], 'nota': round(row[4], 1), 'data_correcao': row[5]
+            })
+        conn.close()
+        return jsonify(historico)
+    except Exception as e:
+        return jsonify([])
+
+@app.route('/api/status_ia', methods=['GET'])
+def status_ia():
+    return jsonify({
+        'treinada': True,
+        'usando_ia': True,
+        'gemini_disponivel': GEMINI_AVAILABLE,
+        'status': '🧠 Gemini AI ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
+        'metodo': 'Gemini AI',
+        'banco': 'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'
+    })
 
 @app.route('/api/exportar', methods=['GET'])
 def exportar_resultados():
@@ -485,16 +842,6 @@ def configuracoes():
         return jsonify({'param1': 80, 'param2': 25})
     return jsonify({'mensagem': 'ok'})
 
-@app.route('/api/status_ia', methods=['GET'])
-def status_ia():
-    return jsonify({
-        'treinada': True, 
-        'usando_ia': True, 
-        'gemini_disponivel': GEMINI_AVAILABLE,
-        'status': '🧠 Gemini AI ativo!' if GEMINI_AVAILABLE else '⚠️ Gemini não configurado',
-        'metodo': 'Gemini AI'
-    })
-
 @app.route('/api/alternar_ia', methods=['POST'])
 def alternar_ia():
     return jsonify({'usando_ia': True})
@@ -507,324 +854,28 @@ def treinar_ia():
 def calibrar():
     return jsonify({'sucesso': True, 'mensagem': 'Gemini AI não precisa de calibração!'})
 
-# ============================================
-# GERAR GABARITO - VERSÃO MELHORADA (COM BOLINHAS MAIORES E INSTRUÇÕES)
-# ============================================
-
-@app.route('/api/gerar_gabarito', methods=['POST'])
-@app.route('/api/gerar_gabarito', methods=['POST'])
-def gerar_gabarito():
+@app.route('/api/testar_gemini', methods=['POST'])
+def testar_gemini():
     try:
         dados = request.json
-        escola_id = dados.get('escola_id')
-        turma_id = dados.get('turma_id')
-        aluno_id = dados.get('aluno_id')
-        prova_id = dados.get('prova_id')
-        qtd_questoes = dados.get('quantidade_questoes', 20)
+        imagem = dados.get('imagem')
         
-        # Buscar dados do banco
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        if not imagem:
+            return jsonify({'erro': 'Imagem não fornecida'}), 400
         
-        cursor.execute("SELECT nome FROM escolas WHERE id = ?", (escola_id,))
-        escola = cursor.fetchone()
-        nome_escola = escola[0] if escola else "ESCOLA"
+        if ',' in imagem:
+            imagem = imagem.split(',')[1]
         
-        cursor.execute("SELECT nome FROM turmas WHERE id = ?", (turma_id,))
-        turma = cursor.fetchone()
-        nome_turma = turma[0] if turma else "TURMA"
+        imagem_bytes = base64.b64decode(imagem)
+        img = Image.open(io.BytesIO(imagem_bytes))
+        img.thumbnail((800, 800))
         
-        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = ?", (aluno_id,))
-        aluno = cursor.fetchone()
-        nome_aluno = aluno[0] if aluno else "ALUNO"
-        numero = str(aluno[1]) if aluno and aluno[1] else ""
+        prompt = "Descreva o que você vê nesta imagem. Liste as letras A, B, C, D, E se aparecerem."
+        response = model.generate_content([prompt, img])
         
-        cursor.execute("SELECT titulo FROM provas WHERE id = ?", (prova_id,))
-        prova = cursor.fetchone()
-        nome_prova = prova[0] if prova else "PROVA"
-        
-        conn.close()
-        
-        # Limitar para caber em uma página (máximo 30 questões por página)
-        if int(qtd_questoes) > 30:
-            qtd_questoes = 30
-            print("⚠️ Limitado a 30 questões para caber em uma página")
-        
-        # HTML otimizado para caber em UMA página
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Folha de Respostas - {nome_aluno}</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            background: #f0f2f5;
-            padding: 15px;
-        }}
-        .container {{
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            border-radius: 10px;
-        }}
-        .folha {{
-            padding: 20px;
-        }}
-        .header {{
-            text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 10px;
-        }}
-        .header h2 {{
-            color: #4CAF50;
-            font-size: 20px;
-        }}
-        .header p {{
-            color: #666;
-            font-size: 10px;
-        }}
-        .info-grid {{
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-            background: #f9f9f9;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 12px;
-        }}
-        .info-item {{
-            display: flex;
-            gap: 8px;
-        }}
-        .info-label {{
-            font-weight: bold;
-            color: #555;
-            min-width: 70px;
-        }}
-        .info-value {{
-            color: #333;
-            border-bottom: 1px solid #ccc;
-            min-width: 120px;
-        }}
-        .instrucoes {{
-            background: #FFF3CD;
-            padding: 8px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            font-size: 10px;
-            color: #856404;
-            text-align: center;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        th {{
-            background: #4CAF50;
-            color: white;
-            padding: 6px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-        }}
-        td {{
-            padding: 6px;
-            border-bottom: 1px solid #ddd;
-        }}
-        .questao-num {{
-            font-weight: bold;
-            width: 50px;
-            text-align: center;
-            font-size: 12px;
-        }}
-        .opcoes {{
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }}
-        .opcao {{
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            min-width: 45px;
-        }}
-        .circulo {{
-            display: inline-block;
-            width: 22px;
-            height: 22px;
-            border: 2px solid #333;
-            border-radius: 50%;
-            background: white;
-        }}
-        .opcao span:last-child {{
-            font-weight: bold;
-            font-size: 11px;
-        }}
-        .rodape {{
-            margin-top: 15px;
-            text-align: center;
-            font-size: 9px;
-            color: #999;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-        }}
-        .botoes {{
-            text-align: center;
-            margin: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }}
-        button {{
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            margin: 0 10px;
-        }}
-        button:hover {{
-            background: #45a049;
-        }}
-        button.secundario {{
-            background: #2196F3;
-        }}
-        button.secundario:hover {{
-            background: #0b7dda;
-        }}
-        @media print {{
-            body {{
-                background: white;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-            }}
-            .botoes {{
-                display: none;
-            }}
-            .info-value {{
-                border-bottom: none;
-            }}
-            .circulo {{
-                border: 1.5px solid #000;
-            }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="folha">
-            <div class="header">
-                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
-                <p>Sistema de Correção Inteligente</p>
-            </div>
-            
-            <div class="info-grid">
-                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
-                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
-                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
-                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
-                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
-                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
-            </div>
-            
-            <div class="instrucoes">
-                <strong>📌 INSTRUÇÕES:</strong> Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.
-            </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>Q</th>
-                        <th colspan="5">RESPOSTAS (A, B, C, D, E)</th>
-                    </tr>
-                </thead>
-                <tbody>"""
-        
-        for i in range(1, int(qtd_questoes) + 1):
-            html += f"""
-                    <tr>
-                        <td class="questao-num">{i}</td>
-                        <td colspan="5" style="text-align:center">
-                            <div class="opcoes">
-                                <label class="opcao">
-                                    <span class="circulo"></span>
-                                    <span>A</span>
-                                </label>
-                                <label class="opcao">
-                                    <span class="circulo"></span>
-                                    <span>B</span>
-                                </label>
-                                <label class="opcao">
-                                    <span class="circulo"></span>
-                                    <span>C</span>
-                                </label>
-                                <label class="opcao">
-                                    <span class="circulo"></span>
-                                    <span>D</span>
-                                </label>
-                                <label class="opcao">
-                                    <span class="circulo"></span>
-                                    <span>E</span>
-                                </label>
-                            </div>
-                        </td>
-                    </tr>"""
-        
-        html += f"""
-                </tbody>
-            </table>
-            
-            <div class="rodape">
-                <strong>AdaBee AI</strong> - Preencha completamente a bolinha | Use caneta PRETA
-            </div>
-        </div>
-        <div class="botoes">
-            <button onclick="window.print()">🖨️ IMPRIMIR</button>
-            <button class="secundario" onclick="baixarPDF()">💾 SALVAR PDF</button>
-        </div>
-    </div>
-    <script>
-        function baixarPDF() {{
-            window.print();
-        }}
-        
-        // Marcar apenas uma opção por linha
-        document.querySelectorAll('.opcoes').forEach(grupo => {{
-            const opcoes = grupo.querySelectorAll('.opcao');
-            opcoes.forEach(opcao => {{
-                opcao.addEventListener('click', function() {{
-                    opcoes.forEach(opt => {{
-                        opt.querySelector('.circulo').style.backgroundColor = 'white';
-                        opt.querySelector('.circulo').style.border = '2px solid #333';
-                    }});
-                    this.querySelector('.circulo').style.backgroundColor = 'black';
-                    this.querySelector('.circulo').style.border = '2px solid black';
-                }});
-            }});
-        }});
-    </script>
-</body>
-</html>"""
-        
-        return html, 200, {'Content-Type': 'text/html'}
-        
+        return jsonify({'resposta_bruta': response.text, 'sucesso': True})
     except Exception as e:
-        print(f"Erro: {e}")
-        return f"<h3>Erro: {str(e)}</h3>", 500
+        return jsonify({'erro': str(e), 'sucesso': False}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
