@@ -22,7 +22,6 @@ CORS(app)
 # CONFIGURAR BANCO DE DADOS - SUPABASE COM SSL
 # ============================================
 
-# URL FIXA DO SUPABASE COM sslmode=require
 SUPABASE_URL = 'postgresql://postgres:hdUiT-HuQG%3FpF3%25@db.hcflxpvwidmbnmtusyol.supabase.co:5432/postgres?sslmode=require'
 
 def get_db_connection():
@@ -371,7 +370,7 @@ def listar_turmas():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/turmas', methods(['POST'])
+@app.route('/api/turmas', methods=['POST'])
 def criar_turma():
     try:
         dados = request.json
