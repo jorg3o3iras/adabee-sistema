@@ -891,7 +891,7 @@ def dashboard():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/historico', methods(['GET'])
+@app.route('/api/historico', methods=['GET'])  # ✅ CORRETO
 def historico():
     try:
         conn = get_db_connection()
