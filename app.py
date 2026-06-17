@@ -156,33 +156,89 @@ class CorretorHibrido:
             if img is None:
                 return None, 0.0
             
+            # Converter para tons de cinza
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Aplicar CLAHE para melhorar contraste
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            
+            # Aplicar blur para reduzir ruído
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
-                                       param1=50, param2=30, minRadius=8, maxRadius=25)
+            
+            # Detectar círculos com parâmetros ajustados (MAIS SENSÍVEIS)
+            circles = cv2.HoughCircles(
+                blurred,
+                cv2.HOUGH_GRADIENT,
+                dp=1.2,          # Aumentado para melhor detecção
+                minDist=15,      # Reduzido para detectar círculos mais próximos
+                param1=40,       # Reduzido (mais sensível a bordas)
+                param2=25,       # Reduzido (detecta mais círculos)
+                minRadius=6,     # Menor raio
+                maxRadius=30     # Maior raio
+            )
+            
+            # Se não detectou, tentar com parâmetros alternativos
             if circles is None:
-                return None, 0.0
+                circles = cv2.HoughCircles(
+                    blurred,
+                    cv2.HOUGH_GRADIENT,
+                    dp=1,
+                    minDist=10,
+                    param1=30,
+                    param2=20,
+                    minRadius=5,
+                    maxRadius=35
+                )
+                
+                if circles is None:
+                    return None, 0.0
+            
             circles = np.uint16(np.around(circles[0]))
+            
+            # Analisar cada círculo
             respostas = []
+            
             for circle in circles:
                 x, y, r = circle
+                
+                # Extrair região do círculo
                 mask = np.zeros_like(gray)
                 cv2.circle(mask, (x, y), r, 255, -1)
                 roi = cv2.bitwise_and(gray, mask)
-                mean_intensity = np.mean(roi[roi > 0]) if np.any(roi > 0) else 255
-                is_filled = mean_intensity < 128
-                if is_filled:
-                    questao = int(y / 30) + 1
-                    opcao = int((x % 200) / 40)
-                    if opcao < num_opcoes:
-                        letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                        respostas.append((questao, letras[opcao]))
+                
+                # Calcular intensidade média
+                pixels = roi[roi > 0]
+                if len(pixels) > 0:
+                    mean_intensity = np.mean(pixels)
+                    # Normalizar (0 = preto, 255 = branco)
+                    preenchimento = 1 - (mean_intensity / 255)
+                    
+                    # Se mais de 35% preenchido, considerar marcado
+                    if preenchimento > 0.35:
+                        # Determinar questão baseado na posição Y
+                        questao = int((y - 20) / 35) + 1
+                        
+                        # Determinar opção baseado na posição X
+                        opcao = int((x % 200) / 40)
+                        
+                        if questao >= 1 and opcao < num_opcoes:
+                            letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                            respostas.append((questao, letras[opcao]))
+            
+            # Ordenar por questão
             respostas.sort(key=lambda x: x[0])
+            
+            # Extrair apenas as letras
             letras_respostas = [r[1] for r in respostas]
-            if len(letras_respostas) >= 3:
-                confianca = min(80, len(letras_respostas) * 2)
+            
+            # Verificar se tem respostas suficientes
+            if len(letras_respostas) >= 2:
+                confianca = min(85, len(letras_respostas) * 15)
                 return letras_respostas, confianca
+            
             return None, 0.0
+            
         except Exception as e:
             print(f"Erro no OpenCV: {e}")
             return None, 0.0
@@ -193,15 +249,25 @@ class CorretorHibrido:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
                 return None, 0.0
+            
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Melhorar contraste para OCR
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            
             custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ'
             text = pytesseract.image_to_string(binary, config=custom_config)
+            
             letras_validas = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[:num_opcoes]
             respostas = [c for c in text.upper() if c in letras_validas]
-            if len(respostas) >= 3:
-                confianca = min(75, len(respostas) * 2)
+            
+            if len(respostas) >= 2:
+                confianca = min(70, len(respostas) * 12)
                 return respostas, confianca
+            
             return None, 0.0
         except Exception as e:
             print(f"Erro no OCR: {e}")
@@ -209,16 +275,21 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
+        # Tentar OpenCV primeiro (melhor para bolinhas)
         respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
-        if respostas_cv:
+        if respostas_cv and len(respostas_cv) >= 3:
             return respostas_cv, conf_cv, 'OpenCV'
         
+        # Se OpenCV não pegou todas, tentar OCR
         respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem_base64, num_opcoes)
-        if respostas_ocr:
+        if respostas_ocr and len(respostas_ocr) >= 2:
             return respostas_ocr, conf_ocr, 'OCR'
         
+        # Se OpenCV pegou algumas mas não todas, usar o que pegou
+        if respostas_cv and len(respostas_cv) >= 1:
+            return respostas_cv, conf_cv, 'OpenCV (parcial)'
+        
         return None, 0.0, 'Nenhum método funcionou'
-
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
