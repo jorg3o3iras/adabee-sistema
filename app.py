@@ -1,100 +1,58 @@
-import os
-import sys
-import subprocess
-import base64
-import io
-import json
-import csv
-import re
-from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import cv2
 import numpy as np
+import base64
+import json
+import sqlite3
+from datetime import datetime
+import os
+import io
+import csv
+import re
 from PIL import Image
-import pytesseract
+import google.generativeai as genai
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import pytesseract
 import requests
-from collections import defaultdict
-import math
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# FLAG PARA CONTROLAR INICIALIZAÇÃO DO BANCO
-# ============================================
-_db_initialized = False
-
-# ============================================
-# CONFIGURAÇÕES PARA RENDER
-# ============================================
-
-IS_RENDER = os.environ.get('RENDER', False)
-
-if IS_RENDER:
-    print("🚀 Rodando no Render!")
-    os.environ['PATH'] = f"/usr/bin:{os.environ.get('PATH', '')}"
-    pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
-    try:
-        result = subprocess.run(['tesseract', '--version'], 
-                               capture_output=True, text=True)
-        print(f"✅ Tesseract versão: {result.stdout[:100]}")
-    except Exception as e:
-        print(f"⚠️ Erro ao verificar Tesseract: {e}")
-else:
-    print("💻 Rodando localmente!")
-    if sys.platform == 'win32':
-        try:
-            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-        except:
-            pass
-
-# ============================================
 # HUGGING FACE - DESATIVADO (ECONOMIA DE MEMÓRIA)
 # ============================================
-
 HF_AVAILABLE = False
-redacao_pipeline = None
 print("ℹ️ Hugging Face desativado - Usando OCR + Análise Avançada")
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE
+# CONFIGURAR BANCO DE DADOS - SUPABASE (VERSÃO QUE FUNCIONA)
 # ============================================
 
-SUPABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
+SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
 
 def get_db_connection():
+    """Conecta ao Supabase"""
     try:
         conn = psycopg2.connect(
             SUPABASE_URL,
             cursor_factory=RealDictCursor,
-            connect_timeout=5,
+            connect_timeout=15,
             keepalives=1,
-            keepalives_idle=10,
-            keepalives_interval=5,
-            keepalives_count=2
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3
         )
+        print("✅ Conectado ao Supabase!")
         return conn
     except Exception as e:
         print(f"❌ ERRO ao conectar: {e}")
-        return None
+        raise e
 
 def init_database():
-    global _db_initialized
-    
-    if _db_initialized:
-        print("ℹ️ Banco já inicializado, pulando...")
-        return
-    
     try:
-        print("📦 Inicializando banco de dados...")
         conn = get_db_connection()
-        if conn is None:
-            print("⚠️ Não foi possível conectar ao banco")
-            return
-        
         cursor = conn.cursor()
         
         cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
@@ -157,13 +115,20 @@ def init_database():
         
         conn.commit()
         conn.close()
-        _db_initialized = True
         print("✅ Banco de dados inicializado com sucesso!")
     except Exception as e:
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO
+# CONFIGURAR GEMINI AI (DESATIVADO - ECONÔMICO)
+# ============================================
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_AVAILABLE = False
+print("ℹ️ Gemini AI desativado - Usando sistema híbrido gratuito")
+
+# ============================================
+# CLASSE CORRETOR HÍBRIDO (SEM GEMINI E SEM HF)
 # ============================================
 
 class CorretorHibrido:
@@ -258,7 +223,7 @@ class CorretorHibrido:
         return None, 0.0, 'Nenhum método funcionou'
 
 # ============================================
-# CLASSE PARA CORREÇÃO DE REDAÇÃO (AVANÇADA)
+# CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
 
 class CorretorRedacaoHibrido:
@@ -285,31 +250,18 @@ class CorretorRedacaoHibrido:
     def analisar_redacao(texto):
         """Análise detalhada da redação sem IA pesada"""
         
-        # Métricas básicas
         palavras = texto.split()
         num_palavras = len(palavras)
-        num_caracteres = len(texto)
         num_frases = len(re.split(r'[.!?]+', texto)) - 1
         num_paragrafos = len(texto.split('\n\n')) if '\n\n' in texto else 1
         
-        # Palavras únicas (vocabulário)
         palavras_unicas = len(set([p.lower() for p in palavras]))
         proporcao_vocabulario = (palavras_unicas / num_palavras) * 100 if num_palavras > 0 else 0
         
-        # Tamanho médio das palavras
-        tamanho_medio = sum(len(p) for p in palavras) / num_palavras if num_palavras > 0 else 0
-        
-        # Conectores (coesão)
         conectores = ['e', 'mas', 'porém', 'contudo', 'entretanto', 'portanto', 'assim', 'logo', 'pois', 'porque', 'além', 'também', 'bem como', 'da mesma forma', 'outrossim', 'todavia', 'conquanto', 'embora', 'apesar', 'enquanto', 'quando', 'como', 'onde', 'cujo', 'que', 'qual', 'quem']
         num_conectores = sum(1 for p in palavras if p.lower() in conectores)
         
-        # Avaliação por categorias
-        nota_coerencia = 0
-        nota_estrutura = 0
-        nota_vocabulario = 0
-        nota_gramatica = 0
-        
-        # Critério 1: Tamanho do texto (coerência)
+        # Critérios
         if num_palavras >= 200:
             nota_coerencia = 8.0
         elif num_palavras >= 150:
@@ -321,7 +273,6 @@ class CorretorRedacaoHibrido:
         else:
             nota_coerencia = 0.0
         
-        # Critério 2: Estrutura (parágrafos e frases)
         if num_paragrafos >= 3 and num_frases >= 8:
             nota_estrutura = 8.0
         elif num_paragrafos >= 2 and num_frases >= 5:
@@ -331,7 +282,6 @@ class CorretorRedacaoHibrido:
         else:
             nota_estrutura = 2.0
         
-        # Critério 3: Vocabulário (riqueza)
         if proporcao_vocabulario >= 60:
             nota_vocabulario = 8.0
         elif proporcao_vocabulario >= 45:
@@ -341,7 +291,6 @@ class CorretorRedacaoHibrido:
         else:
             nota_vocabulario = 2.0
         
-        # Critério 4: Gramática e coesão (conectores)
         if num_conectores >= 10:
             nota_gramatica = 8.0
         elif num_conectores >= 6:
@@ -351,17 +300,13 @@ class CorretorRedacaoHibrido:
         else:
             nota_gramatica = 2.0
         
-        # Nota final (média ponderada)
         nota_final = (nota_coerencia * 0.3 + nota_estrutura * 0.25 + 
                      nota_vocabulario * 0.25 + nota_gramatica * 0.2)
-        
-        # Arredondar para 0.5
         nota_final = round(nota_final * 2) / 2
         
-        # Gerar feedback personalizado
+        # Feedback
         feedback_parts = []
         
-        # Feedback de tamanho
         if num_palavras >= 200:
             feedback_parts.append("✅ Ótimo desenvolvimento do tema. Texto bem extenso e detalhado.")
         elif num_palavras >= 150:
@@ -373,7 +318,6 @@ class CorretorRedacaoHibrido:
         else:
             feedback_parts.append("❌ Texto muito curto. É necessário desenvolver mais o conteúdo.")
         
-        # Feedback de estrutura
         if num_paragrafos >= 3:
             feedback_parts.append("✅ Boa organização em parágrafos. Estrutura clara.")
         elif num_paragrafos >= 2:
@@ -381,7 +325,6 @@ class CorretorRedacaoHibrido:
         else:
             feedback_parts.append("⚠️ Poucos parágrafos. Organize melhor suas ideias.")
         
-        # Feedback de vocabulário
         if proporcao_vocabulario >= 60:
             feedback_parts.append("✅ Vocabulário rico e variado. Ótimo uso de palavras.")
         elif proporcao_vocabulario >= 45:
@@ -389,7 +332,6 @@ class CorretorRedacaoHibrido:
         else:
             feedback_parts.append("📝 Vocabulário limitado. Busque usar palavras mais variadas.")
         
-        # Feedback de coesão
         if num_conectores >= 8:
             feedback_parts.append("✅ Excelente uso de conectores. Texto muito coeso.")
         elif num_conectores >= 5:
@@ -397,7 +339,6 @@ class CorretorRedacaoHibrido:
         else:
             feedback_parts.append("📝 Poucos conectores. Use mais palavras de ligação.")
         
-        # Dicas de melhoria
         dicas = []
         if num_palavras < 150:
             dicas.append("📌 Escreva mais sobre o tema, desenvolvendo cada argumento.")
@@ -409,10 +350,9 @@ class CorretorRedacaoHibrido:
             dicas.append("📌 Use mais conectores como 'portanto', 'contudo', 'além disso'.")
         
         if dicas:
-            feedback_parts.append("💡 **Dicas para melhorar:**")
+            feedback_parts.append("\n💡 **Dicas para melhorar:**")
             feedback_parts.extend(dicas)
         
-        # Conceito
         if nota_final >= 8:
             conceito = "Excelente"
         elif nota_final >= 6:
@@ -424,15 +364,12 @@ class CorretorRedacaoHibrido:
         
         feedback_completo = "\n\n".join(feedback_parts)
         
-        # Métricas detalhadas
         metricas = {
             'palavras': num_palavras,
-            'caracteres': num_caracteres,
             'frases': num_frases,
             'paragrafos': num_paragrafos,
             'palavras_unicas': palavras_unicas,
             'proporcao_vocabulario': round(proporcao_vocabulario, 1),
-            'tamanho_medio_palavras': round(tamanho_medio, 1),
             'conectores': num_conectores,
             'nota_coerencia': round(nota_coerencia, 1),
             'nota_estrutura': round(nota_estrutura, 1),
@@ -444,16 +381,12 @@ class CorretorRedacaoHibrido:
     
     @staticmethod
     def corrigir_redacao_hibrido(imagem_base64=None, texto=None):
-        """Corrige redação usando OCR + Análise Avançada"""
-        
-        # Extrair texto da imagem se necessário
         if not texto and imagem_base64:
             texto = CorretorRedacaoHibrido.extrair_texto_ocr(imagem_base64)
         
         if not texto:
             return None, 0.0, None, "Não foi possível extrair o texto", None
         
-        # Analisar redação
         nota, conceito, feedback, metricas = CorretorRedacaoHibrido.analisar_redacao(texto)
         
         return texto, nota, conceito, feedback, metricas, 'OCR + Análise Avançada'
@@ -470,16 +403,13 @@ def index():
 def teste():
     try:
         conn = get_db_connection()
-        if conn:
-            conn.close()
+        conn.close()
         return jsonify({
             'mensagem': 'Servidor funcionando!',
             'status': 'ok',
-            'ambiente': 'Render' if IS_RENDER else 'Local',
             'banco': 'PostgreSQL (Supabase)',
-            'huggingface': False,
-            'tesseract': True,
-            'metodos': ['OpenCV', 'OCR', 'Análise Avançada']
+            'gemini': GEMINI_AVAILABLE,
+            'huggingface': HF_AVAILABLE
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -492,9 +422,15 @@ def status_ia():
             'OCR': True,
             'Analise_Avancada': True
         },
-        'ambiente': 'Render' if IS_RENDER else 'Local',
         'metodo_ativo': 'Híbrido (sem Gemini)',
-        'status': '🧠 Sistema híbrido ativo - Com análise avançada de redação!'
+        'status': '🧠 Sistema híbrido ativo - Com análise avançada de redação!',
+        'banco': 'PostgreSQL (Supabase)',
+        'vantagens': [
+            '✅ 100% gratuito',
+            '✅ Sem limites de uso',
+            '✅ Correção de provas com OpenCV + OCR',
+            '✅ Correção de redações com análise avançada'
+        ]
     })
 
 # ============================================
@@ -505,8 +441,6 @@ def status_ia():
 def listar_escolas():
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify([])
         cursor = conn.cursor()
         cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
         escolas = [{'id': row['id'], 'nome': row['nome']} for row in cursor.fetchall()]
@@ -522,15 +456,15 @@ def criar_escola():
         nome = dados.get('nome')
         if not nome:
             return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
+        
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         cursor = conn.cursor()
         cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
         escola_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        return jsonify({'id': escola_id, 'mensagem': f'Escola "{nome}" cadastrada!'})
+        
+        return jsonify({'id': escola_id, 'mensagem': f'Escola "{nome}" cadastrada com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -538,13 +472,11 @@ def criar_escola():
 def deletar_escola(escola_id):
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
         conn.commit()
         conn.close()
-        return jsonify({'mensagem': 'Escola excluída!'})
+        return jsonify({'mensagem': 'Escola excluída com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -557,13 +489,13 @@ def listar_turmas():
     try:
         escola_id = request.args.get('escola_id')
         conn = get_db_connection()
-        if conn is None:
-            return jsonify([])
         cursor = conn.cursor()
+        
         if escola_id:
             cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
         else:
             cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
+        
         turmas = [{'id': row['id'], 'escola_id': row['escola_id'], 'nome': row['nome'], 'serie': row['serie']} for row in cursor.fetchall()]
         conn.close()
         return jsonify(turmas)
@@ -577,11 +509,11 @@ def criar_turma():
         escola_id = dados.get('escola_id')
         nome = dados.get('nome')
         serie = dados.get('serie', '1º Ano')
+        
         if not escola_id or not nome:
             return jsonify({'erro': 'Escola e nome da turma são obrigatórios'}), 400
+        
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
                        (escola_id, nome, serie))
@@ -592,17 +524,15 @@ def criar_turma():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/turmas/<int:turma_id>', methods=['DELETE'])
+@app.route('/api/turmas/<int:turma_id>', methods(['DELETE'])
 def deletar_turma(turma_id):
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
         conn.commit()
         conn.close()
-        return jsonify({'mensagem': 'Turma excluída!'})
+        return jsonify({'mensagem': 'Turma excluída com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -615,9 +545,8 @@ def listar_alunos():
     try:
         turma_id = request.args.get('turma_id')
         conn = get_db_connection()
-        if conn is None:
-            return jsonify([])
         cursor = conn.cursor()
+        
         if turma_id:
             cursor.execute("""
                 SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
@@ -633,6 +562,7 @@ def listar_alunos():
                 LEFT JOIN turmas t ON a.turma_id = t.id
                 ORDER BY a.numero_chamada
             """)
+        
         alunos = [{
             'id': row['id'], 
             'turma_id': row['turma_id'], 
@@ -641,6 +571,7 @@ def listar_alunos():
             'numero_chamada': row['numero_chamada'],
             'turma_nome': row['turma_nome']
         } for row in cursor.fetchall()]
+        
         conn.close()
         return jsonify(alunos)
     except Exception as e:
@@ -654,21 +585,22 @@ def criar_aluno():
         nome = dados.get('nome')
         matricula = dados.get('matricula', '')
         numero_chamada = dados.get('numero_chamada')
+        
         if not turma_id or not nome:
             return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
+        
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) 
             VALUES (%s, %s, %s, %s) 
             RETURNING id
         """, (turma_id, nome, matricula, numero_chamada))
+        
         aluno_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        return jsonify({'id': aluno_id, 'mensagem': 'Aluno cadastrado!'})
+        return jsonify({'id': aluno_id, 'mensagem': 'Aluno cadastrado com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -676,13 +608,11 @@ def criar_aluno():
 def deletar_aluno(aluno_id):
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
         conn.commit()
         conn.close()
-        return jsonify({'mensagem': 'Aluno excluído!'})
+        return jsonify({'mensagem': 'Aluno excluído com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -694,8 +624,6 @@ def deletar_aluno(aluno_id):
 def listar_provas():
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify([])
         cursor = conn.cursor()
         cursor.execute("""
             SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
@@ -705,6 +633,7 @@ def listar_provas():
             LEFT JOIN turmas t ON p.turma_id = t.id 
             ORDER BY p.data_prova DESC
         """)
+        
         provas = []
         for row in cursor.fetchall():
             provas.append({
@@ -746,8 +675,6 @@ def criar_prova():
             return jsonify({'erro': 'Gabarito é obrigatório'}), 400
         
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
@@ -761,7 +688,7 @@ def criar_prova():
         prova_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        return jsonify({'id': prova_id, 'mensagem': 'Prova criada!'})
+        return jsonify({'id': prova_id, 'mensagem': 'Prova criada com sucesso!'})
     except Exception as e:
         print(f"Erro ao criar prova: {e}")
         return jsonify({'erro': str(e)}), 500
@@ -770,19 +697,17 @@ def criar_prova():
 def deletar_prova(prova_id):
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
         cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
         conn.commit()
         conn.close()
-        return jsonify({'mensagem': 'Prova excluída!'})
+        return jsonify({'mensagem': 'Prova excluída com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS
+# CORREÇÃO DE PROVAS - HÍBRIDO
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -797,9 +722,6 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-            
         cursor = conn.cursor()
         cursor.execute("SELECT gabarito, tipo_questoes, titulo FROM provas WHERE id = %s", (prova_id,))
         prova = cursor.fetchone()
@@ -868,7 +790,7 @@ def corrigir_prova():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE REDAÇÃO (AVANÇADA)
+# CORREÇÃO DE REDAÇÃO - HÍBRIDO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -902,7 +824,6 @@ def corrigir_redacao():
                 conn.commit()
                 conn.close()
         
-        # Definir cor do conceito
         cores = {
             'Excelente': '#28a745',
             'Bom': '#17a2b8',
@@ -918,8 +839,7 @@ def corrigir_redacao():
             'metricas': metricas,
             'texto_original': texto_corrigido[:500] + ('...' if len(texto_corrigido) > 500 else ''),
             'texto_completo': texto_corrigido,
-            'metodo_ia': metodo,
-            'metodos_disponiveis': ['OCR + Análise Avançada']
+            'metodo_ia': metodo
         })
         
     except Exception as e:
@@ -927,30 +847,34 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# DEMAIS ROTAS
+# ROTAS DE DASHBOARD E RELATÓRIOS
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0, 'total_correcoes': 0, 'media_geral': 0})
         cursor = conn.cursor()
+        
         cursor.execute("SELECT COUNT(*) FROM escolas")
         row = cursor.fetchone()
         total_escolas = row['count'] if row else 0
+        
         cursor.execute("SELECT COUNT(*) FROM turmas")
         row = cursor.fetchone()
         total_turmas = row['count'] if row else 0
+        
         cursor.execute("SELECT COUNT(*) FROM alunos")
         row = cursor.fetchone()
         total_alunos = row['count'] if row else 0
+        
         cursor.execute("SELECT COUNT(*) FROM provas")
         row = cursor.fetchone()
         total_provas = row['count'] if row else 0
+        
         cursor.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes")
         row = cursor.fetchone()
+        
         conn.close()
         return jsonify({
             'total_escolas': total_escolas,
@@ -968,8 +892,6 @@ def dashboard():
 def historico():
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify([])
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
@@ -980,6 +902,7 @@ def historico():
             ORDER BY c.data_correcao DESC 
             LIMIT 50
         """)
+        
         historico = [{
             'id': row['id'], 
             'aluno_nome': row['aluno_nome'], 
@@ -989,10 +912,52 @@ def historico():
             'data_correcao': row['data_correcao'],
             'metodo_ia': row['metodo_ia'] or 'Desconhecido'
         } for row in cursor.fetchall()]
+        
         conn.close()
         return jsonify(historico)
     except Exception as e:
         return jsonify([])
+
+@app.route('/api/estatisticas', methods=['GET'])
+def estatisticas():
+    prova_id = request.args.get('prova_id')
+    if not prova_id:
+        return jsonify({'erro': 'Prova não informada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_corrigidas,
+                COALESCE(AVG(nota), 0) as media_nota,
+                COALESCE(MAX(nota), 0) as maior_nota,
+                COALESCE(MIN(nota), 0) as menor_nota,
+                metodo_ia,
+                COUNT(*) as qtd_por_metodo
+            FROM correcoes 
+            WHERE prova_id = %s
+            GROUP BY metodo_ia
+        """, (prova_id,))
+        
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        metodos = {}
+        for row in resultados:
+            metodos[row['metodo_ia'] or 'Desconhecido'] = row['qtd_por_metodo']
+        
+        return jsonify({
+            'geral': {
+                'total_corrigidas': sum(row['qtd_por_metodo'] for row in resultados),
+                'media_nota': round(np.mean([row['media_nota'] for row in resultados]) if resultados else 0, 1),
+                'maior_nota': round(max([row['maior_nota'] for row in resultados]) if resultados else 0, 1),
+                'menor_nota': round(min([row['menor_nota'] for row in resultados]) if resultados else 0, 1)
+            },
+            'metodos': metodos
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/exportar', methods=['GET'])
 def exportar_resultados():
@@ -1002,8 +967,6 @@ def exportar_resultados():
     
     try:
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
         cursor = conn.cursor()
         cursor.execute("""
             SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao, c.metodo_ia
@@ -1028,28 +991,58 @@ def exportar_resultados():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/testar_conexao', methods=['GET'])
+def testar_conexao():
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'conectado': True,
+            'banco': 'PostgreSQL (Supabase)',
+            'mensagem': '✅ Conectado ao Supabase!'
+        })
+    except Exception as e:
+        return jsonify({
+            'conectado': False,
+            'erro': str(e)
+        }), 500
+
+@app.route('/api/diagnosticar_banco', methods=['GET'])
+def diagnosticar_banco():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 as teste")
+        row = cursor.fetchone()
+        conn.close()
+        return jsonify({
+            'status': 'sucesso',
+            'banco': 'PostgreSQL (Supabase)',
+            'detalhes': {
+                'teste_query': 'OK',
+                'conexao': 'Estabelecida com sucesso'
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'erro',
+            'banco': 'Não conectado',
+            'detalhes': {'erro': str(e)}
+        }), 500
+
 @app.route('/api/ip_info', methods=['GET'])
 def ip_info():
     return jsonify({
         'ip': 'render.com', 
         'porta': 10000, 
-        'url': os.environ.get('RENDER_EXTERNAL_URL', 'https://adabee-sistema-3.onrender.com')
+        'url': 'https://adabee-sistema-3.onrender.com'
     })
 
 @app.route('/api/configuracoes', methods=['GET', 'POST'])
 def configuracoes():
     if request.method == 'GET':
-        return jsonify({
-            'metodo_principal': 'Híbrido',
-            'param1': 80,
-            'param2': 25,
-            'metodos': ['OpenCV', 'OCR', 'Análise Avançada']
-        })
+        return jsonify({'param1': 80, 'param2': 25})
     return jsonify({'mensagem': 'ok'})
-
-# ============================================
-# GERAR GABARITO
-# ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
@@ -1060,10 +1053,9 @@ def gerar_gabarito():
         aluno_id = dados.get('aluno_id')
         prova_id = dados.get('prova_id')
         qtd_questoes = dados.get('quantidade_questoes', 20)
+        tipo_questoes = dados.get('tipo_questoes', '4')
         
         conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         cursor = conn.cursor()
         
         cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
@@ -1083,7 +1075,8 @@ def gerar_gabarito():
         cursor.execute("SELECT titulo, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
         prova = cursor.fetchone()
         nome_prova = prova['titulo'] if prova else "PROVA"
-        tipo_questoes = prova['tipo_questoes'] if prova and prova['tipo_questoes'] else '4'
+        if prova and prova['tipo_questoes']:
+            tipo_questoes = prova['tipo_questoes']
         
         conn.close()
         
@@ -1101,7 +1094,7 @@ def gerar_gabarito():
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Folha de Respostas</title>
+    <title>Folha de Respostas - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
@@ -1203,17 +1196,24 @@ def gerar_gabarito():
 
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({'erro': 'Rota não encontrada'}), 404
+    return jsonify({
+        'erro': 'Rota não encontrada',
+        'mensagem': 'Verifique se a URL está correta'
+    }), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    return jsonify({'erro': 'Erro interno do servidor'}), 500
+    return jsonify({
+        'erro': 'Erro interno do servidor',
+        'mensagem': str(e)
+    }), 500
 
 # ============================================
 # INICIALIZAR E RODAR
 # ============================================
 
 if __name__ == '__main__':
+    # Inicializar banco
     try:
         init_database()
     except Exception as e:
@@ -1221,5 +1221,5 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
-    print("🧠 Sistema com Análise Avançada de Redação - SEM Gemini e SEM Hugging Face")
+    print("🧠 Sistema Híbrido - SEM Gemini - SEM Hugging Face")
     app.run(host='0.0.0.0', port=port, debug=False)
