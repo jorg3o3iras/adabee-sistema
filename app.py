@@ -177,15 +177,16 @@ class CorretorHibrido:
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
                             if circularity > 0.5:
+                                # Extrair a região da bolinha para analisar
                                 mask = np.zeros_like(gray)
                                 cv2.drawContours(mask, [cnt], -1, 255, -1)
                                 roi = cv2.bitwise_and(gray, gray, mask=mask)
                                 pixels = roi[roi > 0]
                                 
                                 if len(pixels) > 0:
-                                    # Quanto menor a intensidade, mais preta é a bolinha
                                     intensidade_media = np.mean(pixels)
-                                    # Quanto mais preta (intensidade baixa), mais preenchida
+                                    # Quanto menor a intensidade (mais preta), mais preenchida
+                                    # Valores: 0 = preto, 255 = branco
                                     preenchimento = 1 - (intensidade_media / 255)
                                     
                                     bolinhas.append({
@@ -220,7 +221,7 @@ class CorretorHibrido:
             linhas = []
             linha_atual = []
             y_anterior = bolinhas[0]['y']
-            tolerancia_y = 25  # Distância máxima para considerar mesma linha
+            tolerancia_y = 25
             
             for bolinha in bolinhas:
                 if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
@@ -236,10 +237,10 @@ class CorretorHibrido:
             respostas = []
             
             for idx, linha in enumerate(linhas, start=1):
-                if idx > 50:  # Limite de segurança
+                if idx > 50:
                     break
                 
-                # Ordenar bolinhas da linha por X (esquerda para direita)
+                # Ordenar bolinhas da linha por X (esquerda → direita)
                 linha.sort(key=lambda b: b['x'])
                 
                 if len(linha) == 0:
@@ -247,29 +248,34 @@ class CorretorHibrido:
                     continue
                 
                 # ============================================
-                # ENCONTRAR A BOLINHA MAIS PRETA (PREECHIDA)
+                # ANALISAR CADA BOLINHA DA LINHA
                 # ============================================
                 
-                # A bolinha com MAIOR preenchimento é a marcada
-                melhor_preenchimento = 0
-                melhor_posicao = -1
+                # Verificar se todas as bolinhas da linha estão presentes
+                # Se faltar alguma, preencher com '?'
                 
-                for pos, bolinha in enumerate(linha):
-                    if pos >= num_opcoes:
-                        break
-                    
-                    # Verificar se esta bolinha está preenchida
-                    if bolinha['preenchimento'] > melhor_preenchimento:
-                        melhor_preenchimento = bolinha['preenchimento']
-                        melhor_posicao = pos
+                # Analisar cada posição (A, B, C, D)
+                opcao_encontrada = '?'
+                melhor_preenchimento = 0
+                melhor_pos = -1
+                
+                for pos in range(num_opcoes):
+                    if pos < len(linha):
+                        bolinha = linha[pos]
+                        preenchimento = bolinha['preenchimento']
+                        
+                        # Se a bolinha for PRETA (preenchimento alto)
+                        if preenchimento > 0.30:  # Mais de 30% preenchida
+                            if preenchimento > melhor_preenchimento:
+                                melhor_preenchimento = preenchimento
+                                melhor_pos = pos
                 
                 # Se encontrou uma bolinha preenchida
-                if melhor_posicao >= 0 and melhor_preenchimento > 0.20:
+                if melhor_pos >= 0:
                     letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                    opcao = letras[melhor_posicao] if melhor_posicao < len(letras) else '?'
-                    respostas.append((idx, opcao))
-                else:
-                    respostas.append((idx, '?'))
+                    opcao_encontrada = letras[melhor_pos] if melhor_pos < len(letras) else '?'
+                
+                respostas.append((idx, opcao_encontrada))
             
             # 5. Verificar se encontrou respostas
             if len(respostas) == 0:
@@ -278,7 +284,6 @@ class CorretorHibrido:
             respostas.sort(key=lambda x: x[0])
             letras_respostas = [r[1] for r in respostas]
             
-            # Calcular confiança
             num_validas = sum(1 for r in letras_respostas if r != '?')
             confianca = min(85, (num_validas / len(letras_respostas)) * 100)
             
@@ -353,14 +358,14 @@ class CorretorHibrido:
                 melhor_preenchimento = 0
                 melhor_pos = -1
                 
-                for pos, bolinha in enumerate(linha):
-                    if pos >= num_opcoes:
-                        break
-                    if bolinha['preenchimento'] > melhor_preenchimento:
-                        melhor_preenchimento = bolinha['preenchimento']
-                        melhor_pos = pos
+                for pos in range(num_opcoes):
+                    if pos < len(linha):
+                        bolinha = linha[pos]
+                        if bolinha['preenchimento'] > melhor_preenchimento:
+                            melhor_preenchimento = bolinha['preenchimento']
+                            melhor_pos = pos
                 
-                if melhor_pos >= 0 and melhor_preenchimento > 0.20:
+                if melhor_pos >= 0 and melhor_preenchimento > 0.30:
                     letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                     respostas.append((idx, letras[melhor_pos]))
                 else:
@@ -383,15 +388,12 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        """
-        Tenta Contorno primeiro, depois OpenCV
-        """
-        # Método 1: Contorno (mais preciso)
+        # Tentar Contorno primeiro
         respostas, confianca, metodo = CorretorHibrido.detectar_respostas(imagem_base64, num_opcoes)
         if respostas and len(respostas) >= 3:
             return respostas, confianca, metodo
         
-        # Método 2: OpenCV
+        # Tentar OpenCV
         respostas, confianca, metodo = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
         if respostas and len(respostas) >= 3:
             return respostas, confianca, metodo
