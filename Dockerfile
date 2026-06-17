@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.11-slim
 
 # Instalar Tesseract e dependências
@@ -24,4 +23,4 @@ COPY . .
 EXPOSE 10000
 
 # Comando para rodar
-CMD ["python", "app.py"]
+CMD ["gunicorn", "app:app", "--timeout", "120", "--workers", "2"]
