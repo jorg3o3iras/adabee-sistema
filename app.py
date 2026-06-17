@@ -1,20 +1,21 @@
+import os
+import sys
+import subprocess
+import base64
+import io
+import json
+import csv
+import re
+from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import cv2
 import numpy as np
-import base64
-import json
-import sqlite3
-from datetime import datetime
-import os
-import io
-import csv
-import re
 from PIL import Image
-import google.generativeai as genai
+import pytesseract
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import pytesseract
+import google.generativeai as genai
 from transformers import pipeline
 import torch
 import requests
@@ -25,10 +26,38 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
+# CONFIGURAÇÕES PARA RENDER
+# ============================================
+
+IS_RENDER = os.environ.get('RENDER', False)
+
+if IS_RENDER:
+    print("🚀 Rodando no Render!")
+    # Configurar PATH do Tesseract
+    os.environ['PATH'] = f"/usr/bin:{os.environ.get('PATH', '')}"
+    pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+    
+    # Verificar Tesseract
+    try:
+        result = subprocess.run(['tesseract', '--version'], 
+                               capture_output=True, text=True)
+        print(f"✅ Tesseract versão: {result.stdout[:100]}")
+    except Exception as e:
+        print(f"⚠️ Erro ao verificar Tesseract: {e}")
+else:
+    print("💻 Rodando localmente!")
+    # Configuração para Windows
+    if sys.platform == 'win32':
+        try:
+            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        except:
+            pass
+
+# ============================================
 # CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
-SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
+SUPABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
 
 def get_db_connection():
     """Conecta ao Supabase"""
@@ -144,7 +173,10 @@ HF_MODEL_AVAILABLE = False
 redacao_pipeline = None
 
 try:
-    # Tenta carregar modelo BERT em português para redações
+    # Desativar GPU para economizar memória no Render
+    torch.cuda.is_available = lambda: False
+    
+    # Carregar modelo BERT em português
     redacao_pipeline = pipeline(
         "text-classification",
         model="neuralmind/bert-base-portuguese-cased",
@@ -157,7 +189,7 @@ except Exception as e:
     HF_MODEL_AVAILABLE = False
 
 # ============================================
-# NOVA CLASSE DE CORREÇÃO HÍBRIDA
+# CLASSE CORRETOR HÍBRIDO
 # ============================================
 
 class CorretorHibrido:
@@ -223,7 +255,6 @@ class CorretorHibrido:
             
             # Analisar cada círculo
             respostas = []
-            circulos_por_questao = defaultdict(list)
             
             for circle in circles:
                 x, y, r = circle
@@ -240,9 +271,8 @@ class CorretorHibrido:
                 
                 if is_filled:
                     # Organizar por posição (questão)
-                    # Usar agrupamento por linha
-                    questao = int(y / 30) + 1  # Aproximação
-                    opcao = int((x % 200) / 40)  # Aproximação
+                    questao = int(y / 30) + 1
+                    opcao = int((x % 200) / 40)
                     
                     if opcao < num_opcoes:
                         letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -514,9 +544,11 @@ def teste():
         return jsonify({
             'mensagem': 'Servidor funcionando!',
             'status': 'ok',
+            'ambiente': 'Render' if IS_RENDER else 'Local',
             'banco': 'PostgreSQL (Supabase)',
             'gemini': GEMINI_AVAILABLE,
             'huggingface': HF_MODEL_AVAILABLE,
+            'tesseract': True,
             'metodos': ['OpenCV', 'OCR', 'Gemini', 'Hugging Face']
         })
     except Exception as e:
@@ -698,7 +730,7 @@ def deletar_aluno(aluno_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE PROVAS - CORRIGIDAS
+# ROTAS DE PROVAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -1044,6 +1076,7 @@ def status_ia():
             'Gemini': GEMINI_AVAILABLE,
             'HuggingFace': HF_MODEL_AVAILABLE
         },
+        'ambiente': 'Render' if IS_RENDER else 'Local',
         'metodo_ativo': 'Híbrido (múltiplas estratégias)',
         'status': '🧠 Sistema híbrido ativo!',
         'banco': 'PostgreSQL (Supabase)',
@@ -1092,7 +1125,7 @@ def ip_info():
     return jsonify({
         'ip': 'render.com', 
         'porta': 10000, 
-        'url': 'https://adabee-sistema-3.onrender.com'
+        'url': os.environ.get('RENDER_EXTERNAL_URL', 'https://adabee-sistema-3.onrender.com')
     })
 
 @app.route('/api/configuracoes', methods=['GET', 'POST'])
@@ -1246,12 +1279,166 @@ def internal_error(e):
         'mensagem': str(e)
     }), 500
 
+# ============================================
+# INICIALIZAR E RODAR
+# ============================================
+
+# Inicializar banco
+try:
+    init_database()
+except Exception as e:
+    print(f"❌ Erro na inicialização: {e}")
+
 if __name__ == '__main__':
-    # Inicializar banco
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
+
+# ============================================
+# ROTA PARA GERAR GABARITO (ADICIONADA)
+# ============================================
+
+@app.route('/api/gerar_gabarito', methods=['POST'])
+def gerar_gabarito():
     try:
-        init_database()
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
+        qtd_questoes = dados.get('quantidade_questoes', 20)
+        tipo_questoes = dados.get('tipo_questoes', '4')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
+        escola = cursor.fetchone()
+        nome_escola = escola['nome'] if escola else "ESCOLA"
+        
+        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
+        turma = cursor.fetchone()
+        nome_turma = turma['nome'] if turma else "TURMA"
+        serie = turma['serie'] if turma else "1º Ano"
+        
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
+        aluno = cursor.fetchone()
+        nome_aluno = aluno['nome'] if aluno else "ALUNO"
+        numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
+        
+        cursor.execute("SELECT titulo, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
+        prova = cursor.fetchone()
+        nome_prova = prova['titulo'] if prova else "PROVA"
+        if prova and prova['tipo_questoes']:
+            tipo_questoes = prova['tipo_questoes']
+        
+        conn.close()
+        
+        if tipo_questoes == '3':
+            opcoes = ['A', 'B', 'C']
+            titulo_opcoes = "3 OPÇÕES (A, B, C)"
+        else:
+            opcoes = ['A', 'B', 'C', 'D']
+            titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
+        
+        if int(qtd_questoes) > 30:
+            qtd_questoes = 30
+        
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Folha de Respostas - {nome_aluno}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
+        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; }}
+        .folha {{ padding: 20px; }}
+        .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
+        .header h2 {{ color: #4CAF50; font-size: 20px; }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; }}
+        .info-item {{ display: flex; gap: 8px; }}
+        .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
+        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
+        .instrucoes {{ background: #FFF3CD; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 10px; text-align: center; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #4CAF50; color: white; padding: 6px; text-align: center; font-size: 12px; }}
+        td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
+        .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
+        .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
+        .opcao {{ display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 45px; }}
+        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; background: white; cursor: pointer; }}
+        .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
+        .rodape {{ margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
+        .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
+        button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
+        button:hover {{ background: #45a049; }}
+        button.secundario {{ background: #2196F3; }}
+        @media print {{ body {{ background: white; padding: 0; margin: 0; }} .container {{ box-shadow: none; }} .botoes {{ display: none; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="folha">
+            <div class="header">
+                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+                <p>{titulo_opcoes} - {serie}</p>
+            </div>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
+            </div>
+            <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.</div>
+            <table>
+                <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
+                <tbody>"""
+        
+        for i in range(1, int(qtd_questoes) + 1):
+            html += f"""
+                    <tr>
+                        <td class="questao-num">{i}</td>
+                        <td colspan="{len(opcoes)}" style="text-align:center">
+                            <div class="opcoes">"""
+            for opcao in opcoes:
+                html += f"""
+                                <label class="opcao">
+                                    <span class="circulo" onclick="marcar(this)"></span>
+                                    <span>{opcao}</span>
+                                </label>"""
+            html += """
+                            </div>
+                        </td>
+                    </tr>"""
+        
+        html += f"""
+                </tbody>
+            </table>
+            <div class="rodape">AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA</div>
+        </div>
+        <div class="botoes">
+            <button onclick="window.print()">🖨️ IMPRIMIR</button>
+            <button class="secundario" onclick="window.print()">💾 SALVAR PDF</button>
+        </div>
+    </div>
+    <script>
+        function marcar(el) {{
+            const grupo = el.closest('.opcoes');
+            grupo.querySelectorAll('.circulo').forEach(c => {{
+                c.style.backgroundColor = 'white';
+                c.style.border = '2px solid #333';
+            }});
+            el.style.backgroundColor = 'black';
+            el.style.border = '2px solid black';
+        }}
+    </script>
+</body>
+</html>"""
+        
+        return html, 200, {'Content-Type': 'text/html'}
+        
     except Exception as e:
-        print(f"❌ Erro na inicialização: {e}")
-    
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+        print(f"Erro ao gerar gabarito: {e}")
+        return jsonify({'erro': str(e)}), 500
