@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>AdaBee AI - Corretor Inteligente com IA Gemini</title>
+    <title>AdaBee AI - Corretor Inteligente</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -152,8 +152,14 @@
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-info { background: #e7f3ff; color: #0066cc; border: 1px solid #b8e0ff; }
         .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .alert-gratis { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .acoes-cell { display: flex; gap: 5px; flex-wrap: wrap; }
         .btn-pequeno { padding: 4px 10px; font-size: 11px; border-radius: 5px; }
+        .metodo-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+        .metodo-opencv { background: #28a745; color: white; }
+        .metodo-ocr { background: #17a2b8; color: white; }
+        .metodo-huggingface { background: #6f42c1; color: white; }
+        .metodo-basico { background: #6c757d; color: white; }
         @media (max-width: 768px) {
             body { padding: 10px; }
             .card { padding: 15px; }
@@ -169,7 +175,7 @@
         <div class="header">
             <div class="logo">🐝🧠</div>
             <h1>AdaBee AI - Corretor Inteligente</h1>
-            <div class="subtitle">Com Inteligência Artificial Gemini para máxima precisão</div>
+            <div class="subtitle">Sistema 100% gratuito - OpenCV + OCR + Hugging Face</div>
         </div>
 
         <div class="dashboard-grid" id="dashboard">
@@ -184,7 +190,6 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="mostrarAba('correcao')">📸 Corrigir Prova</button>
             <button class="tab-btn" onclick="mostrarAba('redacao')">✍️ Corrigir Redação</button>
-            <button class="tab-btn" onclick="mostrarAba('treinar')">🧠 Treinar IA</button>
             <button class="tab-btn" onclick="mostrarAba('provas')">📝 Provas</button>
             <button class="tab-btn" onclick="mostrarAba('alunos')">👨‍🎓 Alunos</button>
             <button class="tab-btn" onclick="mostrarAba('relatorios')">📊 Relatórios</button>
@@ -195,8 +200,8 @@
         <!-- Aba: Correção de Provas -->
         <div id="abaCorrecao">
             <div class="card">
-                <h2>📸 Correção de Prova com IA Gemini</h2>
-                <div id="statusIA" class="alert alert-info">🔍 Verificando status da IA...</div>
+                <h2>📸 Correção de Prova - Sistema Híbrido</h2>
+                <div id="statusIA" class="alert alert-info">🔍 Verificando status do sistema...</div>
                 <div class="form-group">
                     <label>📝 Selecione a prova</label>
                     <select id="selectProva" onchange="carregarDadosProva()"><option value="">Carregando provas...</option></select>
@@ -223,9 +228,9 @@
                     <img id="preview" class="preview" style="display:none;">
                 </div>
                 <div id="statusReconhecimento" class="status-reconhecimento" style="display:none;">
-                    <div class="loading"></div> Processando imagem com IA Gemini...
+                    <div class="loading"></div> Processando imagem com IA...
                 </div>
-                <button class="btn-ai" onclick="corrigirProva()" style="width:100%">🧠 CORRIGIR COM GEMINI AI</button>
+                <button class="btn-ai" onclick="corrigirProva()" style="width:100%">🧠 CORRIGIR PROVA</button>
                 <div id="resultadoCorrecao"></div>
             </div>
         </div>
@@ -233,8 +238,8 @@
         <!-- Aba: Correção de Redação -->
         <div id="abaRedacao" style="display:none;">
             <div class="card">
-                <h2>✍️ Correção de Redação com IA Gemini</h2>
-                <div id="statusIA_redacao" class="alert alert-info">🔍 Verificando status da IA...</div>
+                <h2>✍️ Correção de Redação - Sistema Híbrido</h2>
+                <div id="statusIA_redacao" class="alert alert-info">🔍 Verificando status do sistema...</div>
                 <div class="form-group">
                     <label>📝 Selecione a prova (opcional)</label>
                     <select id="selectProvaRedacao"><option value="">Nenhuma (correção avulsa)</option></select>
@@ -265,41 +270,10 @@
                     <textarea id="textoRedacao" rows="5" placeholder="Digite ou cole o texto aqui..." style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:10px; font-size:14px;"></textarea>
                 </div>
                 <div id="statusRedacao" class="status-reconhecimento" style="display:none;">
-                    <div class="loading"></div> Analisando redação com Gemini AI...
+                    <div class="loading"></div> Analisando redação...
                 </div>
-                <button class="btn-redacao" onclick="corrigirRedacao()" style="width:100%">✍️ CORRIGIR REDAÇÃO COM GEMINI AI</button>
+                <button class="btn-redacao" onclick="corrigirRedacao()" style="width:100%">✍️ CORRIGIR REDAÇÃO</button>
                 <div id="resultadoRedacao"></div>
-            </div>
-        </div>
-
-        <!-- Aba: Treinar IA -->
-        <div id="abaTreinar" style="display:none;">
-            <div class="card">
-                <h2>🧠 Treinar IA Gemini</h2>
-                <p style="margin-bottom:15px;">Ensine a IA Gemini a reconhecer bolinhas marcadas e não marcadas.</p>
-                <div class="form-group">
-                    <label>✅ Bolinhas MARCADAS</label>
-                    <input type="file" id="treinarMarcadas" accept="image/*" multiple>
-                    <div id="previewMarcadas" class="preview-grid"></div>
-                </div>
-                <div class="form-group">
-                    <label>❌ Bolinhas NÃO MARCADAS</label>
-                    <input type="file" id="treinarNaoMarcadas" accept="image/*" multiple>
-                    <div id="previewNaoMarcadas" class="preview-grid"></div>
-                </div>
-                <button class="btn-ai" onclick="treinarIA()" style="width:100%">🧠 TREINAR GEMINI AI</button>
-                <div id="treinamentoResultado"></div>
-            </div>
-            <div class="card">
-                <h2>⚙️ Configurações da IA</h2>
-                <div class="form-group">
-                    <label>Usar IA Gemini?</label>
-                    <select id="usarIA" onchange="alternarIA()">
-                        <option value="true">Sim (Recomendado)</option>
-                        <option value="false">Não (Modo básico)</option>
-                    </select>
-                </div>
-                <button class="btn-info" onclick="verificarStatusIA()">🔍 Verificar Status</button>
             </div>
         </div>
 
@@ -416,8 +390,8 @@
                 <h2>📜 Histórico de Correções</h2>
                 <div class="table-responsive">
                     <table id="tabelaHistorico">
-                        <thead><tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Data</th></tr></thead>
-                        <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+                        <thead><tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Método</th><th>Data</th></tr></thead>
+                        <tbody><tr><td colspan="6">Carregando...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -483,17 +457,23 @@
             <div class="card">
                 <h2>⚙️ Ajustes</h2>
                 <div class="form-group">
-                    <label>Param1</label>
+                    <label>Confiança Mínima</label>
                     <input type="range" id="param1" min="30" max="150" value="80" onchange="atualizarValor('param1')">
                     <span id="param1_val">80</span>
                 </div>
                 <div class="form-group">
-                    <label>Param2</label>
+                    <label>Tolerância</label>
                     <input type="range" id="param2" min="10" max="50" value="25" onchange="atualizarValor('param2')">
                     <span id="param2_val">25</span>
                 </div>
                 <button class="btn-success" onclick="salvarConfiguracoes()">💾 Salvar Configurações</button>
                 <button class="btn-secondary" onclick="restaurarPadrao()" style="margin-left:10px;">🔄 Restaurar Padrão</button>
+            </div>
+            <div class="card">
+                <h2>🧠 Status do Sistema</h2>
+                <div id="statusSistema">
+                    <div class="loading"></div> Carregando...
+                </div>
             </div>
         </div>
 
@@ -543,7 +523,7 @@
         // INICIALIZAÇÃO
         // ============================================
         window.onload = function() {
-            console.log("🚀 AdaBee AI - Sistema com IA Gemini");
+            console.log("🚀 AdaBee AI - Sistema Híbrido (sem Gemini)");
             carregarDashboard();
             carregarEscolas();
             carregarProvas();
@@ -563,7 +543,7 @@
         };
 
         function mostrarAba(aba) {
-            const abas = ['Correcao', 'Redacao', 'Treinar', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
+            const abas = ['Correcao', 'Redacao', 'Provas', 'Alunos', 'Relatorios', 'Configuracoes', 'Gabarito'];
             abas.forEach(a => {
                 let el = document.getElementById('aba' + a);
                 if (el) el.style.display = 'none';
@@ -580,48 +560,51 @@
         }
 
         // ============================================
-        // IA E TREINAMENTO
+        // STATUS DO SISTEMA
         // ============================================
         async function verificarStatusIA() {
             try {
                 const response = await fetch(`${API_URL}/api/status_ia`);
                 const dados = await response.json();
+                
                 const statusDiv = document.getElementById('statusIA');
                 const statusRedacao = document.getElementById('statusIA_redacao');
-                const msg = dados.gemini_disponivel ? 
-                    '🧠 <strong>IA Gemini ativa!</strong> Correções com alta precisão. ✅' :
-                    '⚠️ <strong>IA Gemini não configurada</strong> - Configure a chave API.';
-                if (statusDiv) { statusDiv.innerHTML = msg; statusDiv.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning'; }
-                if (statusRedacao) { statusRedacao.innerHTML = msg; statusRedacao.className = dados.gemini_disponivel ? 'alert alert-success' : 'alert alert-warning'; }
-                if (document.getElementById('usarIA')) {
-                    document.getElementById('usarIA').value = dados.usando_ia ? 'true' : 'false';
+                const statusSistema = document.getElementById('statusSistema');
+                
+                let metodosHtml = '';
+                if (dados.metodos_disponiveis) {
+                    if (dados.metodos_disponiveis.OpenCV) metodosHtml += '<span class="metodo-badge metodo-opencv">OpenCV</span> ';
+                    if (dados.metodos_disponiveis.OCR) metodosHtml += '<span class="metodo-badge metodo-ocr">OCR</span> ';
+                    if (dados.metodos_disponiveis.HuggingFace) metodosHtml += '<span class="metodo-badge metodo-huggingface">Hugging Face</span> ';
+                }
+                
+                const msg = `
+                    <strong>✅ Sistema Híbrido Ativo!</strong><br>
+                    Métodos disponíveis: ${metodosHtml || 'Nenhum'}<br>
+                    <small>💰 100% gratuito - Sem limites de uso</small>
+                `;
+                
+                if (statusDiv) { statusDiv.innerHTML = msg; statusDiv.className = 'alert alert-gratis'; }
+                if (statusRedacao) { statusRedacao.innerHTML = msg; statusRedacao.className = 'alert alert-gratis'; }
+                if (statusSistema) {
+                    statusSistema.innerHTML = `
+                        <div class="alert alert-gratis">
+                            <strong>🧠 Status do Sistema</strong><br>
+                            ${msg}
+                            <hr>
+                            <strong>Ambiente:</strong> ${dados.ambiente || 'Local'}<br>
+                            <strong>Banco de Dados:</strong> ${dados.banco || 'PostgreSQL'}<br>
+                            <strong>Status:</strong> ${dados.status || 'Ativo'}
+                        </div>
+                    `;
                 }
             } catch (erro) {
-                console.error('Erro ao verificar IA:', erro);
+                console.error('Erro ao verificar status:', erro);
             }
-        }
-
-        async function alternarIA() {
-            const usar = document.getElementById('usarIA').value === 'true';
-            try {
-                await fetch(`${API_URL}/api/alternar_ia`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usar_ia: usar })
-                });
-                alert(usar ? '✅ IA Gemini ativada!' : '⚠️ IA desativada.');
-                verificarStatusIA();
-            } catch (erro) {
-                alert('Erro ao alternar IA: ' + erro.message);
-            }
-        }
-
-        async function treinarIA() {
-            alert('🧠 Gemini AI já está treinado e pronto para uso!');
         }
 
         // ============================================
-        // CORREÇÃO DE REDAÇÃO
+        // CORREÇÃO DE REDAÇÃO (SEM GEMINI)
         // ============================================
         async function carregarProvasRedacao() {
             try {
@@ -713,7 +696,7 @@
             
             const btn = event.target;
             const originalText = btn.innerText;
-            btn.innerText = '⏳ Analisando redação com Gemini AI...';
+            btn.innerText = '⏳ Analisando redação...';
             btn.disabled = true;
             document.getElementById('statusRedacao').style.display = 'block';
             document.getElementById('resultadoRedacao').innerHTML = '';
@@ -742,13 +725,18 @@
                 if (dados.erro) {
                     document.getElementById('resultadoRedacao').innerHTML = `<div class="resultado resultado-erro">❌ ${dados.erro}</div>`;
                 } else {
-                    let conceito = dados.conceito || 'Não avaliado';
+                    let conceito = dados.conceito || 'Avaliado';
                     let nota = dados.nota || 0;
                     let corConceito = '#6c757d';
-                    if (conceito.toLowerCase().includes('excelente')) corConceito = '#28a745';
-                    else if (conceito.toLowerCase().includes('bom')) corConceito = '#17a2b8';
-                    else if (conceito.toLowerCase().includes('regular')) corConceito = '#ffc107';
-                    else if (conceito.toLowerCase().includes('insuficiente')) corConceito = '#dc3545';
+                    if (nota >= 8) corConceito = '#28a745';
+                    else if (nota >= 6) corConceito = '#17a2b8';
+                    else if (nota >= 4) corConceito = '#ffc107';
+                    else corConceito = '#dc3545';
+                    
+                    let metodoBadge = '';
+                    if (dados.metodo_ia === 'Hugging Face') metodoBadge = '<span class="metodo-badge metodo-huggingface">Hugging Face</span>';
+                    else if (dados.metodo_ia === 'Básico') metodoBadge = '<span class="metodo-badge metodo-basico">Básico</span>';
+                    else metodoBadge = `<span class="metodo-badge metodo-basico">${dados.metodo_ia || 'Sistema'}</span>`;
                     
                     document.getElementById('resultadoRedacao').innerHTML = `
                         <div class="resultado" style="background: #f8f9fa;">
@@ -761,11 +749,12 @@
                                 <div style="text-align:center; padding:8px 20px; border-radius:20px; background:${corConceito}; color:white; font-weight:bold; font-size:18px;">
                                     ${conceito}
                                 </div>
+                                <div>${metodoBadge}</div>
                             </div>
                             <hr>
                             <div style="white-space:pre-wrap; font-size:14px; line-height:1.8;">${dados.feedback}</div>
                             <hr>
-                            <small>🔬 Correção feita com <strong>Gemini AI</strong> - ${dados.metodo || 'Imagem'}</small>
+                            <small>🔬 Correção feita com <strong>Sistema Híbrido</strong> - ${dados.metodo_ia || 'Múltiplos métodos'}</small>
                         </div>
                     `;
                     carregarDashboard();
@@ -1107,7 +1096,7 @@
         }
 
         // ============================================
-        // PROVAS - CORRIGIDO
+        // PROVAS
         // ============================================
         async function carregarProvas() {
             try {
@@ -1234,7 +1223,7 @@
         }
 
         // ============================================
-        // SALVAR PROVA - CORRIGIDO
+        // SALVAR PROVA
         // ============================================
         async function salvarProva() {
             const turmaId = document.getElementById('turmaProva').value;
@@ -1246,7 +1235,6 @@
             const tipoQuestoes = document.getElementById('tipoProva').value;
             const gabarito = obterGabarito();
             
-            // Validações
             if (!turmaId) { alert('❌ Selecione uma turma!'); return; }
             if (!titulo) { alert('❌ Digite o título da prova!'); return; }
             if (!dataProva) { alert('❌ Selecione a data da prova!'); return; }
@@ -1277,14 +1265,12 @@
                 
                 if (result.id) { 
                     alert('✅ Prova salva com sucesso!'); 
-                    // Recarregar listas
                     carregarTodasProvas();
                     carregarProvas();
                     carregarProvasRelatorio();
                     carregarProvasRedacao();
                     carregarDashboard();
                     
-                    // Limpar formulário
                     document.getElementById('tituloProva').value = '';
                     document.getElementById('descricaoProva').value = '';
                     document.getElementById('dataProva').value = '';
@@ -1300,7 +1286,7 @@
         }
 
         // ============================================
-        // CORREÇÃO COM IA
+        // CORREÇÃO COM IA (SEM GEMINI)
         // ============================================
         function abrirCamera() {
             if (stream) stream.getTracks().forEach(t => t.stop());
@@ -1348,23 +1334,32 @@
             if (!fotoBase64) { alert('❌ Primeiro tire uma foto!'); return; }
             if (!provaId) { alert('❌ Selecione a prova!'); return; }
             if (!alunoId) { alert('❌ Selecione o aluno!'); return; }
+            
             const btn = event.target;
             const originalText = btn.innerText;
             btn.innerText = '⏳ Processando...';
             btn.disabled = true;
             document.getElementById('statusReconhecimento').style.display = 'block';
             document.getElementById('resultadoCorrecao').innerHTML = '';
+            
             try {
                 const response = await fetch(`${API_URL}/api/corrigir`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imagem: fotoBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) })
                 });
                 const dados = await response.json();
+                
                 if (dados.erro) {
                     document.getElementById('resultadoCorrecao').innerHTML = `
                         <div class="resultado resultado-erro"><strong>❌ Erro:</strong><br>${dados.erro}</div>`;
                 } else {
                     const aprovado = dados.nota >= 6;
+                    let metodoBadge = '';
+                    if (dados.metodo_ia === 'OpenCV') metodoBadge = '<span class="metodo-badge metodo-opencv">OpenCV</span>';
+                    else if (dados.metodo_ia === 'OCR') metodoBadge = '<span class="metodo-badge metodo-ocr">OCR</span>';
+                    else if (dados.metodo_ia === 'Gemini') metodoBadge = '<span class="metodo-badge metodo-huggingface">Gemini</span>';
+                    else metodoBadge = `<span class="metodo-badge metodo-basico">${dados.metodo_ia || 'Híbrido'}</span>`;
+                    
                     let html = '<div class="resultado">';
                     html += `<h3>📊 RESULTADO</h3>`;
                     html += `<p><strong>👤 Aluno:</strong> ${dados.aluno}</p>`;
@@ -1373,9 +1368,10 @@
                     html += `<p><strong>📊 Percentual:</strong> ${dados.percentual}%</p>`;
                     html += `<div class="progress-bar"><div class="progress-fill" style="width: ${dados.percentual}%;"></div></div>`;
                     html += `<p><strong>🎓 Nota:</strong> <span style="font-size:36px; font-weight:bold;">${dados.nota}</span></p>`;
-                    if (dados.confianca_media) {
-                        html += `<div class="confidence-bar"><div class="confidence-fill" style="width: ${dados.confianca_media}%;"></div></div>`;
-                        html += `<p><strong>🧠 Confiança:</strong> ${dados.confianca_media}%</p>`;
+                    html += `<p><strong>🧠 Método:</strong> ${metodoBadge}</p>`;
+                    if (dados.confianca) {
+                        html += `<div class="confidence-bar"><div class="confidence-fill" style="width: ${dados.confianca}%;"></div></div>`;
+                        html += `<p><strong>🔬 Confiança:</strong> ${dados.confianca}%</p>`;
                     }
                     html += `<p><span class="${aprovado ? 'badge-aprovado' : 'badge-reprovado'}">${aprovado ? '✅ APROVADO' : '❌ REPROVADO'}</span></p>`;
                     html += `<hr><h4>📝 Detalhamento:</h4>`;
@@ -1384,7 +1380,7 @@
                             html += `<p>Questão ${q.questao}: Resposta: <strong>${q.resposta || '?'}</strong> | Gabarito: <strong>${q.gabarito}</strong> ${q.correta ? '✅' : '❌'}</p>`;
                         });
                     }
-                    html += `<hr><small>🔬 ${dados.tipo_questoes == 3 ? '3 opções (A, B, C)' : '4 opções (A, B, C, D)'} - Gemini AI</small>`;
+                    html += `<hr><small>🔬 ${dados.tipo_questoes == 3 ? '3 opções (A, B, C)' : '4 opções (A, B, C, D)'} - Sistema Híbrido</small>`;
                     html += '</div>';
                     document.getElementById('resultadoCorrecao').innerHTML = html;
                     carregarDashboard(); carregarHistorico();
@@ -1414,6 +1410,12 @@
                     html += `<p>🏆 Maior nota: <strong>${parseFloat(dados.geral.maior_nota || 0).toFixed(1)}</strong></p>`;
                     html += `<p>📉 Menor nota: <strong>${parseFloat(dados.geral.menor_nota || 0).toFixed(1)}</strong></p>`;
                 }
+                if (dados.metodos) {
+                    html += `<hr><h5>📊 Métodos utilizados:</h5>`;
+                    for (const [metodo, qtd] of Object.entries(dados.metodos)) {
+                        html += `<p>${metodo}: <strong>${qtd}</strong> correções</p>`;
+                    }
+                }
                 html += '</div>';
                 document.getElementById('estatisticasContainer').innerHTML = html;
             } catch (erro) { console.error('Erro:', erro); }
@@ -1426,17 +1428,25 @@
                 const tbody = document.querySelector('#tabelaHistorico tbody');
                 if (!tbody) return;
                 if (historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="5">Nenhuma correção realizada</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6">Nenhuma correção realizada</td></tr>';
                 } else {
-                    tbody.innerHTML = historico.map(item => `
-                        <tr>
-                            <td>${item.aluno_nome}</td>
-                            <td>${item.prova_titulo}</td>
-                            <td>${item.acertos}</td>
-                            <td>${item.nota}</td>
-                            <td>${new Date(item.data_correcao).toLocaleString()}</td>
-                        </tr>
-                    `).join('');
+                    tbody.innerHTML = historico.map(item => {
+                        let metodoBadge = '';
+                        if (item.metodo_ia === 'OpenCV') metodoBadge = '<span class="metodo-badge metodo-opencv">OpenCV</span>';
+                        else if (item.metodo_ia === 'OCR') metodoBadge = '<span class="metodo-badge metodo-ocr">OCR</span>';
+                        else if (item.metodo_ia === 'Hugging Face') metodoBadge = '<span class="metodo-badge metodo-huggingface">HF</span>';
+                        else metodoBadge = `<span class="metodo-badge metodo-basico">${item.metodo_ia || 'Híbrido'}</span>`;
+                        return `
+                            <tr>
+                                <td>${item.aluno_nome}</td>
+                                <td>${item.prova_titulo}</td>
+                                <td>${item.acertos}</td>
+                                <td>${item.nota}</td>
+                                <td>${metodoBadge}</td>
+                                <td>${new Date(item.data_correcao).toLocaleString()}</td>
+                            </tr>
+                        `;
+                    }).join('');
                 }
             } catch (erro) { console.error('Erro:', erro); }
         }
@@ -1560,8 +1570,8 @@
             try {
                 const response = await fetch(`${API_URL}/api/configuracoes`);
                 const config = await response.json();
-                document.getElementById('param1').value = config.param1;
-                document.getElementById('param2').value = config.param2;
+                document.getElementById('param1').value = config.param1 || 80;
+                document.getElementById('param2').value = config.param2 || 25;
                 atualizarValor('param1'); atualizarValor('param2');
             } catch (erro) { console.error('Erro ao carregar configurações:', erro); }
         }
