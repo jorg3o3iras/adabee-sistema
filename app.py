@@ -150,102 +150,187 @@ class CorretorHibrido:
             return None
     
     @staticmethod
-    def detectar_bolinhas(imagem_base64):
-        """Detecta todas as bolinhas usando contornos"""
-        try:
-            img = CorretorHibrido.preprocessar_imagem(imagem_base64)
-            if img is None:
-                return None
-            
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            gray = clahe.apply(gray)
-            
-            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            bolinhas = []
-            for cnt in contours:
-                area = cv2.contourArea(cnt)
-                if 50 < area < 400:
-                    M = cv2.moments(cnt)
-                    if M['m00'] > 0:
-                        cx = int(M['m10'] / M['m00'])
-                        cy = int(M['m01'] / M['m00'])
-                        
-                        perimeter = cv2.arcLength(cnt, True)
-                        if perimeter > 0:
-                            circularity = 4 * np.pi * area / (perimeter * perimeter)
-                            if circularity > 0.5:
-                                # Extrair a região da bolinha para analisar
-                                mask = np.zeros_like(gray)
-                                cv2.drawContours(mask, [cnt], -1, 255, -1)
-                                roi = cv2.bitwise_and(gray, gray, mask=mask)
-                                pixels = roi[roi > 0]
-                                
-                                if len(pixels) > 0:
-                                    intensidade_media = np.mean(pixels)
-                                    # Quanto menor a intensidade (mais preta), mais preenchida
-                                    # Valores: 0 = preto, 255 = branco
-                                    preenchimento = 1 - (intensidade_media / 255)
-                                    
-                                    bolinhas.append({
-                                        'x': cx, 
-                                        'y': cy, 
-                                        'preenchimento': preenchimento,
-                                        'intensidade': intensidade_media
-                                    })
-            
-            return bolinhas
-            
-        except Exception as e:
-            print(f"Erro na detecção de bolinhas: {e}")
+def detectar_bolinhas(imagem_base64):
+
+    try:
+
+        img = CorretorHibrido.preprocessar_imagem(imagem_base64)
+
+        if img is None:
             return None
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        clahe = cv2.createCLAHE(
+            clipLimit=2.0,
+            tileGridSize=(8, 8)
+        )
+
+        gray = clahe.apply(gray)
+
+        gray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        circles = cv2.HoughCircles(
+            gray,
+            cv2.HOUGH_GRADIENT,
+            dp=1.2,
+            minDist=25,
+            param1=50,
+            param2=20,
+            minRadius=8,
+            maxRadius=25
+        )
+
+        if circles is None:
+            return []
+
+        circles = np.round(circles[0]).astype("int")
+
+        bolinhas = []
+
+        for (x, y, r) in circles:
+
+            mask = np.zeros(gray.shape, dtype=np.uint8)
+
+            cv2.circle(
+                mask,
+                (x, y),
+                int(r * 0.7),
+                255,
+                -1
+            )
+
+            pixels = gray[mask == 255]
+
+            if len(pixels) == 0:
+                continue
+
+            intensidade_media = np.mean(pixels)
+
+            preenchimento = 1 - (intensidade_media / 255)
+
+            bolinhas.append({
+                'x': int(x),
+                'y': int(y),
+                'r': int(r),
+                'preenchimento': float(preenchimento),
+                'intensidade': float(intensidade_media)
+            })
+
+        print(f"Bolinhas detectadas: {len(bolinhas)}")
+
+        return bolinhas
+
+    except Exception as e:
+        print(f"Erro detectar_bolinhas: {e}")
+        return None
     
     @staticmethod
-    def detectar_respostas(imagem_base64, num_opcoes=4):
-        """
-        Detecta bolinhas e identifica qual está preenchida em cada linha
-        """
-        try:
-            # 1. Detectar todas as bolinhas
-            bolinhas = CorretorHibrido.detectar_bolinhas(imagem_base64)
-            
-            if not bolinhas or len(bolinhas) == 0:
-                return None, 0.0, 'Nenhuma bolinha detectada'
-            
-            # 2. Ordenar por Y (vertical) para agrupar por linhas
-            bolinhas.sort(key=lambda b: b['y'])
-            
-            # 3. Agrupar por linha (questão)
-            linhas = []
-            linha_atual = []
-            y_anterior = bolinhas[0]['y']
-            tolerancia_y = 25
-            
-            for bolinha in bolinhas:
-                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
-                    linhas.append(linha_atual)
-                    linha_atual = []
-                linha_atual.append(bolinha)
-                y_anterior = bolinha['y']
-            
-            if linha_atual:
-                linhas.append(linha_atual)
-            
-            # 4. Para cada linha, identificar qual bolinha está preenchida
-            respostas = []
-            
-            for idx, linha in enumerate(linhas, start=1):
-                if idx > 50:
+def detectar_respostas(imagem_base64, num_opcoes=4):
+
+    try:
+
+        bolinhas = CorretorHibrido.detectar_bolinhas(imagem_base64)
+
+        if not bolinhas:
+            return None, 0.0, "Nenhuma bolinha detectada"
+
+        bolinhas.sort(key=lambda b: b['y'])
+
+        linhas = []
+
+        tolerancia_y = 20
+
+        for bolinha in bolinhas:
+
+            adicionada = False
+
+            for linha in linhas:
+
+                media_y = np.mean(
+                    [b['y'] for b in linha]
+                )
+
+                if abs(bolinha['y'] - media_y) <= tolerancia_y:
+
+                    linha.append(bolinha)
+
+                    adicionada = True
+
                     break
-                
-                # Ordenar bolinhas da linha por X (esquerda → direita)
-                linha.sort(key=lambda b: b['x'])
-                
-                if len(linha) == 0:
-                    respostas.append((idx, '?'))
-                    continue
+
+            if not adicionada:
+                linhas.append([bolinha])
+
+        respostas = []
+
+        letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+        for idx, linha in enumerate(linhas, start=1):
+
+            linha.sort(key=lambda b: b['x'])
+
+            if len(linha) < num_opcoes:
+                continue
+
+            linha = linha[:num_opcoes]
+
+            preenchimentos = [
+                b['preenchimento']
+                for b in linha
+            ]
+
+            maior = max(preenchimentos)
+
+            posicao = preenchimentos.index(maior)
+
+            if maior >= 0.55:
+                resposta = letras[posicao]
+            else:
+                resposta = '?'
+
+            respostas.append(
+                (idx, resposta)
+            )
+
+        if len(respostas) == 0:
+            return None, 0.0, "Nenhuma resposta"
+
+        respostas.sort(key=lambda x: x[0])
+
+        letras_respostas = [
+            r[1]
+            for r in respostas
+        ]
+
+        validas = sum(
+            1
+            for r in letras_respostas
+            if r != '?'
+        )
+
+        confianca = round(
+            (validas / len(letras_respostas)) * 100,
+            1
+        )
+
+        print("========== DEBUG ==========")
+        print(f"Bolinhas: {len(bolinhas)}")
+        print(f"Linhas: {len(linhas)}")
+        print(f"Respostas: {letras_respostas}")
+        print("===========================")
+
+        return (
+            letras_respostas,
+            confianca,
+            "OMR Melhorado"
+        )
+
+    except Exception as e:
+
+        print(f"Erro detectar_respostas: {e}")
+
+        return None, 0.0, "Erro"
                 
                 # ============================================
                 # ANALISAR CADA BOLINHA DA LINHA
@@ -386,19 +471,26 @@ class CorretorHibrido:
             print(f"Erro no OpenCV: {e}")
             return None, 0.0, 'Erro'
     
-    @staticmethod
-    def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        # Tentar Contorno primeiro
-        respostas, confianca, metodo = CorretorHibrido.detectar_respostas(imagem_base64, num_opcoes)
-        if respostas and len(respostas) >= 3:
-            return respostas, confianca, metodo
-        
-        # Tentar OpenCV
-        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
-        if respostas and len(respostas) >= 3:
-            return respostas, confianca, metodo
-        
-        return None, 0.0, 'Nenhum método funcionou'
+   @staticmethod
+def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
+
+    respostas, confianca, metodo = CorretorHibrido.detectar_respostas(
+        imagem_base64,
+        num_opcoes
+    )
+
+    if respostas and len(respostas) >= 1:
+        return respostas, confianca, metodo
+
+    respostas, confianca, metodo = CorretorHibrido.detectar_respostas_opencv(
+        imagem_base64,
+        num_opcoes
+    )
+
+    if respostas and len(respostas) >= 1:
+        return respostas, confianca, metodo
+
+    return None, 0.0, 'Nenhum método funcionou'
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
