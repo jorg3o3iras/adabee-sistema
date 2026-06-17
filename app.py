@@ -150,31 +150,23 @@ class CorretorHibrido:
             return None
     
     @staticmethod
-    def detectar_respostas_por_grid(imagem_base64, num_opcoes=4):
+    def detectar_bolinhas_com_preenchimento(imagem_base64):
         """
-        Abordagem por grid fixo - MAIS PRECISA
+        Detecta bolinhas e calcula o nível de preenchimento de cada uma
         """
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
-                return None, 0.0, 'Erro no pré-processamento'
+                return None
             
-            h, w = img.shape[:2]
-            
-            # Converter para tons de cinza
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Aplicar CLAHE para melhorar contraste
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
             
-            # Binarização
+            # Binarização para detectar contornos
             _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
-            
-            # Detectar contornos
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
-            # Filtrar bolinhas
             bolinhas = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
@@ -183,39 +175,71 @@ class CorretorHibrido:
                     if M['m00'] > 0:
                         cx = int(M['m10'] / M['m00'])
                         cy = int(M['m01'] / M['m00'])
-                        bolinhas.append({'x': cx, 'y': cy})
+                        
+                        # Verificar circularidade
+                        perimeter = cv2.arcLength(cnt, True)
+                        if perimeter > 0:
+                            circularity = 4 * np.pi * area / (perimeter * perimeter)
+                            if circularity > 0.5:
+                                # Extrair pixels da bolinha
+                                mask = np.zeros_like(gray)
+                                cv2.drawContours(mask, [cnt], -1, 255, -1)
+                                roi = cv2.bitwise_and(gray, gray, mask=mask)
+                                pixels = roi[roi > 0]
+                                
+                                if len(pixels) > 0:
+                                    intensidade_media = np.mean(pixels)
+                                    # Quanto menor a intensidade, mais preta (preenchida)
+                                    preenchimento = 1 - (intensidade_media / 255)
+                                    
+                                    bolinhas.append({
+                                        'x': cx,
+                                        'y': cy,
+                                        'area': area,
+                                        'preenchimento': preenchimento,
+                                        'intensidade': intensidade_media
+                                    })
             
-            if len(bolinhas) == 0:
+            print(f"✅ Bolinhas detectadas: {len(bolinhas)}")
+            return bolinhas
+            
+        except Exception as e:
+            print(f"Erro ao detectar bolinhas: {e}")
+            return None
+    
+    @staticmethod
+    def detectar_respostas_com_preenchimento(imagem_base64, num_opcoes=4):
+        """
+        Detecta respostas analisando o preenchimento de cada bolinha
+        """
+        try:
+            # Detectar todas as bolinhas com preenchimento
+            bolinhas = CorretorHibrido.detectar_bolinhas_com_preenchimento(imagem_base64)
+            
+            if not bolinhas or len(bolinhas) == 0:
                 return None, 0.0, 'Nenhuma bolinha detectada'
             
-            # ============================================
-            # AGRUPAMENTO POR LINHAS (QUESTÕES)
-            # ============================================
-            
-            # Ordenar por Y
+            # Ordenar por Y (vertical)
             bolinhas.sort(key=lambda b: b['y'])
             
-            # Encontrar a altura média de uma linha
-            y_values = [b['y'] for b in bolinhas]
-            y_min = min(y_values)
-            y_max = max(y_values)
+            # ============================================
+            # AGRUPAR POR LINHAS (QUESTÕES)
+            # ============================================
             
-            # Estimar o número de linhas (5 questões)
-            num_questoes = 5
-            
-            # Calcular a altura de cada linha
-            altura_total = y_max - y_min
-            altura_linha = altura_total / num_questoes
-            
-            # Agrupar bolinhas por linha
             linhas = []
-            for i in range(num_questoes):
-                y_centro = y_min + (i + 0.5) * altura_linha
-                linha = []
-                for b in bolinhas:
-                    if abs(b['y'] - y_centro) < altura_linha / 2:
-                        linha.append(b)
-                linhas.append(linha)
+            linha_atual = []
+            y_anterior = bolinhas[0]['y']
+            tolerancia_y = 20
+            
+            for bolinha in bolinhas:
+                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
+                    linhas.append(linha_atual)
+                    linha_atual = []
+                linha_atual.append(bolinha)
+                y_anterior = bolinha['y']
+            
+            if linha_atual:
+                linhas.append(linha_atual)
             
             # ============================================
             # ANALISAR CADA LINHA
@@ -225,124 +249,73 @@ class CorretorHibrido:
             letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
             
             for idx, linha in enumerate(linhas, start=1):
-                if len(linha) == 0:
-                    respostas.append((idx, '?'))
-                    continue
+                if idx > 50:
+                    break
                 
                 # Ordenar por X (esquerda → direita)
                 linha.sort(key=lambda b: b['x'])
                 
-                # Verificar se tem o número correto de opções
-                if len(linha) < num_opcoes:
-                    # Tentar completar com base na posição esperada
-                    x_vals = [b['x'] for b in linha]
-                    x_min = min(x_vals)
-                    x_max = max(x_vals)
-                    largura_opcao = (x_max - x_min) / (len(linha) - 1) if len(linha) > 1 else 50
+                # Pegar apenas as primeiras num_opcoes bolinhas (A, B, C, D)
+                linha = linha[:num_opcoes]
+                
+                if len(linha) == 0:
+                    respostas.append((idx, '?'))
+                    continue
+                
+                # ============================================
+                # ENCONTRAR A BOLINHA MAIS PRETA (PREECHIDA)
+                # ============================================
+                
+                melhor_preenchimento = -1
+                melhor_pos = -1
+                
+                for pos, bolinha in enumerate(linha):
+                    print(f"Q{idx} Pos{pos}: preenchimento={bolinha['preenchimento']:.2f}")
                     
-                    # Para cada opção, verificar se tem bolinha
-                    opcoes_detectadas = []
-                    for pos in range(num_opcoes):
-                        x_esperado = x_min + pos * largura_opcao
-                        encontrou = False
-                        for b in linha:
-                            if abs(b['x'] - x_esperado) < largura_opcao / 2:
-                                opcoes_detectadas.append(pos)
-                                encontrou = True
-                                break
-                        if not encontrou:
-                            opcoes_detectadas.append(-1)
-                else:
-                    # Pegar as primeiras num_opcoes bolinhas
-                    opcoes_detectadas = list(range(num_opcoes))
-                    linha = linha[:num_opcoes]
+                    if bolinha['preenchimento'] > melhor_preenchimento:
+                        melhor_preenchimento = bolinha['preenchimento']
+                        melhor_pos = pos
                 
-                # Para cada opção, verificar se a bolinha está preenchida
-                # Precisamos da imagem original em cinza para verificar o preenchimento
-                # Como não temos, vamos usar a posição
-                
-                # Encontrar a bolinha mais à esquerda preenchida
-                # Na verdade, vamos usar a posição conhecida
-                melhor_resposta = '?'
-                
-                if len(linha) >= num_opcoes:
-                    # Verificar qual bolinha está mais escura
-                    # Para isso, precisamos da intensidade, vamos detectar novamente
-                    pass
-                
-                # Abordagem simplificada: a primeira bolinha é A, segunda B, etc.
-                # Mas precisamos saber qual está preenchida
-                # Vamos usar a posição X para identificar
-                
-                # Pegar a bolinha mais à esquerda (A)
-                if len(linha) > 0:
-                    melhor_resposta = '?'  # Placeholder
-                    respostas.append((idx, melhor_resposta))
+                # Verificar se a bolinha está realmente preenchida
+                # Limiar de 20% de preenchimento (ajustável)
+                if melhor_pos >= 0 and melhor_preenchimento > 0.20:
+                    resposta = letras[melhor_pos] if melhor_pos < len(letras) else '?'
+                    respostas.append((idx, resposta))
+                    print(f"Q{idx}: Resposta = {resposta} (preenchimento: {melhor_preenchimento:.2f})")
                 else:
                     respostas.append((idx, '?'))
             
             # ============================================
-            # SOLUÇÃO: USAR OCR PARA LER AS LETRAS
+            # VERIFICAR RESULTADOS
             # ============================================
             
-            # Vamos recortar cada linha e usar OCR para ler as letras
-            respostas_ocr = []
-            
-            for idx, linha in enumerate(linhas, start=1):
-                if len(linha) == 0:
-                    respostas_ocr.append((idx, '?'))
-                    continue
-                
-                # Calcular a região da linha
-                y_vals = [b['y'] for b in linha]
-                y_linha_min = max(0, min(y_vals) - 20)
-                y_linha_max = min(h, max(y_vals) + 20)
-                
-                # Recortar a linha
-                linha_img = gray[y_linha_min:y_linha_max, :]
-                
-                if linha_img.size == 0:
-                    respostas_ocr.append((idx, '?'))
-                    continue
-                
-                # Binarizar a linha
-                _, linha_binary = cv2.threshold(linha_img, 130, 255, cv2.THRESH_BINARY)
-                
-                # Configurar Tesseract
-                custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                texto = pytesseract.image_to_string(linha_binary, config=custom_config)
-                
-                # Extrair letras A, B, C, D
-                letras_validas = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[:num_opcoes]
-                letras_encontradas = [c for c in texto.upper() if c in letras_validas]
-                
-                if letras_encontradas:
-                    respostas_ocr.append((idx, letras_encontradas[0]))
-                else:
-                    respostas_ocr.append((idx, '?'))
-            
-            if len(respostas_ocr) == 0:
+            if len(respostas) == 0:
                 return None, 0.0, 'Nenhuma resposta detectada'
             
-            respostas_ocr.sort(key=lambda x: x[0])
-            letras_respostas = [r[1] for r in respostas_ocr]
+            respostas.sort(key=lambda x: x[0])
+            letras_respostas = [r[1] for r in respostas]
             
             validas = sum(1 for r in letras_respostas if r != '?')
             confianca = round((validas / len(letras_respostas)) * 100, 1)
             
-            return letras_respostas, confianca, 'OCR + Grid'
+            print("========== DEBUG ==========")
+            print(f"Bolinhas: {len(bolinhas)}")
+            print(f"Linhas: {len(linhas)}")
+            print(f"Respostas: {letras_respostas}")
+            print("===========================")
+            
+            return letras_respostas, confianca, 'Preenchimento'
             
         except Exception as e:
-            print(f"Erro na detecção por grid: {e}")
+            print(f"Erro na detecção por preenchimento: {e}")
             return None, 0.0, 'Erro'
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
         """
-        Tenta Grid + OCR primeiro
+        Usa a detecção por preenchimento
         """
-        # Método 1: Grid + OCR
-        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_por_grid(imagem_base64, num_opcoes)
+        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_com_preenchimento(imagem_base64, num_opcoes)
         if respostas and len(respostas) >= 3:
             return respostas, confianca, metodo
         
