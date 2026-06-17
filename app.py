@@ -124,7 +124,7 @@ GEMINI_AVAILABLE = False
 print("ℹ️ Gemini AI desativado - Usando sistema híbrido")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO - VERSÃO CORRIGIDA
+# CLASSE CORRETOR HÍBRIDO - COM MARCAS DE REFERÊNCIA
 # ============================================
 
 class CorretorHibrido:
@@ -150,14 +150,88 @@ class CorretorHibrido:
             return None
     
     @staticmethod
-    def detectar_respostas_por_ocr(imagem_base64, num_opcoes=4):
+    def detectar_marcas_referencia(imagem):
         """
-        Abordagem usando OCR para ler as letras A, B, C, D
+        Detecta marcas de referência nos cantos da folha
+        """
+        try:
+            gray = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
+            
+            # Binarizar para destacar as marcas
+            _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+            
+            # Detectar contornos das marcas
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            marcas = []
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                if 20 < area < 100:
+                    M = cv2.moments(cnt)
+                    if M['m00'] > 0:
+                        cx = int(M['m10'] / M['m00'])
+                        cy = int(M['m01'] / M['m00'])
+                        marcas.append((cx, cy))
+            
+            # Ordenar marcas por posição (superior esquerdo, superior direito, inferior esquerdo, inferior direito)
+            if len(marcas) >= 4:
+                marcas.sort(key=lambda p: (p[1], p[0]))
+                return marcas[:4]
+            
+            return None
+            
+        except Exception as e:
+            print(f"Erro ao detectar marcas: {e}")
+            return None
+    
+    @staticmethod
+    def alinhar_imagem(imagem, marcas):
+        """
+        Alinha a imagem usando as marcas de referência
+        """
+        try:
+            h, w = imagem.shape[:2]
+            
+            # Pontos de origem (marcas detectadas)
+            pts_origem = np.float32(marcas)
+            
+            # Pontos de destino (cantos da imagem)
+            pts_destino = np.float32([
+                [0, 0],
+                [w, 0],
+                [0, h],
+                [w, h]
+            ])
+            
+            # Calcular transformação de perspectiva
+            matriz, _ = cv2.findHomography(pts_origem, pts_destino)
+            
+            # Aplicar transformação
+            img_alinhada = cv2.warpPerspective(imagem, matriz, (w, h))
+            
+            return img_alinhada
+            
+        except Exception as e:
+            print(f"Erro ao alinhar imagem: {e}")
+            return imagem
+    
+    @staticmethod
+    def detectar_respostas_com_referencia(imagem_base64, num_opcoes=4):
+        """
+        Detecção de respostas usando marcas de referência
         """
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
                 return None, 0.0, 'Erro no pré-processamento'
+            
+            # Detectar marcas de referência
+            marcas = CorretorHibrido.detectar_marcas_referencia(img)
+            
+            # Se encontrou marcas, alinhar a imagem
+            if marcas and len(marcas) >= 4:
+                img = CorretorHibrido.alinhar_imagem(img, marcas)
+                print(f"✅ Imagem alinhada com {len(marcas)} marcas")
             
             h, w = img.shape[:2]
             
@@ -168,7 +242,121 @@ class CorretorHibrido:
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
             
-            # Detectar todas as bolinhas (para saber onde estão as opções)
+            # Detectar todas as bolinhas
+            _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            bolinhas = []
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                if 50 < area < 400:
+                    M = cv2.moments(cnt)
+                    if M['m00'] > 0:
+                        cx = int(M['m10'] / M['m00'])
+                        cy = int(M['m01'] / M['m00'])
+                        
+                        # Verificar circularidade
+                        perimeter = cv2.arcLength(cnt, True)
+                        if perimeter > 0:
+                            circularity = 4 * np.pi * area / (perimeter * perimeter)
+                            if circularity > 0.5:
+                                mask = np.zeros_like(gray)
+                                cv2.drawContours(mask, [cnt], -1, 255, -1)
+                                roi = cv2.bitwise_and(gray, gray, mask=mask)
+                                pixels = roi[roi > 0]
+                                
+                                if len(pixels) > 0:
+                                    intensidade_media = np.mean(pixels)
+                                    preenchimento = 1 - (intensidade_media / 255)
+                                    bolinhas.append({
+                                        'x': cx, 
+                                        'y': cy, 
+                                        'preenchimento': preenchimento
+                                    })
+            
+            if len(bolinhas) == 0:
+                return None, 0.0, 'Nenhuma bolinha detectada'
+            
+            # Agrupar por linhas usando algoritmo de clustering
+            bolinhas.sort(key=lambda b: b['y'])
+            linhas = []
+            linha_atual = []
+            y_anterior = bolinhas[0]['y']
+            tolerancia_y = 25
+            
+            for bolinha in bolinhas:
+                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
+                    linhas.append(linha_atual)
+                    linha_atual = []
+                linha_atual.append(bolinha)
+                y_anterior = bolinha['y']
+            
+            if linha_atual:
+                linhas.append(linha_atual)
+            
+            # Para cada linha, identificar a bolinha mais preta
+            respostas = []
+            letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            
+            for idx, linha in enumerate(linhas, start=1):
+                if idx > 50:
+                    break
+                
+                # Ordenar por X (esquerda para direita)
+                linha.sort(key=lambda b: b['x'])
+                
+                # Pegar até o número de opções
+                linha = linha[:num_opcoes]
+                
+                if len(linha) < num_opcoes:
+                    respostas.append((idx, '?'))
+                    continue
+                
+                # Encontrar a bolinha mais preta
+                melhor_preenchimento = -1
+                melhor_pos = -1
+                
+                for pos, bolinha in enumerate(linha):
+                    if bolinha['preenchimento'] > melhor_preenchimento:
+                        melhor_preenchimento = bolinha['preenchimento']
+                        melhor_pos = pos
+                
+                if melhor_pos >= 0 and melhor_preenchimento > 0.25:
+                    respostas.append((idx, letras[melhor_pos]))
+                else:
+                    respostas.append((idx, '?'))
+            
+            if len(respostas) == 0:
+                return None, 0.0, 'Nenhuma resposta'
+            
+            respostas.sort(key=lambda x: x[0])
+            letras_respostas = [r[1] for r in respostas]
+            
+            validas = sum(1 for r in letras_respostas if r != '?')
+            confianca = round((validas / len(letras_respostas)) * 100, 1)
+            
+            return letras_respostas, confianca, 'OMR com Referência'
+            
+        except Exception as e:
+            print(f"Erro na detecção com referência: {e}")
+            return None, 0.0, 'Erro'
+    
+    @staticmethod
+    def detectar_respostas_por_ocr(imagem_base64, num_opcoes=4):
+        """
+        Abordagem usando OCR para ler as letras A, B, C, D
+        """
+        try:
+            img = CorretorHibrido.preprocessar_imagem(imagem_base64)
+            if img is None:
+                return None, 0.0, 'Erro no pré-processamento'
+            
+            h, w = img.shape[:2]
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            
+            # Detectar todas as bolinhas
             _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
@@ -201,46 +389,32 @@ class CorretorHibrido:
             if linha_atual:
                 linhas.append(linha_atual)
             
-            # Para cada linha, extrair a região e analisar
             respostas = []
             
             for idx, linha in enumerate(linhas, start=1):
                 if idx > 50:
                     break
                 
-                # Calcular a altura média da linha
                 y_vals = [b['y'] for b in linha]
-                y_min = min(y_vals) - 20
-                y_max = max(y_vals) + 20
+                y_min = max(0, min(y_vals) - 20)
+                y_max = min(h, max(y_vals) + 20)
                 
-                if y_min < 0:
-                    y_min = 0
-                if y_max > h:
-                    y_max = h
-                
-                # Recortar a linha
                 linha_img = gray[y_min:y_max, :]
                 
                 if linha_img.size == 0:
                     respostas.append((idx, '?'))
                     continue
                 
-                # Binarizar a linha para destacar as letras
                 _, linha_binary = cv2.threshold(linha_img, 130, 255, cv2.THRESH_BINARY)
-                
-                # Tentar ler as letras da linha
                 custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                 texto = pytesseract.image_to_string(linha_binary, config=custom_config)
                 
-                # Extrair letras A, B, C, D
                 letras_validas = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[:num_opcoes]
                 letras_encontradas = [c for c in texto.upper() if c in letras_validas]
                 
-                # Se encontrou letras, a primeira é a resposta
                 if letras_encontradas:
                     respostas.append((idx, letras_encontradas[0]))
                 else:
-                    # Tentar detectar pela cor
                     respostas.append((idx, '?'))
             
             if len(respostas) == 0:
@@ -268,16 +442,10 @@ class CorretorHibrido:
             if img is None:
                 return None, 0.0, 'Erro no pré-processamento'
             
-            h, w = img.shape[:2]
-            
-            # Converter para tons de cinza
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Aplicar CLAHE
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
             
-            # Detectar todas as bolinhas
             _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
@@ -307,7 +475,6 @@ class CorretorHibrido:
             if len(bolinhas) == 0:
                 return None, 0.0, 'Nenhuma bolinha detectada'
             
-            # Agrupar por linhas
             bolinhas.sort(key=lambda b: b['y'])
             linhas = []
             linha_atual = []
@@ -323,7 +490,6 @@ class CorretorHibrido:
             if linha_atual:
                 linhas.append(linha_atual)
             
-            # Para cada linha, identificar a bolinha mais preta
             respostas = []
             letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
             
@@ -331,17 +497,13 @@ class CorretorHibrido:
                 if idx > 50:
                     break
                 
-                # Ordenar por X (esquerda para direita)
                 linha.sort(key=lambda b: b['x'])
-                
-                # Pegar até o número de opções
                 linha = linha[:num_opcoes]
                 
                 if len(linha) == 0:
                     respostas.append((idx, '?'))
                     continue
                 
-                # Encontrar a bolinha mais preta
                 melhor_preenchimento = -1
                 melhor_pos = -1
                 
@@ -350,7 +512,7 @@ class CorretorHibrido:
                         melhor_preenchimento = bolinha['preenchimento']
                         melhor_pos = pos
                 
-                if melhor_pos >= 0 and melhor_preenchimento > 0.20:
+                if melhor_pos >= 0 and melhor_preenchimento > 0.25:
                     respostas.append((idx, letras[melhor_pos]))
                 else:
                     respostas.append((idx, '?'))
@@ -373,19 +535,25 @@ class CorretorHibrido:
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
         """
-        Tenta OCR primeiro, depois análise de cor
+        Tenta todos os métodos: Referência → OCR → Cor
         """
-        # Método 1: OCR (tenta ler as letras)
+        # Método 1: OMR com Marcas de Referência (MAIS PRECISO)
+        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_com_referencia(imagem_base64, num_opcoes)
+        if respostas and len(respostas) >= 3:
+            return respostas, confianca, metodo
+        
+        # Método 2: OCR
         respostas, confianca, metodo = CorretorHibrido.detectar_respostas_por_ocr(imagem_base64, num_opcoes)
         if respostas and len(respostas) >= 3:
             return respostas, confianca, metodo
         
-        # Método 2: Análise de Cor
+        # Método 3: Análise de Cor
         respostas, confianca, metodo = CorretorHibrido.detectar_respostas_por_cor(imagem_base64, num_opcoes)
         if respostas and len(respostas) >= 3:
             return respostas, confianca, metodo
         
         return None, 0.0, 'Nenhum método funcionou'
+
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
