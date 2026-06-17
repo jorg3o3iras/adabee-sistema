@@ -1,17 +1,27 @@
+# Dockerfile
 FROM python:3.11-slim
 
-# Instalar Tesseract OCR
+# Instalar Tesseract e dependências
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-por \
+    libtesseract-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Definir diretório de trabalho
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
+# Copiar requirements e instalar
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar código
 COPY . .
 
-ENV PORT=10000
-CMD exec gunicorn --bind 0.0.0.0:$PORT app:app
+# Expor porta
+EXPOSE 10000
+
+# Comando para rodar
+CMD ["python", "app.py"]
