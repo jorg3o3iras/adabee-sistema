@@ -19,15 +19,6 @@ import requests
 from collections import defaultdict
 import math
 
-# Tentar importar Hugging Face (opcional)
-try:
-    from transformers import pipeline
-    HF_AVAILABLE = True
-    print("✅ Hugging Face disponível!")
-except ImportError:
-    HF_AVAILABLE = False
-    print("⚠️ Hugging Face não instalado. Usando avaliação básica.")
-
 app = Flask(__name__)
 CORS(app)
 
@@ -61,13 +52,20 @@ else:
             pass
 
 # ============================================
+# HUGGING FACE - DESATIVADO (ECONOMIA DE MEMÓRIA)
+# ============================================
+
+HF_AVAILABLE = False
+redacao_pipeline = None
+print("ℹ️ Hugging Face desativado - Usando OCR + Análise Avançada")
+
+# ============================================
 # CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
 SUPABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
 
 def get_db_connection():
-    """Conecta ao Supabase com timeout reduzido"""
     try:
         conn = psycopg2.connect(
             SUPABASE_URL,
@@ -84,7 +82,6 @@ def get_db_connection():
         return None
 
 def init_database():
-    """Inicializa o banco de dados APENAS UMA VEZ"""
     global _db_initialized
     
     if _db_initialized:
@@ -166,29 +163,10 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CONFIGURAR HUGGING FACE (OPCIONAL)
-# ============================================
-
-redacao_pipeline = None
-if HF_AVAILABLE:
-    try:
-        redacao_pipeline = pipeline(
-            "text-classification",
-            model="neuralmind/bert-base-portuguese-cased",
-            device=-1  # CPU
-        )
-        print("✅ Modelo Hugging Face carregado!")
-    except Exception as e:
-        print(f"⚠️ Erro ao carregar modelo HF: {e}")
-        HF_AVAILABLE = False
-
-# ============================================
-# CLASSE CORRETOR HÍBRIDO (SEM GEMINI)
+# CLASSE CORRETOR HÍBRIDO
 # ============================================
 
 class CorretorHibrido:
-    """Sistema de correção com múltiplas estratégias - SEM GEMINI"""
-    
     @staticmethod
     def preprocessar_imagem(imagem_base64):
         try:
@@ -269,110 +247,216 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        resultados = []
-        
-        # Estratégia 1: OpenCV
         respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
         if respostas_cv:
-            resultados.append((respostas_cv, conf_cv, 'OpenCV'))
+            return respostas_cv, conf_cv, 'OpenCV'
         
-        # Estratégia 2: OCR
         respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem_base64, num_opcoes)
         if respostas_ocr:
-            resultados.append((respostas_ocr, conf_ocr, 'OCR'))
+            return respostas_ocr, conf_ocr, 'OCR'
         
-        if not resultados:
-            return None, 0.0, 'Nenhum método funcionou'
-        
-        # Escolher o melhor resultado (maior confiança)
-        melhor = max(resultados, key=lambda x: x[1])
-        return melhor[0], melhor[1], melhor[2]
+        return None, 0.0, 'Nenhum método funcionou'
 
 # ============================================
-# CLASSE PARA CORREÇÃO DE REDAÇÃO (SEM GEMINI)
+# CLASSE PARA CORREÇÃO DE REDAÇÃO (AVANÇADA)
 # ============================================
 
 class CorretorRedacaoHibrido:
-    """Sistema híbrido para correção de redações - SEM GEMINI"""
-    
     @staticmethod
     def extrair_texto_ocr(imagem_base64):
-        """Extrai texto da imagem usando OCR"""
         try:
-            img = CorretorHibrido.preprocessar_imagem(imagem_base64)
+            if ',' in imagem_base64:
+                imagem_base64 = imagem_base64.split(',')[1]
+            imagem_bytes = base64.b64decode(imagem_base64)
+            nparr = np.frombuffer(imagem_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
                 return None
-            
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-            
             custom_config = r'--oem 3 --psm 6 -l por'
             text = pytesseract.image_to_string(binary, config=custom_config)
-            
             return text.strip() if text.strip() else None
-            
         except Exception as e:
             print(f"Erro ao extrair texto: {e}")
             return None
     
     @staticmethod
-    def corrigir_redacao_huggingface(texto):
-        """Corrige redação usando modelo Hugging Face"""
-        try:
-            if not HF_AVAILABLE or redacao_pipeline is None:
-                return None, 0.0
-            
-            if len(texto) > 512:
-                texto = texto[:512]
-            
-            result = redacao_pipeline(texto)
-            score = result[0]['score']
-            nota = score * 10
-            
-            if nota >= 8:
-                feedback = "Excelente redação! Ótima estrutura e argumentação."
-            elif nota >= 6:
-                feedback = "Boa redação. Pode melhorar a coesão e clareza."
-            elif nota >= 4:
-                feedback = "Redação regular. Trabalhe na organização e desenvolvimento das ideias."
-            else:
-                feedback = "Redação insuficiente. Revisar estrutura e conteúdo."
-            
-            return feedback, nota
-            
-        except Exception as e:
-            print(f"Erro no Hugging Face: {e}")
-            return None, 0.0
+    def analisar_redacao(texto):
+        """Análise detalhada da redação sem IA pesada"""
+        
+        # Métricas básicas
+        palavras = texto.split()
+        num_palavras = len(palavras)
+        num_caracteres = len(texto)
+        num_frases = len(re.split(r'[.!?]+', texto)) - 1
+        num_paragrafos = len(texto.split('\n\n')) if '\n\n' in texto else 1
+        
+        # Palavras únicas (vocabulário)
+        palavras_unicas = len(set([p.lower() for p in palavras]))
+        proporcao_vocabulario = (palavras_unicas / num_palavras) * 100 if num_palavras > 0 else 0
+        
+        # Tamanho médio das palavras
+        tamanho_medio = sum(len(p) for p in palavras) / num_palavras if num_palavras > 0 else 0
+        
+        # Conectores (coesão)
+        conectores = ['e', 'mas', 'porém', 'contudo', 'entretanto', 'portanto', 'assim', 'logo', 'pois', 'porque', 'além', 'também', 'bem como', 'da mesma forma', 'outrossim', 'todavia', 'conquanto', 'embora', 'apesar', 'enquanto', 'quando', 'como', 'onde', 'cujo', 'que', 'qual', 'quem']
+        num_conectores = sum(1 for p in palavras if p.lower() in conectores)
+        
+        # Avaliação por categorias
+        nota_coerencia = 0
+        nota_estrutura = 0
+        nota_vocabulario = 0
+        nota_gramatica = 0
+        
+        # Critério 1: Tamanho do texto (coerência)
+        if num_palavras >= 200:
+            nota_coerencia = 8.0
+        elif num_palavras >= 150:
+            nota_coerencia = 6.0
+        elif num_palavras >= 100:
+            nota_coerencia = 4.0
+        elif num_palavras >= 50:
+            nota_coerencia = 2.0
+        else:
+            nota_coerencia = 0.0
+        
+        # Critério 2: Estrutura (parágrafos e frases)
+        if num_paragrafos >= 3 and num_frases >= 8:
+            nota_estrutura = 8.0
+        elif num_paragrafos >= 2 and num_frases >= 5:
+            nota_estrutura = 6.0
+        elif num_paragrafos >= 1 and num_frases >= 3:
+            nota_estrutura = 4.0
+        else:
+            nota_estrutura = 2.0
+        
+        # Critério 3: Vocabulário (riqueza)
+        if proporcao_vocabulario >= 60:
+            nota_vocabulario = 8.0
+        elif proporcao_vocabulario >= 45:
+            nota_vocabulario = 6.0
+        elif proporcao_vocabulario >= 30:
+            nota_vocabulario = 4.0
+        else:
+            nota_vocabulario = 2.0
+        
+        # Critério 4: Gramática e coesão (conectores)
+        if num_conectores >= 10:
+            nota_gramatica = 8.0
+        elif num_conectores >= 6:
+            nota_gramatica = 6.0
+        elif num_conectores >= 3:
+            nota_gramatica = 4.0
+        else:
+            nota_gramatica = 2.0
+        
+        # Nota final (média ponderada)
+        nota_final = (nota_coerencia * 0.3 + nota_estrutura * 0.25 + 
+                     nota_vocabulario * 0.25 + nota_gramatica * 0.2)
+        
+        # Arredondar para 0.5
+        nota_final = round(nota_final * 2) / 2
+        
+        # Gerar feedback personalizado
+        feedback_parts = []
+        
+        # Feedback de tamanho
+        if num_palavras >= 200:
+            feedback_parts.append("✅ Ótimo desenvolvimento do tema. Texto bem extenso e detalhado.")
+        elif num_palavras >= 150:
+            feedback_parts.append("✅ Bom desenvolvimento. Continue expandindo suas ideias.")
+        elif num_palavras >= 100:
+            feedback_parts.append("📝 Desenvolvimento razoável. Tente aprofundar mais seus argumentos.")
+        elif num_palavras >= 50:
+            feedback_parts.append("⚠️ Texto curto. É importante desenvolver mais suas ideias.")
+        else:
+            feedback_parts.append("❌ Texto muito curto. É necessário desenvolver mais o conteúdo.")
+        
+        # Feedback de estrutura
+        if num_paragrafos >= 3:
+            feedback_parts.append("✅ Boa organização em parágrafos. Estrutura clara.")
+        elif num_paragrafos >= 2:
+            feedback_parts.append("📝 Estrutura razoável. Tente dividir melhor em parágrafos.")
+        else:
+            feedback_parts.append("⚠️ Poucos parágrafos. Organize melhor suas ideias.")
+        
+        # Feedback de vocabulário
+        if proporcao_vocabulario >= 60:
+            feedback_parts.append("✅ Vocabulário rico e variado. Ótimo uso de palavras.")
+        elif proporcao_vocabulario >= 45:
+            feedback_parts.append("✅ Bom vocabulário. Continue expandindo seu repertório.")
+        else:
+            feedback_parts.append("📝 Vocabulário limitado. Busque usar palavras mais variadas.")
+        
+        # Feedback de coesão
+        if num_conectores >= 8:
+            feedback_parts.append("✅ Excelente uso de conectores. Texto muito coeso.")
+        elif num_conectores >= 5:
+            feedback_parts.append("✅ Bom uso de conectores. Texto coeso.")
+        else:
+            feedback_parts.append("📝 Poucos conectores. Use mais palavras de ligação.")
+        
+        # Dicas de melhoria
+        dicas = []
+        if num_palavras < 150:
+            dicas.append("📌 Escreva mais sobre o tema, desenvolvendo cada argumento.")
+        if num_paragrafos < 3:
+            dicas.append("📌 Divida seu texto em introdução, desenvolvimento e conclusão.")
+        if proporcao_vocabulario < 45:
+            dicas.append("📌 Busque sinônimos e evite repetir as mesmas palavras.")
+        if num_conectores < 5:
+            dicas.append("📌 Use mais conectores como 'portanto', 'contudo', 'além disso'.")
+        
+        if dicas:
+            feedback_parts.append("💡 **Dicas para melhorar:**")
+            feedback_parts.extend(dicas)
+        
+        # Conceito
+        if nota_final >= 8:
+            conceito = "Excelente"
+        elif nota_final >= 6:
+            conceito = "Bom"
+        elif nota_final >= 4:
+            conceito = "Regular"
+        else:
+            conceito = "Insuficiente"
+        
+        feedback_completo = "\n\n".join(feedback_parts)
+        
+        # Métricas detalhadas
+        metricas = {
+            'palavras': num_palavras,
+            'caracteres': num_caracteres,
+            'frases': num_frases,
+            'paragrafos': num_paragrafos,
+            'palavras_unicas': palavras_unicas,
+            'proporcao_vocabulario': round(proporcao_vocabulario, 1),
+            'tamanho_medio_palavras': round(tamanho_medio, 1),
+            'conectores': num_conectores,
+            'nota_coerencia': round(nota_coerencia, 1),
+            'nota_estrutura': round(nota_estrutura, 1),
+            'nota_vocabulario': round(nota_vocabulario, 1),
+            'nota_gramatica': round(nota_gramatica, 1)
+        }
+        
+        return nota_final, conceito, feedback_completo, metricas
     
     @staticmethod
     def corrigir_redacao_hibrido(imagem_base64=None, texto=None):
-        """Método principal para correção de redação - SEM GEMINI"""
+        """Corrige redação usando OCR + Análise Avançada"""
         
-        # Se não houver texto, extrair da imagem
+        # Extrair texto da imagem se necessário
         if not texto and imagem_base64:
             texto = CorretorRedacaoHibrido.extrair_texto_ocr(imagem_base64)
         
         if not texto:
-            return None, 0.0, "Não foi possível extrair o texto", "Erro"
+            return None, 0.0, None, "Não foi possível extrair o texto", None
         
-        # Tentar Hugging Face primeiro
-        feedback_hf, nota_hf = CorretorRedacaoHibrido.corrigir_redacao_huggingface(texto)
-        if feedback_hf:
-            return texto, nota_hf, feedback_hf, 'Hugging Face'
+        # Analisar redação
+        nota, conceito, feedback, metricas = CorretorRedacaoHibrido.analisar_redacao(texto)
         
-        # Avaliação simples se tudo falhar
-        palavras = len(texto.split())
-        if palavras > 100:
-            nota = 6.0
-            feedback = "Redação válida. Desenvolva melhor seus argumentos para uma nota maior."
-        elif palavras > 50:
-            nota = 4.0
-            feedback = "Redação curta. Desenvolva mais seus argumentos e ideias."
-        else:
-            nota = 2.0
-            feedback = "Redação muito curta. É necessário desenvolver mais o texto."
-        
-        return texto, nota, feedback, 'Básico'
+        return texto, nota, conceito, feedback, metricas, 'OCR + Análise Avançada'
 
 # ============================================
 # ROTAS PRINCIPAIS
@@ -393,13 +477,25 @@ def teste():
             'status': 'ok',
             'ambiente': 'Render' if IS_RENDER else 'Local',
             'banco': 'PostgreSQL (Supabase)',
-            'gemini': False,
-            'huggingface': HF_AVAILABLE,
+            'huggingface': False,
             'tesseract': True,
-            'metodos': ['OpenCV', 'OCR', 'Hugging Face']
+            'metodos': ['OpenCV', 'OCR', 'Análise Avançada']
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/status_ia', methods=['GET'])
+def status_ia():
+    return jsonify({
+        'metodos_disponiveis': {
+            'OpenCV': True,
+            'OCR': True,
+            'Analise_Avancada': True
+        },
+        'ambiente': 'Render' if IS_RENDER else 'Local',
+        'metodo_ativo': 'Híbrido (sem Gemini)',
+        'status': '🧠 Sistema híbrido ativo - Com análise avançada de redação!'
+    })
 
 # ============================================
 # ROTAS DE ESCOLAS
@@ -686,7 +782,7 @@ def deletar_prova(prova_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS - SEM GEMINI
+# CORREÇÃO DE PROVAS
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -772,7 +868,7 @@ def corrigir_prova():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE REDAÇÃO - SEM GEMINI
+# CORREÇÃO DE REDAÇÃO (AVANÇADA)
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -788,10 +884,12 @@ def corrigir_redacao():
             return jsonify({'erro': 'Forneça imagem ou texto da redação'}), 400
         
         corretor = CorretorRedacaoHibrido()
-        texto_corrigido, nota, feedback, metodo = corretor.corrigir_redacao_hibrido(imagem, texto)
+        resultado = corretor.corrigir_redacao_hibrido(imagem, texto)
         
-        if not texto_corrigido:
+        if resultado is None or resultado[0] is None:
             return jsonify({'erro': 'Não foi possível processar a redação'}), 400
+        
+        texto_corrigido, nota, conceito, feedback, metricas, metodo = resultado
         
         if prova_id and aluno_id:
             conn = get_db_connection()
@@ -804,14 +902,24 @@ def corrigir_redacao():
                 conn.commit()
                 conn.close()
         
+        # Definir cor do conceito
+        cores = {
+            'Excelente': '#28a745',
+            'Bom': '#17a2b8',
+            'Regular': '#ffc107',
+            'Insuficiente': '#dc3545'
+        }
+        
         return jsonify({
             'nota': round(nota, 1),
-            'conceito': 'Avaliado por IA',
+            'conceito': conceito,
+            'cor_conceito': cores.get(conceito, '#6c757d'),
             'feedback': feedback,
+            'metricas': metricas,
             'texto_original': texto_corrigido[:500] + ('...' if len(texto_corrigido) > 500 else ''),
-            'metodo_ia': metodo,
             'texto_completo': texto_corrigido,
-            'metodos_disponiveis': ['Hugging Face', 'Básico']
+            'metodo_ia': metodo,
+            'metodos_disponiveis': ['OCR + Análise Avançada']
         })
         
     except Exception as e:
@@ -886,25 +994,6 @@ def historico():
     except Exception as e:
         return jsonify([])
 
-@app.route('/api/status_ia', methods=['GET'])
-def status_ia():
-    return jsonify({
-        'metodos_disponiveis': {
-            'OpenCV': True,
-            'OCR': True,
-            'HuggingFace': HF_AVAILABLE
-        },
-        'ambiente': 'Render' if IS_RENDER else 'Local',
-        'metodo_ativo': 'Híbrido (sem Gemini)',
-        'status': '🧠 Sistema híbrido ativo - SEM GEMINI!',
-        'vantagens': [
-            '✅ Totalmente gratuito',
-            '✅ Sem limites de uso',
-            '✅ Funciona offline',
-            '✅ Rápido e eficiente'
-        ]
-    })
-
 @app.route('/api/exportar', methods=['GET'])
 def exportar_resultados():
     prova_id = request.args.get('prova_id')
@@ -951,128 +1040,12 @@ def ip_info():
 def configuracoes():
     if request.method == 'GET':
         return jsonify({
-            'metodo_principal': 'Híbrido (sem Gemini)',
+            'metodo_principal': 'Híbrido',
             'param1': 80,
             'param2': 25,
-            'metodos': ['OpenCV', 'OCR', 'Hugging Face'],
-            'gemini_available': False,
-            'huggingface_available': HF_AVAILABLE
+            'metodos': ['OpenCV', 'OCR', 'Análise Avançada']
         })
     return jsonify({'mensagem': 'ok'})
-
-@app.route('/api/alternar_ia', methods=['POST'])
-def alternar_ia():
-    return jsonify({
-        'metodo': 'hibrido',
-        'status': '✅ Sistema híbrido ativo! (sem Gemini)',
-        'metodos_disponiveis': ['opencv', 'ocr', 'huggingface']
-    })
-
-@app.route('/api/treinar_ia', methods=['POST'])
-def treinar_ia():
-    return jsonify({
-        'status': 'ok',
-        'mensagem': '✅ Sistema híbrido está pronto para uso! (sem Gemini)',
-        'metodos_ativos': ['OpenCV', 'OCR', 'Hugging Face']
-    })
-
-@app.route('/api/calibrar', methods=['POST'])
-def calibrar():
-    return jsonify({
-        'sucesso': True,
-        'mensagem': '✅ Sistema calibrado! (sem Gemini)',
-        'confianca_minima': 70,
-        'metodos_testados': 3
-    })
-
-@app.route('/api/testar_metodos', methods=['POST'])
-def testar_metodos():
-    try:
-        dados = request.json
-        imagem = dados.get('imagem')
-        
-        if not imagem:
-            return jsonify({'erro': 'Imagem não fornecida'}), 400
-        
-        resultados = {}
-        
-        respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem)
-        resultados['opencv'] = {
-            'sucesso': bool(respostas_cv),
-            'respostas': respostas_cv[:10] if respostas_cv else [],
-            'confianca': conf_cv
-        }
-        
-        respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem)
-        resultados['ocr'] = {
-            'sucesso': bool(respostas_ocr),
-            'respostas': respostas_ocr[:10] if respostas_ocr else [],
-            'confianca': conf_ocr
-        }
-        
-        respostas_hib, conf_hib, metodo = CorretorHibrido.detectar_respostas_hibrido(imagem)
-        resultados['hibrido'] = {
-            'sucesso': bool(respostas_hib),
-            'respostas': respostas_hib[:10] if respostas_hib else [],
-            'confianca': conf_hib,
-            'metodo_escolhido': metodo
-        }
-        
-        return jsonify({
-            'resultados': resultados,
-            'melhor_metodo': max(resultados.items(), key=lambda x: x[1]['confianca'])[0] if resultados else 'Nenhum',
-            'total_metodos_testados': len(resultados)
-        })
-        
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/diagnosticar_banco', methods=['GET'])
-def diagnosticar_banco():
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({'status': 'erro', 'banco': 'Não conectado'}), 500
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 as teste")
-        row = cursor.fetchone()
-        conn.close()
-        return jsonify({
-            'status': 'sucesso',
-            'banco': 'PostgreSQL (Supabase)',
-            'detalhes': {
-                'teste_query': 'OK',
-                'conexao': 'Estabelecida com sucesso'
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'erro',
-            'banco': 'Não conectado',
-            'detalhes': {'erro': str(e)}
-        }), 500
-
-@app.route('/api/testar_conexao', methods=['GET'])
-def testar_conexao():
-    try:
-        conn = get_db_connection()
-        if conn:
-            conn.close()
-            return jsonify({
-                'conectado': True,
-                'banco': 'PostgreSQL (Supabase)',
-                'mensagem': '✅ Conectado ao Supabase!'
-            })
-        else:
-            return jsonify({
-                'conectado': False,
-                'erro': 'Não foi possível conectar'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'conectado': False,
-            'erro': str(e)
-        }), 500
 
 # ============================================
 # GERAR GABARITO
@@ -1237,11 +1210,10 @@ def internal_error(e):
     return jsonify({'erro': 'Erro interno do servidor'}), 500
 
 # ============================================
-# INICIALIZAR E RODAR (APENAS UMA VEZ)
+# INICIALIZAR E RODAR
 # ============================================
 
 if __name__ == '__main__':
-    # Inicializar banco apenas uma vez
     try:
         init_database()
     except Exception as e:
@@ -1249,5 +1221,5 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
-    print("🧠 Sistema SEM Gemini - Usando OpenCV + OCR + Hugging Face")
+    print("🧠 Sistema com Análise Avançada de Redação - SEM Gemini e SEM Hugging Face")
     app.run(host='0.0.0.0', port=port, debug=False)
