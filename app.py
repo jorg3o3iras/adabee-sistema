@@ -15,10 +15,18 @@ from PIL import Image
 import pytesseract
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import google.generativeai as genai
 import requests
 from collections import defaultdict
 import math
+
+# Tentar importar Hugging Face (opcional)
+try:
+    from transformers import pipeline
+    HF_AVAILABLE = True
+    print("✅ Hugging Face disponível!")
+except ImportError:
+    HF_AVAILABLE = False
+    print("⚠️ Hugging Face não instalado. Usando avaliação básica.")
 
 app = Flask(__name__)
 CORS(app)
@@ -53,7 +61,7 @@ else:
             pass
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE (CORRIGIDO)
+# CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
 SUPABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
@@ -136,7 +144,7 @@ def init_database():
             acertos INTEGER, 
             nota REAL, 
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            metodo_ia TEXT DEFAULT 'gemini'
+            metodo_ia TEXT DEFAULT 'híbrido'
         )''')
         
         cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
@@ -147,7 +155,7 @@ def init_database():
             nota REAL, 
             feedback TEXT, 
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            metodo_ia TEXT DEFAULT 'gemini'
+            metodo_ia TEXT DEFAULT 'híbrido'
         )''')
         
         conn.commit()
@@ -158,28 +166,28 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CONFIGURAR GEMINI AI (FALLBACK)
+# CONFIGURAR HUGGING FACE (OPCIONAL)
 # ============================================
 
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_AVAILABLE = False
-model = None
-
-if GEMINI_API_KEY:
+redacao_pipeline = None
+if HF_AVAILABLE:
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('models/gemini-2.0-flash')
-        GEMINI_AVAILABLE = True
-        print("✅ Gemini AI configurado!")
+        redacao_pipeline = pipeline(
+            "text-classification",
+            model="neuralmind/bert-base-portuguese-cased",
+            device=-1  # CPU
+        )
+        print("✅ Modelo Hugging Face carregado!")
     except Exception as e:
-        print(f"❌ Erro ao configurar Gemini: {e}")
+        print(f"⚠️ Erro ao carregar modelo HF: {e}")
+        HF_AVAILABLE = False
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO
+# CLASSE CORRETOR HÍBRIDO (SEM GEMINI)
 # ============================================
 
 class CorretorHibrido:
-    """Sistema de correção com múltiplas estratégias"""
+    """Sistema de correção com múltiplas estratégias - SEM GEMINI"""
     
     @staticmethod
     def preprocessar_imagem(imagem_base64):
@@ -260,52 +268,111 @@ class CorretorHibrido:
             return None, 0.0
     
     @staticmethod
-    def detectar_respostas_gemini(imagem_base64, num_opcoes=4):
-        try:
-            if not GEMINI_AVAILABLE:
-                return None, 0.0
-            if ',' in imagem_base64:
-                imagem_base64 = imagem_base64.split(',')[1]
-            imagem_bytes = base64.b64decode(imagem_base64)
-            img = Image.open(io.BytesIO(imagem_bytes))
-            img.thumbnail((1024, 1024))
-            opcoes = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[:num_opcoes]
-            opcoes_str = ', '.join(list(opcoes))
-            prompt = f"""Analise esta imagem de folha de respostas.
-            Identifique as bolinhas marcadas para cada questão.
-            Responda APENAS com as letras das respostas, separadas por vírgula.
-            Use apenas as letras: {opcoes_str}
-            Exemplo: A, B, C, A, B, C"""
-            response = model.generate_content([prompt, img])
-            texto = response.text.strip().upper()
-            letras_validas = set(opcoes)
-            respostas = [c for c in texto if c in letras_validas]
-            if len(respostas) >= 3:
-                return respostas, 90.0
-            elif len(respostas) > 0:
-                return respostas, 70.0
-            return None, 0.0
-        except Exception as e:
-            print(f"Erro no Gemini: {e}")
-            return None, 0.0
-    
-    @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
         resultados = []
+        
+        # Estratégia 1: OpenCV
         respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
         if respostas_cv:
             resultados.append((respostas_cv, conf_cv, 'OpenCV'))
+        
+        # Estratégia 2: OCR
         respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem_base64, num_opcoes)
         if respostas_ocr:
             resultados.append((respostas_ocr, conf_ocr, 'OCR'))
-        if GEMINI_AVAILABLE:
-            respostas_gemini, conf_gemini = CorretorHibrido.detectar_respostas_gemini(imagem_base64, num_opcoes)
-            if respostas_gemini:
-                resultados.append((respostas_gemini, conf_gemini, 'Gemini'))
+        
         if not resultados:
             return None, 0.0, 'Nenhum método funcionou'
+        
+        # Escolher o melhor resultado (maior confiança)
         melhor = max(resultados, key=lambda x: x[1])
         return melhor[0], melhor[1], melhor[2]
+
+# ============================================
+# CLASSE PARA CORREÇÃO DE REDAÇÃO (SEM GEMINI)
+# ============================================
+
+class CorretorRedacaoHibrido:
+    """Sistema híbrido para correção de redações - SEM GEMINI"""
+    
+    @staticmethod
+    def extrair_texto_ocr(imagem_base64):
+        """Extrai texto da imagem usando OCR"""
+        try:
+            img = CorretorHibrido.preprocessar_imagem(imagem_base64)
+            if img is None:
+                return None
+            
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+            
+            custom_config = r'--oem 3 --psm 6 -l por'
+            text = pytesseract.image_to_string(binary, config=custom_config)
+            
+            return text.strip() if text.strip() else None
+            
+        except Exception as e:
+            print(f"Erro ao extrair texto: {e}")
+            return None
+    
+    @staticmethod
+    def corrigir_redacao_huggingface(texto):
+        """Corrige redação usando modelo Hugging Face"""
+        try:
+            if not HF_AVAILABLE or redacao_pipeline is None:
+                return None, 0.0
+            
+            if len(texto) > 512:
+                texto = texto[:512]
+            
+            result = redacao_pipeline(texto)
+            score = result[0]['score']
+            nota = score * 10
+            
+            if nota >= 8:
+                feedback = "Excelente redação! Ótima estrutura e argumentação."
+            elif nota >= 6:
+                feedback = "Boa redação. Pode melhorar a coesão e clareza."
+            elif nota >= 4:
+                feedback = "Redação regular. Trabalhe na organização e desenvolvimento das ideias."
+            else:
+                feedback = "Redação insuficiente. Revisar estrutura e conteúdo."
+            
+            return feedback, nota
+            
+        except Exception as e:
+            print(f"Erro no Hugging Face: {e}")
+            return None, 0.0
+    
+    @staticmethod
+    def corrigir_redacao_hibrido(imagem_base64=None, texto=None):
+        """Método principal para correção de redação - SEM GEMINI"""
+        
+        # Se não houver texto, extrair da imagem
+        if not texto and imagem_base64:
+            texto = CorretorRedacaoHibrido.extrair_texto_ocr(imagem_base64)
+        
+        if not texto:
+            return None, 0.0, "Não foi possível extrair o texto", "Erro"
+        
+        # Tentar Hugging Face primeiro
+        feedback_hf, nota_hf = CorretorRedacaoHibrido.corrigir_redacao_huggingface(texto)
+        if feedback_hf:
+            return texto, nota_hf, feedback_hf, 'Hugging Face'
+        
+        # Avaliação simples se tudo falhar
+        palavras = len(texto.split())
+        if palavras > 100:
+            nota = 6.0
+            feedback = "Redação válida. Desenvolva melhor seus argumentos para uma nota maior."
+        elif palavras > 50:
+            nota = 4.0
+            feedback = "Redação curta. Desenvolva mais seus argumentos e ideias."
+        else:
+            nota = 2.0
+            feedback = "Redação muito curta. É necessário desenvolver mais o texto."
+        
+        return texto, nota, feedback, 'Básico'
 
 # ============================================
 # ROTAS PRINCIPAIS
@@ -326,9 +393,10 @@ def teste():
             'status': 'ok',
             'ambiente': 'Render' if IS_RENDER else 'Local',
             'banco': 'PostgreSQL (Supabase)',
-            'gemini': GEMINI_AVAILABLE,
+            'gemini': False,
+            'huggingface': HF_AVAILABLE,
             'tesseract': True,
-            'metodos': ['OpenCV', 'OCR', 'Gemini']
+            'metodos': ['OpenCV', 'OCR', 'Hugging Face']
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -618,7 +686,7 @@ def deletar_prova(prova_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS
+# CORREÇÃO DE PROVAS - SEM GEMINI
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -704,6 +772,53 @@ def corrigir_prova():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
+# CORREÇÃO DE REDAÇÃO - SEM GEMINI
+# ============================================
+
+@app.route('/api/corrigir_redacao', methods=['POST'])
+def corrigir_redacao():
+    try:
+        dados = request.json
+        imagem = dados.get('imagem')
+        texto = dados.get('texto')
+        prova_id = dados.get('prova_id')
+        aluno_id = dados.get('aluno_id')
+        
+        if not imagem and not texto:
+            return jsonify({'erro': 'Forneça imagem ou texto da redação'}), 400
+        
+        corretor = CorretorRedacaoHibrido()
+        texto_corrigido, nota, feedback, metodo = corretor.corrigir_redacao_hibrido(imagem, texto)
+        
+        if not texto_corrigido:
+            return jsonify({'erro': 'Não foi possível processar a redação'}), 400
+        
+        if prova_id and aluno_id:
+            conn = get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao, metodo_ia) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (prova_id, aluno_id, texto_corrigido, nota, feedback, datetime.now(), metodo))
+                conn.commit()
+                conn.close()
+        
+        return jsonify({
+            'nota': round(nota, 1),
+            'conceito': 'Avaliado por IA',
+            'feedback': feedback,
+            'texto_original': texto_corrigido[:500] + ('...' if len(texto_corrigido) > 500 else ''),
+            'metodo_ia': metodo,
+            'texto_completo': texto_corrigido,
+            'metodos_disponiveis': ['Hugging Face', 'Básico']
+        })
+        
+    except Exception as e:
+        print(f"Erro: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
 # DEMAIS ROTAS
 # ============================================
 
@@ -777,12 +892,52 @@ def status_ia():
         'metodos_disponiveis': {
             'OpenCV': True,
             'OCR': True,
-            'Gemini': GEMINI_AVAILABLE
+            'HuggingFace': HF_AVAILABLE
         },
         'ambiente': 'Render' if IS_RENDER else 'Local',
-        'metodo_ativo': 'Híbrido',
-        'status': '🧠 Sistema híbrido ativo!'
+        'metodo_ativo': 'Híbrido (sem Gemini)',
+        'status': '🧠 Sistema híbrido ativo - SEM GEMINI!',
+        'vantagens': [
+            '✅ Totalmente gratuito',
+            '✅ Sem limites de uso',
+            '✅ Funciona offline',
+            '✅ Rápido e eficiente'
+        ]
     })
+
+@app.route('/api/exportar', methods=['GET'])
+def exportar_resultados():
+    prova_id = request.args.get('prova_id')
+    if not prova_id:
+        return jsonify({'erro': 'Prova não informada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({'erro': 'Erro ao conectar'}), 500
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao, c.metodo_ia
+            FROM correcoes c 
+            JOIN alunos a ON c.aluno_id = a.id 
+            WHERE c.prova_id = %s
+        """, (prova_id,))
+        
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
+        for r in resultados:
+            writer.writerow([r['nome'], r['matricula'] or '', r['acertos'], round(r['nota'], 1), r['data_correcao'], r['metodo_ia'] or 'Desconhecido'])
+        
+        return output.getvalue(), 200, {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
+        }
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/ip_info', methods=['GET'])
 def ip_info():
@@ -796,37 +951,36 @@ def ip_info():
 def configuracoes():
     if request.method == 'GET':
         return jsonify({
-            'metodo_principal': 'Híbrido',
+            'metodo_principal': 'Híbrido (sem Gemini)',
             'param1': 80,
             'param2': 25,
-            'metodos': ['OpenCV', 'OCR', 'Gemini'],
-            'gemini_available': GEMINI_AVAILABLE
+            'metodos': ['OpenCV', 'OCR', 'Hugging Face'],
+            'gemini_available': False,
+            'huggingface_available': HF_AVAILABLE
         })
     return jsonify({'mensagem': 'ok'})
 
 @app.route('/api/alternar_ia', methods=['POST'])
 def alternar_ia():
-    dados = request.json
-    metodo = dados.get('metodo', 'hibrido')
     return jsonify({
-        'metodo': metodo,
-        'status': f'✅ Método {metodo} ativado!',
-        'metodos_disponiveis': ['hibrido', 'opencv', 'ocr', 'gemini']
+        'metodo': 'hibrido',
+        'status': '✅ Sistema híbrido ativo! (sem Gemini)',
+        'metodos_disponiveis': ['opencv', 'ocr', 'huggingface']
     })
 
 @app.route('/api/treinar_ia', methods=['POST'])
 def treinar_ia():
     return jsonify({
         'status': 'ok',
-        'mensagem': '✅ Sistema híbrido está pronto para uso!',
-        'metodos_ativos': ['OpenCV', 'OCR', 'Gemini']
+        'mensagem': '✅ Sistema híbrido está pronto para uso! (sem Gemini)',
+        'metodos_ativos': ['OpenCV', 'OCR', 'Hugging Face']
     })
 
 @app.route('/api/calibrar', methods=['POST'])
 def calibrar():
     return jsonify({
         'sucesso': True,
-        'mensagem': '✅ Sistema calibrado!',
+        'mensagem': '✅ Sistema calibrado! (sem Gemini)',
         'confianca_minima': 70,
         'metodos_testados': 3
     })
@@ -855,14 +1009,6 @@ def testar_metodos():
             'respostas': respostas_ocr[:10] if respostas_ocr else [],
             'confianca': conf_ocr
         }
-        
-        if GEMINI_AVAILABLE:
-            respostas_gemini, conf_gemini = CorretorHibrido.detectar_respostas_gemini(imagem)
-            resultados['gemini'] = {
-                'sucesso': bool(respostas_gemini),
-                'respostas': respostas_gemini[:10] if respostas_gemini else [],
-                'confianca': conf_gemini
-            }
         
         respostas_hib, conf_hib, metodo = CorretorHibrido.detectar_respostas_hibrido(imagem)
         resultados['hibrido'] = {
@@ -927,40 +1073,6 @@ def testar_conexao():
             'conectado': False,
             'erro': str(e)
         }), 500
-
-@app.route('/api/exportar', methods=['GET'])
-def exportar_resultados():
-    prova_id = request.args.get('prova_id')
-    if not prova_id:
-        return jsonify({'erro': 'Prova não informada'}), 400
-    
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({'erro': 'Erro ao conectar'}), 500
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao, c.metodo_ia
-            FROM correcoes c 
-            JOIN alunos a ON c.aluno_id = a.id 
-            WHERE c.prova_id = %s
-        """, (prova_id,))
-        
-        resultados = cursor.fetchall()
-        conn.close()
-        
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
-        for r in resultados:
-            writer.writerow([r['nome'], r['matricula'] or '', r['acertos'], round(r['nota'], 1), r['data_correcao'], r['metodo_ia'] or 'Desconhecido'])
-        
-        return output.getvalue(), 200, {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
-        }
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # GERAR GABARITO
@@ -1137,4 +1249,5 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
+    print("🧠 Sistema SEM Gemini - Usando OpenCV + OCR + Hugging Face")
     app.run(host='0.0.0.0', port=port, debug=False)
