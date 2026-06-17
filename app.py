@@ -152,7 +152,7 @@ class CorretorHibrido:
     @staticmethod
     def detectar_respostas_por_contorno(imagem_base64, num_opcoes=4):
         """
-        Detecta bolinhas usando contornos - MAIS PRECISO
+        Detecta bolinhas usando contornos com agrupamento correto
         """
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
@@ -183,17 +183,28 @@ class CorretorHibrido:
                         cx = int(M['m10'] / M['m00'])
                         cy = int(M['m01'] / M['m00'])
                         
-                        # Verificar se é circular
+                        # Calcular circularidade
                         perimeter = cv2.arcLength(cnt, True)
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
-                            if circularity > 0.5:  # É um círculo
-                                bolinhas.append({
-                                    'x': cx, 
-                                    'y': cy, 
-                                    'area': area,
-                                    'circularity': circularity
-                                })
+                            if circularity > 0.5:
+                                # Calcular preenchimento (quão escura é a bolinha)
+                                mask = np.zeros_like(gray)
+                                cv2.drawContours(mask, [cnt], -1, 255, -1)
+                                roi = cv2.bitwise_and(gray, gray, mask=mask)
+                                pixels = roi[roi > 0]
+                                
+                                if len(pixels) > 0:
+                                    mean_intensity = np.mean(pixels)
+                                    preenchimento = 1 - (mean_intensity / 255)
+                                    
+                                    bolinhas.append({
+                                        'x': cx, 
+                                        'y': cy, 
+                                        'area': area,
+                                        'circularity': circularity,
+                                        'preenchimento': preenchimento
+                                    })
             
             if len(bolinhas) == 0:
                 return None, 0.0
@@ -201,11 +212,13 @@ class CorretorHibrido:
             # ORDENAR POR Y (linha) para agrupar por questão
             bolinhas.sort(key=lambda b: b['y'])
             
-            # AGRUPAR POR LINHA (questões)
+            # ============================================
+            # AGRUPAMENTO INTELIGENTE POR LINHA
+            # ============================================
             linhas = []
             linha_atual = []
             y_anterior = bolinhas[0]['y']
-            tolerancia_y = 25  # Tolerância para considerar mesma linha
+            tolerancia_y = 30
             
             for bolinha in bolinhas:
                 if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
@@ -217,30 +230,67 @@ class CorretorHibrido:
             if linha_atual:
                 linhas.append(linha_atual)
             
-            # Para cada linha, ordenar por X e extrair a letra
-            respostas = []
-            
             # Ordenar linhas por Y (de cima para baixo)
             linhas.sort(key=lambda linha: linha[0]['y'])
             
+            # ============================================
+            # IDENTIFICAR OPÇÃO MARCADA EM CADA LINHA
+            # ============================================
+            respostas = []
+            
             for idx, linha in enumerate(linhas, start=1):
+                if idx > 50:  # Limite de segurança
+                    break
+                
                 # Ordenar bolinhas da linha por X (da esquerda para direita)
                 linha.sort(key=lambda b: b['x'])
                 
-                # Pegar a primeira bolinha (mais à esquerda = marcada)
-                if len(linha) > 0:
-                    # Determinar qual opção baseado na posição X relativa
-                    x_min = linha[0]['x']
-                    opcao = 0
+                if len(linha) == 0:
+                    respostas.append((idx, '?'))
+                    continue
+                
+                # ============================================
+                # ESTRATÉGIA: A bolinha mais à ESQUERDA é a OPÇÃO A
+                # As demais são B, C, D...
+                # ============================================
+                
+                # Pegar a posição X da primeira bolinha (mais à esquerda)
+                x_min = linha[0]['x']
+                
+                # Para cada bolinha na linha, determinar qual opção ela representa
+                opcao_encontrada = None
+                
+                for i, bolinha in enumerate(linha):
+                    if i >= num_opcoes:
+                        break
                     
-                    # Tentar identificar a opção pela posição
-                    for i, b in enumerate(linha):
-                        if i < num_opcoes:
-                            letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                            respostas.append((idx, letras[i]))
-                            break
+                    # A primeira é A, segunda é B, etc.
+                    letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                    opcao_letra = letras[i] if i < len(letras) else '?'
+                    
+                    # Verificar se esta bolinha está preenchida (escura)
+                    if bolinha.get('preenchimento', 0) > 0.35:
+                        # Esta é a bolinha marcada
+                        opcao_encontrada = opcao_letra
+                        break
+                
+                # Se não encontrou nenhuma preenchida, tentar detectar pela posição
+                if opcao_encontrada is None:
+                    # Verificar qual bolinha está mais escura
+                    linha.sort(key=lambda b: b.get('preenchimento', 0), reverse=True)
+                    if len(linha) > 0 and linha[0].get('preenchimento', 0) > 0.3:
+                        # A mais escura é a marcada
+                        pos = linha.index(linha[0])
+                        letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                        opcao_encontrada = letras[pos] if pos < num_opcoes else '?'
+                    else:
+                        opcao_encontrada = '?'
+                
+                respostas.append((idx, opcao_encontrada))
             
-            # Se não encontrou respostas suficientes, tentar método alternativo
+            # ============================================
+            # SE NÃO ENCONTROU RESPOSTAS, TENTAR MÉTODO ALTERNATIVO
+            # ============================================
             if len(respostas) == 0:
                 return None, 0.0
             
@@ -259,9 +309,7 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_opencv(imagem_base64, num_opcoes=4):
-        """
-        Método alternativo: detecta círculos com HoughCircles
-        """
+        """Método alternativo usando HoughCircles"""
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
@@ -288,7 +336,9 @@ class CorretorHibrido:
             
             circles = np.uint16(np.around(circles[0]))
             
-            bolinhas = []
+            # Mapear círculos por linha
+            linhas = {}
+            
             for circle in circles:
                 x, y, r = circle
                 mask = np.zeros_like(gray)
@@ -300,37 +350,46 @@ class CorretorHibrido:
                     mean_intensity = np.mean(pixels)
                     preenchimento = 1 - (mean_intensity / 255)
                     
-                    if preenchimento > 0.35:
-                        bolinhas.append({'x': x, 'y': y, 'r': r})
+                    # Agrupar por linha (Y)
+                    linha_key = int(y / 35) * 35
+                    if linha_key not in linhas:
+                        linhas[linha_key] = []
+                    
+                    linhas[linha_key].append({
+                        'x': x,
+                        'y': y,
+                        'r': r,
+                        'preenchimento': preenchimento
+                    })
             
-            if len(bolinhas) == 0:
-                return None, 0.0
-            
-            # Agrupar por linha
-            bolinhas.sort(key=lambda b: b['y'])
-            linhas = []
-            linha_atual = []
-            y_anterior = bolinhas[0]['y']
-            
-            for bolinha in bolinhas:
-                if abs(bolinha['y'] - y_anterior) > 20 and linha_atual:
-                    linhas.append(linha_atual)
-                    linha_atual = []
-                linha_atual.append(bolinha)
-                y_anterior = bolinha['y']
-            
-            if linha_atual:
-                linhas.append(linha_atual)
-            
+            # Ordenar linhas por Y
             respostas = []
-            for idx, linha in enumerate(linhas, start=1):
+            linhas_keys = sorted(linhas.keys())
+            
+            for idx, linha_key in enumerate(linhas_keys, start=1):
+                if idx > 50:
+                    break
+                
+                linha = linhas[linha_key]
+                # Ordenar por X
                 linha.sort(key=lambda b: b['x'])
-                if len(linha) > 0:
-                    for i, b in enumerate(linha):
-                        if i < num_opcoes:
-                            letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                            respostas.append((idx, letras[i]))
-                            break
+                
+                # Encontrar a bolinha mais preenchida
+                melhor_preenchimento = 0
+                melhor_pos = -1
+                
+                for pos, bolinha in enumerate(linha):
+                    if pos >= num_opcoes:
+                        break
+                    if bolinha['preenchimento'] > melhor_preenchimento:
+                        melhor_preenchimento = bolinha['preenchimento']
+                        melhor_pos = pos
+                
+                if melhor_pos >= 0 and melhor_preenchimento > 0.3:
+                    letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                    respostas.append((idx, letras[melhor_pos]))
+                else:
+                    respostas.append((idx, '?'))
             
             if len(respostas) == 0:
                 return None, 0.0
@@ -374,7 +433,7 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        # Tentar método por contorno primeiro (MAIS PRECISO)
+        # Tentar método por contorno primeiro
         respostas_cont, conf_cont = CorretorHibrido.detectar_respostas_por_contorno(imagem_base64, num_opcoes)
         if respostas_cont and len(respostas_cont) >= 3:
             return respostas_cont, conf_cont, 'Contorno'
@@ -389,15 +448,7 @@ class CorretorHibrido:
         if respostas_ocr and len(respostas_ocr) >= 2:
             return respostas_ocr, conf_ocr, 'OCR'
         
-        # Se contorno pegou algumas, usar o que pegou
-        if respostas_cont and len(respostas_cont) >= 1:
-            return respostas_cont, conf_cont, 'Contorno (parcial)'
-        
-        if respostas_cv and len(respostas_cv) >= 1:
-            return respostas_cv, conf_cv, 'OpenCV (parcial)'
-        
         return None, 0.0, 'Nenhum método funcionou'
-
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
