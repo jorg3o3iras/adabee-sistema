@@ -124,7 +124,7 @@ GEMINI_AVAILABLE = False
 print("ℹ️ Gemini AI desativado - Usando sistema híbrido")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO (COM OPENCV MELHORADO)
+# CLASSE CORRETOR HÍBRIDO - VERSÃO CORRIGIDA
 # ============================================
 
 class CorretorHibrido:
@@ -150,45 +150,33 @@ class CorretorHibrido:
             return None
     
     @staticmethod
-    def detectar_respostas_por_contorno(imagem_base64, num_opcoes=4):
-        """
-        Detecta bolinhas usando contornos com agrupamento correto
-        """
+    def detectar_bolinhas_por_contorno(imagem_base64):
+        """Detecta todas as bolinhas usando contornos"""
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
-                return None, 0.0
+                return None
             
-            # Converter para tons de cinza
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Aplicar CLAHE para melhorar contraste
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
             
-            # Binarização
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-            
-            # Encontrar contornos
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             bolinhas = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                # Filtrar por área (bolinhas têm área entre 50 e 400)
                 if 50 < area < 400:
-                    # Calcular centro
                     M = cv2.moments(cnt)
                     if M['m00'] > 0:
                         cx = int(M['m10'] / M['m00'])
                         cy = int(M['m01'] / M['m00'])
                         
-                        # Calcular circularidade
                         perimeter = cv2.arcLength(cnt, True)
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
                             if circularity > 0.5:
-                                # Calcular preenchimento (quão escura é a bolinha)
                                 mask = np.zeros_like(gray)
                                 cv2.drawContours(mask, [cnt], -1, 255, -1)
                                 roi = cv2.bitwise_and(gray, gray, mask=mask)
@@ -201,24 +189,37 @@ class CorretorHibrido:
                                     bolinhas.append({
                                         'x': cx, 
                                         'y': cy, 
-                                        'area': area,
-                                        'circularity': circularity,
                                         'preenchimento': preenchimento
                                     })
             
-            if len(bolinhas) == 0:
-                return None, 0.0
+            return bolinhas
             
-            # ORDENAR POR Y (linha) para agrupar por questão
+        except Exception as e:
+            print(f"Erro na detecção de bolinhas: {e}")
+            return None
+    
+    @staticmethod
+    def detectar_respostas(imagem_base64, num_opcoes=4):
+        """
+        Método principal: detecta bolinhas e identifica as respostas
+        """
+        try:
+            # Detectar todas as bolinhas
+            bolinhas = CorretorHibrido.detectar_bolinhas_por_contorno(imagem_base64)
+            
+            if not bolinhas or len(bolinhas) == 0:
+                return None, 0.0, 'Nenhuma bolinha detectada'
+            
+            # ============================================
+            # AGRUPAR POR LINHAS (QUESTÕES)
+            # ============================================
+            
             bolinhas.sort(key=lambda b: b['y'])
             
-            # ============================================
-            # AGRUPAMENTO INTELIGENTE POR LINHA
-            # ============================================
             linhas = []
             linha_atual = []
             y_anterior = bolinhas[0]['y']
-            tolerancia_y = 30
+            tolerancia_y = 25
             
             for bolinha in bolinhas:
                 if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
@@ -230,19 +231,17 @@ class CorretorHibrido:
             if linha_atual:
                 linhas.append(linha_atual)
             
-            # Ordenar linhas por Y (de cima para baixo)
-            linhas.sort(key=lambda linha: linha[0]['y'])
+            # ============================================
+            # IDENTIFICAR RESPOSTAS POR LINHA
+            # ============================================
             
-            # ============================================
-            # IDENTIFICAR OPÇÃO MARCADA EM CADA LINHA
-            # ============================================
             respostas = []
             
             for idx, linha in enumerate(linhas, start=1):
-                if idx > 50:  # Limite de segurança
+                if idx > 50:
                     break
                 
-                # Ordenar bolinhas da linha por X (da esquerda para direita)
+                # Ordenar bolinhas da linha por X (esquerda para direita)
                 linha.sort(key=lambda b: b['x'])
                 
                 if len(linha) == 0:
@@ -250,62 +249,45 @@ class CorretorHibrido:
                     continue
                 
                 # ============================================
-                # ESTRATÉGIA: A bolinha mais à ESQUERDA é a OPÇÃO A
-                # As demais são B, C, D...
+                # ENCONTRAR A BOLINHA MAIS PREENCHIDA
                 # ============================================
                 
-                # Pegar a posição X da primeira bolinha (mais à esquerda)
-                x_min = linha[0]['x']
-                
-                # Para cada bolinha na linha, determinar qual opção ela representa
-                opcao_encontrada = None
+                opcao_encontrada = '?'
+                melhor_preenchimento = 0
                 
                 for i, bolinha in enumerate(linha):
                     if i >= num_opcoes:
                         break
                     
-                    # A primeira é A, segunda é B, etc.
-                    letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                    opcao_letra = letras[i] if i < len(letras) else '?'
-                    
-                    # Verificar se esta bolinha está preenchida (escura)
-                    if bolinha.get('preenchimento', 0) > 0.35:
-                        # Esta é a bolinha marcada
-                        opcao_encontrada = opcao_letra
-                        break
-                
-                # Se não encontrou nenhuma preenchida, tentar detectar pela posição
-                if opcao_encontrada is None:
-                    # Verificar qual bolinha está mais escura
-                    linha.sort(key=lambda b: b.get('preenchimento', 0), reverse=True)
-                    if len(linha) > 0 and linha[0].get('preenchimento', 0) > 0.3:
-                        # A mais escura é a marcada
-                        pos = linha.index(linha[0])
+                    if bolinha['preenchimento'] > melhor_preenchimento:
+                        melhor_preenchimento = bolinha['preenchimento']
                         letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                        opcao_encontrada = letras[pos] if pos < num_opcoes else '?'
-                    else:
-                        opcao_encontrada = '?'
+                        opcao_encontrada = letras[i] if i < len(letras) else '?'
+                
+                # Só considera válido se o preenchimento for significativo
+                if melhor_preenchimento < 0.20:
+                    opcao_encontrada = '?'
                 
                 respostas.append((idx, opcao_encontrada))
             
             # ============================================
-            # SE NÃO ENCONTROU RESPOSTAS, TENTAR MÉTODO ALTERNATIVO
+            # VERIFICAR SE ENCONTROU RESPOSTAS
             # ============================================
-            if len(respostas) == 0:
-                return None, 0.0
             
-            # Ordenar por questão
+            if len(respostas) == 0:
+                return None, 0.0, 'Nenhuma resposta detectada'
+            
             respostas.sort(key=lambda x: x[0])
             letras_respostas = [r[1] for r in respostas]
             
-            # Calcular confiança
-            confianca = min(85, len(letras_respostas) * 15)
+            num_validas = sum(1 for r in letras_respostas if r != '?')
+            confianca = min(85, (num_validas / len(letras_respostas)) * 100)
             
-            return letras_respostas, confianca
+            return letras_respostas, confianca, 'Contorno'
             
         except Exception as e:
-            print(f"Erro no contorno: {e}")
-            return None, 0.0
+            print(f"Erro na detecção: {e}")
+            return None, 0.0, 'Erro'
     
     @staticmethod
     def detectar_respostas_opencv(imagem_base64, num_opcoes=4):
@@ -313,7 +295,7 @@ class CorretorHibrido:
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
-                return None, 0.0
+                return None, 0.0, 'Erro no pré-processamento'
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
@@ -332,11 +314,10 @@ class CorretorHibrido:
             )
             
             if circles is None:
-                return None, 0.0
+                return None, 0.0, 'Nenhum círculo detectado'
             
             circles = np.uint16(np.around(circles[0]))
             
-            # Mapear círculos por linha
             linhas = {}
             
             for circle in circles:
@@ -350,19 +331,15 @@ class CorretorHibrido:
                     mean_intensity = np.mean(pixels)
                     preenchimento = 1 - (mean_intensity / 255)
                     
-                    # Agrupar por linha (Y)
                     linha_key = int(y / 35) * 35
                     if linha_key not in linhas:
                         linhas[linha_key] = []
                     
                     linhas[linha_key].append({
                         'x': x,
-                        'y': y,
-                        'r': r,
                         'preenchimento': preenchimento
                     })
             
-            # Ordenar linhas por Y
             respostas = []
             linhas_keys = sorted(linhas.keys())
             
@@ -371,10 +348,8 @@ class CorretorHibrido:
                     break
                 
                 linha = linhas[linha_key]
-                # Ordenar por X
                 linha.sort(key=lambda b: b['x'])
                 
-                # Encontrar a bolinha mais preenchida
                 melhor_preenchimento = 0
                 melhor_pos = -1
                 
@@ -385,31 +360,33 @@ class CorretorHibrido:
                         melhor_preenchimento = bolinha['preenchimento']
                         melhor_pos = pos
                 
-                if melhor_pos >= 0 and melhor_preenchimento > 0.3:
+                if melhor_pos >= 0 and melhor_preenchimento > 0.20:
                     letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                     respostas.append((idx, letras[melhor_pos]))
                 else:
                     respostas.append((idx, '?'))
             
             if len(respostas) == 0:
-                return None, 0.0
+                return None, 0.0, 'Nenhuma resposta'
             
             respostas.sort(key=lambda x: x[0])
             letras_respostas = [r[1] for r in respostas]
-            confianca = min(80, len(letras_respostas) * 15)
             
-            return letras_respostas, confianca
+            num_validas = sum(1 for r in letras_respostas if r != '?')
+            confianca = min(80, (num_validas / len(letras_respostas)) * 100)
+            
+            return letras_respostas, confianca, 'OpenCV'
             
         except Exception as e:
             print(f"Erro no OpenCV: {e}")
-            return None, 0.0
+            return None, 0.0, 'Erro'
     
     @staticmethod
     def detectar_respostas_ocr(imagem_base64, num_opcoes=4):
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
-                return None, 0.0
+                return None, 0.0, 'Erro no pré-processamento'
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
@@ -424,31 +401,35 @@ class CorretorHibrido:
             
             if len(respostas) >= 2:
                 confianca = min(70, len(respostas) * 12)
-                return respostas, confianca
+                return respostas, confianca, 'OCR'
             
-            return None, 0.0
+            return None, 0.0, 'OCR falhou'
         except Exception as e:
             print(f"Erro no OCR: {e}")
-            return None, 0.0
+            return None, 0.0, 'Erro'
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        # Tentar método por contorno primeiro
-        respostas_cont, conf_cont = CorretorHibrido.detectar_respostas_por_contorno(imagem_base64, num_opcoes)
-        if respostas_cont and len(respostas_cont) >= 3:
-            return respostas_cont, conf_cont, 'Contorno'
+        """
+        Tenta todos os métodos e retorna o melhor resultado
+        """
+        # Método 1: Contorno (mais preciso)
+        respostas, confianca, metodo = CorretorHibrido.detectar_respostas(imagem_base64, num_opcoes)
+        if respostas and len(respostas) >= 3:
+            return respostas, confianca, metodo
         
-        # Tentar OpenCV
-        respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
-        if respostas_cv and len(respostas_cv) >= 3:
-            return respostas_cv, conf_cv, 'OpenCV'
+        # Método 2: OpenCV
+        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
+        if respostas and len(respostas) >= 3:
+            return respostas, confianca, metodo
         
-        # Tentar OCR
-        respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem_base64, num_opcoes)
-        if respostas_ocr and len(respostas_ocr) >= 2:
-            return respostas_ocr, conf_ocr, 'OCR'
+        # Método 3: OCR
+        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_ocr(imagem_base64, num_opcoes)
+        if respostas and len(respostas) >= 2:
+            return respostas, confianca, metodo
         
         return None, 0.0, 'Nenhum método funcionou'
+
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
@@ -847,7 +828,7 @@ def deletar_aluno(aluno_id):
 # ROTAS DE PROVAS
 # ============================================
 
-@app.route('/api/provas', methods=['GET'])
+@app.route('/api/provas', methods(['GET'])
 def listar_provas():
     try:
         conn = get_db_connection()
@@ -934,7 +915,7 @@ def deletar_prova(prova_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS - HÍBRIDO (COM CONTORNO)
+# CORREÇÃO DE PROVAS - HÍBRIDO
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
