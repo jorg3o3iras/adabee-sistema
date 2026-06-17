@@ -124,7 +124,7 @@ GEMINI_AVAILABLE = False
 print("ℹ️ Gemini AI desativado - Usando sistema híbrido")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO (COM OPENCV)
+# CLASSE CORRETOR HÍBRIDO (COM OPENCV MELHORADO)
 # ============================================
 
 class CorretorHibrido:
@@ -150,7 +150,10 @@ class CorretorHibrido:
             return None
     
     @staticmethod
-    def detectar_respostas_opencv(imagem_base64, num_opcoes=4):
+    def detectar_respostas_por_contorno(imagem_base64, num_opcoes=4):
+        """
+        Detecta bolinhas usando contornos - MAIS PRECISO
+        """
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
@@ -163,81 +166,180 @@ class CorretorHibrido:
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
             
-            # Aplicar blur para reduzir ruído
-            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            # Binarização
+            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
             
-            # Detectar círculos com parâmetros ajustados (MAIS SENSÍVEIS)
-            circles = cv2.HoughCircles(
-                blurred,
-                cv2.HOUGH_GRADIENT,
-                dp=1.2,          # Aumentado para melhor detecção
-                minDist=15,      # Reduzido para detectar círculos mais próximos
-                param1=40,       # Reduzido (mais sensível a bordas)
-                param2=25,       # Reduzido (detecta mais círculos)
-                minRadius=6,     # Menor raio
-                maxRadius=30     # Maior raio
-            )
+            # Encontrar contornos
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
-            # Se não detectou, tentar com parâmetros alternativos
-            if circles is None:
-                circles = cv2.HoughCircles(
-                    blurred,
-                    cv2.HOUGH_GRADIENT,
-                    dp=1,
-                    minDist=10,
-                    param1=30,
-                    param2=20,
-                    minRadius=5,
-                    maxRadius=35
-                )
-                
-                if circles is None:
-                    return None, 0.0
+            bolinhas = []
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                # Filtrar por área (bolinhas têm área entre 50 e 400)
+                if 50 < area < 400:
+                    # Calcular centro
+                    M = cv2.moments(cnt)
+                    if M['m00'] > 0:
+                        cx = int(M['m10'] / M['m00'])
+                        cy = int(M['m01'] / M['m00'])
+                        
+                        # Verificar se é circular
+                        perimeter = cv2.arcLength(cnt, True)
+                        if perimeter > 0:
+                            circularity = 4 * np.pi * area / (perimeter * perimeter)
+                            if circularity > 0.5:  # É um círculo
+                                bolinhas.append({
+                                    'x': cx, 
+                                    'y': cy, 
+                                    'area': area,
+                                    'circularity': circularity
+                                })
             
-            circles = np.uint16(np.around(circles[0]))
+            if len(bolinhas) == 0:
+                return None, 0.0
             
-            # Analisar cada círculo
+            # ORDENAR POR Y (linha) para agrupar por questão
+            bolinhas.sort(key=lambda b: b['y'])
+            
+            # AGRUPAR POR LINHA (questões)
+            linhas = []
+            linha_atual = []
+            y_anterior = bolinhas[0]['y']
+            tolerancia_y = 25  # Tolerância para considerar mesma linha
+            
+            for bolinha in bolinhas:
+                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
+                    linhas.append(linha_atual)
+                    linha_atual = []
+                linha_atual.append(bolinha)
+                y_anterior = bolinha['y']
+            
+            if linha_atual:
+                linhas.append(linha_atual)
+            
+            # Para cada linha, ordenar por X e extrair a letra
             respostas = []
             
-            for circle in circles:
-                x, y, r = circle
+            # Ordenar linhas por Y (de cima para baixo)
+            linhas.sort(key=lambda linha: linha[0]['y'])
+            
+            for idx, linha in enumerate(linhas, start=1):
+                # Ordenar bolinhas da linha por X (da esquerda para direita)
+                linha.sort(key=lambda b: b['x'])
                 
-                # Extrair região do círculo
-                mask = np.zeros_like(gray)
-                cv2.circle(mask, (x, y), r, 255, -1)
-                roi = cv2.bitwise_and(gray, mask)
-                
-                # Calcular intensidade média
-                pixels = roi[roi > 0]
-                if len(pixels) > 0:
-                    mean_intensity = np.mean(pixels)
-                    # Normalizar (0 = preto, 255 = branco)
-                    preenchimento = 1 - (mean_intensity / 255)
+                # Pegar a primeira bolinha (mais à esquerda = marcada)
+                if len(linha) > 0:
+                    # Determinar qual opção baseado na posição X relativa
+                    x_min = linha[0]['x']
+                    opcao = 0
                     
-                    # Se mais de 35% preenchido, considerar marcado
-                    if preenchimento > 0.35:
-                        # Determinar questão baseado na posição Y
-                        questao = int((y - 20) / 35) + 1
-                        
-                        # Determinar opção baseado na posição X
-                        opcao = int((x % 200) / 40)
-                        
-                        if questao >= 1 and opcao < num_opcoes:
+                    # Tentar identificar a opção pela posição
+                    for i, b in enumerate(linha):
+                        if i < num_opcoes:
                             letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                            respostas.append((questao, letras[opcao]))
+                            respostas.append((idx, letras[i]))
+                            break
+            
+            # Se não encontrou respostas suficientes, tentar método alternativo
+            if len(respostas) == 0:
+                return None, 0.0
             
             # Ordenar por questão
             respostas.sort(key=lambda x: x[0])
-            
-            # Extrair apenas as letras
             letras_respostas = [r[1] for r in respostas]
             
-            # Verificar se tem respostas suficientes
-            if len(letras_respostas) >= 2:
-                confianca = min(85, len(letras_respostas) * 15)
-                return letras_respostas, confianca
+            # Calcular confiança
+            confianca = min(85, len(letras_respostas) * 15)
             
+            return letras_respostas, confianca
+            
+        except Exception as e:
+            print(f"Erro no contorno: {e}")
             return None, 0.0
+    
+    @staticmethod
+    def detectar_respostas_opencv(imagem_base64, num_opcoes=4):
+        """
+        Método alternativo: detecta círculos com HoughCircles
+        """
+        try:
+            img = CorretorHibrido.preprocessar_imagem(imagem_base64)
+            if img is None:
+                return None, 0.0
+            
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            
+            circles = cv2.HoughCircles(
+                blurred,
+                cv2.HOUGH_GRADIENT,
+                dp=1.2,
+                minDist=15,
+                param1=40,
+                param2=25,
+                minRadius=6,
+                maxRadius=30
+            )
+            
+            if circles is None:
+                return None, 0.0
+            
+            circles = np.uint16(np.around(circles[0]))
+            
+            bolinhas = []
+            for circle in circles:
+                x, y, r = circle
+                mask = np.zeros_like(gray)
+                cv2.circle(mask, (x, y), r, 255, -1)
+                roi = cv2.bitwise_and(gray, mask)
+                pixels = roi[roi > 0]
+                
+                if len(pixels) > 0:
+                    mean_intensity = np.mean(pixels)
+                    preenchimento = 1 - (mean_intensity / 255)
+                    
+                    if preenchimento > 0.35:
+                        bolinhas.append({'x': x, 'y': y, 'r': r})
+            
+            if len(bolinhas) == 0:
+                return None, 0.0
+            
+            # Agrupar por linha
+            bolinhas.sort(key=lambda b: b['y'])
+            linhas = []
+            linha_atual = []
+            y_anterior = bolinhas[0]['y']
+            
+            for bolinha in bolinhas:
+                if abs(bolinha['y'] - y_anterior) > 20 and linha_atual:
+                    linhas.append(linha_atual)
+                    linha_atual = []
+                linha_atual.append(bolinha)
+                y_anterior = bolinha['y']
+            
+            if linha_atual:
+                linhas.append(linha_atual)
+            
+            respostas = []
+            for idx, linha in enumerate(linhas, start=1):
+                linha.sort(key=lambda b: b['x'])
+                if len(linha) > 0:
+                    for i, b in enumerate(linha):
+                        if i < num_opcoes:
+                            letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                            respostas.append((idx, letras[i]))
+                            break
+            
+            if len(respostas) == 0:
+                return None, 0.0
+            
+            respostas.sort(key=lambda x: x[0])
+            letras_respostas = [r[1] for r in respostas]
+            confianca = min(80, len(letras_respostas) * 15)
+            
+            return letras_respostas, confianca
             
         except Exception as e:
             print(f"Erro no OpenCV: {e}")
@@ -251,11 +353,8 @@ class CorretorHibrido:
                 return None, 0.0
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Melhorar contraste para OCR
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
-            
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
             
             custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -275,21 +374,30 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        # Tentar OpenCV primeiro (melhor para bolinhas)
+        # Tentar método por contorno primeiro (MAIS PRECISO)
+        respostas_cont, conf_cont = CorretorHibrido.detectar_respostas_por_contorno(imagem_base64, num_opcoes)
+        if respostas_cont and len(respostas_cont) >= 3:
+            return respostas_cont, conf_cont, 'Contorno'
+        
+        # Tentar OpenCV
         respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem_base64, num_opcoes)
         if respostas_cv and len(respostas_cv) >= 3:
             return respostas_cv, conf_cv, 'OpenCV'
         
-        # Se OpenCV não pegou todas, tentar OCR
+        # Tentar OCR
         respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem_base64, num_opcoes)
         if respostas_ocr and len(respostas_ocr) >= 2:
             return respostas_ocr, conf_ocr, 'OCR'
         
-        # Se OpenCV pegou algumas mas não todas, usar o que pegou
+        # Se contorno pegou algumas, usar o que pegou
+        if respostas_cont and len(respostas_cont) >= 1:
+            return respostas_cont, conf_cont, 'Contorno (parcial)'
+        
         if respostas_cv and len(respostas_cv) >= 1:
             return respostas_cv, conf_cv, 'OpenCV (parcial)'
         
         return None, 0.0, 'Nenhum método funcionou'
+
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
@@ -476,7 +584,7 @@ def teste():
             'mensagem': 'Servidor funcionando!',
             'status': 'ok',
             'banco': 'PostgreSQL (Supabase)',
-            'metodos': ['OpenCV', 'OCR', 'Análise Avançada']
+            'metodos': ['Contorno', 'OpenCV', 'OCR', 'Análise Avançada']
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -485,17 +593,18 @@ def teste():
 def status_ia():
     return jsonify({
         'metodos_disponiveis': {
+            'Contorno': True,
             'OpenCV': True,
             'OCR': True,
             'Analise_Avancada': True
         },
-        'metodo_ativo': 'Híbrido (OpenCV + OCR + Análise Avançada)',
+        'metodo_ativo': 'Híbrido (Contorno + OpenCV + OCR + Análise Avançada)',
         'status': '🧠 Sistema híbrido ativo!',
         'banco': 'PostgreSQL (Supabase)',
         'vantagens': [
             '✅ 100% gratuito',
             '✅ Sem limites de uso',
-            '✅ Correção de provas com OpenCV + OCR',
+            '✅ Correção de provas com detecção por contorno',
             '✅ Correção de redações com análise avançada'
         ]
     })
@@ -774,7 +883,7 @@ def deletar_prova(prova_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS - HÍBRIDO (COM OPENCV)
+# CORREÇÃO DE PROVAS - HÍBRIDO (COM CONTORNO)
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1258,5 +1367,5 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
-    print("🧠 Sistema Híbrido - OpenCV + OCR + Análise Avançada de Redação")
+    print("🧠 Sistema Híbrido - Contorno + OpenCV + OCR + Análise Avançada de Redação")
     app.run(host='0.0.0.0', port=port, debug=False)
