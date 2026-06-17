@@ -1442,3 +1442,17 @@ def gerar_gabarito():
     except Exception as e:
         print(f"Erro ao gerar gabarito: {e}")
         return jsonify({'erro': str(e)}), 500
+
+        # ============================================
+# INICIALIZAR BANCO (APENAS UMA VEZ)
+# ============================================
+
+if __name__ == '__main__':
+    # Inicializar banco apenas uma vez
+    try:
+        init_database()
+    except Exception as e:
+        print(f"❌ Erro na inicialização: {e}")
+    
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
