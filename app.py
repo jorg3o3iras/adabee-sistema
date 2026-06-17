@@ -238,7 +238,7 @@ class CorretorHibrido:
                 maior = max(preenchimentos)
                 posicao = preenchimentos.index(maior)
 
-                if maior >= 0.55:
+                if maior >= 0.25:
                     resposta = letras[posicao]
                 else:
                     resposta = '?'
@@ -331,7 +331,7 @@ class CorretorHibrido:
                             melhor_preenchimento = bolinha['preenchimento']
                             melhor_pos = pos
                 
-                if melhor_pos >= 0 and melhor_preenchimento > 0.30:
+                if melhor_pos >= 0 and melhor_preenchimento > 0.25:
                     letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                     respostas.append((idx, letras[melhor_pos]))
                 else:
