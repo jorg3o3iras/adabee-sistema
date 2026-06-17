@@ -524,7 +524,7 @@ def criar_turma():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/turmas/<int:turma_id>', methods(['DELETE'])
+@app.route('/api/turmas/<int:turma_id>', methods=['DELETE'])
 def deletar_turma(turma_id):
     try:
         conn = get_db_connection()
