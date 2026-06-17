@@ -4,14 +4,12 @@ import cv2
 import numpy as np
 import base64
 import json
-import sqlite3
-from datetime import datetime
-import os
 import io
 import csv
 import re
+from datetime import datetime
+import os
 from PIL import Image
-import google.generativeai as genai
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytesseract
@@ -21,19 +19,18 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# HUGGING FACE - DESATIVADO (ECONOMIA DE MEMÓRIA)
+# HUGGING FACE - DESATIVADO
 # ============================================
 HF_AVAILABLE = False
-print("ℹ️ Hugging Face desativado - Usando OCR + Análise Avançada")
+print("ℹ️ Hugging Face desativado - Usando OpenCV + OCR + Análise Avançada")
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE (VERSÃO QUE FUNCIONA)
+# CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
 SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
 
 def get_db_connection():
-    """Conecta ao Supabase"""
     try:
         conn = psycopg2.connect(
             SUPABASE_URL,
@@ -99,7 +96,7 @@ def init_database():
             acertos INTEGER, 
             nota REAL, 
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            metodo_ia TEXT DEFAULT 'híbrido'
+            metodo_ia TEXT DEFAULT 'hibrido'
         )''')
         
         cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
@@ -110,7 +107,7 @@ def init_database():
             nota REAL, 
             feedback TEXT, 
             data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            metodo_ia TEXT DEFAULT 'híbrido'
+            metodo_ia TEXT DEFAULT 'hibrido'
         )''')
         
         conn.commit()
@@ -120,15 +117,14 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CONFIGURAR GEMINI AI (DESATIVADO - ECONÔMICO)
+# GEMINI - DESATIVADO
 # ============================================
 
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GEMINI_AVAILABLE = False
-print("ℹ️ Gemini AI desativado - Usando sistema híbrido gratuito")
+print("ℹ️ Gemini AI desativado - Usando sistema híbrido")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO (SEM GEMINI E SEM HF)
+# CLASSE CORRETOR HÍBRIDO (COM OPENCV)
 # ============================================
 
 class CorretorHibrido:
@@ -159,6 +155,7 @@ class CorretorHibrido:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
                 return None, 0.0
+            
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
             circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
@@ -408,8 +405,7 @@ def teste():
             'mensagem': 'Servidor funcionando!',
             'status': 'ok',
             'banco': 'PostgreSQL (Supabase)',
-            'gemini': GEMINI_AVAILABLE,
-            'huggingface': HF_AVAILABLE
+            'metodos': ['OpenCV', 'OCR', 'Análise Avançada']
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -422,8 +418,8 @@ def status_ia():
             'OCR': True,
             'Analise_Avancada': True
         },
-        'metodo_ativo': 'Híbrido (sem Gemini)',
-        'status': '🧠 Sistema híbrido ativo - Com análise avançada de redação!',
+        'metodo_ativo': 'Híbrido (OpenCV + OCR + Análise Avançada)',
+        'status': '🧠 Sistema híbrido ativo!',
         'banco': 'PostgreSQL (Supabase)',
         'vantagens': [
             '✅ 100% gratuito',
@@ -707,7 +703,7 @@ def deletar_prova(prova_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS - HÍBRIDO
+# CORREÇÃO DE PROVAS - HÍBRIDO (COM OPENCV)
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -847,7 +843,7 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE DASHBOARD E RELATÓRIOS
+# DEMAIS ROTAS
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -1007,29 +1003,6 @@ def testar_conexao():
             'erro': str(e)
         }), 500
 
-@app.route('/api/diagnosticar_banco', methods=['GET'])
-def diagnosticar_banco():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 as teste")
-        row = cursor.fetchone()
-        conn.close()
-        return jsonify({
-            'status': 'sucesso',
-            'banco': 'PostgreSQL (Supabase)',
-            'detalhes': {
-                'teste_query': 'OK',
-                'conexao': 'Estabelecida com sucesso'
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'erro',
-            'banco': 'Não conectado',
-            'detalhes': {'erro': str(e)}
-        }), 500
-
 @app.route('/api/ip_info', methods=['GET'])
 def ip_info():
     return jsonify({
@@ -1037,12 +1010,6 @@ def ip_info():
         'porta': 10000, 
         'url': 'https://adabee-sistema-3.onrender.com'
     })
-
-@app.route('/api/configuracoes', methods=['GET', 'POST'])
-def configuracoes():
-    if request.method == 'GET':
-        return jsonify({'param1': 80, 'param2': 25})
-    return jsonify({'mensagem': 'ok'})
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
@@ -1213,7 +1180,6 @@ def internal_error(e):
 # ============================================
 
 if __name__ == '__main__':
-    # Inicializar banco
     try:
         init_database()
     except Exception as e:
@@ -1221,5 +1187,5 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
-    print("🧠 Sistema Híbrido - SEM Gemini - SEM Hugging Face")
+    print("🧠 Sistema Híbrido - OpenCV + OCR + Análise Avançada de Redação")
     app.run(host='0.0.0.0', port=port, debug=False)
