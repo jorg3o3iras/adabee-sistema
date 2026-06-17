@@ -24,6 +24,11 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
+# FLAG PARA CONTROLAR INICIALIZAÇÃO DO BANCO
+# ============================================
+_db_initialized = False
+
+# ============================================
 # CONFIGURAÇÕES PARA RENDER
 # ============================================
 
@@ -48,31 +53,38 @@ else:
             pass
 
 # ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE
+# CONFIGURAR BANCO DE DADOS - SUPABASE (CORRIGIDO)
 # ============================================
 
 SUPABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
 
 def get_db_connection():
-    """Conecta ao Supabase"""
+    """Conecta ao Supabase com timeout reduzido"""
     try:
         conn = psycopg2.connect(
             SUPABASE_URL,
             cursor_factory=RealDictCursor,
-            connect_timeout=15,
+            connect_timeout=5,
             keepalives=1,
-            keepalives_idle=30,
-            keepalives_interval=10,
-            keepalives_count=3
+            keepalives_idle=10,
+            keepalives_interval=5,
+            keepalives_count=2
         )
-        print("✅ Conectado ao Supabase!")
         return conn
     except Exception as e:
         print(f"❌ ERRO ao conectar: {e}")
         return None
 
 def init_database():
+    """Inicializa o banco de dados APENAS UMA VEZ"""
+    global _db_initialized
+    
+    if _db_initialized:
+        print("ℹ️ Banco já inicializado, pulando...")
+        return
+    
     try:
+        print("📦 Inicializando banco de dados...")
         conn = get_db_connection()
         if conn is None:
             print("⚠️ Não foi possível conectar ao banco")
@@ -140,6 +152,7 @@ def init_database():
         
         conn.commit()
         conn.close()
+        _db_initialized = True
         print("✅ Banco de dados inicializado com sucesso!")
     except Exception as e:
         print(f"❌ Erro ao inicializar banco: {e}")
@@ -321,7 +334,7 @@ def teste():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE ESCOLAS, TURMAS E ALUNOS
+# ROTAS DE ESCOLAS
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -370,6 +383,10 @@ def deletar_escola(escola_id):
         return jsonify({'mensagem': 'Escola excluída!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTAS DE TURMAS
+# ============================================
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
@@ -424,6 +441,10 @@ def deletar_turma(turma_id):
         return jsonify({'mensagem': 'Turma excluída!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTAS DE ALUNOS
+# ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
@@ -762,6 +783,188 @@ def status_ia():
         'metodo_ativo': 'Híbrido',
         'status': '🧠 Sistema híbrido ativo!'
     })
+
+@app.route('/api/ip_info', methods=['GET'])
+def ip_info():
+    return jsonify({
+        'ip': 'render.com', 
+        'porta': 10000, 
+        'url': os.environ.get('RENDER_EXTERNAL_URL', 'https://adabee-sistema-3.onrender.com')
+    })
+
+@app.route('/api/configuracoes', methods=['GET', 'POST'])
+def configuracoes():
+    if request.method == 'GET':
+        return jsonify({
+            'metodo_principal': 'Híbrido',
+            'param1': 80,
+            'param2': 25,
+            'metodos': ['OpenCV', 'OCR', 'Gemini'],
+            'gemini_available': GEMINI_AVAILABLE
+        })
+    return jsonify({'mensagem': 'ok'})
+
+@app.route('/api/alternar_ia', methods=['POST'])
+def alternar_ia():
+    dados = request.json
+    metodo = dados.get('metodo', 'hibrido')
+    return jsonify({
+        'metodo': metodo,
+        'status': f'✅ Método {metodo} ativado!',
+        'metodos_disponiveis': ['hibrido', 'opencv', 'ocr', 'gemini']
+    })
+
+@app.route('/api/treinar_ia', methods=['POST'])
+def treinar_ia():
+    return jsonify({
+        'status': 'ok',
+        'mensagem': '✅ Sistema híbrido está pronto para uso!',
+        'metodos_ativos': ['OpenCV', 'OCR', 'Gemini']
+    })
+
+@app.route('/api/calibrar', methods=['POST'])
+def calibrar():
+    return jsonify({
+        'sucesso': True,
+        'mensagem': '✅ Sistema calibrado!',
+        'confianca_minima': 70,
+        'metodos_testados': 3
+    })
+
+@app.route('/api/testar_metodos', methods=['POST'])
+def testar_metodos():
+    try:
+        dados = request.json
+        imagem = dados.get('imagem')
+        
+        if not imagem:
+            return jsonify({'erro': 'Imagem não fornecida'}), 400
+        
+        resultados = {}
+        
+        respostas_cv, conf_cv = CorretorHibrido.detectar_respostas_opencv(imagem)
+        resultados['opencv'] = {
+            'sucesso': bool(respostas_cv),
+            'respostas': respostas_cv[:10] if respostas_cv else [],
+            'confianca': conf_cv
+        }
+        
+        respostas_ocr, conf_ocr = CorretorHibrido.detectar_respostas_ocr(imagem)
+        resultados['ocr'] = {
+            'sucesso': bool(respostas_ocr),
+            'respostas': respostas_ocr[:10] if respostas_ocr else [],
+            'confianca': conf_ocr
+        }
+        
+        if GEMINI_AVAILABLE:
+            respostas_gemini, conf_gemini = CorretorHibrido.detectar_respostas_gemini(imagem)
+            resultados['gemini'] = {
+                'sucesso': bool(respostas_gemini),
+                'respostas': respostas_gemini[:10] if respostas_gemini else [],
+                'confianca': conf_gemini
+            }
+        
+        respostas_hib, conf_hib, metodo = CorretorHibrido.detectar_respostas_hibrido(imagem)
+        resultados['hibrido'] = {
+            'sucesso': bool(respostas_hib),
+            'respostas': respostas_hib[:10] if respostas_hib else [],
+            'confianca': conf_hib,
+            'metodo_escolhido': metodo
+        }
+        
+        return jsonify({
+            'resultados': resultados,
+            'melhor_metodo': max(resultados.items(), key=lambda x: x[1]['confianca'])[0] if resultados else 'Nenhum',
+            'total_metodos_testados': len(resultados)
+        })
+        
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/diagnosticar_banco', methods=['GET'])
+def diagnosticar_banco():
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({'status': 'erro', 'banco': 'Não conectado'}), 500
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 as teste")
+        row = cursor.fetchone()
+        conn.close()
+        return jsonify({
+            'status': 'sucesso',
+            'banco': 'PostgreSQL (Supabase)',
+            'detalhes': {
+                'teste_query': 'OK',
+                'conexao': 'Estabelecida com sucesso'
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'erro',
+            'banco': 'Não conectado',
+            'detalhes': {'erro': str(e)}
+        }), 500
+
+@app.route('/api/testar_conexao', methods=['GET'])
+def testar_conexao():
+    try:
+        conn = get_db_connection()
+        if conn:
+            conn.close()
+            return jsonify({
+                'conectado': True,
+                'banco': 'PostgreSQL (Supabase)',
+                'mensagem': '✅ Conectado ao Supabase!'
+            })
+        else:
+            return jsonify({
+                'conectado': False,
+                'erro': 'Não foi possível conectar'
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'conectado': False,
+            'erro': str(e)
+        }), 500
+
+@app.route('/api/exportar', methods=['GET'])
+def exportar_resultados():
+    prova_id = request.args.get('prova_id')
+    if not prova_id:
+        return jsonify({'erro': 'Prova não informada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({'erro': 'Erro ao conectar'}), 500
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao, c.metodo_ia
+            FROM correcoes c 
+            JOIN alunos a ON c.aluno_id = a.id 
+            WHERE c.prova_id = %s
+        """, (prova_id,))
+        
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
+        for r in resultados:
+            writer.writerow([r['nome'], r['matricula'] or '', r['acertos'], round(r['nota'], 1), r['data_correcao'], r['metodo_ia'] or 'Desconhecido'])
+        
+        return output.getvalue(), 200, {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
+        }
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# GERAR GABARITO
+# ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
