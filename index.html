@@ -3000,14 +3000,78 @@ document.getElementById('del-modal')?.addEventListener('click', e => {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Inicializando sistema...');
   buildGabGrid();
   carregarCombos();
   carregarDados();
   
   const tipoProva = document.getElementById('modal-prova-tipo');
   if (tipoProva) gerarGabaritoModal(tipoProva.value);
+  
+  // ═══ CORREÇÃO DEFINITIVA DA SÉRIE ═══
+  setTimeout(function() {
+    console.log('🔧 Aplicando correção da série...');
+    
+    const selectProva = document.getElementById('corrigir-prova');
+    const selectSerie = document.getElementById('corrigir-serie');
+    
+    if (selectProva && selectSerie) {
+      // Função para preencher a série
+      function preencherSerie() {
+        const selected = selectProva.options[selectProva.selectedIndex];
+        const serie = selected?.dataset?.serie || '';
+        
+        console.log('📌 Série encontrada:', serie);
+        
+        if (serie) {
+          const options = selectSerie.options;
+          let found = false;
+          
+          // Tentar encontrar correspondência exata
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].text === serie || options[i].value === serie) {
+              selectSerie.value = options[i].value;
+              found = true;
+              console.log('✅ Série preenchida (exata):', options[i].value);
+              break;
+            }
+          }
+          
+          // Se não encontrou, tentar correspondência parcial
+          if (!found) {
+            for (let i = 0; i < options.length; i++) {
+              if (options[i].text.includes(serie) || serie.includes(options[i].text)) {
+                selectSerie.value = options[i].value;
+                found = true;
+                console.log('✅ Série preenchida (parcial):', options[i].value);
+                break;
+              }
+            }
+          }
+          
+          // Se ainda não encontrou, definir como texto
+          if (!found) {
+            selectSerie.value = serie;
+            console.log('✅ Série preenchida (texto):', serie);
+          }
+        } else {
+          selectSerie.value = '';
+          console.log('⚠️ Nenhuma série encontrada');
+        }
+      }
+      
+      // Remover eventos antigos e adicionar novo
+      selectProva.onchange = preencherSerie;
+      
+      // Forçar o preenchimento se já houver valor
+      if (selectProva.value) {
+        console.log('📋 Forçando preenchimento para:', selectProva.value);
+        preencherSerie();
+      }
+      
+      console.log('✅ Correção da série aplicada!');
+    } else {
+      console.log('❌ Selects não encontrados');
+    }
+  }, 2000); // Aguarda 2 segundos para garantir que os dados foram carregados
 });
-</script>
-
-</body>
-</html>
