@@ -1877,6 +1877,59 @@ async function carregarCombos() {
   }
 }
 
+
+// ═══════════════════════════════ CARREGAR PROVAS COM SÉRIE ═══════════════════════════════
+async function carregarProvasComSerie() {
+    try {
+        const response = await fetch(API_URL + '/api/provas');
+        const provas = await response.json();
+        const selectProva = document.getElementById('corrigir-prova');
+        const selectSerie = document.getElementById('corrigir-serie');
+        
+        if (selectProva) {
+            const current = selectProva.value;
+            selectProva.innerHTML = '<option value="">Selecione a prova</option>';
+            a
+            if (provas && !provas.erro) {
+                provas.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    // Mostrar a série junto com o título
+                    const serie = p.turma_serie || 'Série não definida';
+                    opt.textContent = p.titulo + ' - ' + serie;
+                    // Guardar a série como atributo
+                    opt.dataset.serie = serie;
+                    selectProva.appendChild(opt);
+                });
+            }
+            if (current) selectProva.value = current;
+        }
+        
+        // Quando selecionar a prova, atualizar a série
+        if (selectProva) {
+            selectProva.onchange = function() {
+                const selected = this.options[this.selectedIndex];
+                const serie = selected?.dataset?.serie || '';
+                if (selectSerie) {
+                    selectSerie.value = serie;
+                    // Se não encontrar a série exata, tentar encontrar por texto
+                    if (!serie) {
+                        const options = selectSerie.options;
+                        for (let i = 0; i < options.length; i++) {
+                            if (options[i].text === serie) {
+                                selectSerie.value = options[i].value;
+                                break;
+                            }
+                        }
+                    }
+                }
+            };
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar provas com série:', erro);
+    }
+}
+
 // ═══════════════════════════════ LISTA POR TURMA COM BOLINHAS ═══════════════════════════════
 async function gerarListaTurma() {
     const escolaId = document.getElementById('lista-escola').value;
