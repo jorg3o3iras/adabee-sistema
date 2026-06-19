@@ -1,668 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>CorrigePro — Sistema de Correção de Provas</title>
-<style>
-/* ═══════════════ DESIGN SYSTEM ═══════════════ */
-:root {
-  --bg: #0f1117; --bg2: #161b2e; --bg3: #1e2540;
-  --surface: #1a2035; --surface2: #222b44;
-  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
-  --blue: #3b82f6; --blue-glow: rgba(59,130,246,0.3);
-  --purple: #8b5cf6; --purple-glow: rgba(139,92,246,0.3);
-  --green: #10b981; --green-glow: rgba(16,185,129,0.25);
-  --red: #ef4444; --red-glow: rgba(239,68,68,0.25);
-  --orange: #f59e0b; --cyan: #06b6d4;
-  --text: #f1f5f9; --text2: #94a3b8; --text3: #64748b;
-  --r: 12px; --r2: 8px;
-  --sh: 0 4px 24px rgba(0,0,0,0.4); --sh2: 0 2px 12px rgba(0,0,0,0.3);
-  --grad-blue: linear-gradient(135deg,#3b82f6,#6366f1);
-  --grad-purple: linear-gradient(135deg,#8b5cf6,#ec4899);
-  --grad-green: linear-gradient(135deg,#10b981,#06b6d4);
-  --grad-orange: linear-gradient(135deg,#f59e0b,#ef4444);
-}
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg2)}
-::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:99px}
-::-webkit-scrollbar-thumb:hover{background:var(--blue)}
-
-/* ═══════════════ LOGIN ═══════════════ */
-#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
-.login-bg{position:absolute;inset:0;pointer-events:none}
-.login-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.22;animation:blobFloat 8s ease-in-out infinite}
-.lb1{width:500px;height:500px;background:var(--blue);top:-150px;left:-150px}
-.lb2{width:400px;height:400px;background:var(--purple);bottom:-100px;right:-100px;animation-delay:3s}
-.lb3{width:300px;height:300px;background:var(--cyan);top:40%;left:30%;animation-delay:6s}
-@keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,-20px) scale(1.05)}66%{transform:translate(-10px,15px) scale(.97)}}
-.login-card{background:rgba(26,32,53,.88);backdrop-filter:blur(24px);border:1px solid var(--border2);border-radius:24px;padding:44px 40px;width:440px;max-width:95vw;box-shadow:0 32px 80px rgba(0,0,0,.5);position:relative;z-index:1}
-.login-logo{text-align:center;margin-bottom:32px}
-.l-icon{width:72px;height:72px;border-radius:20px;margin:0 auto 14px;background:var(--grad-blue);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 32px var(--blue-glow)}
-.login-logo h1{font-size:24px;font-weight:800;letter-spacing:-.5px}
-.login-logo p{color:var(--text2);font-size:13px;margin-top:6px}
-.login-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px;background:var(--bg);border-radius:10px;padding:4px;border:1px solid var(--border)}
-.login-tab{padding:10px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:all .25s;background:transparent;color:var(--text2)}
-.login-tab.active{background:var(--grad-blue);color:#fff;box-shadow:0 4px 16px var(--blue-glow)}
-.lf-group{margin-bottom:16px}
-.lf-group label{display:block;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase}
-.lf-input{width:100%;padding:13px 16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;outline:none;transition:all .2s}
-.lf-input:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-glow)}
-.lf-input::placeholder{color:var(--text3)}
-.btn-login{width:100%;padding:14px;background:var(--grad-blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 20px var(--blue-glow);transition:all .25s}
-.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 32px var(--blue-glow)}
-.login-hint{text-align:center;margin-top:16px;font-size:12px;color:var(--text3)}
-@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
-
-/* ═══════════════ APP LAYOUT ═══════════════ */
-#app{display:none;height:100vh;flex-direction:row;overflow:hidden}
-
-/* ═══════════════ SIDEBAR ═══════════════ */
-.sidebar{
-  width:230px;flex-shrink:0;background:var(--bg2);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;height:100vh;overflow:hidden;
-}
-.sb-brand{
-  display:flex;align-items:center;gap:10px;padding:18px 16px 16px;
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.sb-logo{
-  width:36px;height:36px;border-radius:10px;background:var(--grad-blue);
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  box-shadow:0 2px 10px var(--blue-glow);flex-shrink:0;
-}
-.sb-brand-name{font-size:16px;font-weight:800;letter-spacing:-.3px}
-.sb-brand-name span{color:var(--blue)}
-.sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
-.sb-section{font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding:14px 10px 5px;margin-top:2px}
-.sb-item{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all .18s;border:1px solid transparent;white-space:nowrap}
-.sb-item:hover{background:var(--surface);color:var(--text)}
-.sb-item.active{background:rgba(59,130,246,.12);color:var(--blue);border-color:rgba(59,130,246,.2)}
-.sb-ico{font-size:15px;flex-shrink:0;width:18px;text-align:center}
-.sb-badge{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(139,92,246,.2);color:#a78bfa;font-weight:700;border:1px solid rgba(139,92,246,.3)}
-.sb-footer{border-top:1px solid var(--border);padding:12px 12px;flex-shrink:0}
-.sb-user{display:flex;align-items:center;gap:9px;padding:10px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;margin-bottom:8px}
-.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--grad-blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
-.sb-uname{font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.sb-urole{font-size:9px;color:var(--text3);margin-top:1px}
-.sb-logout{width:100%;padding:9px;border:1px solid rgba(239,68,68,.3);border-radius:8px;background:rgba(239,68,68,.08);color:#fc8181;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
-.sb-logout:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5)}
-
-/* ═══════════════ CONTENT ═══════════════ */
-.content{flex:1;overflow-y:auto;padding:24px;background:var(--bg)}
-.page{display:none;animation:fadeIn .25s ease}
-.page.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-/* ═══════════════ PAGE ELEMENTS ═══════════════ */
-.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
-.page-title{font-size:21px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:9px}
-.page-sub{color:var(--text2);font-size:13px;margin-top:4px}
-.page-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:18px;box-shadow:var(--sh2);transition:border-color .2s}
-.card:hover{border-color:var(--border2)}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
-.card-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px;transition:all .25s;position:relative;overflow:hidden}
-.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.stat-card.blue::before{background:var(--grad-blue)}
-.stat-card.green::before{background:var(--grad-green)}
-.stat-card.orange::before{background:var(--grad-orange)}
-.stat-card.purple::before{background:var(--grad-purple)}
-.stat-card:hover{transform:translateY(-2px);box-shadow:var(--sh);border-color:var(--border2)}
-.stat-top{display:flex;align-items:center;justify-content:space-between}
-.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.stat-icon.blue{background:rgba(59,130,246,.15)}
-.stat-icon.green{background:rgba(16,185,129,.15)}
-.stat-icon.orange{background:rgba(245,158,11,.15)}
-.stat-icon.purple{background:rgba(139,92,246,.15)}
-.stat-trend{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(16,185,129,.15);color:var(--green)}
-.stat-val{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1}
-.stat-label{font-size:12px;color:var(--text2)}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
-.btn:hover{transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
-.btn-primary{background:var(--grad-blue);color:#fff;box-shadow:0 4px 14px var(--blue-glow)}
-.btn-primary:hover{box-shadow:0 6px 22px var(--blue-glow)}
-.btn-purple{background:var(--grad-purple);color:#fff;box-shadow:0 4px 14px var(--purple-glow)}
-.btn-green{background:var(--grad-green);color:#fff;box-shadow:0 4px 14px var(--green-glow)}
-.btn-red{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 14px var(--red-glow)}
-.btn-red:hover{box-shadow:0 6px 22px var(--red-glow)}
-.btn-orange{background:var(--grad-orange);color:#fff}
-.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border2)}
-.btn-outline:hover{background:var(--surface2);color:var(--text);box-shadow:none}
-.btn-ghost{background:transparent;color:var(--text2);padding:6px 9px}
-.btn-ghost:hover{background:var(--surface2);color:var(--text);box-shadow:none}
-.btn-del{background:transparent;color:var(--text3);padding:6px 9px;border:none;border-radius:6px;cursor:pointer;font-size:14px;transition:all .18s;display:inline-flex;align-items:center}
-.btn-del:hover{background:rgba(239,68,68,.15);color:var(--red);transform:scale(1.1)}
-.btn-sm{padding:5px 11px;font-size:11px;border-radius:6px}
-.btn-lg{padding:13px 28px;font-size:15px;border-radius:10px}
-.btn-full{width:100%;justify-content:center}
-.btn-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.form-row.c1{grid-template-columns:1fr}
-.form-row.c3{grid-template-columns:1fr 1fr 1fr}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.req{color:var(--red);margin-left:3px}
-.form-control{padding:10px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;outline:none;transition:all .2s;width:100%}
-.form-control:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-glow)}
-.form-control::placeholder{color:var(--text3)}
-select.form-control{cursor:pointer}
-textarea.form-control{resize:vertical;line-height:1.6}
-.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead{background:var(--bg2)}
-th{padding:11px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.8px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
-tr:last-child td{border-bottom:none}
-tbody tr{transition:all .2s}
-tbody tr:hover td{background:var(--surface2);color:var(--text)}
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-.badge-green{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
-.badge-red{background:rgba(239,68,68,.15);color:#fc8181;border:1px solid rgba(239,68,68,.3)}
-.badge-orange{background:rgba(245,158,11,.15);color:var(--orange);border:1px solid rgba(245,158,11,.3)}
-.badge-blue{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
-.badge-purple{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)}
-.badge-gray{background:rgba(148,163,184,.1);color:var(--text3);border:1px solid var(--border)}
-.badge-cyan{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid rgba(6,182,212,.3)}
-.chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border2);color:var(--text2)}
-.progress{background:var(--bg2);border-radius:99px;height:6px;overflow:hidden}
-.progress-fill{height:100%;border-radius:99px;transition:width .6s ease}
-.pf-blue{background:var(--grad-blue)}
-.pf-green{background:var(--grad-green)}
-.pf-purple{background:var(--grad-purple)}
-.search-wrap{position:relative;display:inline-flex;align-items:center}
-.search-wrap input{padding:8px 14px 8px 36px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;outline:none;width:220px;transition:all .2s}
-.search-wrap input:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-glow)}
-.search-wrap input::placeholder{color:var(--text3)}
-.search-ico{position:absolute;left:11px;color:var(--text3);font-size:13px;pointer-events:none}
-.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;transition:all .25s;background:var(--surface2)}
-.upload-zone:hover{border-color:var(--blue);background:rgba(59,130,246,.05)}
-.uz-ico{font-size:40px;margin-bottom:10px}
-.uz-hint{font-size:11px;color:var(--text3);margin-top:4px}
-.chart-bars{display:flex;align-items:flex-end;gap:8px;height:130px;padding-bottom:4px}
-.chart-bar-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:28px}
-.chart-bar{width:100%;border-radius:6px 6px 0 0;transition:height .6s ease;min-height:4px}
-.chart-bar-val{font-size:10px;font-weight:700;color:var(--text2)}
-.chart-bar-lbl{font-size:10px;color:var(--text3)}
-.gab-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
-.gab-item{display:flex;flex-direction:column;align-items:center;gap:4px}
-.gab-num{font-size:10px;font-weight:700;color:var(--text3)}
-.gab-select{width:100%;padding:5px 2px;border-radius:6px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;font-weight:700;text-align:center;cursor:pointer;outline:none;transition:all .15s}
-.gab-select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
-.gab-select.filled{border-color:var(--green)!important;background:rgba(16,185,129,.07)!important}
-.ai-hero{background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(139,92,246,.1));border:1px solid rgba(139,92,246,.2);border-radius:var(--r);padding:20px;margin-bottom:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.ai-hero-icon{font-size:42px;flex-shrink:0}
-.ai-hero-text h3{font-size:16px;font-weight:800}
-.ai-hero-text p{font-size:13px;color:var(--text2);margin-top:3px}
-.ai-hero-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-.ai-feature-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;border-radius:var(--r);border:1px solid var(--border2);cursor:pointer;transition:all .25s;background:var(--surface2);text-align:center}
-.ai-feature-btn:hover{transform:translateY(-3px);box-shadow:var(--sh)}
-.af-ico{font-size:30px}
-.af-title{font-size:12px;font-weight:700}
-.af-sub{font-size:10px;color:var(--text2);line-height:1.4}
-.afb-blue:hover{border-color:var(--blue);box-shadow:0 8px 24px var(--blue-glow)}
-.afb-green:hover{border-color:var(--green);box-shadow:0 8px 24px var(--green-glow)}
-.afb-purple:hover{border-color:var(--purple);box-shadow:0 8px 24px var(--purple-glow)}
-.afb-red:hover{border-color:var(--red);box-shadow:0 8px 24px var(--red-glow)}
-.cam-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
-.cam-modal.show{display:flex}
-.cam-container{width:min(90vw,640px)}
-.cam-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:var(--text)}
-.cam-video-wrap{background:#000;border-radius:var(--r);overflow:hidden;position:relative;border:2px solid var(--border2)}
-#cam-video{width:100%;display:block;max-height:380px;object-fit:cover}
-.cam-controls{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
-.cam-hint{color:var(--text3);font-size:12px;text-align:center;margin-top:10px}
-#cam-canvas{display:none}
-.modal-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);align-items:center;justify-content:center}
-.modal-overlay.show{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:28px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5);animation:modalIn .25s ease}
-@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.modal-header h3{font-size:18px;font-weight:800}
-.modal-close{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.modal-close:hover{background:rgba(239,68,68,.2);color:var(--red)}
-.modal-footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
-.del-modal{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);align-items:center;justify-content:center}
-.del-modal.show{display:flex}
-.del-box{background:var(--surface);border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:32px;width:400px;max-width:92vw;text-align:center;animation:modalIn .2s ease;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.del-icon{font-size:52px;margin-bottom:14px}
-.del-box h3{font-size:19px;font-weight:800;margin-bottom:8px}
-.del-box p{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6}
-.del-name{color:var(--red);font-weight:700}
-.del-actions{display:flex;gap:10px;justify-content:center}
-.toast-container{position:fixed;bottom:24px;right:24px;z-index:4000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:10px;font-size:13px;font-weight:500;animation:toastIn .3s ease;max-width:320px;box-shadow:var(--sh);pointer-events:auto}
-.toast-info{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:var(--text)}
-.toast-success{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:var(--text)}
-.toast-error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--text)}
-.toast-ai{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:var(--text)}
-@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
-.tab-nav{display:flex;margin-bottom:16px;background:var(--bg2);border-radius:8px;padding:4px;border:1px solid var(--border)}
-.tab-btn{flex:1;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:transparent;color:var(--text2)}
-.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--sh2)}
-.tab-c{display:block}
-.spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--purple);animation:spin .8s linear infinite;margin:0 auto}
-@keyframes spin{to{transform:rotate(360deg)}}
-.ai-criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
-.ai-crit{background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border)}
-.ai-crit-name{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.ai-crit-val{font-size:22px;font-weight:800;margin-bottom:6px}
-.ai-feedback-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:var(--text2);margin-top:14px}
-@media print{.sidebar,.btn,.btn-group,.page-actions{display:none!important}.content{padding:0}body{background:#fff;color:#000}.card{background:#fff;border:1px solid #ddd;box-shadow:none}}
-@media(max-width:900px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}.gab-grid{grid-template-columns:repeat(5,1fr)}}
-@media(max-width:640px){.stats-grid{grid-template-columns:1fr 1fr}.form-row{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-
-<!-- ══════════ LOGIN ══════════ -->
-<div id="login-screen">
-  <div class="login-bg">
-    <div class="login-blob lb1"></div>
-    <div class="login-blob lb2"></div>
-    <div class="login-blob lb3"></div>
-  </div>
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="l-icon">🎓</div>
-      <h1>CorrigePro</h1>
-      <p>Sistema Inteligente de Correção de Provas</p>
-    </div>
-    <div class="login-tabs">
-      <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
-      <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
-    </div>
-    <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
-    <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
-    <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
-    <p class="login-hint">Demo: <strong>admin</strong> / admin &nbsp;|&nbsp; <strong>usuario</strong> / 123</p>
-  </div>
-</div>
-
-<!-- ══════════ APP ══════════ -->
-<div id="app">
-  <div class="sidebar" id="sidebar">
-    <div class="sb-brand">
-      <div class="sb-logo">🎓</div>
-      <div class="sb-brand-name">Corrije<span>Pro</span></div>
-    </div>
-    <div class="sb-nav">
-      <div id="adm-sb">
-        <div class="sb-section">Principal</div>
-        <div class="sb-item active" onclick="go('dashboard')" data-p="dashboard"><span class="sb-ico">🏠</span> Dashboard</div>
-        <div class="sb-section">Cadastros</div>
-        <div class="sb-item" onclick="go('escola')" data-p="escola"><span class="sb-ico">🏫</span> Escolas</div>
-        <div class="sb-item" onclick="go('turmas')" data-p="turmas"><span class="sb-ico">👥</span> Turmas</div>
-        <div class="sb-item" onclick="go('alunos')" data-p="alunos"><span class="sb-ico">🎒</span> Alunos</div>
-        <div class="sb-section">Avaliações</div>
-        <div class="sb-item" onclick="go('provas')" data-p="provas"><span class="sb-ico">📑</span> Provas</div>
-        <div class="sb-item" onclick="go('gabarito')" data-p="gabarito"><span class="sb-ico">✅</span> Gabarito</div>
-        <div class="sb-section">IA & Correção</div>
-        <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia"><span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span></div>
-        <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto"><span class="sb-ico">✍️</span> Texto com IA <span class="sb-badge">IA</span></div>
-        <div class="sb-item" onclick="abrirCamera()"><span class="sb-ico">📱</span> Câmera do Celular</div>
-        <div class="sb-item" onclick="abrirArquivo()"><span class="sb-ico">📂</span> Escolher Arquivo</div>
-        <div class="sb-section">Resultados</div>
-        <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
-        <div class="sb-section">Sistema</div>
-        <div class="sb-item" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
-      </div>
-      <div id="usr-sb" style="display:none;">
-        <div class="sb-section">Menu</div>
-        <div class="sb-item active" onclick="go('u-dashboard')" data-p="u-dashboard"><span class="sb-ico">🏠</span> Início</div>
-      </div>
-    </div>
-    <div class="sb-footer">
-      <div class="sb-user">
-        <div class="sb-avatar" id="sb-avatar">A</div>
-        <div style="flex:1;min-width:0;">
-          <div class="sb-uname" id="sb-uname">Administrador</div>
-          <div class="sb-urole" id="sb-urole">Administrador do Sistema</div>
-        </div>
-      </div>
-      <button class="sb-logout" onclick="doLogout()">🚪 Sair do Sistema</button>
-    </div>
-  </div>
-
-  <div class="content">
-    <!-- DASHBOARD -->
-    <div class="page active" id="page-dashboard">
-      <div class="page-header">
-        <div><div class="page-title">🏠 Dashboard</div><p class="page-sub">Visão geral do sistema</p></div>
-        <div class="page-actions">
-          <button class="btn btn-outline" onclick="abrirCamera()">📱 Câmera</button>
-          <button class="btn btn-primary" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-        </div>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
-        <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
-        <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
-        <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
-      </div>
-      <div class="ai-hero">
-        <div class="ai-hero-icon">🤖</div>
-        <div class="ai-hero-text">
-          <h3>Ferramentas de Inteligência Artificial</h3>
-          <p>Corrija cartões resposta com IA</p>
-        </div>
-        <div class="ai-hero-actions">
-          <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ESCOLAS -->
-    <div class="page" id="page-escola">
-      <div class="page-header">
-        <div><div class="page-title">🏫 Escolas</div><p class="page-sub">Gerencie as unidades de ensino</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-escola')">+ Nova Escola</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor(a)</th><th>Ações</th></tr></thead>
-          <tbody id="tb-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- TURMAS -->
-    <div class="page" id="page-turmas">
-      <div class="page-header">
-        <div><div class="page-title">👥 Turmas</div><p class="page-sub">Gerencie as turmas</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-turma')">+ Nova Turma</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Escola</th><th>Professor(a)</th><th>Ações</th></tr></thead>
-          <tbody id="tb-turmas"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- ALUNOS -->
-    <div class="page" id="page-alunos">
-      <div class="page-header">
-        <div><div class="page-title">🎒 Alunos</div><p class="page-sub">Gerencie os alunos</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo Aluno</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Ações</th></tr></thead>
-          <tbody id="tb-alunos"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- PROVAS -->
-    <div class="page" id="page-provas">
-      <div class="page-header">
-        <div><div class="page-title">📑 Provas</div><p class="page-sub">Gerencie as provas</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-prova')">+ Nova Prova</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Turma</th><th>Data</th><th>Ações</th></tr></thead>
-          <tbody id="tb-provas"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- GABARITO -->
-    <div class="page" id="page-gabarito">
-      <div class="page-header"><div><div class="page-title">✅ Gabarito</div><p class="page-sub">Cadastre o gabarito da prova</p></div></div>
-      <div class="card">
-        <div class="form-row c3">
-          <div class="form-group"><label class="form-label">Prova</label>
-            <select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select>
-          </div>
-          <div class="form-group"><label class="form-label">Série</label>
-            <select class="form-control" id="gab-serie" onchange="buildGabGrid()">
-              <option value="1">1º Ano — A, B, C</option>
-              <option value="2" selected>2º Ano — A, B, C, D</option>
-              <option value="3">3º Ano — A, B, C, D</option>
-              <option value="4">4º Ano — A, B, C, D</option>
-              <option value="5">5º Ano — A, B, C, D</option>
-              <option value="6">6º Ano — A, B, C, D</option>
-              <option value="7">7º Ano — A, B, C, D</option>
-              <option value="8">8º Ano — A, B, C, D</option>
-              <option value="9">9º Ano — A, B, C, D</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Nº de Questões</label>
-            <select class="form-control" id="gab-total" onchange="buildGabGrid()">
-              <option>10</option><option>15</option><option selected>20</option><option>25</option><option>30</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📝 Gabarito das Questões</div>
-          <div class="btn-group">
-            <button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button>
-            <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
-          </div>
-        </div>
-        <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
-        <div class="gab-grid" id="gab-grid"></div>
-        <div class="btn-group" style="margin-top:18px;">
-          <button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button>
-          <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- CORRIGIR COM IA -->
-    <div class="page" id="page-corrigir-ia">
-      <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção automática de cartões resposta</p></div></div>
-      <div class="g2" style="margin-bottom:18px;">
-        <div class="card card-glow-blue">
-          <div class="card-header"><div class="card-title" style="color:var(--cyan);">📱 Câmera</div></div>
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;" onclick="abrirCamera()">
-            <div style="font-size:50px;margin-bottom:8px;">📱</div>
-            <p style="color:var(--text2);font-size:13px;">Clique para abrir a câmera</p>
-          </div>
-          <button class="btn btn-lg btn-full" style="margin-top:12px;background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;" onclick="abrirCamera()">📱 Abrir Câmera</button>
-        </div>
-        <div class="card card-glow-green">
-          <div class="card-header"><div class="card-title" style="color:var(--green);">📂 Arquivo</div></div>
-          <div class="upload-zone" onclick="abrirArquivo()" style="margin-bottom:10px;">
-            <div class="uz-ico">📂</div>
-            <p><strong>Clique para escolher a imagem</strong></p>
-            <p class="uz-hint">JPG, PNG</p>
-          </div>
-          <button class="btn btn-lg btn-full btn-green" onclick="abrirArquivo()">📂 Escolher Arquivo</button>
-          <input type="file" id="inp-arq" accept="image/*" style="display:none" onchange="processarArq(this)">
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">⚙️ Configurações</div></div>
-        <div class="form-row c3">
-          <div class="form-group"><label class="form-label">Prova</label>
-            <select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select>
-          </div>
-          <div class="form-group"><label class="form-label">Aluno</label>
-            <select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select>
-          </div>
-        </div>
-      </div>
-      <div id="ia-result" style="display:none;">
-        <div class="card card-glow-green">
-          <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado</div></div>
-          <div class="g2" style="margin-bottom:14px;">
-            <div>
-              <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:7px;">Respostas detectadas:</div>
-              <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ia-resp"></div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);border-radius:12px;padding:22px;text-align:center;">
-              <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
-              <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
-            </div>
-          </div>
-          <div class="btn-group">
-            <button class="btn btn-green btn-sm" onclick="showToast('💾 Resultado salvo!','success')">💾 Salvar</button>
-            <button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CORREÇÃO DE TEXTO -->
-    <div class="page" id="page-correcao-texto">
-      <div class="page-header"><div><div class="page-title">✍️ Correção de Texto</div><p class="page-sub">Análise automática de redações</p></div></div>
-      <div class="g2">
-        <div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">📥 Enviar Texto</div></div>
-            <div class="form-group" style="margin-bottom:12px;">
-              <label class="form-label">Texto do Aluno</label>
-              <textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea>
-            </div>
-            <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar Texto</button>
-          </div>
-        </div>
-        <div>
-          <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-            <div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div>
-            <h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3>
-            <p style="font-size:13px;color:var(--text2);">Cole o texto e clique em <strong>"Avaliar Texto"</strong></p>
-          </div>
-          <div id="txt-loading" style="display:none;" class="card">
-            <div style="text-align:center;padding:32px;">
-              <div class="spinner" style="margin-bottom:14px;"></div>
-              <p style="font-size:14px;font-weight:700;">Processando...</p>
-            </div>
-          </div>
-          <div id="txt-res" style="display:none;" class="card card-glow-purple">
-            <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação</div></div>
-            <div style="font-size:60px;font-weight:900;text-align:center;color:#a78bfa;" id="txt-nota">0</div>
-            <div class="ai-feedback-box" id="txt-fb">Feedback gerado automaticamente.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RESULTADOS -->
-    <div class="page" id="page-resultados">
-      <div class="page-header"><div><div class="page-title">🏆 Resultados</div><p class="page-sub">Histórico de correções</p></div></div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Método</th><th>Data</th></tr></thead>
-          <tbody id="tb-resultados"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- CONFIG -->
-    <div class="page" id="page-config">
-      <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div></div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">👥 Usuários</div></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td><strong>admin</strong></td><td><span class="badge badge-orange">Admin</span></td><td><span class="badge badge-green">Ativo</span></td></tr>
-            <tr><td><strong>usuario</strong></td><td><span class="badge badge-blue">Usuário</span></td><td><span class="badge badge-green">Ativo</span></td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- USER PAGES -->
-    <div class="page" id="page-u-dashboard">
-      <div class="page-header"><div><div class="page-title">🏠 Início</div><p class="page-sub">Portal do Usuário</p></div></div>
-      <div class="card"><p style="color:var(--text2);">Bem-vindo ao sistema!</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════ CÂMERA MODAL ═══════════ -->
-<div class="cam-modal" id="cam-modal">
-  <div class="cam-container">
-    <div class="cam-header"><h3>📱 Scanner — Câmera</h3><button class="modal-close" onclick="fecharCamera()">×</button></div>
-    <div class="cam-video-wrap">
-      <video id="cam-video" autoplay playsinline></video>
-    </div>
-    <div class="cam-controls">
-      <button class="btn btn-red" onclick="fecharCamera()">✕ Cancelar</button>
-      <button class="btn btn-green btn-lg" onclick="capturarFoto()">📸 Capturar</button>
-    </div>
-  </div>
-  <canvas id="cam-canvas"></canvas>
-</div>
-
-<!-- ═══════════ MODALS ═══════════ -->
-<!-- Modal Escola -->
-<div class="modal-overlay" id="m-escola">
-  <div class="modal">
-    <div class="modal-header"><h3>🏫 Cadastrar Escola</h3><button class="modal-close" onclick="closeM('m-escola')">×</button></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="escola-nome" placeholder="Ex: E.E. Prof. João Ribeiro"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">INEP</label><input class="form-control" id="escola-inep" placeholder="8 dígitos"></div><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="escola-municipio" placeholder="Cidade"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">Estado</label><select class="form-control" id="escola-estado"><option>SP</option><option>RJ</option><option>MG</option></select></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="escola-telefone" placeholder="(00) 0000-0000"></div></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Diretor(a)</label><input class="form-control" id="escola-diretor" placeholder="Nome completo"></div></div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-escola')">Cancelar</button><button class="btn btn-green" onclick="salvarEscola()">💾 Salvar</button></div>
-  </div>
-</div>
-
-<!-- Modal Turma -->
-<div class="modal-overlay" id="m-turma">
-  <div class="modal">
-    <div class="modal-header"><h3>👥 Cadastrar Turma</h3><button class="modal-close" onclick="closeM('m-turma')">×</button></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="turma-nome" placeholder="Ex: 3ºA"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
-      <select class="form-control" id="turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
-    </div>
-    <div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Professor(a)</label><input class="form-control" id="turma-professor" placeholder="Nome do professor"></div></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
-      <select class="form-control" id="turma-escola"><option value="">Selecione a escola</option></select>
-    </div></div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-turma')">Cancelar</button><button class="btn btn-green" onclick="salvarTurma()">💾 Salvar</button></div>
-  </div>
-</div>
-
-<!-- Modal Aluno -->
-<div class="modal-overlay" id="m-aluno">
-  <div class="modal">
-    <div class="modal-header"><h3>🎒 Cadastrar Aluno</h3><button class="modal-close" onclick="closeM('m-aluno')">×</button></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="aluno-nome" placeholder="Nome completo do aluno"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01"></div>
-    <div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div>
-    <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
-      <select class="form-control" id="aluno-turma"><option value="">Selecione a turma</option></select>
-    </div></div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button><button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button></div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast-container" id="toast-c"></div>
-
-<script>
 // ═══════════════════════════════ STATE ═══════════════════════════════
 let loginType = 'admin';
 let camStream = null;
 let camFacing = 'environment';
+let delTarget = null;
 const API_URL = '';
 
 // ═══════════════════════════════ LOGIN ═══════════════════════════════
@@ -676,13 +16,6 @@ function setLTab(t) {
 async function doLogin() {
   const u = document.getElementById('lu').value.trim();
   const p = document.getElementById('lp').value.trim();
-
-  // Fallback para demo offline
-  if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
-      (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
-    startApp(loginType, u);
-    return;
-  }
 
   try {
     const response = await fetch(`${API_URL}/api/login`, {
@@ -725,7 +58,7 @@ function startApp(role, uname) {
   
   document.getElementById('sb-avatar').textContent = uname[0].toUpperCase();
   document.getElementById('sb-uname').textContent = uname;
-  document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador' : 'Usuário';
+  document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
   
   const isAdmin = role === 'admin';
   document.getElementById('adm-sb').style.display = isAdmin ? 'block' : 'none';
@@ -751,23 +84,30 @@ function go(page) {
   if (el) el.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
   
+  // Recarregar dados ao navegar
   if (page === 'escola') carregarEscolas();
   if (page === 'turmas') carregarTurmas();
   if (page === 'alunos') carregarAlunos();
   if (page === 'provas') carregarProvas();
   if (page === 'dashboard') carregarDashboard();
-  if (page === 'resultados') carregarResultados();
+  if (page === 'resultados') carregarHistorico();
+  if (page === 'gabaritos') carregarGabaritos();
+  if (page === 'rel-turma' || page === 'rel-aluno' || page === 'rel-escola') carregarRelatorios();
 }
 
 // ═══════════════════════════════ CARREGAR DADOS ═══════════════════════════════
 async function carregarDados() {
-  await carregarEscolas();
-  await carregarTurmas();
-  await carregarAlunos();
-  await carregarProvas();
-  await carregarDashboard();
-  await carregarResultados();
-  await carregarCombos();
+  await Promise.all([
+    carregarEscolas(),
+    carregarTurmas(),
+    carregarAlunos(),
+    carregarProvas(),
+    carregarDashboard(),
+    carregarHistorico(),
+    carregarGabaritos(),
+    carregarCombos(),
+    carregarRelatorios()
+  ]);
 }
 
 // ═══════════════════════════════ ESCOLAS ═══════════════════════════════
@@ -779,44 +119,480 @@ async function carregarEscolas() {
     if (!tbody) return;
     
     if (!escolas || escolas.length === 0 || escolas.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>`;
     } else {
-      tbody.innerHTML = escolas.map((e, i) => `
-        <tr data-id="${e.id}">
+      // Buscar contagem de turmas e alunos por escola
+      const turmasResp = await fetch(`${API_URL}/api/turmas`);
+      const turmas = await turmasResp.json();
+      const alunosResp = await fetch(`${API_URL}/api/alunos`);
+      const alunos = await alunosResp.json();
+      
+      tbody.innerHTML = escolas.map((e, i) => {
+        const turmasCount = turmas.filter(t => t.escola_id === e.id).length;
+        const alunosCount = alunos.filter(a => a.escola_id === e.id).length;
+        return `
+        <tr data-id="${e.id}" data-nome="${e.nome}">
           <td><span class="badge badge-blue">${String(i+1).padStart(3,'0')}</span></td>
           <td><strong>${e.nome}</strong></td>
           <td>${e.municipio || '—'}${e.estado ? ' — ' + e.estado : ''}</td>
           <td><span class="chip">${e.inep || '—'}</span></td>
           <td>${e.diretor || '—'}</td>
-          <td><button class="btn-del" onclick="excluirEscola(${e.id})" title="Excluir">🗑️</button></td>
+          <td>${turmasCount}</td>
+          <td>${alunosCount}</td>
+          <td><div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="editarEscola(${e.id})">✏️ Editar</button>
+            <button class="btn-del" onclick="excluirEscola(${e.id}, '${e.nome}')" title="Excluir">🗑️</button>
+          </div></td>
         </tr>
-      `).join('');
+      `}).join('');
     }
   } catch (erro) {
     console.error('Erro ao carregar escolas:', erro);
   }
 }
 
-async function excluirEscola(id) {
-  if (!confirm('Excluir esta escola?')) return;
+async function excluirEscola(id, nome) {
+  if (!confirm(`Excluir a escola "${nome}"? Isso também excluirá todas as turmas e alunos vinculados.`)) return;
   try {
-    await fetch(`${API_URL}/api/escolas/${id}`, { method: 'DELETE' });
-    showToast('✅ Escola excluída!', 'success');
-    carregarEscolas();
-    carregarDashboard();
+    const response = await fetch(`${API_URL}/api/escolas/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      showToast(`🗑️ Escola "${nome}" excluída!`, 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
   } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
+    showToast('Erro ao excluir: ' + erro.message, 'error');
   }
 }
 
+function editarEscola(id) {
+  showToast(`✏️ Editando escola ID ${id}...`, 'info');
+}
+
+// ═══════════════════════════════ TURMAS ═══════════════════════════════
+async function carregarTurmas() {
+  try {
+    const response = await fetch(`${API_URL}/api/turmas`);
+    const turmas = await response.json();
+    const tbody = document.getElementById('tb-turmas');
+    if (!tbody) return;
+    
+    if (!turmas || turmas.length === 0 || turmas.erro) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>`;
+    } else {
+      const corMap = {
+        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
+        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
+        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
+      };
+      
+      tbody.innerHTML = turmas.map((t, i) => `
+        <tr data-id="${t.id}" data-nome="${t.nome}" data-serie="${t.serie}">
+          <td><span class="badge badge-gray">${String(i+1).padStart(2,'0')}</span></td>
+          <td><strong>${t.nome}</strong></td>
+          <td><span class="badge ${corMap[t.serie] || 'badge-blue'}">${t.serie || '—'}</span></td>
+          <td>${t.turno || 'Manhã'}</td>
+          <td>${t.escola_nome || '—'}</td>
+          <td>${t.professor || '—'}</td>
+          <td>0</td>
+          <td><div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="editarTurma(${t.id})">✏️</button>
+            <button class="btn btn-green btn-sm" onclick="go('lista-turma')" title="Lista de Alunos">📋</button>
+            <button class="btn-del" onclick="excluirTurma(${t.id}, '${t.nome}')">🗑️</button>
+          </div></td>
+        </tr>
+      `).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar turmas:', erro);
+  }
+}
+
+async function excluirTurma(id, nome) {
+  if (!confirm(`Excluir a turma "${nome}"? Isso também excluirá todos os alunos vinculados.`)) return;
+  try {
+    const response = await fetch(`${API_URL}/api/turmas/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      showToast(`🗑️ Turma "${nome}" excluída!`, 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+function editarTurma(id) {
+  showToast(`✏️ Editando turma ID ${id}...`, 'info');
+}
+
+// ═══════════════════════════════ ALUNOS ═══════════════════════════════
+async function carregarAlunos() {
+  try {
+    const response = await fetch(`${API_URL}/api/alunos`);
+    const alunos = await response.json();
+    const tbody = document.getElementById('tb-alunos');
+    if (!tbody) return;
+    
+    if (!alunos || alunos.length === 0 || alunos.erro) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>`;
+    } else {
+      const corMap = {
+        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
+        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
+        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
+      };
+      
+      tbody.innerHTML = alunos.map((a, i) => `
+        <tr data-id="${a.id}" data-nome="${a.nome}">
+          <td><span class="badge badge-blue">${String(a.numero_chamada || i+1).padStart(2,'0')}</span></td>
+          <td><span class="chip">${a.matricula || '—'}</span></td>
+          <td><strong>${a.nome}</strong></td>
+          <td><span class="badge ${corMap[a.turma_serie] || 'badge-blue'}">${a.turma_serie || '—'}</span></td>
+          <td>${a.turma_nome || '—'}</td>
+          <td>${a.escola_nome || '—'}</td>
+          <td>${a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—'}</td>
+          <td><div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="editarAluno(${a.id})">✏️</button>
+            <button class="btn-del" onclick="excluirAluno(${a.id}, '${a.nome}')">🗑️</button>
+          </div></td>
+        </tr>
+      `).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar alunos:', erro);
+  }
+}
+
+async function excluirAluno(id, nome) {
+  if (!confirm(`Excluir o aluno "${nome}"?`)) return;
+  try {
+    const response = await fetch(`${API_URL}/api/alunos/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      showToast(`🗑️ Aluno "${nome}" excluído!`, 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+function editarAluno(id) {
+  showToast(`✏️ Editando aluno ID ${id}...`, 'info');
+}
+
+// ═══════════════════════════════ PROVAS ═══════════════════════════════
+async function carregarProvas() {
+  try {
+    const response = await fetch(`${API_URL}/api/provas`);
+    const provas = await response.json();
+    const tbody = document.getElementById('tb-provas');
+    if (!tbody) return;
+    
+    if (!provas || provas.length === 0 || provas.erro) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>`;
+    } else {
+      tbody.innerHTML = provas.map((p, i) => `
+        <tr data-id="${p.id}" data-nome="${p.titulo}">
+          <td><span class="badge badge-blue">${String(i+1).padStart(3,'0')}</span></td>
+          <td><strong>${p.titulo}</strong></td>
+          <td><span class="badge badge-purple">${p.turma_serie || '—'}</span></td>
+          <td>${p.turma_nome || '—'}</td>
+          <td>${p.data_prova || '—'}</td>
+          <td><span class="badge ${p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange'}">${p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito'}</span></td>
+          <td><div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="editarProva(${p.id})">👁️</button>
+            ${p.gabarito && p.gabarito.length > 0 ? '' : `<button class="btn btn-primary btn-sm" onclick="go('gabarito')">+ Gabarito</button>`}
+            <button class="btn-del" onclick="excluirProva(${p.id}, '${p.titulo}')">🗑️</button>
+          </div></td>
+        </tr>
+      `).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar provas:', erro);
+  }
+}
+
+async function excluirProva(id, titulo) {
+  if (!confirm(`Excluir a prova "${titulo}"?`)) return;
+  try {
+    const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      showToast(`🗑️ Prova "${titulo}" excluída!`, 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+function editarProva(id) {
+  showToast(`👁️ Visualizando prova ID ${id}...`, 'info');
+}
+
+// ═══════════════════════════════ GABARITOS ═══════════════════════════════
+async function carregarGabaritos() {
+  try {
+    const response = await fetch(`${API_URL}/api/provas`);
+    const provas = await response.json();
+    const tbody = document.getElementById('tb-gabaritos');
+    if (!tbody) return;
+    
+    if (!provas || provas.length === 0 || provas.erro) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>`;
+    } else {
+      tbody.innerHTML = provas.filter(p => p.gabarito && p.gabarito.length > 0).map((p, i) => `
+        <tr data-id="${p.id}" data-nome="${p.titulo}">
+          <td><span class="badge badge-blue">${String(i+1).padStart(3,'0')}</span></td>
+          <td>${p.titulo}</td>
+          <td><span class="badge badge-purple">${p.turma_serie || '—'}</span></td>
+          <td>${p.quantidade_questoes || p.gabarito?.length || 0}</td>
+          <td><span class="badge ${p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue'}">${p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D'}</span></td>
+          <td>${p.data_prova || '—'}</td>
+          <td><div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="editarGabarito(${p.id})">✏️</button>
+            <button class="btn-del" onclick="excluirGabarito(${p.id}, '${p.titulo}')">🗑️</button>
+          </div></td>
+        </tr>
+      `).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar gabaritos:', erro);
+  }
+}
+
+function editarGabarito(id) {
+  showToast(`✏️ Editando gabarito da prova ID ${id}...`, 'info');
+  go('gabarito');
+}
+
+async function excluirGabarito(id, titulo) {
+  if (!confirm(`Excluir o gabarito da prova "${titulo}"?`)) return;
+  try {
+    const response = await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      showToast(`🗑️ Gabarito da prova "${titulo}" excluído!`, 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+// ═══════════════════════════════ DASHBOARD ═══════════════════════════════
+async function carregarDashboard() {
+  try {
+    const response = await fetch(`${API_URL}/api/dashboard`);
+    const dados = await response.json();
+    
+    // Atualizar os cards do dashboard
+    const cards = document.querySelectorAll('.stat-card .stat-val');
+    if (cards.length >= 4) {
+      const valores = [
+        dados.total_escolas || 0,
+        dados.total_turmas || 0,
+        dados.total_alunos || 0,
+        dados.total_provas || 0
+      ];
+      cards.forEach((card, index) => {
+        if (index < valores.length) card.textContent = valores[index];
+      });
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar dashboard:', erro);
+  }
+}
+
+// ═══════════════════════════════ HISTÓRICO / RESULTADOS ═══════════════════════════════
+async function carregarHistorico() {
+  try {
+    const response = await fetch(`${API_URL}/api/historico`);
+    const historico = await response.json();
+    
+    // Atualizar tabela de resultados
+    const tbody = document.querySelector('#page-resultados .table-wrap tbody');
+    if (tbody) {
+      if (!historico || historico.length === 0 || historico.erro) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>`;
+      } else {
+        tbody.innerHTML = historico.map((item, index) => `
+          <tr>
+            <td>${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index+1}</td>
+            <td>${index+1}</td>
+            <td><strong>${item.aluno_nome}</strong></td>
+            <td><span class="badge badge-purple">—</span></td>
+            <td>${item.acertos}</td>
+            <td><strong style="color:${item.nota >= 6 ? 'var(--green)' : 'var(--red)'};">${item.nota}</strong></td>
+            <td><span class="badge ${item.nota >= 6 ? 'badge-green' : 'badge-red'}">${item.nota >= 6 ? 'Aprovado' : 'Reprovado'}</span></td>
+          </tr>
+        `).join('');
+      }
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar histórico:', erro);
+  }
+}
+
+// ═══════════════════════════════ RELATÓRIOS ═══════════════════════════════
+async function carregarRelatorios() {
+  try {
+    const response = await fetch(`${API_URL}/api/dashboard`);
+    const dados = await response.json();
+    
+    // Atualizar relatório por turma
+    const stats = document.querySelectorAll('#page-rel-turma .stat-card .stat-val');
+    if (stats.length >= 4) {
+      // Buscar dados reais
+      const alunosResp = await fetch(`${API_URL}/api/alunos`);
+      const alunos = await alunosResp.json();
+      const correcoesResp = await fetch(`${API_URL}/api/historico`);
+      const correcoes = await correcoesResp.json();
+      
+      const totalAlunos = alunos.length || 0;
+      const aprovados = correcoes.filter(c => c.nota >= 6).length || 0;
+      const recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0;
+      const media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+      
+      stats[0].textContent = totalAlunos;
+      stats[1].textContent = aprovados;
+      stats[2].textContent = recuperacao;
+      stats[3].textContent = media.toFixed(1);
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar relatórios:', erro);
+  }
+}
+
+// ═══════════════════════════════ COMBOS ═══════════════════════════════
+async function carregarCombos() {
+  try {
+    // Escola para turma
+    const respEscolas = await fetch(`${API_URL}/api/escolas`);
+    const escolas = await respEscolas.json();
+    
+    // Popula todos os selects de escola
+    document.querySelectorAll('select').forEach(select => {
+      if (select.id && (select.id === 'turma-escola' || select.id === 'aluno-escola' || select.id.includes('escola'))) {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione a escola</option>';
+        if (escolas && !escolas.erro) {
+          escolas.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e.id;
+            opt.textContent = e.nome;
+            select.appendChild(opt);
+          });
+        }
+        if (currentValue) select.value = currentValue;
+      }
+    });
+    
+    // Turma para aluno
+    const respTurmas = await fetch(`${API_URL}/api/turmas`);
+    const turmas = await respTurmas.json();
+    
+    document.querySelectorAll('select').forEach(select => {
+      if (select.id && select.id === 'aluno-turma') {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione a turma</option>';
+        if (turmas && !turmas.erro) {
+          turmas.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.nome} - ${t.serie || '—'}`;
+            select.appendChild(opt);
+          });
+        }
+        if (currentValue) select.value = currentValue;
+      }
+    });
+    
+    // Provas para correção
+    const respProvas = await fetch(`${API_URL}/api/provas`);
+    const provas = await respProvas.json();
+    
+    document.querySelectorAll('select').forEach(select => {
+      if (select.id && (select.id === 'gab-prova' || select.id === 'corrigir-prova')) {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione a prova</option>';
+        if (provas && !provas.erro) {
+          provas.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.titulo} - ${p.disciplina || '—'}`;
+            select.appendChild(opt);
+          });
+        }
+        if (currentValue) select.value = currentValue;
+      }
+    });
+    
+    // Alunos para correção
+    const respAlunos = await fetch(`${API_URL}/api/alunos`);
+    const alunos = await respAlunos.json();
+    
+    document.querySelectorAll('select').forEach(select => {
+      if (select.id && select.id === 'corrigir-aluno') {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione o aluno</option>';
+        if (alunos && !alunos.erro) {
+          alunos.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a.id;
+            opt.textContent = a.nome;
+            select.appendChild(opt);
+          });
+        }
+        if (currentValue) select.value = currentValue;
+      }
+    });
+  } catch (erro) {
+    console.error('Erro ao carregar combos:', erro);
+  }
+}
+
+// ═══════════════════════════════ MODALS ═══════════════════════════════
+function openM(id) {
+  document.getElementById(id).classList.add('show');
+  // Recarregar combos ao abrir modais
+  if (id === 'm-turma' || id === 'm-aluno') carregarCombos();
+}
+
+function closeM(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// Fechar modal ao clicar fora
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => {
+    if (e.target === m) m.classList.remove('show');
+  });
+});
+
+// ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
+
+// SALVAR ESCOLA
 async function salvarEscola() {
   const dados = {
-    nome: document.getElementById('escola-nome').value.trim(),
-    inep: document.getElementById('escola-inep').value.trim(),
-    municipio: document.getElementById('escola-municipio').value.trim(),
-    estado: document.getElementById('escola-estado').value,
-    telefone: document.getElementById('escola-telefone').value.trim(),
-    diretor: document.getElementById('escola-diretor').value.trim()
+    nome: document.getElementById('escola-nome')?.value.trim(),
+    inep: document.getElementById('escola-inep')?.value.trim() || '',
+    municipio: document.getElementById('escola-municipio')?.value.trim() || '',
+    estado: document.getElementById('escola-estado')?.value || 'SP',
+    telefone: document.getElementById('escola-telefone')?.value.trim() || '',
+    diretor: document.getElementById('escola-diretor')?.value.trim() || ''
   };
   
   if (!dados.nome) {
@@ -832,73 +608,35 @@ async function salvarEscola() {
     });
     const result = await response.json();
     if (result.id) {
-      showToast('✅ Escola cadastrada!', 'success');
+      showToast(`✅ Escola "${dados.nome}" cadastrada!`, 'success');
       closeM('m-escola');
-      carregarEscolas();
-      carregarDashboard();
-      carregarCombos();
-    }
-  } catch (erro) {
-    showToast('❌ Erro ao salvar', 'error');
-  }
-}
-
-// ═══════════════════════════════ TURMAS ═══════════════════════════════
-async function carregarTurmas() {
-  try {
-    const response = await fetch(`${API_URL}/api/turmas`);
-    const turmas = await response.json();
-    const tbody = document.getElementById('tb-turmas');
-    if (!tbody) return;
-    
-    if (!turmas || turmas.length === 0 || turmas.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>`;
+      carregarDados();
     } else {
-      const corMap = {
-        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
-        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
-        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
-      };
-      
-      tbody.innerHTML = turmas.map((t, i) => `
-        <tr data-id="${t.id}">
-          <td><span class="badge badge-gray">${String(i+1).padStart(2,'0')}</span></td>
-          <td><strong>${t.nome}</strong></td>
-          <td><span class="badge ${corMap[t.serie] || 'badge-blue'}">${t.serie || '—'}</span></td>
-          <td>${t.escola_nome || '—'}</td>
-          <td>${t.professor || '—'}</td>
-          <td><button class="btn-del" onclick="excluirTurma(${t.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar escola', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar turmas:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
-async function excluirTurma(id) {
-  if (!confirm('Excluir esta turma?')) return;
-  try {
-    await fetch(`${API_URL}/api/turmas/${id}`, { method: 'DELETE' });
-    showToast('✅ Turma excluída!', 'success');
-    carregarTurmas();
-    carregarDashboard();
-  } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
-  }
-}
-
+// SALVAR TURMA
 async function salvarTurma() {
   const dados = {
-    nome: document.getElementById('turma-nome').value.trim(),
-    serie: document.getElementById('turma-serie').value,
-    turno: document.getElementById('turma-turno').value,
-    professor: document.getElementById('turma-professor').value.trim(),
-    escola_id: parseInt(document.getElementById('turma-escola').value)
+    escola_id: parseInt(document.getElementById('turma-escola')?.value) || null,
+    nome: document.getElementById('turma-nome')?.value.trim(),
+    serie: document.getElementById('turma-serie')?.value || '1º Ano',
+    turno: document.getElementById('turma-turno')?.value || 'Manhã',
+    professor: document.getElementById('turma-professor')?.value.trim() || '',
+    capacidade: parseInt(document.getElementById('turma-capacidade')?.value) || 35,
+    ano_letivo: parseInt(document.getElementById('turma-ano')?.value) || 2025
   };
   
-  if (!dados.nome || !dados.escola_id) {
-    showToast('❌ Preencha todos os campos obrigatórios!', 'error');
+  if (!dados.escola_id) {
+    showToast('❌ Selecione uma escola!', 'error');
+    return;
+  }
+  if (!dados.nome) {
+    showToast('❌ Nome da turma é obrigatório!', 'error');
     return;
   }
   
@@ -910,74 +648,38 @@ async function salvarTurma() {
     });
     const result = await response.json();
     if (result.id) {
-      showToast('✅ Turma cadastrada!', 'success');
+      showToast(`✅ Turma "${dados.nome}" cadastrada!`, 'success');
       closeM('m-turma');
-      carregarTurmas();
-      carregarDashboard();
-      carregarCombos();
-    }
-  } catch (erro) {
-    showToast('❌ Erro ao salvar', 'error');
-  }
-}
-
-// ═══════════════════════════════ ALUNOS ═══════════════════════════════
-async function carregarAlunos() {
-  try {
-    const response = await fetch(`${API_URL}/api/alunos`);
-    const alunos = await response.json();
-    const tbody = document.getElementById('tb-alunos');
-    if (!tbody) return;
-    
-    if (!alunos || alunos.length === 0 || alunos.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>`;
+      carregarDados();
     } else {
-      const corMap = {
-        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
-        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
-        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
-      };
-      
-      tbody.innerHTML = alunos.map((a, i) => `
-        <tr data-id="${a.id}">
-          <td>${a.numero_chamada || i+1}</td>
-          <td><span class="chip">${a.matricula || '—'}</span></td>
-          <td><strong>${a.nome}</strong></td>
-          <td><span class="badge ${corMap[a.turma_serie] || 'badge-blue'}">${a.turma_serie || '—'}</span></td>
-          <td>${a.turma_nome || '—'}</td>
-          <td><button class="btn-del" onclick="excluirAluno(${a.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar turma', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar alunos:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
-async function excluirAluno(id) {
-  if (!confirm('Excluir este aluno?')) return;
-  try {
-    await fetch(`${API_URL}/api/alunos/${id}`, { method: 'DELETE' });
-    showToast('✅ Aluno excluído!', 'success');
-    carregarAlunos();
-    carregarDashboard();
-  } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
-  }
-}
-
+// SALVAR ALUNO
 async function salvarAluno() {
   const dados = {
-    nome: document.getElementById('aluno-nome').value.trim(),
-    numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null,
-    matricula: document.getElementById('aluno-matricula').value.trim(),
-    data_nascimento: document.getElementById('aluno-nascimento').value || null,
-    genero: document.getElementById('aluno-genero').value,
-    turma_id: parseInt(document.getElementById('aluno-turma').value)
+    turma_id: parseInt(document.getElementById('aluno-turma')?.value) || null,
+    nome: document.getElementById('aluno-nome')?.value.trim(),
+    matricula: document.getElementById('aluno-matricula')?.value.trim() || '',
+    numero_chamada: parseInt(document.getElementById('aluno-numero')?.value) || null,
+    data_nascimento: document.getElementById('aluno-nascimento')?.value || null,
+    genero: document.getElementById('aluno-genero')?.value || 'Masculino',
+    responsavel: document.getElementById('aluno-responsavel')?.value.trim() || '',
+    telefone: document.getElementById('aluno-telefone')?.value.trim() || '',
+    email: document.getElementById('aluno-email')?.value.trim() || '',
+    observacoes: document.getElementById('aluno-observacoes')?.value.trim() || ''
   };
   
-  if (!dados.nome || !dados.turma_id) {
-    showToast('❌ Preencha todos os campos obrigatórios!', 'error');
+  if (!dados.nome) {
+    showToast('❌ Nome do aluno é obrigatório!', 'error');
+    return;
+  }
+  if (!dados.turma_id) {
+    showToast('❌ Selecione a turma do aluno!', 'error');
     return;
   }
   
@@ -989,169 +691,60 @@ async function salvarAluno() {
     });
     const result = await response.json();
     if (result.id) {
-      showToast('✅ Aluno cadastrado!', 'success');
+      showToast(`✅ Aluno "${dados.nome}" cadastrado!`, 'success');
       closeM('m-aluno');
-      carregarAlunos();
-      carregarDashboard();
-    }
-  } catch (erro) {
-    showToast('❌ Erro ao salvar', 'error');
-  }
-}
-
-// ═══════════════════════════════ PROVAS ═══════════════════════════════
-async function carregarProvas() {
-  try {
-    const response = await fetch(`${API_URL}/api/provas`);
-    const provas = await response.json();
-    const tbody = document.getElementById('tb-provas');
-    if (!tbody) return;
-    
-    if (!provas || provas.length === 0 || provas.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>`;
+      carregarDados();
     } else {
-      tbody.innerHTML = provas.map((p, i) => `
-        <tr data-id="${p.id}">
-          <td><span class="badge badge-blue">${String(i+1).padStart(3,'0')}</span></td>
-          <td><strong>${p.titulo}</strong></td>
-          <td>${p.disciplina || '—'}</td>
-          <td>${p.turma_nome || '—'}</td>
-          <td>${p.data_prova || '—'}</td>
-          <td><button class="btn-del" onclick="excluirProva(${p.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar aluno', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar provas:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
-async function excluirProva(id) {
-  if (!confirm('Excluir esta prova?')) return;
-  try {
-    await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
-    showToast('✅ Prova excluída!', 'success');
-    carregarProvas();
-    carregarDashboard();
-  } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
+// SALVAR PROVA
+async function salvarProva() {
+  const dados = {
+    turma_id: parseInt(document.getElementById('prova-turma')?.value) || null,
+    titulo: document.getElementById('prova-titulo')?.value.trim(),
+    disciplina: document.getElementById('prova-disciplina')?.value || '',
+    bimestre: document.getElementById('prova-bimestre')?.value || '',
+    data_prova: document.getElementById('prova-data')?.value || null,
+    valor_nota: parseFloat(document.getElementById('prova-nota')?.value) || 10,
+    tipo_questoes: document.getElementById('prova-serie')?.value ? 
+      (document.getElementById('prova-serie').value.startsWith('1') ? '3' : '4') : '4',
+    gabarito: []
+  };
+  
+  if (!dados.turma_id) {
+    showToast('❌ Selecione a turma!', 'error');
+    return;
   }
-}
-
-// ═══════════════════════════════ DASHBOARD ═══════════════════════════════
-async function carregarDashboard() {
-  try {
-    const response = await fetch(`${API_URL}/api/dashboard`);
-    const dados = await response.json();
-    
-    document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
-    document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
-    document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
-    document.getElementById('totalProvas').textContent = dados.total_provas || 0;
-  } catch (erro) {
-    console.error('Erro ao carregar dashboard:', erro);
+  if (!dados.titulo) {
+    showToast('❌ Título da prova é obrigatório!', 'error');
+    return;
   }
-}
-
-// ═══════════════════════════════ RESULTADOS ═══════════════════════════════
-async function carregarResultados() {
+  if (!dados.data_prova) {
+    showToast('❌ Data da prova é obrigatória!', 'error');
+    return;
+  }
+  
   try {
-    const response = await fetch(`${API_URL}/api/historico`);
-    const historico = await response.json();
-    const tbody = document.getElementById('tb-resultados');
-    if (!tbody) return;
-    
-    if (!historico || historico.length === 0 || historico.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>`;
+    const response = await fetch(`${API_URL}/api/provas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados)
+    });
+    const result = await response.json();
+    if (result.id) {
+      showToast(`✅ Prova "${dados.titulo}" cadastrada!`, 'success');
+      closeM('m-prova');
+      carregarDados();
     } else {
-      tbody.innerHTML = historico.map(item => `
-        <tr>
-          <td><strong>${item.aluno_nome}</strong></td>
-          <td>${item.prova_titulo}</td>
-          <td>${item.acertos}</td>
-          <td><strong style="color:${item.nota >= 6 ? 'var(--green)' : 'var(--red)'};">${item.nota}</strong></td>
-          <td><span class="badge badge-purple">${item.metodo_ia || 'Híbrido'}</span></td>
-          <td>${item.data_correcao ? new Date(item.data_correcao).toLocaleString() : '—'}</td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar prova', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar resultados:', erro);
-  }
-}
-
-// ═══════════════════════════════ COMBOS ═══════════════════════════════
-async function carregarCombos() {
-  try {
-    // Escola para turma
-    const respEscolas = await fetch(`${API_URL}/api/escolas`);
-    const escolas = await respEscolas.json();
-    
-    const selectEscola = document.getElementById('turma-escola');
-    if (selectEscola) {
-      selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
-      if (escolas && !escolas.erro) {
-        escolas.forEach(e => {
-          const opt = document.createElement('option');
-          opt.value = e.id;
-          opt.textContent = e.nome;
-          selectEscola.appendChild(opt);
-        });
-      }
-    }
-    
-    // Turma para aluno
-    const respTurmas = await fetch(`${API_URL}/api/turmas`);
-    const turmas = await respTurmas.json();
-    
-    const selectTurma = document.getElementById('aluno-turma');
-    if (selectTurma) {
-      selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
-      if (turmas && !turmas.erro) {
-        turmas.forEach(t => {
-          const opt = document.createElement('option');
-          opt.value = t.id;
-          opt.textContent = `${t.nome} - ${t.serie || '—'}`;
-          selectTurma.appendChild(opt);
-        });
-      }
-    }
-    
-    // Provas para correção
-    const respProvas = await fetch(`${API_URL}/api/provas`);
-    const provas = await respProvas.json();
-    
-    const selectProva = document.getElementById('corrigir-prova');
-    if (selectProva) {
-      selectProva.innerHTML = '<option value="">Selecione a prova</option>';
-      if (provas && !provas.erro) {
-        provas.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.textContent = `${p.titulo} - ${p.disciplina || '—'}`;
-          selectProva.appendChild(opt);
-        });
-      }
-    }
-    
-    // Alunos para correção
-    const respAlunos = await fetch(`${API_URL}/api/alunos`);
-    const alunos = await respAlunos.json();
-    
-    const selectAluno = document.getElementById('corrigir-aluno');
-    if (selectAluno) {
-      selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
-      if (alunos && !alunos.erro) {
-        alunos.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = a.id;
-          opt.textContent = a.nome;
-          selectAluno.appendChild(opt);
-        });
-      }
-    }
-  } catch (erro) {
-    console.error('Erro ao carregar combos:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
@@ -1237,6 +830,7 @@ async function saveGab() {
     const result = await response.json();
     if (result.id) {
       showToast('✅ Gabarito salvo!', 'success');
+      carregarDados();
     } else {
       showToast('❌ Erro ao salvar gabarito', 'error');
     }
@@ -1258,6 +852,11 @@ async function abrirCamera() {
     showToast('❌ Câmera não disponível: ' + e.message, 'error');
     fecharCamera();
   }
+}
+
+function trocarCamera() {
+  camFacing = camFacing === 'environment' ? 'user' : 'environment';
+  abrirCamera();
 }
 
 function fecharCamera() {
@@ -1338,14 +937,35 @@ async function processarComIA(imagemBase64) {
       }).join('');
     }
     
+    // Atualizar comparativo
+    const cd = document.getElementById('ia-comp');
+    if (cd) {
+      cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
+        const ok = a === dados.correcoes?.[i]?.gabarito;
+        return `<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q${i+1}</div>
+          <div style="background:${ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)'};border:1px solid ${ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:${ok ? 'var(--green)' : 'var(--red)'};">${a}</div></div>`;
+      }).join('');
+    }
+    
     const ne = document.getElementById('ia-nota');
     if (ne) ne.textContent = dados.nota || 0;
+    
+    // Atualizar badge de confiança
+    const confBadge = document.querySelector('#ia-result .badge-gray');
+    if (confBadge) confBadge.textContent = `${dados.confianca || 0}% conf.`;
+    
+    // Atualizar nome do aluno
+    const alunoDiv = document.querySelector('#ia-result .g2 .surface2');
+    if (alunoDiv) {
+      const nomeSpan = alunoDiv.querySelector('div:last-child');
+      if (nomeSpan) nomeSpan.textContent = dados.aluno || 'Aluno';
+    }
     
     if (box) box.style.display = 'block';
     showToast(`✅ ${dados.acertos}/${dados.total} acertos — Nota: ${dados.nota}`, 'success');
     
     carregarDashboard();
-    carregarResultados();
+    carregarHistorico();
     
   } catch (erro) {
     showToast('❌ Erro na correção: ' + erro.message, 'error');
@@ -1383,6 +1003,20 @@ async function avaliarTexto() {
     }
     
     document.getElementById('txt-nota').textContent = dados.nota || 0;
+    
+    // Atualizar métricas
+    if (dados.metricas) {
+      document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
+      document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
+      document.getElementById('c-ort').textContent = dados.metricas.nota_gramatica || 0;
+      document.getElementById('c-voc').textContent = dados.metricas.nota_vocabulario || 0;
+      
+      document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
+      document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
+      document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
+      document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
+    }
+    
     const fb = document.getElementById('txt-fb');
     if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
     
@@ -1394,21 +1028,78 @@ async function avaliarTexto() {
   }
 }
 
-// ═══════════════════════════════ MODALS ═══════════════════════════════
-function openM(id) {
-  document.getElementById(id).classList.add('show');
+// ═══════════════════════════════ TABS ═══════════════════════════════
+function switchTab(idx, btn) {
+  const parent = btn.closest('.tab-nav');
+  if (parent) {
+    parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const card = btn.closest('.card');
+  if (card) {
+    card.querySelectorAll('.tab-c').forEach((tc, i) => {
+      tc.style.display = i === idx ? 'block' : 'none';
+    });
+  }
 }
 
-function closeM(id) {
-  document.getElementById(id).classList.remove('show');
+// ═══════════════════════════════ DELETE ═══════════════════════════════
+function excluir(btn, tipo, nome) {
+  const row = btn.closest('tr');
+  delTarget = { row, tipo, nome };
+  document.getElementById('del-nome-txt').textContent = `"${nome}"`;
+  document.getElementById('del-modal').classList.add('show');
 }
 
-// Fechar modal ao clicar fora
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => {
-    if (e.target === m) m.classList.remove('show');
+function cancelarDel() {
+  document.getElementById('del-modal').classList.remove('show');
+  delTarget = null;
+}
+
+function confirmarDel() {
+  document.getElementById('del-modal').classList.remove('show');
+  if (!delTarget) return;
+  const { row, tipo, nome } = delTarget;
+  row.classList.add('deleting');
+  setTimeout(() => {
+    row.remove();
+    showToast(`🗑️ ${tipo.charAt(0).toUpperCase() + tipo.slice(1)} "${nome}" excluído(a).`, 'error');
+    delTarget = null;
+    renumerarTabela(row.closest('tbody'));
+  }, 350);
+}
+
+function renumerarTabela(tbody) {
+  if (!tbody) return;
+  tbody.querySelectorAll('tr').forEach((tr, i) => {
+    const badge = tr.querySelector('.badge-blue, .badge-gray');
+    if (badge) {
+      const num = String(i + 1).padStart(2, '0');
+      if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
+    }
   });
-});
+}
+
+function editarItem(btn, tipo, nome) {
+  showToast(`✏️ Editando ${tipo}: "${nome}"...`, 'info');
+}
+
+// ═══════════════════════════════ FILTRAR ═══════════════════════════════
+function filtrarTabela(input, tbodyId) {
+  const val = input.value.toLowerCase();
+  const rows = document.querySelectorAll(`#${tbodyId} tr`);
+  rows.forEach(row => {
+    const txt = row.textContent.toLowerCase();
+    row.style.display = txt.includes(val) ? '' : 'none';
+  });
+}
+
+function filtrarSerie(sel) {
+  const val = sel.value;
+  document.querySelectorAll('#tb-turmas tr').forEach(row => {
+    row.style.display = (!val || row.dataset.serie === val) ? '' : 'none';
+  });
+}
 
 // ═══════════════════════════════ TOAST ═══════════════════════════════
 function showToast(msg, type = 'info') {
@@ -1425,10 +1116,32 @@ function showToast(msg, type = 'info') {
   }, 3200);
 }
 
+// ═══════════════════════════════ MISC ═══════════════════════════════
+function simUpload() {
+  setTimeout(() => {
+    document.getElementById('up-ok').style.display = 'block';
+    showToast('✅ Arquivo enviado!', 'success');
+  }, 600);
+}
+
+function atualizarInfoAlts() {
+  const s = document.getElementById('prova-serie');
+  const info = document.getElementById('info-alts');
+  if (!s || !info) return;
+  const is1 = s.value.startsWith('1');
+  info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : `ℹ️ ${s.value} — Gabarito com 4 alternativas: A, B, C, D`;
+  info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
+  info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
+  info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+}
+
 // ═══════════════════════════════ INIT ═══════════════════════════════
+// Fechar del modal ao clicar fora
+document.getElementById('del-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) cancelarDel();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   buildGabGrid();
+  carregarCombos();
 });
-</script>
-</body>
-</html>
