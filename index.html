@@ -66,6 +66,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;height:100vh;overflow:hidden;
 }
+/* Sidebar Header — Brand */
 .sb-brand{
   display:flex;align-items:center;gap:10px;padding:18px 16px 16px;
   border-bottom:1px solid var(--border);flex-shrink:0;
@@ -77,6 +78,8 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 }
 .sb-brand-name{font-size:16px;font-weight:800;letter-spacing:-.3px}
 .sb-brand-name span{color:var(--blue)}
+
+/* Sidebar Nav */
 .sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
 .sb-section{font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding:14px 10px 5px;margin-top:2px}
 .sb-item{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all .18s;border:1px solid transparent;white-space:nowrap}
@@ -84,12 +87,26 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 .sb-item.active{background:rgba(59,130,246,.12);color:var(--blue);border-color:rgba(59,130,246,.2)}
 .sb-ico{font-size:15px;flex-shrink:0;width:18px;text-align:center}
 .sb-badge{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(139,92,246,.2);color:#a78bfa;font-weight:700;border:1px solid rgba(139,92,246,.3)}
-.sb-footer{border-top:1px solid var(--border);padding:12px 12px;flex-shrink:0}
-.sb-user{display:flex;align-items:center;gap:9px;padding:10px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;margin-bottom:8px}
-.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--grad-blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* Sidebar Footer — User + Logout */
+.sb-footer{
+  border-top:1px solid var(--border);padding:12px 12px;flex-shrink:0;
+}
+.sb-user{
+  display:flex;align-items:center;gap:9px;padding:10px 10px;
+  background:var(--surface);border:1px solid var(--border2);border-radius:10px;margin-bottom:8px;
+}
+.sb-avatar{
+  width:32px;height:32px;border-radius:50%;background:var(--grad-blue);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;
+}
 .sb-uname{font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .sb-urole{font-size:9px;color:var(--text3);margin-top:1px}
-.sb-logout{width:100%;padding:9px;border:1px solid rgba(239,68,68,.3);border-radius:8px;background:rgba(239,68,68,.08);color:#fc8181;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.sb-logout{
+  width:100%;padding:9px;border:1px solid rgba(239,68,68,.3);border-radius:8px;
+  background:rgba(239,68,68,.08);color:#fc8181;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
 .sb-logout:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5)}
 
 /* ═══════════════ CONTENT ═══════════════ */
@@ -103,32 +120,38 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 .page-title{font-size:21px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:9px}
 .page-sub{color:var(--text2);font-size:13px;margin-top:4px}
 .page-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* Cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:18px;box-shadow:var(--sh2);transition:border-color .2s}
 .card:hover{border-color:var(--border2)}
+.card-glow-blue{border-color:rgba(59,130,246,.3)} .card-glow-purple{border-color:rgba(139,92,246,.3)}
+.card-glow-green{border-color:rgba(16,185,129,.3)} .card-glow-red{border-color:rgba(239,68,68,.3)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
 .card-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+
+/* Stat Cards */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px;transition:all .25s;position:relative;overflow:hidden}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.stat-card.blue::before{background:var(--grad-blue)}
-.stat-card.green::before{background:var(--grad-green)}
-.stat-card.orange::before{background:var(--grad-orange)}
-.stat-card.purple::before{background:var(--grad-purple)}
+.stat-card.blue::before{background:var(--grad-blue)} .stat-card.green::before{background:var(--grad-green)}
+.stat-card.orange::before{background:var(--grad-orange)} .stat-card.purple::before{background:var(--grad-purple)}
 .stat-card:hover{transform:translateY(-2px);box-shadow:var(--sh);border-color:var(--border2)}
 .stat-top{display:flex;align-items:center;justify-content:space-between}
 .stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.stat-icon.blue{background:rgba(59,130,246,.15)}
-.stat-icon.green{background:rgba(16,185,129,.15)}
-.stat-icon.orange{background:rgba(245,158,11,.15)}
-.stat-icon.purple{background:rgba(139,92,246,.15)}
+.stat-icon.blue{background:rgba(59,130,246,.15)} .stat-icon.green{background:rgba(16,185,129,.15)}
+.stat-icon.orange{background:rgba(245,158,11,.15)} .stat-icon.purple{background:rgba(139,92,246,.15)}
 .stat-trend{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(16,185,129,.15);color:var(--green)}
 .stat-val{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1}
 .stat-label{font-size:12px;color:var(--text2)}
+
+/* Grid */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+
+/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
-.btn:hover{transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
+.btn:hover{transform:translateY(-1px)} .btn:active{transform:translateY(0)}
 .btn-primary{background:var(--grad-blue);color:#fff;box-shadow:0 4px 14px var(--blue-glow)}
 .btn-primary:hover{box-shadow:0 6px 22px var(--blue-glow)}
 .btn-purple{background:var(--grad-purple);color:#fff;box-shadow:0 4px 14px var(--purple-glow)}
@@ -146,17 +169,29 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 .btn-lg{padding:13px 28px;font-size:15px;border-radius:10px}
 .btn-full{width:100%;justify-content:center}
 .btn-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* AI Feature Buttons */
+.ai-feature-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;border-radius:var(--r);border:1px solid var(--border2);cursor:pointer;transition:all .25s;background:var(--surface2);text-align:center}
+.ai-feature-btn:hover{transform:translateY(-3px);box-shadow:var(--sh)}
+.af-ico{font-size:30px} .af-title{font-size:12px;font-weight:700} .af-sub{font-size:10px;color:var(--text2);line-height:1.4}
+.afb-blue:hover{border-color:var(--blue);box-shadow:0 8px 24px var(--blue-glow)}
+.afb-green:hover{border-color:var(--green);box-shadow:0 8px 24px var(--green-glow)}
+.afb-purple:hover{border-color:var(--purple);box-shadow:0 8px 24px var(--purple-glow)}
+.afb-red:hover{border-color:var(--red);box-shadow:0 8px 24px var(--red-glow)}
+
+/* Forms */
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.form-row.c1{grid-template-columns:1fr}
-.form-row.c3{grid-template-columns:1fr 1fr 1fr}
+.form-row.c1{grid-template-columns:1fr} .form-row.c3{grid-template-columns:1fr 1fr 1fr}
 .form-group{display:flex;flex-direction:column;gap:6px}
 .form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 .req{color:var(--red);margin-left:3px}
 .form-control{padding:10px 14px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;outline:none;transition:all .2s;width:100%}
 .form-control:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-glow)}
 .form-control::placeholder{color:var(--text3)}
-select.form-control{cursor:pointer}
-textarea.form-control{resize:vertical;line-height:1.6}
+select.form-control{cursor:pointer} textarea.form-control{resize:vertical;line-height:1.6}
+.form-hint{font-size:11px;color:var(--text3)}
+
+/* Tables */
 .table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead{background:var(--bg2)}
@@ -165,6 +200,10 @@ td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle
 tr:last-child td{border-bottom:none}
 tbody tr{transition:all .2s}
 tbody tr:hover td{background:var(--surface2);color:var(--text)}
+tbody tr.deleting{opacity:0;transform:translateX(30px);transition:all .35s ease}
+td strong{color:var(--text);font-weight:600}
+
+/* Badges */
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
 .badge-green{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
 .badge-red{background:rgba(239,68,68,.15);color:#fc8181;border:1px solid rgba(239,68,68,.3)}
@@ -173,55 +212,75 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 .badge-purple{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)}
 .badge-gray{background:rgba(148,163,184,.1);color:var(--text3);border:1px solid var(--border)}
 .badge-cyan{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid rgba(6,182,212,.3)}
-.chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border2);color:var(--text2)}
+
+/* Progress */
 .progress{background:var(--bg2);border-radius:99px;height:6px;overflow:hidden}
 .progress-fill{height:100%;border-radius:99px;transition:width .6s ease}
-.pf-blue{background:var(--grad-blue)}
-.pf-green{background:var(--grad-green)}
+.pf-blue{background:var(--grad-blue)} .pf-green{background:var(--grad-green)}
+.pf-orange{background:var(--grad-orange)} .pf-red{background:linear-gradient(90deg,#ef4444,#f87171)}
 .pf-purple{background:var(--grad-purple)}
+
+/* Search */
 .search-wrap{position:relative;display:inline-flex;align-items:center}
 .search-wrap input{padding:8px 14px 8px 36px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;outline:none;width:220px;transition:all .2s}
 .search-wrap input:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-glow)}
 .search-wrap input::placeholder{color:var(--text3)}
 .search-ico{position:absolute;left:11px;color:var(--text3);font-size:13px;pointer-events:none}
+
+/* Upload Zone */
 .upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;transition:all .25s;background:var(--surface2)}
 .upload-zone:hover{border-color:var(--blue);background:rgba(59,130,246,.05)}
-.uz-ico{font-size:40px;margin-bottom:10px}
-.uz-hint{font-size:11px;color:var(--text3);margin-top:4px}
+.uz-ico{font-size:40px;margin-bottom:10px} .uz-hint{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Chart */
 .chart-bars{display:flex;align-items:flex-end;gap:8px;height:130px;padding-bottom:4px}
 .chart-bar-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:28px}
 .chart-bar{width:100%;border-radius:6px 6px 0 0;transition:height .6s ease;min-height:4px}
-.chart-bar-val{font-size:10px;font-weight:700;color:var(--text2)}
-.chart-bar-lbl{font-size:10px;color:var(--text3)}
+.chart-bar-val{font-size:10px;font-weight:700;color:var(--text2)} .chart-bar-lbl{font-size:10px;color:var(--text3)}
+
+/* Gabarito */
 .gab-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
 .gab-item{display:flex;flex-direction:column;align-items:center;gap:4px}
 .gab-num{font-size:10px;font-weight:700;color:var(--text3)}
 .gab-select{width:100%;padding:5px 2px;border-radius:6px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;font-weight:700;text-align:center;cursor:pointer;outline:none;transition:all .15s}
 .gab-select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
+.gab-select.s1y{border-color:rgba(139,92,246,.4);background:rgba(139,92,246,.07)}
+.gab-select.s29{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.07)}
 .gab-select.filled{border-color:var(--green)!important;background:rgba(16,185,129,.07)!important}
-.ai-hero{background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(139,92,246,.1));border:1px solid rgba(139,92,246,.2);border-radius:var(--r);padding:20px;margin-bottom:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.ai-hero-icon{font-size:42px;flex-shrink:0}
-.ai-hero-text h3{font-size:16px;font-weight:800}
-.ai-hero-text p{font-size:13px;color:var(--text2);margin-top:3px}
-.ai-hero-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-.ai-feature-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 12px;border-radius:var(--r);border:1px solid var(--border2);cursor:pointer;transition:all .25s;background:var(--surface2);text-align:center}
-.ai-feature-btn:hover{transform:translateY(-3px);box-shadow:var(--sh)}
-.af-ico{font-size:30px}
-.af-title{font-size:12px;font-weight:700}
-.af-sub{font-size:10px;color:var(--text2);line-height:1.4}
-.afb-blue:hover{border-color:var(--blue);box-shadow:0 8px 24px var(--blue-glow)}
-.afb-green:hover{border-color:var(--green);box-shadow:0 8px 24px var(--green-glow)}
-.afb-purple:hover{border-color:var(--purple);box-shadow:0 8px 24px var(--purple-glow)}
-.afb-red:hover{border-color:var(--red);box-shadow:0 8px 24px var(--red-glow)}
+
+/* Scanner */
+.scanner-area{background:var(--bg2);border:2px solid var(--border2);border-radius:var(--r);padding:32px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;transition:border-color .3s}
+.scanner-area.scanning{border-color:var(--green)}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);box-shadow:0 0 12px var(--green);opacity:0;animation:scanMove 2s linear infinite}
+.scanning .scan-line{opacity:1}
+@keyframes scanMove{0%{top:20px}100%{top:calc(100% - 20px)}}
+.scan-result{display:none;width:100%;margin-top:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:var(--r2);padding:14px}
+.scan-result.show{display:block}
+
+/* Camera Modal */
 .cam-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);z-index:2000;flex-direction:column;align-items:center;justify-content:center}
 .cam-modal.show{display:flex}
 .cam-container{width:min(90vw,640px)}
 .cam-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:var(--text)}
 .cam-video-wrap{background:#000;border-radius:var(--r);overflow:hidden;position:relative;border:2px solid var(--border2)}
 #cam-video{width:100%;display:block;max-height:380px;object-fit:cover}
+.cam-frame{position:absolute;inset:12px;border:2px solid var(--green);border-radius:8px;pointer-events:none}
+.cam-corner{position:absolute;width:22px;height:22px;border-color:var(--green);border-style:solid}
+.cc-tl{top:12px;left:12px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.cc-tr{top:12px;right:12px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.cc-bl{bottom:12px;left:12px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.cc-br{bottom:12px;right:12px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.cam-scan-line{position:absolute;left:12px;right:12px;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);box-shadow:0 0 8px var(--green);animation:scanMove 2s linear infinite}
 .cam-controls{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
 .cam-hint{color:var(--text3);font-size:12px;text-align:center;margin-top:10px}
 #cam-canvas{display:none}
+
+/* Tabs */
+.tab-nav{display:flex;margin-bottom:16px;background:var(--bg2);border-radius:8px;padding:4px;border:1px solid var(--border)}
+.tab-btn{flex:1;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:transparent;color:var(--text2)}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--sh2)}
+
+/* Modals */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:28px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5);animation:modalIn .25s ease}
@@ -231,6 +290,8 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 .modal-close{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .modal-close:hover{background:rgba(239,68,68,.2);color:var(--red)}
 .modal-footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* ═══ DELETE CONFIRM MODAL ═══ */
 .del-modal{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);align-items:center;justify-content:center}
 .del-modal.show{display:flex}
 .del-box{background:var(--surface);border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:32px;width:400px;max-width:92vw;text-align:center;animation:modalIn .2s ease;box-shadow:0 24px 60px rgba(0,0,0,.5)}
@@ -239,6 +300,8 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 .del-box p{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6}
 .del-name{color:var(--red);font-weight:700}
 .del-actions{display:flex;gap:10px;justify-content:center}
+
+/* Toast */
 .toast-container{position:fixed;bottom:24px;right:24px;z-index:4000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:10px;font-size:13px;font-weight:500;animation:toastIn .3s ease;max-width:320px;box-shadow:var(--sh);pointer-events:auto}
 .toast-info{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:var(--text)}
@@ -246,18 +309,32 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 .toast-error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--text)}
 .toast-ai{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:var(--text)}
 @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
-.tab-nav{display:flex;margin-bottom:16px;background:var(--bg2);border-radius:8px;padding:4px;border:1px solid var(--border)}
-.tab-btn{flex:1;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:transparent;color:var(--text2)}
-.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--sh2)}
-.tab-c{display:block}
-.spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--purple);animation:spin .8s linear infinite;margin:0 auto}
-@keyframes spin{to{transform:rotate(360deg)}}
+
+/* AI Result */
 .ai-criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
 .ai-crit{background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border)}
 .ai-crit-name{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .ai-crit-val{font-size:22px;font-weight:800;margin-bottom:6px}
 .ai-feedback-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:var(--text2);margin-top:14px}
-@media print{.sidebar,.btn,.btn-group,.page-actions{display:none!important}.content{padding:0}body{background:#fff;color:#000}.card{background:#fff;border:1px solid #ddd;box-shadow:none}}
+
+/* Chip */
+.chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border2);color:var(--text2)}
+
+/* AI Hero */
+.ai-hero{background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(139,92,246,.1));border:1px solid rgba(139,92,246,.2);border-radius:var(--r);padding:20px;margin-bottom:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.ai-hero-icon{font-size:42px;flex-shrink:0}
+.ai-hero-text h3{font-size:16px;font-weight:800}
+.ai-hero-text p{font-size:13px;color:var(--text2);margin-top:3px}
+.ai-hero-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* Spinner */
+.spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--purple);animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Print */
+@media print{.sidebar,.btn,.btn-group,.page-actions,.card-actions{display:none!important}.content{padding:0}body{background:#fff;color:#000}.card{background:#fff;border:1px solid #ddd;box-shadow:none}}
+
+/* Responsive */
 @media(max-width:900px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}.gab-grid{grid-template-columns:repeat(5,1fr)}}
 @media(max-width:640px){.stats-grid{grid-template-columns:1fr 1fr}.form-row{grid-template-columns:1fr}}
 </style>
@@ -285,42 +362,82 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
     <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
     <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
     <p class="login-hint">Demo: <strong>admin</strong> / admin &nbsp;|&nbsp; <strong>usuario</strong> / 123</p>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
+      <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli</div>
+    </div>
   </div>
 </div>
 
 <!-- ══════════ APP ══════════ -->
 <div id="app">
+
+  <!-- ══ SIDEBAR ══ -->
   <div class="sidebar" id="sidebar">
+
+    <!-- Brand -->
     <div class="sb-brand">
       <div class="sb-logo">🎓</div>
       <div class="sb-brand-name">Corrije<span>Pro</span></div>
     </div>
+
+    <!-- Navigation -->
     <div class="sb-nav">
+      <!-- ADMIN -->
       <div id="adm-sb">
         <div class="sb-section">Principal</div>
         <div class="sb-item active" onclick="go('dashboard')" data-p="dashboard"><span class="sb-ico">🏠</span> Dashboard</div>
+
         <div class="sb-section">Cadastros</div>
         <div class="sb-item" onclick="go('escola')" data-p="escola"><span class="sb-ico">🏫</span> Escolas</div>
         <div class="sb-item" onclick="go('turmas')" data-p="turmas"><span class="sb-ico">👥</span> Turmas</div>
         <div class="sb-item" onclick="go('alunos')" data-p="alunos"><span class="sb-ico">🎒</span> Alunos</div>
+        <div class="sb-item" onclick="go('lista-turma')" data-p="lista-turma"><span class="sb-ico">📋</span> Lista por Turma</div>
+
         <div class="sb-section">Avaliações</div>
+        <div class="sb-item" onclick="go('prova-upload')" data-p="prova-upload"><span class="sb-ico">📤</span> Cadastrar Prova</div>
         <div class="sb-item" onclick="go('provas')" data-p="provas"><span class="sb-ico">📑</span> Provas</div>
         <div class="sb-item" onclick="go('gabarito')" data-p="gabarito"><span class="sb-ico">✅</span> Gabarito</div>
+        <div class="sb-item" onclick="go('gabaritos')" data-p="gabaritos"><span class="sb-ico">📋</span> Gabaritos</div>
+
         <div class="sb-section">IA & Correção</div>
-        <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia"><span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span></div>
-        <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto"><span class="sb-ico">✍️</span> Texto com IA <span class="sb-badge">IA</span></div>
+        <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia">
+          <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
+        </div>
+        <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
+          <span class="sb-ico">✍️</span> Texto com IA <span class="sb-badge">IA</span>
+        </div>
         <div class="sb-item" onclick="abrirCamera()"><span class="sb-ico">📱</span> Câmera do Celular</div>
         <div class="sb-item" onclick="abrirArquivo()"><span class="sb-ico">📂</span> Escolher Arquivo</div>
+
         <div class="sb-section">Resultados</div>
         <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
+        <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
+        <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
+        <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
+
         <div class="sb-section">Sistema</div>
         <div class="sb-item" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
       </div>
+
+      <!-- USER -->
       <div id="usr-sb" style="display:none;">
         <div class="sb-section">Menu</div>
         <div class="sb-item active" onclick="go('u-dashboard')" data-p="u-dashboard"><span class="sb-ico">🏠</span> Início</div>
+        <div class="sb-item" onclick="go('u-escola')" data-p="u-escola"><span class="sb-ico">🏫</span> Escola</div>
+        <div class="sb-item" onclick="go('u-turmas')" data-p="u-turmas"><span class="sb-ico">👥</span> Turmas</div>
+        <div class="sb-item" onclick="go('u-alunos')" data-p="u-alunos"><span class="sb-ico">🎒</span> Alunos</div>
+        <div class="sb-item" onclick="go('lista-turma')" data-p="lista-turma"><span class="sb-ico">📋</span> Lista por Turma</div>
+        <div class="sb-section">Consultas</div>
+        <div class="sb-item" onclick="go('u-resultados')" data-p="u-resultados"><span class="sb-ico">🏆</span> Resultados</div>
+        <div class="sb-item" onclick="go('u-relatorios')" data-p="u-relatorios"><span class="sb-ico">📊</span> Relatórios</div>
+        <div class="sb-section">IA</div>
+        <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto"><span class="sb-ico">✍️</span> Correção Texto IA <span class="sb-badge">IA</span></div>
+        <div class="sb-item" onclick="abrirCamera()"><span class="sb-ico">📱</span> Câmera</div>
       </div>
     </div>
+
+    <!-- Footer: User Info + Logout -->
     <div class="sb-footer">
       <div class="sb-user">
         <div class="sb-avatar" id="sb-avatar">A</div>
@@ -333,283 +450,681 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
     </div>
   </div>
 
+  <!-- ══ CONTENT ══ -->
   <div class="content">
-    <!-- DASHBOARD -->
-    <div class="page active" id="page-dashboard">
-      <div class="page-header">
-        <div><div class="page-title">🏠 Dashboard</div><p class="page-sub">Visão geral do sistema</p></div>
-        <div class="page-actions">
-          <button class="btn btn-outline" onclick="abrirCamera()">📱 Câmera</button>
-          <button class="btn btn-primary" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-        </div>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
-        <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
-        <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
-        <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
-      </div>
-      <div class="ai-hero">
-        <div class="ai-hero-icon">🤖</div>
-        <div class="ai-hero-text">
-          <h3>Ferramentas de Inteligência Artificial</h3>
-          <p>Corrija cartões resposta com IA</p>
-        </div>
-        <div class="ai-hero-actions">
-          <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-        </div>
+
+<!-- ═══════════════════════════════════
+     DASHBOARD
+═══════════════════════════════════ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div><div class="page-title">🏠 Dashboard</div><p class="page-sub">Visão geral do sistema</p></div>
+    <div class="page-actions">
+      <button class="btn btn-outline" onclick="abrirCamera()">📱 Câmera</button>
+      <button class="btn btn-primary" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div><span class="stat-trend">+1</span></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
+    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div><span class="stat-trend">27</span></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
+    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div><span class="stat-trend">+12</span></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
+    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div><span class="stat-trend">IA</span></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
+  </div>
+  <div class="ai-hero">
+    <div class="ai-hero-icon">🤖</div>
+    <div class="ai-hero-text">
+      <h3>Ferramentas de Inteligência Artificial</h3>
+      <p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p>
+    </div>
+    <div class="ai-hero-actions">
+      <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+      <button class="btn btn-outline" onclick="go('correcao-texto')">✍️ Correção de Texto</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+    <div class="ai-feature-btn afb-purple" onclick="go('corrigir-ia')"><div class="af-ico">🤖</div><div class="af-title">Corrigir com IA</div><div class="af-sub">Detecção automática</div></div>
+    <div class="ai-feature-btn afb-blue" onclick="abrirCamera()"><div class="af-ico">📱</div><div class="af-title">Câmera do Celular</div><div class="af-sub">Scan em tempo real</div></div>
+    <div class="ai-feature-btn afb-green" onclick="abrirArquivo()"><div class="af-ico">📂</div><div class="af-title">Escolher Arquivo</div><div class="af-sub">Imagem do cartão</div></div>
+    <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">✍️</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📊 Desempenho por Turma</div></div>
+      <div class="chart-bars">
+        <div class="chart-bar-item"><div class="chart-bar-val">82%</div><div class="chart-bar" style="height:107px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">1ºA</div></div>
+        <div class="chart-bar-item"><div class="chart-bar-val">75%</div><div class="chart-bar" style="height:98px;background:linear-gradient(180deg,#06b6d4,#0e7490);"></div><div class="chart-bar-lbl">3ºA</div></div>
+        <div class="chart-bar-item"><div class="chart-bar-val">91%</div><div class="chart-bar" style="height:118px;background:linear-gradient(180deg,#8b5cf6,#6d28d9);"></div><div class="chart-bar-lbl">5ºA</div></div>
+        <div class="chart-bar-item"><div class="chart-bar-val">68%</div><div class="chart-bar" style="height:88px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">6ºA</div></div>
+        <div class="chart-bar-item"><div class="chart-bar-val">79%</div><div class="chart-bar" style="height:103px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8ºA</div></div>
+        <div class="chart-bar-item"><div class="chart-bar-val">85%</div><div class="chart-bar" style="height:110px;background:linear-gradient(180deg,#ec4899,#be185d);"></div><div class="chart-bar-lbl">9ºA</div></div>
       </div>
     </div>
-
-    <!-- ESCOLAS -->
-    <div class="page" id="page-escola">
-      <div class="page-header">
-        <div><div class="page-title">🏫 Escolas</div><p class="page-sub">Gerencie as unidades de ensino</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-escola')">+ Nova Escola</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor(a)</th><th>Ações</th></tr></thead>
-          <tbody id="tb-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- TURMAS -->
-    <div class="page" id="page-turmas">
-      <div class="page-header">
-        <div><div class="page-title">👥 Turmas</div><p class="page-sub">Gerencie as turmas</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-turma')">+ Nova Turma</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Escola</th><th>Professor(a)</th><th>Ações</th></tr></thead>
-          <tbody id="tb-turmas"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- ALUNOS -->
-    <div class="page" id="page-alunos">
-      <div class="page-header">
-        <div><div class="page-title">🎒 Alunos</div><p class="page-sub">Gerencie os alunos</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo Aluno</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Ações</th></tr></thead>
-          <tbody id="tb-alunos"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- PROVAS -->
-    <div class="page" id="page-provas">
-      <div class="page-header">
-        <div><div class="page-title">📑 Provas</div><p class="page-sub">Gerencie as provas</p></div>
-        <div class="page-actions">
-          <button class="btn btn-primary" onclick="openM('m-prova')">+ Nova Prova</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Turma</th><th>Data</th><th>Ações</th></tr></thead>
-          <tbody id="tb-provas"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- GABARITO -->
-    <div class="page" id="page-gabarito">
-      <div class="page-header"><div><div class="page-title">✅ Gabarito</div><p class="page-sub">Cadastre o gabarito da prova</p></div></div>
-      <div class="card">
-        <div class="form-row c3">
-          <div class="form-group"><label class="form-label">Prova</label>
-            <select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select>
-          </div>
-          <div class="form-group"><label class="form-label">Série</label>
-            <select class="form-control" id="gab-serie" onchange="buildGabGrid()">
-              <option value="1">1º Ano — A, B, C</option>
-              <option value="2" selected>2º Ano — A, B, C, D</option>
-              <option value="3">3º Ano — A, B, C, D</option>
-              <option value="4">4º Ano — A, B, C, D</option>
-              <option value="5">5º Ano — A, B, C, D</option>
-              <option value="6">6º Ano — A, B, C, D</option>
-              <option value="7">7º Ano — A, B, C, D</option>
-              <option value="8">8º Ano — A, B, C, D</option>
-              <option value="9">9º Ano — A, B, C, D</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Nº de Questões</label>
-            <select class="form-control" id="gab-total" onchange="buildGabGrid()">
-              <option>10</option><option>15</option><option selected>20</option><option>25</option><option>30</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📝 Gabarito das Questões</div>
-          <div class="btn-group">
-            <button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button>
-            <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
-          </div>
-        </div>
-        <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
-        <div class="gab-grid" id="gab-grid"></div>
-        <div class="btn-group" style="margin-top:18px;">
-          <button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button>
-          <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- CORRIGIR COM IA -->
-    <div class="page" id="page-corrigir-ia">
-      <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção automática de cartões resposta</p></div></div>
-      <div class="g2" style="margin-bottom:18px;">
-        <div class="card card-glow-blue">
-          <div class="card-header"><div class="card-title" style="color:var(--cyan);">📱 Câmera</div></div>
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;" onclick="abrirCamera()">
-            <div style="font-size:50px;margin-bottom:8px;">📱</div>
-            <p style="color:var(--text2);font-size:13px;">Clique para abrir a câmera</p>
-          </div>
-          <button class="btn btn-lg btn-full" style="margin-top:12px;background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;" onclick="abrirCamera()">📱 Abrir Câmera</button>
-        </div>
-        <div class="card card-glow-green">
-          <div class="card-header"><div class="card-title" style="color:var(--green);">📂 Arquivo</div></div>
-          <div class="upload-zone" onclick="abrirArquivo()" style="margin-bottom:10px;">
-            <div class="uz-ico">📂</div>
-            <p><strong>Clique para escolher a imagem</strong></p>
-            <p class="uz-hint">JPG, PNG</p>
-          </div>
-          <button class="btn btn-lg btn-full btn-green" onclick="abrirArquivo()">📂 Escolher Arquivo</button>
-          <input type="file" id="inp-arq" accept="image/*" style="display:none" onchange="processarArq(this)">
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">⚙️ Configurações</div></div>
-        <div class="form-row c3">
-          <div class="form-group"><label class="form-label">Prova</label>
-            <select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select>
-          </div>
-          <div class="form-group"><label class="form-label">Aluno</label>
-            <select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select>
-          </div>
-        </div>
-      </div>
-      <div id="ia-result" style="display:none;">
-        <div class="card card-glow-green">
-          <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado</div></div>
-          <div class="g2" style="margin-bottom:14px;">
-            <div>
-              <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:7px;">Respostas detectadas:</div>
-              <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ia-resp"></div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);border-radius:12px;padding:22px;text-align:center;">
-              <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
-              <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
-            </div>
-          </div>
-          <div class="btn-group">
-            <button class="btn btn-green btn-sm" onclick="showToast('💾 Resultado salvo!','success')">💾 Salvar</button>
-            <button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CORREÇÃO DE TEXTO -->
-    <div class="page" id="page-correcao-texto">
-      <div class="page-header"><div><div class="page-title">✍️ Correção de Texto</div><p class="page-sub">Análise automática de redações</p></div></div>
-      <div class="g2">
-        <div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">📥 Enviar Texto</div></div>
-            <div class="form-group" style="margin-bottom:12px;">
-              <label class="form-label">Texto do Aluno</label>
-              <textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea>
-            </div>
-            <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar Texto</button>
-          </div>
-        </div>
-        <div>
-          <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-            <div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div>
-            <h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3>
-            <p style="font-size:13px;color:var(--text2);">Cole o texto e clique em <strong>"Avaliar Texto"</strong></p>
-          </div>
-          <div id="txt-loading" style="display:none;" class="card">
-            <div style="text-align:center;padding:32px;">
-              <div class="spinner" style="margin-bottom:14px;"></div>
-              <p style="font-size:14px;font-weight:700;">Processando...</p>
-            </div>
-          </div>
-          <div id="txt-res" style="display:none;" class="card card-glow-purple">
-            <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação</div></div>
-            <div style="font-size:60px;font-weight:900;text-align:center;color:#a78bfa;" id="txt-nota">0</div>
-            <div class="ai-feedback-box" id="txt-fb">Feedback gerado automaticamente.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RESULTADOS -->
-    <div class="page" id="page-resultados">
-      <div class="page-header"><div><div class="page-title">🏆 Resultados</div><p class="page-sub">Histórico de correções</p></div></div>
-      <div class="card">
-        <div class="table-wrap"><table>
-          <thead><tr><th>Aluno</th><th>Prova</th><th>Acertos</th><th>Nota</th><th>Método</th><th>Data</th></tr></thead>
-          <tbody id="tb-resultados"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- CONFIG -->
-    <div class="page" id="page-config">
-      <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div></div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">👥 Usuários</div></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td><strong>admin</strong></td><td><span class="badge badge-orange">Admin</span></td><td><span class="badge badge-green">Ativo</span></td></tr>
-            <tr><td><strong>usuario</strong></td><td><span class="badge badge-blue">Usuário</span></td><td><span class="badge badge-green">Ativo</span></td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- USER PAGES -->
-    <div class="page" id="page-u-dashboard">
-      <div class="page-header"><div><div class="page-title">🏠 Início</div><p class="page-sub">Portal do Usuário</p></div></div>
-      <div class="card"><p style="color:var(--text2);">Bem-vindo ao sistema!</p></div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">⚡ Últimas Correções</div><span class="badge badge-green">● Ao Vivo</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Aluno</th><th>Prova</th><th>Nota</th><th>Status</th></tr></thead>
+        <tbody id="ultimas-correcoes">
+          <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+        </tbody>
+      </table></div>
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════
+     ESCOLA
+═══════════════════════════════════ -->
+<div class="page" id="page-escola">
+  <div class="page-header">
+    <div><div class="page-title">🏫 Escolas</div><p class="page-sub">Gerencie as unidades de ensino cadastradas</p></div>
+    <div class="page-actions">
+      <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar escola..." oninput="filtrarTabela(this,'tb-escola')"></div>
+      <button class="btn btn-primary" onclick="openM('m-escola')">+ Nova Escola</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Nome da Escola</th><th>Município</th><th>INEP</th><th>Diretor(a)</th><th>Turmas</th><th>Alunos</th><th>Ações</th></tr></thead>
+      <tbody id="tb-escola">
+        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     TURMAS
+═══════════════════════════════════ -->
+<div class="page" id="page-turmas">
+  <div class="page-header">
+    <div><div class="page-title">👥 Turmas</div><p class="page-sub">1º Ano ao 9º Ano do Ensino Fundamental</p></div>
+    <div class="page-actions">
+      <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar turma..." oninput="filtrarTabela(this,'tb-turmas')"></div>
+      <select class="form-control" style="width:140px;padding:8px 12px;font-size:12px;" onchange="filtrarSerie(this)">
+        <option value="">Todas as séries</option>
+        <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+        <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+        <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+      </select>
+      <button class="btn btn-primary" onclick="openM('m-turma')">+ Nova Turma</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor(a)</th><th>Alunos</th><th>Ações</th></tr></thead>
+      <tbody id="tb-turmas">
+        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     LISTA ALUNOS POR TURMA
+═══════════════════════════════════ -->
+<div class="page" id="page-lista-turma">
+  <div class="page-header">
+    <div><div class="page-title">📋 Lista de Alunos por Turma</div><p class="page-sub">Emissão oficial da lista de chamada</p></div>
+    <div class="page-actions">
+      <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="btn btn-green">📥 Exportar PDF</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-row c3">
+      <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="lista-escola"><option value="">Selecione a escola</option></select></div>
+      <div class="form-group"><label class="form-label">Série</label>
+        <select class="form-control" id="lista-serie"><option value="">Todas</option><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Turma</label><select class="form-control" id="lista-turma"><option value="">Selecione a turma</option></select></div>
+    </div>
+    <button class="btn btn-primary" onclick="gerarListaTurma()">🔍 Gerar Lista</button>
+  </div>
+  <div class="card" id="lista-resultado">
+    <div style="text-align:center;padding:20px;color:var(--text3);">Selecione os filtros e clique em "Gerar Lista"</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     ALUNOS
+═══════════════════════════════════ -->
+<div class="page" id="page-alunos">
+  <div class="page-header">
+    <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Todos os alunos matriculados</p></div>
+    <div class="page-actions">
+      <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar aluno..." oninput="filtrarTabela(this,'tb-alunos')"></div>
+      <select class="form-control" style="width:120px;padding:8px 11px;font-size:12px;" id="filtro-serie-alunos">
+        <option value="">Todas séries</option>
+        <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+        <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+        <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+      </select>
+      <button class="btn btn-green" onclick="go('lista-turma')">📋 Lista</button>
+      <button class="btn btn-outline" onclick="exportarAlunosCSV()">📤 CSV</button>
+      <button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo Aluno</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome Completo</th><th>Série</th><th>Turma</th><th>Escola</th><th>Data Nasc.</th><th>Ações</th></tr></thead>
+      <tbody id="tb-alunos">
+        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     UPLOAD PROVA
+═══════════════════════════════════ -->
+<div class="page" id="page-prova-upload">
+  <div class="page-header">
+    <div><div class="page-title">📤 Cadastrar Prova</div><p class="page-sub">Configure os parâmetros da avaliação</p></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📄 Informações</div></div>
+      <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label>
+          <select class="form-control" id="prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Bimestre</label>
+          <select class="form-control" id="prova-bimestre"><option>1º Bimestre</option><option>2º Bimestre</option><option>3º Bimestre</option><option>4º Bimestre</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
+          <select class="form-control" id="prova-escola" onchange="carregarTurmasProva()"><option value="">Selecione a escola</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
+          <select class="form-control" id="prova-serie" onchange="atualizarInfoAlts()">
+            <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+            <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+            <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Turma</label><select class="form-control" id="prova-turma"><option value="">Selecione a turma</option></select></div>
+        <div class="form-group"><label class="form-label">Data</label><input class="form-control" id="prova-data" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nº de Questões</label>
+          <select class="form-control" id="prova-questoes"><option>10</option><option>15</option><option selected>20</option><option>25</option><option>30</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="prova-nota" type="number" value="10"></div>
+      </div>
+      <div id="info-alts" style="padding:10px 14px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:8px;font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:6px;">
+        ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">📁 Arquivo</div></div>
+      <div class="upload-zone" onclick="simUpload()" style="margin-bottom:14px;">
+        <div class="uz-ico">📄</div>
+        <p><strong>Clique para enviar</strong> ou arraste aqui</p>
+        <p class="uz-hint">PDF, DOCX, PNG — máx. 50MB</p>
+      </div>
+      <div id="up-ok" style="display:none;padding:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;margin-bottom:14px;font-size:13px;color:var(--green);">
+        ✅ <strong>arquivo_enviado.pdf</strong> — enviado!
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-green btn-full" onclick="salvarProva()">💾 Salvar</button>
+        <button class="btn btn-primary btn-full" onclick="go('gabarito')">➡️ Gabarito</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     GABARITO
+═══════════════════════════════════ -->
+<div class="page" id="page-gabarito">
+  <div class="page-header">
+    <div><div class="page-title">✅ Cadastrar Gabarito</div><p class="page-sub">1º Ano: A,B,C &nbsp;|&nbsp; 2º ao 9º Ano: A,B,C,D</p></div>
+  </div>
+  <div class="card">
+    <div class="form-row c3">
+      <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label>
+        <select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
+        <select class="form-control" id="gab-serie" onchange="buildGabGrid()">
+          <option value="1">1º Ano — A, B, C</option><option value="2" selected>2º Ano — A, B, C, D</option>
+          <option value="3">3º Ano — A, B, C, D</option><option value="4">4º Ano — A, B, C, D</option>
+          <option value="5">5º Ano — A, B, C, D</option><option value="6">6º Ano — A, B, C, D</option>
+          <option value="7">7º Ano — A, B, C, D</option><option value="8">8º Ano — A, B, C, D</option>
+          <option value="9">9º Ano — A, B, C, D</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Nº de Questões</label>
+        <select class="form-control" id="gab-total" onchange="buildGabGrid()">
+          <option>10</option><option>15</option><option selected>20</option><option>25</option><option>30</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div>
+      <div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📝 Gabarito das Questões</div>
+      <div class="btn-group">
+        <button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
+      </div>
+    </div>
+    <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
+    <div class="gab-grid" id="gab-grid"></div>
+    <div class="form-row c3" style="margin-top:18px;">
+      <div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div>
+      <div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div>
+      <div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button>
+      <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CORRIGIR COM IA
+═══════════════════════════════════ -->
+<div class="page" id="page-corrigir-ia">
+  <div class="page-header">
+    <div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção e correção automática de cartões resposta</p></div>
+  </div>
+  <div class="g2" style="margin-bottom:18px;">
+    <div class="card card-glow-blue" style="border-color:rgba(6,182,212,.3);">
+      <div class="card-header"><div class="card-title" style="color:var(--cyan);">📱 Câmera do Celular</div><span class="badge badge-cyan">Real-time</span></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Aponte a câmera para o cartão resposta. O sistema detecta as marcações com IA automaticamente.</p>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;transition:all .25s;" onclick="abrirCamera()">
+        <div style="font-size:50px;margin-bottom:8px;">📱</div>
+        <p style="color:var(--text2);font-size:13px;">Clique para abrir a câmera</p>
+      </div>
+      <button class="btn btn-lg btn-full" style="margin-top:12px;background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.3);" onclick="abrirCamera()">📱 Abrir Câmera do Celular</button>
+    </div>
+    <div class="card card-glow-green">
+      <div class="card-header"><div class="card-title" style="color:var(--green);">📂 Escolher Arquivo</div><span class="badge badge-green">JPG / PNG</span></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Selecione uma foto do cartão resposta. A IA detecta e corrige as respostas automaticamente.</p>
+      <div class="upload-zone" onclick="abrirArquivo()" style="margin-bottom:10px;">
+        <div class="uz-ico">📂</div>
+        <p><strong>Clique para escolher a imagem</strong></p>
+        <p class="uz-hint">JPG, PNG — máx. 20MB</p>
+      </div>
+      <div id="arq-preview" style="display:none;text-align:center;margin:8px 0;">
+        <img id="img-prev" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);" src="" alt="">
+      </div>
+      <button class="btn btn-lg btn-full btn-green" onclick="abrirArquivo()">📂 Escolher Arquivo</button>
+      <input type="file" id="inp-arq" accept="image/*" style="display:none" onchange="processarArq(this)">
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
+    <div class="form-row c3">
+      <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="corrigir-serie"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label>
+    </div>
+  </div>
+  <div id="ia-result" style="display:none;">
+    <div class="card card-glow-green">
+      <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div><div class="btn-group"><span class="badge badge-green">✅ Processado</span><span class="badge badge-gray" id="confianca-badge">0% conf.</span></div></div>
+      <div class="g2" style="margin-bottom:14px;">
+        <div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;">
+            <div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">ALUNO</div><div style="font-weight:700;" id="ia-aluno">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">TURMA</div><div style="font-weight:700;" id="ia-turma">—</div></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px;">Respostas detectadas:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ia-resp"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);border-radius:12px;padding:22px;text-align:center;">
+          <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
+          <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
+      <div class="btn-group">
+        <button class="btn btn-green btn-sm" onclick="salvarCorrecao()">💾 Salvar</button>
+        <button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button>
+        <button class="btn btn-purple btn-sm" onclick="processarComIA(document.getElementById('ia-ultima-imagem')?.value)">🔄 Próximo</button>
+      </div>
+      <input type="hidden" id="ia-ultima-imagem">
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CORREÇÃO DE TEXTO IA
+═══════════════════════════════════ -->
+<div class="page" id="page-correcao-texto">
+  <div class="page-header">
+    <div><div class="page-title">✍️ Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div>
+  </div>
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📥 Enviar Texto</div></div>
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(0,this)">📱 Câmera</button>
+          <button class="tab-btn" onclick="switchTab(1,this)">📂 Arquivo</button>
+          <button class="tab-btn" onclick="switchTab(2,this)">⌨️ Digitar</button>
+        </div>
+        <div class="tab-c" id="tabc-0">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:12px;" onclick="abrirCamera()">
+            <div style="font-size:46px;margin-bottom:8px;">📱</div>
+            <p style="color:var(--text2);font-size:13px;">Fotografe a redação do aluno</p>
+          </div>
+          <button class="btn btn-full btn-lg" style="background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.3);" onclick="abrirCamera()">📱 Abrir Câmera</button>
+        </div>
+        <div class="tab-c" id="tabc-1" style="display:none;">
+          <div class="upload-zone" onclick="document.getElementById('inp-txt').click()" style="margin-bottom:12px;">
+            <div class="uz-ico">📸</div><p><strong>Escolher foto da redação</strong></p><p class="uz-hint">JPG, PNG, PDF</p>
+          </div>
+          <input type="file" id="inp-txt" accept="image/*,application/pdf" style="display:none" onchange="prevTexto(this)">
+          <div id="txt-img-prev" style="display:none;text-align:center;margin-bottom:12px;">
+            <img id="txt-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src="" alt="">
+          </div>
+          <button class="btn btn-full btn-green" onclick="document.getElementById('inp-txt').click()">📂 Escolher Arquivo</button>
+        </div>
+        <div class="tab-c" id="tabc-2" style="display:none;">
+          <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Texto do Aluno</label>
+            <textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
+            <div class="form-group"><label class="form-label">Série</label>
+              <select class="form-control" id="txt-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Coerência e Coesão</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Adequação ao Tema</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Ortografia e Gramática</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Riqueza Vocabular</label>
+            </div>
+          </div>
+          <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+        <div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div>
+        <h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3>
+        <p style="font-size:13px;color:var(--text2);">Envie a foto ou cole o texto e clique em <strong>"Avaliar com Gemini AI"</strong></p>
+      </div>
+      <div id="txt-loading" style="display:none;" class="card">
+        <div style="text-align:center;padding:32px;">
+          <div class="spinner" style="margin-bottom:14px;"></div>
+          <p style="font-size:14px;font-weight:700;">Gemini AI processando...</p>
+          <p style="font-size:12px;color:var(--text2);margin-top:5px;">Analisando critérios textuais</p>
+          <div class="progress" style="margin-top:14px;height:4px;">
+            <div class="progress-fill pf-purple" id="txt-pb" style="width:0%;transition:width .15s;"></div>
+          </div>
+        </div>
+      </div>
+      <div id="txt-res" style="display:none;" class="card card-glow-purple">
+        <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação Gemini AI</div><span class="badge badge-purple">IA</span></div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;">
+          <div><div style="font-size:60px;font-weight:900;line-height:1;color:#a78bfa;" id="txt-nota">0</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Nota Final</div></div>
+          <div style="flex:1;"><div style="font-weight:700;font-size:15px;margin-bottom:8px;" id="txt-aluno-nome">—</div><span class="badge badge-green" id="txt-status">AGUARDANDO</span></div>
+        </div>
+        <div class="ai-criteria-grid">
+          <div class="ai-crit"><div class="ai-crit-name">Coerência e Coesão</div><div class="ai-crit-val" id="c-coe">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-coe" style="width:0%;"></div></div></div>
+          <div class="ai-crit"><div class="ai-crit-name">Adequação ao Tema</div><div class="ai-crit-val" id="c-tema">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-tema" style="width:0%;"></div></div></div>
+          <div class="ai-crit"><div class="ai-crit-name">Ortografia e Gramática</div><div class="ai-crit-val" id="c-ort">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-ort" style="width:0%;"></div></div></div>
+          <div class="ai-crit"><div class="ai-crit-name">Riqueza Vocabular</div><div class="ai-crit-val" id="c-voc">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-voc" style="width:0%;"></div></div></div>
+        </div>
+        <div class="ai-feedback-box"><strong style="color:#a78bfa;">📝 Feedback:</strong><br><br><span id="txt-fb">Aguardando avaliação...</span></div>
+        <div class="btn-group" style="margin-top:14px;">
+          <button class="btn btn-green btn-sm" onclick="salvarAvaliacaoTexto()">💾 Salvar</button>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️</button>
+          <button class="btn btn-purple btn-sm" onclick="avaliarTexto()">🔄 Reavaliar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     GABARITOS LIST
+═══════════════════════════════════ -->
+<div class="page" id="page-gabaritos">
+  <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div>
+  </div>
+  <div class="card"><div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>Criado</th><th>Ações</th></tr></thead>
+    <tbody id="tb-gabaritos">
+      <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PROVAS
+═══════════════════════════════════ -->
+<div class="page" id="page-provas">
+  <div class="page-header"><div><div class="page-title">📑 Provas</div></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="go('prova-upload')">+ Nova Prova</button></div>
+  </div>
+  <div class="card"><div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Título</th><th>Série</th><th>Turma</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody id="tb-provas">
+      <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ═══════════════════════════════════
+     RESULTADOS
+═══════════════════════════════════ -->
+<div class="page" id="page-resultados">
+  <div class="page-header">
+    <div><div class="page-title">🏆 Resultados</div><p class="page-sub">Notas e desempenho dos alunos</p></div>
+    <div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarResultados()">📥 Excel</button></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total">0</div><div style="font-size:11px;color:var(--text2);">Total</div></div>
+    <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-aprovados">0</div><div style="font-size:11px;color:var(--text2);">Aprovados</div></div>
+    <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao">0</div><div style="font-size:11px;color:var(--text2);">Recuperação</div></div>
+    <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media">0</div><div style="font-size:11px;color:var(--text2);">Média</div></div>
+  </div>
+  <div class="card"><div class="table-wrap"><table>
+    <thead><tr><th>Pos.</th><th>Nº</th><th>Nome</th><th>Série</th><th>Acertos</th><th>Nota</th><th>Status</th></tr></thead>
+    <tbody id="tb-resultados">
+      <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- RELATÓRIOS -->
+<div class="page" id="page-rel-turma">
+  <div class="page-header"><div><div class="page-title">📊 Relatório por Turma</div></div>
+    <div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div>
+    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-aprovados">0</div><div class="stat-label">Aprovados</div></div></div>
+    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recuperação</div></div></div>
+    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title">📈 Distribuição de Notas</div></div>
+    <div class="chart-bars" id="dist-notas">
+      <div class="chart-bar-item"><div class="chart-bar-val" id="d0-2">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div><div class="chart-bar-lbl">0–2</div></div>
+      <div class="chart-bar-item"><div class="chart-bar-val" id="d2-4">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">2–4</div></div>
+      <div class="chart-bar-item"><div class="chart-bar-val" id="d4-6">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">4–6</div></div>
+      <div class="chart-bar-item"><div class="chart-bar-val" id="d6-8">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">6–8</div></div>
+      <div class="chart-bar-item"><div class="chart-bar-val" id="d8-10">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8–10</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-rel-aluno">
+  <div class="page-header"><div><div class="page-title">👤 Relatório por Aluno</div></div>
+    <div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button></div>
+  </div>
+  <div class="card">
+    <div class="form-row c3">
+      <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="rel-aluno-select"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><label class="form-label">Prova</label><select class="form-control" id="rel-prova-select"><option value="">Todas</option></select></div>
+      <div class="form-group" style="justify-content:flex-end;"><button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="card-header"><div class="card-title">📋 Histórico</div></div>
+      <div class="table-wrap"><table><thead><tr><th>Prova</th><th>Data</th><th>Nota</th><th>Status</th></tr></thead>
+        <tbody id="rel-aluno-historico"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">📊 Evolução</div></div>
+      <div class="chart-bars" style="height:100px;" id="rel-evolucao">
+        <div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Selecione um aluno</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-rel-escola">
+  <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
+  <div class="card"><div class="table-wrap"><table>
+    <thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Desempenho</th></tr></thead>
+    <tbody id="tb-rel-escola">
+      <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- CONFIG -->
+<div class="page" id="page-config">
+  <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
+  <div class="g2">
+    <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div>
+      <div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div>
+      <div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São Paulo — SP"></div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">🤖 IA & Scanner</div></div>
+      <div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div>
+      <div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div>
+        <div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">👥 Usuários</div><button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="tb-usuarios">
+          <tr data-nome="admin"><td><strong>admin</strong></td><td><span class="badge badge-orange">Admin</span></td><td><span class="badge badge-green">Ativo</span></td><td><button class="btn btn-outline btn-sm">✏️</button></td></tr>
+          <tr data-nome="usuario"><td><strong>usuario</strong></td><td><span class="badge badge-blue">Usuário</span></td><td><span class="badge badge-green">Ativo</span></td>
+            <td><div class="btn-group"><button class="btn btn-outline btn-sm">✏️</button><button class="btn-del" onclick="excluir(this,'usuário','usuario')">🗑️</button></div></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- USER PAGES -->
+<div class="page" id="page-u-dashboard">
+  <div class="page-header"><div><div class="page-title">🏠 Início</div><p class="page-sub">Portal do Usuário</p></div></div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="u-total-escolas">0</div><div class="stat-label">Escola</div></div></div>
+    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="u-total-turmas">0</div><div class="stat-label">Turmas</div></div></div>
+    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="u-total-alunos">0</div><div class="stat-label">Alunos</div></div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title">📋 Provas Recentes</div></div>
+    <div class="table-wrap"><table><thead><tr><th>Prova</th><th>Série</th><th>Data</th><th>Status</th></tr></thead>
+      <tbody id="u-provas-recentes"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+<div class="page" id="page-u-escola">
+  <div class="page-header"><div><div class="page-title">🏫 Escola</div></div><button class="btn btn-primary" onclick="openM('m-escola')">+ Nova</button></div>
+  <div class="card" id="u-escola-info"><div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div></div>
+</div>
+<div class="page" id="page-u-turmas">
+  <div class="page-header"><div><div class="page-title">👥 Turmas</div></div><button class="btn btn-primary" onclick="openM('m-turma')">+ Nova</button></div>
+  <div class="card"><div class="table-wrap"><table><thead><tr><th>Turma</th><th>Série</th><th>Professor</th><th>Alunos</th><th>Lista</th></tr></thead>
+    <tbody id="u-tb-turmas"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+  </table></div></div>
+</div>
+<div class="page" id="page-u-alunos">
+  <div class="page-header"><div><div class="page-title">🎒 Alunos</div></div><button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo</button></div>
+  <div class="card"><div class="table-wrap"><table><thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th></tr></thead>
+    <tbody id="u-tb-alunos"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+  </table></div></div>
+</div>
+<div class="page" id="page-u-resultados">
+  <div class="page-header"><div><div class="page-title">🏆 Resultados</div></div></div>
+  <div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Nota</th><th>Status</th></tr></thead>
+    <tbody id="u-tb-resultados"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+  </table></div></div>
+</div>
+<div class="page" id="page-u-relatorios">
+  <div class="page-header"><div><div class="page-title">📊 Relatórios</div></div>
+    <div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green">📥 PDF</button></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div>
+    <div class="chart-bars" style="height:100px;" id="u-chart">
+      <div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div>
+    </div>
+  </div>
+</div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
 
 <!-- ═══════════ CÂMERA MODAL ═══════════ -->
 <div class="cam-modal" id="cam-modal">
   <div class="cam-container">
-    <div class="cam-header"><h3>📱 Scanner — Câmera</h3><button class="modal-close" onclick="fecharCamera()">×</button></div>
+    <div class="cam-header"><h3>📱 Scanner — Câmera do Celular</h3><button class="modal-close" onclick="fecharCamera()">×</button></div>
     <div class="cam-video-wrap">
       <video id="cam-video" autoplay playsinline></video>
+      <div class="cam-frame">
+        <div class="cam-corner cc-tl"></div><div class="cam-corner cc-tr"></div>
+        <div class="cam-corner cc-bl"></div><div class="cam-corner cc-br"></div>
+      </div>
+      <div class="cam-scan-line"></div>
     </div>
     <div class="cam-controls">
       <button class="btn btn-red" onclick="fecharCamera()">✕ Cancelar</button>
+      <button class="btn btn-outline" onclick="trocarCamera()" style="color:var(--cyan);border-color:var(--cyan);">🔄 Virar</button>
       <button class="btn btn-green btn-lg" onclick="capturarFoto()">📸 Capturar</button>
     </div>
+    <p class="cam-hint">Enquadre o cartão resposta na moldura verde</p>
   </div>
   <canvas id="cam-canvas"></canvas>
 </div>
 
-<!-- ═══════════ MODALS ═══════════ -->
+<!-- ═══════════ DELETE CONFIRM MODAL ═══════════ -->
+<div class="del-modal" id="del-modal">
+  <div class="del-box">
+    <div class="del-icon">🗑️</div>
+    <h3>Confirmar Exclusão</h3>
+    <p>Tem certeza que deseja excluir<br><span class="del-name" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p>
+    <div class="del-actions">
+      <button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODALS CADASTRO ═══════════ -->
 <!-- Modal Escola -->
 <div class="modal-overlay" id="m-escola">
   <div class="modal">
@@ -626,15 +1141,14 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 <div class="modal-overlay" id="m-turma">
   <div class="modal">
     <div class="modal-header"><h3>👥 Cadastrar Turma</h3><button class="modal-close" onclick="closeM('m-turma')">×</button></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="turma-nome" placeholder="Ex: 3ºA"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
-      <select class="form-control" id="turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
+    <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="turma-escola"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Ano Letivo</label><input class="form-control" id="turma-ano" value="2025" type="number"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="turma-nome" placeholder="Ex: 3ºA"></div>
+      <div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
+        <select class="form-control" id="turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div><div class="form-group"><label class="form-label">Capacidade</label><input class="form-control" id="turma-capacidade" type="number" placeholder="35"></div></div>
     <div class="form-row c1"><div class="form-group"><label class="form-label">Professor(a)</label><input class="form-control" id="turma-professor" placeholder="Nome do professor"></div></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
-      <select class="form-control" id="turma-escola"><option value="">Selecione a escola</option></select>
-    </div></div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-turma')">Cancelar</button><button class="btn btn-green" onclick="salvarTurma()">💾 Salvar</button></div>
   </div>
 </div>
@@ -642,16 +1156,58 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 <!-- Modal Aluno -->
 <div class="modal-overlay" id="m-aluno">
   <div class="modal">
-    <div class="modal-header"><h3>🎒 Cadastrar Aluno</h3><button class="modal-close" onclick="closeM('m-aluno')">×</button></div>
+    <div class="modal-header">
+      <h3>🎒 Cadastrar Aluno</h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');">📋 Lista</button>
+        <button class="modal-close" onclick="closeM('m-aluno')">×</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Número na Turma</label>
+        <input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60">
+        <div class="form-hint">Número sequencial na lista de chamada</div>
+      </div>
+      <div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001"></div>
+    </div>
     <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="aluno-nome" placeholder="Nome completo do aluno"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01"></div>
-    <div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001"></div></div>
     <div class="form-row"><div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div>
-    <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div></div>
-    <div class="form-row c1"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+      <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div>
+    </div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
       <select class="form-control" id="aluno-turma"><option value="">Selecione a turma</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="aluno-telefone" placeholder="(00) 99999-9999"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
+    <div class="form-row c1"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');" style="margin-right:auto;">📋 Ver Lista</button>
+      <button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button>
+      <button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Prova -->
+<div class="modal-overlay" id="m-prova">
+  <div class="modal">
+    <div class="modal-header"><h3>📝 Cadastrar Prova</h3><button class="modal-close" onclick="closeM('m-prova')">×</button></div>
+    <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="modal-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Disciplina</label><select class="form-control" id="modal-prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select></div>
+      <div class="form-group"><label class="form-label">Bimestre</label><select class="form-control" id="modal-prova-bimestre"><option>1º Bimestre</option><option>2º Bimestre</option><option>3º Bimestre</option><option>4º Bimestre</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+      <select class="form-control" id="modal-prova-turma"><option value="">Selecione a turma</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Data <span class="req">*</span></label><input class="form-control" id="modal-prova-data" type="date"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Valor Nota</label><input class="form-control" id="modal-prova-valor" type="number" value="10"></div>
+      <div class="form-group"><label class="form-label">Tipo</label>
+        <select class="form-control" id="modal-prova-tipo"><option value="4">4 Opções (A,B,C,D)</option><option value="3">3 Opções (A,B,C)</option></select>
+      </div></div>
+    <div class="form-row c1"><div class="form-group"><label class="form-label">Gabarito</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="modal-gabarito-grid"></div>
     </div></div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button><button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-prova')">Cancelar</button><button class="btn btn-green" onclick="salvarProvaModal()">💾 Salvar</button></div>
   </div>
 </div>
 
@@ -663,6 +1219,8 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 let loginType = 'admin';
 let camStream = null;
 let camFacing = 'environment';
+let delTarget = null;
+let ultimaImagem = null;
 const API_URL = '';
 
 // ═══════════════════════════════ LOGIN ═══════════════════════════════
@@ -676,13 +1234,6 @@ function setLTab(t) {
 async function doLogin() {
   const u = document.getElementById('lu').value.trim();
   const p = document.getElementById('lp').value.trim();
-
-  // Fallback para demo offline
-  if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
-      (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
-    startApp(loginType, u);
-    return;
-  }
 
   try {
     const response = await fetch(`${API_URL}/api/login`, {
@@ -698,7 +1249,6 @@ async function doLogin() {
       shakeCard();
     }
   } catch (erro) {
-    // Fallback offline
     if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
         (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
       startApp(loginType, u);
@@ -725,7 +1275,7 @@ function startApp(role, uname) {
   
   document.getElementById('sb-avatar').textContent = uname[0].toUpperCase();
   document.getElementById('sb-uname').textContent = uname;
-  document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador' : 'Usuário';
+  document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
   
   const isAdmin = role === 'admin';
   document.getElementById('adm-sb').style.display = isAdmin ? 'block' : 'none';
@@ -757,17 +1307,25 @@ function go(page) {
   if (page === 'provas') carregarProvas();
   if (page === 'dashboard') carregarDashboard();
   if (page === 'resultados') carregarResultados();
+  if (page === 'gabaritos') carregarGabaritos();
+  if (page === 'rel-turma' || page === 'rel-aluno' || page === 'rel-escola') carregarRelatorios();
 }
 
 // ═══════════════════════════════ CARREGAR DADOS ═══════════════════════════════
 async function carregarDados() {
-  await carregarEscolas();
-  await carregarTurmas();
-  await carregarAlunos();
-  await carregarProvas();
-  await carregarDashboard();
-  await carregarResultados();
-  await carregarCombos();
+  await Promise.all([
+    carregarEscolas(),
+    carregarTurmas(),
+    carregarAlunos(),
+    carregarProvas(),
+    carregarDashboard(),
+    carregarResultados(),
+    carregarGabaritos(),
+    carregarCombos(),
+    carregarRelatorios(),
+    carregarUltimasCorrecoes(),
+    carregarUserData()
+  ]);
 }
 
 // ═══════════════════════════════ ESCOLAS ═══════════════════════════════
@@ -779,44 +1337,623 @@ async function carregarEscolas() {
     if (!tbody) return;
     
     if (!escolas || escolas.length === 0 || escolas.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
     } else {
-      tbody.innerHTML = escolas.map((e, i) => `
-        <tr data-id="${e.id}">
-          <td><span class="badge badge-blue">${String(i+1).padStart(3,'0')}</span></td>
-          <td><strong>${e.nome}</strong></td>
-          <td>${e.municipio || '—'}${e.estado ? ' — ' + e.estado : ''}</td>
-          <td><span class="chip">${e.inep || '—'}</span></td>
-          <td>${e.diretor || '—'}</td>
-          <td><button class="btn-del" onclick="excluirEscola(${e.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      const turmasResp = await fetch(`${API_URL}/api/turmas`);
+      const turmas = await turmasResp.json();
+      const alunosResp = await fetch(`${API_URL}/api/alunos`);
+      const alunos = await alunosResp.json();
+      
+      tbody.innerHTML = escolas.map((e, i) => {
+        const turmasCount = turmas.filter(t => t.escola_id === e.id).length;
+        const alunosCount = alunos.filter(a => a.escola_id === e.id).length;
+        return '<tr data-id="' + e.id + '" data-nome="' + e.nome + '">' +
+          '<td><span class="badge badge-blue">' + String(i+1).padStart(3,'0') + '</span></td>' +
+          '<td><strong>' + e.nome + '</strong></td>' +
+          '<td>' + (e.municipio || '—') + (e.estado ? ' — ' + e.estado : '') + '</td>' +
+          '<td><span class="chip">' + (e.inep || '—') + '</span></td>' +
+          '<td>' + (e.diretor || '—') + '</td>' +
+          '<td>' + turmasCount + '</td>' +
+          '<td>' + alunosCount + '</td>' +
+          '<td><div class="btn-group">' +
+          '<button class="btn btn-outline btn-sm" onclick="editarEscola(' + e.id + ')">✏️ Editar</button>' +
+          '<button class="btn-del" onclick="excluirEscola(' + e.id + ', \'' + e.nome + '\')" title="Excluir">🗑️</button>' +
+          '</div></td></tr>';
+      }).join('');
     }
   } catch (erro) {
     console.error('Erro ao carregar escolas:', erro);
   }
 }
 
-async function excluirEscola(id) {
-  if (!confirm('Excluir esta escola?')) return;
+async function excluirEscola(id, nome) {
+  if (!confirm('Excluir a escola "' + nome + '"? Isso também excluirá todas as turmas e alunos vinculados.')) return;
   try {
-    await fetch(`${API_URL}/api/escolas/${id}`, { method: 'DELETE' });
-    showToast('✅ Escola excluída!', 'success');
-    carregarEscolas();
-    carregarDashboard();
+    const response = await fetch(API_URL + '/api/escolas/' + id, { method: 'DELETE' });
+    if (response.ok) {
+      showToast('🗑️ Escola "' + nome + '" excluída!', 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
   } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
+    showToast('Erro ao excluir: ' + erro.message, 'error');
   }
 }
 
+function editarEscola(id) {
+  showToast('✏️ Editando escola ID ' + id + '...', 'info');
+}
+
+// ═══════════════════════════════ TURMAS ═══════════════════════════════
+async function carregarTurmas() {
+  try {
+    const response = await fetch(API_URL + '/api/turmas');
+    const turmas = await response.json();
+    const tbody = document.getElementById('tb-turmas');
+    if (!tbody) return;
+    
+    if (!turmas || turmas.length === 0 || turmas.erro) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
+    } else {
+      const corMap = {
+        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
+        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
+        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
+      };
+      
+      tbody.innerHTML = turmas.map((t, i) => {
+        return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
+          '<td><span class="badge badge-gray">' + String(i+1).padStart(2,'0') + '</span></td>' +
+          '<td><strong>' + t.nome + '</strong></td>' +
+          '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
+          '<td>' + (t.turno || 'Manhã') + '</td>' +
+          '<td>' + (t.escola_nome || '—') + '</td>' +
+          '<td>' + (t.professor || '—') + '</td>' +
+          '<td>0</td>' +
+          '<td><div class="btn-group">' +
+          '<button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button>' +
+          '<button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button>' +
+          '<button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button>' +
+          '</div></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar turmas:', erro);
+  }
+}
+
+async function excluirTurma(id, nome) {
+  if (!confirm('Excluir a turma "' + nome + '"? Isso também excluirá todos os alunos vinculados.')) return;
+  try {
+    const response = await fetch(API_URL + '/api/turmas/' + id, { method: 'DELETE' });
+    if (response.ok) {
+      showToast('🗑️ Turma "' + nome + '" excluída!', 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+function editarTurma(id) {
+  showToast('✏️ Editando turma ID ' + id + '...', 'info');
+}
+
+// ═══════════════════════════════ ALUNOS ═══════════════════════════════
+async function carregarAlunos() {
+  try {
+    const response = await fetch(API_URL + '/api/alunos');
+    const alunos = await response.json();
+    const tbody = document.getElementById('tb-alunos');
+    if (!tbody) return;
+    
+    if (!alunos || alunos.length === 0 || alunos.erro) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>';
+    } else {
+      const corMap = {
+        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
+        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
+        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
+      };
+      
+      tbody.innerHTML = alunos.map((a, i) => {
+        return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
+          '<td><span class="badge badge-blue">' + String(a.numero_chamada || i+1).padStart(2,'0') + '</span></td>' +
+          '<td><span class="chip">' + (a.matricula || '—') + '</span></td>' +
+          '<td><strong>' + a.nome + '</strong></td>' +
+          '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td>' +
+          '<td>' + (a.turma_nome || '—') + '</td>' +
+          '<td>' + (a.escola_nome || '—') + '</td>' +
+          '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
+          '<td><div class="btn-group">' +
+          '<button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button>' +
+          '<button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button>' +
+          '</div></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar alunos:', erro);
+  }
+}
+
+async function excluirAluno(id, nome) {
+  if (!confirm('Excluir o aluno "' + nome + '"?')) return;
+  try {
+    const response = await fetch(API_URL + '/api/alunos/' + id, { method: 'DELETE' });
+    if (response.ok) {
+      showToast('🗑️ Aluno "' + nome + '" excluído!', 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+function editarAluno(id) {
+  showToast('✏️ Editando aluno ID ' + id + '...', 'info');
+}
+
+// ═══════════════════════════════ PROVAS ═══════════════════════════════
+async function carregarProvas() {
+  try {
+    const response = await fetch(API_URL + '/api/provas');
+    const provas = await response.json();
+    const tbody = document.getElementById('tb-provas');
+    if (!tbody) return;
+    
+    if (!provas || provas.length === 0 || provas.erro) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
+    } else {
+      tbody.innerHTML = provas.map((p, i) => {
+        return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+          '<td><span class="badge badge-blue">' + String(i+1).padStart(3,'0') + '</span></td>' +
+          '<td><strong>' + p.titulo + '</strong></td>' +
+          '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
+          '<td>' + (p.turma_nome || '—') + '</td>' +
+          '<td>' + (p.data_prova || '—') + '</td>' +
+          '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
+          '<td><div class="btn-group">' +
+          '<button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' +
+          (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') +
+          '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button>' +
+          '</div></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar provas:', erro);
+  }
+}
+
+async function excluirProva(id, titulo) {
+  if (!confirm('Excluir a prova "' + titulo + '"?')) return;
+  try {
+    const response = await fetch(API_URL + '/api/provas/' + id, { method: 'DELETE' });
+    if (response.ok) {
+      showToast('🗑️ Prova "' + titulo + '" excluída!', 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+function editarProva(id) {
+  showToast('👁️ Visualizando prova ID ' + id + '...', 'info');
+}
+
+// ═══════════════════════════════ GABARITOS ═══════════════════════════════
+async function carregarGabaritos() {
+  try {
+    const response = await fetch(API_URL + '/api/provas');
+    const provas = await response.json();
+    const tbody = document.getElementById('tb-gabaritos');
+    if (!tbody) return;
+    
+    const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
+    if (!comGabarito || comGabarito.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
+    } else {
+      tbody.innerHTML = comGabarito.map((p, i) => {
+        return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+          '<td><span class="badge badge-blue">' + String(i+1).padStart(3,'0') + '</span></td>' +
+          '<td>' + p.titulo + '</td>' +
+          '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
+          '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
+          '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
+          '<td>' + (p.data_prova || '—') + '</td>' +
+          '<td><div class="btn-group">' +
+          '<button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button>' +
+          '<button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button>' +
+          '</div></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar gabaritos:', erro);
+  }
+}
+
+function editarGabarito(id) {
+  showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info');
+  go('gabarito');
+}
+
+async function excluirGabarito(id, titulo) {
+  if (!confirm('Excluir o gabarito da prova "' + titulo + '"?')) return;
+  try {
+    const response = await fetch(API_URL + '/api/provas/' + id, { method: 'DELETE' });
+    if (response.ok) {
+      showToast('🗑️ Gabarito da prova "' + titulo + '" excluído!', 'error');
+      carregarDados();
+    } else {
+      const erro = await response.json();
+      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
+    }
+  } catch (erro) {
+    showToast('Erro ao excluir: ' + erro.message, 'error');
+  }
+}
+
+// ═══════════════════════════════ DASHBOARD ═══════════════════════════════
+async function carregarDashboard() {
+  try {
+    const response = await fetch(API_URL + '/api/dashboard');
+    const dados = await response.json();
+    
+    document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
+    document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
+    document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
+    document.getElementById('totalProvas').textContent = dados.total_provas || 0;
+    
+    // Atualizar user dashboard
+    document.getElementById('u-total-escolas').textContent = dados.total_escolas || 0;
+    document.getElementById('u-total-turmas').textContent = dados.total_turmas || 0;
+    document.getElementById('u-total-alunos').textContent = dados.total_alunos || 0;
+  } catch (erro) {
+    console.error('Erro ao carregar dashboard:', erro);
+  }
+}
+
+// ═══════════════════════════════ ÚLTIMAS CORREÇÕES ═══════════════════════════════
+async function carregarUltimasCorrecoes() {
+  try {
+    const response = await fetch(API_URL + '/api/historico');
+    const historico = await response.json();
+    const tbody = document.getElementById('ultimas-correcoes');
+    if (!tbody) return;
+    
+    if (!historico || historico.length === 0 || historico.erro) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+    } else {
+      const recentes = historico.slice(0, 4);
+      tbody.innerHTML = recentes.map(item => {
+        const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
+        const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
+        const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
+        return '<tr>' +
+          '<td><strong>' + item.aluno_nome + '</strong></td>' +
+          '<td>' + item.prova_titulo + '</td>' +
+          '<td><strong style="color:' + cor + ';">' + item.nota + '</strong></td>' +
+          '<td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar últimas correções:', erro);
+  }
+}
+
+// ═══════════════════════════════ RESULTADOS ═══════════════════════════════
+async function carregarResultados() {
+  try {
+    const response = await fetch(API_URL + '/api/historico');
+    const historico = await response.json();
+    const tbody = document.getElementById('tb-resultados');
+    if (!tbody) return;
+    
+    if (!historico || historico.length === 0 || historico.erro) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>';
+    } else {
+      let total = historico.length;
+      let aprovados = historico.filter(c => c.nota >= 6).length;
+      let recuperacao = historico.filter(c => c.nota >= 4 && c.nota < 6).length;
+      let media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
+      
+      document.getElementById('res-total').textContent = total;
+      document.getElementById('res-aprovados').textContent = aprovados;
+      document.getElementById('res-recuperacao').textContent = recuperacao;
+      document.getElementById('res-media').textContent = media.toFixed(1);
+      
+      tbody.innerHTML = historico.map((item, index) => {
+        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index+1;
+        const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
+        const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
+        const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
+        return '<tr>' +
+          '<td>' + medalha + '</td>' +
+          '<td>' + (index+1) + '</td>' +
+          '<td><strong>' + item.aluno_nome + '</strong></td>' +
+          '<td><span class="badge badge-purple">—</span></td>' +
+          '<td>' + item.acertos + '</td>' +
+          '<td><strong style="color:' + cor + ';">' + item.nota + '</strong></td>' +
+          '<td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar resultados:', erro);
+  }
+}
+
+// ═══════════════════════════════ RELATÓRIOS ═══════════════════════════════
+async function carregarRelatorios() {
+  try {
+    const alunosResp = await fetch(API_URL + '/api/alunos');
+    const alunos = await alunosResp.json();
+    const correcoesResp = await fetch(API_URL + '/api/historico');
+    const correcoes = await correcoesResp.json();
+    
+    const totalAlunos = alunos.length || 0;
+    const aprovados = correcoes.filter(c => c.nota >= 6).length || 0;
+    const recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0;
+    const media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+    
+    document.getElementById('rel-total-alunos').textContent = totalAlunos;
+    document.getElementById('rel-aprovados').textContent = aprovados;
+    document.getElementById('rel-recuperacao').textContent = recuperacao;
+    document.getElementById('rel-media').textContent = media.toFixed(1);
+    
+    // Distribuição de notas
+    const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+    correcoes.forEach(c => {
+      if (c.nota < 2) faixas['0-2']++;
+      else if (c.nota < 4) faixas['2-4']++;
+      else if (c.nota < 6) faixas['4-6']++;
+      else if (c.nota < 8) faixas['6-8']++;
+      else faixas['8-10']++;
+    });
+    
+    const maxVal = Math.max(...Object.values(faixas), 1);
+    document.getElementById('d0-2').textContent = faixas['0-2'];
+    document.getElementById('d2-4').textContent = faixas['2-4'];
+    document.getElementById('d4-6').textContent = faixas['4-6'];
+    document.getElementById('d6-8').textContent = faixas['6-8'];
+    document.getElementById('d8-10').textContent = faixas['8-10'];
+    
+    const bars = document.querySelectorAll('#dist-notas .chart-bar');
+    const heights = [10, 10, 10, 10, 10];
+    const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
+    vals.forEach((v, i) => {
+      if (bars[i]) {
+        const h = maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10;
+        bars[i].style.height = h + 'px';
+      }
+    });
+    
+    // Relatório por escola
+    await carregarRelatorioEscola();
+    
+  } catch (erro) {
+    console.error('Erro ao carregar relatórios:', erro);
+  }
+}
+
+async function carregarRelatorioEscola() {
+  try {
+    const escolasResp = await fetch(API_URL + '/api/escolas');
+    const escolas = await escolasResp.json();
+    const turmasResp = await fetch(API_URL + '/api/turmas');
+    const turmas = await turmasResp.json();
+    const alunosResp = await fetch(API_URL + '/api/alunos');
+    const alunos = await alunosResp.json();
+    const correcoesResp = await fetch(API_URL + '/api/historico');
+    const correcoes = await correcoesResp.json();
+    
+    const tbody = document.getElementById('tb-rel-escola');
+    if (!tbody) return;
+    
+    if (!escolas || escolas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+    } else {
+      tbody.innerHTML = escolas.map(e => {
+        const turmasEscola = turmas.filter(t => t.escola_id === e.id);
+        const alunosEscola = alunos.filter(a => a.escola_id === e.id);
+        const correcoesEscola = correcoes.filter(c => {
+          const aluno = alunos.find(a => a.id === c.aluno_id);
+          return aluno && aluno.escola_id === e.id;
+        });
+        const media = correcoesEscola.length > 0 ? 
+          (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
+        const aprovados = correcoesEscola.filter(c => c.nota >= 6).length;
+        const perc = correcoesEscola.length > 0 ? Math.round((aprovados / correcoesEscola.length) * 100) : 0;
+        
+        return '<tr>' +
+          '<td><strong>' + e.nome + '</strong></td>' +
+          '<td>' + turmasEscola.length + '</td>' +
+          '<td>' + alunosEscola.length + '</td>' +
+          '<td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td>' +
+          '<td>' + perc + '%</td>' +
+          '<td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+      }).join('');
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar relatório por escola:', erro);
+  }
+}
+
+// ═══════════════════════════════ COMBOS ═══════════════════════════════
+async function carregarCombos() {
+  try {
+    // Escolas
+    const respEscolas = await fetch(API_URL + '/api/escolas');
+    const escolas = await respEscolas.json();
+    
+    const selects = ['turma-escola', 'prova-escola', 'lista-escola'];
+    selects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+        const current = select.value;
+        select.innerHTML = '<option value="">Selecione a escola</option>';
+        if (escolas && !escolas.erro) {
+          escolas.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e.id;
+            opt.textContent = e.nome;
+            select.appendChild(opt);
+          });
+        }
+        if (current) select.value = current;
+      }
+    });
+    
+    // Turmas
+    const respTurmas = await fetch(API_URL + '/api/turmas');
+    const turmas = await respTurmas.json();
+    
+    const turmaSelects = ['aluno-turma', 'modal-prova-turma', 'lista-turma'];
+    turmaSelects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+        const current = select.value;
+        select.innerHTML = '<option value="">Selecione a turma</option>';
+        if (turmas && !turmas.erro) {
+          turmas.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.nome + ' - ' + (t.serie || '—');
+            select.appendChild(opt);
+          });
+        }
+        if (current) select.value = current;
+      }
+    });
+    
+    // Provas para gabarito e correção
+    const respProvas = await fetch(API_URL + '/api/provas');
+    const provas = await respProvas.json();
+    
+    const provaSelects = ['gab-prova', 'corrigir-prova', 'rel-prova-select'];
+    provaSelects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+        const current = select.value;
+        select.innerHTML = '<option value="">Selecione a prova</option>';
+        if (provas && !provas.erro) {
+          provas.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.titulo + ' - ' + (p.disciplina || '—');
+            select.appendChild(opt);
+          });
+        }
+        if (current) select.value = current;
+      }
+    });
+    
+    // Alunos para correção e relatórios
+    const respAlunos = await fetch(API_URL + '/api/alunos');
+    const alunos = await respAlunos.json();
+    
+    const alunoSelects = ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select'];
+    alunoSelects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+        const current = select.value;
+        select.innerHTML = '<option value="">Selecione o aluno</option>';
+        if (alunos && !alunos.erro) {
+          alunos.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a.id;
+            opt.textContent = a.nome;
+            select.appendChild(opt);
+          });
+        }
+        if (current) select.value = current;
+      }
+    });
+    
+  } catch (erro) {
+    console.error('Erro ao carregar combos:', erro);
+  }
+}
+
+// ═══════════════════════════════ LISTA POR TURMA ═══════════════════════════════
+async function gerarListaTurma() {
+  const turmaId = document.getElementById('lista-turma').value;
+  if (!turmaId) {
+    showToast('❌ Selecione uma turma!', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
+    const alunos = await response.json();
+    const turmaResp = await fetch(API_URL + '/api/turmas');
+    const turmas = await turmaResp.json();
+    const turma = turmas.find(t => t.id == turmaId);
+    
+    const container = document.getElementById('lista-resultado');
+    if (!container) return;
+    
+    if (!alunos || alunos.length === 0 || alunos.erro) {
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+      return;
+    }
+    
+    const escolaResp = await fetch(API_URL + '/api/escolas');
+    const escolas = await escolaResp.json();
+    const escola = escolas.find(e => e.id === turma?.escola_id);
+    
+    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">';
+    html += '<div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div>';
+    html += '<div style="color:var(--text2);font-size:13px;margin-top:4px;">Lista de Alunos — ' + (turma?.nome || '') + ' — ' + (turma?.serie || '') + '</div>';
+    html += '<div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div>';
+    html += '</div>';
+    html += '<div class="table-wrap"><table>';
+    html += '<thead><tr><th>Nº</th><th>Matrícula</th><th>Nome Completo</th><th>Data Nasc.</th><th>Responsável</th><th>Assinatura</th></tr></thead>';
+    html += '<tbody>';
+    
+    alunos.forEach(a => {
+      html += '<tr><td>' + (a.numero_chamada || '—') + '</td>';
+      html += '<td><span class="chip">' + (a.matricula || '—') + '</span></td>';
+      html += '<td><strong>' + a.nome + '</strong></td>';
+      html += '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>';
+      html += '<td>' + (a.responsavel || '—') + '</td>';
+      html += '<td style="width:140px;border-bottom:1px solid var(--border2);">&nbsp;</td></tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:30px;padding-top:18px;border-top:1px solid var(--border);">';
+    html += '<div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div>';
+    html += '<div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div>';
+    html += '</div>';
+    
+    container.innerHTML = html;
+    showToast('📋 Lista gerada com ' + alunos.length + ' alunos!', 'success');
+    
+  } catch (erro) {
+    console.error('Erro ao gerar lista:', erro);
+    showToast('❌ Erro ao gerar lista', 'error');
+  }
+}
+
+// ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
 async function salvarEscola() {
   const dados = {
     nome: document.getElementById('escola-nome').value.trim(),
-    inep: document.getElementById('escola-inep').value.trim(),
-    municipio: document.getElementById('escola-municipio').value.trim(),
-    estado: document.getElementById('escola-estado').value,
-    telefone: document.getElementById('escola-telefone').value.trim(),
-    diretor: document.getElementById('escola-diretor').value.trim()
+    inep: document.getElementById('escola-inep').value.trim() || '',
+    municipio: document.getElementById('escola-municipio').value.trim() || '',
+    estado: document.getElementById('escola-estado').value || 'SP',
+    telefone: document.getElementById('escola-telefone').value.trim() || '',
+    diretor: document.getElementById('escola-diretor').value.trim() || ''
   };
   
   if (!dados.nome) {
@@ -825,333 +1962,201 @@ async function salvarEscola() {
   }
   
   try {
-    const response = await fetch(`${API_URL}/api/escolas`, {
+    const response = await fetch(API_URL + '/api/escolas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados)
     });
     const result = await response.json();
     if (result.id) {
-      showToast('✅ Escola cadastrada!', 'success');
+      showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success');
       closeM('m-escola');
-      carregarEscolas();
-      carregarDashboard();
-      carregarCombos();
-    }
-  } catch (erro) {
-    showToast('❌ Erro ao salvar', 'error');
-  }
-}
-
-// ═══════════════════════════════ TURMAS ═══════════════════════════════
-async function carregarTurmas() {
-  try {
-    const response = await fetch(`${API_URL}/api/turmas`);
-    const turmas = await response.json();
-    const tbody = document.getElementById('tb-turmas');
-    if (!tbody) return;
-    
-    if (!turmas || turmas.length === 0 || turmas.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>`;
+      carregarDados();
     } else {
-      const corMap = {
-        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
-        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
-        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
-      };
-      
-      tbody.innerHTML = turmas.map((t, i) => `
-        <tr data-id="${t.id}">
-          <td><span class="badge badge-gray">${String(i+1).padStart(2,'0')}</span></td>
-          <td><strong>${t.nome}</strong></td>
-          <td><span class="badge ${corMap[t.serie] || 'badge-blue'}">${t.serie || '—'}</span></td>
-          <td>${t.escola_nome || '—'}</td>
-          <td>${t.professor || '—'}</td>
-          <td><button class="btn-del" onclick="excluirTurma(${t.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar escola', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar turmas:', erro);
-  }
-}
-
-async function excluirTurma(id) {
-  if (!confirm('Excluir esta turma?')) return;
-  try {
-    await fetch(`${API_URL}/api/turmas/${id}`, { method: 'DELETE' });
-    showToast('✅ Turma excluída!', 'success');
-    carregarTurmas();
-    carregarDashboard();
-  } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
 async function salvarTurma() {
   const dados = {
+    escola_id: parseInt(document.getElementById('turma-escola').value) || null,
     nome: document.getElementById('turma-nome').value.trim(),
-    serie: document.getElementById('turma-serie').value,
-    turno: document.getElementById('turma-turno').value,
-    professor: document.getElementById('turma-professor').value.trim(),
-    escola_id: parseInt(document.getElementById('turma-escola').value)
+    serie: document.getElementById('turma-serie').value || '1º Ano',
+    turno: document.getElementById('turma-turno').value || 'Manhã',
+    professor: document.getElementById('turma-professor').value.trim() || '',
+    capacidade: parseInt(document.getElementById('turma-capacidade').value) || 35,
+    ano_letivo: parseInt(document.getElementById('turma-ano').value) || 2025
   };
   
-  if (!dados.nome || !dados.escola_id) {
-    showToast('❌ Preencha todos os campos obrigatórios!', 'error');
+  if (!dados.escola_id) {
+    showToast('❌ Selecione uma escola!', 'error');
+    return;
+  }
+  if (!dados.nome) {
+    showToast('❌ Nome da turma é obrigatório!', 'error');
     return;
   }
   
   try {
-    const response = await fetch(`${API_URL}/api/turmas`, {
+    const response = await fetch(API_URL + '/api/turmas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados)
     });
     const result = await response.json();
     if (result.id) {
-      showToast('✅ Turma cadastrada!', 'success');
+      showToast('✅ Turma "' + dados.nome + '" cadastrada!', 'success');
       closeM('m-turma');
-      carregarTurmas();
-      carregarDashboard();
-      carregarCombos();
-    }
-  } catch (erro) {
-    showToast('❌ Erro ao salvar', 'error');
-  }
-}
-
-// ═══════════════════════════════ ALUNOS ═══════════════════════════════
-async function carregarAlunos() {
-  try {
-    const response = await fetch(`${API_URL}/api/alunos`);
-    const alunos = await response.json();
-    const tbody = document.getElementById('tb-alunos');
-    if (!tbody) return;
-    
-    if (!alunos || alunos.length === 0 || alunos.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>`;
+      carregarDados();
     } else {
-      const corMap = {
-        '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
-        '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
-        '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
-      };
-      
-      tbody.innerHTML = alunos.map((a, i) => `
-        <tr data-id="${a.id}">
-          <td>${a.numero_chamada || i+1}</td>
-          <td><span class="chip">${a.matricula || '—'}</span></td>
-          <td><strong>${a.nome}</strong></td>
-          <td><span class="badge ${corMap[a.turma_serie] || 'badge-blue'}">${a.turma_serie || '—'}</span></td>
-          <td>${a.turma_nome || '—'}</td>
-          <td><button class="btn-del" onclick="excluirAluno(${a.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar turma', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar alunos:', erro);
-  }
-}
-
-async function excluirAluno(id) {
-  if (!confirm('Excluir este aluno?')) return;
-  try {
-    await fetch(`${API_URL}/api/alunos/${id}`, { method: 'DELETE' });
-    showToast('✅ Aluno excluído!', 'success');
-    carregarAlunos();
-    carregarDashboard();
-  } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
 async function salvarAluno() {
   const dados = {
+    turma_id: parseInt(document.getElementById('aluno-turma').value) || null,
     nome: document.getElementById('aluno-nome').value.trim(),
+    matricula: document.getElementById('aluno-matricula').value.trim() || '',
     numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null,
-    matricula: document.getElementById('aluno-matricula').value.trim(),
     data_nascimento: document.getElementById('aluno-nascimento').value || null,
-    genero: document.getElementById('aluno-genero').value,
-    turma_id: parseInt(document.getElementById('aluno-turma').value)
+    genero: document.getElementById('aluno-genero').value || 'Masculino',
+    responsavel: document.getElementById('aluno-responsavel').value.trim() || '',
+    telefone: document.getElementById('aluno-telefone').value.trim() || '',
+    email: document.getElementById('aluno-email').value.trim() || '',
+    observacoes: document.getElementById('aluno-observacoes').value.trim() || ''
   };
   
-  if (!dados.nome || !dados.turma_id) {
-    showToast('❌ Preencha todos os campos obrigatórios!', 'error');
+  if (!dados.nome) {
+    showToast('❌ Nome do aluno é obrigatório!', 'error');
+    return;
+  }
+  if (!dados.turma_id) {
+    showToast('❌ Selecione a turma do aluno!', 'error');
     return;
   }
   
   try {
-    const response = await fetch(`${API_URL}/api/alunos`, {
+    const response = await fetch(API_URL + '/api/alunos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados)
     });
     const result = await response.json();
     if (result.id) {
-      showToast('✅ Aluno cadastrado!', 'success');
+      showToast('✅ Aluno "' + dados.nome + '" cadastrado!', 'success');
       closeM('m-aluno');
-      carregarAlunos();
-      carregarDashboard();
-    }
-  } catch (erro) {
-    showToast('❌ Erro ao salvar', 'error');
-  }
-}
-
-// ═══════════════════════════════ PROVAS ═══════════════════════════════
-async function carregarProvas() {
-  try {
-    const response = await fetch(`${API_URL}/api/provas`);
-    const provas = await response.json();
-    const tbody = document.getElementById('tb-provas');
-    if (!tbody) return;
-    
-    if (!provas || provas.length === 0 || provas.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>`;
+      carregarDados();
     } else {
-      tbody.innerHTML = provas.map((p, i) => `
-        <tr data-id="${p.id}">
-          <td><span class="badge badge-blue">${String(i+1).padStart(3,'0')}</span></td>
-          <td><strong>${p.titulo}</strong></td>
-          <td>${p.disciplina || '—'}</td>
-          <td>${p.turma_nome || '—'}</td>
-          <td>${p.data_prova || '—'}</td>
-          <td><button class="btn-del" onclick="excluirProva(${p.id})" title="Excluir">🗑️</button></td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar aluno', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar provas:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
-async function excluirProva(id) {
-  if (!confirm('Excluir esta prova?')) return;
-  try {
-    await fetch(`${API_URL}/api/provas/${id}`, { method: 'DELETE' });
-    showToast('✅ Prova excluída!', 'success');
-    carregarProvas();
-    carregarDashboard();
-  } catch (erro) {
-    showToast('❌ Erro ao excluir', 'error');
+async function salvarProva() {
+  const dados = {
+    turma_id: parseInt(document.getElementById('prova-turma').value) || null,
+    titulo: document.getElementById('prova-titulo').value.trim(),
+    disciplina: document.getElementById('prova-disciplina').value || '',
+    bimestre: document.getElementById('prova-bimestre').value || '',
+    data_prova: document.getElementById('prova-data').value || null,
+    valor_nota: parseFloat(document.getElementById('prova-nota').value) || 10,
+    tipo_questoes: document.getElementById('prova-serie').value ? 
+      (document.getElementById('prova-serie').value.startsWith('1') ? '3' : '4') : '4',
+    gabarito: []
+  };
+  
+  if (!dados.turma_id) {
+    showToast('❌ Selecione a turma!', 'error');
+    return;
   }
-}
-
-// ═══════════════════════════════ DASHBOARD ═══════════════════════════════
-async function carregarDashboard() {
-  try {
-    const response = await fetch(`${API_URL}/api/dashboard`);
-    const dados = await response.json();
-    
-    document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
-    document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
-    document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
-    document.getElementById('totalProvas').textContent = dados.total_provas || 0;
-  } catch (erro) {
-    console.error('Erro ao carregar dashboard:', erro);
+  if (!dados.titulo) {
+    showToast('❌ Título da prova é obrigatório!', 'error');
+    return;
   }
-}
-
-// ═══════════════════════════════ RESULTADOS ═══════════════════════════════
-async function carregarResultados() {
+  if (!dados.data_prova) {
+    showToast('❌ Data da prova é obrigatória!', 'error');
+    return;
+  }
+  
   try {
-    const response = await fetch(`${API_URL}/api/historico`);
-    const historico = await response.json();
-    const tbody = document.getElementById('tb-resultados');
-    if (!tbody) return;
-    
-    if (!historico || historico.length === 0 || historico.erro) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>`;
+    const response = await fetch(API_URL + '/api/provas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados)
+    });
+    const result = await response.json();
+    if (result.id) {
+      showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success');
+      document.getElementById('up-ok').style.display = 'block';
+      carregarDados();
     } else {
-      tbody.innerHTML = historico.map(item => `
-        <tr>
-          <td><strong>${item.aluno_nome}</strong></td>
-          <td>${item.prova_titulo}</td>
-          <td>${item.acertos}</td>
-          <td><strong style="color:${item.nota >= 6 ? 'var(--green)' : 'var(--red)'};">${item.nota}</strong></td>
-          <td><span class="badge badge-purple">${item.metodo_ia || 'Híbrido'}</span></td>
-          <td>${item.data_correcao ? new Date(item.data_correcao).toLocaleString() : '—'}</td>
-        </tr>
-      `).join('');
+      showToast('❌ Erro ao cadastrar prova', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar resultados:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
-// ═══════════════════════════════ COMBOS ═══════════════════════════════
-async function carregarCombos() {
+async function salvarProvaModal() {
+  const dados = {
+    turma_id: parseInt(document.getElementById('modal-prova-turma').value) || null,
+    titulo: document.getElementById('modal-prova-titulo').value.trim(),
+    disciplina: document.getElementById('modal-prova-disciplina').value || '',
+    bimestre: document.getElementById('modal-prova-bimestre').value || '',
+    data_prova: document.getElementById('modal-prova-data').value || null,
+    valor_nota: parseFloat(document.getElementById('modal-prova-valor').value) || 10,
+    tipo_questoes: document.getElementById('modal-prova-tipo').value || '4',
+    gabarito: []
+  };
+  
+  // Coletar gabarito do modal
+  const gabInputs = document.querySelectorAll('#modal-gabarito-grid input');
+  gabInputs.forEach(input => {
+    if (input.value) dados.gabarito.push(input.value.toUpperCase());
+  });
+  
+  if (!dados.turma_id) {
+    showToast('❌ Selecione a turma!', 'error');
+    return;
+  }
+  if (!dados.titulo) {
+    showToast('❌ Título da prova é obrigatório!', 'error');
+    return;
+  }
+  if (!dados.data_prova) {
+    showToast('❌ Data da prova é obrigatória!', 'error');
+    return;
+  }
+  if (dados.gabarito.length === 0) {
+    showToast('❌ Preencha o gabarito!', 'error');
+    return;
+  }
+  
   try {
-    // Escola para turma
-    const respEscolas = await fetch(`${API_URL}/api/escolas`);
-    const escolas = await respEscolas.json();
-    
-    const selectEscola = document.getElementById('turma-escola');
-    if (selectEscola) {
-      selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
-      if (escolas && !escolas.erro) {
-        escolas.forEach(e => {
-          const opt = document.createElement('option');
-          opt.value = e.id;
-          opt.textContent = e.nome;
-          selectEscola.appendChild(opt);
-        });
-      }
-    }
-    
-    // Turma para aluno
-    const respTurmas = await fetch(`${API_URL}/api/turmas`);
-    const turmas = await respTurmas.json();
-    
-    const selectTurma = document.getElementById('aluno-turma');
-    if (selectTurma) {
-      selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
-      if (turmas && !turmas.erro) {
-        turmas.forEach(t => {
-          const opt = document.createElement('option');
-          opt.value = t.id;
-          opt.textContent = `${t.nome} - ${t.serie || '—'}`;
-          selectTurma.appendChild(opt);
-        });
-      }
-    }
-    
-    // Provas para correção
-    const respProvas = await fetch(`${API_URL}/api/provas`);
-    const provas = await respProvas.json();
-    
-    const selectProva = document.getElementById('corrigir-prova');
-    if (selectProva) {
-      selectProva.innerHTML = '<option value="">Selecione a prova</option>';
-      if (provas && !provas.erro) {
-        provas.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.textContent = `${p.titulo} - ${p.disciplina || '—'}`;
-          selectProva.appendChild(opt);
-        });
-      }
-    }
-    
-    // Alunos para correção
-    const respAlunos = await fetch(`${API_URL}/api/alunos`);
-    const alunos = await respAlunos.json();
-    
-    const selectAluno = document.getElementById('corrigir-aluno');
-    if (selectAluno) {
-      selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
-      if (alunos && !alunos.erro) {
-        alunos.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = a.id;
-          opt.textContent = a.nome;
-          selectAluno.appendChild(opt);
-        });
-      }
+    const response = await fetch(API_URL + '/api/provas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados)
+    });
+    const result = await response.json();
+    if (result.id) {
+      showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success');
+      closeM('m-prova');
+      carregarDados();
+    } else {
+      showToast('❌ Erro ao cadastrar prova', 'error');
     }
   } catch (erro) {
-    console.error('Erro ao carregar combos:', erro);
+    showToast('❌ Erro: ' + erro.message, 'error');
   }
 }
 
@@ -1177,19 +2182,16 @@ function buildGabGrid() {
   for (let i = 1; i <= total; i++) {
     const div = document.createElement('div');
     div.className = 'gab-item';
-    div.innerHTML = `
-      <div class="gab-num">Q${i}</div>
-      <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">
-        <option value="">—</option>
-        ${alts.map(a => `<option>${a}</option>`).join('')}
-      </select>
-    `;
+    let opts = '<option value="">—</option>';
+    alts.forEach(a => { opts += '<option>' + a + '</option>'; });
+    div.innerHTML = '<div class="gab-num">Q' + i + '</div>' +
+      '<select class="gab-select" onchange="this.classList.toggle(\'filled\', this.value!=\'\')">' + opts + '</select>';
     grid.appendChild(div);
   }
 }
 
 function fillGabRand() {
-  const is1 = (parseInt(document.getElementById('gab-serie')?.value) || 1) === 1;
+  const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
   const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
   document.querySelectorAll('.gab-select').forEach(s => {
     s.value = alts[Math.floor(Math.random() * alts.length)];
@@ -1216,11 +2218,11 @@ async function saveGab() {
     return;
   }
   
-  const serie = document.getElementById('gab-serie')?.value || '1º Ano';
-  const provaId = document.getElementById('gab-prova')?.value || 1;
+  const serie = document.getElementById('gab-serie').value || '1º Ano';
+  const provaId = document.getElementById('gab-prova').value || 1;
   
   try {
-    const response = await fetch(`${API_URL}/api/gabaritos`, {
+    const response = await fetch(API_URL + '/api/gabaritos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1237,6 +2239,7 @@ async function saveGab() {
     const result = await response.json();
     if (result.id) {
       showToast('✅ Gabarito salvo!', 'success');
+      carregarDados();
     } else {
       showToast('❌ Erro ao salvar gabarito', 'error');
     }
@@ -1260,6 +2263,11 @@ async function abrirCamera() {
   }
 }
 
+function trocarCamera() {
+  camFacing = camFacing === 'environment' ? 'user' : 'environment';
+  abrirCamera();
+}
+
 function fecharCamera() {
   document.getElementById('cam-modal').classList.remove('show');
   if (camStream) {
@@ -1277,13 +2285,14 @@ function capturarFoto() {
   const foto = canvas.toDataURL('image/jpeg', 0.9);
   fecharCamera();
   showToast('📸 Foto capturada!', 'ai');
+  ultimaImagem = foto;
   processarComIA(foto);
   go('corrigir-ia');
 }
 
 // ═══════════════════════════════ ARQUIVO ═══════════════════════════════
 function abrirArquivo() {
-  document.getElementById('inp-arq')?.click();
+  document.getElementById('inp-arq').click();
 }
 
 function processarArq(input) {
@@ -1292,6 +2301,7 @@ function processarArq(input) {
   const reader = new FileReader();
   reader.onload = e => {
     showToast('📂 Arquivo carregado!', 'ai');
+    ultimaImagem = e.target.result;
     processarComIA(e.target.result);
     go('corrigir-ia');
   };
@@ -1304,16 +2314,18 @@ async function processarComIA(imagemBase64) {
   const box = document.getElementById('ia-result');
   if (box) box.style.display = 'none';
   
-  const provaId = document.getElementById('corrigir-prova')?.value || 1;
-  const alunoId = document.getElementById('corrigir-aluno')?.value || 1;
+  const provaId = document.getElementById('corrigir-prova').value || 1;
+  const alunoId = document.getElementById('corrigir-aluno').value || 1;
   
   if (!imagemBase64) {
     showToast('❌ Nenhuma imagem!', 'error');
     return;
   }
   
+  document.getElementById('ia-ultima-imagem').value = imagemBase64;
+  
   try {
-    const response = await fetch(`${API_URL}/api/corrigir`, {
+    const response = await fetch(API_URL + '/api/corrigir', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1334,15 +2346,28 @@ async function processarComIA(imagemBase64) {
     if (rd) {
       rd.innerHTML = dados.respostas_detectadas.map((a, i) => {
         const ok = a === dados.correcoes?.[i]?.gabarito;
-        return `<span style="background:${ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)'};border:1px solid ${ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : 'var(--red)'};">Q${i+1}:${a}</span>`;
+        return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i+1) + ':' + a + '</span>';
       }).join('');
     }
     
-    const ne = document.getElementById('ia-nota');
-    if (ne) ne.textContent = dados.nota || 0;
+    const cd = document.getElementById('ia-comp');
+    if (cd) {
+      cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
+        const ok = a === dados.correcoes?.[i]?.gabarito;
+        return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i+1) + '</div>' +
+          '<div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + a + '</div></div>';
+      }).join('');
+    }
+    
+    document.getElementById('ia-nota').textContent = dados.nota || 0;
+    document.getElementById('ia-aluno').textContent = dados.aluno || 'Aluno';
+    document.getElementById('ia-turma').textContent = dados.prova || 'Prova';
+    document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
+    document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+    document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
     
     if (box) box.style.display = 'block';
-    showToast(`✅ ${dados.acertos}/${dados.total} acertos — Nota: ${dados.nota}`, 'success');
+    showToast('✅ ' + dados.acertos + '/' + dados.total + ' acertos — Nota: ' + dados.nota, 'success');
     
     carregarDashboard();
     carregarResultados();
@@ -1353,9 +2378,26 @@ async function processarComIA(imagemBase64) {
   }
 }
 
+function salvarCorrecao() {
+  showToast('💾 Correção salva com sucesso!', 'success');
+}
+
 // ═══════════════════════════════ TEXTO IA ═══════════════════════════════
+function prevTexto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('txt-img-prev').style.display = 'block';
+    document.getElementById('txt-img').src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 async function avaliarTexto() {
-  const texto = document.getElementById('txt-aluno')?.value;
+  const texto = document.getElementById('txt-aluno').value;
+  const alunoId = document.getElementById('txt-aluno-select').value;
+  
   if (!texto || texto.trim().length < 5) {
     showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error');
     return;
@@ -1365,11 +2407,25 @@ async function avaliarTexto() {
   document.getElementById('txt-loading').style.display = 'block';
   document.getElementById('txt-res').style.display = 'none';
   
+  const pb = document.getElementById('txt-pb');
+  let p = 0;
+  const iv = setInterval(() => {
+    p += Math.random() * 12;
+    if (p > 100) p = 100;
+    if (pb) pb.style.width = p + '%';
+    if (p >= 100) {
+      clearInterval(iv);
+      processarAvaliacaoTexto(texto, alunoId);
+    }
+  }, 120);
+}
+
+async function processarAvaliacaoTexto(texto, alunoId) {
   try {
-    const response = await fetch(`${API_URL}/api/corrigir_redacao`, {
+    const response = await fetch(API_URL + '/api/corrigir_redacao', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: texto })
+      body: JSON.stringify({ texto: texto, aluno_id: alunoId || null })
     });
     
     const dados = await response.json();
@@ -1383,8 +2439,33 @@ async function avaliarTexto() {
     }
     
     document.getElementById('txt-nota').textContent = dados.nota || 0;
+    document.getElementById('txt-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+    document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+    
+    if (dados.metricas) {
+      document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
+      document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
+      document.getElementById('c-ort').textContent = dados.metricas.nota_gramatica || 0;
+      document.getElementById('c-voc').textContent = dados.metricas.nota_vocabulario || 0;
+      
+      document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
+      document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
+      document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
+      document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
+    }
+    
     const fb = document.getElementById('txt-fb');
     if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
+    
+    // Buscar nome do aluno
+    if (alunoId) {
+      try {
+        const respAlunos = await fetch(API_URL + '/api/alunos');
+        const alunos = await respAlunos.json();
+        const aluno = alunos.find(a => a.id == alunoId);
+        document.getElementById('txt-aluno-nome').textContent = aluno ? aluno.nome : '—';
+      } catch (e) {}
+    }
     
     showToast('✅ Avaliação concluída!', 'success');
     
@@ -1394,29 +2475,145 @@ async function avaliarTexto() {
   }
 }
 
+function salvarAvaliacaoTexto() {
+  showToast('💾 Avaliação salva com sucesso!', 'success');
+}
+
+// ═══════════════════════════════ TABS ═══════════════════════════════
+function switchTab(idx, btn) {
+  const parent = btn.closest('.tab-nav');
+  if (parent) {
+    parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const card = btn.closest('.card');
+  if (card) {
+    card.querySelectorAll('.tab-c').forEach((tc, i) => {
+      tc.style.display = i === idx ? 'block' : 'none';
+    });
+  }
+}
+
 // ═══════════════════════════════ MODALS ═══════════════════════════════
 function openM(id) {
   document.getElementById(id).classList.add('show');
+  if (id === 'm-turma' || id === 'm-aluno') carregarCombos();
+  if (id === 'm-prova') {
+    carregarCombos();
+    const tipo = document.getElementById('modal-prova-tipo').value;
+    gerarGabaritoModal(tipo);
+  }
 }
 
 function closeM(id) {
   document.getElementById(id).classList.remove('show');
 }
 
-// Fechar modal ao clicar fora
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => {
     if (e.target === m) m.classList.remove('show');
   });
 });
 
+// ═══════════════════════════════ GABARITO MODAL ═══════════════════════════════
+function gerarGabaritoModal(tipo) {
+  const grid = document.getElementById('modal-gabarito-grid');
+  if (!grid) return;
+  
+  const numQuestoes = 20;
+  const alts = tipo == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+  
+  grid.innerHTML = '';
+  for (let i = 1; i <= numQuestoes; i++) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 1;
+    input.style.width = '40px';
+    input.style.height = '35px';
+    input.style.textAlign = 'center';
+    input.style.background = 'var(--bg2)';
+    input.style.border = '1.5px solid var(--border2)';
+    input.style.borderRadius = '6px';
+    input.style.color = 'var(--text)';
+    input.style.fontWeight = 'bold';
+    input.style.fontSize = '14px';
+    input.style.textTransform = 'uppercase';
+    input.placeholder = i;
+    input.title = 'Questão ' + i;
+    input.addEventListener('input', function() {
+      this.value = this.value.toUpperCase().replace(/[^A-D]/g, '');
+      if (this.value && !alts.includes(this.value)) this.value = '';
+    });
+    grid.appendChild(input);
+  }
+}
+
+// ═══════════════════════════════ DELETE ═══════════════════════════════
+function excluir(btn, tipo, nome) {
+  const row = btn.closest('tr');
+  delTarget = { row, tipo, nome };
+  document.getElementById('del-nome-txt').textContent = '"' + nome + '"';
+  document.getElementById('del-modal').classList.add('show');
+}
+
+function cancelarDel() {
+  document.getElementById('del-modal').classList.remove('show');
+  delTarget = null;
+}
+
+function confirmarDel() {
+  document.getElementById('del-modal').classList.remove('show');
+  if (!delTarget) return;
+  const { row, tipo, nome } = delTarget;
+  row.classList.add('deleting');
+  setTimeout(() => {
+    row.remove();
+    showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
+    delTarget = null;
+    renumerarTabela(row.closest('tbody'));
+  }, 350);
+}
+
+function renumerarTabela(tbody) {
+  if (!tbody) return;
+  tbody.querySelectorAll('tr').forEach((tr, i) => {
+    const badge = tr.querySelector('.badge-blue, .badge-gray');
+    if (badge) {
+      const num = String(i + 1).padStart(2, '0');
+      if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
+    }
+  });
+}
+
+function editarItem(btn, tipo, nome) {
+  showToast('✏️ Editando ' + tipo + ': "' + nome + '"...', 'info');
+}
+
+// ═══════════════════════════════ FILTRAR ═══════════════════════════════
+function filtrarTabela(input, tbodyId) {
+  const val = input.value.toLowerCase();
+  const rows = document.querySelectorAll('#' + tbodyId + ' tr');
+  rows.forEach(row => {
+    const txt = row.textContent.toLowerCase();
+    row.style.display = txt.includes(val) ? '' : 'none';
+  });
+}
+
+function filtrarSerie(sel) {
+  const val = sel.value;
+  document.querySelectorAll('#tb-turmas tr').forEach(row => {
+    row.style.display = (!val || row.dataset.serie === val) ? '' : 'none';
+  });
+}
+
 // ═══════════════════════════════ TOAST ═══════════════════════════════
-function showToast(msg, type = 'info') {
+function showToast(msg, type) {
+  type = type || 'info';
   const c = document.getElementById('toast-c');
   const t = document.createElement('div');
-  t.className = `toast toast-${type}`;
+  t.className = 'toast toast-' + type;
   const icons = { info: 'ℹ️', success: '✅', error: '❌', ai: '🤖' };
-  t.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + msg + '</span>';
   c.appendChild(t);
   setTimeout(() => {
     t.style.opacity = '0';
@@ -1425,10 +2622,309 @@ function showToast(msg, type = 'info') {
   }, 3200);
 }
 
+// ═══════════════════════════════ MISC ═══════════════════════════════
+function simUpload() {
+  setTimeout(() => {
+    document.getElementById('up-ok').style.display = 'block';
+    showToast('✅ Arquivo enviado!', 'success');
+  }, 600);
+}
+
+function atualizarInfoAlts() {
+  const s = document.getElementById('prova-serie');
+  const info = document.getElementById('info-alts');
+  if (!s || !info) return;
+  const is1 = s.value.startsWith('1');
+  info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
+  info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
+  info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
+  info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+}
+
+function carregarTurmasProva() {
+  const escolaId = document.getElementById('prova-escola').value;
+  if (!escolaId) return;
+  const select = document.getElementById('prova-turma');
+  select.innerHTML = '<option value="">Selecione a turma</option>';
+  fetch(API_URL + '/api/turmas?escola_id=' + escolaId)
+    .then(r => r.json())
+    .then(turmas => {
+      if (turmas && !turmas.erro) {
+        turmas.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.nome + ' - ' + (t.serie || '—');
+          select.appendChild(opt);
+        });
+      }
+    })
+    .catch(e => console.error(e));
+}
+
+function exportarAlunosCSV() {
+  showToast('📤 Exportando alunos...', 'info');
+  fetch(API_URL + '/api/alunos')
+    .then(r => r.json())
+    .then(alunos => {
+      if (!alunos || alunos.length === 0) {
+        showToast('⚠️ Nenhum aluno para exportar', 'error');
+        return;
+      }
+      let csv = 'Nº,Matrícula,Nome,Série,Turma, Escola,Data Nasc.\n';
+      alunos.forEach(a => {
+        csv += (a.numero_chamada || '') + ',' +
+               (a.matricula || '') + ',' +
+               a.nome + ',' +
+               (a.turma_serie || '') + ',' +
+               (a.turma_nome || '') + ',' +
+               (a.escola_nome || '') + ',' +
+               (a.data_nascimento || '') + '\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'alunos.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✅ Alunos exportados!', 'success');
+    })
+    .catch(e => {
+      showToast('❌ Erro ao exportar', 'error');
+      console.error(e);
+    });
+}
+
+function exportarResultados() {
+  showToast('📥 Exportando resultados...', 'info');
+  const provaId = document.getElementById('rel-prova-select').value || '';
+  let url = API_URL + '/api/exportar';
+  if (provaId) url += '?prova_id=' + provaId;
+  window.open(url, '_blank');
+}
+
+function exportarRelatorio() {
+  showToast('📥 Exportando relatório...', 'info');
+  window.print();
+}
+
+function exportarRelatorioAluno() {
+  showToast('📥 Exportando relatório do aluno...', 'info');
+  window.print();
+}
+
+function exportarRelatorioEscola() {
+  showToast('📥 Exportando relatório por escola...', 'info');
+  const tbody = document.getElementById('tb-rel-escola');
+  if (!tbody) return;
+  let csv = 'Escola,Turmas,Alunos,Média,Aprovação\n';
+  const rows = tbody.querySelectorAll('tr');
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length >= 5) {
+      csv += cells[0].textContent.trim() + ',' +
+             cells[1].textContent.trim() + ',' +
+             cells[2].textContent.trim() + ',' +
+             cells[3].textContent.trim() + ',' +
+             cells[4].textContent.trim() + '\n';
+    }
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'relatorio_escolas.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Relatório exportado!', 'success');
+}
+
+function buscarRelatorioAluno() {
+  const alunoId = document.getElementById('rel-aluno-select').value;
+  if (!alunoId) {
+    showToast('❌ Selecione um aluno!', 'error');
+    return;
+  }
+  showToast('🔍 Buscando histórico do aluno...', 'info');
+  // Implementar busca de histórico do aluno
+  const tbody = document.getElementById('rel-aluno-historico');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
+  }
+  // Buscar correções do aluno
+  fetch(API_URL + '/api/historico')
+    .then(r => r.json())
+    .then(historico => {
+      const filtrado = historico.filter(h => h.aluno_id == alunoId);
+      if (filtrado.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+        return;
+      }
+      tbody.innerHTML = filtrado.map(h => {
+        const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado';
+        const badge = h.nota >= 6 ? 'badge-green' : 'badge-red';
+        return '<tr><td>' + h.prova_titulo + '</td><td>' + (h.data_correcao ? new Date(h.data_correcao).toLocaleDateString() : '—') + '</td><td><strong style="color:' + (h.nota >= 6 ? 'var(--green)' : 'var(--red)') + ';">' + h.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+      }).join('');
+    })
+    .catch(e => {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+      console.error(e);
+    });
+}
+
+function salvarConfiguracoes() {
+  showToast('✅ Configurações salvas!', 'success');
+}
+
+function abrirModalUsuario() {
+  showToast('👤 Abrindo cadastro de usuário...', 'info');
+}
+
+function carregarUserData() {
+  // Carregar dados do usuário
+  const tbody = document.getElementById('u-tb-turmas');
+  if (tbody) {
+    fetch(API_URL + '/api/turmas')
+      .then(r => r.json())
+      .then(turmas => {
+        if (!turmas || turmas.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma turma</td></tr>';
+          return;
+        }
+        tbody.innerHTML = turmas.map(t => {
+          return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td>0</td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+        }).join('');
+      })
+      .catch(e => console.error(e));
+  }
+  
+  // Alunos do usuário
+  const alunoBody = document.getElementById('u-tb-alunos');
+  if (alunoBody) {
+    fetch(API_URL + '/api/alunos')
+      .then(r => r.json())
+      .then(alunos => {
+        if (!alunos || alunos.length === 0) {
+          alunoBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum aluno</td></tr>';
+          return;
+        }
+        const corMap = {
+          '1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue',
+          '4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan',
+          '7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'
+        };
+        alunoBody.innerHTML = alunos.slice(0, 10).map(a => {
+          return '<tr><td>' + (a.numero_chamada || '—') + '</td><td><span class="chip">' + (a.matricula || '—') + '</span></td><td><strong>' + a.nome + '</strong></td><td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td></tr>';
+        }).join('');
+      })
+      .catch(e => console.error(e));
+  }
+  
+  // Provas recentes do usuário
+  const provasBody = document.getElementById('u-provas-recentes');
+  if (provasBody) {
+    fetch(API_URL + '/api/provas')
+      .then(r => r.json())
+      .then(provas => {
+        if (!provas || provas.length === 0) {
+          provasBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma prova</td></tr>';
+          return;
+        }
+        provasBody.innerHTML = provas.slice(0, 5).map(p => {
+          return '<tr><td>' + p.titulo + '</td><td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td><td>' + (p.data_prova || '—') + '</td><td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Corrigido' : 'Pendente') + '</span></td></tr>';
+        }).join('');
+      })
+      .catch(e => console.error(e));
+  }
+  
+  // Resultados do usuário
+  const resBody = document.getElementById('u-tb-resultados');
+  if (resBody) {
+    fetch(API_URL + '/api/historico')
+      .then(r => r.json())
+      .then(historico => {
+        if (!historico || historico.length === 0) {
+          resBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum resultado</td></tr>';
+          return;
+        }
+        resBody.innerHTML = historico.slice(0, 5).map(h => {
+          const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado';
+          const badge = h.nota >= 6 ? 'badge-green' : 'badge-red';
+          return '<tr><td>' + h.aluno_nome + '</td><td>' + h.prova_titulo + '</td><td><strong style="color:' + (h.nota >= 6 ? 'var(--green)' : 'var(--red)') + ';">' + h.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+        }).join('');
+      })
+      .catch(e => console.error(e));
+  }
+  
+  // Escola do usuário
+  const escolaInfo = document.getElementById('u-escola-info');
+  if (escolaInfo) {
+    fetch(API_URL + '/api/escolas')
+      .then(r => r.json())
+      .then(escolas => {
+        if (!escolas || escolas.length === 0) {
+          escolaInfo.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);">Nenhuma escola cadastrada</div>';
+          return;
+        }
+        const e = escolas[0];
+        escolaInfo.innerHTML = '<div style="display:flex;gap:16px;align-items:center;padding:8px;">' +
+          '<div style="width:52px;height:52px;border-radius:14px;background:rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🏫</div>' +
+          '<div><div style="font-size:17px;font-weight:800;">' + e.nome + '</div><p style="color:var(--text2);font-size:13px;margin-top:3px;">INEP: ' + (e.inep || '—') + ' · ' + (e.municipio || '') + (e.estado ? ', ' + e.estado : '') + ' · Diretor: ' + (e.diretor || '—') + '</p></div></div>';
+      })
+      .catch(e => console.error(e));
+  }
+  
+  // Gráfico do usuário
+  const chart = document.getElementById('u-chart');
+  if (chart) {
+    fetch(API_URL + '/api/historico')
+      .then(r => r.json())
+      .then(historico => {
+        if (!historico || historico.length === 0) {
+          chart.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Sem dados para exibir</div>';
+          return;
+        }
+        const recentes = historico.slice(0, 6);
+        let html = '';
+        const maxNota = Math.max(...recentes.map(h => h.nota), 1);
+        recentes.forEach(h => {
+          const altura = Math.max(20, (h.nota / 10) * 100);
+          const cor = h.nota >= 6 ? 'var(--grad-green)' : 'var(--grad-orange)';
+          html += '<div class="chart-bar-item"><div class="chart-bar-val">' + h.nota + '</div>' +
+            '<div class="chart-bar" style="height:' + altura + 'px;background:' + cor + ';"></div>' +
+            '<div class="chart-bar-lbl">' + (h.prova_titulo ? h.prova_titulo.substring(0, 10) : '—') + '</div></div>';
+        });
+        chart.innerHTML = html;
+      })
+      .catch(e => console.error(e));
+  }
+}
+
+// ═══════════════════════════════ MODAL GABARITO TIPO ═══════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  const tipoSelect = document.getElementById('modal-prova-tipo');
+  if (tipoSelect) {
+    tipoSelect.addEventListener('change', function() {
+      gerarGabaritoModal(this.value);
+    });
+  }
+});
+
 // ═══════════════════════════════ INIT ═══════════════════════════════
+document.getElementById('del-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) cancelarDel();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   buildGabGrid();
+  carregarCombos();
+  carregarDados();
+  
+  // Inicializar modal de prova com gabarito
+  const tipoProva = document.getElementById('modal-prova-tipo');
+  if (tipoProva) gerarGabaritoModal(tipoProva.value);
 });
 </script>
+
 </body>
 </html>
