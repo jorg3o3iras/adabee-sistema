@@ -13,19 +13,15 @@ from PIL import Image
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytesseract
-import requests
+import hashlib
+import secrets
+from functools import wraps
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# HUGGING FACE - DESATIVADO
-# ============================================
-HF_AVAILABLE = False
-print("ℹ️ Hugging Face desativado - Usando OpenCV + OCR + Análise Avançada")
-
-# ============================================
-# CONFIGURAR BANCO DE DADOS - SUPABASE
+# CONFIGURAÇÃO DO BANCO DE DADOS
 # ============================================
 
 SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
@@ -41,7 +37,6 @@ def get_db_connection():
             keepalives_interval=10,
             keepalives_count=3
         )
-        print("✅ Conectado ao Supabase!")
         return conn
     except Exception as e:
         print(f"❌ ERRO ao conectar: {e}")
@@ -52,63 +47,153 @@ def init_database():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
-            id SERIAL PRIMARY KEY, 
-            nome TEXT NOT NULL, 
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
+        # ESCOLAS
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS escolas (
+                id SERIAL PRIMARY KEY,
+                nome TEXT NOT NULL,
+                inep TEXT,
+                municipio TEXT,
+                estado TEXT,
+                telefone TEXT,
+                diretor TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
-            id SERIAL PRIMARY KEY, 
-            escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-            nome TEXT NOT NULL, 
-            serie TEXT DEFAULT '1º Ano', 
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
+        # TURMAS
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS turmas (
+                id SERIAL PRIMARY KEY,
+                escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                serie TEXT DEFAULT '1º Ano',
+                turno TEXT DEFAULT 'Manhã',
+                professor TEXT,
+                capacidade INTEGER DEFAULT 35,
+                ano_letivo INTEGER DEFAULT 2025,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
-            id SERIAL PRIMARY KEY, 
-            turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-            nome TEXT NOT NULL, 
-            matricula TEXT, 
-            numero_chamada INTEGER,
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
+        # ALUNOS
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS alunos (
+                id SERIAL PRIMARY KEY,
+                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                matricula TEXT,
+                numero_chamada INTEGER,
+                data_nascimento DATE,
+                genero TEXT,
+                responsavel TEXT,
+                telefone TEXT,
+                email TEXT,
+                observacoes TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
-            id SERIAL PRIMARY KEY, 
-            turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-            titulo TEXT NOT NULL, 
-            descricao TEXT, 
-            gabarito TEXT, 
-            data_prova DATE,
-            valor_nota REAL DEFAULT 10, 
-            quantidade_questoes INTEGER, 
-            tipo_questoes TEXT DEFAULT '4',
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
+        # PROVAS
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS provas (
+                id SERIAL PRIMARY KEY,
+                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+                titulo TEXT NOT NULL,
+                disciplina TEXT,
+                bimestre TEXT,
+                descricao TEXT,
+                gabarito TEXT,
+                data_prova DATE,
+                valor_nota REAL DEFAULT 10,
+                quantidade_questoes INTEGER,
+                tipo_questoes TEXT DEFAULT '4',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
-            id SERIAL PRIMARY KEY, 
-            prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-            respostas TEXT, 
-            acertos INTEGER, 
-            nota REAL, 
-            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            metodo_ia TEXT DEFAULT 'hibrido'
-        )''')
+        # GABARITOS
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS gabaritos (
+                id SERIAL PRIMARY KEY,
+                prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                serie TEXT NOT NULL,
+                total_questoes INTEGER DEFAULT 20,
+                alternativas TEXT DEFAULT 'A,B,C,D',
+                respostas TEXT,
+                pontos_por_acerto REAL DEFAULT 0.5,
+                penalidade REAL DEFAULT 0,
+                questoes_anuladas TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
-            id SERIAL PRIMARY KEY, 
-            prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-            texto TEXT, 
-            nota REAL, 
-            feedback TEXT, 
-            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            metodo_ia TEXT DEFAULT 'hibrido'
-        )''')
+        # CORRECOES
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS correcoes (
+                id SERIAL PRIMARY KEY,
+                prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                respostas TEXT,
+                acertos INTEGER,
+                nota REAL,
+                data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                metodo_ia TEXT DEFAULT 'hibrido',
+                confianca REAL DEFAULT 0
+            )
+        ''')
+        
+        # CORRECOES_REDACAO
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS correcoes_redacao (
+                id SERIAL PRIMARY KEY,
+                prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                texto TEXT,
+                nota REAL,
+                feedback TEXT,
+                metricas JSONB,
+                data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                metodo_ia TEXT DEFAULT 'hibrido'
+            )
+        ''')
+        
+        # CONFIGURACOES
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS configuracoes (
+                id SERIAL PRIMARY KEY,
+                chave TEXT UNIQUE NOT NULL,
+                valor TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # USUARIOS
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                senha_hash TEXT NOT NULL,
+                perfil TEXT DEFAULT 'usuario',
+                nome TEXT,
+                email TEXT,
+                ativo BOOLEAN DEFAULT TRUE,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # INSERIR USUÁRIOS PADRÃO
+        cursor.execute("INSERT INTO usuarios (username, senha_hash, perfil, nome) VALUES ('admin', 'admin', 'admin', 'Administrador') ON CONFLICT (username) DO NOTHING")
+        cursor.execute("INSERT INTO usuarios (username, senha_hash, perfil, nome) VALUES ('usuario', '123', 'usuario', 'Usuário Padrão') ON CONFLICT (username) DO NOTHING")
+        
+        # INSERIR CONFIGURAÇÕES PADRÃO
+        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('nota_maxima', '10') ON CONFLICT (chave) DO NOTHING")
+        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('nota_minima_aprovacao', '5') ON CONFLICT (chave) DO NOTHING")
+        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('metodo_correcao', 'hibrido') ON CONFLICT (chave) DO NOTHING")
+        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('confianca_minima', '0.7') ON CONFLICT (chave) DO NOTHING")
+        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('param1', '80') ON CONFLICT (chave) DO NOTHING")
+        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('param2', '25') ON CONFLICT (chave) DO NOTHING")
         
         conn.commit()
         conn.close()
@@ -117,14 +202,7 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# GEMINI - DESATIVADO
-# ============================================
-
-GEMINI_AVAILABLE = False
-print("ℹ️ Gemini AI desativado - Usando sistema híbrido")
-
-# ============================================
-# CLASSE CORRETOR HÍBRIDO - COM MARCAS DE REFERÊNCIA
+# CLASSE CORRETOR HÍBRIDO
 # ============================================
 
 class CorretorHibrido:
@@ -151,9 +229,6 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_bolinhas_com_preenchimento(imagem_base64):
-        """
-        Detecta bolinhas e calcula o nível de preenchimento de cada uma
-        """
         try:
             img = CorretorHibrido.preprocessar_imagem(imagem_base64)
             if img is None:
@@ -163,7 +238,6 @@ class CorretorHibrido:
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             gray = clahe.apply(gray)
             
-            # Binarização para detectar contornos
             _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
@@ -175,23 +249,17 @@ class CorretorHibrido:
                     if M['m00'] > 0:
                         cx = int(M['m10'] / M['m00'])
                         cy = int(M['m01'] / M['m00'])
-                        
-                        # Verificar circularidade
                         perimeter = cv2.arcLength(cnt, True)
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
                             if circularity > 0.5:
-                                # Extrair pixels da bolinha
                                 mask = np.zeros_like(gray)
                                 cv2.drawContours(mask, [cnt], -1, 255, -1)
                                 roi = cv2.bitwise_and(gray, gray, mask=mask)
                                 pixels = roi[roi > 0]
-                                
                                 if len(pixels) > 0:
                                     intensidade_media = np.mean(pixels)
-                                    # Quanto menor a intensidade, mais preta (preenchida)
                                     preenchimento = 1 - (intensidade_media / 255)
-                                    
                                     bolinhas.append({
                                         'x': cx,
                                         'y': cy,
@@ -199,33 +267,19 @@ class CorretorHibrido:
                                         'preenchimento': preenchimento,
                                         'intensidade': intensidade_media
                                     })
-            
-            print(f"✅ Bolinhas detectadas: {len(bolinhas)}")
             return bolinhas
-            
         except Exception as e:
             print(f"Erro ao detectar bolinhas: {e}")
             return None
     
     @staticmethod
     def detectar_respostas_com_preenchimento(imagem_base64, num_opcoes=4):
-        """
-        Detecta respostas analisando o preenchimento de cada bolinha
-        """
         try:
-            # Detectar todas as bolinhas com preenchimento
             bolinhas = CorretorHibrido.detectar_bolinhas_com_preenchimento(imagem_base64)
-            
             if not bolinhas or len(bolinhas) == 0:
                 return None, 0.0, 'Nenhuma bolinha detectada'
             
-            # Ordenar por Y (vertical)
             bolinhas.sort(key=lambda b: b['y'])
-            
-            # ============================================
-            # AGRUPAR POR LINHAS (QUESTÕES)
-            # ============================================
-            
             linhas = []
             linha_atual = []
             y_anterior = bolinhas[0]['y']
@@ -241,68 +295,39 @@ class CorretorHibrido:
             if linha_atual:
                 linhas.append(linha_atual)
             
-            # ============================================
-            # ANALISAR CADA LINHA
-            # ============================================
-            
             respostas = []
             letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
             
             for idx, linha in enumerate(linhas, start=1):
                 if idx > 50:
                     break
-                
-                # Ordenar por X (esquerda → direita)
                 linha.sort(key=lambda b: b['x'])
-                
-                # Pegar apenas as primeiras num_opcoes bolinhas (A, B, C, D)
                 linha = linha[:num_opcoes]
-                
                 if len(linha) == 0:
                     respostas.append((idx, '?'))
                     continue
-                
-                # ============================================
-                # ENCONTRAR A BOLINHA MAIS PRETA (PREECHIDA)
-                # ============================================
                 
                 melhor_preenchimento = -1
                 melhor_pos = -1
                 
                 for pos, bolinha in enumerate(linha):
-                    print(f"Q{idx} Pos{pos}: preenchimento={bolinha['preenchimento']:.2f}")
-                    
                     if bolinha['preenchimento'] > melhor_preenchimento:
                         melhor_preenchimento = bolinha['preenchimento']
                         melhor_pos = pos
                 
-                # Verificar se a bolinha está realmente preenchida
-                # Limiar de 20% de preenchimento (ajustável)
                 if melhor_pos >= 0 and melhor_preenchimento > 0.20:
                     resposta = letras[melhor_pos] if melhor_pos < len(letras) else '?'
                     respostas.append((idx, resposta))
-                    print(f"Q{idx}: Resposta = {resposta} (preenchimento: {melhor_preenchimento:.2f})")
                 else:
                     respostas.append((idx, '?'))
-            
-            # ============================================
-            # VERIFICAR RESULTADOS
-            # ============================================
             
             if len(respostas) == 0:
                 return None, 0.0, 'Nenhuma resposta detectada'
             
             respostas.sort(key=lambda x: x[0])
             letras_respostas = [r[1] for r in respostas]
-            
             validas = sum(1 for r in letras_respostas if r != '?')
             confianca = round((validas / len(letras_respostas)) * 100, 1)
-            
-            print("========== DEBUG ==========")
-            print(f"Bolinhas: {len(bolinhas)}")
-            print(f"Linhas: {len(linhas)}")
-            print(f"Respostas: {letras_respostas}")
-            print("===========================")
             
             return letras_respostas, confianca, 'Preenchimento'
             
@@ -312,16 +337,13 @@ class CorretorHibrido:
     
     @staticmethod
     def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        """
-        Usa a detecção por preenchimento
-        """
         respostas, confianca, metodo = CorretorHibrido.detectar_respostas_com_preenchimento(imagem_base64, num_opcoes)
         if respostas and len(respostas) >= 3:
             return respostas, confianca, metodo
-        
         return None, 0.0, 'Nenhum método funcionou'
+
 # ============================================
-# CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
+# CLASSE PARA CORREÇÃO DE REDAÇÃO
 # ============================================
 
 class CorretorRedacaoHibrido:
@@ -486,49 +508,36 @@ class CorretorRedacaoHibrido:
         return texto, nota, conceito, feedback, metricas, 'OCR + Análise Avançada'
 
 # ============================================
-# ROTAS PRINCIPAIS
+# ROTAS - AUTENTICAÇÃO
 # ============================================
 
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/api/teste', methods=['GET'])
-def teste():
+@app.route('/api/login', methods=['POST'])
+def login():
     try:
+        dados = request.json
+        username = dados.get('username')
+        senha = dados.get('senha')
+        
         conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE username = %s AND senha_hash = %s AND ativo = TRUE", (username, senha))
+        usuario = cursor.fetchone()
         conn.close()
-        return jsonify({
-            'mensagem': 'Servidor funcionando!',
-            'status': 'ok',
-            'banco': 'PostgreSQL (Supabase)',
-            'metodos': ['Contorno', 'OpenCV', 'OCR', 'Análise Avançada']
-        })
+        
+        if usuario:
+            return jsonify({
+                'sucesso': True,
+                'usuario': usuario['username'],
+                'perfil': usuario['perfil'],
+                'nome': usuario['nome']
+            })
+        else:
+            return jsonify({'sucesso': False, 'mensagem': 'Usuário ou senha inválidos'}), 401
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/status_ia', methods=['GET'])
-def status_ia():
-    return jsonify({
-        'metodos_disponiveis': {
-            'Contorno': True,
-            'OpenCV': True,
-            'OCR': True,
-            'Analise_Avancada': True
-        },
-        'metodo_ativo': 'Híbrido (Contorno + OpenCV + OCR + Análise Avançada)',
-        'status': '🧠 Sistema híbrido ativo!',
-        'banco': 'PostgreSQL (Supabase)',
-        'vantagens': [
-            '✅ 100% gratuito',
-            '✅ Sem limites de uso',
-            '✅ Correção de provas com detecção por contorno',
-            '✅ Correção de redações com análise avançada'
-        ]
-    })
-
 # ============================================
-# ROTAS DE ESCOLAS
+# ROTAS - ESCOLAS
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -536,8 +545,18 @@ def listar_escolas():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
-        escolas = [{'id': row['id'], 'nome': row['nome']} for row in cursor.fetchall()]
+        cursor.execute("SELECT * FROM escolas ORDER BY nome")
+        escolas = []
+        for row in cursor.fetchall():
+            escolas.append({
+                'id': row['id'],
+                'nome': row['nome'],
+                'inep': row.get('inep'),
+                'municipio': row.get('municipio'),
+                'estado': row.get('estado'),
+                'telefone': row.get('telefone'),
+                'diretor': row.get('diretor')
+            })
         conn.close()
         return jsonify(escolas)
     except Exception as e:
@@ -547,18 +566,49 @@ def listar_escolas():
 def criar_escola():
     try:
         dados = request.json
-        nome = dados.get('nome')
-        if not nome:
-            return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
-        
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
+        cursor.execute("""
+            INSERT INTO escolas (nome, inep, municipio, estado, telefone, diretor)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+        """, (
+            dados.get('nome'),
+            dados.get('inep'),
+            dados.get('municipio'),
+            dados.get('estado'),
+            dados.get('telefone'),
+            dados.get('diretor')
+        ))
         escola_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        
-        return jsonify({'id': escola_id, 'mensagem': f'Escola "{nome}" cadastrada com sucesso!'})
+        return jsonify({'id': escola_id, 'mensagem': 'Escola cadastrada com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/escolas/<int:escola_id>', methods=['PUT'])
+def atualizar_escola(escola_id):
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE escolas SET 
+                nome = %s, inep = %s, municipio = %s, estado = %s, 
+                telefone = %s, diretor = %s
+            WHERE id = %s
+        """, (
+            dados.get('nome'),
+            dados.get('inep'),
+            dados.get('municipio'),
+            dados.get('estado'),
+            dados.get('telefone'),
+            dados.get('diretor'),
+            escola_id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Escola atualizada com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -575,7 +625,7 @@ def deletar_escola(escola_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE TURMAS
+# ROTAS - TURMAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -586,11 +636,34 @@ def listar_turmas():
         cursor = conn.cursor()
         
         if escola_id:
-            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+            cursor.execute("""
+                SELECT t.*, e.nome as escola_nome 
+                FROM turmas t 
+                LEFT JOIN escolas e ON t.escola_id = e.id 
+                WHERE t.escola_id = %s 
+                ORDER BY t.serie, t.nome
+            """, (escola_id,))
         else:
-            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
+            cursor.execute("""
+                SELECT t.*, e.nome as escola_nome 
+                FROM turmas t 
+                LEFT JOIN escolas e ON t.escola_id = e.id 
+                ORDER BY t.serie, t.nome
+            """)
         
-        turmas = [{'id': row['id'], 'escola_id': row['escola_id'], 'nome': row['nome'], 'serie': row['serie']} for row in cursor.fetchall()]
+        turmas = []
+        for row in cursor.fetchall():
+            turmas.append({
+                'id': row['id'],
+                'escola_id': row['escola_id'],
+                'escola_nome': row.get('escola_nome'),
+                'nome': row['nome'],
+                'serie': row['serie'],
+                'turno': row.get('turno'),
+                'professor': row.get('professor'),
+                'capacidade': row.get('capacidade'),
+                'ano_letivo': row.get('ano_letivo')
+            })
         conn.close()
         return jsonify(turmas)
     except Exception as e:
@@ -600,21 +673,24 @@ def listar_turmas():
 def criar_turma():
     try:
         dados = request.json
-        escola_id = dados.get('escola_id')
-        nome = dados.get('nome')
-        serie = dados.get('serie', '1º Ano')
-        
-        if not escola_id or not nome:
-            return jsonify({'erro': 'Escola e nome da turma são obrigatórios'}), 400
-        
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
-                       (escola_id, nome, serie))
+        cursor.execute("""
+            INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (
+            dados.get('escola_id'),
+            dados.get('nome'),
+            dados.get('serie', '1º Ano'),
+            dados.get('turno', 'Manhã'),
+            dados.get('professor'),
+            dados.get('capacidade', 35),
+            dados.get('ano_letivo', 2025)
+        ))
         turma_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
-        return jsonify({'id': turma_id})
+        return jsonify({'id': turma_id, 'mensagem': 'Turma cadastrada com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
@@ -631,7 +707,7 @@ def deletar_turma(turma_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE ALUNOS
+# ROTAS - ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -643,29 +719,40 @@ def listar_alunos():
         
         if turma_id:
             cursor.execute("""
-                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
+                SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
                 FROM alunos a 
-                LEFT JOIN turmas t ON a.turma_id = t.id
+                LEFT JOIN turmas t ON a.turma_id = t.id 
+                LEFT JOIN escolas e ON t.escola_id = e.id 
                 WHERE a.turma_id = %s 
                 ORDER BY a.numero_chamada
             """, (turma_id,))
         else:
             cursor.execute("""
-                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
+                SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
                 FROM alunos a 
-                LEFT JOIN turmas t ON a.turma_id = t.id
+                LEFT JOIN turmas t ON a.turma_id = t.id 
+                LEFT JOIN escolas e ON t.escola_id = e.id 
                 ORDER BY a.numero_chamada
             """)
         
-        alunos = [{
-            'id': row['id'], 
-            'turma_id': row['turma_id'], 
-            'nome': row['nome'], 
-            'matricula': row['matricula'], 
-            'numero_chamada': row['numero_chamada'],
-            'turma_nome': row['turma_nome']
-        } for row in cursor.fetchall()]
-        
+        alunos = []
+        for row in cursor.fetchall():
+            alunos.append({
+                'id': row['id'],
+                'turma_id': row['turma_id'],
+                'turma_nome': row.get('turma_nome'),
+                'turma_serie': row.get('turma_serie'),
+                'escola_nome': row.get('escola_nome'),
+                'nome': row['nome'],
+                'matricula': row.get('matricula'),
+                'numero_chamada': row.get('numero_chamada'),
+                'data_nascimento': str(row.get('data_nascimento')) if row.get('data_nascimento') else None,
+                'genero': row.get('genero'),
+                'responsavel': row.get('responsavel'),
+                'telefone': row.get('telefone'),
+                'email': row.get('email'),
+                'observacoes': row.get('observacoes')
+            })
         conn.close()
         return jsonify(alunos)
     except Exception as e:
@@ -675,22 +762,24 @@ def listar_alunos():
 def criar_aluno():
     try:
         dados = request.json
-        turma_id = dados.get('turma_id')
-        nome = dados.get('nome')
-        matricula = dados.get('matricula', '')
-        numero_chamada = dados.get('numero_chamada')
-        
-        if not turma_id or not nome:
-            return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
-        
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) 
-            VALUES (%s, %s, %s, %s) 
-            RETURNING id
-        """, (turma_id, nome, matricula, numero_chamada))
-        
+            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada, data_nascimento, 
+                genero, responsavel, telefone, email, observacoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (
+            dados.get('turma_id'),
+            dados.get('nome'),
+            dados.get('matricula'),
+            dados.get('numero_chamada'),
+            dados.get('data_nascimento'),
+            dados.get('genero'),
+            dados.get('responsavel'),
+            dados.get('telefone'),
+            dados.get('email'),
+            dados.get('observacoes')
+        ))
         aluno_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
@@ -711,7 +800,7 @@ def deletar_aluno(aluno_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE PROVAS
+# ROTAS - PROVAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -720,27 +809,30 @@ def listar_provas():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
-                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
-                   t.nome as turma_nome, p.turma_id
+            SELECT p.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
             FROM provas p 
             LEFT JOIN turmas t ON p.turma_id = t.id 
+            LEFT JOIN escolas e ON t.escola_id = e.id 
             ORDER BY p.data_prova DESC
         """)
         
         provas = []
         for row in cursor.fetchall():
             provas.append({
-                'id': row['id'], 
-                'titulo': row['titulo'], 
-                'descricao': row['descricao'],
-                'gabarito_array': json.loads(row['gabarito']) if row['gabarito'] else [],
-                'data_prova': row['data_prova'], 
+                'id': row['id'],
+                'turma_id': row['turma_id'],
+                'turma_nome': row.get('turma_nome'),
+                'turma_serie': row.get('turma_serie'),
+                'escola_nome': row.get('escola_nome'),
+                'titulo': row['titulo'],
+                'disciplina': row.get('disciplina'),
+                'bimestre': row.get('bimestre'),
+                'descricao': row.get('descricao'),
+                'gabarito': json.loads(row['gabarito']) if row['gabarito'] else [],
+                'data_prova': str(row['data_prova']) if row['data_prova'] else None,
                 'valor_nota': row['valor_nota'],
                 'quantidade_questoes': row['quantidade_questoes'] or 0,
-                'tipo_questoes': row['tipo_questoes'] or '4',
-                'turma_nome': row['turma_nome'], 
-                'turma_id': row['turma_id']
+                'tipo_questoes': row['tipo_questoes'] or '4'
             })
         conn.close()
         return jsonify(provas)
@@ -751,40 +843,29 @@ def listar_provas():
 def criar_prova():
     try:
         dados = request.json
-        turma_id = dados.get('turma_id')
-        titulo = dados.get('titulo')
-        descricao = dados.get('descricao', '')
-        gabarito = dados.get('gabarito', [])
-        data_prova = dados.get('data_prova')
-        valor_nota = dados.get('valor_nota', 10)
-        tipo_questoes = dados.get('tipo_questoes', '4')
-        
-        if not turma_id:
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-        if not titulo:
-            return jsonify({'erro': 'Título da prova é obrigatório'}), 400
-        if not data_prova:
-            return jsonify({'erro': 'Data da prova é obrigatória'}), 400
-        if not gabarito or len(gabarito) == 0:
-            return jsonify({'erro': 'Gabarito é obrigatório'}), 400
-        
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) 
-            RETURNING id
+            INSERT INTO provas (turma_id, titulo, disciplina, bimestre, descricao, 
+                gabarito, data_prova, valor_nota, quantidade_questoes, tipo_questoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         """, (
-            turma_id, titulo, descricao,
-            json.dumps(gabarito), len(gabarito),
-            data_prova, valor_nota, tipo_questoes
+            dados.get('turma_id'),
+            dados.get('titulo'),
+            dados.get('disciplina'),
+            dados.get('bimestre'),
+            dados.get('descricao'),
+            json.dumps(dados.get('gabarito', [])),
+            dados.get('data_prova'),
+            dados.get('valor_nota', 10),
+            len(dados.get('gabarito', [])),
+            dados.get('tipo_questoes', '4')
         ))
         prova_id = cursor.fetchone()['id']
         conn.commit()
         conn.close()
         return jsonify({'id': prova_id, 'mensagem': 'Prova criada com sucesso!'})
     except Exception as e:
-        print(f"Erro ao criar prova: {e}")
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
@@ -793,6 +874,8 @@ def deletar_prova(prova_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
+        cursor.execute("DELETE FROM correcoes_redacao WHERE prova_id = %s", (prova_id,))
+        cursor.execute("DELETE FROM gabaritos WHERE prova_id = %s", (prova_id,))
         cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
         conn.commit()
         conn.close()
@@ -801,7 +884,62 @@ def deletar_prova(prova_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE PROVAS
+# ROTAS - GABARITOS
+# ============================================
+
+@app.route('/api/gabaritos', methods=['POST'])
+def salvar_gabarito():
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO gabaritos (prova_id, serie, total_questoes, alternativas, 
+                respostas, pontos_por_acerto, penalidade, questoes_anuladas)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (
+            dados.get('prova_id'),
+            dados.get('serie'),
+            dados.get('total_questoes', 20),
+            dados.get('alternativas', 'A,B,C,D'),
+            json.dumps(dados.get('respostas', [])),
+            dados.get('pontos_por_acerto', 0.5),
+            dados.get('penalidade', 0),
+            dados.get('questoes_anuladas', '')
+        ))
+        gabarito_id = cursor.fetchone()['id']
+        conn.commit()
+        conn.close()
+        return jsonify({'id': gabarito_id, 'mensagem': 'Gabarito salvo com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/gabaritos/<int:prova_id>', methods=['GET'])
+def buscar_gabarito(prova_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM gabaritos WHERE prova_id = %s ORDER BY id DESC LIMIT 1", (prova_id,))
+        gabarito = cursor.fetchone()
+        conn.close()
+        if gabarito:
+            return jsonify({
+                'id': gabarito['id'],
+                'prova_id': gabarito['prova_id'],
+                'serie': gabarito['serie'],
+                'total_questoes': gabarito['total_questoes'],
+                'alternativas': gabarito['alternativas'],
+                'respostas': json.loads(gabarito['respostas']) if gabarito['respostas'] else [],
+                'pontos_por_acerto': gabarito['pontos_por_acerto'],
+                'penalidade': gabarito['penalidade'],
+                'questoes_anuladas': gabarito['questoes_anuladas']
+            })
+        return jsonify(None)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTAS - CORREÇÃO DE PROVAS
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -817,7 +955,7 @@ def corrigir_prova():
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT gabarito, tipo_questoes, titulo FROM provas WHERE id = %s", (prova_id,))
+        cursor.execute("SELECT gabarito, tipo_questoes, titulo, valor_nota FROM provas WHERE id = %s", (prova_id,))
         prova = cursor.fetchone()
         
         if not prova:
@@ -827,6 +965,7 @@ def corrigir_prova():
         gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
         tipo_questoes = int(prova['tipo_questoes'] or 4)
         titulo_prova = prova['titulo']
+        valor_nota = prova['valor_nota'] or 10
         
         corretor = CorretorHibrido()
         respostas_detectadas, confianca, metodo = corretor.detectar_respostas_hibrido(imagem, tipo_questoes)
@@ -853,16 +992,16 @@ def corrigir_prova():
                 'correta': correta
             })
         
-        nota = (acertos / len(gabarito)) * 10 if gabarito else 0
+        nota = (acertos / len(gabarito)) * valor_nota if gabarito else 0
         
         cursor.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cursor.fetchone()
         aluno_nome = aluno['nome'] if aluno else 'Aluno'
         
         cursor.execute("""
-            INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao, metodo_ia) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now(), metodo))
+            INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao, metodo_ia, confianca) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now(), metodo, confianca))
         conn.commit()
         conn.close()
         
@@ -884,7 +1023,7 @@ def corrigir_prova():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# CORREÇÃO DE REDAÇÃO
+# ROTAS - CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -912,9 +1051,9 @@ def corrigir_redacao():
             if conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao, metodo_ia) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (prova_id, aluno_id, texto_corrigido, nota, feedback, datetime.now(), metodo))
+                    INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, metricas, data_correcao, metodo_ia) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (prova_id, aluno_id, texto_corrigido, nota, feedback, json.dumps(metricas), datetime.now(), metodo))
                 conn.commit()
                 conn.close()
         
@@ -941,7 +1080,7 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# DEMAIS ROTAS
+# ROTAS - DASHBOARD E ESTATÍSTICAS
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -997,16 +1136,17 @@ def historico():
             LIMIT 50
         """)
         
-        historico = [{
-            'id': row['id'], 
-            'aluno_nome': row['aluno_nome'], 
-            'prova_titulo': row['prova_titulo'],
-            'acertos': row['acertos'], 
-            'nota': round(row['nota'], 1), 
-            'data_correcao': row['data_correcao'],
-            'metodo_ia': row['metodo_ia'] or 'Desconhecido'
-        } for row in cursor.fetchall()]
-        
+        historico = []
+        for row in cursor.fetchall():
+            historico.append({
+                'id': row['id'],
+                'aluno_nome': row['aluno_nome'],
+                'prova_titulo': row['prova_titulo'],
+                'acertos': row['acertos'],
+                'nota': round(row['nota'], 1),
+                'data_correcao': str(row['data_correcao']),
+                'metodo_ia': row['metodo_ia'] or 'Desconhecido'
+            })
         conn.close()
         return jsonify(historico)
     except Exception as e:
@@ -1021,34 +1161,60 @@ def estatisticas():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Estatísticas gerais
         cursor.execute("""
             SELECT 
                 COUNT(*) as total_corrigidas,
                 COALESCE(AVG(nota), 0) as media_nota,
                 COALESCE(MAX(nota), 0) as maior_nota,
-                COALESCE(MIN(nota), 0) as menor_nota,
+                COALESCE(MIN(nota), 0) as menor_nota
+            FROM correcoes 
+            WHERE prova_id = %s
+        """, (prova_id,))
+        geral = cursor.fetchone()
+        
+        # Estatísticas por método
+        cursor.execute("""
+            SELECT 
                 metodo_ia,
-                COUNT(*) as qtd_por_metodo
+                COUNT(*) as qtd,
+                COALESCE(AVG(nota), 0) as media_metodo
             FROM correcoes 
             WHERE prova_id = %s
             GROUP BY metodo_ia
         """, (prova_id,))
+        metodos = cursor.fetchall()
         
-        resultados = cursor.fetchall()
+        # Distribuição de notas
+        cursor.execute("""
+            SELECT 
+                CASE 
+                    WHEN nota < 2 THEN '0-2'
+                    WHEN nota < 4 THEN '2-4'
+                    WHEN nota < 6 THEN '4-6'
+                    WHEN nota < 8 THEN '6-8'
+                    ELSE '8-10'
+                END as faixa,
+                COUNT(*) as quantidade
+            FROM correcoes 
+            WHERE prova_id = %s
+            GROUP BY faixa
+            ORDER BY faixa
+        """, (prova_id,))
+        distribuicao = cursor.fetchall()
+        
         conn.close()
-        
-        metodos = {}
-        for row in resultados:
-            metodos[row['metodo_ia'] or 'Desconhecido'] = row['qtd_por_metodo']
         
         return jsonify({
             'geral': {
-                'total_corrigidas': sum(row['qtd_por_metodo'] for row in resultados),
-                'media_nota': round(np.mean([row['media_nota'] for row in resultados]) if resultados else 0, 1),
-                'maior_nota': round(max([row['maior_nota'] for row in resultados]) if resultados else 0, 1),
-                'menor_nota': round(min([row['menor_nota'] for row in resultados]) if resultados else 0, 1)
+                'total_corrigidas': geral['total_corrigidas'] if geral else 0,
+                'media_nota': round(geral['media_nota'] if geral else 0, 1),
+                'maior_nota': round(geral['maior_nota'] if geral else 0, 1),
+                'menor_nota': round(geral['menor_nota'] if geral else 0, 1)
             },
-            'metodos': metodos
+            'metodos': [{'metodo': m['metodo_ia'] or 'Desconhecido', 'qtd': m['qtd'], 'media': round(m['media_metodo'], 1)} for m in metodos],
+            'distribuicao': [{'faixa': d['faixa'], 'quantidade': d['quantidade']} for d in distribuicao]
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -1063,10 +1229,18 @@ def exportar_resultados():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao, c.metodo_ia
+            SELECT 
+                a.numero_chamada,
+                a.nome as aluno_nome,
+                a.matricula,
+                c.acertos,
+                c.nota,
+                c.data_correcao,
+                c.metodo_ia
             FROM correcoes c 
             JOIN alunos a ON c.aluno_id = a.id 
             WHERE c.prova_id = %s
+            ORDER BY a.numero_chamada
         """, (prova_id,))
         
         resultados = cursor.fetchall()
@@ -1074,9 +1248,17 @@ def exportar_resultados():
         
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
+        writer.writerow(['Nº Chamada', 'Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
         for r in resultados:
-            writer.writerow([r['nome'], r['matricula'] or '', r['acertos'], round(r['nota'], 1), r['data_correcao'], r['metodo_ia'] or 'Desconhecido'])
+            writer.writerow([
+                r['numero_chamada'] or '',
+                r['aluno_nome'],
+                r['matricula'] or '',
+                r['acertos'],
+                round(r['nota'], 1),
+                str(r['data_correcao']),
+                r['metodo_ia'] or 'Desconhecido'
+            ])
         
         return output.getvalue(), 200, {
             'Content-Type': 'text/csv',
@@ -1085,29 +1267,47 @@ def exportar_resultados():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/testar_conexao', methods=['GET'])
-def testar_conexao():
+# ============================================
+# ROTAS - CONFIGURAÇÕES
+# ============================================
+
+@app.route('/api/configuracoes', methods=['GET'])
+def get_configuracoes():
     try:
         conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT chave, valor FROM configuracoes")
+        configs = {}
+        for row in cursor.fetchall():
+            configs[row['chave']] = row['valor']
         conn.close()
-        return jsonify({
-            'conectado': True,
-            'banco': 'PostgreSQL (Supabase)',
-            'mensagem': '✅ Conectado ao Supabase!'
-        })
+        return jsonify(configs)
     except Exception as e:
-        return jsonify({
-            'conectado': False,
-            'erro': str(e)
-        }), 500
+        return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/ip_info', methods=['GET'])
-def ip_info():
-    return jsonify({
-        'ip': 'render.com', 
-        'porta': 10000, 
-        'url': 'https://adabee-sistema-3.onrender.com'
-    })
+@app.route('/api/configuracoes', methods=['POST'])
+def salvar_configuracoes():
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        for chave, valor in dados.items():
+            cursor.execute("""
+                INSERT INTO configuracoes (chave, valor, atualizado_em) 
+                VALUES (%s, %s, %s) 
+                ON CONFLICT (chave) DO UPDATE SET 
+                    valor = EXCLUDED.valor, 
+                    atualizado_em = EXCLUDED.atualizado_em
+            """, (chave, str(valor), datetime.now()))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Configurações salvas com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTAS - GERAR GABARITO (FOLHA DE RESPOSTAS)
+# ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
@@ -1127,10 +1327,12 @@ def gerar_gabarito():
         escola = cursor.fetchone()
         nome_escola = escola['nome'] if escola else "ESCOLA"
         
-        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
+        cursor.execute("SELECT nome, serie, turno, professor FROM turmas WHERE id = %s", (turma_id,))
         turma = cursor.fetchone()
         nome_turma = turma['nome'] if turma else "TURMA"
         serie = turma['serie'] if turma else "1º Ano"
+        turno = turma['turno'] if turma else "Manhã"
+        professor = turma['professor'] if turma else ""
         
         cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cursor.fetchone()
@@ -1254,6 +1456,62 @@ def gerar_gabarito():
     except Exception as e:
         print(f"Erro ao gerar gabarito: {e}")
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTAS - IP E STATUS
+# ============================================
+
+@app.route('/api/ip_info', methods=['GET'])
+def ip_info():
+    return jsonify({
+        'ip': 'render.com', 
+        'porta': 10000, 
+        'url': 'https://adabee-sistema-3.onrender.com'
+    })
+
+@app.route('/api/status_ia', methods=['GET'])
+def status_ia():
+    return jsonify({
+        'metodos_disponiveis': {
+            'Contorno': True,
+            'OpenCV': True,
+            'OCR': True,
+            'Analise_Avancada': True
+        },
+        'metodo_ativo': 'Híbrido (Contorno + OpenCV + OCR + Análise Avançada)',
+        'status': '🧠 Sistema híbrido ativo!',
+        'banco': 'PostgreSQL (Supabase)',
+        'vantagens': [
+            '✅ 100% gratuito',
+            '✅ Sem limites de uso',
+            '✅ Correção de provas com detecção por contorno',
+            '✅ Correção de redações com análise avançada'
+        ]
+    })
+
+@app.route('/api/testar_conexao', methods=['GET'])
+def testar_conexao():
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'conectado': True,
+            'banco': 'PostgreSQL (Supabase)',
+            'mensagem': '✅ Conectado ao Supabase!'
+        })
+    except Exception as e:
+        return jsonify({
+            'conectado': False,
+            'erro': str(e)
+        }), 500
+
+# ============================================
+# ROTA PRINCIPAL
+# ============================================
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
 
 # ============================================
 # ERROR HANDLERS
