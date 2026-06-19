@@ -1615,7 +1615,6 @@ async function carregarDashboard() {
     document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
     document.getElementById('totalProvas').textContent = dados.total_provas || 0;
     
-    // Atualizar user dashboard
     document.getElementById('u-total-escolas').textContent = dados.total_escolas || 0;
     document.getElementById('u-total-turmas').textContent = dados.total_turmas || 0;
     document.getElementById('u-total-alunos').textContent = dados.total_alunos || 0;
@@ -1711,7 +1710,6 @@ async function carregarRelatorios() {
     document.getElementById('rel-recuperacao').textContent = recuperacao;
     document.getElementById('rel-media').textContent = media.toFixed(1);
     
-    // Distribuição de notas
     const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
     correcoes.forEach(c => {
       if (c.nota < 2) faixas['0-2']++;
@@ -1729,7 +1727,6 @@ async function carregarRelatorios() {
     document.getElementById('d8-10').textContent = faixas['8-10'];
     
     const bars = document.querySelectorAll('#dist-notas .chart-bar');
-    const heights = [10, 10, 10, 10, 10];
     const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
     vals.forEach((v, i) => {
       if (bars[i]) {
@@ -1738,7 +1735,6 @@ async function carregarRelatorios() {
       }
     });
     
-    // Relatório por escola
     await carregarRelatorioEscola();
     
   } catch (erro) {
@@ -1792,7 +1788,6 @@ async function carregarRelatorioEscola() {
 // ═══════════════════════════════ COMBOS ═══════════════════════════════
 async function carregarCombos() {
   try {
-    // Escolas
     const respEscolas = await fetch(API_URL + '/api/escolas');
     const escolas = await respEscolas.json();
     
@@ -1814,7 +1809,6 @@ async function carregarCombos() {
       }
     });
     
-    // Turmas
     const respTurmas = await fetch(API_URL + '/api/turmas');
     const turmas = await respTurmas.json();
     
@@ -1836,7 +1830,6 @@ async function carregarCombos() {
       }
     });
     
-    // Provas para gabarito e correção
     const respProvas = await fetch(API_URL + '/api/provas');
     const provas = await respProvas.json();
     
@@ -1858,7 +1851,6 @@ async function carregarCombos() {
       }
     });
     
-    // Alunos para correção e relatórios
     const respAlunos = await fetch(API_URL + '/api/alunos');
     const alunos = await respAlunos.json();
     
@@ -1885,11 +1877,9 @@ async function carregarCombos() {
   }
 }
 
-// ═══════════════════════════════ LISTA POR TURMA ═══════════════════════════════
 // ═══════════════════════════════ LISTA POR TURMA COM BOLINHAS ═══════════════════════════════
 async function gerarListaTurma() {
     const escolaId = document.getElementById('lista-escola').value;
-    const serie = document.getElementById('lista-serie').value;
     const turmaId = document.getElementById('lista-turma').value;
     
     if (!turmaId) {
@@ -1902,51 +1892,60 @@ async function gerarListaTurma() {
         return;
     }
     
-    // Pegar o primeiro aluno da turma para gerar o cartão individual
     try {
         const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
         const alunos = await alunosResp.json();
+        const turmaResp = await fetch(API_URL + '/api/turmas');
+        const turmas = await turmaResp.json();
+        const turma = turmas.find(t => t.id == turmaId);
         
-        if (!alunos || alunos.length === 0) {
-            showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
+        const container = document.getElementById('lista-resultado');
+        if (!container) return;
+        
+        if (!alunos || alunos.length === 0 || alunos.erro) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+            showToast('❌ Nenhum aluno na turma!', 'error');
             return;
         }
         
-        // Buscar prova da turma
         const provasResp = await fetch(API_URL + '/api/provas');
         const provas = await provasResp.json();
         const prova = provas.find(p => p.turma_id == turmaId);
         
         if (!prova) {
-            showToast('❌ Nenhuma prova cadastrada para esta turma!', 'error');
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
+            showToast('❌ Nenhuma prova para esta turma!', 'error');
             return;
         }
         
-        // Se tiver mais de um aluno, mostrar lista com opção de gerar cartão individual
-        if (alunos.length > 1) {
-            // Mostrar lista de alunos com botão para gerar cartão de cada um
-            let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">';
-            html += '<div style="font-size:16px;font-weight:800;">' + (document.getElementById('lista-escola').selectedOptions[0]?.text || 'Escola') + '</div>';
-            html += '<div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div>';
-            html += '</div>';
-            
-            html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-            alunos.forEach(aluno => {
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">';
-                html += '<div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div>';
-                html += '<button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button>';
-                html += '</div>';
-            });
-            html += '</div>';
-            
-            document.getElementById('lista-resultado').innerHTML = html;
-            showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
-            return;
-        }
+        const escolaResp = await fetch(API_URL + '/api/escolas');
+        const escolas = await escolaResp.json();
+        const escola = escolas.find(e => e.id == turma?.escola_id);
         
-        // Se for apenas 1 aluno, gerar cartão diretamente
-        const aluno = alunos[0];
-        await gerarCartaoResposta(escolaId, turmaId, aluno.id, prova.id);
+        // Mostrar lista de alunos com botão para gerar cartão de cada um
+        let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">';
+        html += '<div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div>';
+        html += '<div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div>';
+        html += '<div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div>';
+        html += '</div>';
+        
+        html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+        alunos.forEach(aluno => {
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">';
+            html += '<div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div>';
+            html += '<button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button>';
+            html += '</div>';
+        });
+        html += '</div>';
+        
+        // Espaço para assinaturas
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">';
+        html += '<div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div>';
+        html += '<div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div>';
+        html += '</div>';
+        
+        container.innerHTML = html;
+        showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
         
     } catch (erro) {
         console.error('Erro ao gerar lista:', erro);
@@ -1957,9 +1956,8 @@ async function gerarListaTurma() {
 // ═══════════════════════════════ GERAR CARTÃO RESPOSTA COM BOLINHAS ═══════════════════════════════
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
-        const qtdQuestoes = 20; // Você pode pegar do select
+        const qtdQuestoes = 20;
         
-        // Chamar o endpoint que gera o HTML com bolinhas
         const response = await fetch(API_URL + '/api/gerar_gabarito', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1974,12 +1972,10 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         
         if (response.ok) {
             const html = await response.text();
-            // Abrir em nova aba para impressão
             const novaAba = window.open('', '_blank');
             novaAba.document.write(html);
             novaAba.document.close();
             
-            // Mostrar mensagem na lista
             document.getElementById('lista-resultado').innerHTML = `
                 <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
                     ✅ Cartão resposta gerado!<br>
@@ -1997,6 +1993,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         showToast('❌ Erro: ' + erro.message, 'error');
     }
 }
+
 // ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
 async function salvarEscola() {
   const dados = {
@@ -2170,7 +2167,6 @@ async function salvarProvaModal() {
     gabarito: []
   };
   
-  // Coletar gabarito do modal
   const gabInputs = document.querySelectorAll('#modal-gabarito-grid input');
   gabInputs.forEach(input => {
     if (input.value) dados.gabarito.push(input.value.toUpperCase());
@@ -2509,7 +2505,6 @@ async function processarAvaliacaoTexto(texto, alunoId) {
     const fb = document.getElementById('txt-fb');
     if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
     
-    // Buscar nome do aluno
     if (alunoId) {
       try {
         const respAlunos = await fetch(API_URL + '/api/alunos');
@@ -2798,12 +2793,10 @@ function buscarRelatorioAluno() {
     return;
   }
   showToast('🔍 Buscando histórico do aluno...', 'info');
-  // Implementar busca de histórico do aluno
   const tbody = document.getElementById('rel-aluno-historico');
   if (tbody) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
   }
-  // Buscar correções do aluno
   fetch(API_URL + '/api/historico')
     .then(r => r.json())
     .then(historico => {
@@ -2833,7 +2826,6 @@ function abrirModalUsuario() {
 }
 
 function carregarUserData() {
-  // Carregar dados do usuário
   const tbody = document.getElementById('u-tb-turmas');
   if (tbody) {
     fetch(API_URL + '/api/turmas')
@@ -2850,7 +2842,6 @@ function carregarUserData() {
       .catch(e => console.error(e));
   }
   
-  // Alunos do usuário
   const alunoBody = document.getElementById('u-tb-alunos');
   if (alunoBody) {
     fetch(API_URL + '/api/alunos')
@@ -2872,7 +2863,6 @@ function carregarUserData() {
       .catch(e => console.error(e));
   }
   
-  // Provas recentes do usuário
   const provasBody = document.getElementById('u-provas-recentes');
   if (provasBody) {
     fetch(API_URL + '/api/provas')
@@ -2889,7 +2879,6 @@ function carregarUserData() {
       .catch(e => console.error(e));
   }
   
-  // Resultados do usuário
   const resBody = document.getElementById('u-tb-resultados');
   if (resBody) {
     fetch(API_URL + '/api/historico')
@@ -2908,7 +2897,6 @@ function carregarUserData() {
       .catch(e => console.error(e));
   }
   
-  // Escola do usuário
   const escolaInfo = document.getElementById('u-escola-info');
   if (escolaInfo) {
     fetch(API_URL + '/api/escolas')
@@ -2926,7 +2914,6 @@ function carregarUserData() {
       .catch(e => console.error(e));
   }
   
-  // Gráfico do usuário
   const chart = document.getElementById('u-chart');
   if (chart) {
     fetch(API_URL + '/api/historico')
@@ -2972,7 +2959,6 @@ document.addEventListener('DOMContentLoaded', function() {
   carregarCombos();
   carregarDados();
   
-  // Inicializar modal de prova com gabarito
   const tipoProva = document.getElementById('modal-prova-tipo');
   if (tipoProva) gerarGabaritoModal(tipoProva.value);
 });
