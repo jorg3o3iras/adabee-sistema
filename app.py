@@ -14,6 +14,17 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytesseract
 
+# ============================================
+# IMPORTAÇÃO DO GEMINI
+# ============================================
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+    print("✅ Gemini AI disponível!")
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("⚠️ Gemini AI não instalado. Execute: pip install google-generativeai")
+
 app = Flask(__name__)
 CORS(app)
 
@@ -33,6 +44,57 @@ def get_db_connection():
         return conn
     except Exception as e:
         print(f"❌ ERRO ao conectar: {e}")
+        return None
+
+# ============================================
+# FUNÇÕES PARA GEMINI
+# ============================================
+
+def get_gemini_api_key():
+    """Busca a chave API do Gemini no banco de dados"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return None
+        cursor = conn.cursor()
+        cursor.execute("SELECT valor FROM configuracoes WHERE chave = 'gemini_api_key'")
+        row = cursor.fetchone()
+        conn.close()
+        if row and row['valor']:
+            return row['valor']
+        return None
+    except Exception as e:
+        print(f"❌ Erro ao buscar chave Gemini: {e}")
+        return None
+
+def get_gemini_model():
+    """Configura e retorna o modelo Gemini"""
+    try:
+        if not GEMINI_AVAILABLE:
+            return None
+        
+        api_key = get_gemini_api_key()
+        if not api_key:
+            print("⚠️ Chave Gemini não configurada")
+            return None
+        
+        genai.configure(api_key=api_key)
+        
+        # Tentar diferentes modelos
+        modelos = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+        for modelo in modelos:
+            try:
+                model = genai.GenerativeModel(modelo)
+                # Teste rápido
+                test = model.generate_content("Ok")
+                print(f"✅ Gemini conectado com modelo: {modelo}")
+                return model
+            except:
+                continue
+        
+        return None
+    except Exception as e:
+        print(f"❌ Erro ao configurar Gemini: {e}")
         return None
 
 # ============================================
@@ -1035,7 +1097,7 @@ def corrigir_prova():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS - CORREÇÃO DE REDAÇÃO
+# ROTA - CORREÇÃO DE REDAÇÃO (COM GEMINI)
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -1047,17 +1109,89 @@ def corrigir_redacao():
         prova_id = dados.get('prova_id')
         aluno_id = dados.get('aluno_id')
         
-        if not imagem and not texto:
+        # Se não houver texto, tentar extrair da imagem
+        if not texto and imagem:
+            texto = CorretorRedacaoHibrido.extrair_texto_ocr(imagem)
+        
+        if not texto:
             return jsonify({'erro': 'Forneça imagem ou texto da redação'}), 400
         
-        corretor = CorretorRedacaoHibrido()
-        resultado = corretor.corrigir_redacao_hibrido(imagem, texto)
+        # Verificar se temos Gemini disponível
+        model = get_gemini_model()
         
-        if resultado is None or resultado[0] is None:
+        if model and len(texto) > 20:
+            # Usar Gemini para correção avançada
+            try:
+                prompt = f"""
+                Você é um professor de português experiente. Avalie a seguinte redação:
+
+                TEXTO:
+                {texto}
+
+                Critérios de avaliação (notas de 0 a 10):
+                1. Coerência e Coesão: As ideias estão bem organizadas e conectadas?
+                2. Estrutura e Organização: Há introdução, desenvolvimento e conclusão?
+                3. Vocabulário: É rico, variado e adequado?
+                4. Gramática e Ortografia: Está correto?
+
+                Responda APENAS com JSON neste formato:
+                {{"coerencia": 0, "estrutura": 0, "vocabulario": 0, "gramatica": 0, "nota_final": 0, "feedback": "", "conceito": ""}}
+                """
+                
+                response = model.generate_content(prompt)
+                
+                # Tentar extrair JSON
+                import ast
+                json_match = re.search(r'\{[^{}]*\}', response.text)
+                if json_match:
+                    try:
+                        resultado = ast.literal_eval(json_match.group())
+                        nota = resultado.get('nota_final', 0)
+                        conceito = resultado.get('conceito', 'Bom')
+                        feedback = resultado.get('feedback', '')
+                        
+                        metricas = {
+                            'nota_coerencia': resultado.get('coerencia', 0),
+                            'nota_estrutura': resultado.get('estrutura', 0),
+                            'nota_vocabulario': resultado.get('vocabulario', 0),
+                            'nota_gramatica': resultado.get('gramatica', 0)
+                        }
+                        
+                        # Salvar no banco se tiver prova e aluno
+                        if prova_id and aluno_id:
+                            conn = get_db_connection()
+                            if conn:
+                                cursor = conn.cursor()
+                                cursor.execute("""
+                                    INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, metricas, data_correcao, metodo_ia) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                """, (prova_id, aluno_id, texto, nota, feedback, json.dumps(metricas), datetime.now(), 'Gemini AI'))
+                                conn.commit()
+                                conn.close()
+                        
+                        return jsonify({
+                            'nota': round(nota, 1),
+                            'conceito': conceito,
+                            'feedback': feedback,
+                            'metricas': metricas,
+                            'texto_original': texto[:500] + ('...' if len(texto) > 500 else ''),
+                            'texto_completo': texto,
+                            'metodo_ia': 'Gemini AI'
+                        })
+                    except:
+                        pass
+            except Exception as e:
+                print(f"Erro no Gemini: {e}")
+                # Fallback para método híbrido
+        
+        # Fallback: usar método híbrido (OCR + Análise)
+        corretor = CorretorRedacaoHibrido()
+        texto_corrigido, nota, conceito, feedback, metricas, metodo = corretor.corrigir_redacao_hibrido(imagem, texto)
+        
+        if texto_corrigido is None:
             return jsonify({'erro': 'Não foi possível processar a redação'}), 400
         
-        texto_corrigido, nota, conceito, feedback, metricas, metodo = resultado
-        
+        # Salvar no banco se tiver prova e aluno
         if prova_id and aluno_id:
             conn = get_db_connection()
             if conn:
@@ -1089,6 +1223,73 @@ def corrigir_redacao():
         
     except Exception as e:
         print(f"Erro na correção de redação: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA - CORREÇÃO COM GEMINI PURA
+# ============================================
+
+@app.route('/api/corrigir_gemini', methods=['POST'])
+def corrigir_gemini():
+    try:
+        dados = request.json
+        texto = dados.get('texto')
+        
+        if not texto or len(texto) < 10:
+            return jsonify({'erro': 'Texto muito curto para avaliação'}), 400
+        
+        model = get_gemini_model()
+        if not model:
+            return jsonify({'erro': 'Gemini não configurado. Configure a chave API nas configurações.'}), 400
+        
+        prompt = f"""
+        Você é um professor de português experiente. Avalie a seguinte redação:
+
+        TEXTO:
+        {texto}
+
+        Avalie os seguintes critérios (notas de 0 a 10):
+        1. Coerência e Coesão
+        2. Estrutura e Organização
+        3. Vocabulário
+        4. Gramática e Ortografia
+
+        Responda APENAS com JSON neste formato:
+        {{"coerencia": 0, "estrutura": 0, "vocabulario": 0, "gramatica": 0, "nota_final": 0, "feedback": "", "conceito": ""}}
+        """
+        
+        response = model.generate_content(prompt)
+        
+        # Tentar extrair JSON
+        import ast
+        json_match = re.search(r'\{[^{}]*\}', response.text)
+        if json_match:
+            try:
+                resultado = ast.literal_eval(json_match.group())
+                return jsonify({
+                    'nota': resultado.get('nota_final', 0),
+                    'conceito': resultado.get('conceito', 'Regular'),
+                    'feedback': resultado.get('feedback', ''),
+                    'metricas': {
+                        'coerencia': resultado.get('coerencia', 0),
+                        'estrutura': resultado.get('estrutura', 0),
+                        'vocabulario': resultado.get('vocabulario', 0),
+                        'gramatica': resultado.get('gramatica', 0)
+                    },
+                    'metodo': 'Gemini AI'
+                })
+            except:
+                pass
+        
+        # Fallback
+        return jsonify({
+            'nota': 0,
+            'feedback': response.text,
+            'metodo': 'Gemini AI'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro no Gemini: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -1389,7 +1590,7 @@ def exportar_resultados():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS - CONFIGURAÇÕES
+# ROTAS - CONFIGURAÇÕES (ATUALIZADO)
 # ============================================
 
 @app.route('/api/configuracoes', methods=['GET'])
@@ -1409,6 +1610,41 @@ def get_configuracoes():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/configuracoes', methods=['POST'])
+def salvar_configuracoes():
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
+        cursor = conn.cursor()
+        
+        for chave, valor in dados.items():
+            cursor.execute("""
+                INSERT INTO configuracoes (chave, valor, atualizado_em) 
+                VALUES (%s, %s, %s) 
+                ON CONFLICT (chave) DO UPDATE SET 
+                    valor = EXCLUDED.valor, 
+                    atualizado_em = EXCLUDED.atualizado_em
+            """, (chave, str(valor), datetime.now()))
+        
+        # Testar Gemini se chave foi salva
+        if 'gemini_api_key' in dados and dados['gemini_api_key']:
+            try:
+                genai.configure(api_key=dados['gemini_api_key'])
+                test_model = genai.GenerativeModel('gemini-1.5-flash')
+                response = test_model.generate_content("Ok")
+                print(f"✅ Gemini conectado com sucesso!")
+            except Exception as e:
+                print(f"⚠️ Erro ao testar Gemini: {e}")
+        
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Configurações salvas com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 # ============================================
 # ROTAS - IP E STATUS
 # ============================================
@@ -1423,20 +1659,24 @@ def ip_info():
 
 @app.route('/api/status_ia', methods=['GET'])
 def status_ia():
+    gemini_status = "✅ Disponível" if get_gemini_api_key() else "❌ Não configurado"
     return jsonify({
         'metodos_disponiveis': {
             'OpenCV': True,
             'OCR': True,
-            'Analise_Avancada': True
+            'Analise_Avancada': True,
+            'Gemini_AI': bool(get_gemini_api_key())
         },
-        'metodo_ativo': 'Híbrido (OpenCV + OCR)',
-        'status': '🧠 Sistema híbrido ativo!',
+        'metodo_ativo': 'Híbrido (OpenCV + OCR + Gemini)',
+        'status': '🧠 Sistema híbrido com Gemini AI!',
         'banco': 'PostgreSQL (Supabase)',
+        'gemini': gemini_status,
         'vantagens': [
             '✅ 100% gratuito',
             '✅ Sem limites de uso',
             '✅ Correção de provas com detecção por OpenCV',
-            '✅ Correção de redações com OCR e análise avançada'
+            '✅ Correção de redações com OCR e análise avançada',
+            '✅ Correção com Gemini AI (inteligência artificial)'
         ]
     })
 
@@ -1500,5 +1740,18 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
-    print("🧠 Sistema Híbrido - OpenCV + OCR + Análise Avançada de Redação")
+    print("🧠 Sistema Híbrido - OpenCV + OCR + Gemini AI")
+    print("=" * 50)
+    
+    if GEMINI_AVAILABLE:
+        api_key = get_gemini_api_key()
+        if api_key:
+            print("✅ Gemini AI configurado e pronto!")
+        else:
+            print("⚠️ Gemini AI instalado, mas chave não configurada")
+            print("   Acesse Configurações → API Key Gemini para configurar")
+    else:
+        print("⚠️ Gemini AI não instalado. Execute: pip install google-generativeai")
+    
+    print("=" * 50)
     app.run(host='0.0.0.0', port=port, debug=False)
