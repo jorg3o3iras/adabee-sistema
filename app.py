@@ -743,6 +743,7 @@ def deletar_aluno(aluno_id):
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
+@app.route('/api/provas', methods=['GET'])
 def listar_provas():
     try:
         conn = get_db_connection()
@@ -764,7 +765,7 @@ def listar_provas():
                 'id': row['id'],
                 'turma_id': row['turma_id'],
                 'turma_nome': row.get('turma_nome'),
-                'turma_serie': row.get('turma_serie'),
+                'turma_serie': row.get('turma_serie'),  # <-- ADICIONADO
                 'escola_nome': row.get('escola_nome'),
                 'titulo': row['titulo'],
                 'disciplina': row.get('disciplina'),
@@ -780,57 +781,6 @@ def listar_provas():
         return jsonify(provas)
     except Exception as e:
         return jsonify([]), 500
-
-@app.route('/api/provas', methods=['POST'])
-def criar_prova():
-    try:
-        dados = request.json
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro no banco de dados'}), 500
-        
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO provas (turma_id, titulo, disciplina, bimestre, descricao, 
-                gabarito, data_prova, valor_nota, quantidade_questoes, tipo_questoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        """, (
-            dados.get('turma_id'),
-            dados.get('titulo'),
-            dados.get('disciplina'),
-            dados.get('bimestre'),
-            dados.get('descricao'),
-            json.dumps(dados.get('gabarito', [])),
-            dados.get('data_prova'),
-            dados.get('valor_nota', 10),
-            len(dados.get('gabarito', [])),
-            dados.get('tipo_questoes', '4')
-        ))
-        prova_id = cursor.fetchone()['id']
-        conn.commit()
-        conn.close()
-        return jsonify({'id': prova_id, 'mensagem': 'Prova criada com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
-def deletar_prova(prova_id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro no banco de dados'}), 500
-        
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
-        cursor.execute("DELETE FROM correcoes_redacao WHERE prova_id = %s", (prova_id,))
-        cursor.execute("DELETE FROM gabaritos WHERE prova_id = %s", (prova_id,))
-        cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Prova excluída com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
 # ============================================
 # ROTAS - GABARITOS
 # ============================================
