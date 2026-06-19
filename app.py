@@ -13,9 +13,6 @@ from PIL import Image
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytesseract
-import hashlib
-import secrets
-from functools import wraps
 
 app = Flask(__name__)
 CORS(app)
@@ -31,20 +28,24 @@ def get_db_connection():
         conn = psycopg2.connect(
             SUPABASE_URL,
             cursor_factory=RealDictCursor,
-            connect_timeout=15,
-            keepalives=1,
-            keepalives_idle=30,
-            keepalives_interval=10,
-            keepalives_count=3
+            connect_timeout=10
         )
         return conn
     except Exception as e:
         print(f"❌ ERRO ao conectar: {e}")
-        raise e
+        return None
+
+# ============================================
+# INICIALIZAR BANCO DE DADOS
+# ============================================
 
 def init_database():
     try:
         conn = get_db_connection()
+        if not conn:
+            print("❌ Não foi possível conectar ao banco")
+            return
+        
         cursor = conn.cursor()
         
         # ESCOLAS
@@ -191,9 +192,6 @@ def init_database():
         cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('nota_maxima', '10') ON CONFLICT (chave) DO NOTHING")
         cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('nota_minima_aprovacao', '5') ON CONFLICT (chave) DO NOTHING")
         cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('metodo_correcao', 'hibrido') ON CONFLICT (chave) DO NOTHING")
-        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('confianca_minima', '0.7') ON CONFLICT (chave) DO NOTHING")
-        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('param1', '80') ON CONFLICT (chave) DO NOTHING")
-        cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES ('param2', '25') ON CONFLICT (chave) DO NOTHING")
         
         conn.commit()
         conn.close()
@@ -202,7 +200,7 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO
+# CLASSE CORRETOR HÍBRIDO (OTIMIZADO)
 # ============================================
 
 class CorretorHibrido:
@@ -216,9 +214,10 @@ class CorretorHibrido:
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
                 return None
+            # Reduzir tamanho para economizar memória
             height, width = img.shape[:2]
-            if width > 1200:
-                scale = 1200 / width
+            if width > 1000:
+                scale = 1000 / width
                 new_width = int(width * scale)
                 new_height = int(height * scale)
                 img = cv2.resize(img, (new_width, new_height))
@@ -235,16 +234,14 @@ class CorretorHibrido:
                 return None
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            gray = clahe.apply(gray)
-            
-            _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+            # Usar threshold simples em vez de CLAHE para economizar
+            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             bolinhas = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                if 50 < area < 400:
+                if 30 < area < 400:
                     M = cv2.moments(cnt)
                     if M['m00'] > 0:
                         cx = int(M['m10'] / M['m00'])
@@ -252,28 +249,19 @@ class CorretorHibrido:
                         perimeter = cv2.arcLength(cnt, True)
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
-                            if circularity > 0.5:
-                                mask = np.zeros_like(gray)
-                                cv2.drawContours(mask, [cnt], -1, 255, -1)
-                                roi = cv2.bitwise_and(gray, gray, mask=mask)
-                                pixels = roi[roi > 0]
-                                if len(pixels) > 0:
-                                    intensidade_media = np.mean(pixels)
-                                    preenchimento = 1 - (intensidade_media / 255)
-                                    bolinhas.append({
-                                        'x': cx,
-                                        'y': cy,
-                                        'area': area,
-                                        'preenchimento': preenchimento,
-                                        'intensidade': intensidade_media
-                                    })
+                            if circularity > 0.4:
+                                bolinhas.append({
+                                    'x': cx,
+                                    'y': cy,
+                                    'area': area
+                                })
             return bolinhas
         except Exception as e:
             print(f"Erro ao detectar bolinhas: {e}")
             return None
     
     @staticmethod
-    def detectar_respostas_com_preenchimento(imagem_base64, num_opcoes=4):
+    def detectar_respostas(imagem_base64, num_opcoes=4):
         try:
             bolinhas = CorretorHibrido.detectar_bolinhas_com_preenchimento(imagem_base64)
             if not bolinhas or len(bolinhas) == 0:
@@ -283,14 +271,14 @@ class CorretorHibrido:
             linhas = []
             linha_atual = []
             y_anterior = bolinhas[0]['y']
-            tolerancia_y = 20
+            tolerancia_y = 30
             
-            for bolinha in bolinhas:
-                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
+            for b in bolinhas:
+                if abs(b['y'] - y_anterior) > tolerancia_y and linha_atual:
                     linhas.append(linha_atual)
                     linha_atual = []
-                linha_atual.append(bolinha)
-                y_anterior = bolinha['y']
+                linha_atual.append(b)
+                y_anterior = b['y']
             
             if linha_atual:
                 linhas.append(linha_atual)
@@ -298,49 +286,31 @@ class CorretorHibrido:
             respostas = []
             letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
             
-            for idx, linha in enumerate(linhas, start=1):
-                if idx > 50:
+            for linha in linhas:
+                if len(respostas) >= 50:
                     break
                 linha.sort(key=lambda b: b['x'])
                 linha = linha[:num_opcoes]
-                if len(linha) == 0:
-                    respostas.append((idx, '?'))
-                    continue
                 
-                melhor_preenchimento = -1
-                melhor_pos = -1
-                
-                for pos, bolinha in enumerate(linha):
-                    if bolinha['preenchimento'] > melhor_preenchimento:
-                        melhor_preenchimento = bolinha['preenchimento']
-                        melhor_pos = pos
-                
-                if melhor_pos >= 0 and melhor_preenchimento > 0.20:
-                    resposta = letras[melhor_pos] if melhor_pos < len(letras) else '?'
-                    respostas.append((idx, resposta))
+                if len(linha) > 0:
+                    # A bolinha com maior área = mais preenchida
+                    melhor = max(linha, key=lambda b: b['area'])
+                    pos = linha.index(melhor)
+                    respostas.append(letras[pos] if pos < len(letras) else '?')
                 else:
-                    respostas.append((idx, '?'))
+                    respostas.append('?')
             
             if len(respostas) == 0:
                 return None, 0.0, 'Nenhuma resposta detectada'
             
-            respostas.sort(key=lambda x: x[0])
-            letras_respostas = [r[1] for r in respostas]
-            validas = sum(1 for r in letras_respostas if r != '?')
-            confianca = round((validas / len(letras_respostas)) * 100, 1)
+            validas = sum(1 for r in respostas if r != '?')
+            confianca = round((validas / len(respostas)) * 100, 1) if respostas else 0
             
-            return letras_respostas, confianca, 'Preenchimento'
+            return respostas, confianca, 'Híbrido (OpenCV)'
             
         except Exception as e:
-            print(f"Erro na detecção por preenchimento: {e}")
+            print(f"Erro na detecção: {e}")
             return None, 0.0, 'Erro'
-    
-    @staticmethod
-    def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
-        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_com_preenchimento(imagem_base64, num_opcoes)
-        if respostas and len(respostas) >= 3:
-            return respostas, confianca, metodo
-        return None, 0.0, 'Nenhum método funcionou'
 
 # ============================================
 # CLASSE PARA CORREÇÃO DE REDAÇÃO
@@ -358,6 +328,7 @@ class CorretorRedacaoHibrido:
             if img is None:
                 return None
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            # Aplicar threshold para melhorar OCR
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
             custom_config = r'--oem 3 --psm 6 -l por'
             text = pytesseract.image_to_string(binary, config=custom_config)
@@ -519,6 +490,9 @@ def login():
         senha = dados.get('senha')
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'sucesso': False, 'mensagem': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM usuarios WHERE username = %s AND senha_hash = %s AND ativo = TRUE", (username, senha))
         usuario = cursor.fetchone()
@@ -544,6 +518,9 @@ def login():
 def listar_escolas():
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify([])
+        
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM escolas ORDER BY nome")
         escolas = []
@@ -560,13 +537,17 @@ def listar_escolas():
         conn.close()
         return jsonify(escolas)
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+        print(f"Erro listar escolas: {e}")
+        return jsonify([]), 500
 
 @app.route('/api/escolas', methods=['POST'])
 def criar_escola():
     try:
         dados = request.json
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO escolas (nome, inep, municipio, estado, telefone, diretor)
@@ -584,38 +565,16 @@ def criar_escola():
         conn.close()
         return jsonify({'id': escola_id, 'mensagem': 'Escola cadastrada com sucesso!'})
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/escolas/<int:escola_id>', methods=['PUT'])
-def atualizar_escola(escola_id):
-    try:
-        dados = request.json
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE escolas SET 
-                nome = %s, inep = %s, municipio = %s, estado = %s, 
-                telefone = %s, diretor = %s
-            WHERE id = %s
-        """, (
-            dados.get('nome'),
-            dados.get('inep'),
-            dados.get('municipio'),
-            dados.get('estado'),
-            dados.get('telefone'),
-            dados.get('diretor'),
-            escola_id
-        ))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Escola atualizada com sucesso!'})
-    except Exception as e:
+        print(f"Erro criar escola: {e}")
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/escolas/<int:escola_id>', methods=['DELETE'])
 def deletar_escola(escola_id):
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
         conn.commit()
@@ -631,25 +590,17 @@ def deletar_escola(escola_id):
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
     try:
-        escola_id = request.args.get('escola_id')
         conn = get_db_connection()
-        cursor = conn.cursor()
+        if not conn:
+            return jsonify([])
         
-        if escola_id:
-            cursor.execute("""
-                SELECT t.*, e.nome as escola_nome 
-                FROM turmas t 
-                LEFT JOIN escolas e ON t.escola_id = e.id 
-                WHERE t.escola_id = %s 
-                ORDER BY t.serie, t.nome
-            """, (escola_id,))
-        else:
-            cursor.execute("""
-                SELECT t.*, e.nome as escola_nome 
-                FROM turmas t 
-                LEFT JOIN escolas e ON t.escola_id = e.id 
-                ORDER BY t.serie, t.nome
-            """)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT t.*, e.nome as escola_nome 
+            FROM turmas t 
+            LEFT JOIN escolas e ON t.escola_id = e.id 
+            ORDER BY t.serie, t.nome
+        """)
         
         turmas = []
         for row in cursor.fetchall():
@@ -667,13 +618,16 @@ def listar_turmas():
         conn.close()
         return jsonify(turmas)
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+        return jsonify([]), 500
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
     try:
         dados = request.json
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
@@ -698,6 +652,9 @@ def criar_turma():
 def deletar_turma(turma_id):
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
         conn.commit()
@@ -713,27 +670,18 @@ def deletar_turma(turma_id):
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
     try:
-        turma_id = request.args.get('turma_id')
         conn = get_db_connection()
-        cursor = conn.cursor()
+        if not conn:
+            return jsonify([])
         
-        if turma_id:
-            cursor.execute("""
-                SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
-                FROM alunos a 
-                LEFT JOIN turmas t ON a.turma_id = t.id 
-                LEFT JOIN escolas e ON t.escola_id = e.id 
-                WHERE a.turma_id = %s 
-                ORDER BY a.numero_chamada
-            """, (turma_id,))
-        else:
-            cursor.execute("""
-                SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
-                FROM alunos a 
-                LEFT JOIN turmas t ON a.turma_id = t.id 
-                LEFT JOIN escolas e ON t.escola_id = e.id 
-                ORDER BY a.numero_chamada
-            """)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
+            FROM alunos a 
+            LEFT JOIN turmas t ON a.turma_id = t.id 
+            LEFT JOIN escolas e ON t.escola_id = e.id 
+            ORDER BY a.numero_chamada
+        """)
         
         alunos = []
         for row in cursor.fetchall():
@@ -746,39 +694,31 @@ def listar_alunos():
                 'nome': row['nome'],
                 'matricula': row.get('matricula'),
                 'numero_chamada': row.get('numero_chamada'),
-                'data_nascimento': str(row.get('data_nascimento')) if row.get('data_nascimento') else None,
-                'genero': row.get('genero'),
-                'responsavel': row.get('responsavel'),
-                'telefone': row.get('telefone'),
-                'email': row.get('email'),
-                'observacoes': row.get('observacoes')
+                'data_nascimento': str(row.get('data_nascimento')) if row.get('data_nascimento') else None
             })
         conn.close()
         return jsonify(alunos)
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+        return jsonify([]), 500
 
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
     try:
         dados = request.json
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada, data_nascimento, 
-                genero, responsavel, telefone, email, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada, data_nascimento)
+            VALUES (%s, %s, %s, %s, %s) RETURNING id
         """, (
             dados.get('turma_id'),
             dados.get('nome'),
             dados.get('matricula'),
             dados.get('numero_chamada'),
-            dados.get('data_nascimento'),
-            dados.get('genero'),
-            dados.get('responsavel'),
-            dados.get('telefone'),
-            dados.get('email'),
-            dados.get('observacoes')
+            dados.get('data_nascimento')
         ))
         aluno_id = cursor.fetchone()['id']
         conn.commit()
@@ -791,6 +731,9 @@ def criar_aluno():
 def deletar_aluno(aluno_id):
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
         conn.commit()
@@ -807,6 +750,9 @@ def deletar_aluno(aluno_id):
 def listar_provas():
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify([])
+        
         cursor = conn.cursor()
         cursor.execute("""
             SELECT p.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
@@ -837,13 +783,16 @@ def listar_provas():
         conn.close()
         return jsonify(provas)
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+        return jsonify([]), 500
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
     try:
         dados = request.json
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO provas (turma_id, titulo, disciplina, bimestre, descricao, 
@@ -872,6 +821,9 @@ def criar_prova():
 def deletar_prova(prova_id):
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
         cursor.execute("DELETE FROM correcoes_redacao WHERE prova_id = %s", (prova_id,))
@@ -892,6 +844,9 @@ def salvar_gabarito():
     try:
         dados = request.json
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO gabaritos (prova_id, serie, total_questoes, alternativas, 
@@ -918,6 +873,9 @@ def salvar_gabarito():
 def buscar_gabarito(prova_id):
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify(None)
+        
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM gabaritos WHERE prova_id = %s ORDER BY id DESC LIMIT 1", (prova_id,))
         gabarito = cursor.fetchone()
@@ -954,6 +912,9 @@ def corrigir_prova():
             return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("SELECT gabarito, tipo_questoes, titulo, valor_nota FROM provas WHERE id = %s", (prova_id,))
         prova = cursor.fetchone()
@@ -968,7 +929,7 @@ def corrigir_prova():
         valor_nota = prova['valor_nota'] or 10
         
         corretor = CorretorHibrido()
-        respostas_detectadas, confianca, metodo = corretor.detectar_respostas_hibrido(imagem, tipo_questoes)
+        respostas_detectadas, confianca, metodo = corretor.detectar_respostas(imagem, tipo_questoes)
         
         if not respostas_detectadas:
             conn.close()
@@ -1019,7 +980,7 @@ def corrigir_prova():
             'tipo_questoes': tipo_questoes
         })
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"Erro na correção: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -1076,7 +1037,7 @@ def corrigir_redacao():
         })
         
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"Erro na correção de redação: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -1087,6 +1048,16 @@ def corrigir_redacao():
 def dashboard():
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({
+                'total_escolas': 0,
+                'total_turmas': 0,
+                'total_alunos': 0,
+                'total_provas': 0,
+                'total_correcoes': 0,
+                'media_geral': 0
+            })
+        
         cursor = conn.cursor()
         
         cursor.execute("SELECT COUNT(*) FROM escolas")
@@ -1125,6 +1096,9 @@ def dashboard():
 def historico():
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify([])
+        
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
@@ -1160,9 +1134,10 @@ def estatisticas():
     
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco'}), 500
         
-        # Estatísticas gerais
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT 
                 COUNT(*) as total_corrigidas,
@@ -1174,47 +1149,14 @@ def estatisticas():
         """, (prova_id,))
         geral = cursor.fetchone()
         
-        # Estatísticas por método
-        cursor.execute("""
-            SELECT 
-                metodo_ia,
-                COUNT(*) as qtd,
-                COALESCE(AVG(nota), 0) as media_metodo
-            FROM correcoes 
-            WHERE prova_id = %s
-            GROUP BY metodo_ia
-        """, (prova_id,))
-        metodos = cursor.fetchall()
-        
-        # Distribuição de notas
-        cursor.execute("""
-            SELECT 
-                CASE 
-                    WHEN nota < 2 THEN '0-2'
-                    WHEN nota < 4 THEN '2-4'
-                    WHEN nota < 6 THEN '4-6'
-                    WHEN nota < 8 THEN '6-8'
-                    ELSE '8-10'
-                END as faixa,
-                COUNT(*) as quantidade
-            FROM correcoes 
-            WHERE prova_id = %s
-            GROUP BY faixa
-            ORDER BY faixa
-        """, (prova_id,))
-        distribuicao = cursor.fetchall()
-        
         conn.close()
-        
         return jsonify({
             'geral': {
                 'total_corrigidas': geral['total_corrigidas'] if geral else 0,
                 'media_nota': round(geral['media_nota'] if geral else 0, 1),
                 'maior_nota': round(geral['maior_nota'] if geral else 0, 1),
                 'menor_nota': round(geral['menor_nota'] if geral else 0, 1)
-            },
-            'metodos': [{'metodo': m['metodo_ia'] or 'Desconhecido', 'qtd': m['qtd'], 'media': round(m['media_metodo'], 1)} for m in metodos],
-            'distribuicao': [{'faixa': d['faixa'], 'quantidade': d['quantidade']} for d in distribuicao]
+            }
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
@@ -1227,6 +1169,9 @@ def exportar_resultados():
     
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco'}), 500
+        
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
@@ -1275,6 +1220,9 @@ def exportar_resultados():
 def get_configuracoes():
     try:
         conn = get_db_connection()
+        if not conn:
+            return jsonify({})
+        
         cursor = conn.cursor()
         cursor.execute("SELECT chave, valor FROM configuracoes")
         configs = {}
@@ -1283,178 +1231,6 @@ def get_configuracoes():
         conn.close()
         return jsonify(configs)
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/configuracoes', methods=['POST'])
-def salvar_configuracoes():
-    try:
-        dados = request.json
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        for chave, valor in dados.items():
-            cursor.execute("""
-                INSERT INTO configuracoes (chave, valor, atualizado_em) 
-                VALUES (%s, %s, %s) 
-                ON CONFLICT (chave) DO UPDATE SET 
-                    valor = EXCLUDED.valor, 
-                    atualizado_em = EXCLUDED.atualizado_em
-            """, (chave, str(valor), datetime.now()))
-        conn.commit()
-        conn.close()
-        return jsonify({'mensagem': 'Configurações salvas com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS - GERAR GABARITO (FOLHA DE RESPOSTAS)
-# ============================================
-
-@app.route('/api/gerar_gabarito', methods=['POST'])
-def gerar_gabarito():
-    try:
-        dados = request.json
-        escola_id = dados.get('escola_id')
-        turma_id = dados.get('turma_id')
-        aluno_id = dados.get('aluno_id')
-        prova_id = dados.get('prova_id')
-        qtd_questoes = dados.get('quantidade_questoes', 20)
-        tipo_questoes = dados.get('tipo_questoes', '4')
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
-        escola = cursor.fetchone()
-        nome_escola = escola['nome'] if escola else "ESCOLA"
-        
-        cursor.execute("SELECT nome, serie, turno, professor FROM turmas WHERE id = %s", (turma_id,))
-        turma = cursor.fetchone()
-        nome_turma = turma['nome'] if turma else "TURMA"
-        serie = turma['serie'] if turma else "1º Ano"
-        turno = turma['turno'] if turma else "Manhã"
-        professor = turma['professor'] if turma else ""
-        
-        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
-        aluno = cursor.fetchone()
-        nome_aluno = aluno['nome'] if aluno else "ALUNO"
-        numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
-        
-        cursor.execute("SELECT titulo, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
-        prova = cursor.fetchone()
-        nome_prova = prova['titulo'] if prova else "PROVA"
-        if prova and prova['tipo_questoes']:
-            tipo_questoes = prova['tipo_questoes']
-        
-        conn.close()
-        
-        if tipo_questoes == '3':
-            opcoes = ['A', 'B', 'C']
-            titulo_opcoes = "3 OPÇÕES (A, B, C)"
-        else:
-            opcoes = ['A', 'B', 'C', 'D']
-            titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
-        
-        if int(qtd_questoes) > 30:
-            qtd_questoes = 30
-        
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Folha de Respostas - {nome_aluno}</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
-        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; }}
-        .folha {{ padding: 20px; }}
-        .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
-        .header h2 {{ color: #4CAF50; font-size: 20px; }}
-        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; }}
-        .info-item {{ display: flex; gap: 8px; }}
-        .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
-        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
-        .instrucoes {{ background: #FFF3CD; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 10px; text-align: center; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th {{ background: #4CAF50; color: white; padding: 6px; text-align: center; font-size: 12px; }}
-        td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
-        .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
-        .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
-        .opcao {{ display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 45px; }}
-        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; background: white; cursor: pointer; }}
-        .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
-        .rodape {{ margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
-        .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
-        button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
-        button:hover {{ background: #45a049; }}
-        button.secundario {{ background: #2196F3; }}
-        @media print {{ body {{ background: white; padding: 0; margin: 0; }} .container {{ box-shadow: none; }} .botoes {{ display: none; }} }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="folha">
-            <div class="header">
-                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
-                <p>{titulo_opcoes} - {serie}</p>
-            </div>
-            <div class="info-grid">
-                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
-                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
-                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
-                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
-                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
-                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
-            </div>
-            <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.</div>
-            <table>
-                <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
-                <tbody>"""
-        
-        for i in range(1, int(qtd_questoes) + 1):
-            html += f"""
-                    <tr>
-                        <td class="questao-num">{i}</td>
-                        <td colspan="{len(opcoes)}" style="text-align:center">
-                            <div class="opcoes">"""
-            for opcao in opcoes:
-                html += f"""
-                                <label class="opcao">
-                                    <span class="circulo" onclick="marcar(this)"></span>
-                                    <span>{opcao}</span>
-                                </label>"""
-            html += """
-                            </div>
-                        </td>
-                    </tr>"""
-        
-        html += f"""
-                </tbody>
-            </table>
-            <div class="rodape">AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA</div>
-        </div>
-        <div class="botoes">
-            <button onclick="window.print()">🖨️ IMPRIMIR</button>
-            <button class="secundario" onclick="window.print()">💾 SALVAR PDF</button>
-        </div>
-    </div>
-    <script>
-        function marcar(el) {{
-            const grupo = el.closest('.opcoes');
-            grupo.querySelectorAll('.circulo').forEach(c => {{
-                c.style.backgroundColor = 'white';
-                c.style.border = '2px solid #333';
-            }});
-            el.style.backgroundColor = 'black';
-            el.style.border = '2px solid black';
-        }}
-    </script>
-</body>
-</html>"""
-        
-        return html, 200, {'Content-Type': 'text/html'}
-        
-    except Exception as e:
-        print(f"Erro ao gerar gabarito: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -1473,19 +1249,18 @@ def ip_info():
 def status_ia():
     return jsonify({
         'metodos_disponiveis': {
-            'Contorno': True,
             'OpenCV': True,
             'OCR': True,
             'Analise_Avancada': True
         },
-        'metodo_ativo': 'Híbrido (Contorno + OpenCV + OCR + Análise Avançada)',
+        'metodo_ativo': 'Híbrido (OpenCV + OCR)',
         'status': '🧠 Sistema híbrido ativo!',
         'banco': 'PostgreSQL (Supabase)',
         'vantagens': [
             '✅ 100% gratuito',
             '✅ Sem limites de uso',
-            '✅ Correção de provas com detecção por contorno',
-            '✅ Correção de redações com análise avançada'
+            '✅ Correção de provas com detecção por OpenCV',
+            '✅ Correção de redações com OCR e análise avançada'
         ]
     })
 
@@ -1493,12 +1268,18 @@ def status_ia():
 def testar_conexao():
     try:
         conn = get_db_connection()
-        conn.close()
-        return jsonify({
-            'conectado': True,
-            'banco': 'PostgreSQL (Supabase)',
-            'mensagem': '✅ Conectado ao Supabase!'
-        })
+        if conn:
+            conn.close()
+            return jsonify({
+                'conectado': True,
+                'banco': 'PostgreSQL (Supabase)',
+                'mensagem': '✅ Conectado ao Supabase!'
+            })
+        else:
+            return jsonify({
+                'conectado': False,
+                'erro': 'Falha na conexão'
+            }), 500
     except Exception as e:
         return jsonify({
             'conectado': False,
@@ -1543,5 +1324,5 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor rodando na porta {port}")
-    print("🧠 Sistema Híbrido - Contorno + OpenCV + OCR + Análise Avançada de Redação")
+    print("🧠 Sistema Híbrido - OpenCV + OCR + Análise Avançada de Redação")
     app.run(host='0.0.0.0', port=port, debug=False)
