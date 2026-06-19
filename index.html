@@ -1886,65 +1886,117 @@ async function carregarCombos() {
 }
 
 // ═══════════════════════════════ LISTA POR TURMA ═══════════════════════════════
+// ═══════════════════════════════ LISTA POR TURMA COM BOLINHAS ═══════════════════════════════
 async function gerarListaTurma() {
-  const turmaId = document.getElementById('lista-turma').value;
-  if (!turmaId) {
-    showToast('❌ Selecione uma turma!', 'error');
-    return;
-  }
-  
-  try {
-    const response = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
-    const alunos = await response.json();
-    const turmaResp = await fetch(API_URL + '/api/turmas');
-    const turmas = await turmaResp.json();
-    const turma = turmas.find(t => t.id == turmaId);
+    const escolaId = document.getElementById('lista-escola').value;
+    const serie = document.getElementById('lista-serie').value;
+    const turmaId = document.getElementById('lista-turma').value;
     
-    const container = document.getElementById('lista-resultado');
-    if (!container) return;
-    
-    if (!alunos || alunos.length === 0 || alunos.erro) {
-      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
-      return;
+    if (!turmaId) {
+        showToast('❌ Selecione uma turma!', 'error');
+        return;
     }
     
-    const escolaResp = await fetch(API_URL + '/api/escolas');
-    const escolas = await escolaResp.json();
-    const escola = escolas.find(e => e.id === turma?.escola_id);
+    if (!escolaId) {
+        showToast('❌ Selecione uma escola!', 'error');
+        return;
+    }
     
-    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">';
-    html += '<div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div>';
-    html += '<div style="color:var(--text2);font-size:13px;margin-top:4px;">Lista de Alunos — ' + (turma?.nome || '') + ' — ' + (turma?.serie || '') + '</div>';
-    html += '<div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div>';
-    html += '</div>';
-    html += '<div class="table-wrap"><table>';
-    html += '<thead><tr><th>Nº</th><th>Matrícula</th><th>Nome Completo</th><th>Data Nasc.</th><th>Responsável</th><th>Assinatura</th></tr></thead>';
-    html += '<tbody>';
-    
-    alunos.forEach(a => {
-      html += '<tr><td>' + (a.numero_chamada || '—') + '</td>';
-      html += '<td><span class="chip">' + (a.matricula || '—') + '</span></td>';
-      html += '<td><strong>' + a.nome + '</strong></td>';
-      html += '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>';
-      html += '<td>' + (a.responsavel || '—') + '</td>';
-      html += '<td style="width:140px;border-bottom:1px solid var(--border2);">&nbsp;</td></tr>';
-    });
-    
-    html += '</tbody></table></div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:30px;padding-top:18px;border-top:1px solid var(--border);">';
-    html += '<div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div>';
-    html += '<div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div>';
-    html += '</div>';
-    
-    container.innerHTML = html;
-    showToast('📋 Lista gerada com ' + alunos.length + ' alunos!', 'success');
-    
-  } catch (erro) {
-    console.error('Erro ao gerar lista:', erro);
-    showToast('❌ Erro ao gerar lista', 'error');
-  }
+    // Pegar o primeiro aluno da turma para gerar o cartão individual
+    try {
+        const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
+        const alunos = await alunosResp.json();
+        
+        if (!alunos || alunos.length === 0) {
+            showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
+            return;
+        }
+        
+        // Buscar prova da turma
+        const provasResp = await fetch(API_URL + '/api/provas');
+        const provas = await provasResp.json();
+        const prova = provas.find(p => p.turma_id == turmaId);
+        
+        if (!prova) {
+            showToast('❌ Nenhuma prova cadastrada para esta turma!', 'error');
+            return;
+        }
+        
+        // Se tiver mais de um aluno, mostrar lista com opção de gerar cartão individual
+        if (alunos.length > 1) {
+            // Mostrar lista de alunos com botão para gerar cartão de cada um
+            let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">';
+            html += '<div style="font-size:16px;font-weight:800;">' + (document.getElementById('lista-escola').selectedOptions[0]?.text || 'Escola') + '</div>';
+            html += '<div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div>';
+            html += '</div>';
+            
+            html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+            alunos.forEach(aluno => {
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">';
+                html += '<div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div>';
+                html += '<button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button>';
+                html += '</div>';
+            });
+            html += '</div>';
+            
+            document.getElementById('lista-resultado').innerHTML = html;
+            showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
+            return;
+        }
+        
+        // Se for apenas 1 aluno, gerar cartão diretamente
+        const aluno = alunos[0];
+        await gerarCartaoResposta(escolaId, turmaId, aluno.id, prova.id);
+        
+    } catch (erro) {
+        console.error('Erro ao gerar lista:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
 }
 
+// ═══════════════════════════════ GERAR CARTÃO RESPOSTA COM BOLINHAS ═══════════════════════════════
+async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+    try {
+        const qtdQuestoes = 20; // Você pode pegar do select
+        
+        // Chamar o endpoint que gera o HTML com bolinhas
+        const response = await fetch(API_URL + '/api/gerar_gabarito', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                escola_id: parseInt(escolaId),
+                turma_id: parseInt(turmaId),
+                aluno_id: parseInt(alunoId),
+                prova_id: parseInt(provaId),
+                quantidade_questoes: qtdQuestoes
+            })
+        });
+        
+        if (response.ok) {
+            const html = await response.text();
+            // Abrir em nova aba para impressão
+            const novaAba = window.open('', '_blank');
+            novaAba.document.write(html);
+            novaAba.document.close();
+            
+            // Mostrar mensagem na lista
+            document.getElementById('lista-resultado').innerHTML = `
+                <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
+                    ✅ Cartão resposta gerado!<br>
+                    <small>Uma nova aba foi aberta com a folha de respostas.<br>
+                    Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small>
+                </div>
+            `;
+            showToast('✅ Cartão resposta gerado com sucesso!', 'success');
+        } else {
+            const erro = await response.json();
+            showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
+        }
+    } catch (erro) {
+        console.error('Erro ao gerar cartão:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
 // ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
 async function salvarEscola() {
   const dados = {
