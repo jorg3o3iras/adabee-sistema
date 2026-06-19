@@ -214,7 +214,6 @@ class CorretorHibrido:
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
                 return None
-            # Reduzir tamanho para economizar memória
             height, width = img.shape[:2]
             if width > 1000:
                 scale = 1000 / width
@@ -234,7 +233,6 @@ class CorretorHibrido:
                 return None
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            # Usar threshold simples em vez de CLAHE para economizar
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
@@ -293,7 +291,6 @@ class CorretorHibrido:
                 linha = linha[:num_opcoes]
                 
                 if len(linha) > 0:
-                    # A bolinha com maior área = mais preenchida
                     melhor = max(linha, key=lambda b: b['area'])
                     pos = linha.index(melhor)
                     respostas.append(letras[pos] if pos < len(letras) else '?')
@@ -328,7 +325,6 @@ class CorretorRedacaoHibrido:
             if img is None:
                 return None
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            # Aplicar threshold para melhorar OCR
             _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
             custom_config = r'--oem 3 --psm 6 -l por'
             text = pytesseract.image_to_string(binary, config=custom_config)
@@ -1038,6 +1034,130 @@ def corrigir_redacao():
         
     except Exception as e:
         print(f"Erro na correção de redação: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA - GERAR CARTÃO RESPOSTA COM BOLINHAS
+# ============================================
+
+@app.route('/api/gerar_gabarito', methods=['POST'])
+def gerar_gabarito():
+    try:
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
+        qtd_questoes = dados.get('quantidade_questoes', 20)
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
+        cursor = conn.cursor()
+        
+        # Buscar dados
+        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
+        escola = cursor.fetchone()
+        
+        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
+        turma = cursor.fetchone()
+        
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
+        aluno = cursor.fetchone()
+        
+        cursor.execute("SELECT titulo, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
+        prova = cursor.fetchone()
+        
+        conn.close()
+        
+        # Determinar opções (3 ou 4)
+        tipo_questoes = prova['tipo_questoes'] if prova else '4'
+        opcoes = ['A', 'B', 'C'] if tipo_questoes == '3' else ['A', 'B', 'C', 'D']
+        titulo_opcoes = "3 OPÇÕES (A, B, C)" if tipo_questoes == '3' else "4 OPÇÕES (A, B, C, D)"
+        
+        # Gerar HTML COM BOLINHAS
+        html = f'''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cartão Resposta - {aluno['nome'] if aluno else 'ALUNO'}</title>
+<style>
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{ font-family: Arial, sans-serif; background: #fff; padding: 20px; }}
+    .container {{ max-width: 800px; margin: 0 auto; }}
+    .header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }}
+    .header h1 {{ color: #4CAF50; font-size: 22px; }}
+    .info {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; padding: 10px; background: #f5f5f5; border-radius: 8px; }}
+    .info-item {{ display: flex; gap: 5px; }}
+    .label {{ font-weight: bold; color: #555; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th {{ background: #4CAF50; color: white; padding: 8px; text-align: center; }}
+    td {{ padding: 8px; text-align: center; border-bottom: 1px solid #ddd; }}
+    .questao {{ font-weight: bold; width: 50px; }}
+    .opcoes {{ display: flex; gap: 30px; justify-content: center; }}
+    .opcao {{ display: flex; flex-direction: column; align-items: center; gap: 3px; }}
+    .circulo {{ display: inline-block; width: 25px; height: 25px; border: 2px solid #333; border-radius: 50%; background: white; }}
+    .footer {{ margin-top: 20px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
+    .botoes {{ text-align: center; margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
+    button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
+    button:hover {{ background: #45a049; }}
+    @media print {{ .botoes {{ display: none; }} }}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h1>
+        <p>{titulo_opcoes} - {turma['serie'] if turma else '1º Ano'}</p>
+    </div>
+    <div class="info">
+        <div class="info-item"><span class="label">ESCOLA:</span> {escola['nome'] if escola else 'ESCOLA'}</div>
+        <div class="info-item"><span class="label">TURMA:</span> {turma['nome'] if turma else 'TURMA'}</div>
+        <div class="info-item"><span class="label">ALUNO:</span> {aluno['nome'] if aluno else 'ALUNO'}</div>
+        <div class="info-item"><span class="label">Nº:</span> {aluno['numero_chamada'] if aluno else ''}</div>
+        <div class="info-item"><span class="label">PROVA:</span> {prova['titulo'] if prova else 'PROVA'}</div>
+        <div class="info-item"><span class="label">DATA:</span> ___/___/______</div>
+    </div>
+    <table>
+        <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
+        <tbody>'''
+        
+        for i in range(1, int(qtd_questoes) + 1):
+            html += f'''
+            <tr>
+                <td class="questao">{i}</td>
+                <td colspan="{len(opcoes)}">
+                    <div class="opcoes">'''
+            for opcao in opcoes:
+                html += f'''
+                        <div class="opcao">
+                            <span class="circulo"></span>
+                            <span>{opcao}</span>
+                        </div>'''
+            html += '''
+                    </div>
+                </td>
+            </tr>'''
+        
+        html += f'''
+        </tbody>
+    </table>
+    <div class="footer">
+        AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA
+    </div>
+</div>
+<div class="botoes">
+    <button onclick="window.print()">🖨️ IMPRIMIR</button>
+    <button onclick="window.print()">💾 SALVAR PDF</button>
+</div>
+</body>
+</html>'''
+        
+        return html, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        print(f"Erro ao gerar gabarito: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
