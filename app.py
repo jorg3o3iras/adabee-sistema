@@ -262,7 +262,7 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO (OTIMIZADO)
+# CLASSE CORRETOR HÍBRIDO (CORRIGIDA - DETECÇÃO MELHORADA)
 # ============================================
 
 class CorretorHibrido:
@@ -276,9 +276,18 @@ class CorretorHibrido:
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
                 return None
+            
+            # ========== MELHORIA 1: AUMENTAR CONTRASTE ==========
+            lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+            l = clahe.apply(l)
+            lab = cv2.merge((l, a, b))
+            img = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+            
             height, width = img.shape[:2]
-            if width > 1000:
-                scale = 1000 / width
+            if width > 1200:
+                scale = 1200 / width
                 new_width = int(width * scale)
                 new_height = int(height * scale)
                 img = cv2.resize(img, (new_width, new_height))
@@ -295,13 +304,19 @@ class CorretorHibrido:
                 return None
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            
+            # ========== MELHORIA 2: REDUZIR RUÍDO ==========
+            gray = cv2.GaussianBlur(gray, (5, 5), 0)
+            
+            # ========== MELHORIA 3: THRESHOLD ADAPTATIVO ==========
+            _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             bolinhas = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                if 30 < area < 400:
+                # ========== MELHORIA 4: FAIXA MAIS TOLERANTE ==========
+                if 20 < area < 500:
                     M = cv2.moments(cnt)
                     if M['m00'] > 0:
                         cx = int(M['m10'] / M['m00'])
@@ -309,12 +324,23 @@ class CorretorHibrido:
                         perimeter = cv2.arcLength(cnt, True)
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
-                            if circularity > 0.4:
-                                bolinhas.append({
-                                    'x': cx,
-                                    'y': cy,
-                                    'area': area
-                                })
+                            # ========== MELHORIA 5: MAIS TOLERANTE ==========
+                            if circularity > 0.3:
+                                # ========== MELHORIA 6: ANALISAR PREENCHIMENTO ==========
+                                mask = np.zeros_like(gray)
+                                cv2.drawContours(mask, [cnt], -1, 255, -1)
+                                roi = cv2.bitwise_and(gray, gray, mask=mask)
+                                pixels = roi[roi > 0]
+                                if len(pixels) > 0:
+                                    intensidade_media = np.mean(pixels)
+                                    preenchimento = 1 - (intensidade_media / 255)
+                                    bolinhas.append({
+                                        'x': cx,
+                                        'y': cy,
+                                        'area': area,
+                                        'preenchimento': preenchimento,
+                                        'intensidade': intensidade_media
+                                    })
             return bolinhas
         except Exception as e:
             print(f"Erro ao detectar bolinhas: {e}")
@@ -328,34 +354,61 @@ class CorretorHibrido:
                 return None, 0.0, 'Nenhuma bolinha detectada'
             
             bolinhas.sort(key=lambda b: b['y'])
+            
+            # ========== MELHORIA 7: TOLERÂNCIA DINÂMICA ==========
+            alturas = [b['area'] ** 0.5 for b in bolinhas]
+            altura_media = np.mean(alturas) if alturas else 30
+            tolerancia_y = altura_media * 1.2
+            
             linhas = []
             linha_atual = []
             y_anterior = bolinhas[0]['y']
-            tolerancia_y = 30
             
-            for b in bolinhas:
-                if abs(b['y'] - y_anterior) > tolerancia_y and linha_atual:
+            for bolinha in bolinhas:
+                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
                     linhas.append(linha_atual)
                     linha_atual = []
-                linha_atual.append(b)
-                y_anterior = b['y']
+                linha_atual.append(bolinha)
+                y_anterior = bolinha['y']
             
             if linha_atual:
                 linhas.append(linha_atual)
             
+            # ========== MELHORIA 8: FILTRAR LINHAS ==========
+            linhas_filtradas = []
+            for linha in linhas:
+                if len(linha) >= num_opcoes - 1:
+                    linhas_filtradas.append(linha)
+            
+            if len(linhas_filtradas) == 0:
+                linhas_filtradas = linhas
+            
             respostas = []
             letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
             
-            for linha in linhas:
+            for linha in linhas_filtradas:
                 if len(respostas) >= 50:
                     break
                 linha.sort(key=lambda b: b['x'])
                 linha = linha[:num_opcoes]
                 
                 if len(linha) > 0:
-                    melhor = max(linha, key=lambda b: b['area'])
-                    pos = linha.index(melhor)
-                    respostas.append(letras[pos] if pos < len(letras) else '?')
+                    # ========== MELHORIA 9: DETECTAR PREENCHIDAS ==========
+                    preenchidas = [b for b in linha if b['preenchimento'] > 0.15]
+                    
+                    if len(preenchidas) == 1:
+                        melhor = preenchidas[0]
+                        pos = linha.index(melhor)
+                        respostas.append(letras[pos] if pos < len(letras) else '?')
+                    elif len(preenchidas) > 1:
+                        melhor = max(preenchidas, key=lambda b: b['preenchimento'])
+                        pos = linha.index(melhor)
+                        respostas.append(letras[pos] if pos < len(letras) else '?')
+                    else:
+                        # Nenhuma preenchida → pegar a maior área
+                        melhor = max(linha, key=lambda b: b['area'])
+                        pos = linha.index(melhor)
+                        respostas.append(letras[pos] if pos < len(letras) else '?')
                 else:
                     respostas.append('?')
             
