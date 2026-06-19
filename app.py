@@ -844,6 +844,8 @@ def salvar_gabarito():
             return jsonify({'erro': 'Erro no banco de dados'}), 500
         
         cursor = conn.cursor()
+        
+        # Salvar na tabela gabaritos
         cursor.execute("""
             INSERT INTO gabaritos (prova_id, serie, total_questoes, alternativas, 
                 respostas, pontos_por_acerto, penalidade, questoes_anuladas)
@@ -859,39 +861,26 @@ def salvar_gabarito():
             dados.get('questoes_anuladas', '')
         ))
         gabarito_id = cursor.fetchone()['id']
+        
+        # ATUALIZAR A PROVA COM O GABARITO
+        cursor.execute("""
+            UPDATE provas 
+            SET gabarito = %s, 
+                quantidade_questoes = %s,
+                tipo_questoes = %s
+            WHERE id = %s
+        """, (
+            json.dumps(dados.get('respostas', [])),
+            len(dados.get('respostas', [])),
+            '3' if dados.get('serie') == '1º Ano' else '4',
+            dados.get('prova_id')
+        ))
+        
         conn.commit()
         conn.close()
         return jsonify({'id': gabarito_id, 'mensagem': 'Gabarito salvo com sucesso!'})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/gabaritos/<int:prova_id>', methods=['GET'])
-def buscar_gabarito(prova_id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify(None)
-        
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM gabaritos WHERE prova_id = %s ORDER BY id DESC LIMIT 1", (prova_id,))
-        gabarito = cursor.fetchone()
-        conn.close()
-        if gabarito:
-            return jsonify({
-                'id': gabarito['id'],
-                'prova_id': gabarito['prova_id'],
-                'serie': gabarito['serie'],
-                'total_questoes': gabarito['total_questoes'],
-                'alternativas': gabarito['alternativas'],
-                'respostas': json.loads(gabarito['respostas']) if gabarito['respostas'] else [],
-                'pontos_por_acerto': gabarito['pontos_por_acerto'],
-                'penalidade': gabarito['penalidade'],
-                'questoes_anuladas': gabarito['questoes_anuladas']
-            })
-        return jsonify(None)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
 # ============================================
 # ROTAS - CORREÇÃO DE PROVAS
 # ============================================
