@@ -84,7 +84,6 @@ function go(page) {
   if (el) el.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
   
-  // Recarregar dados ao navegar
   if (page === 'escola') carregarEscolas();
   if (page === 'turmas') carregarTurmas();
   if (page === 'alunos') carregarAlunos();
@@ -121,7 +120,6 @@ async function carregarEscolas() {
     if (!escolas || escolas.length === 0 || escolas.erro) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>`;
     } else {
-      // Buscar contagem de turmas e alunos por escola
       const turmasResp = await fetch(`${API_URL}/api/turmas`);
       const turmas = await turmasResp.json();
       const alunosResp = await fetch(`${API_URL}/api/alunos`);
@@ -398,7 +396,6 @@ async function carregarDashboard() {
     const response = await fetch(`${API_URL}/api/dashboard`);
     const dados = await response.json();
     
-    // Atualizar os cards do dashboard
     const cards = document.querySelectorAll('.stat-card .stat-val');
     if (cards.length >= 4) {
       const valores = [
@@ -422,7 +419,6 @@ async function carregarHistorico() {
     const response = await fetch(`${API_URL}/api/historico`);
     const historico = await response.json();
     
-    // Atualizar tabela de resultados
     const tbody = document.querySelector('#page-resultados .table-wrap tbody');
     if (tbody) {
       if (!historico || historico.length === 0 || historico.erro) {
@@ -452,10 +448,8 @@ async function carregarRelatorios() {
     const response = await fetch(`${API_URL}/api/dashboard`);
     const dados = await response.json();
     
-    // Atualizar relatório por turma
     const stats = document.querySelectorAll('#page-rel-turma .stat-card .stat-val');
     if (stats.length >= 4) {
-      // Buscar dados reais
       const alunosResp = await fetch(`${API_URL}/api/alunos`);
       const alunos = await alunosResp.json();
       const correcoesResp = await fetch(`${API_URL}/api/historico`);
@@ -479,11 +473,9 @@ async function carregarRelatorios() {
 // ═══════════════════════════════ COMBOS ═══════════════════════════════
 async function carregarCombos() {
   try {
-    // Escola para turma
     const respEscolas = await fetch(`${API_URL}/api/escolas`);
     const escolas = await respEscolas.json();
     
-    // Popula todos os selects de escola
     document.querySelectorAll('select').forEach(select => {
       if (select.id && (select.id === 'turma-escola' || select.id === 'aluno-escola' || select.id.includes('escola'))) {
         const currentValue = select.value;
@@ -500,7 +492,6 @@ async function carregarCombos() {
       }
     });
     
-    // Turma para aluno
     const respTurmas = await fetch(`${API_URL}/api/turmas`);
     const turmas = await respTurmas.json();
     
@@ -520,7 +511,6 @@ async function carregarCombos() {
       }
     });
     
-    // Provas para correção
     const respProvas = await fetch(`${API_URL}/api/provas`);
     const provas = await respProvas.json();
     
@@ -540,7 +530,6 @@ async function carregarCombos() {
       }
     });
     
-    // Alunos para correção
     const respAlunos = await fetch(`${API_URL}/api/alunos`);
     const alunos = await respAlunos.json();
     
@@ -567,7 +556,6 @@ async function carregarCombos() {
 // ═══════════════════════════════ MODALS ═══════════════════════════════
 function openM(id) {
   document.getElementById(id).classList.add('show');
-  // Recarregar combos ao abrir modais
   if (id === 'm-turma' || id === 'm-aluno') carregarCombos();
 }
 
@@ -575,7 +563,6 @@ function closeM(id) {
   document.getElementById(id).classList.remove('show');
 }
 
-// Fechar modal ao clicar fora
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => {
     if (e.target === m) m.classList.remove('show');
@@ -584,7 +571,6 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 
 // ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
 
-// SALVAR ESCOLA
 async function salvarEscola() {
   const dados = {
     nome: document.getElementById('escola-nome')?.value.trim(),
@@ -619,7 +605,6 @@ async function salvarEscola() {
   }
 }
 
-// SALVAR TURMA
 async function salvarTurma() {
   const dados = {
     escola_id: parseInt(document.getElementById('turma-escola')?.value) || null,
@@ -659,7 +644,6 @@ async function salvarTurma() {
   }
 }
 
-// SALVAR ALUNO
 async function salvarAluno() {
   const dados = {
     turma_id: parseInt(document.getElementById('aluno-turma')?.value) || null,
@@ -702,7 +686,6 @@ async function salvarAluno() {
   }
 }
 
-// SALVAR PROVA
 async function salvarProva() {
   const dados = {
     turma_id: parseInt(document.getElementById('prova-turma')?.value) || null,
@@ -937,7 +920,6 @@ async function processarComIA(imagemBase64) {
       }).join('');
     }
     
-    // Atualizar comparativo
     const cd = document.getElementById('ia-comp');
     if (cd) {
       cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
@@ -950,11 +932,9 @@ async function processarComIA(imagemBase64) {
     const ne = document.getElementById('ia-nota');
     if (ne) ne.textContent = dados.nota || 0;
     
-    // Atualizar badge de confiança
     const confBadge = document.querySelector('#ia-result .badge-gray');
     if (confBadge) confBadge.textContent = `${dados.confianca || 0}% conf.`;
     
-    // Atualizar nome do aluno
     const alunoDiv = document.querySelector('#ia-result .g2 .surface2');
     if (alunoDiv) {
       const nomeSpan = alunoDiv.querySelector('div:last-child');
@@ -1004,7 +984,6 @@ async function avaliarTexto() {
     
     document.getElementById('txt-nota').textContent = dados.nota || 0;
     
-    // Atualizar métricas
     if (dados.metricas) {
       document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
       document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
@@ -1136,7 +1115,6 @@ function atualizarInfoAlts() {
 }
 
 // ═══════════════════════════════ INIT ═══════════════════════════════
-// Fechar del modal ao clicar fora
 document.getElementById('del-modal')?.addEventListener('click', e => {
   if (e.target === e.currentTarget) cancelarDel();
 });
