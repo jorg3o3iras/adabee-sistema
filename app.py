@@ -1699,6 +1699,76 @@ def salvar_configuracoes():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
+# ROTAS - USUÁRIOS (NOVO)
+# ============================================
+
+@app.route('/api/usuarios', methods=['GET'])
+def listar_usuarios():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify([])
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, perfil, nome, email, ativo, criado_em FROM usuarios ORDER BY id")
+        usuarios = []
+        for row in cursor.fetchall():
+            usuarios.append({
+                'id': row['id'],
+                'username': row['username'],
+                'perfil': row['perfil'],
+                'nome': row['nome'],
+                'email': row['email'],
+                'ativo': row['ativo'],
+                'criado_em': str(row['criado_em'])
+            })
+        conn.close()
+        return jsonify(usuarios)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/usuarios', methods=['POST'])
+def criar_usuario():
+    try:
+        dados = request.json
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO usuarios (username, senha_hash, perfil, nome, email, ativo)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+        """, (
+            dados.get('username'),
+            dados.get('senha'),
+            dados.get('perfil', 'usuario'),
+            dados.get('nome'),
+            dados.get('email'),
+            dados.get('ativo', True)
+        ))
+        usuario_id = cursor.fetchone()['id']
+        conn.commit()
+        conn.close()
+        return jsonify({'id': usuario_id, 'mensagem': 'Usuário criado com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/usuarios/<int:usuario_id>', methods=['DELETE'])
+def deletar_usuario(usuario_id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM usuarios WHERE id = %s", (usuario_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Usuário excluído com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
 # ROTAS - IP E STATUS
 # ============================================
 
