@@ -3016,7 +3016,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectSerie = document.getElementById('corrigir-serie');
     
     if (selectProva && selectSerie) {
-      // Função para preencher a série
       function preencherSerie() {
         const selected = selectProva.options[selectProva.selectedIndex];
         const serie = selected?.dataset?.serie || '';
@@ -3027,7 +3026,6 @@ document.addEventListener('DOMContentLoaded', function() {
           const options = selectSerie.options;
           let found = false;
           
-          // Tentar encontrar correspondência exata
           for (let i = 0; i < options.length; i++) {
             if (options[i].text === serie || options[i].value === serie) {
               selectSerie.value = options[i].value;
@@ -3037,7 +3035,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           }
           
-          // Se não encontrou, tentar correspondência parcial
           if (!found) {
             for (let i = 0; i < options.length; i++) {
               if (options[i].text.includes(serie) || serie.includes(options[i].text)) {
@@ -3049,7 +3046,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           }
           
-          // Se ainda não encontrou, definir como texto
           if (!found) {
             selectSerie.value = serie;
             console.log('✅ Série preenchida (texto):', serie);
@@ -3060,10 +3056,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
       
-      // Remover eventos antigos e adicionar novo
       selectProva.onchange = preencherSerie;
       
-      // Forçar o preenchimento se já houver valor
       if (selectProva.value) {
         console.log('📋 Forçando preenchimento para:', selectProva.value);
         preencherSerie();
@@ -3073,5 +3067,5 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       console.log('❌ Selects não encontrados');
     }
-  }, 2000); // Aguarda 2 segundos para garantir que os dados foram carregados
+  }, 2000);
 });
