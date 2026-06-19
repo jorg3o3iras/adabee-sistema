@@ -1055,8 +1055,13 @@ def gerar_gabarito():
         cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cursor.fetchone()
         
-        cursor.execute("SELECT titulo, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
+        # Buscar a prova com a quantidade de questões correta
+        cursor.execute("SELECT titulo, tipo_questoes, quantidade_questoes FROM provas WHERE id = %s", (prova_id,))
         prova = cursor.fetchone()
+        
+        # Se a prova tiver quantidade_questoes, usar ela
+        if prova and prova['quantidade_questoes']:
+            qtd_questoes = prova['quantidade_questoes']
         
         conn.close()
         
@@ -1065,7 +1070,7 @@ def gerar_gabarito():
         opcoes = ['A', 'B', 'C'] if tipo_questoes == '3' else ['A', 'B', 'C', 'D']
         titulo_opcoes = "3 OPÇÕES (A, B, C)" if tipo_questoes == '3' else "4 OPÇÕES (A, B, C, D)"
         
-        # Gerar HTML COM BOLINHAS
+        # Gerar HTML COM BOLINHAS (usando qtd_questoes)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -1099,6 +1104,7 @@ def gerar_gabarito():
     <div class="header">
         <h1>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h1>
         <p>{titulo_opcoes} - {turma['serie'] if turma else '1º Ano'}</p>
+        <p style="font-size:12px;color:#666;">Total de {qtd_questoes} questões</p>
     </div>
     <div class="info">
         <div class="info-item"><span class="label">ESCOLA:</span> {escola['nome'] if escola else 'ESCOLA'}</div>
@@ -1148,7 +1154,6 @@ def gerar_gabarito():
     except Exception as e:
         print(f"Erro ao gerar gabarito: {e}")
         return jsonify({'erro': str(e)}), 500
-
 # ============================================
 # ROTAS - DASHBOARD E ESTATÍSTICAS
 # ============================================
