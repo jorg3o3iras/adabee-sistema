@@ -1956,7 +1956,13 @@ async function gerarListaTurma() {
 // ═══════════════════════════════ GERAR CARTÃO RESPOSTA COM BOLINHAS ═══════════════════════════════
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
-        const qtdQuestoes = 20;
+        // Buscar a quantidade de questões do gabarito
+        const provasResp = await fetch(API_URL + '/api/provas');
+        const provas = await provasResp.json();
+        const prova = provas.find(p => p.id == provaId);
+        
+        // Usar a quantidade de questões da prova, ou 20 como fallback
+        const qtdQuestoes = prova?.quantidade_questoes || 20;
         
         const response = await fetch(API_URL + '/api/gerar_gabarito', {
             method: 'POST',
@@ -1978,12 +1984,12 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             
             document.getElementById('lista-resultado').innerHTML = `
                 <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
-                    ✅ Cartão resposta gerado!<br>
+                    ✅ Cartão resposta gerado com ${qtdQuestoes} questões!<br>
                     <small>Uma nova aba foi aberta com a folha de respostas.<br>
                     Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small>
                 </div>
             `;
-            showToast('✅ Cartão resposta gerado com sucesso!', 'success');
+            showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
         } else {
             const erro = await response.json();
             showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
