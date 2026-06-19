@@ -767,18 +767,20 @@ td strong{color:var(--text);font-weight:600}
     <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
     <div class="form-row c3">
       <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select></div>
-      <select class="form-control" id="corrigir-serie">
-    <option value="">Selecione...</option>
-    <option value="1º Ano">1º Ano</option>
-    <option value="2º Ano">2º Ano</option>
-    <option value="3º Ano">3º Ano</option>
-    <option value="4º Ano">4º Ano</option>
-    <option value="5º Ano">5º Ano</option>
-    <option value="6º Ano">6º Ano</option>
-    <option value="7º Ano">7º Ano</option>
-    <option value="8º Ano">8º Ano</option>
-    <option value="9º Ano">9º Ano</option>
-</select>
+      <div class="form-group"><label class="form-label">Série</label>
+        <select class="form-control" id="corrigir-serie">
+          <option value="">Selecione...</option>
+          <option value="1º Ano">1º Ano</option>
+          <option value="2º Ano">2º Ano</option>
+          <option value="3º Ano">3º Ano</option>
+          <option value="4º Ano">4º Ano</option>
+          <option value="5º Ano">5º Ano</option>
+          <option value="6º Ano">6º Ano</option>
+          <option value="7º Ano">7º Ano</option>
+          <option value="8º Ano">8º Ano</option>
+          <option value="9º Ano">9º Ano</option>
+        </select>
+      </div>
       <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
     </div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;">
@@ -1337,6 +1339,36 @@ async function carregarDados() {
     carregarUltimasCorrecoes(),
     carregarUserData()
   ]);
+  
+  // ═══ CORREÇÃO DA SÉRIE ═══
+  setTimeout(function() {
+    console.log('🔧 Aplicando correção da série...');
+    
+    const selectProva = document.getElementById('corrigir-prova');
+    const selectSerie = document.getElementById('corrigir-serie');
+    
+    if (selectProva && selectSerie) {
+      function preencherSerie() {
+        const selected = selectProva.options[selectProva.selectedIndex];
+        const serie = selected?.dataset?.serie || '';
+        
+        if (serie) {
+          const options = selectSerie.options;
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].text === serie || options[i].value === serie) {
+              selectSerie.value = options[i].value;
+              console.log('✅ Série preenchida:', selectSerie.value);
+              return;
+            }
+          }
+          selectSerie.value = serie;
+        }
+      }
+      
+      selectProva.onchange = preencherSerie;
+      if (selectProva.value) preencherSerie();
+    }
+  }, 1500);
 }
 
 // ═══════════════════════════════ ESCOLAS ═══════════════════════════════
@@ -3006,104 +3038,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ═══════════════════════════════ INIT ═══════════════════════════════
-(function() {
-    'use strict';
-    
-    console.log('🚀 Inicializando sistema...');
-    
-    // Aguardar DOM carregar
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', iniciar);
-    } else {
-        iniciar();
-    }
-    
-    function iniciar() {
-        console.log('📋 DOM carregado, iniciando...');
-        
-        // Modal de exclusão
-        const delModal = document.getElementById('del-modal');
-        if (delModal) {
-            delModal.addEventListener('click', function(e) {
-                if (e.target === this) cancelarDel();
-            });
-        }
-        
-        // Inicializar componentes
-        if (typeof buildGabGrid === 'function') buildGabGrid();
-        if (typeof carregarCombos === 'function') carregarCombos();
-        if (typeof carregarDados === 'function') carregarDados();
-        
-        // Modal de prova
-        const tipoProva = document.getElementById('modal-prova-tipo');
-        if (tipoProva && typeof gerarGabaritoModal === 'function') {
-            gerarGabaritoModal(tipoProva.value);
-        }
-        
-        // ═══ CORREÇÃO DA SÉRIE ═══
-        setTimeout(function() {
-            console.log('🔧 Aplicando correção da série...');
-            
-            const selectProva = document.getElementById('corrigir-prova');
-            const selectSerie = document.getElementById('corrigir-serie');
-            
-            if (selectProva && selectSerie) {
-                function preencherSerie() {
-                    const selected = selectProva.options[selectProva.selectedIndex];
-                    const serie = selected?.dataset?.serie || '';
-                    
-                    console.log('📌 Série encontrada:', serie);
-                    
-                    if (serie) {
-                        const options = selectSerie.options;
-                        let found = false;
-                        
-                        for (let i = 0; i < options.length; i++) {
-                            if (options[i].text === serie || options[i].value === serie) {
-                                selectSerie.value = options[i].value;
-                                found = true;
-                                console.log('✅ Série preenchida (exata):', options[i].value);
-                                break;
-                            }
-                        }
-                        
-                        if (!found) {
-                            for (let i = 0; i < options.length; i++) {
-                                if (options[i].text.includes(serie) || serie.includes(options[i].text)) {
-                                    selectSerie.value = options[i].value;
-                                    found = true;
-                                    console.log('✅ Série preenchida (parcial):', options[i].value);
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (!found) {
-                            selectSerie.value = serie;
-                            console.log('✅ Série preenchida (texto):', serie);
-                        }
-                    } else {
-                        selectSerie.value = '';
-                        console.log('⚠️ Nenhuma série encontrada');
-                    }
-                }
-                
-                selectProva.onchange = preencherSerie;
-                
-                if (selectProva.value) {
-                    console.log('📋 Forçando preenchimento para:', selectProva.value);
-                    preencherSerie();
-                }
-                
-                console.log('✅ Correção da série aplicada!');
-            } else {
-                console.log('❌ Selects não encontrados');
-            }
-        }, 2000);
-        
-        console.log('✅ Sistema inicializado com sucesso!');
-    }
-})();
+document.getElementById('del-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) cancelarDel();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Inicializando sistema...');
+  buildGabGrid();
+  carregarCombos();
+  carregarDados();
+  
+  const tipoProva = document.getElementById('modal-prova-tipo');
+  if (tipoProva) gerarGabaritoModal(tipoProva.value);
+});
+
 </script>
 
 </body>
