@@ -2377,6 +2377,7 @@ function limparRespostasCM() {
 }
 
 // ═══════════════════════════════ SALVAR CORREÇÃO MANUAL - CORRIGIDO ═══════════════════════════════
+// ═══════════════════════════════ SALVAR CORREÇÃO MANUAL - CORRIGIDO ═══════════════════════════════
 function salvarCorrecaoManual() {
     const qtd = correcaoManualData.quantidade || 20;
     const respostas = correcaoManualData.respostasAluno || [];
@@ -2415,33 +2416,91 @@ function salvarCorrecaoManual() {
     .then(response => response.json())
     .then(data => {
         if (data.sucesso) {
-            showToast('✅ Correção manual salva com sucesso! Nota: ' + nota.toFixed(1), 'success');
+            showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
             closeM('m-correcao-manual');
             
-            // ATUALIZAR A INTERFACE
-            // 1. Atualizar a nota exibida no resultado da IA
-            document.getElementById('ia-nota').textContent = nota.toFixed(1);
-            const status = nota >= 5 ? 'APROVADO' : 'REPROVADO';
-            const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
-            document.getElementById('ia-status').textContent = status;
-            document.getElementById('ia-status').className = 'badge ' + badgeClass;
+            // ========================================
+            // ATUALIZAR O CARD DE RESULTADO DA IA
+            // ========================================
             
-            // 2. Adicionar badge de "Manual" no resultado
+            // 1. Atualizar a nota
+            const notaEl = document.getElementById('ia-nota');
+            if (notaEl) {
+                notaEl.textContent = nota.toFixed(1);
+                notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)';
+            }
+            
+            // 2. Atualizar o status
+            const statusEl = document.getElementById('ia-status');
+            if (statusEl) {
+                const status = nota >= 5 ? 'APROVADO' : 'REPROVADO';
+                const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
+                statusEl.textContent = status;
+                statusEl.className = 'badge ' + badgeClass;
+            }
+            
+            // 3. Atualizar os acertos exibidos no resumo
+            const acertosEl = document.getElementById('ia-acertos');
+            if (acertosEl) {
+                acertosEl.textContent = acertos;
+            }
+            
+            // 4. Atualizar o total de questões
+            const totalEl = document.getElementById('ia-total');
+            if (totalEl) {
+                totalEl.textContent = qtd;
+            }
+            
+            // 5. Adicionar/Atualizar badge de "Manual" no header do card
             const header = document.querySelector('.card-glow-green .card-header .btn-group');
             if (header) {
+                // Remover badge antigo se existir
                 const oldBadge = header.querySelector('.badge-manual');
                 if (oldBadge) oldBadge.remove();
                 
+                // Adicionar badge de manual
                 const manualBadge = document.createElement('span');
                 manualBadge.className = 'badge badge-orange badge-manual';
                 manualBadge.textContent = '✏️ Manual';
                 header.appendChild(manualBadge);
             }
             
-            // 3. Recarregar dados do banco
-            carregarResultados();
-            carregarDashboard();
-            carregarUltimasCorrecoes();
+            // 6. Atualizar a lista de respostas detectadas com cores
+            const respContainer = document.getElementById('ia-resp');
+            if (respContainer && respostas.length > 0) {
+                const gabarito = correcaoManualData.gabarito || [];
+                respContainer.innerHTML = respostas.map((resp, i) => {
+                    const ok = resp === gabarito[i];
+                    return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i+1) + ':' + resp + '</span>';
+                }).join('');
+            }
+            
+            // 7. Atualizar o grid de comparação
+            const compContainer = document.getElementById('ia-comp');
+            if (compContainer && respostas.length > 0) {
+                const gabarito = correcaoManualData.gabarito || [];
+                compContainer.innerHTML = respostas.map((resp, i) => {
+                    const ok = resp === gabarito[i];
+                    return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i+1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + resp + '</div></div>';
+                }).join('');
+            }
+            
+            // 8. Atualizar a confiança para 100% (já que é manual)
+            const confiancaEl = document.getElementById('confianca-badge');
+            if (confiancaEl) {
+                confiancaEl.textContent = '100% conf.';
+            }
+            
+            // ========================================
+            // RECARREGAR OUTRAS PARTES DO SISTEMA
+            // ========================================
+            
+            // Recarregar resultados, dashboard e últimas correções
+            setTimeout(() => {
+                carregarResultados();
+                carregarDashboard();
+                carregarUltimasCorrecoes();
+            }, 500);
             
         } else {
             showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
@@ -2452,7 +2511,6 @@ function salvarCorrecaoManual() {
         console.error('Erro ao salvar correção manual:', erro);
     });
 }
-
 // ═══════════════════════════════ RESULTADOS - CORRIGIDO (BUSCANDO DO BANCO) ═══════════════════════════════
 async function carregarResultados() {
     try {
