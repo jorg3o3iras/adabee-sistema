@@ -14,6 +14,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytesseract
 import random
+import traceback
 
 # ============================================
 # IMPORTAÇÃO DO GEMINI
@@ -714,10 +715,15 @@ def excluir_prova(id):
 def salvar_gabarito():
     """
     Salva o gabarito de uma prova no banco de dados.
+    VERSÃO CORRIGIDA - COM TRATAMENTO DE ERROS DETALHADO
     """
     try:
+        print("=" * 60)
+        print("📝 INICIANDO SALVAMENTO DO GABARITO")
+        print("=" * 60)
+        
         data = request.json
-        print(f"📝 Recebendo dados do gabarito: {data}")
+        print(f"📥 Dados recebidos: {data}")
         
         # Validar dados recebidos
         prova_id = data.get('prova_id')
@@ -737,11 +743,18 @@ def salvar_gabarito():
             if r and str(r).strip().upper() in ['A', 'B', 'C', 'D']:
                 respostas_validas.append(str(r).strip().upper())
         
+        # Se não houver respostas válidas, mas há respostas, tentar converter
+        if not respostas_validas and respostas:
+            for r in respostas:
+                if r:
+                    respostas_validas.append(str(r).strip().upper())
+        
         if not respostas_validas:
             print("❌ Nenhuma resposta válida encontrada")
             return jsonify({'erro': 'Respostas devem ser A, B, C ou D'}), 400
         
-        print(f"📝 Respostas válidas: {respostas_validas} (total: {len(respostas_validas)})")
+        print(f"📝 Respostas válidas: {respostas_validas}")
+        print(f"📝 Total de respostas: {len(respostas_validas)}")
         
         # Conectar ao banco
         conn = get_db_connection()
@@ -753,6 +766,7 @@ def salvar_gabarito():
             cur = conn.cursor(cursor_factory=RealDictCursor)
             
             # Verificar se a prova existe
+            print(f"🔍 Verificando prova ID: {prova_id}")
             cur.execute("SELECT id, titulo, turma_id FROM provas WHERE id = %s", (prova_id,))
             prova = cur.fetchone()
             
@@ -764,15 +778,18 @@ def salvar_gabarito():
             
             print(f"✅ Prova encontrada: {prova['titulo']} (ID: {prova['id']})")
             
+            # Converter lista para formato PostgreSQL ARRAY
+            gabarito_array = '{' + ','.join([f'"{r}"' for r in respostas_validas]) + '}'
+            print(f"📦 Gabarito em formato ARRAY: {gabarito_array}")
+            
             # ATUALIZAR A PROVA COM O GABARITO
             cur.execute("""
                 UPDATE provas 
-                SET gabarito = %s,
-                    quantidade_questoes = %s,
-                    tipo_questoes = %s
+                SET gabarito = %s::text[],
+                    quantidade_questoes = %s
                 WHERE id = %s
                 RETURNING id, titulo
-            """, (respostas_validas, len(respostas_validas), '4', prova_id))
+            """, (respostas_validas, len(respostas_validas), prova_id))
             
             result = cur.fetchone()
             
@@ -784,6 +801,7 @@ def salvar_gabarito():
                 cur.execute("SELECT gabarito, quantidade_questoes FROM provas WHERE id = %s", (prova_id,))
                 prova_atualizada = cur.fetchone()
                 print(f"📊 Gabarito atualizado: {prova_atualizada['gabarito']}")
+                print(f"📊 Quantidade de questões: {prova_atualizada['quantidade_questoes']}")
                 
                 cur.close()
                 conn.close()
@@ -798,11 +816,19 @@ def salvar_gabarito():
                 conn.rollback()
                 cur.close()
                 conn.close()
-                print("❌ Erro ao atualizar a prova")
-                return jsonify({'erro': 'Erro ao salvar gabarito'}), 500
+                print("❌ Erro ao atualizar a prova - nenhum resultado retornado")
+                return jsonify({'erro': 'Erro ao salvar gabarito - nenhuma linha atualizada'}), 500
                 
+        except psycopg2.Error as e:
+            print(f"❌ Erro no PostgreSQL: {e}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return jsonify({'erro': f'Erro no banco de dados: {str(e)}'}), 500
+            
         except Exception as e:
             print(f"❌ Erro no banco de dados: {e}")
+            print(traceback.format_exc())
             if conn:
                 conn.rollback()
                 conn.close()
@@ -810,6 +836,7 @@ def salvar_gabarito():
             
     except Exception as e:
         print(f"❌ Erro geral: {e}")
+        print(traceback.format_exc())
         return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
 
 
