@@ -707,10 +707,6 @@ def excluir_prova(id):
     
     return jsonify({'erro': 'Erro ao excluir prova'}), 500
 
-# ============================================
-# ROTA DE GABARITOS - CORRIGIDA (USANDO ::text[] PARA FORÇAR ARRAY)
-# ============================================
-
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     """
@@ -734,7 +730,7 @@ def salvar_gabarito():
         if not respostas or len(respostas) == 0:
             return jsonify({'erro': 'Respostas do gabarito são obrigatórias'}), 400
         
-        # Filtrar respostas (igual faz na criação da prova)
+        # Filtrar respostas
         respostas_validas = []
         for r in respostas:
             if r:
@@ -762,8 +758,8 @@ def salvar_gabarito():
             print(f"✅ Prova encontrada: {prova[1]} (ID: {prova[0]})")
             
             # ============================================================
-            # CORREÇÃO AQUI: Usar %s::text[] para forçar o PostgreSQL a 
-            # interpretar a lista como um array de texto
+            # CORREÇÃO AQUI! Usar %s::text[] para forçar o PostgreSQL
+            # a interpretar a lista como um array de texto
             # ============================================================
             cur.execute("""
                 UPDATE provas 
@@ -812,7 +808,6 @@ def salvar_gabarito():
         print(f"❌ Erro geral: {e}")
         print(traceback.format_exc())
         return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
-
 
 @app.route('/api/gabaritos/prova/<int:prova_id>', methods=['GET'])
 def buscar_gabarito_por_prova(prova_id):
