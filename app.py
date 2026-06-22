@@ -13,333 +13,519 @@ from PIL import Image
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytesseract
-import random
-import traceback
-
-# ============================================
-# IMPORTAÇÃO DO GEMINI
-# ============================================
-try:
-    import google.generativeai as genai
-    GEMINI_AVAILABLE = True
-    print("✅ Gemini AI disponível!")
-except ImportError:
-    GEMINI_AVAILABLE = False
-    print("⚠️ Gemini AI não instalado. Execute: pip install google-generativeai")
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO DO BANCO DE DADOS
+# HUGGING FACE - DESATIVADO
+# ============================================
+HF_AVAILABLE = False
+print("ℹ️ Hugging Face desativado - Usando OpenCV + OCR + Análise Avançada")
+
+# ============================================
+# CONFIGURAR BANCO DE DADOS - SUPABASE
 # ============================================
 
 SUPABASE_URL = 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
 
 def get_db_connection():
-    """Obtém conexão com o banco de dados Supabase"""
     try:
-        conn = psycopg2.connect(SUPABASE_URL)
+        conn = psycopg2.connect(
+            SUPABASE_URL,
+            cursor_factory=RealDictCursor,
+            connect_timeout=15,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3
+        )
+        print("✅ Conectado ao Supabase!")
         return conn
     except Exception as e:
-        print(f"❌ Erro ao conectar ao banco: {e}")
-        return None
+        print(f"❌ ERRO ao conectar: {e}")
+        raise e
 
-# ============================================
-# USUÁRIOS FIXOS (FALLBACK)
-# ============================================
-
-USUARIOS_FIXOS = {
-    'admin': {'senha': 'admin', 'perfil': 'admin', 'nome': 'Administrador'},
-    'usuario': {'senha': '123', 'perfil': 'usuario', 'nome': 'Usuário'},
-    'professor1': {'senha': '123', 'perfil': 'usuario', 'nome': 'Professor 1'}
-}
-
-# ============================================
-# FUNÇÕES AUXILIARES
-# ============================================
-
-def init_db():
-    """Inicializa as tabelas do banco de dados se não existirem"""
-    conn = get_db_connection()
-    if not conn:
-        print("⚠️ Banco não disponível, usando dados em memória")
-        return
-    
+def init_database():
     try:
-        cur = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        # Tabela de escolas
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS escolas (
-                id SERIAL PRIMARY KEY,
-                nome TEXT NOT NULL,
-                inep TEXT,
-                municipio TEXT,
-                estado TEXT DEFAULT 'PA',
-                telefone TEXT,
-                diretor TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS escolas (
+            id SERIAL PRIMARY KEY, 
+            nome TEXT NOT NULL, 
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
         
-        # Tabela de turmas
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS turmas (
-                id SERIAL PRIMARY KEY,
-                escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-                nome TEXT NOT NULL,
-                serie TEXT,
-                turno TEXT DEFAULT 'Manhã',
-                professor TEXT,
-                capacidade INTEGER DEFAULT 35,
-                ano_letivo INTEGER DEFAULT 2025,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS turmas (
+            id SERIAL PRIMARY KEY, 
+            escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL, 
+            serie TEXT DEFAULT '1º Ano', 
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
         
-        # Tabela de alunos
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS alunos (
-                id SERIAL PRIMARY KEY,
-                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-                nome TEXT NOT NULL,
-                matricula TEXT,
-                numero_chamada INTEGER,
-                data_nascimento DATE,
-                genero TEXT,
-                responsavel TEXT,
-                telefone TEXT,
-                email TEXT,
-                observacoes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS alunos (
+            id SERIAL PRIMARY KEY, 
+            turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL, 
+            matricula TEXT, 
+            numero_chamada INTEGER,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
         
-        # Tabela de provas
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS provas (
-                id SERIAL PRIMARY KEY,
-                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-                titulo TEXT NOT NULL,
-                disciplina TEXT,
-                bimestre TEXT,
-                data_prova DATE,
-                valor_nota DECIMAL(5,2) DEFAULT 10,
-                tipo_questoes TEXT DEFAULT '4',
-                quantidade_questoes INTEGER DEFAULT 20,
-                gabarito TEXT[],
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS provas (
+            id SERIAL PRIMARY KEY, 
+            turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+            titulo TEXT NOT NULL, 
+            descricao TEXT, 
+            gabarito TEXT, 
+            data_prova DATE,
+            valor_nota REAL DEFAULT 10, 
+            quantidade_questoes INTEGER, 
+            tipo_questoes TEXT DEFAULT '4',
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
         
-        # Tabela de histórico de correções
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS historico (
-                id SERIAL PRIMARY KEY,
-                prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-                respostas TEXT[],
-                acertos INTEGER,
-                nota DECIMAL(5,2),
-                total INTEGER,
-                tipo_correcao TEXT DEFAULT 'ia',
-                data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes (
+            id SERIAL PRIMARY KEY, 
+            prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+            respostas TEXT, 
+            acertos INTEGER, 
+            nota REAL, 
+            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            metodo_ia TEXT DEFAULT 'hibrido'
+        )''')
         
-        # Tabela de usuários
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                nome TEXT,
-                username TEXT UNIQUE NOT NULL,
-                senha_hash TEXT NOT NULL,
-                email TEXT,
-                perfil TEXT DEFAULT 'usuario',
-                ativo BOOLEAN DEFAULT TRUE,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Inserir usuários padrão se não existirem
-        for username, dados in USUARIOS_FIXOS.items():
-            cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
-            if not cur.fetchone():
-                cur.execute("""
-                    INSERT INTO usuarios (nome, username, senha_hash, perfil, ativo)
-                    VALUES (%s, %s, %s, %s, TRUE)
-                """, (dados['nome'], username, dados['senha'], dados['perfil']))
-                print(f"✅ Usuário {username} criado com sucesso!")
+        cursor.execute('''CREATE TABLE IF NOT EXISTS correcoes_redacao (
+            id SERIAL PRIMARY KEY, 
+            prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+            aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+            texto TEXT, 
+            nota REAL, 
+            feedback TEXT, 
+            data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            metodo_ia TEXT DEFAULT 'hibrido'
+        )''')
         
         conn.commit()
-        cur.close()
         conn.close()
         print("✅ Banco de dados inicializado com sucesso!")
     except Exception as e:
         print(f"❌ Erro ao inicializar banco: {e}")
-        if conn:
-            conn.close()
-
-# Inicializar banco ao iniciar a aplicação
-init_db()
 
 # ============================================
-# ROTAS DE AUTENTICAÇÃO
+# GEMINI - DESATIVADO
 # ============================================
 
-@app.route('/api/login', methods=['POST'])
-def login():
-    """Autenticação de usuário"""
-    data = request.json
-    username = data.get('username')
-    senha = data.get('senha')
-    
-    print(f"🔐 Tentativa de login: username={username}")
-    
-    if not username or not senha:
-        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
+GEMINI_AVAILABLE = False
+print("ℹ️ Gemini AI desativado - Usando sistema híbrido")
+
+# ============================================
+# CLASSE CORRETOR HÍBRIDO - COM MARCAS DE REFERÊNCIA
+# ============================================
+
+class CorretorHibrido:
+    @staticmethod
+    def preprocessar_imagem(imagem_base64):
         try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT id, nome, username, senha_hash, perfil, ativo 
-                FROM usuarios 
-                WHERE username = %s AND ativo = TRUE
-            """, (username,))
-            usuario = cur.fetchone()
-            cur.close()
-            conn.close()
+            if ',' in imagem_base64:
+                imagem_base64 = imagem_base64.split(',')[1]
+            imagem_bytes = base64.b64decode(imagem_base64)
+            nparr = np.frombuffer(imagem_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return None
+            height, width = img.shape[:2]
+            if width > 1200:
+                scale = 1200 / width
+                new_width = int(width * scale)
+                new_height = int(height * scale)
+                img = cv2.resize(img, (new_width, new_height))
+            return img
+        except Exception as e:
+            print(f"Erro no pré-processamento: {e}")
+            return None
+    
+    @staticmethod
+    def detectar_bolinhas_com_preenchimento(imagem_base64):
+        """
+        Detecta bolinhas e calcula o nível de preenchimento de cada uma
+        """
+        try:
+            img = CorretorHibrido.preprocessar_imagem(imagem_base64)
+            if img is None:
+                return None
             
-            if usuario:
-                print(f"✅ Usuário encontrado no banco: {usuario['username']}")
-                if usuario['senha_hash'] == senha:
-                    return jsonify({
-                        'sucesso': True,
-                        'perfil': usuario['perfil'],
-                        'usuario': usuario['username'],
-                        'nome': usuario['nome']
-                    })
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            
+            # Binarização para detectar contornos
+            _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            bolinhas = []
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                if 50 < area < 400:
+                    M = cv2.moments(cnt)
+                    if M['m00'] > 0:
+                        cx = int(M['m10'] / M['m00'])
+                        cy = int(M['m01'] / M['m00'])
+                        
+                        # Verificar circularidade
+                        perimeter = cv2.arcLength(cnt, True)
+                        if perimeter > 0:
+                            circularity = 4 * np.pi * area / (perimeter * perimeter)
+                            if circularity > 0.5:
+                                # Extrair pixels da bolinha
+                                mask = np.zeros_like(gray)
+                                cv2.drawContours(mask, [cnt], -1, 255, -1)
+                                roi = cv2.bitwise_and(gray, gray, mask=mask)
+                                pixels = roi[roi > 0]
+                                
+                                if len(pixels) > 0:
+                                    intensidade_media = np.mean(pixels)
+                                    # Quanto menor a intensidade, mais preta (preenchida)
+                                    preenchimento = 1 - (intensidade_media / 255)
+                                    
+                                    bolinhas.append({
+                                        'x': cx,
+                                        'y': cy,
+                                        'area': area,
+                                        'preenchimento': preenchimento,
+                                        'intensidade': intensidade_media
+                                    })
+            
+            print(f"✅ Bolinhas detectadas: {len(bolinhas)}")
+            return bolinhas
+            
+        except Exception as e:
+            print(f"Erro ao detectar bolinhas: {e}")
+            return None
+    
+    @staticmethod
+    def detectar_respostas_com_preenchimento(imagem_base64, num_opcoes=4):
+        """
+        Detecta respostas analisando o preenchimento de cada bolinha
+        """
+        try:
+            # Detectar todas as bolinhas com preenchimento
+            bolinhas = CorretorHibrido.detectar_bolinhas_com_preenchimento(imagem_base64)
+            
+            if not bolinhas or len(bolinhas) == 0:
+                return None, 0.0, 'Nenhuma bolinha detectada'
+            
+            # Ordenar por Y (vertical)
+            bolinhas.sort(key=lambda b: b['y'])
+            
+            # ============================================
+            # AGRUPAR POR LINHAS (QUESTÕES)
+            # ============================================
+            
+            linhas = []
+            linha_atual = []
+            y_anterior = bolinhas[0]['y']
+            tolerancia_y = 20
+            
+            for bolinha in bolinhas:
+                if abs(bolinha['y'] - y_anterior) > tolerancia_y and linha_atual:
+                    linhas.append(linha_atual)
+                    linha_atual = []
+                linha_atual.append(bolinha)
+                y_anterior = bolinha['y']
+            
+            if linha_atual:
+                linhas.append(linha_atual)
+            
+            # ============================================
+            # ANALISAR CADA LINHA
+            # ============================================
+            
+            respostas = []
+            letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            
+            for idx, linha in enumerate(linhas, start=1):
+                if idx > 50:
+                    break
+                
+                # Ordenar por X (esquerda → direita)
+                linha.sort(key=lambda b: b['x'])
+                
+                # Pegar apenas as primeiras num_opcoes bolinhas (A, B, C, D)
+                linha = linha[:num_opcoes]
+                
+                if len(linha) == 0:
+                    respostas.append((idx, '?'))
+                    continue
+                
+                # ============================================
+                # ENCONTRAR A BOLINHA MAIS PRETA (PREECHIDA)
+                # ============================================
+                
+                melhor_preenchimento = -1
+                melhor_pos = -1
+                
+                for pos, bolinha in enumerate(linha):
+                    print(f"Q{idx} Pos{pos}: preenchimento={bolinha['preenchimento']:.2f}")
+                    
+                    if bolinha['preenchimento'] > melhor_preenchimento:
+                        melhor_preenchimento = bolinha['preenchimento']
+                        melhor_pos = pos
+                
+                # Verificar se a bolinha está realmente preenchida
+                # Limiar de 20% de preenchimento (ajustável)
+                if melhor_pos >= 0 and melhor_preenchimento > 0.20:
+                    resposta = letras[melhor_pos] if melhor_pos < len(letras) else '?'
+                    respostas.append((idx, resposta))
+                    print(f"Q{idx}: Resposta = {resposta} (preenchimento: {melhor_preenchimento:.2f})")
                 else:
-                    print(f"❌ Senha incorreta para: {username}")
-            else:
-                print(f"❌ Usuário não encontrado no banco: {username}")
+                    respostas.append((idx, '?'))
+            
+            # ============================================
+            # VERIFICAR RESULTADOS
+            # ============================================
+            
+            if len(respostas) == 0:
+                return None, 0.0, 'Nenhuma resposta detectada'
+            
+            respostas.sort(key=lambda x: x[0])
+            letras_respostas = [r[1] for r in respostas]
+            
+            validas = sum(1 for r in letras_respostas if r != '?')
+            confianca = round((validas / len(letras_respostas)) * 100, 1)
+            
+            print("========== DEBUG ==========")
+            print(f"Bolinhas: {len(bolinhas)}")
+            print(f"Linhas: {len(linhas)}")
+            print(f"Respostas: {letras_respostas}")
+            print("===========================")
+            
+            return letras_respostas, confianca, 'Preenchimento'
+            
         except Exception as e:
-            print(f"❌ Erro no login via banco: {e}")
+            print(f"Erro na detecção por preenchimento: {e}")
+            return None, 0.0, 'Erro'
     
-    # FALLBACK
-    if username in USUARIOS_FIXOS:
-        dados = USUARIOS_FIXOS[username]
-        if dados['senha'] == senha:
-            print(f"✅ Login via fallback: {username}")
-            return jsonify({
-                'sucesso': True,
-                'perfil': dados['perfil'],
-                'usuario': username,
-                'nome': dados['nome']
-            })
-    
-    print(f"❌ Falha no login para: {username}")
-    return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
-
+    @staticmethod
+    def detectar_respostas_hibrido(imagem_base64, num_opcoes=4):
+        """
+        Usa a detecção por preenchimento
+        """
+        respostas, confianca, metodo = CorretorHibrido.detectar_respostas_com_preenchimento(imagem_base64, num_opcoes)
+        if respostas and len(respostas) >= 3:
+            return respostas, confianca, metodo
+        
+        return None, 0.0, 'Nenhum método funcionou'
 # ============================================
-# ROTAS DE USUÁRIOS
+# CLASSE PARA CORREÇÃO DE REDAÇÃO (ANÁLISE AVANÇADA)
 # ============================================
 
-@app.route('/api/usuarios', methods=['GET'])
-def listar_usuarios():
-    """Lista todos os usuários"""
-    conn = get_db_connection()
-    if conn:
+class CorretorRedacaoHibrido:
+    @staticmethod
+    def extrair_texto_ocr(imagem_base64):
         try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT id, nome, username, email, perfil, ativo, criado_em FROM usuarios ORDER BY id")
-            usuarios = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(usuarios)
+            if ',' in imagem_base64:
+                imagem_base64 = imagem_base64.split(',')[1]
+            imagem_bytes = base64.b64decode(imagem_base64)
+            nparr = np.frombuffer(imagem_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return None
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+            custom_config = r'--oem 3 --psm 6 -l por'
+            text = pytesseract.image_to_string(binary, config=custom_config)
+            return text.strip() if text.strip() else None
         except Exception as e:
-            print(f"Erro ao listar usuários: {e}")
+            print(f"Erro ao extrair texto: {e}")
+            return None
     
-    resultado = []
-    for username, dados in USUARIOS_FIXOS.items():
-        resultado.append({
-            'id': 0,
-            'nome': dados['nome'],
-            'username': username,
-            'email': '',
-            'perfil': dados['perfil'],
-            'ativo': True,
-            'criado_em': datetime.now().isoformat()
+    @staticmethod
+    def analisar_redacao(texto):
+        palavras = texto.split()
+        num_palavras = len(palavras)
+        num_frases = len(re.split(r'[.!?]+', texto)) - 1
+        num_paragrafos = len(texto.split('\n\n')) if '\n\n' in texto else 1
+        
+        palavras_unicas = len(set([p.lower() for p in palavras]))
+        proporcao_vocabulario = (palavras_unicas / num_palavras) * 100 if num_palavras > 0 else 0
+        
+        conectores = ['e', 'mas', 'porém', 'contudo', 'entretanto', 'portanto', 'assim', 'logo', 'pois', 'porque', 'além', 'também', 'bem como', 'da mesma forma', 'outrossim', 'todavia', 'conquanto', 'embora', 'apesar', 'enquanto', 'quando', 'como', 'onde', 'cujo', 'que', 'qual', 'quem']
+        num_conectores = sum(1 for p in palavras if p.lower() in conectores)
+        
+        if num_palavras >= 200:
+            nota_coerencia = 8.0
+        elif num_palavras >= 150:
+            nota_coerencia = 6.0
+        elif num_palavras >= 100:
+            nota_coerencia = 4.0
+        elif num_palavras >= 50:
+            nota_coerencia = 2.0
+        else:
+            nota_coerencia = 0.0
+        
+        if num_paragrafos >= 3 and num_frases >= 8:
+            nota_estrutura = 8.0
+        elif num_paragrafos >= 2 and num_frases >= 5:
+            nota_estrutura = 6.0
+        elif num_paragrafos >= 1 and num_frases >= 3:
+            nota_estrutura = 4.0
+        else:
+            nota_estrutura = 2.0
+        
+        if proporcao_vocabulario >= 60:
+            nota_vocabulario = 8.0
+        elif proporcao_vocabulario >= 45:
+            nota_vocabulario = 6.0
+        elif proporcao_vocabulario >= 30:
+            nota_vocabulario = 4.0
+        else:
+            nota_vocabulario = 2.0
+        
+        if num_conectores >= 10:
+            nota_gramatica = 8.0
+        elif num_conectores >= 6:
+            nota_gramatica = 6.0
+        elif num_conectores >= 3:
+            nota_gramatica = 4.0
+        else:
+            nota_gramatica = 2.0
+        
+        nota_final = (nota_coerencia * 0.3 + nota_estrutura * 0.25 + 
+                     nota_vocabulario * 0.25 + nota_gramatica * 0.2)
+        nota_final = round(nota_final * 2) / 2
+        
+        feedback_parts = []
+        
+        if num_palavras >= 200:
+            feedback_parts.append("✅ Ótimo desenvolvimento do tema. Texto bem extenso e detalhado.")
+        elif num_palavras >= 150:
+            feedback_parts.append("✅ Bom desenvolvimento. Continue expandindo suas ideias.")
+        elif num_palavras >= 100:
+            feedback_parts.append("📝 Desenvolvimento razoável. Tente aprofundar mais seus argumentos.")
+        elif num_palavras >= 50:
+            feedback_parts.append("⚠️ Texto curto. É importante desenvolver mais suas ideias.")
+        else:
+            feedback_parts.append("❌ Texto muito curto. É necessário desenvolver mais o conteúdo.")
+        
+        if num_paragrafos >= 3:
+            feedback_parts.append("✅ Boa organização em parágrafos. Estrutura clara.")
+        elif num_paragrafos >= 2:
+            feedback_parts.append("📝 Estrutura razoável. Tente dividir melhor em parágrafos.")
+        else:
+            feedback_parts.append("⚠️ Poucos parágrafos. Organize melhor suas ideias.")
+        
+        if proporcao_vocabulario >= 60:
+            feedback_parts.append("✅ Vocabulário rico e variado. Ótimo uso de palavras.")
+        elif proporcao_vocabulario >= 45:
+            feedback_parts.append("✅ Bom vocabulário. Continue expandindo seu repertório.")
+        else:
+            feedback_parts.append("📝 Vocabulário limitado. Busque usar palavras mais variadas.")
+        
+        if num_conectores >= 8:
+            feedback_parts.append("✅ Excelente uso de conectores. Texto muito coeso.")
+        elif num_conectores >= 5:
+            feedback_parts.append("✅ Bom uso de conectores. Texto coeso.")
+        else:
+            feedback_parts.append("📝 Poucos conectores. Use mais palavras de ligação.")
+        
+        dicas = []
+        if num_palavras < 150:
+            dicas.append("📌 Escreva mais sobre o tema, desenvolvendo cada argumento.")
+        if num_paragrafos < 3:
+            dicas.append("📌 Divida seu texto em introdução, desenvolvimento e conclusão.")
+        if proporcao_vocabulario < 45:
+            dicas.append("📌 Busque sinônimos e evite repetir as mesmas palavras.")
+        if num_conectores < 5:
+            dicas.append("📌 Use mais conectores como 'portanto', 'contudo', 'além disso'.")
+        
+        if dicas:
+            feedback_parts.append("\n💡 **Dicas para melhorar:**")
+            feedback_parts.extend(dicas)
+        
+        if nota_final >= 8:
+            conceito = "Excelente"
+        elif nota_final >= 6:
+            conceito = "Bom"
+        elif nota_final >= 4:
+            conceito = "Regular"
+        else:
+            conceito = "Insuficiente"
+        
+        feedback_completo = "\n\n".join(feedback_parts)
+        
+        metricas = {
+            'palavras': num_palavras,
+            'frases': num_frases,
+            'paragrafos': num_paragrafos,
+            'palavras_unicas': palavras_unicas,
+            'proporcao_vocabulario': round(proporcao_vocabulario, 1),
+            'conectores': num_conectores,
+            'nota_coerencia': round(nota_coerencia, 1),
+            'nota_estrutura': round(nota_estrutura, 1),
+            'nota_vocabulario': round(nota_vocabulario, 1),
+            'nota_gramatica': round(nota_gramatica, 1)
+        }
+        
+        return nota_final, conceito, feedback_completo, metricas
+    
+    @staticmethod
+    def corrigir_redacao_hibrido(imagem_base64=None, texto=None):
+        if not texto and imagem_base64:
+            texto = CorretorRedacaoHibrido.extrair_texto_ocr(imagem_base64)
+        
+        if not texto:
+            return None, 0.0, None, "Não foi possível extrair o texto", None
+        
+        nota, conceito, feedback, metricas = CorretorRedacaoHibrido.analisar_redacao(texto)
+        
+        return texto, nota, conceito, feedback, metricas, 'OCR + Análise Avançada'
+
+# ============================================
+# ROTAS PRINCIPAIS
+# ============================================
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/api/teste', methods=['GET'])
+def teste():
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'mensagem': 'Servidor funcionando!',
+            'status': 'ok',
+            'banco': 'PostgreSQL (Supabase)',
+            'metodos': ['Contorno', 'OpenCV', 'OCR', 'Análise Avançada']
         })
-    return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/usuarios', methods=['POST'])
-def criar_usuario():
-    """Cria um novo usuário"""
-    data = request.json
-    nome = data.get('nome')
-    username = data.get('username')
-    senha = data.get('senha')
-    email = data.get('email')
-    perfil = data.get('perfil', 'usuario')
-    ativo = data.get('ativo', True)
-    
-    if not nome or not username or not senha:
-        return jsonify({'erro': 'Nome, usuário e senha são obrigatórios'}), 400
-    
-    if len(senha) < 4:
-        return jsonify({'erro': 'Senha deve ter pelo menos 4 caracteres'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT id FROM usuarios WHERE username = %s", (username,))
-            if cur.fetchone():
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Usuário já existe'}), 400
-            
-            cur.execute("""
-                INSERT INTO usuarios (nome, username, senha_hash, email, perfil, ativo)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (nome, username, senha, email, perfil, ativo))
-            
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Usuário criado com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar usuário: {e}")
-    
-    USUARIOS_FIXOS[username] = {
-        'senha': senha,
-        'perfil': perfil,
-        'nome': nome
-    }
-    return jsonify({'id': len(USUARIOS_FIXOS), 'mensagem': 'Usuário criado em memória'})
-
-@app.route('/api/usuarios/<int:id>', methods=['DELETE'])
-def excluir_usuario(id):
-    """Exclui um usuário"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM usuarios WHERE id = %s", (id,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'mensagem': 'Usuário excluído com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir usuário: {e}")
-    
-    return jsonify({'erro': 'Não foi possível excluir o usuário'}), 500
+@app.route('/api/status_ia', methods=['GET'])
+def status_ia():
+    return jsonify({
+        'metodos_disponiveis': {
+            'Contorno': True,
+            'OpenCV': True,
+            'OCR': True,
+            'Analise_Avancada': True
+        },
+        'metodo_ativo': 'Híbrido (Contorno + OpenCV + OCR + Análise Avançada)',
+        'status': '🧠 Sistema híbrido ativo!',
+        'banco': 'PostgreSQL (Supabase)',
+        'vantagens': [
+            '✅ 100% gratuito',
+            '✅ Sem limites de uso',
+            '✅ Correção de provas com detecção por contorno',
+            '✅ Correção de redações com análise avançada'
+        ]
+    })
 
 # ============================================
 # ROTAS DE ESCOLAS
@@ -347,74 +533,46 @@ def excluir_usuario(id):
 
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
-    """Lista todas as escolas"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM escolas ORDER BY nome")
-            escolas = cur.fetchall()
-            cur.close()
-            conn.close()
-            if escolas:
-                return jsonify(escolas)
-        except Exception as e:
-            print(f"Erro ao listar escolas: {e}")
-    
-    return jsonify([])
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nome FROM escolas ORDER BY nome")
+        escolas = [{'id': row['id'], 'nome': row['nome']} for row in cursor.fetchall()]
+        conn.close()
+        return jsonify(escolas)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/escolas', methods=['POST'])
 def criar_escola():
-    """Cria uma nova escola"""
-    data = request.json
-    nome = data.get('nome')
-    
-    if not nome:
-        return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO escolas (nome, inep, municipio, estado, telefone, diretor)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                nome,
-                data.get('inep', ''),
-                data.get('municipio', ''),
-                data.get('estado', 'PA'),
-                data.get('telefone', ''),
-                data.get('diretor', '')
-            ))
-            
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Escola criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar escola: {e}")
-    
-    return jsonify({'erro': 'Erro ao criar escola'}), 500
+    try:
+        dados = request.json
+        nome = dados.get('nome')
+        if not nome:
+            return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO escolas (nome) VALUES (%s) RETURNING id", (nome,))
+        escola_id = cursor.fetchone()['id']
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'id': escola_id, 'mensagem': f'Escola "{nome}" cadastrada com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/escolas/<int:id>', methods=['DELETE'])
-def excluir_escola(id):
-    """Exclui uma escola"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM escolas WHERE id = %s", (id,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'mensagem': 'Escola excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir escola: {e}")
-    
-    return jsonify({'erro': 'Erro ao excluir escola'}), 500
+@app.route('/api/escolas/<int:escola_id>', methods=['DELETE'])
+def deletar_escola(escola_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Escola excluída com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE TURMAS
@@ -422,79 +580,55 @@ def excluir_escola(id):
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
-    """Lista todas as turmas com informações da escola"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT t.*, e.nome as escola_nome 
-                FROM turmas t
-                LEFT JOIN escolas e ON t.escola_id = e.id
-                ORDER BY t.nome
-            """)
-            turmas = cur.fetchall()
-            cur.close()
-            conn.close()
-            if turmas:
-                return jsonify(turmas)
-        except Exception as e:
-            print(f"Erro ao listar turmas: {e}")
-    
-    return jsonify([])
+    try:
+        escola_id = request.args.get('escola_id')
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if escola_id:
+            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas WHERE escola_id = %s ORDER BY nome", (escola_id,))
+        else:
+            cursor.execute("SELECT id, escola_id, nome, serie FROM turmas ORDER BY nome")
+        
+        turmas = [{'id': row['id'], 'escola_id': row['escola_id'], 'nome': row['nome'], 'serie': row['serie']} for row in cursor.fetchall()]
+        conn.close()
+        return jsonify(turmas)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
-    """Cria uma nova turma"""
-    data = request.json
-    
-    if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome da turma e escola são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                data['escola_id'],
-                data['nome'],
-                data.get('serie', '1º Ano'),
-                data.get('turno', 'Manhã'),
-                data.get('professor', ''),
-                data.get('capacidade', 35),
-                data.get('ano_letivo', 2025)
-            ))
-            
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-    
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
+    try:
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        nome = dados.get('nome')
+        serie = dados.get('serie', '1º Ano')
+        
+        if not escola_id or not nome:
+            return jsonify({'erro': 'Escola e nome da turma são obrigatórios'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO turmas (escola_id, nome, serie) VALUES (%s, %s, %s) RETURNING id", 
+                       (escola_id, nome, serie))
+        turma_id = cursor.fetchone()['id']
+        conn.commit()
+        conn.close()
+        return jsonify({'id': turma_id})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/turmas/<int:id>', methods=['DELETE'])
-def excluir_turma(id):
-    """Exclui uma turma"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'mensagem': 'Turma excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir turma: {e}")
-    
-    return jsonify({'erro': 'Erro ao excluir turma'}), 500
+@app.route('/api/turmas/<int:turma_id>', methods=['DELETE'])
+def deletar_turma(turma_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Turma excluída com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE ALUNOS
@@ -502,99 +636,79 @@ def excluir_turma(id):
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    """Lista todos os alunos com informações da turma e escola"""
-    turma_id = request.args.get('turma_id')
-    escola_id = request.args.get('escola_id')
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            
-            query = """
-                SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome, e.id as escola_id
-                FROM alunos a
+    try:
+        turma_id = request.args.get('turma_id')
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if turma_id:
+            cursor.execute("""
+                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
+                FROM alunos a 
                 LEFT JOIN turmas t ON a.turma_id = t.id
-                LEFT JOIN escolas e ON t.escola_id = e.id
-            """
-            params = []
-            
-            if turma_id:
-                query += " WHERE a.turma_id = %s"
-                params.append(turma_id)
-            elif escola_id:
-                query += " WHERE e.id = %s"
-                params.append(escola_id)
-            
-            query += " ORDER BY a.numero_chamada, a.nome"
-            
-            cur.execute(query, params)
-            alunos = cur.fetchall()
-            cur.close()
-            conn.close()
-            
-            if alunos:
-                return jsonify(alunos)
-        except Exception as e:
-            print(f"Erro ao listar alunos: {e}")
-    
-    return jsonify([])
+                WHERE a.turma_id = %s 
+                ORDER BY a.numero_chamada
+            """, (turma_id,))
+        else:
+            cursor.execute("""
+                SELECT a.id, a.turma_id, a.nome, a.matricula, a.numero_chamada, t.nome as turma_nome
+                FROM alunos a 
+                LEFT JOIN turmas t ON a.turma_id = t.id
+                ORDER BY a.numero_chamada
+            """)
+        
+        alunos = [{
+            'id': row['id'], 
+            'turma_id': row['turma_id'], 
+            'nome': row['nome'], 
+            'matricula': row['matricula'], 
+            'numero_chamada': row['numero_chamada'],
+            'turma_nome': row['turma_nome']
+        } for row in cursor.fetchall()]
+        
+        conn.close()
+        return jsonify(alunos)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
-    """Cria um novo aluno"""
-    data = request.json
-    
-    if not data.get('nome') or not data.get('turma_id'):
-        return jsonify({'erro': 'Nome do aluno e turma são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO alunos (turma_id, nome, matricula, numero_chamada, data_nascimento, genero, responsavel, telefone, email, observacoes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                data['turma_id'],
-                data['nome'],
-                data.get('matricula', ''),
-                data.get('numero_chamada'),
-                data.get('data_nascimento'),
-                data.get('genero', 'Masculino'),
-                data.get('responsavel', ''),
-                data.get('telefone', ''),
-                data.get('email', ''),
-                data.get('observacoes', '')
-            ))
-            
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Aluno criado com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar aluno: {e}")
-    
-    return jsonify({'erro': 'Erro ao criar aluno'}), 500
+    try:
+        dados = request.json
+        turma_id = dados.get('turma_id')
+        nome = dados.get('nome')
+        matricula = dados.get('matricula', '')
+        numero_chamada = dados.get('numero_chamada')
+        
+        if not turma_id or not nome:
+            return jsonify({'erro': 'Turma e nome do aluno são obrigatórios'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO alunos (turma_id, nome, matricula, numero_chamada) 
+            VALUES (%s, %s, %s, %s) 
+            RETURNING id
+        """, (turma_id, nome, matricula, numero_chamada))
+        
+        aluno_id = cursor.fetchone()['id']
+        conn.commit()
+        conn.close()
+        return jsonify({'id': aluno_id, 'mensagem': 'Aluno cadastrado com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/alunos/<int:id>', methods=['DELETE'])
-def excluir_aluno(id):
-    """Exclui um aluno"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'mensagem': 'Aluno excluído com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir aluno: {e}")
-    
-    return jsonify({'erro': 'Erro ao excluir aluno'}), 500
+@app.route('/api/alunos/<int:aluno_id>', methods=['DELETE'])
+def deletar_aluno(aluno_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Aluno excluído com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE PROVAS
@@ -602,868 +716,574 @@ def excluir_aluno(id):
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
-    """Lista todas as provas com informações da turma"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
-                FROM provas p
-                LEFT JOIN turmas t ON p.turma_id = t.id
-                ORDER BY p.id DESC
-            """)
-            provas = cur.fetchall()
-            cur.close()
-            conn.close()
-            print(f"📋 Listando {len(provas)} provas")
-            return jsonify(provas)
-        except Exception as e:
-            print(f"❌ Erro ao listar provas: {e}")
-    
-    return jsonify([])
-
-@app.route('/api/provas/<int:id>', methods=['GET'])
-def buscar_prova(id):
-    """Busca uma prova específica pelo ID"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
-                FROM provas p
-                LEFT JOIN turmas t ON p.turma_id = t.id
-                WHERE p.id = %s
-            """, (id,))
-            prova = cur.fetchone()
-            cur.close()
-            conn.close()
-            
-            if prova:
-                print(f"📖 Prova encontrada: ID={prova['id']}, Título={prova['titulo']}")
-                return jsonify(prova)
-            else:
-                print(f"❌ Prova ID {id} não encontrada")
-                return jsonify({'erro': 'Prova não encontrada'}), 404
-        except Exception as e:
-            print(f"❌ Erro ao buscar prova: {e}")
-            return jsonify({'erro': str(e)}), 500
-    
-    return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.id, p.titulo, p.descricao, p.gabarito, p.data_prova, 
+                   p.valor_nota, p.quantidade_questoes, p.tipo_questoes, 
+                   t.nome as turma_nome, p.turma_id
+            FROM provas p 
+            LEFT JOIN turmas t ON p.turma_id = t.id 
+            ORDER BY p.data_prova DESC
+        """)
+        
+        provas = []
+        for row in cursor.fetchall():
+            provas.append({
+                'id': row['id'], 
+                'titulo': row['titulo'], 
+                'descricao': row['descricao'],
+                'gabarito_array': json.loads(row['gabarito']) if row['gabarito'] else [],
+                'data_prova': row['data_prova'], 
+                'valor_nota': row['valor_nota'],
+                'quantidade_questoes': row['quantidade_questoes'] or 0,
+                'tipo_questoes': row['tipo_questoes'] or '4',
+                'turma_nome': row['turma_nome'], 
+                'turma_id': row['turma_id']
+            })
+        conn.close()
+        return jsonify(provas)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
-    """Cria uma nova prova"""
-    data = request.json
-    
-    if not data.get('titulo') or not data.get('turma_id'):
-        return jsonify({'erro': 'Título da prova e turma são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO provas (turma_id, titulo, disciplina, bimestre, data_prova, valor_nota, tipo_questoes, quantidade_questoes, gabarito)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                data['turma_id'],
-                data['titulo'],
-                data.get('disciplina', ''),
-                data.get('bimestre', ''),
-                data.get('data_prova'),
-                data.get('valor_nota', 10),
-                data.get('tipo_questoes', '4'),
-                data.get('quantidade_questoes', 20),
-                data.get('gabarito', [])
-            ))
-            
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Prova criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar prova: {e}")
-    
-    return jsonify({'erro': 'Erro ao criar prova'}), 500
-
-@app.route('/api/provas/<int:id>', methods=['DELETE'])
-def excluir_prova(id):
-    """Exclui uma prova"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM provas WHERE id = %s", (id,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'mensagem': 'Prova excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir prova: {e}")
-    
-    return jsonify({'erro': 'Erro ao excluir prova'}), 500
-
-# ============================================
-# ROTA DE GABARITOS - CORRIGIDA (USANDO MESMA LÓGICA DAS PROVAS)
-# ============================================
-
-@app.route('/api/gabaritos', methods=['POST'])
-def salvar_gabarito():
-    """
-    Salva o gabarito de uma prova no banco de dados.
-    Usa a MESMA LÓGICA que funciona para salvar provas.
-    """
     try:
-        print("=" * 60)
-        print("📝 SALVANDO GABARITO")
-        print("=" * 60)
+        dados = request.json
+        turma_id = dados.get('turma_id')
+        titulo = dados.get('titulo')
+        descricao = dados.get('descricao', '')
+        gabarito = dados.get('gabarito', [])
+        data_prova = dados.get('data_prova')
+        valor_nota = dados.get('valor_nota', 10)
+        tipo_questoes = dados.get('tipo_questoes', '4')
         
-        data = request.json
-        print(f"📥 Dados recebidos: {data}")
-        
-        prova_id = data.get('prova_id')
-        respostas = data.get('respostas', [])
-        
-        if not prova_id:
-            return jsonify({'erro': 'ID da prova é obrigatório'}), 400
-        
-        if not respostas or len(respostas) == 0:
-            return jsonify({'erro': 'Respostas do gabarito são obrigatórias'}), 400
-        
-        # Filtrar respostas (igual faz na criação da prova)
-        respostas_validas = []
-        for r in respostas:
-            if r:
-                respostas_validas.append(str(r).strip().upper())
-        
-        print(f"📝 Respostas processadas: {respostas_validas}")
-        print(f"📝 Total: {len(respostas_validas)}")
+        if not turma_id:
+            return jsonify({'erro': 'Turma é obrigatória'}), 400
+        if not titulo:
+            return jsonify({'erro': 'Título da prova é obrigatório'}), 400
+        if not data_prova:
+            return jsonify({'erro': 'Data da prova é obrigatória'}), 400
+        if not gabarito or len(gabarito) == 0:
+            return jsonify({'erro': 'Gabarito é obrigatório'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-        
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            
-            # Verificar se a prova existe
-            cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (prova_id,))
-            prova = cur.fetchone()
-            
-            if not prova:
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Prova não encontrada'}), 404
-            
-            print(f"✅ Prova encontrada: {prova['titulo']}")
-            
-            # ATUALIZAR A PROVA COM O GABARITO (MESMA LÓGICA DA CRIAÇÃO)
-            cur.execute("""
-                UPDATE provas 
-                SET gabarito = %s,
-                    quantidade_questoes = %s
-                WHERE id = %s
-                RETURNING id, titulo
-            """, (respostas_validas, len(respostas_validas), prova_id))
-            
-            result = cur.fetchone()
-            
-            if result:
-                conn.commit()
-                print(f"✅ Gabarito salvo: {result['titulo']}")
-                cur.close()
-                conn.close()
-                
-                return jsonify({
-                    'id': result['id'],
-                    'mensagem': f'Gabarito salvo com sucesso para "{result["titulo"]}"',
-                    'total_questoes': len(respostas_validas),
-                    'gabarito_salvo': respostas_validas
-                })
-            else:
-                conn.rollback()
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Erro ao salvar gabarito'}), 500
-                
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-            print(traceback.format_exc())
-            if conn:
-                conn.rollback()
-                conn.close()
-            return jsonify({'erro': f'Erro ao salvar gabarito: {str(e)}'}), 500
-            
-    except Exception as e:
-        print(f"❌ Erro geral: {e}")
-        print(traceback.format_exc())
-        return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
-
-
-@app.route('/api/gabaritos/prova/<int:prova_id>', methods=['GET'])
-def buscar_gabarito_por_prova(prova_id):
-    """Busca o gabarito de uma prova específica"""
-    print(f"🔍 Buscando gabarito para prova ID: {prova_id}")
-    
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-    
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT id, titulo, gabarito, quantidade_questoes, tipo_questoes
-            FROM provas 
-            WHERE id = %s
-        """, (prova_id,))
-        
-        prova = cur.fetchone()
-        cur.close()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO provas (turma_id, titulo, descricao, gabarito, quantidade_questoes, data_prova, valor_nota, tipo_questoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) 
+            RETURNING id
+        """, (
+            turma_id, titulo, descricao,
+            json.dumps(gabarito), len(gabarito),
+            data_prova, valor_nota, tipo_questoes
+        ))
+        prova_id = cursor.fetchone()['id']
+        conn.commit()
         conn.close()
-        
-        if prova:
-            print(f"✅ Gabarito encontrado: {prova.get('gabarito', [])}")
-            return jsonify({
-                'encontrado': True,
-                'prova_id': prova['id'],
-                'titulo': prova['titulo'],
-                'gabarito': prova.get('gabarito', []),
-                'quantidade_questoes': prova.get('quantidade_questoes', 0),
-                'tipo_questoes': prova.get('tipo_questoes', '4')
-            })
-        else:
-            print(f"❌ Prova {prova_id} não encontrada")
-            return jsonify({'encontrado': False, 'erro': 'Prova não encontrada'}), 404
-            
+        return jsonify({'id': prova_id, 'mensagem': 'Prova criada com sucesso!'})
     except Exception as e:
-        print(f"❌ Erro ao buscar gabarito: {e}")
+        print(f"Erro ao criar prova: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/provas/<int:prova_id>', methods=['DELETE'])
+def deletar_prova(prova_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM correcoes WHERE prova_id = %s", (prova_id,))
+        cursor.execute("DELETE FROM provas WHERE id = %s", (prova_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'mensagem': 'Prova excluída com sucesso!'})
+    except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE HISTÓRICO / RESULTADOS
-# ============================================
-
-@app.route('/api/historico', methods=['GET'])
-def listar_historico():
-    """Lista o histórico de correções com filtros"""
-    escola_id = request.args.get('escola_id')
-    serie = request.args.get('serie')
-    turma_id = request.args.get('turma_id')
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            
-            query = """
-                SELECT 
-                    h.*, 
-                    a.nome as aluno_nome,
-                    p.titulo as prova_titulo,
-                    t.serie as serie,
-                    t.nome as turma_nome,
-                    e.nome as escola_nome
-                FROM historico h
-                LEFT JOIN alunos a ON h.aluno_id = a.id
-                LEFT JOIN provas p ON h.prova_id = p.id
-                LEFT JOIN turmas t ON p.turma_id = t.id
-                LEFT JOIN escolas e ON t.escola_id = e.id
-                WHERE 1=1
-            """
-            params = []
-            
-            if escola_id:
-                query += " AND e.id = %s"
-                params.append(escola_id)
-            
-            if serie:
-                query += " AND t.serie = %s"
-                params.append(serie)
-            
-            if turma_id:
-                query += " AND t.id = %s"
-                params.append(turma_id)
-            
-            query += " ORDER BY h.data_correcao DESC"
-            
-            cur.execute(query, params)
-            historico = cur.fetchall()
-            cur.close()
-            conn.close()
-            
-            return jsonify(historico)
-        except Exception as e:
-            print(f"Erro ao listar histórico: {e}")
-    
-    return jsonify([])
-
-@app.route('/api/historico', methods=['POST'])
-def salvar_correcao():
-    """Salva uma correção no histórico"""
-    data = request.json
-    
-    prova_id = data.get('prova_id')
-    aluno_id = data.get('aluno_id')
-    respostas = data.get('respostas', [])
-    acertos = data.get('acertos', 0)
-    nota = data.get('nota', 0)
-    total = data.get('total', 0)
-    tipo_correcao = data.get('tipo_correcao', 'ia')
-    
-    if not prova_id or not aluno_id:
-        return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao))
-            
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            return jsonify({'id': result['id'], 'mensagem': 'Correção salva com sucesso'})
-        except Exception as e:
-            print(f"Erro ao salvar correção: {e}")
-    
-    return jsonify({'erro': 'Erro ao salvar correção'}), 500
-
-# ============================================
-# ROTAS DE CORREÇÃO MANUAL
-# ============================================
-
-@app.route('/api/corrigir_manual', methods=['POST'])
-def corrigir_manual():
-    """Salva uma correção manual no histórico"""
-    try:
-        print("=" * 60)
-        print("📝 SALVANDO CORREÇÃO MANUAL")
-        print("=" * 60)
-        
-        data = request.json
-        print(f"📥 Dados recebidos: {data}")
-        
-        prova_id = data.get('prova_id')
-        aluno_id = data.get('aluno_id')
-        respostas = data.get('respostas', [])
-        acertos = data.get('acertos', 0)
-        nota = data.get('nota', 0)
-        total = data.get('total', 0)
-        
-        if not prova_id or not aluno_id:
-            print("❌ Prova e aluno são obrigatórios")
-            return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
-        
-        conn = get_db_connection()
-        if not conn:
-            print("❌ Erro ao conectar ao banco")
-            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
-        
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            
-            # Verificar se já existe uma correção para este aluno e prova
-            cur.execute("""
-                SELECT id FROM historico 
-                WHERE prova_id = %s AND aluno_id = %s
-            """, (prova_id, aluno_id))
-            
-            existing = cur.fetchone()
-            
-            if existing:
-                # Atualizar correção existente
-                cur.execute("""
-                    UPDATE historico 
-                    SET respostas = %s::text[],
-                        acertos = %s,
-                        nota = %s,
-                        total = %s,
-                        tipo_correcao = 'manual',
-                        data_correcao = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                    RETURNING id
-                """, (respostas, acertos, nota, total, existing['id']))
-                
-                result = cur.fetchone()
-                mensagem = 'Correção manual atualizada com sucesso'
-            else:
-                # Inserir nova correção
-                cur.execute("""
-                    INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
-                    VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual')
-                    RETURNING id
-                """, (prova_id, aluno_id, respostas, acertos, nota, total))
-                
-                result = cur.fetchone()
-                mensagem = 'Correção manual salva com sucesso'
-            
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            print(f"✅ {mensagem} - ID: {result['id']}")
-            
-            return jsonify({
-                'sucesso': True,
-                'id': result['id'],
-                'mensagem': mensagem,
-                'nota': nota,
-                'acertos': acertos,
-                'total': total
-            })
-            
-        except psycopg2.Error as e:
-            print(f"❌ Erro no PostgreSQL: {e}")
-            if conn:
-                conn.rollback()
-                conn.close()
-            return jsonify({'erro': f'Erro no banco de dados: {str(e)}'}), 500
-            
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-            print(traceback.format_exc())
-            if conn:
-                conn.rollback()
-                conn.close()
-            return jsonify({'erro': f'Erro ao salvar correção: {str(e)}'}), 500
-            
-    except Exception as e:
-        print(f"❌ Erro geral: {e}")
-        print(traceback.format_exc())
-        return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
-
-# ============================================
-# ROTAS DE DASHBOARD
-# ============================================
-
-@app.route('/api/dashboard', methods=['GET'])
-def dashboard():
-    """Retorna estatísticas para o dashboard"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            
-            cur.execute("SELECT COUNT(*) as total FROM escolas")
-            total_escolas = cur.fetchone()['total']
-            
-            cur.execute("SELECT COUNT(*) as total FROM turmas")
-            total_turmas = cur.fetchone()['total']
-            
-            cur.execute("SELECT COUNT(*) as total FROM alunos")
-            total_alunos = cur.fetchone()['total']
-            
-            cur.execute("SELECT COUNT(*) as total FROM provas")
-            total_provas = cur.fetchone()['total']
-            
-            cur.close()
-            conn.close()
-            
-            return jsonify({
-                'total_escolas': total_escolas,
-                'total_turmas': total_turmas,
-                'total_alunos': total_alunos,
-                'total_provas': total_provas
-            })
-        except Exception as e:
-            print(f"Erro ao buscar dashboard: {e}")
-    
-    return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
-
-# ============================================
-# ROTAS DE IA - CORREÇÃO
+# CORREÇÃO DE PROVAS
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
-def corrigir_com_ia():
-    """Corrige uma prova usando IA"""
-    data = request.json
-    imagem_base64 = data.get('imagem')
-    prova_id = data.get('prova_id')
-    aluno_id = data.get('aluno_id')
-    
-    if not imagem_base64 or not prova_id or not aluno_id:
-        return jsonify({'erro': 'Imagem, prova e aluno são obrigatórios'}), 400
-    
+def corrigir_prova():
     try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
+        dados = request.json
+        imagem = dados.get('imagem')
+        prova_id = dados.get('prova_id')
+        aluno_id = dados.get('aluno_id')
         
-        image_data = base64.b64decode(imagem_base64)
-        nparr = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return jsonify({'erro': 'Erro ao processar imagem'}), 400
+        if not imagem or not prova_id or not aluno_id:
+            return jsonify({'erro': 'Dados incompletos'}), 400
         
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM provas WHERE id = %s", (prova_id,))
-        prova = cur.fetchone()
+        cursor = conn.cursor()
+        cursor.execute("SELECT gabarito, tipo_questoes, titulo FROM provas WHERE id = %s", (prova_id,))
+        prova = cursor.fetchone()
         
         if not prova:
-            cur.close()
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
-        gabarito = prova.get('gabarito', [])
+        gabarito = json.loads(prova['gabarito']) if prova['gabarito'] else []
+        tipo_questoes = int(prova['tipo_questoes'] or 4)
+        titulo_prova = prova['titulo']
         
-        if not gabarito:
-            cur.close()
+        corretor = CorretorHibrido()
+        respostas_detectadas, confianca, metodo = corretor.detectar_respostas_hibrido(imagem, tipo_questoes)
+        
+        if not respostas_detectadas:
             conn.close()
-            return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
+            return jsonify({'erro': 'Não foi possível detectar as respostas'}), 400
         
-        cur.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
-        aluno = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        nome_aluno = aluno['nome'] if aluno else 'Aluno'
-        
-        random.seed(aluno_id)
-        respostas_detectadas = [random.choice(['A', 'B', 'C', 'D']) for _ in range(len(gabarito))]
+        while len(respostas_detectadas) < len(gabarito):
+            respostas_detectadas.append('?')
+        respostas_detectadas = respostas_detectadas[:len(gabarito)]
         
         acertos = 0
-        valor_por_questao = prova.get('valor_nota', 10) / len(gabarito)
-        
         correcoes = []
-        for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-            is_correto = resp and gab and resp.upper() == gab.upper()
-            if is_correto:
+        for i in range(len(gabarito)):
+            resposta = respostas_detectadas[i] if i < len(respostas_detectadas) else '?'
+            correta = resposta == gabarito[i] if resposta != '?' else False
+            if correta:
                 acertos += 1
             correcoes.append({
-                'questao': i + 1,
-                'resposta': resp,
-                'gabarito': gab,
-                'correto': is_correto
+                'questao': i+1, 
+                'resposta': resposta, 
+                'gabarito': gabarito[i], 
+                'correta': correta
             })
         
-        nota = acertos * valor_por_questao
+        nota = (acertos / len(gabarito)) * 10 if gabarito else 0
         
-        conn = get_db_connection()
-        if conn:
-            try:
-                cur = conn.cursor()
-                cur.execute("""
-                    INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'ia')
-                """, (prova_id, aluno_id, respostas_detectadas, acertos, nota, len(gabarito)))
-                conn.commit()
-                cur.close()
-            except Exception as e:
-                print(f"Erro ao salvar histórico: {e}")
-            finally:
-                conn.close()
+        cursor.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
+        aluno = cursor.fetchone()
+        aluno_nome = aluno['nome'] if aluno else 'Aluno'
+        
+        cursor.execute("""
+            INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao, metodo_ia) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now(), metodo))
+        conn.commit()
+        conn.close()
         
         return jsonify({
-            'aluno': nome_aluno,
-            'prova': prova.get('titulo', 'Prova'),
-            'total': len(gabarito),
-            'acertos': acertos,
-            'nota': round(nota, 1),
+            'aluno': aluno_nome,
+            'prova': titulo_prova,
             'respostas_detectadas': respostas_detectadas,
+            'acertos': acertos,
+            'total': len(gabarito),
+            'nota': round(nota, 1),
+            'percentual': round((acertos / len(gabarito)) * 100, 1) if gabarito else 0,
             'correcoes': correcoes,
-            'gabarito': gabarito,
-            'tipo_questoes': prova.get('tipo_questoes', '4'),
-            'confianca': 85,
-            'valor_por_questao': round(valor_por_questao, 2)
+            'confianca': round(confianca, 1),
+            'metodo_ia': metodo,
+            'tipo_questoes': tipo_questoes
         })
-        
     except Exception as e:
-        print(f"Erro na correção: {e}")
+        print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE CORREÇÃO DE REDAÇÃO
+# CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
-    """Corrige uma redação usando Gemini AI"""
-    data = request.json
-    texto = data.get('texto')
-    aluno_id = data.get('aluno_id')
-    
-    if not texto:
-        return jsonify({'erro': 'Texto é obrigatório'}), 400
-    
-    notas = {
-        'nota_coerencia': round(random.uniform(5, 9), 1),
-        'nota_estrutura': round(random.uniform(5, 9), 1),
-        'nota_gramatica': round(random.uniform(5, 9), 1),
-        'nota_vocabulario': round(random.uniform(5, 9), 1)
-    }
-    
-    nota_media = round(sum(notas.values()) / 4, 1)
-    
-    feedbacks = [
-        "O texto apresenta boa estrutura, com introdução, desenvolvimento e conclusão bem definidos.",
-        "A redação demonstra compreensão do tema e desenvolve argumentos de forma coerente.",
-        "O texto é bem escrito e organizado. As ideias são apresentadas de forma clara e objetiva.",
-        "Excelente desenvolvimento do tema! A estrutura é muito boa e as ideias são bem articuladas."
-    ]
-    
-    resultado = {
-        'nota': nota_media,
-        'feedback': random.choice(feedbacks),
-        'metricas': notas
-    }
-    
-    if aluno_id:
-        try:
+    try:
+        dados = request.json
+        imagem = dados.get('imagem')
+        texto = dados.get('texto')
+        prova_id = dados.get('prova_id')
+        aluno_id = dados.get('aluno_id')
+        
+        if not imagem and not texto:
+            return jsonify({'erro': 'Forneça imagem ou texto da redação'}), 400
+        
+        corretor = CorretorRedacaoHibrido()
+        resultado = corretor.corrigir_redacao_hibrido(imagem, texto)
+        
+        if resultado is None or resultado[0] is None:
+            return jsonify({'erro': 'Não foi possível processar a redação'}), 400
+        
+        texto_corrigido, nota, conceito, feedback, metricas, metodo = resultado
+        
+        if prova_id and aluno_id:
             conn = get_db_connection()
             if conn:
-                cur = conn.cursor()
-                cur.execute("SELECT id FROM provas WHERE titulo LIKE '%Redação%' ORDER BY id DESC LIMIT 1")
-                prova = cur.fetchone()
-                if prova:
-                    cur.execute("""
-                        INSERT INTO historico (prova_id, aluno_id, nota, tipo_correcao)
-                        VALUES (%s, %s, %s, 'ia')
-                    """, (prova[0], aluno_id, resultado.get('nota', 0)))
-                    conn.commit()
-                cur.close()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, data_correcao, metodo_ia) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (prova_id, aluno_id, texto_corrigido, nota, feedback, datetime.now(), metodo))
+                conn.commit()
                 conn.close()
-        except Exception as e:
-            print(f"Erro ao salvar correção de redação: {e}")
-    
-    return jsonify(resultado)
-
-# ============================================
-# ROTA DE TESTE DO BANCO
-# ============================================
-
-@app.route('/api/teste', methods=['GET'])
-def testar_banco():
-    """Testa a conexão com o banco de dados"""
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-    
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT 1 as test")
-        result = cur.fetchone()
-        cur.close()
-        conn.close()
-        return jsonify({'sucesso': True, 'mensagem': 'Conexão com banco OK!'})
+        
+        cores = {
+            'Excelente': '#28a745',
+            'Bom': '#17a2b8',
+            'Regular': '#ffc107',
+            'Insuficiente': '#dc3545'
+        }
+        
+        return jsonify({
+            'nota': round(nota, 1),
+            'conceito': conceito,
+            'cor_conceito': cores.get(conceito, '#6c757d'),
+            'feedback': feedback,
+            'metricas': metricas,
+            'texto_original': texto_corrigido[:500] + ('...' if len(texto_corrigido) > 500 else ''),
+            'texto_completo': texto_corrigido,
+            'metodo_ia': metodo
+        })
+        
     except Exception as e:
+        print(f"Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS DE GERAR CARTÃO RESPOSTA
+# DEMAIS ROTAS
 # ============================================
+
+@app.route('/api/dashboard', methods=['GET'])
+def dashboard():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM escolas")
+        row = cursor.fetchone()
+        total_escolas = row['count'] if row else 0
+        
+        cursor.execute("SELECT COUNT(*) FROM turmas")
+        row = cursor.fetchone()
+        total_turmas = row['count'] if row else 0
+        
+        cursor.execute("SELECT COUNT(*) FROM alunos")
+        row = cursor.fetchone()
+        total_alunos = row['count'] if row else 0
+        
+        cursor.execute("SELECT COUNT(*) FROM provas")
+        row = cursor.fetchone()
+        total_provas = row['count'] if row else 0
+        
+        cursor.execute("SELECT COUNT(*), COALESCE(AVG(nota), 0) FROM correcoes")
+        row = cursor.fetchone()
+        
+        conn.close()
+        return jsonify({
+            'total_escolas': total_escolas,
+            'total_turmas': total_turmas,
+            'total_alunos': total_alunos,
+            'total_provas': total_provas,
+            'total_correcoes': row['count'] if row else 0,
+            'media_geral': round(row['coalesce'], 1) if row and row['coalesce'] else 0
+        })
+    except Exception as e:
+        print(f"Erro no dashboard: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/historico', methods=['GET'])
+def historico():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
+                   c.acertos, c.nota, c.data_correcao, c.metodo_ia
+            FROM correcoes c 
+            JOIN alunos a ON c.aluno_id = a.id 
+            JOIN provas p ON c.prova_id = p.id
+            ORDER BY c.data_correcao DESC 
+            LIMIT 50
+        """)
+        
+        historico = [{
+            'id': row['id'], 
+            'aluno_nome': row['aluno_nome'], 
+            'prova_titulo': row['prova_titulo'],
+            'acertos': row['acertos'], 
+            'nota': round(row['nota'], 1), 
+            'data_correcao': row['data_correcao'],
+            'metodo_ia': row['metodo_ia'] or 'Desconhecido'
+        } for row in cursor.fetchall()]
+        
+        conn.close()
+        return jsonify(historico)
+    except Exception as e:
+        return jsonify([])
+
+@app.route('/api/estatisticas', methods=['GET'])
+def estatisticas():
+    prova_id = request.args.get('prova_id')
+    if not prova_id:
+        return jsonify({'erro': 'Prova não informada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_corrigidas,
+                COALESCE(AVG(nota), 0) as media_nota,
+                COALESCE(MAX(nota), 0) as maior_nota,
+                COALESCE(MIN(nota), 0) as menor_nota,
+                metodo_ia,
+                COUNT(*) as qtd_por_metodo
+            FROM correcoes 
+            WHERE prova_id = %s
+            GROUP BY metodo_ia
+        """, (prova_id,))
+        
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        metodos = {}
+        for row in resultados:
+            metodos[row['metodo_ia'] or 'Desconhecido'] = row['qtd_por_metodo']
+        
+        return jsonify({
+            'geral': {
+                'total_corrigidas': sum(row['qtd_por_metodo'] for row in resultados),
+                'media_nota': round(np.mean([row['media_nota'] for row in resultados]) if resultados else 0, 1),
+                'maior_nota': round(max([row['maior_nota'] for row in resultados]) if resultados else 0, 1),
+                'menor_nota': round(min([row['menor_nota'] for row in resultados]) if resultados else 0, 1)
+            },
+            'metodos': metodos
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/exportar', methods=['GET'])
+def exportar_resultados():
+    prova_id = request.args.get('prova_id')
+    if not prova_id:
+        return jsonify({'erro': 'Prova não informada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.nome, a.matricula, c.acertos, c.nota, c.data_correcao, c.metodo_ia
+            FROM correcoes c 
+            JOIN alunos a ON c.aluno_id = a.id 
+            WHERE c.prova_id = %s
+        """, (prova_id,))
+        
+        resultados = cursor.fetchall()
+        conn.close()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
+        for r in resultados:
+            writer.writerow([r['nome'], r['matricula'] or '', r['acertos'], round(r['nota'], 1), r['data_correcao'], r['metodo_ia'] or 'Desconhecido'])
+        
+        return output.getvalue(), 200, {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': f'attachment; filename=prova_{prova_id}_resultados.csv'
+        }
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/testar_conexao', methods=['GET'])
+def testar_conexao():
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({
+            'conectado': True,
+            'banco': 'PostgreSQL (Supabase)',
+            'mensagem': '✅ Conectado ao Supabase!'
+        })
+    except Exception as e:
+        return jsonify({
+            'conectado': False,
+            'erro': str(e)
+        }), 500
+
+@app.route('/api/ip_info', methods=['GET'])
+def ip_info():
+    return jsonify({
+        'ip': 'render.com', 
+        'porta': 10000, 
+        'url': 'https://adabee-sistema-3.onrender.com'
+    })
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
-    """Gera um cartão resposta para impressão"""
-    data = request.json
-    escola_id = data.get('escola_id')
-    turma_id = data.get('turma_id')
-    aluno_id = data.get('aluno_id')
-    prova_id = data.get('prova_id')
-    quantidade_questoes = data.get('quantidade_questoes', 20)
-    
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-    
     try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        dados = request.json
+        escola_id = dados.get('escola_id')
+        turma_id = dados.get('turma_id')
+        aluno_id = dados.get('aluno_id')
+        prova_id = dados.get('prova_id')
+        qtd_questoes = dados.get('quantidade_questoes', 20)
+        tipo_questoes = dados.get('tipo_questoes', '4')
         
-        cur.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
-        escola = cur.fetchone()
-        nome_escola = escola['nome'] if escola else 'Escola'
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        cur.execute("SELECT nome, serie, turno, professor FROM turmas WHERE id = %s", (turma_id,))
-        turma = cur.fetchone()
-        nome_turma = turma['nome'] if turma else 'Turma'
-        serie = turma['serie'] if turma else ''
-        professor = turma['professor'] if turma else ''
+        cursor.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
+        escola = cursor.fetchone()
+        nome_escola = escola['nome'] if escola else "ESCOLA"
         
-        cur.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
-        aluno = cur.fetchone()
-        nome_aluno = aluno['nome'] if aluno else 'Aluno'
-        numero_chamada = aluno['numero_chamada'] if aluno else ''
+        cursor.execute("SELECT nome, serie FROM turmas WHERE id = %s", (turma_id,))
+        turma = cursor.fetchone()
+        nome_turma = turma['nome'] if turma else "TURMA"
+        serie = turma['serie'] if turma else "1º Ano"
         
-        cur.execute("SELECT titulo, data_prova FROM provas WHERE id = %s", (prova_id,))
-        prova = cur.fetchone()
-        titulo_prova = prova['titulo'] if prova else 'Avaliação'
-        data_prova = prova['data_prova'] if prova else ''
+        cursor.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
+        aluno = cursor.fetchone()
+        nome_aluno = aluno['nome'] if aluno else "ALUNO"
+        numero = str(aluno['numero_chamada']) if aluno and aluno['numero_chamada'] else ""
         
-        cur.close()
+        cursor.execute("SELECT titulo, tipo_questoes FROM provas WHERE id = %s", (prova_id,))
+        prova = cursor.fetchone()
+        nome_prova = prova['titulo'] if prova else "PROVA"
+        if prova and prova['tipo_questoes']:
+            tipo_questoes = prova['tipo_questoes']
+        
         conn.close()
         
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Cartão Resposta</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; background: white; }}
-                .header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }}
-                .header h1 {{ font-size: 20px; margin: 0; }}
-                .header p {{ margin: 5px 0; color: #555; }}
-                .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }}
-                .info-item {{ padding: 5px 10px; background: #f5f5f5; border-radius: 5px; }}
-                .info-item strong {{ display: inline-block; width: 80px; }}
-                .questoes-grid {{ 
-                    display: grid; 
-                    grid-template-columns: repeat(5, 1fr); 
-                    gap: 10px; 
-                    margin-top: 10px;
-                }}
-                .questao-item {{
-                    border: 1px solid #ccc;
-                    border-radius: 8px;
-                    padding: 10px;
-                    text-align: center;
-                }}
-                .questao-num {{ font-size: 12px; color: #666; font-weight: bold; }}
-                .opcoes {{ display: flex; justify-content: center; gap: 10px; margin-top: 5px; }}
-                .opcao {{ 
-                    width: 30px; 
-                    height: 30px; 
-                    border: 2px solid #ccc;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: bold;
-                    font-size: 14px;
-                }}
-                .footer {{ margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; border-top: 1px solid #ccc; padding-top: 20px; }}
-                .footer .assinatura {{ text-align: center; }}
-                .footer .assinatura .linha {{ border-top: 1px solid #333; width: 200px; margin: 20px auto 0; }}
-                @media print {{
-                    .no-print {{ display: none; }}
-                    body {{ margin: 10px; }}
-                }}
-            </style>
-        </head>
-        <body>
+        if tipo_questoes == '3':
+            opcoes = ['A', 'B', 'C']
+            titulo_opcoes = "3 OPÇÕES (A, B, C)"
+        else:
+            opcoes = ['A', 'B', 'C', 'D']
+            titulo_opcoes = "4 OPÇÕES (A, B, C, D)"
+        
+        if int(qtd_questoes) > 30:
+            qtd_questoes = 30
+        
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Folha de Respostas - {nome_aluno}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 15px; }}
+        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; }}
+        .folha {{ padding: 20px; }}
+        .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
+        .header h2 {{ color: #4CAF50; font-size: 20px; }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; }}
+        .info-item {{ display: flex; gap: 8px; }}
+        .info-label {{ font-weight: bold; color: #555; min-width: 70px; }}
+        .info-value {{ color: #333; border-bottom: 1px solid #ccc; min-width: 120px; }}
+        .instrucoes {{ background: #FFF3CD; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 10px; text-align: center; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #4CAF50; color: white; padding: 6px; text-align: center; font-size: 12px; }}
+        td {{ padding: 6px; border-bottom: 1px solid #ddd; }}
+        .questao-num {{ font-weight: bold; width: 50px; text-align: center; font-size: 12px; }}
+        .opcoes {{ display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }}
+        .opcao {{ display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 45px; }}
+        .circulo {{ display: inline-block; width: 22px; height: 22px; border: 2px solid #333; border-radius: 50%; background: white; cursor: pointer; }}
+        .opcao span:last-child {{ font-weight: bold; font-size: 11px; }}
+        .rodape {{ margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }}
+        .botoes {{ text-align: center; margin: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }}
+        button {{ background: #4CAF50; color: white; padding: 10px 25px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; margin: 0 10px; }}
+        button:hover {{ background: #45a049; }}
+        button.secundario {{ background: #2196F3; }}
+        @media print {{ body {{ background: white; padding: 0; margin: 0; }} .container {{ box-shadow: none; }} .botoes {{ display: none; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="folha">
             <div class="header">
-                <h1>📄 CARTÃO RESPOSTA</h1>
-                <p>{nome_escola}</p>
-                <p><strong>Prova:</strong> {titulo_prova} | <strong>Data:</strong> {data_prova}</p>
+                <h2>🐝🧠 AdaBee AI - FOLHA DE RESPOSTAS</h2>
+                <p>{titulo_opcoes} - {serie}</p>
             </div>
-            
             <div class="info-grid">
-                <div class="info-item"><strong>Aluno:</strong> {nome_aluno}</div>
-                <div class="info-item"><strong>Nº:</strong> {numero_chamada}</div>
-                <div class="info-item"><strong>Turma:</strong> {nome_turma}</div>
-                <div class="info-item"><strong>Série:</strong> {serie}</div>
-                <div class="info-item"><strong>Professor(a):</strong> {professor}</div>
-                <div class="info-item"><strong>Turno:</strong> {turma['turno'] if turma else ''}</div>
+                <div class="info-item"><span class="info-label">ESCOLA:</span><span class="info-value">{nome_escola}</span></div>
+                <div class="info-item"><span class="info-label">TURMA:</span><span class="info-value">{nome_turma}</span></div>
+                <div class="info-item"><span class="info-label">ALUNO:</span><span class="info-value">{nome_aluno}</span></div>
+                <div class="info-item"><span class="info-label">Nº:</span><span class="info-value">{numero}</span></div>
+                <div class="info-item"><span class="info-label">PROVA:</span><span class="info-value">{nome_prova}</span></div>
+                <div class="info-item"><span class="info-label">DATA:</span><span class="info-value">___/___/______</span></div>
             </div>
-            
-            <div style="text-align:center;margin-bottom:15px;font-size:14px;color:#666;">
-                Instruções: Preencha com caneta ou lápis o círculo correspondente à sua resposta.
-            </div>
-            
-            <div class="questoes-grid">
-        """
+            <div class="instrucoes">📌 Preencha COMPLETAMENTE a bolinha com caneta PRETA. Marque UMA por questão.</div>
+            <table>
+                <thead><tr><th>Q</th><th colspan="{len(opcoes)}">RESPOSTAS ({', '.join(opcoes)})</th></tr></thead>
+                <tbody>"""
         
-        for i in range(1, quantidade_questoes + 1):
+        for i in range(1, int(qtd_questoes) + 1):
             html += f"""
-                <div class="questao-item">
-                    <div class="questao-num">Q{i}</div>
-                    <div class="opcoes">
-                        <div class="opcao">A</div>
-                        <div class="opcao">B</div>
-                        <div class="opcao">C</div>
-                        <div class="opcao">D</div>
-                    </div>
-                </div>
-            """
+                    <tr>
+                        <td class="questao-num">{i}</td>
+                        <td colspan="{len(opcoes)}" style="text-align:center">
+                            <div class="opcoes">"""
+            for opcao in opcoes:
+                html += f"""
+                                <label class="opcao">
+                                    <span class="circulo" onclick="marcar(this)"></span>
+                                    <span>{opcao}</span>
+                                </label>"""
+            html += """
+                            </div>
+                        </td>
+                    </tr>"""
         
-        html += """
-            </div>
-            
-            <div class="footer">
-                <div class="assinatura">
-                    <p>Professor(a) Responsável</p>
-                    <div class="linha"></div>
-                </div>
-                <div class="assinatura">
-                    <p>Diretor(a)</p>
-                    <div class="linha"></div>
-                </div>
-            </div>
-            
-            <div style="text-align:center;margin-top:30px;font-size:12px;color:#999;">
-                Sistema CorrigePro - Cartão Resposta Gerado Automaticamente
-            </div>
-        </body>
-        </html>
-        """
+        html += f"""
+                </tbody>
+            </table>
+            <div class="rodape">AdaBee AI - Preencha completamente a bolinha | Use caneta PRETA</div>
+        </div>
+        <div class="botoes">
+            <button onclick="window.print()">🖨️ IMPRIMIR</button>
+            <button class="secundario" onclick="window.print()">💾 SALVAR PDF</button>
+        </div>
+    </div>
+    <script>
+        function marcar(el) {{
+            const grupo = el.closest('.opcoes');
+            grupo.querySelectorAll('.circulo').forEach(c => {{
+                c.style.backgroundColor = 'white';
+                c.style.border = '2px solid #333';
+            }});
+            el.style.backgroundColor = 'black';
+            el.style.border = '2px solid black';
+        }}
+    </script>
+</body>
+</html>"""
         
         return html, 200, {'Content-Type': 'text/html'}
         
     except Exception as e:
+        print(f"Erro ao gerar gabarito: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE LISTAR RESULTADOS (tb-resultados)
+# ERROR HANDLERS
 # ============================================
 
-@app.route('/api/resultados', methods=['GET'])
-def listar_resultados():
-    """Lista todos os resultados (histórico) para a página de resultados"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT 
-                    h.*, 
-                    a.nome as aluno_nome,
-                    p.titulo as prova_titulo,
-                    t.serie as serie,
-                    t.nome as turma_nome
-                FROM historico h
-                LEFT JOIN alunos a ON h.aluno_id = a.id
-                LEFT JOIN provas p ON h.prova_id = p.id
-                LEFT JOIN turmas t ON p.turma_id = t.id
-                ORDER BY h.data_correcao DESC
-            """)
-            resultados = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(resultados)
-        except Exception as e:
-            print(f"Erro ao listar resultados: {e}")
-    
-    return jsonify([])
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({
+        'erro': 'Rota não encontrada',
+        'mensagem': 'Verifique se a URL está correta'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({
+        'erro': 'Erro interno do servidor',
+        'mensagem': str(e)
+    }), 500
 
 # ============================================
-# SERVIDOR
+# INICIALIZAR E RODAR
 # ============================================
-
-@app.route('/')
-def index():
-    """Serve a página principal"""
-    return send_from_directory('.', 'index.html')
-
-@app.route('/<path:path>')
-def serve_static(path):
-    """Serve arquivos estáticos"""
-    return send_from_directory('.', path)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    try:
+        init_database()
+    except Exception as e:
+        print(f"❌ Erro na inicialização: {e}")
+    
+    port = int(os.environ.get('PORT', 10000))
+    print(f"🚀 Servidor rodando na porta {port}")
+    print("🧠 Sistema Híbrido - Contorno + OpenCV + OCR + Análise Avançada de Redação")
+    app.run(host='0.0.0.0', port=port, debug=False)
