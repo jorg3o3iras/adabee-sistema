@@ -156,6 +156,7 @@ def init_db():
                 INSERT INTO usuarios (nome, username, senha, perfil, ativo)
                 VALUES ('Administrador', 'admin', 'admin', 'admin', TRUE)
             """)
+            print("✅ Usuário admin criado com sucesso!")
         
         conn.commit()
         cur.close()
@@ -179,6 +180,8 @@ def login():
     username = data.get('username')
     senha = data.get('senha')
     
+    print(f"🔐 Tentativa de login: username={username}")
+    
     if not username or not senha:
         return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
     
@@ -188,21 +191,38 @@ def login():
     
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM usuarios WHERE username = %s AND senha = %s AND ativo = TRUE", (username, senha))
+        
+        # Buscar usuário pelo username (sem criptografia por enquanto)
+        cur.execute("""
+            SELECT id, nome, username, senha, perfil, ativo 
+            FROM usuarios 
+            WHERE username = %s AND ativo = TRUE
+        """, (username,))
+        
         usuario = cur.fetchone()
         cur.close()
         conn.close()
         
         if usuario:
-            return jsonify({
-                'sucesso': True,
-                'perfil': usuario['perfil'],
-                'usuario': usuario['username'],
-                'nome': usuario['nome']
-            })
+            print(f"✅ Usuário encontrado: {usuario['username']}")
+            
+            # Comparar senha diretamente (sem hash por simplicidade)
+            if usuario['senha'] == senha:
+                return jsonify({
+                    'sucesso': True,
+                    'perfil': usuario['perfil'],
+                    'usuario': usuario['username'],
+                    'nome': usuario['nome']
+                })
+            else:
+                print(f"❌ Senha incorreta para: {username}")
+                return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
         else:
-            return jsonify({'sucesso': False, 'erro': 'Usuário ou senha inválidos'}), 401
+            print(f"❌ Usuário não encontrado: {username}")
+            return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
+            
     except Exception as e:
+        print(f"❌ Erro no login: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -1131,6 +1151,27 @@ def simular_avaliacao_texto(texto, aluno_id=None):
         'feedback': random.choice(feedbacks),
         'metricas': notas
     }
+
+# ============================================
+# ROTA DE TESTE DO BANCO
+# ============================================
+
+@app.route('/api/teste', methods=['GET'])
+def testar_banco():
+    """Testa a conexão com o banco de dados"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 as test")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        return jsonify({'sucesso': True, 'mensagem': 'Conexão com banco OK!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE GERAR CARTÃO RESPOSTA
