@@ -1807,19 +1807,28 @@ async function carregarResultadosComFiltros() {
             return;
         }
 
-        let total = historico.length;
-        let aprovados = historico.filter(c => c.nota >= 5).length;
-        let recuperacao = historico.filter(c => c.nota >= 3 && c.nota < 5).length;
-        let media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
+        // ============================================================
+        // CORREÇÃO: Converter nota para número antes de usar
+        // ============================================================
+        const dadosCorrigidos = historico.map(item => ({
+            ...item,
+            nota: parseFloat(item.nota) || 0,
+            acertos: parseInt(item.acertos) || 0
+        }));
+
+        let total = dadosCorrigidos.length;
+        let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
+        let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
+        let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
 
         document.getElementById('res-total-filtrado').textContent = total;
         document.getElementById('res-aprovados-filtrado').textContent = aprovados;
         document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
         document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
 
-        historico.sort((a, b) => b.nota - a.nota);
+        dadosCorrigidos.sort((a, b) => b.nota - a.nota);
 
-        tbody.innerHTML = historico.map((item, index) => {
+        tbody.innerHTML = dadosCorrigidos.map((item, index) => {
             const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
             const nota = item.nota || 0;
             const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
