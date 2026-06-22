@@ -778,10 +778,6 @@ def salvar_gabarito():
             
             print(f"✅ Prova encontrada: {prova['titulo']} (ID: {prova['id']})")
             
-            # Converter lista para formato PostgreSQL ARRAY
-            gabarito_array = '{' + ','.join([f'"{r}"' for r in respostas_validas]) + '}'
-            print(f"📦 Gabarito em formato ARRAY: {gabarito_array}")
-            
             # ATUALIZAR A PROVA COM O GABARITO
             cur.execute("""
                 UPDATE provas 
@@ -975,44 +971,108 @@ def salvar_correcao():
     return jsonify({'erro': 'Erro ao salvar correção'}), 500
 
 # ============================================
-# ROTAS DE CORREÇÃO MANUAL
+# ROTAS DE CORREÇÃO MANUAL - CORRIGIDA
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
 def corrigir_manual():
-    """Salva uma correção manual"""
-    data = request.json
-    
-    prova_id = data.get('prova_id')
-    aluno_id = data.get('aluno_id')
-    respostas = data.get('respostas', [])
-    acertos = data.get('acertos', 0)
-    nota = data.get('nota', 0)
-    total = data.get('total', 0)
-    
-    if not prova_id or not aluno_id:
-        return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
+    """Salva uma correção manual no histórico"""
+    try:
+        print("=" * 60)
+        print("📝 SALVANDO CORREÇÃO MANUAL")
+        print("=" * 60)
+        
+        data = request.json
+        print(f"📥 Dados recebidos: {data}")
+        
+        prova_id = data.get('prova_id')
+        aluno_id = data.get('aluno_id')
+        respostas = data.get('respostas', [])
+        acertos = data.get('acertos', 0)
+        nota = data.get('nota', 0)
+        total = data.get('total', 0)
+        
+        if not prova_id or not aluno_id:
+            print("❌ Prova e aluno são obrigatórios")
+            return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            print("❌ Erro ao conectar ao banco")
+            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
+        
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
-                VALUES (%s, %s, %s, %s, %s, %s, 'manual')
-                RETURNING id
-            """, (prova_id, aluno_id, respostas, acertos, nota, total))
             
-            result = cur.fetchone()
+            # Verificar se já existe uma correção para este aluno e prova
+            cur.execute("""
+                SELECT id FROM historico 
+                WHERE prova_id = %s AND aluno_id = %s
+            """, (prova_id, aluno_id))
+            
+            existing = cur.fetchone()
+            
+            if existing:
+                # Atualizar correção existente
+                cur.execute("""
+                    UPDATE historico 
+                    SET respostas = %s::text[],
+                        acertos = %s,
+                        nota = %s,
+                        total = %s,
+                        tipo_correcao = 'manual',
+                        data_correcao = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    RETURNING id
+                """, (respostas, acertos, nota, total, existing['id']))
+                
+                result = cur.fetchone()
+                mensagem = 'Correção manual atualizada com sucesso'
+            else:
+                # Inserir nova correção
+                cur.execute("""
+                    INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
+                    VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual')
+                    RETURNING id
+                """, (prova_id, aluno_id, respostas, acertos, nota, total))
+                
+                result = cur.fetchone()
+                mensagem = 'Correção manual salva com sucesso'
+            
             conn.commit()
             cur.close()
             conn.close()
             
-            return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Correção manual salva com sucesso'})
+            print(f"✅ {mensagem} - ID: {result['id']}")
+            
+            return jsonify({
+                'sucesso': True,
+                'id': result['id'],
+                'mensagem': mensagem,
+                'nota': nota,
+                'acertos': acertos,
+                'total': total
+            })
+            
+        except psycopg2.Error as e:
+            print(f"❌ Erro no PostgreSQL: {e}")
+            if conn:
+                conn.rollback()
+                conn.close()
+            return jsonify({'erro': f'Erro no banco de dados: {str(e)}'}), 500
+            
         except Exception as e:
-            print(f"Erro ao salvar correção manual: {e}")
-    
-    return jsonify({'erro': 'Erro ao salvar correção manual'}), 500
+            print(f"❌ Erro: {e}")
+            print(traceback.format_exc())
+            if conn:
+                conn.rollback()
+                conn.close()
+            return jsonify({'erro': f'Erro ao salvar correção: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"❌ Erro geral: {e}")
+        print(traceback.format_exc())
+        return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
 
 # ============================================
 # ROTAS DE DASHBOARD
@@ -1388,6 +1448,39 @@ def gerar_gabarito():
         
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA DE LISTAR RESULTADOS (tb-resultados)
+# ============================================
+
+@app.route('/api/resultados', methods=['GET'])
+def listar_resultados():
+    """Lista todos os resultados (histórico) para a página de resultados"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT 
+                    h.*, 
+                    a.nome as aluno_nome,
+                    p.titulo as prova_titulo,
+                    t.serie as serie,
+                    t.nome as turma_nome
+                FROM historico h
+                LEFT JOIN alunos a ON h.aluno_id = a.id
+                LEFT JOIN provas p ON h.prova_id = p.id
+                LEFT JOIN turmas t ON p.turma_id = t.id
+                ORDER BY h.data_correcao DESC
+            """)
+            resultados = cur.fetchall()
+            cur.close()
+            conn.close()
+            return jsonify(resultados)
+        except Exception as e:
+            print(f"Erro ao listar resultados: {e}")
+    
+    return jsonify([])
 
 # ============================================
 # SERVIDOR
