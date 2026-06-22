@@ -708,14 +708,14 @@ def excluir_prova(id):
     return jsonify({'erro': 'Erro ao excluir prova'}), 500
 
 # ============================================
-# ROTA DE GABARITOS - CORRIGIDA (USANDO MESMA LÓGICA DAS PROVAS)
+# ROTA DE GABARITOS - CORRIGIDA (USANDO ::text[] PARA FORÇAR ARRAY)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     """
     Salva o gabarito de uma prova no banco de dados.
-    Usa a MESMA LÓGICA que funciona para salvar provas.
+    CORRIGIDO: Usa ::text[] para forçar o PostgreSQL a interpretar como array.
     """
     try:
         print("=" * 60)
@@ -748,7 +748,7 @@ def salvar_gabarito():
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
         try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur = conn.cursor()
             
             # Verificar se a prova existe
             cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (prova_id,))
@@ -759,12 +759,15 @@ def salvar_gabarito():
                 conn.close()
                 return jsonify({'erro': 'Prova não encontrada'}), 404
             
-            print(f"✅ Prova encontrada: {prova['titulo']}")
+            print(f"✅ Prova encontrada: {prova[1]} (ID: {prova[0]})")
             
-            # ATUALIZAR A PROVA COM O GABARITO (MESMA LÓGICA DA CRIAÇÃO)
+            # ============================================================
+            # CORREÇÃO AQUI: Usar %s::text[] para forçar o PostgreSQL a 
+            # interpretar a lista como um array de texto
+            # ============================================================
             cur.execute("""
                 UPDATE provas 
-                SET gabarito = %s,
+                SET gabarito = %s::text[],
                     quantidade_questoes = %s
                 WHERE id = %s
                 RETURNING id, titulo
@@ -774,13 +777,20 @@ def salvar_gabarito():
             
             if result:
                 conn.commit()
-                print(f"✅ Gabarito salvo: {result['titulo']}")
+                print(f"✅ Gabarito salvo: {result[1]}")
+                
+                # Buscar para confirmar
+                cur.execute("SELECT gabarito, quantidade_questoes FROM provas WHERE id = %s", (prova_id,))
+                confirm = cur.fetchone()
+                print(f"📊 Confirmação - Gabarito: {confirm[0]}")
+                print(f"📊 Confirmação - Questões: {confirm[1]}")
+                
                 cur.close()
                 conn.close()
                 
                 return jsonify({
-                    'id': result['id'],
-                    'mensagem': f'Gabarito salvo com sucesso para "{result["titulo"]}"',
+                    'id': result[0],
+                    'mensagem': f'Gabarito salvo com sucesso para "{result[1]}"',
                     'total_questoes': len(respostas_validas),
                     'gabarito_salvo': respostas_validas
                 })
