@@ -708,80 +708,63 @@ def excluir_prova(id):
     return jsonify({'erro': 'Erro ao excluir prova'}), 500
 
 # ============================================
-# ROTAS DE GABARITOS - CORRIGIDA COMPLETAMENTE
+# ROTA DE GABARITOS - CORRIGIDA (USANDO MESMA LÓGICA DAS PROVAS)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     """
     Salva o gabarito de uma prova no banco de dados.
-    VERSÃO CORRIGIDA - COM TRATAMENTO DE ERROS DETALHADO
+    Usa a MESMA LÓGICA que funciona para salvar provas.
     """
     try:
         print("=" * 60)
-        print("📝 INICIANDO SALVAMENTO DO GABARITO")
+        print("📝 SALVANDO GABARITO")
         print("=" * 60)
         
         data = request.json
         print(f"📥 Dados recebidos: {data}")
         
-        # Validar dados recebidos
         prova_id = data.get('prova_id')
         respostas = data.get('respostas', [])
         
         if not prova_id:
-            print("❌ ID da prova não fornecido")
             return jsonify({'erro': 'ID da prova é obrigatório'}), 400
         
         if not respostas or len(respostas) == 0:
-            print("❌ Respostas não fornecidas")
             return jsonify({'erro': 'Respostas do gabarito são obrigatórias'}), 400
         
-        # Filtrar apenas respostas válidas (A, B, C, D)
+        # Filtrar respostas (igual faz na criação da prova)
         respostas_validas = []
         for r in respostas:
-            if r and str(r).strip().upper() in ['A', 'B', 'C', 'D']:
+            if r:
                 respostas_validas.append(str(r).strip().upper())
         
-        # Se não houver respostas válidas, mas há respostas, tentar converter
-        if not respostas_validas and respostas:
-            for r in respostas:
-                if r:
-                    respostas_validas.append(str(r).strip().upper())
+        print(f"📝 Respostas processadas: {respostas_validas}")
+        print(f"📝 Total: {len(respostas_validas)}")
         
-        if not respostas_validas:
-            print("❌ Nenhuma resposta válida encontrada")
-            return jsonify({'erro': 'Respostas devem ser A, B, C ou D'}), 400
-        
-        print(f"📝 Respostas válidas: {respostas_validas}")
-        print(f"📝 Total de respostas: {len(respostas_validas)}")
-        
-        # Conectar ao banco
         conn = get_db_connection()
         if not conn:
-            print("❌ Erro ao conectar ao banco")
-            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             
             # Verificar se a prova existe
-            print(f"🔍 Verificando prova ID: {prova_id}")
-            cur.execute("SELECT id, titulo, turma_id FROM provas WHERE id = %s", (prova_id,))
+            cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (prova_id,))
             prova = cur.fetchone()
             
             if not prova:
                 cur.close()
                 conn.close()
-                print(f"❌ Prova ID {prova_id} não encontrada")
                 return jsonify({'erro': 'Prova não encontrada'}), 404
             
-            print(f"✅ Prova encontrada: {prova['titulo']} (ID: {prova['id']})")
+            print(f"✅ Prova encontrada: {prova['titulo']}")
             
-            # ATUALIZAR A PROVA COM O GABARITO
+            # ATUALIZAR A PROVA COM O GABARITO (MESMA LÓGICA DA CRIAÇÃO)
             cur.execute("""
                 UPDATE provas 
-                SET gabarito = %s::text[],
+                SET gabarito = %s,
                     quantidade_questoes = %s
                 WHERE id = %s
                 RETURNING id, titulo
@@ -791,14 +774,7 @@ def salvar_gabarito():
             
             if result:
                 conn.commit()
-                print(f"✅ Gabarito salvo com sucesso para prova: {result['titulo']}")
-                
-                # Buscar a prova atualizada para confirmar
-                cur.execute("SELECT gabarito, quantidade_questoes FROM provas WHERE id = %s", (prova_id,))
-                prova_atualizada = cur.fetchone()
-                print(f"📊 Gabarito atualizado: {prova_atualizada['gabarito']}")
-                print(f"📊 Quantidade de questões: {prova_atualizada['quantidade_questoes']}")
-                
+                print(f"✅ Gabarito salvo: {result['titulo']}")
                 cur.close()
                 conn.close()
                 
@@ -812,18 +788,10 @@ def salvar_gabarito():
                 conn.rollback()
                 cur.close()
                 conn.close()
-                print("❌ Erro ao atualizar a prova - nenhum resultado retornado")
-                return jsonify({'erro': 'Erro ao salvar gabarito - nenhuma linha atualizada'}), 500
+                return jsonify({'erro': 'Erro ao salvar gabarito'}), 500
                 
-        except psycopg2.Error as e:
-            print(f"❌ Erro no PostgreSQL: {e}")
-            if conn:
-                conn.rollback()
-                conn.close()
-            return jsonify({'erro': f'Erro no banco de dados: {str(e)}'}), 500
-            
         except Exception as e:
-            print(f"❌ Erro no banco de dados: {e}")
+            print(f"❌ Erro: {e}")
             print(traceback.format_exc())
             if conn:
                 conn.rollback()
@@ -971,7 +939,7 @@ def salvar_correcao():
     return jsonify({'erro': 'Erro ao salvar correção'}), 500
 
 # ============================================
-# ROTAS DE CORREÇÃO MANUAL - CORRIGIDA
+# ROTAS DE CORREÇÃO MANUAL
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
