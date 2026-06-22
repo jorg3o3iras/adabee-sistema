@@ -2376,98 +2376,192 @@ function limparRespostasCM() {
   showToast('🗑️ Respostas limpas!', 'info');
 }
 
-// ============================================================
-// SALVAR CORREÇÃO MANUAL - CORRIGIDO COM ATUALIZAÇÃO DOS RESULTADOS
-// ============================================================
+// ═══════════════════════════════ SALVAR CORREÇÃO MANUAL - CORRIGIDO ═══════════════════════════════
 function salvarCorrecaoManual() {
-  const qtd = correcaoManualData.quantidade || 20;
-  const respostas = correcaoManualData.respostasAluno || [];
-  const gabarito = correcaoManualData.gabarito || [];
-  
-  let acertos = 0;
-  for (let i = 0; i < qtd; i++) {
-    const resp = i < respostas.length ? respostas[i] : '';
-    const gab = i < gabarito.length ? gabarito[i] : '';
-    if (resp && resp.toUpperCase() === gab.toUpperCase()) {
-      acertos++;
-    }
-  }
-  
-  const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
-  
-  // Criar objeto do histórico
-  const historico = {
-    id: Date.now(),
-    aluno_id: correcaoManualData.alunoId,
-    aluno_nome: correcaoManualData.alunoNome,
-    prova_id: correcaoManualData.provaId,
-    prova_titulo: correcaoManualData.provaTitulo,
-    respostas: respostas,
-    gabarito: gabarito,
-    acertos: acertos,
-    nota: nota,
-    total: qtd,
-    tipo_correcao: 'manual',
-    data_correcao: new Date().toISOString(),
-    metodo_ia: 'manual',
-    confianca: 100
-  };
-  
-  // Salvar no localStorage
-  salvarHistoricoLocal(historico);
-  
-  // ATUALIZAR A INTERFACE IMEDIATAMENTE
-  
-  // 1. Atualizar a nota exibida no resultado da IA
-  document.getElementById('ia-nota').textContent = nota.toFixed(1);
-  const status = nota >= 5 ? 'APROVADO' : 'REPROVADO';
-  const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
-  document.getElementById('ia-status').textContent = status;
-  document.getElementById('ia-status').className = 'badge ' + badgeClass;
-  
-  // 2. Adicionar badge de "Manual" no resultado
-  const header = document.querySelector('.card-glow-green .card-header .btn-group');
-  if (header) {
-    // Remover badge antigo se existir
-    const oldBadge = header.querySelector('.badge-manual');
-    if (oldBadge) oldBadge.remove();
+    const qtd = correcaoManualData.quantidade || 20;
+    const respostas = correcaoManualData.respostasAluno || [];
+    const gabarito = correcaoManualData.gabarito || [];
     
-    const manualBadge = document.createElement('span');
-    manualBadge.className = 'badge badge-orange badge-manual';
-    manualBadge.textContent = '✏️ Manual';
-    header.appendChild(manualBadge);
-  }
-  
-  // 3. Atualizar as listas de resultados
-  carregarResultados();
-  carregarDashboard();
-  carregarUltimasCorrecoes();
-  
-  // 4. Fechar modal
-  closeM('m-correcao-manual');
-  
-  showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
+    let acertos = 0;
+    for (let i = 0; i < qtd; i++) {
+        const resp = i < respostas.length ? respostas[i] : '';
+        const gab = i < gabarito.length ? gabarito[i] : '';
+        if (resp && resp.toUpperCase() === gab.toUpperCase()) {
+            acertos++;
+        }
+    }
+    
+    const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
+    
+    // Mostrar toast de carregamento
+    showToast('💾 Salvando correção manual...', 'info');
+    
+    // Dados para enviar ao backend
+    const dadosCorrecao = {
+        prova_id: correcaoManualData.provaId,
+        aluno_id: correcaoManualData.alunoId,
+        respostas: respostas,
+        acertos: acertos,
+        nota: nota,
+        total: qtd
+    };
+    
+    // Enviar para o backend via API
+    fetch('/api/corrigir_manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosCorrecao)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            showToast('✅ Correção manual salva com sucesso! Nota: ' + nota.toFixed(1), 'success');
+            closeM('m-correcao-manual');
+            
+            // ATUALIZAR A INTERFACE
+            // 1. Atualizar a nota exibida no resultado da IA
+            document.getElementById('ia-nota').textContent = nota.toFixed(1);
+            const status = nota >= 5 ? 'APROVADO' : 'REPROVADO';
+            const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
+            document.getElementById('ia-status').textContent = status;
+            document.getElementById('ia-status').className = 'badge ' + badgeClass;
+            
+            // 2. Adicionar badge de "Manual" no resultado
+            const header = document.querySelector('.card-glow-green .card-header .btn-group');
+            if (header) {
+                const oldBadge = header.querySelector('.badge-manual');
+                if (oldBadge) oldBadge.remove();
+                
+                const manualBadge = document.createElement('span');
+                manualBadge.className = 'badge badge-orange badge-manual';
+                manualBadge.textContent = '✏️ Manual';
+                header.appendChild(manualBadge);
+            }
+            
+            // 3. Recarregar dados do banco
+            carregarResultados();
+            carregarDashboard();
+            carregarUltimasCorrecoes();
+            
+        } else {
+            showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
+        }
+    })
+    .catch(erro => {
+        showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+        console.error('Erro ao salvar correção manual:', erro);
+    });
 }
 
-function salvarHistoricoLocal(historico) {
-  // Salvar no localStorage para persistência entre recarregamentos
-  let historicos = JSON.parse(localStorage.getItem('historico_correcoes') || '[]');
-  
-  // Verificar se já existe uma correção para este aluno/prova
-  const index = historicos.findIndex(h => 
-    h.aluno_id === historico.aluno_id && 
-    h.prova_id === historico.prova_id
-  );
-  
-  if (index !== -1) {
-    historicos[index] = historico;
-  } else {
-    historicos.push(historico);
-  }
-  
-  localStorage.setItem('historico_correcoes', JSON.stringify(historicos));
+// ═══════════════════════════════ RESULTADOS - CORRIGIDO (BUSCANDO DO BANCO) ═══════════════════════════════
+async function carregarResultados() {
+    try {
+        // Buscar do banco de dados via API
+        const response = await fetch(API_URL + '/api/historico');
+        const historico = await response.json();
+        
+        const tbody = document.getElementById('tb-resultados');
+        if (!tbody) return;
+        
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>';
+            document.getElementById('res-total').textContent = '0';
+            document.getElementById('res-aprovados').textContent = '0';
+            document.getElementById('res-recuperacao').textContent = '0';
+            document.getElementById('res-media').textContent = '0';
+            return;
+        }
+        
+        // Calcular estatísticas
+        let total = historico.length;
+        let aprovados = historico.filter(c => c.nota >= 5).length;
+        let recuperacao = historico.filter(c => c.nota >= 3 && c.nota < 5).length;
+        let media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
+        
+        document.getElementById('res-total').textContent = total;
+        document.getElementById('res-aprovados').textContent = aprovados;
+        document.getElementById('res-recuperacao').textContent = recuperacao;
+        document.getElementById('res-media').textContent = media.toFixed(1);
+        
+        // Ordenar por nota (maior primeiro)
+        historico.sort((a, b) => b.nota - a.nota);
+        
+        tbody.innerHTML = historico.map((item, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            const nota = item.nota || 0;
+            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
+            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+            
+            // Mostrar se foi correção manual
+            const tipoBadge = item.tipo_correcao === 'manual' ? ' ✏️' : '';
+            const nome = item.aluno_nome || 'Aluno';
+            const acertos = item.acertos || 0;
+            
+            return '<tr>' +
+                '<td>' + medalha + '</td>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td><strong>' + nome + '</strong></td>' +
+                '<td><span class="badge badge-purple">—</span></td>' +
+                '<td>' + acertos + '</td>' +
+                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
+                '<td><span class="badge ' + badge + '">' + status + tipoBadge + '</span></td>' +
+                '</tr>';
+        }).join('');
+        
+    } catch (erro) {
+        console.error('Erro ao carregar resultados:', erro);
+        const tbody = document.getElementById('tb-resultados');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+        }
+    }
 }
 
+// ═══════════════════════════════ ÚLTIMAS CORREÇÕES - CORRIGIDO ═══════════════════════════════
+async function carregarUltimasCorrecoes() {
+    try {
+        const response = await fetch(API_URL + '/api/historico');
+        const historico = await response.json();
+        const tbody = document.getElementById('ultimas-correcoes');
+        if (!tbody) return;
+        
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+        } else {
+            const recentes = historico.slice(0, 4);
+            tbody.innerHTML = recentes.map(item => {
+                const nota = item.nota || 0;
+                const status = nota >= 5 ? 'Aprovado' : 'Reprovado';
+                const cor = nota >= 5 ? 'var(--green)' : 'var(--red)';
+                const badge = nota >= 5 ? 'badge-green' : 'badge-red';
+                const tipoBadge = item.tipo_correcao === 'manual' ? ' ✏️' : '';
+                return '<tr><td><strong>' + (item.aluno_nome || 'Aluno') + '</strong></td><td>' + (item.prova_titulo || 'Prova') + '</td><td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td><td><span class="badge ' + badge + '">' + status + tipoBadge + '</span></td></tr>';
+            }).join('');
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar últimas correções:', erro);
+    }
+}
+
+// ═══════════════════════════════ DASHBOARD - CORRIGIDO ═══════════════════════════════
+async function carregarDashboard() {
+    try {
+        const response = await fetch(API_URL + '/api/dashboard');
+        const dados = await response.json();
+        
+        document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
+        document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
+        document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
+        document.getElementById('totalProvas').textContent = dados.total_provas || 0;
+        
+        document.getElementById('u-total-escolas').textContent = dados.total_escolas || 0;
+        document.getElementById('u-total-turmas').textContent = dados.total_turmas || 0;
+        document.getElementById('u-total-alunos').textContent = dados.total_alunos || 0;
+    } catch (erro) {
+        console.error('Erro ao carregar dashboard:', erro);
+    }
+}
 // ═══════════════════════════════ TEXTO IA ═══════════════════════════════
 function prevTexto(input) {
   const file = input.files[0];
