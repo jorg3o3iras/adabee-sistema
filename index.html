@@ -1247,6 +1247,12 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 <div class="toast-container" id="toast-c"></div>
 
 <script>
+// ═══════════════════════════════ CONFIGURAÇÃO DA API ═══════════════════════════════
+// CONFIGURE A URL DO SEU BACKEND AQUI
+const API_URL = 'https://adabee-sistema-3.onrender.com';
+
+console.log('🚀 API_URL configurado:', API_URL);
+
 // ═══════════════════════════════ TOGGLE MENU ═══════════════════════════════
 function toggleMenu() {
   const sidebar = document.getElementById('sidebar');
@@ -1270,7 +1276,6 @@ let camStream = null;
 let camFacing = 'environment';
 let delTarget = null;
 let ultimaImagem = null;
-const API_URL = 'https://adabee-sistema-3.onrender.com';
 
 // ═══════════════════════════════ CORREÇÃO MANUAL - VARIÁVEIS ═══════════════════════════════
 let correcaoManualData = {
@@ -1391,21 +1396,26 @@ function go(page) {
 
 // ═══════════════════════════════ CARREGAR DADOS ═══════════════════════════════
 async function carregarDados() {
-  await Promise.all([
-    carregarEscolas(),
-    carregarTurmas(),
-    carregarAlunos(),
-    carregarProvas(),
-    carregarDashboard(),
-    carregarResultados(),
-    carregarGabaritos(),
-    carregarCombos(),
-    carregarRelatorios(),
-    carregarUltimasCorrecoes(),
-    carregarUserData()
-  ]);
+  console.log('🔄 Carregando dados do sistema...');
   
-  setTimeout(function() {
+  try {
+    await Promise.all([
+      carregarEscolas(),
+      carregarTurmas(),
+      carregarAlunos(),
+      carregarProvas(),
+      carregarDashboard(),
+      carregarResultados(),
+      carregarGabaritos(),
+      carregarCombos(),
+      carregarRelatorios(),
+      carregarUltimasCorrecoes(),
+      carregarUserData()
+    ]);
+    
+    console.log('✅ Todos os dados carregados com sucesso!');
+    
+    // Preencher automaticamente a série quando selecionar uma prova
     const selectProva = document.getElementById('corrigir-prova');
     const selectSerie = document.getElementById('corrigir-serie');
     if (selectProva && selectSerie) {
@@ -1426,7 +1436,54 @@ async function carregarDados() {
       selectProva.onchange = preencherSerie;
       if (selectProva.value) preencherSerie();
     }
-  }, 1500);
+    
+  } catch (erro) {
+    console.error('❌ Erro ao carregar dados:', erro);
+    showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+  }
+}
+
+// ═══════════════════════════════ RESULTADOS ═══════════════════════════════
+async function carregarResultados() {
+    try {
+        const response = await fetch(`${API_URL}/api/historico`);
+        const historico = await response.json();
+        const tbody = document.getElementById('tb-resultados');
+        if (!tbody) return;
+        
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+            return;
+        }
+        
+        // Ordenar por nota (maior para menor)
+        historico.sort((a, b) => b.nota - a.nota);
+        
+        tbody.innerHTML = historico.map((item, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            const nota = item.nota || 0;
+            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
+            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+            
+            return '<tr>' +
+                '<td>' + medalha + '</td>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td><strong>' + (item.aluno_nome || 'Aluno') + '</strong></td>' +
+                '<td><span class="badge badge-purple">' + (item.serie || '—') + '</span></td>' +
+                '<td>' + (item.acertos || 0) + '</td>' +
+                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
+                '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                '</tr>';
+        }).join('');
+        
+    } catch (erro) {
+        console.error('Erro ao carregar resultados:', erro);
+        const tbody = document.getElementById('tb-resultados');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+        }
+    }
 }
 
 // ═══════════════════════════════ ESCOLAS ═══════════════════════════════
@@ -2619,7 +2676,7 @@ function salvarCorrecaoManual() {
     };
     
     // Enviar para o backend via API
-    fetch('/api/corrigir_manual', {
+    fetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dadosCorrecao)
