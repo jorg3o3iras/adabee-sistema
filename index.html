@@ -948,11 +948,99 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
       <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Turma</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
     </div>
 
-    <!-- ═══ RESULTADOS ═══ -->
+    <!-- ═══ RESULTADOS - COM FILTROS ═══ -->
     <div class="page" id="page-resultados">
-      <div class="page-header"><div><div class="page-title">🏆 Resultados</div><p class="page-sub">Notas e desempenho dos alunos</p></div><div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarResultados()">📥 Excel</button></div></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"><div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total">0</div><div style="font-size:11px;color:var(--text2);">Total</div></div><div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-aprovados">0</div><div style="font-size:11px;color:var(--text2);">Aprovados</div></div><div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao">0</div><div style="font-size:11px;color:var(--text2);">Recuperação</div></div><div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media">0</div><div style="font-size:11px;color:var(--text2);">Média</div></div></div>
-      <div class="card"><div class="table-wrap"><table><thead><tr><th>Pos.</th><th>Nº</th><th>Nome</th><th>Série</th><th>Acertos</th><th>Nota</th><th>Status</th></tr></thead><tbody id="tb-resultados"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+      <div class="page-header">
+        <div>
+          <div class="page-title">🏆 Resultados</div>
+          <p class="page-sub">Notas e desempenho dos alunos</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="form-row c3">
+          <div class="form-group">
+            <label class="form-label">Escola</label>
+            <select class="form-control" id="filtro-escola" onchange="carregarResultadosComFiltros()">
+              <option value="">Todas as escolas</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Série</label>
+            <select class="form-control" id="filtro-serie" onchange="carregarResultadosComFiltros()">
+              <option value="">Todas as séries</option>
+              <option value="1º Ano">1º Ano</option>
+              <option value="2º Ano">2º Ano</option>
+              <option value="3º Ano">3º Ano</option>
+              <option value="4º Ano">4º Ano</option>
+              <option value="5º Ano">5º Ano</option>
+              <option value="6º Ano">6º Ano</option>
+              <option value="7º Ano">7º Ano</option>
+              <option value="8º Ano">8º Ano</option>
+              <option value="9º Ano">9º Ano</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Turma</label>
+            <select class="form-control" id="filtro-turma" onchange="carregarResultadosComFiltros()">
+              <option value="">Todas as turmas</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
+          <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
+        </div>
+      </div>
+
+      <!-- CARDS DE ESTATÍSTICAS (ATUALIZADOS COM OS DADOS FILTRADOS) -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total-filtrado">0</div>
+          <div style="font-size:11px;color:var(--text2);">Total</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:var(--green);" id="res-aprovados-filtrado">0</div>
+          <div style="font-size:11px;color:var(--text2);">Aprovados</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div>
+          <div style="font-size:11px;color:var(--text2);">Recuperação</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div>
+          <div style="font-size:11px;color:var(--text2);">Média</div>
+        </div>
+      </div>
+
+      <!-- TABELA DE RESULTADOS -->
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pos.</th>
+                <th>Nº</th>
+                <th>Nome</th>
+                <th>Série</th>
+                <th>Acertos</th>
+                <th>Nota</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tb-resultados-filtrado">
+              <tr>
+                <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ RELATÓRIOS ═══ -->
@@ -1283,7 +1371,7 @@ function go(page) {
   if (page === 'alunos') carregarAlunos();
   if (page === 'provas') carregarProvas();
   if (page === 'dashboard') carregarDashboard();
-  if (page === 'resultados') carregarResultados();
+  if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
   if (page === 'gabaritos') carregarGabaritos();
   if (page === 'rel-turma' || page === 'rel-aluno' || page === 'rel-escola') carregarRelatorios();
   
@@ -1627,30 +1715,154 @@ async function carregarUltimasCorrecoes() {
   } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
 }
 
-// ═══════════════════════════════ RESULTADOS ═══════════════════════════════
-async function carregarResultados() {
-  try {
-    const response = await fetch(API_URL + '/api/historico');
-    const historico = await response.json();
-    const tbody = document.getElementById('tb-resultados');
-    if (!tbody) return;
-    if (!historico || historico.length === 0 || historico.erro) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>';
-    } else {
-      let total = historico.length, aprovados = historico.filter(c => c.nota >= 6).length, recuperacao = historico.filter(c => c.nota >= 4 && c.nota < 6).length, media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
-      document.getElementById('res-total').textContent = total;
-      document.getElementById('res-aprovados').textContent = aprovados;
-      document.getElementById('res-recuperacao').textContent = recuperacao;
-      document.getElementById('res-media').textContent = media.toFixed(1);
-      tbody.innerHTML = historico.map((item, index) => {
-        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index+1;
-        const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
-        const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
-        const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
-        return '<tr><td>' + medalha + '</td><td>' + (index+1) + '</td><td><strong>' + item.aluno_nome + '</strong></td><td><span class="badge badge-purple">—</span></td><td>' + item.acertos + '</td><td><strong style="color:' + cor + ';">' + item.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
-      }).join('');
+// ═══════════════════════════════ RESULTADOS - COM FILTROS ═══════════════════════════════
+
+// Carregar filtros de escolas e turmas
+async function carregarFiltrosResultados() {
+    try {
+        // Carregar escolas
+        const respEscolas = await fetch(API_URL + '/api/escolas');
+        const escolas = await respEscolas.json();
+        const selectEscola = document.getElementById('filtro-escola');
+        if (selectEscola && escolas && !escolas.erro) {
+            const current = selectEscola.value;
+            selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                selectEscola.appendChild(opt);
+            });
+            if (current) selectEscola.value = current;
+        }
+
+        // Carregar turmas
+        const respTurmas = await fetch(API_URL + '/api/turmas');
+        const turmas = await respTurmas.json();
+        const selectTurma = document.getElementById('filtro-turma');
+        if (selectTurma && turmas && !turmas.erro) {
+            const current = selectTurma.value;
+            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                selectTurma.appendChild(opt);
+            });
+            if (current) selectTurma.value = current;
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar filtros:', erro);
     }
-  } catch (erro) { console.error('Erro ao carregar resultados:', erro); }
+}
+
+async function carregarResultadosComFiltros() {
+    try {
+        const escolaId = document.getElementById('filtro-escola').value;
+        const serie = document.getElementById('filtro-serie').value;
+        const turmaId = document.getElementById('filtro-turma').value;
+
+        let url = API_URL + '/api/historico';
+        const params = new URLSearchParams();
+        if (escolaId) params.append('escola_id', escolaId);
+        if (serie) params.append('serie', serie);
+        if (turmaId) params.append('turma_id', turmaId);
+        if (params.toString()) url += '?' + params.toString();
+
+        const response = await fetch(url);
+        const historico = await response.json();
+        const tbody = document.getElementById('tb-resultados-filtrado');
+        if (!tbody) return;
+
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+            document.getElementById('res-total-filtrado').textContent = '0';
+            document.getElementById('res-aprovados-filtrado').textContent = '0';
+            document.getElementById('res-recuperacao-filtrado').textContent = '0';
+            document.getElementById('res-media-filtrado').textContent = '0';
+            return;
+        }
+
+        // Calcular estatísticas
+        let total = historico.length;
+        let aprovados = historico.filter(c => c.nota >= 5).length;
+        let recuperacao = historico.filter(c => c.nota >= 3 && c.nota < 5).length;
+        let media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
+
+        document.getElementById('res-total-filtrado').textContent = total;
+        document.getElementById('res-aprovados-filtrado').textContent = aprovados;
+        document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
+        document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
+
+        // Ordenar por nota (maior primeiro)
+        historico.sort((a, b) => b.nota - a.nota);
+
+        tbody.innerHTML = historico.map((item, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            const nota = item.nota || 0;
+            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
+            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+            
+            const nome = item.aluno_nome || 'Aluno';
+            const acertos = item.acertos || 0;
+            const serieAluno = item.serie || '—';
+            
+            return '<tr>' +
+                '<td>' + medalha + '</td>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td><strong>' + nome + '</strong></td>' +
+                '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
+                '<td>' + acertos + '</td>' +
+                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
+                '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                '</tr>';
+        }).join('');
+
+    } catch (erro) {
+        console.error('Erro ao carregar resultados:', erro);
+        const tbody = document.getElementById('tb-resultados-filtrado');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+        }
+    }
+}
+
+function limparFiltrosResultados() {
+    document.getElementById('filtro-escola').value = '';
+    document.getElementById('filtro-serie').value = '';
+    document.getElementById('filtro-turma').value = '';
+    carregarResultadosComFiltros();
+}
+
+function exportarResultadosFiltrados() {
+    showToast('📥 Exportando resultados filtrados...', 'info');
+    // Pega os dados atuais da tabela
+    const tbody = document.getElementById('tb-resultados-filtrado');
+    if (!tbody) return;
+    
+    let csv = 'Posição,Número,Nome,Série,Acertos,Nota,Status\n';
+    tbody.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 7) {
+            csv += cells[0].textContent.trim() + ',' +
+                   cells[1].textContent.trim() + ',' +
+                   cells[2].textContent.trim() + ',' +
+                   cells[3].textContent.trim() + ',' +
+                   cells[4].textContent.trim() + ',' +
+                   cells[5].textContent.trim() + ',' +
+                   cells[6].textContent.trim() + '\n';
+        }
+    });
+    
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'resultados_filtrados.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ Resultados exportados!', 'success');
 }
 
 // ═══════════════════════════════ RELATÓRIOS ═══════════════════════════════
@@ -2377,7 +2589,6 @@ function limparRespostasCM() {
 }
 
 // ═══════════════════════════════ SALVAR CORREÇÃO MANUAL - CORRIGIDO ═══════════════════════════════
-// ═══════════════════════════════ SALVAR CORREÇÃO MANUAL - CORRIGIDO ═══════════════════════════════
 function salvarCorrecaoManual() {
     const qtd = correcaoManualData.quantidade || 20;
     const respostas = correcaoManualData.respostasAluno || [];
@@ -2511,115 +2722,7 @@ function salvarCorrecaoManual() {
         console.error('Erro ao salvar correção manual:', erro);
     });
 }
-// ═══════════════════════════════ RESULTADOS - CORRIGIDO (BUSCANDO DO BANCO) ═══════════════════════════════
-async function carregarResultados() {
-    try {
-        // Buscar do banco de dados via API
-        const response = await fetch(API_URL + '/api/historico');
-        const historico = await response.json();
-        
-        const tbody = document.getElementById('tb-resultados');
-        if (!tbody) return;
-        
-        if (!historico || historico.length === 0 || historico.erro) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção realizada</td></tr>';
-            document.getElementById('res-total').textContent = '0';
-            document.getElementById('res-aprovados').textContent = '0';
-            document.getElementById('res-recuperacao').textContent = '0';
-            document.getElementById('res-media').textContent = '0';
-            return;
-        }
-        
-        // Calcular estatísticas
-        let total = historico.length;
-        let aprovados = historico.filter(c => c.nota >= 5).length;
-        let recuperacao = historico.filter(c => c.nota >= 3 && c.nota < 5).length;
-        let media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
-        
-        document.getElementById('res-total').textContent = total;
-        document.getElementById('res-aprovados').textContent = aprovados;
-        document.getElementById('res-recuperacao').textContent = recuperacao;
-        document.getElementById('res-media').textContent = media.toFixed(1);
-        
-        // Ordenar por nota (maior primeiro)
-        historico.sort((a, b) => b.nota - a.nota);
-        
-        tbody.innerHTML = historico.map((item, index) => {
-            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-            const nota = item.nota || 0;
-            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
-            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
-            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
-            
-            // Mostrar se foi correção manual
-            const tipoBadge = item.tipo_correcao === 'manual' ? ' ✏️' : '';
-            const nome = item.aluno_nome || 'Aluno';
-            const acertos = item.acertos || 0;
-            
-            return '<tr>' +
-                '<td>' + medalha + '</td>' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td><strong>' + nome + '</strong></td>' +
-                '<td><span class="badge badge-purple">—</span></td>' +
-                '<td>' + acertos + '</td>' +
-                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
-                '<td><span class="badge ' + badge + '">' + status + tipoBadge + '</span></td>' +
-                '</tr>';
-        }).join('');
-        
-    } catch (erro) {
-        console.error('Erro ao carregar resultados:', erro);
-        const tbody = document.getElementById('tb-resultados');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
-        }
-    }
-}
 
-// ═══════════════════════════════ ÚLTIMAS CORREÇÕES - CORRIGIDO ═══════════════════════════════
-async function carregarUltimasCorrecoes() {
-    try {
-        const response = await fetch(API_URL + '/api/historico');
-        const historico = await response.json();
-        const tbody = document.getElementById('ultimas-correcoes');
-        if (!tbody) return;
-        
-        if (!historico || historico.length === 0 || historico.erro) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
-        } else {
-            const recentes = historico.slice(0, 4);
-            tbody.innerHTML = recentes.map(item => {
-                const nota = item.nota || 0;
-                const status = nota >= 5 ? 'Aprovado' : 'Reprovado';
-                const cor = nota >= 5 ? 'var(--green)' : 'var(--red)';
-                const badge = nota >= 5 ? 'badge-green' : 'badge-red';
-                const tipoBadge = item.tipo_correcao === 'manual' ? ' ✏️' : '';
-                return '<tr><td><strong>' + (item.aluno_nome || 'Aluno') + '</strong></td><td>' + (item.prova_titulo || 'Prova') + '</td><td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td><td><span class="badge ' + badge + '">' + status + tipoBadge + '</span></td></tr>';
-            }).join('');
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar últimas correções:', erro);
-    }
-}
-
-// ═══════════════════════════════ DASHBOARD - CORRIGIDO ═══════════════════════════════
-async function carregarDashboard() {
-    try {
-        const response = await fetch(API_URL + '/api/dashboard');
-        const dados = await response.json();
-        
-        document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
-        document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
-        document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
-        document.getElementById('totalProvas').textContent = dados.total_provas || 0;
-        
-        document.getElementById('u-total-escolas').textContent = dados.total_escolas || 0;
-        document.getElementById('u-total-turmas').textContent = dados.total_turmas || 0;
-        document.getElementById('u-total-alunos').textContent = dados.total_alunos || 0;
-    } catch (erro) {
-        console.error('Erro ao carregar dashboard:', erro);
-    }
-}
 // ═══════════════════════════════ TEXTO IA ═══════════════════════════════
 function prevTexto(input) {
   const file = input.files[0];
@@ -2808,7 +2911,6 @@ function exportarAlunosCSV() {
   }).catch(e => { showToast('❌ Erro ao exportar', 'error'); console.error(e); });
 }
 
-function exportarResultados() { showToast('📥 Exportando resultados...', 'info'); const provaId = document.getElementById('rel-prova-select').value || ''; let url = API_URL + '/api/exportar'; if (provaId) url += '?prova_id=' + provaId; window.open(url, '_blank'); }
 function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info'); window.print(); }
 function exportarRelatorioAluno() { showToast('📥 Exportando relatório do aluno...', 'info'); window.print(); }
 function exportarRelatorioEscola() {
@@ -2869,6 +2971,8 @@ document.addEventListener('DOMContentLoaded', function() {
   buildGabGrid();
   carregarCombos();
   carregarDados();
+  carregarFiltrosResultados();
+  carregarResultadosComFiltros();
   const tipoProva = document.getElementById('modal-prova-tipo');
   if (tipoProva) gerarGabaritoModal(tipoProva.value);
 });
