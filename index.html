@@ -833,7 +833,7 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
       </div>
     </div>
 
-    <!-- ═══ GABARITO - CORRIGIDO ═══ -->
+    <!-- ═══ GABARITO ═══ -->
     <div class="page" id="page-gabarito">
       <div class="page-header"><div><div class="page-title">✅ Cadastrar Gabarito</div><p class="page-sub">1º Ano: A,B,C &nbsp;|&nbsp; 2º ao 9º Ano: A,B,C,D</p></div></div>
       <div class="card">
@@ -1284,6 +1284,12 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 <div class="toast-container" id="toast-c"></div>
 
 <script>
+// ═══════════════════════════════ CONFIGURAÇÃO DA API ═══════════════════════════════
+// CONFIGURE A URL DO SEU BACKEND AQUI
+const API_URL = 'https://adabee-sistema-3.onrender.com';
+
+console.log('🚀 API_URL configurado:', API_URL);
+
 // ═══════════════════════════════ TOGGLE MENU ═══════════════════════════════
 function toggleMenu() {
   const sidebar = document.getElementById('sidebar');
@@ -1307,8 +1313,7 @@ let camStream = null;
 let camFacing = 'environment';
 let delTarget = null;
 let ultimaImagem = null;
-// CORRIJA ESTA LINHA - Adicione a URL completa do seu backend
-const API_URL = 'https://adabee-sistema-3.onrender.com'; // <-- ADICIONE ESTA URL
+
 // ═══════════════════════════════ CORREÇÃO MANUAL - VARIÁVEIS ═══════════════════════════════
 let correcaoManualData = {
   alunoId: null,
@@ -1501,464 +1506,113 @@ async function carregarEscolas() {
   }
 }
 
-async function excluirEscola(id, nome) {
-  if (!confirm('Excluir a escola "' + nome + '"? Isso também excluirá todas as turmas e alunos vinculados.')) return;
-  try {
-    const response = await fetch(API_URL + '/api/escolas/' + id, { method: 'DELETE' });
-    if (response.ok) {
-      showToast('🗑️ Escola "' + nome + '" excluída!', 'error');
-      carregarDados();
-    } else {
-      const erro = await response.json();
-      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
-    }
-  } catch (erro) {
-    showToast('Erro ao excluir: ' + erro.message, 'error');
-  }
-}
-
-function editarEscola(id) {
-  showToast('✏️ Editando escola ID ' + id + '...', 'info');
-}
-
-// ═══════════════════════════════ TURMAS ═══════════════════════════════
-async function carregarTurmas() {
-  try {
-    const response = await fetch(API_URL + '/api/turmas');
-    const turmas = await response.json();
-    const tbody = document.getElementById('tb-turmas');
-    if (!tbody) return;
-    
-    if (!turmas || turmas.length === 0 || turmas.erro) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
-    } else {
-      const corMap = {'1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue','4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan','7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'};
-      tbody.innerHTML = turmas.map((t, i) => {
-        return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
-          '<td><span class="badge badge-gray">' + String(i+1).padStart(2,'0') + '</span></td>' +
-          '<td><strong>' + t.nome + '</strong></td>' +
-          '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
-          '<td>' + (t.turno || 'Manhã') + '</td>' +
-          '<td>' + (t.escola_nome || '—') + '</td>' +
-          '<td>' + (t.professor || '—') + '</td>' +
-          '<td>0</td>' +
-          '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
-      }).join('');
-    }
-  } catch (erro) {
-    console.error('Erro ao carregar turmas:', erro);
-  }
-}
-
-async function excluirTurma(id, nome) {
-  if (!confirm('Excluir a turma "' + nome + '"? Isso também excluirá todos os alunos vinculados.')) return;
-  try {
-    const response = await fetch(API_URL + '/api/turmas/' + id, { method: 'DELETE' });
-    if (response.ok) {
-      showToast('🗑️ Turma "' + nome + '" excluída!', 'error');
-      carregarDados();
-    } else {
-      const erro = await response.json();
-      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
-    }
-  } catch (erro) {
-    showToast('Erro ao excluir: ' + erro.message, 'error');
-  }
-}
-
-function editarTurma(id) {
-  showToast('✏️ Editando turma ID ' + id + '...', 'info');
-}
-
-// ═══════════════════════════════ ALUNOS ═══════════════════════════════
-async function carregarAlunos() {
-  try {
-    const response = await fetch(API_URL + '/api/alunos');
-    const alunos = await response.json();
-    const tbody = document.getElementById('tb-alunos');
-    if (!tbody) return;
-    
-    if (!alunos || alunos.length === 0 || alunos.erro) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>';
-    } else {
-      const corMap = {'1º Ano': 'badge-purple','2º Ano': 'badge-purple','3º Ano': 'badge-blue','4º Ano': 'badge-blue','5º Ano': 'badge-blue','6º Ano': 'badge-cyan','7º Ano': 'badge-cyan','8º Ano': 'badge-orange','9º Ano': 'badge-orange'};
-      tbody.innerHTML = alunos.map((a, i) => {
-        return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
-          '<td><span class="badge badge-blue">' + String(a.numero_chamada || i+1).padStart(2,'0') + '</span></td>' +
-          '<td><span class="chip">' + (a.matricula || '—') + '</span></td>' +
-          '<td><strong>' + a.nome + '</strong></td>' +
-          '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td>' +
-          '<td>' + (a.turma_nome || '—') + '</td>' +
-          '<td>' + (a.escola_nome || '—') + '</td>' +
-          '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
-          '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
-      }).join('');
-    }
-  } catch (erro) {
-    console.error('Erro ao carregar alunos:', erro);
-  }
-}
-
-async function excluirAluno(id, nome) {
-  if (!confirm('Excluir o aluno "' + nome + '"?')) return;
-  try {
-    const response = await fetch(API_URL + '/api/alunos/' + id, { method: 'DELETE' });
-    if (response.ok) {
-      showToast('🗑️ Aluno "' + nome + '" excluído!', 'error');
-      carregarDados();
-    } else {
-      const erro = await response.json();
-      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
-    }
-  } catch (erro) {
-    showToast('Erro ao excluir: ' + erro.message, 'error');
-  }
-}
-
-function editarAluno(id) {
-  showToast('✏️ Editando aluno ID ' + id + '...', 'info');
-}
-
-// ═══════════════════════════════ PROVAS ═══════════════════════════════
-async function carregarProvas() {
-  try {
-    const response = await fetch(API_URL + '/api/provas');
-    const provas = await response.json();
-    const tbody = document.getElementById('tb-provas');
-    if (!tbody) return;
-    
-    if (!provas || provas.length === 0 || provas.erro) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
-    } else {
-      tbody.innerHTML = provas.map((p, i) => {
-        return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-          '<td><span class="badge badge-blue">' + String(i+1).padStart(3,'0') + '</span></td>' +
-          '<td><strong>' + p.titulo + '</strong></td>' +
-          '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
-          '<td>' + (p.turma_nome || '—') + '</td>' +
-          '<td>' + (p.data_prova || '—') + '</td>' +
-          '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-          '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
-      }).join('');
-    }
-  } catch (erro) {
-    console.error('Erro ao carregar provas:', erro);
-  }
-}
-
-async function excluirProva(id, titulo) {
-  if (!confirm('Excluir a prova "' + titulo + '"?')) return;
-  try {
-    const response = await fetch(API_URL + '/api/provas/' + id, { method: 'DELETE' });
-    if (response.ok) {
-      showToast('🗑️ Prova "' + titulo + '" excluída!', 'error');
-      carregarDados();
-    } else {
-      const erro = await response.json();
-      showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
-    }
-  } catch (erro) {
-    showToast('Erro ao excluir: ' + erro.message, 'error');
-  }
-}
-
-function editarProva(id) {
-  fetch(API_URL + '/api/provas/' + id).then(r => r.json()).then(prova => {
-    if (prova.erro || !prova) { showToast('❌ Prova não encontrada!', 'error'); return; }
-    const is1Ano = prova.turma_serie && prova.turma_serie.startsWith('1');
-    const gabarito = prova.gabarito || [];
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
-    let html = '<div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 32px 80px rgba(0,0,0,0.6);">';
-    html += '<button onclick="this.closest(\'div[style]\').remove()" style="position:sticky;top:0;float:right;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#fc8181;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">✕</button>';
-    html += '<div style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px;"><h2 style="font-size:22px;font-weight:800;color:var(--text);">📄 ' + (prova.titulo || 'Prova') + '</h2><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px;color:var(--text2);"><span>🏷️ Disciplina: <strong style="color:var(--text);">' + (prova.disciplina || '—') + '</strong></span><span>📚 Série: <strong style="color:var(--text);">' + (prova.turma_serie || '—') + '</strong></span><span>👥 Turma: <strong style="color:var(--text);">' + (prova.turma_nome || '—') + '</strong></span><span>📅 Data: <strong style="color:var(--text);">' + (prova.data_prova || '—') + '</strong></span><span>📊 Questões: <strong style="color:var(--text);">' + (gabarito.length || 0) + '</strong></span><span style="background:' + (is1Ano ? 'rgba(139,92,246,0.15)' : 'rgba(59,130,246,0.15)') + ';padding:2px 10px;border-radius:20px;border:1px solid ' + (is1Ano ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') + ';">' + (is1Ano ? '🔵 3 alternativas (A,B,C)' : '🟦 4 alternativas (A,B,C,D)') + '</span></div></div>';
-    html += '<div style="margin-bottom:20px;"><h3 style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">✅ Gabarito da Prova</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;max-height:300px;overflow-y:auto;padding:4px;">' + (gabarito.map((resp, i) => '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:8px 4px;text-align:center;"><div style="font-size:9px;color:var(--text3);font-weight:700;margin-bottom:2px;">Q' + (i+1) + '</div><div style="font-size:16px;font-weight:800;color:var(--green);background:rgba(16,185,129,0.1);border-radius:6px;padding:4px 0;">' + (resp || '—') + '</div></div>').join('') || '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:20px;">⚠️ Nenhum gabarito cadastrado</div>') + '</div></div>';
-    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--border);"><button onclick="go(\'corrigir-ia\')" class="btn btn-purple" style="flex:1;justify-content:center;">🤖 Corrigir com IA</button><button onclick="this.closest(\'div[style]\').remove()" class="btn btn-outline" style="flex:1;justify-content:center;">✕ Fechar</button><button onclick="window.print()" class="btn btn-outline">🖨️ Imprimir</button></div></div>';
-    container.innerHTML = html;
-    document.body.appendChild(container);
-    container.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
-    showToast('👁️ Visualizando prova: ' + prova.titulo, 'info');
-  }).catch(erro => { console.error('Erro ao carregar prova:', erro); showToast('❌ Erro ao visualizar prova', 'error'); });
-}
-
-// ═══════════════════════════════ GABARITOS ═══════════════════════════════
-async function carregarGabaritos() {
-  try {
-    const response = await fetch(API_URL + '/api/provas');
-    const provas = await response.json();
-    const tbody = document.getElementById('tb-gabaritos');
-    if (!tbody) return;
-    const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
-    if (!comGabarito || comGabarito.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
-    } else {
-      tbody.innerHTML = comGabarito.map((p, i) => {
-        return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-          '<td><span class="badge badge-blue">' + String(i+1).padStart(3,'0') + '</span></td>' +
-          '<td>' + p.titulo + '</td>' +
-          '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
-          '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
-          '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
-          '<td>' + (p.data_prova || '—') + '</td>' +
-          '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
-      }).join('');
-    }
-  } catch (erro) { console.error('Erro ao carregar gabaritos:', erro); }
-}
-
-function editarGabarito(id) { showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info'); go('gabarito'); }
-async function excluirGabarito(id, titulo) {
-  if (!confirm('Excluir o gabarito da prova "' + titulo + '"?')) return;
-  try {
-    const response = await fetch(API_URL + '/api/provas/' + id, { method: 'DELETE' });
-    if (response.ok) { showToast('🗑️ Gabarito da prova "' + titulo + '" excluído!', 'error'); carregarDados(); } 
-    else { const erro = await response.json(); showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error'); }
-  } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
-}
-
-// ═══════════════════════════════ DASHBOARD ═══════════════════════════════
-async function carregarDashboard() {
-  try {
-    const response = await fetch(API_URL + '/api/dashboard');
-    const dados = await response.json();
-    document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
-    document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
-    document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
-    document.getElementById('totalProvas').textContent = dados.total_provas || 0;
-    document.getElementById('u-total-escolas').textContent = dados.total_escolas || 0;
-    document.getElementById('u-total-turmas').textContent = dados.total_turmas || 0;
-    document.getElementById('u-total-alunos').textContent = dados.total_alunos || 0;
-  } catch (erro) { console.error('Erro ao carregar dashboard:', erro); }
-}
-
-// ═══════════════════════════════ ÚLTIMAS CORREÇÕES ═══════════════════════════════
-async function carregarUltimasCorrecoes() {
-  try {
-    const response = await fetch(API_URL + '/api/historico');
-    const historico = await response.json();
-    const tbody = document.getElementById('ultimas-correcoes');
-    if (!tbody) return;
-    if (!historico || historico.length === 0 || historico.erro) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
-    } else {
-      const recentes = historico.slice(0, 4);
-      tbody.innerHTML = recentes.map(item => {
-        const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
-        const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
-        const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
-        return '<tr><td><strong>' + item.aluno_nome + '</strong></td><td>' + item.prova_titulo + '</td><td><strong style="color:' + cor + ';">' + item.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
-      }).join('');
-    }
-  } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
-}
-
-// ═══════════════════════════════ RESULTADOS - COM FILTROS ═══════════════════════════════
-
-// Carregar filtros de escolas e turmas
-async function carregarFiltrosResultados() {
+// ═══════════════════════════════ SALVAR GABARITO - CORRIGIDO ═══════════════════════════════
+async function saveGab() {
     try {
-        // Carregar escolas
-        const respEscolas = await fetch(API_URL + '/api/escolas');
-        const escolas = await respEscolas.json();
-        const selectEscola = document.getElementById('filtro-escola');
-        if (selectEscola && escolas && !escolas.erro) {
-            const current = selectEscola.value;
-            selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                selectEscola.appendChild(opt);
-            });
-            if (current) selectEscola.value = current;
+        // Coletar respostas do gabarito
+        const selects = document.querySelectorAll('.gab-select');
+        const respostas = [];
+        let todosPreenchidos = true;
+        
+        selects.forEach(s => {
+            if (s.value) {
+                respostas.push(s.value);
+            } else {
+                todosPreenchidos = false;
+                respostas.push('');
+            }
+        });
+        
+        // Verificar se todas as questões foram preenchidas
+        if (!todosPreenchidos) {
+            const confirmar = confirm('⚠️ Nem todas as questões foram preenchidas. Deseja continuar mesmo assim?');
+            if (!confirmar) return;
         }
-
-        // Carregar turmas
-        const respTurmas = await fetch(API_URL + '/api/turmas');
-        const turmas = await respTurmas.json();
-        const selectTurma = document.getElementById('filtro-turma');
-        if (selectTurma && turmas && !turmas.erro) {
-            const current = selectTurma.value;
-            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-            turmas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                selectTurma.appendChild(opt);
-            });
-            if (current) selectTurma.value = current;
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar filtros:', erro);
-    }
-}
-
-async function carregarResultadosComFiltros() {
-    try {
-        const escolaId = document.getElementById('filtro-escola').value;
-        const serie = document.getElementById('filtro-serie').value;
-        const turmaId = document.getElementById('filtro-turma').value;
-
-        let url = API_URL + '/api/historico';
-        const params = new URLSearchParams();
-        if (escolaId) params.append('escola_id', escolaId);
-        if (serie) params.append('serie', serie);
-        if (turmaId) params.append('turma_id', turmaId);
-        if (params.toString()) url += '?' + params.toString();
-
-        const response = await fetch(url);
-        const historico = await response.json();
-        const tbody = document.getElementById('tb-resultados-filtrado');
-        if (!tbody) return;
-
-        if (!historico || historico.length === 0 || historico.erro) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-            document.getElementById('res-total-filtrado').textContent = '0';
-            document.getElementById('res-aprovados-filtrado').textContent = '0';
-            document.getElementById('res-recuperacao-filtrado').textContent = '0';
-            document.getElementById('res-media-filtrado').textContent = '0';
+        
+        // Verificar se há respostas
+        const respostasValidas = respostas.filter(r => r !== '');
+        if (respostasValidas.length === 0) {
+            showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error');
             return;
         }
-
-        // Calcular estatísticas
-        let total = historico.length;
-        let aprovados = historico.filter(c => c.nota >= 5).length;
-        let recuperacao = historico.filter(c => c.nota >= 3 && c.nota < 5).length;
-        let media = total > 0 ? (historico.reduce((s, c) => s + c.nota, 0) / total) : 0;
-
-        document.getElementById('res-total-filtrado').textContent = total;
-        document.getElementById('res-aprovados-filtrado').textContent = aprovados;
-        document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
-        document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
-
-        // Ordenar por nota (maior primeiro)
-        historico.sort((a, b) => b.nota - a.nota);
-
-        tbody.innerHTML = historico.map((item, index) => {
-            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-            const nota = item.nota || 0;
-            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
-            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
-            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+        
+        // Obter dados adicionais
+        const provaId = document.getElementById('gab-prova').value;
+        const serie = document.getElementById('gab-serie').value;
+        const total = document.getElementById('gab-total').value;
+        const ptsAcerto = document.getElementById('pts-acerto').value || 0.5;
+        const penalidade = document.getElementById('penalidade').value || 'Sem penalidade';
+        const questoesAnuladas = document.getElementById('questoes-anuladas').value || '';
+        
+        if (!provaId) {
+            showToast('❌ Selecione uma prova primeiro!', 'error');
+            return;
+        }
+        
+        console.log('📝 Salvando gabarito para prova ID:', provaId);
+        console.log('📝 Respostas:', respostas);
+        
+        showToast('💾 Salvando gabarito...', 'info');
+        
+        // Construir a URL
+        const url = `${API_URL}/api/gabaritos`;
+        console.log('📤 Enviando para:', url);
+        
+        // Enviar para o backend
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prova_id: parseInt(provaId),
+                respostas: respostas,
+                serie: serie,
+                total_questoes: parseInt(total),
+                alternativas: '4',
+                pontos_por_acerto: parseFloat(ptsAcerto),
+                penalidade: penalidade,
+                questoes_anuladas: questoesAnuladas
+            })
+        });
+        
+        const result = await response.json();
+        console.log('📥 Resposta do servidor:', result);
+        
+        if (response.ok && result.id) {
+            showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
             
-            const nome = item.aluno_nome || 'Aluno';
-            const acertos = item.acertos || 0;
-            const serieAluno = item.serie || '—';
+            // Marcar todos os selects como filled
+            selects.forEach(s => {
+                if (s.value) s.classList.add('filled');
+            });
             
-            return '<tr>' +
-                '<td>' + medalha + '</td>' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td><strong>' + nome + '</strong></td>' +
-                '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
-                '<td>' + acertos + '</td>' +
-                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
-                '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
-                '</tr>';
-        }).join('');
-
+            // Recarregar a lista de gabaritos
+            carregarGabaritos();
+            
+            // Atualizar o select de provas
+            await carregarProvasSelect();
+            
+            // Recarregar a página de provas
+            carregarProvas();
+            
+        } else {
+            showToast('❌ Erro ao salvar gabarito: ' + (result.erro || 'Erro desconhecido'), 'error');
+            console.error('Erro ao salvar gabarito:', result);
+        }
+        
     } catch (erro) {
-        console.error('Erro ao carregar resultados:', erro);
-        const tbody = document.getElementById('tb-resultados-filtrado');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
-        }
+        console.error('❌ Erro ao salvar gabarito:', erro);
+        showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
     }
-}
-
-function limparFiltrosResultados() {
-    document.getElementById('filtro-escola').value = '';
-    document.getElementById('filtro-serie').value = '';
-    document.getElementById('filtro-turma').value = '';
-    carregarResultadosComFiltros();
-}
-
-function exportarResultadosFiltrados() {
-    showToast('📥 Exportando resultados filtrados...', 'info');
-    // Pega os dados atuais da tabela
-    const tbody = document.getElementById('tb-resultados-filtrado');
-    if (!tbody) return;
-    
-    let csv = 'Posição,Número,Nome,Série,Acertos,Nota,Status\n';
-    tbody.querySelectorAll('tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
-            csv += cells[0].textContent.trim() + ',' +
-                   cells[1].textContent.trim() + ',' +
-                   cells[2].textContent.trim() + ',' +
-                   cells[3].textContent.trim() + ',' +
-                   cells[4].textContent.trim() + ',' +
-                   cells[5].textContent.trim() + ',' +
-                   cells[6].textContent.trim() + '\n';
-        }
-    });
-    
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'resultados_filtrados.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('✅ Resultados exportados!', 'success');
-}
-
-// ═══════════════════════════════ RELATÓRIOS ═══════════════════════════════
-async function carregarRelatorios() {
-  try {
-    const alunosResp = await fetch(API_URL + '/api/alunos');
-    const alunos = await alunosResp.json();
-    const correcoesResp = await fetch(API_URL + '/api/historico');
-    const correcoes = await correcoesResp.json();
-    const totalAlunos = alunos.length || 0, aprovados = correcoes.filter(c => c.nota >= 6).length || 0, recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0, media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
-    document.getElementById('rel-total-alunos').textContent = totalAlunos;
-    document.getElementById('rel-aprovados').textContent = aprovados;
-    document.getElementById('rel-recuperacao').textContent = recuperacao;
-    document.getElementById('rel-media').textContent = media.toFixed(1);
-    const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-    correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++; else if (c.nota < 4) faixas['2-4']++; else if (c.nota < 6) faixas['4-6']++; else if (c.nota < 8) faixas['6-8']++; else faixas['8-10']++; });
-    const maxVal = Math.max(...Object.values(faixas), 1);
-    document.getElementById('d0-2').textContent = faixas['0-2']; document.getElementById('d2-4').textContent = faixas['2-4']; document.getElementById('d4-6').textContent = faixas['4-6']; document.getElementById('d6-8').textContent = faixas['6-8']; document.getElementById('d8-10').textContent = faixas['8-10'];
-    const bars = document.querySelectorAll('#dist-notas .chart-bar'); const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
-    vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
-    await carregarRelatorioEscola();
-  } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
-}
-
-async function carregarRelatorioEscola() {
-  try {
-    const escolasResp = await fetch(API_URL + '/api/escolas');
-    const escolas = await escolasResp.json();
-    const turmasResp = await fetch(API_URL + '/api/turmas');
-    const turmas = await turmasResp.json();
-    const alunosResp = await fetch(API_URL + '/api/alunos');
-    const alunos = await alunosResp.json();
-    const correcoesResp = await fetch(API_URL + '/api/historico');
-    const correcoes = await correcoesResp.json();
-    const tbody = document.getElementById('tb-rel-escola');
-    if (!tbody) return;
-    if (!escolas || escolas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
-    } else {
-      tbody.innerHTML = escolas.map(e => {
-        const turmasEscola = turmas.filter(t => t.escola_id === e.id);
-        const alunosEscola = alunos.filter(a => a.escola_id === e.id);
-        const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
-        const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
-        const aprovados = correcoesEscola.filter(c => c.nota >= 6).length;
-        const perc = correcoesEscola.length > 0 ? Math.round((aprovados / correcoesEscola.length) * 100) : 0;
-        return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
-      }).join('');
-    }
-  } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
 }
 
 // ═══════════════════════════════ CARREGAR PROVAS NO SELECT DO GABARITO ═══════════════════════════════
-
 async function carregarProvasSelect() {
     try {
         console.log('🔄 Carregando provas para o select...');
         
-        const response = await fetch(API_URL + '/api/provas');
+        const response = await fetch(`${API_URL}/api/provas`);
         const provas = await response.json();
         
         const select = document.getElementById('gab-prova');
@@ -2008,7 +1662,6 @@ async function carregarProvasSelect() {
 }
 
 // ═══════════════════════════════ CARREGAR PROVA SELECIONADA ═══════════════════════════════
-
 async function carregarProvaSelecionada() {
     const select = document.getElementById('gab-prova');
     const selectedOption = select.options[select.selectedIndex];
@@ -2070,7 +1723,6 @@ async function carregarProvaSelecionada() {
 }
 
 // ═══════════════════════════════ PREENCHER GABARITO EXISTENTE ═══════════════════════════════
-
 function preencherGabaritoExistente(gabarito) {
     if (!gabarito || gabarito.length === 0) return;
     
@@ -2092,7 +1744,6 @@ function preencherGabaritoExistente(gabarito) {
 }
 
 // ═══════════════════════════════ FUNÇÃO BUILD GAB GRID CORRIGIDA ═══════════════════════════════
-
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
     if (!grid) return;
@@ -2219,63 +1870,6 @@ async function carregarCombos() {
   } catch (erro) { console.error('Erro ao carregar combos:', erro); }
 }
 
-// ═══════════════════════════════ LISTA POR TURMA ═══════════════════════════════
-async function gerarListaTurma() {
-  const escolaId = document.getElementById('lista-escola').value;
-  const turmaId = document.getElementById('lista-turma').value;
-  if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
-  if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
-  try {
-    const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
-    const alunos = await alunosResp.json();
-    const turmaResp = await fetch(API_URL + '/api/turmas');
-    const turmas = await turmaResp.json();
-    const turma = turmas.find(t => t.id == turmaId);
-    const container = document.getElementById('lista-resultado');
-    if (!container) return;
-    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>'; showToast('❌ Nenhum aluno na turma!', 'error'); return; }
-    const provasResp = await fetch(API_URL + '/api/provas');
-    const provas = await provasResp.json();
-    const prova = provas.find(p => p.turma_id == turmaId);
-    if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>'; showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
-    const escolaResp = await fetch(API_URL + '/api/escolas');
-    const escolas = await escolaResp.json();
-    const escola = escolas.find(e => e.id == turma?.escola_id);
-    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
-    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-    alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
-    html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
-    container.innerHTML = html;
-    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
-  } catch (erro) { console.error('Erro ao gerar lista:', erro); showToast('❌ Erro: ' + erro.message, 'error'); }
-}
-
-// ═══════════════════════════════ GERAR CARTÃO RESPOSTA ═══════════════════════════════
-async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
-  try {
-    const provasResp = await fetch(API_URL + '/api/provas');
-    const provas = await provasResp.json();
-    const prova = provas.find(p => p.id == provaId);
-    const qtdQuestoes = prova?.quantidade_questoes || 20;
-    const response = await fetch(API_URL + '/api/gerar_gabarito', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
-    });
-    if (response.ok) {
-      const html = await response.text();
-      const novaAba = window.open('', '_blank');
-      novaAba.document.write(html);
-      novaAba.document.close();
-      document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
-      showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
-    } else {
-      const erro = await response.json();
-      showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
-    }
-  } catch (erro) { console.error('Erro ao gerar cartão:', erro); showToast('❌ Erro: ' + erro.message, 'error'); }
-}
-
 // ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
 async function salvarEscola() {
   const dados = { nome: document.getElementById('escola-nome').value.trim(), inep: document.getElementById('escola-inep').value.trim() || '', municipio: document.getElementById('escola-municipio').value.trim() || '', estado: document.getElementById('escola-estado').value || 'SP', telefone: document.getElementById('escola-telefone').value.trim() || '', diretor: document.getElementById('escola-diretor').value.trim() || '' };
@@ -2287,7 +1881,6 @@ async function salvarEscola() {
     else { showToast('❌ Erro ao cadastrar escola', 'error'); }
   } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
 }
-
 async function salvarTurma() {
   const dados = { escola_id: parseInt(document.getElementById('turma-escola').value) || null, nome: document.getElementById('turma-nome').value.trim(), serie: document.getElementById('turma-serie').value || '1º Ano', turno: document.getElementById('turma-turno').value || 'Manhã', professor: document.getElementById('turma-professor').value.trim() || '', capacidade: parseInt(document.getElementById('turma-capacidade').value) || 35, ano_letivo: parseInt(document.getElementById('turma-ano').value) || 2025 };
   if (!dados.escola_id) { showToast('❌ Selecione uma escola!', 'error'); return; }
@@ -2497,106 +2090,20 @@ function fillGabRand() {
 
 function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); }); }
 
-// ═══════════════════════════════ SALVAR GABARITO - CORRIGIDO ═══════════════════════════════
 async function saveGab() {
-    try {
-        // Coletar respostas do gabarito
-        const selects = document.querySelectorAll('.gab-select');
-        const respostas = [];
-        let todosPreenchidos = true;
-        
-        selects.forEach(s => {
-            if (s.value) {
-                respostas.push(s.value);
-            } else {
-                todosPreenchidos = false;
-                respostas.push('');
-            }
-        });
-        
-        // Verificar se todas as questões foram preenchidas
-        if (!todosPreenchidos) {
-            const confirmar = confirm('⚠️ Nem todas as questões foram preenchidas. Deseja continuar mesmo assim?');
-            if (!confirmar) return;
-        }
-        
-        // Verificar se há respostas
-        const respostasValidas = respostas.filter(r => r !== '');
-        if (respostasValidas.length === 0) {
-            showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error');
-            return;
-        }
-        
-        // Obter dados adicionais
-        const provaId = document.getElementById('gab-prova').value;
-        const serie = document.getElementById('gab-serie').value;
-        const total = document.getElementById('gab-total').value;
-        const ptsAcerto = document.getElementById('pts-acerto').value || 0.5;
-        const penalidade = document.getElementById('penalidade').value || 'Sem penalidade';
-        const questoesAnuladas = document.getElementById('questoes-anuladas').value || '';
-        
-        if (!provaId) {
-            showToast('❌ Selecione uma prova primeiro!', 'error');
-            return;
-        }
-        
-        console.log('📝 Salvando gabarito para prova ID:', provaId);
-        console.log('📝 Respostas:', respostas);
-        
-        showToast('💾 Salvando gabarito...', 'info');
-        
-        // Construir a URL corretamente
-        const url = API_URL ? `${API_URL}/api/gabaritos` : '/api/gabaritos';
-        console.log('📤 Enviando para:', url);
-        
-        // Enviar para o backend
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                prova_id: parseInt(provaId),
-                respostas: respostas,
-                serie: serie,
-                total_questoes: parseInt(total),
-                alternativas: '4',
-                pontos_por_acerto: parseFloat(ptsAcerto),
-                penalidade: penalidade,
-                questoes_anuladas: questoesAnuladas
-            })
-        });
-        
-        const result = await response.json();
-        console.log('📥 Resposta do servidor:', result);
-        
-        if (response.ok && result.id) {
-            showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
-            
-            // Marcar todos os selects como filled
-            selects.forEach(s => {
-                if (s.value) s.classList.add('filled');
-            });
-            
-            // Recarregar a lista de gabaritos
-            carregarGabaritos();
-            
-            // Atualizar o select de provas para mostrar que tem gabarito
-            await carregarProvasSelect();
-            
-            // Recarregar a página de provas
-            carregarProvas();
-            
-        } else {
-            showToast('❌ Erro ao salvar gabarito: ' + (result.erro || 'Erro desconhecido'), 'error');
-            console.error('Erro ao salvar gabarito:', result);
-        }
-        
-    } catch (erro) {
-        console.error('❌ Erro ao salvar gabarito:', erro);
-        showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
-    }
+  const respostas = [];
+  document.querySelectorAll('.gab-select').forEach(s => { if (s.value) respostas.push(s.value); });
+  if (respostas.length === 0) { showToast('⚠️ Preencha o gabarito!', 'error'); return; }
+  const serie = document.getElementById('gab-serie').value || '1º Ano';
+  const provaId = document.getElementById('gab-prova').value || 1;
+  try {
+    const response = await fetch(API_URL + '/api/gabaritos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prova_id: parseInt(provaId), serie: serie, total_questoes: respostas.length, alternativas: 'A,B,C,D', respostas: respostas, pontos_por_acerto: 0.5, penalidade: 0, questoes_anuladas: '' }) });
+    const result = await response.json();
+    if (result.id) { showToast('✅ Gabarito salvo!', 'success'); carregarDados(); } 
+    else { showToast('❌ Erro ao salvar gabarito', 'error'); }
+  } catch (erro) { showToast('❌ Erro ao salvar', 'error'); }
 }
+
 // ═══════════════════════════════ CÂMERA ═══════════════════════════════
 async function abrirCamera() {
   document.getElementById('cam-modal').classList.add('show');
