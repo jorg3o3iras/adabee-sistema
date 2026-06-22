@@ -296,6 +296,132 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 .ai-crit-val{font-size:22px;font-weight:800;margin-bottom:6px}
 .ai-feedback-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:var(--text2);margin-top:14px}
 
+/* ═══════════════ CORREÇÃO MANUAL - ESTILOS ESPECÍFICOS ═══════════════ */
+.correcao-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.correcao-manual-item {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.correcao-manual-item:hover {
+  border-color: var(--blue);
+}
+.correcao-manual-item .q-num {
+  font-size: 9px;
+  color: var(--text3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+.correcao-manual-item .q-resposta {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.correcao-manual-item .q-status {
+  font-size: 10px;
+}
+.correcao-manual-item .q-status.correta {
+  color: var(--green);
+}
+.correcao-manual-item .q-status.errada {
+  color: var(--red);
+}
+.correcao-manual-item select {
+  width: 100%;
+  padding: 4px 2px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border2);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s;
+}
+.correcao-manual-item select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-glow);
+}
+.correcao-manual-item select.correta {
+  border-color: var(--green);
+  background: rgba(16,185,129,0.08);
+}
+.correcao-manual-item select.errada {
+  border-color: var(--red);
+  background: rgba(239,68,68,0.08);
+}
+.resumo-correcao {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px;
+  background: var(--bg2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.resumo-correcao .item {
+  text-align: center;
+}
+.resumo-correcao .valor {
+  font-size: 24px;
+  font-weight: 800;
+}
+.resumo-correcao .label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.resumo-correcao .valor.acertos {
+  color: var(--green);
+}
+.resumo-correcao .valor.erros {
+  color: var(--red);
+}
+.resumo-correcao .valor.nota {
+  color: var(--blue);
+}
+.correcao-aluno-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.correcao-aluno-info .info-item {
+  font-size: 13px;
+}
+.correcao-aluno-info .info-item strong {
+  color: var(--text);
+}
+.correcao-aluno-info .info-item .label {
+  color: var(--text3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
 /* ═══════════════ RESPONSIVO ═══════════════ */
 @media (max-width: 900px) {
   .menu-toggle {
@@ -375,6 +501,15 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
   .af-ico {
     font-size: 24px;
   }
+  .correcao-manual-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  }
+  .resumo-correcao {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .correcao-aluno-info {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 640px) {
   .stats-grid {
@@ -440,6 +575,17 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
   .form-control {
     font-size: 12px;
     padding: 8px 10px;
+  }
+  .correcao-manual-grid {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  }
+  .resumo-correcao {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+  .resumo-correcao .valor {
+    font-size: 18px;
   }
 }
 @media print{.sidebar,.btn,.btn-group,.page-actions{display:none!important}.content{padding:0}body{background:#fff;color:#000}.card{background:#fff;border:1px solid #ddd;box-shadow:none}}
@@ -748,6 +894,7 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
               <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
               <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
               <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
+              <button class="btn btn-orange btn-sm" style="margin-top:10px;" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
@@ -863,6 +1010,45 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
     <p class="cam-hint">Enquadre o cartão resposta na moldura verde</p>
   </div>
   <canvas id="cam-canvas"></canvas>
+</div>
+
+<!-- ═══════════ MODAL CORREÇÃO MANUAL ═══════════ -->
+<div class="modal-overlay" id="m-correcao-manual">
+  <div class="modal" style="max-width: 750px; width: 95vw;">
+    <div class="modal-header">
+      <h3>✏️ Correção Manual — <span id="cm-aluno-nome">Aluno</span></h3>
+      <button class="modal-close" onclick="closeM('m-correcao-manual')">×</button>
+    </div>
+    <div class="correcao-aluno-info">
+      <div class="info-item"><span class="label">Prova</span><strong id="cm-prova-titulo">—</strong></div>
+      <div class="info-item"><span class="label">Série / Turma</span><strong id="cm-turma-info">—</strong></div>
+      <div class="info-item"><span class="label">Data da Correção</span><strong id="cm-data-correcao">—</strong></div>
+      <div class="info-item"><span class="label">Status</span><strong id="cm-status-atual">—</strong></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Respostas do Aluno</span>
+      <div class="btn-group">
+        <button class="btn btn-outline btn-sm" onclick="preencherGabaritoCM()">📋 Preencher com Gabarito</button>
+        <button class="btn btn-ghost btn-sm" onclick="limparRespostasCM()">🗑️ Limpar</button>
+      </div>
+    </div>
+    <div id="cm-grid" class="correcao-manual-grid">
+      <!-- Gerado dinamicamente -->
+    </div>
+    <div class="resumo-correcao">
+      <div class="item"><div class="valor acertos" id="cm-acertos">0</div><div class="label">Acertos</div></div>
+      <div class="item"><div class="valor erros" id="cm-erros">0</div><div class="label">Erros</div></div>
+      <div class="item"><div class="valor nota" id="cm-nota">0,0</div><div class="label">Nota Final</div></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
+      <span id="cm-status-badge" class="badge badge-gray">AGUARDANDO</span>
+      <span id="cm-porcentagem" style="font-size:12px;color:var(--text2);">0% de aproveitamento</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeM('m-correcao-manual')">✕ Fechar</button>
+      <button class="btn btn-green" onclick="salvarCorrecaoManual()">💾 Salvar Correção</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ DELETE CONFIRM MODAL ═══════════ -->
@@ -997,6 +1183,22 @@ let camFacing = 'environment';
 let delTarget = null;
 let ultimaImagem = null;
 const API_URL = '';
+
+// ═══════════════════════════════ CORREÇÃO MANUAL - VARIÁVEIS ═══════════════════════════════
+let correcaoManualData = {
+  alunoId: null,
+  alunoNome: '',
+  provaId: null,
+  provaTitulo: '',
+  gabarito: [],
+  respostasAluno: [],
+  quantidade: 20,
+  alternativas: ['A', 'B', 'C', 'D'],
+  notaMaxima: 10,
+  notaMinima: 5,
+  valorPorQuestao: 0.5,
+  serie: '1º Ano'
+};
 
 // ═══════════════════════════════ LOGIN ═══════════════════════════════
 function setLTab(t) {
@@ -1931,6 +2133,21 @@ async function processarComIA(imagemBase64) {
     document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
     document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
     document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+    
+    // Armazenar dados para correção manual
+    correcaoManualData.alunoId = parseInt(alunoId);
+    correcaoManualData.alunoNome = dados.aluno || 'Aluno';
+    correcaoManualData.provaId = parseInt(provaId);
+    correcaoManualData.provaTitulo = dados.prova || 'Prova';
+    correcaoManualData.gabarito = dados.correcoes?.map(c => c.gabarito) || [];
+    correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
+    correcaoManualData.quantidade = dados.total || 20;
+    correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+    correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+    correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+    correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+    correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
+    
     if (box) box.style.display = 'block';
     showToast('✅ ' + dados.acertos + '/' + dados.total + ' acertos — Nota: ' + dados.nota, 'success');
     carregarDashboard();
@@ -1939,6 +2156,284 @@ async function processarComIA(imagemBase64) {
 }
 
 function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
+
+// ═══════════════════════════════ CORREÇÃO MANUAL ═══════════════════════════════
+function abrirCorrecaoManual() {
+  // Verificar se há dados da última correção
+  if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
+    showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
+    return;
+  }
+  
+  // Verificar se o gabarito está disponível
+  if (!correcaoManualData.gabarito || correcaoManualData.gabarito.length === 0) {
+    showToast('❌ Gabarito não disponível para esta prova!', 'error');
+    return;
+  }
+  
+  // Preencher informações do aluno
+  document.getElementById('cm-aluno-nome').textContent = correcaoManualData.alunoNome || 'Aluno';
+  document.getElementById('cm-prova-titulo').textContent = correcaoManualData.provaTitulo || 'Prova';
+  document.getElementById('cm-turma-info').textContent = correcaoManualData.serie + ' | Turma: —';
+  document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
+  
+  // Gerar grid de respostas
+  gerarGridCorrecaoManual();
+  
+  // Atualizar resumo
+  atualizarResumoCorrecaoManual();
+  
+  // Abrir modal
+  openM('m-correcao-manual');
+}
+
+function gerarGridCorrecaoManual() {
+  const grid = document.getElementById('cm-grid');
+  if (!grid) return;
+  
+  const qtd = correcaoManualData.quantidade || 20;
+  const alternativas = correcaoManualData.alternativas || ['A', 'B', 'C', 'D'];
+  const respostas = correcaoManualData.respostasAluno || [];
+  const gabarito = correcaoManualData.gabarito || [];
+  
+  grid.innerHTML = '';
+  
+  for (let i = 0; i < qtd; i++) {
+    const div = document.createElement('div');
+    div.className = 'correcao-manual-item';
+    
+    const respostaAluno = (i < respostas.length) ? respostas[i] : '';
+    const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
+    const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+    
+    // Montar opções do select
+    let options = '<option value="">—</option>';
+    alternativas.forEach(alt => {
+      const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
+      options += `<option value="${alt}" ${selected}>${alt}</option>`;
+    });
+    
+    let statusClass = '';
+    let statusText = '';
+    if (respostaAluno) {
+      if (isCorreto) {
+        statusClass = 'correta';
+        statusText = '✅ Correto';
+      } else {
+        statusClass = 'errada';
+        statusText = '❌ Errado';
+      }
+    }
+    
+    div.innerHTML = `
+      <div class="q-num">Q${i+1}</div>
+      <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">
+        ${respostaAluno || '—'}
+      </div>
+      <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">
+        ${options}
+      </select>
+      <div class="q-status ${statusClass}">${statusText}</div>
+      <div style="font-size:8px;color:var(--text3);margin-top:2px;">Gabarito: ${respostaGabarito || '—'}</div>
+    `;
+    
+    // Se a resposta do aluno estiver correta, marcar o select
+    if (isCorreto && respostaAluno) {
+      const select = div.querySelector('.q-select');
+      if (select) select.className = 'q-select correta';
+    } else if (respostaAluno && !isCorreto) {
+      const select = div.querySelector('.q-select');
+      if (select) select.className = 'q-select errada';
+    }
+    
+    grid.appendChild(div);
+  }
+}
+
+function atualizarRespostaManual(select) {
+  const questaoIndex = parseInt(select.dataset.questao);
+  const novaResposta = select.value;
+  
+  // Atualizar o array de respostas
+  if (novaResposta) {
+    correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase();
+  } else {
+    correcaoManualData.respostasAluno[questaoIndex] = '';
+  }
+  
+  // Atualizar a exibição da resposta
+  const item = select.closest('.correcao-manual-item');
+  const qResposta = item.querySelector('.q-resposta');
+  const qStatus = item.querySelector('.q-status');
+  const gabarito = correcaoManualData.gabarito[questaoIndex] || '';
+  const resposta = correcaoManualData.respostasAluno[questaoIndex] || '';
+  
+  const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+  
+  // Atualizar texto da resposta
+  qResposta.textContent = resposta || '—';
+  qResposta.style.color = isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)');
+  
+  // Atualizar status
+  if (resposta) {
+    if (isCorreto) {
+      qStatus.textContent = '✅ Correto';
+      qStatus.className = 'q-status correta';
+      select.className = 'q-select correta';
+    } else {
+      qStatus.textContent = '❌ Errado';
+      qStatus.className = 'q-status errada';
+      select.className = 'q-select errada';
+    }
+  } else {
+    qStatus.textContent = '';
+    qStatus.className = 'q-status';
+    select.className = 'q-select';
+  }
+  
+  // Atualizar resumo
+  atualizarResumoCorrecaoManual();
+}
+
+function atualizarResumoCorrecaoManual() {
+  const qtd = correcaoManualData.quantidade || 20;
+  const respostas = correcaoManualData.respostasAluno || [];
+  const gabarito = correcaoManualData.gabarito || [];
+  
+  let acertos = 0;
+  let respondidas = 0;
+  
+  for (let i = 0; i < qtd; i++) {
+    const resp = i < respostas.length ? respostas[i] : '';
+    const gab = i < gabarito.length ? gabarito[i] : '';
+    if (resp) {
+      respondidas++;
+      if (resp.toUpperCase() === gab.toUpperCase()) {
+        acertos++;
+      }
+    }
+  }
+  
+  const erros = respondidas - acertos;
+  const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
+  const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
+  const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+  
+  document.getElementById('cm-acertos').textContent = acertos;
+  document.getElementById('cm-erros').textContent = erros;
+  document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
+  
+  // Atualizar status badge
+  const statusBadge = document.getElementById('cm-status-badge');
+  const statusAtual = document.getElementById('cm-status-atual');
+  if (notaFinal >= (correcaoManualData.notaMinima || 5)) {
+    statusBadge.textContent = '✅ APROVADO';
+    statusBadge.className = 'badge badge-green';
+    statusAtual.textContent = 'Aprovado';
+    statusAtual.style.color = 'var(--green)';
+  } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) {
+    statusBadge.textContent = '⚠️ RECUPERAÇÃO';
+    statusBadge.className = 'badge badge-orange';
+    statusAtual.textContent = 'Recuperação';
+    statusAtual.style.color = 'var(--orange)';
+  } else {
+    statusBadge.textContent = '❌ REPROVADO';
+    statusBadge.className = 'badge badge-red';
+    statusAtual.textContent = 'Reprovado';
+    statusAtual.style.color = 'var(--red)';
+  }
+  
+  document.getElementById('cm-porcentagem').textContent = porcentagem + '% de aproveitamento';
+}
+
+function preencherGabaritoCM() {
+  // Preencher todas as respostas com o gabarito
+  const qtd = correcaoManualData.quantidade || 20;
+  const gabarito = correcaoManualData.gabarito || [];
+  
+  for (let i = 0; i < qtd; i++) {
+    if (i < gabarito.length && gabarito[i]) {
+      correcaoManualData.respostasAluno[i] = gabarito[i];
+    }
+  }
+  
+  // Regerar o grid
+  gerarGridCorrecaoManual();
+  atualizarResumoCorrecaoManual();
+  showToast('📋 Respostas preenchidas com o gabarito!', 'success');
+}
+
+function limparRespostasCM() {
+  const qtd = correcaoManualData.quantidade || 20;
+  for (let i = 0; i < qtd; i++) {
+    correcaoManualData.respostasAluno[i] = '';
+  }
+  gerarGridCorrecaoManual();
+  atualizarResumoCorrecaoManual();
+  showToast('🗑️ Respostas limpas!', 'info');
+}
+
+function salvarCorrecaoManual() {
+  const qtd = correcaoManualData.quantidade || 20;
+  const respostas = correcaoManualData.respostasAluno || [];
+  const gabarito = correcaoManualData.gabarito || [];
+  
+  let acertos = 0;
+  for (let i = 0; i < qtd; i++) {
+    const resp = i < respostas.length ? respostas[i] : '';
+    const gab = i < gabarito.length ? gabarito[i] : '';
+    if (resp && resp.toUpperCase() === gab.toUpperCase()) {
+      acertos++;
+    }
+  }
+  
+  const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
+  
+  // Salvar no histórico
+  const historico = {
+    aluno_id: correcaoManualData.alunoId,
+    aluno_nome: correcaoManualData.alunoNome,
+    prova_id: correcaoManualData.provaId,
+    prova_titulo: correcaoManualData.provaTitulo,
+    respostas: respostas,
+    gabarito: gabarito,
+    acertos: acertos,
+    nota: nota,
+    total: qtd,
+    tipo_correcao: 'manual',
+    data_correcao: new Date().toISOString()
+  };
+  
+  // Salvar via API (simulado por enquanto)
+  // Em produção, enviar para o backend
+  salvarHistoricoLocal(historico);
+  
+  showToast('✅ Correção manual salva com sucesso! Nota: ' + nota.toFixed(1), 'success');
+  closeM('m-correcao-manual');
+  
+  // Atualizar resultados
+  carregarResultados();
+  carregarDashboard();
+}
+
+function salvarHistoricoLocal(historico) {
+  // Salvar no localStorage para persistência entre recarregamentos
+  let historicos = JSON.parse(localStorage.getItem('historico_correcoes') || '[]');
+  
+  // Verificar se já existe uma correção para este aluno/prova
+  const index = historicos.findIndex(h => 
+    h.aluno_id === historico.aluno_id && 
+    h.prova_id === historico.prova_id
+  );
+  
+  if (index !== -1) {
+    historicos[index] = historico;
+  } else {
+    historicos.push(historico);
+  }
+  
+  localStorage.setItem('historico_correcoes', JSON.stringify(historicos));
+}
 
 // ═══════════════════════════════ TEXTO IA ═══════════════════════════════
 function prevTexto(input) {
