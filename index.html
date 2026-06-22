@@ -176,6 +176,10 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 .badge-purple{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)}
 .badge-gray{background:rgba(148,163,184,.1);color:var(--text3);border:1px solid var(--border)}
 .badge-cyan{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid rgba(6,182,212,.3)}
+.badge-conceito-baixo{background:rgba(239,68,68,.15);color:#fc8181;border:1px solid rgba(239,68,68,.3)}
+.badge-conceito-medio-baixo{background:rgba(245,158,11,.15);color:var(--orange);border:1px solid rgba(245,158,11,.3)}
+.badge-conceito-medio-alto{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.badge-conceito-alto{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
 .chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border2);color:var(--text2)}
 .progress{background:var(--bg2);border-radius:99px;height:6px;overflow:hidden}
 .progress-fill{height:100%;border-radius:99px;transition:width .6s ease}
@@ -922,7 +926,7 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
         <div class="form-row c3">
           <div class="form-group">
             <label class="form-label">Escola</label>
-            <select class="form-control" id="filtro-escola" onchange="carregarResultadosComFiltros()">
+            <select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)">
               <option value="">Todas as escolas</option>
             </select>
           </div>
@@ -985,13 +989,15 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
                 <th>Nome</th>
                 <th>Série</th>
                 <th>Acertos</th>
+                <th>%</th>
+                <th>Conceito</th>
                 <th>Nota</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody id="tb-resultados-filtrado">
               <tr>
-                <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td>
+                <td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td>
               </tr>
             </tbody>
           </table>
@@ -1424,7 +1430,7 @@ async function carregarResultados() {
         if (!tbody) return;
         
         if (!historico || historico.length === 0 || historico.erro) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
             return;
         }
         
@@ -1433,16 +1439,25 @@ async function carregarResultados() {
         tbody.innerHTML = historico.map((item, index) => {
             const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
             const nota = item.nota || 0;
+            const totalQuestoes = 20; // Idealmente, pegar do backend
+            const acertos = item.acertos || 0;
+            const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+            const conceito = calcularConceito(porcentagem);
             const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
             const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
             const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+            
+            // Badge de conceito
+            const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
             
             return '<tr>' +
                 '<td>' + medalha + '</td>' +
                 '<td>' + (index + 1) + '</td>' +
                 '<td><strong>' + (item.aluno_nome || 'Aluno') + '</strong></td>' +
                 '<td><span class="badge badge-purple">' + (item.serie || '—') + '</span></td>' +
-                '<td>' + (item.acertos || 0) + '</td>' +
+                '<td>' + acertos + '</td>' +
+                '<td><strong>' + porcentagem + '%</strong></td>' +
+                '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                 '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
                 '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                 '</tr>';
@@ -1452,7 +1467,7 @@ async function carregarResultados() {
         console.error('Erro ao carregar resultados:', erro);
         const tbody = document.getElementById('tb-resultados');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
         }
     }
 }
@@ -1743,6 +1758,14 @@ async function carregarUltimasCorrecoes() {
   } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
 }
 
+// ═══════════════════════════════ FUNÇÃO PARA CALCULAR CONCEITO ═══════════════════════════════
+function calcularConceito(porcentagem) {
+    if (porcentagem <= 40) return 'Baixo';
+    if (porcentagem <= 60) return 'Médio Baixo';
+    if (porcentagem <= 80) return 'Médio Alto';
+    return 'Alto';
+}
+
 // ═══════════════════════════════ RESULTADOS - COM FILTROS ═══════════════════════════════
 async function carregarFiltrosResultados() {
     try {
@@ -1780,6 +1803,52 @@ async function carregarFiltrosResultados() {
     }
 }
 
+// Função para carregar turmas com base na escola selecionada
+async function carregarTurmasPorEscola(escolaId) {
+    const selectTurma = document.getElementById('filtro-turma');
+    if (!selectTurma) return;
+    
+    // Limpa o select de turmas
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+    
+    if (!escolaId) {
+        // Se não tiver escola selecionada, carrega todas as turmas
+        try {
+            const respTurmas = await fetch(API_URL + '/api/turmas');
+            const turmas = await respTurmas.json();
+            if (turmas && !turmas.erro) {
+                turmas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    selectTurma.appendChild(opt);
+                });
+            }
+        } catch (erro) {
+            console.error('Erro ao carregar turmas:', erro);
+        }
+    } else {
+        // Carrega turmas da escola específica
+        try {
+            const respTurmas = await fetch(API_URL + '/api/turmas?escola_id=' + escolaId);
+            const turmas = await respTurmas.json();
+            if (turmas && !turmas.erro) {
+                turmas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    selectTurma.appendChild(opt);
+                });
+            }
+        } catch (erro) {
+            console.error('Erro ao carregar turmas da escola:', erro);
+        }
+    }
+    
+    // Atualiza os resultados
+    carregarResultadosComFiltros();
+}
+
 async function carregarResultadosComFiltros() {
     try {
         const escolaId = document.getElementById('filtro-escola').value;
@@ -1799,7 +1868,7 @@ async function carregarResultadosComFiltros() {
         if (!tbody) return;
 
         if (!historico || historico.length === 0 || historico.erro) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
             document.getElementById('res-total-filtrado').textContent = '0';
             document.getElementById('res-aprovados-filtrado').textContent = '0';
             document.getElementById('res-recuperacao-filtrado').textContent = '0';
@@ -1807,13 +1876,12 @@ async function carregarResultadosComFiltros() {
             return;
         }
 
-        // ============================================================
         // CORREÇÃO: Converter nota para número antes de usar
-        // ============================================================
         const dadosCorrigidos = historico.map(item => ({
             ...item,
             nota: parseFloat(item.nota) || 0,
-            acertos: parseInt(item.acertos) || 0
+            acertos: parseInt(item.acertos) || 0,
+            total_questoes: parseInt(item.total_questoes) || 20 // Fallback para 20
         }));
 
         let total = dadosCorrigidos.length;
@@ -1831,12 +1899,19 @@ async function carregarResultadosComFiltros() {
         tbody.innerHTML = dadosCorrigidos.map((item, index) => {
             const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
             const nota = item.nota || 0;
+            const acertos = item.acertos || 0;
+            const totalQuestoes = item.total_questoes || 20;
+            const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+            const conceito = calcularConceito(porcentagem);
+            
             const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
             const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
             const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
             
+            // Badge de conceito
+            const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
+            
             const nome = item.aluno_nome || 'Aluno';
-            const acertos = item.acertos || 0;
             const serieAluno = item.serie || '—';
             
             return '<tr>' +
@@ -1845,6 +1920,8 @@ async function carregarResultadosComFiltros() {
                 '<td><strong>' + nome + '</strong></td>' +
                 '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
                 '<td>' + acertos + '</td>' +
+                '<td><strong>' + porcentagem + '%</strong></td>' +
+                '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                 '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
                 '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                 '</tr>';
@@ -1854,7 +1931,7 @@ async function carregarResultadosComFiltros() {
         console.error('Erro ao carregar resultados:', erro);
         const tbody = document.getElementById('tb-resultados-filtrado');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
         }
     }
 }
@@ -1862,7 +1939,7 @@ async function carregarResultadosComFiltros() {
 function limparFiltrosResultados() {
     document.getElementById('filtro-escola').value = '';
     document.getElementById('filtro-serie').value = '';
-    document.getElementById('filtro-turma').value = '';
+    document.getElementById('filtro-turma').innerHTML = '<option value="">Todas as turmas</option>';
     carregarResultadosComFiltros();
 }
 
@@ -1871,17 +1948,19 @@ function exportarResultadosFiltrados() {
     const tbody = document.getElementById('tb-resultados-filtrado');
     if (!tbody) return;
     
-    let csv = 'Posição,Número,Nome,Série,Acertos,Nota,Status\n';
+    let csv = 'Posição,Número,Nome,Série,Acertos,%,Conceito,Nota,Status\n';
     tbody.querySelectorAll('tr').forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
+        if (cells.length >= 9) {
             csv += cells[0].textContent.trim() + ',' +
                    cells[1].textContent.trim() + ',' +
                    cells[2].textContent.trim() + ',' +
                    cells[3].textContent.trim() + ',' +
                    cells[4].textContent.trim() + ',' +
                    cells[5].textContent.trim() + ',' +
-                   cells[6].textContent.trim() + '\n';
+                   cells[6].textContent.trim() + ',' +
+                   cells[7].textContent.trim() + ',' +
+                   cells[8].textContent.trim() + '\n';
         }
     });
     
