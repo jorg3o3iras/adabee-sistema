@@ -32,42 +32,11 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 ::-webkit-scrollbar-thumb:hover{background:var(--blue)}
 
 /* ═══════════════ BOTÃO MENU HAMBÚRGUER ═══════════════ */
-.menu-toggle {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 9999;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  font-size: 22px;
-  cursor: pointer;
-  transition: all 0.3s;
-  align-items: center;
-  justify-content: center;
-}
-.menu-toggle:hover {
-  background: var(--surface);
-  border-color: var(--blue);
-}
-.menu-toggle.active {
-  left: 240px;
-}
-
-.menu-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 9997;
-}
-.menu-overlay.show {
-  display: block;
-}
+.menu-toggle{display:none;position:fixed;top:12px;left:12px;z-index:9999;width:44px;height:44px;border-radius:10px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-size:22px;cursor:pointer;transition:all .3s;align-items:center;justify-content:center}
+.menu-toggle:hover{background:var(--surface);border-color:var(--blue)}
+.menu-toggle.active{left:240px}
+.menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9997}
+.menu-overlay.show{display:block}
 
 /* ═══════════════ LOGIN ═══════════════ */
 #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
@@ -99,20 +68,9 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 #app{display:none;height:100vh;flex-direction:row;overflow:hidden}
 
 /* ═══════════════ SIDEBAR ═══════════════ */
-.sidebar{
-  width:230px;flex-shrink:0;background:var(--bg2);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;height:100vh;overflow:hidden;
-}
-.sb-brand{
-  display:flex;align-items:center;gap:10px;padding:18px 16px 16px;
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.sb-logo{
-  width:36px;height:36px;border-radius:10px;background:var(--grad-blue);
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  box-shadow:0 2px 10px var(--blue-glow);flex-shrink:0;
-}
+.sidebar{width:230px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:18px 16px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-logo{width:36px;height:36px;border-radius:10px;background:var(--grad-blue);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 10px var(--blue-glow);flex-shrink:0}
 .sb-brand-name{font-size:16px;font-weight:800;letter-spacing:-.3px}
 .sb-brand-name span{color:var(--blue)}
 .sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
@@ -135,8 +93,6 @@ body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 .page{display:none;animation:fadeIn .25s ease}
 .page.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-/* ═══════════════ PAGE ELEMENTS ═══════════════ */
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
 .page-title{font-size:21px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:9px}
 .page-sub{color:var(--text2);font-size:13px;margin-top:4px}
@@ -1248,7 +1204,6 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
 
 <script>
 // ═══════════════════════════════ CONFIGURAÇÃO DA API ═══════════════════════════════
-// CONFIGURE A URL DO SEU BACKEND AQUI
 const API_URL = 'https://adabee-sistema-3.onrender.com';
 
 console.log('🚀 API_URL configurado:', API_URL);
@@ -1380,7 +1335,6 @@ function go(page) {
   if (page === 'gabaritos') carregarGabaritos();
   if (page === 'rel-turma' || page === 'rel-aluno' || page === 'rel-escola') carregarRelatorios();
   
-  // Fechar menu ao navegar no celular
   if (window.innerWidth <= 900) {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('menuOverlay');
@@ -1415,7 +1369,6 @@ async function carregarDados() {
     
     console.log('✅ Todos os dados carregados com sucesso!');
     
-    // Preencher automaticamente a série quando selecionar uma prova
     const selectProva = document.getElementById('corrigir-prova');
     const selectSerie = document.getElementById('corrigir-serie');
     if (selectProva && selectSerie) {
@@ -1443,6 +1396,25 @@ async function carregarDados() {
   }
 }
 
+// ═══════════════════════════════ USER DATA ═══════════════════════════════
+function carregarUserData() {
+  console.log('🔄 Carregando dados do usuário...');
+  try {
+    const tbody = document.getElementById('u-tb-turmas');
+    if (tbody) {
+      fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+        if (turmas && turmas.length > 0) {
+          tbody.innerHTML = turmas.map(t => {
+            return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td>0</td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+          }).join('');
+        }
+      }).catch(e => console.error(e));
+    }
+  } catch(e) {
+    console.log('Erro ao carregar dados do usuário:', e);
+  }
+}
+
 // ═══════════════════════════════ RESULTADOS ═══════════════════════════════
 async function carregarResultados() {
     try {
@@ -1456,7 +1428,6 @@ async function carregarResultados() {
             return;
         }
         
-        // Ordenar por nota (maior para menor)
         historico.sort((a, b) => b.nota - a.nota);
         
         tbody.innerHTML = historico.map((item, index) => {
@@ -1773,11 +1744,8 @@ async function carregarUltimasCorrecoes() {
 }
 
 // ═══════════════════════════════ RESULTADOS - COM FILTROS ═══════════════════════════════
-
-// Carregar filtros de escolas e turmas
 async function carregarFiltrosResultados() {
     try {
-        // Carregar escolas
         const respEscolas = await fetch(API_URL + '/api/escolas');
         const escolas = await respEscolas.json();
         const selectEscola = document.getElementById('filtro-escola');
@@ -1793,7 +1761,6 @@ async function carregarFiltrosResultados() {
             if (current) selectEscola.value = current;
         }
 
-        // Carregar turmas
         const respTurmas = await fetch(API_URL + '/api/turmas');
         const turmas = await respTurmas.json();
         const selectTurma = document.getElementById('filtro-turma');
@@ -1840,7 +1807,6 @@ async function carregarResultadosComFiltros() {
             return;
         }
 
-        // Calcular estatísticas
         let total = historico.length;
         let aprovados = historico.filter(c => c.nota >= 5).length;
         let recuperacao = historico.filter(c => c.nota >= 3 && c.nota < 5).length;
@@ -1851,7 +1817,6 @@ async function carregarResultadosComFiltros() {
         document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
         document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
 
-        // Ordenar por nota (maior primeiro)
         historico.sort((a, b) => b.nota - a.nota);
 
         tbody.innerHTML = historico.map((item, index) => {
@@ -1894,7 +1859,6 @@ function limparFiltrosResultados() {
 
 function exportarResultadosFiltrados() {
     showToast('📥 Exportando resultados filtrados...', 'info');
-    // Pega os dados atuais da tabela
     const tbody = document.getElementById('tb-resultados-filtrado');
     if (!tbody) return;
     
@@ -2175,7 +2139,6 @@ async function salvarUsuario() {
   const perfil = document.getElementById('usuario-perfil').value;
   const ativo = document.getElementById('usuario-ativo').checked;
 
-  // Validações
   if (!nome) { showToast('❌ Nome do usuário é obrigatório!', 'error'); return; }
   if (!username) { showToast('❌ Usuário (login) é obrigatório!', 'error'); return; }
   if (username.length < 3) { showToast('❌ Usuário deve ter pelo menos 3 caracteres!', 'error'); return; }
@@ -2230,8 +2193,6 @@ async function carregarUsuarios() {
       const perfilBadge = u.perfil === 'admin' ? 'badge-orange' : 'badge-blue';
       const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
       const statusText = u.ativo ? 'Ativo' : 'Inativo';
-      
-      // Não permite excluir o admin principal
       const isAdmin = u.username === 'admin';
       
       return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
@@ -2279,14 +2240,12 @@ function editarUsuario(id) {
 }
 
 function abrirModalUsuario() {
-  // Limpar campos
   document.getElementById('usuario-nome').value = '';
   document.getElementById('usuario-username').value = '';
   document.getElementById('usuario-senha').value = '';
   document.getElementById('usuario-email').value = '';
   document.getElementById('usuario-perfil').value = 'usuario';
   document.getElementById('usuario-ativo').checked = true;
-  
   openM('m-usuario');
 }
 
@@ -2322,18 +2281,88 @@ function fillGabRand() {
 
 function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); }); }
 
+// ═══════════════════════════════ SALVAR GABARITO - CORRIGIDO ═══════════════════════════════
 async function saveGab() {
-  const respostas = [];
-  document.querySelectorAll('.gab-select').forEach(s => { if (s.value) respostas.push(s.value); });
-  if (respostas.length === 0) { showToast('⚠️ Preencha o gabarito!', 'error'); return; }
-  const serie = document.getElementById('gab-serie').value || '1º Ano';
-  const provaId = document.getElementById('gab-prova').value || 1;
-  try {
-    const response = await fetch(API_URL + '/api/gabaritos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prova_id: parseInt(provaId), serie: serie, total_questoes: respostas.length, alternativas: 'A,B,C,D', respostas: respostas, pontos_por_acerto: 0.5, penalidade: 0, questoes_anuladas: '' }) });
-    const result = await response.json();
-    if (result.id) { showToast('✅ Gabarito salvo!', 'success'); carregarDados(); } 
-    else { showToast('❌ Erro ao salvar gabarito', 'error'); }
-  } catch (erro) { showToast('❌ Erro ao salvar', 'error'); }
+    try {
+        console.log('🔄 Iniciando salvamento do gabarito...');
+        
+        const selects = document.querySelectorAll('.gab-select');
+        const respostas = [];
+        let todosPreenchidos = true;
+        
+        selects.forEach(s => {
+            if (s.value) {
+                respostas.push(s.value);
+            } else {
+                todosPreenchidos = false;
+                respostas.push('');
+            }
+        });
+        
+        console.log('📝 Respostas coletadas:', respostas);
+        
+        const respostasValidas = respostas.filter(r => r !== '');
+        if (respostasValidas.length === 0) {
+            showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error');
+            return;
+        }
+        
+        const provaId = document.getElementById('gab-prova').value;
+        
+        if (!provaId) {
+            showToast('❌ Selecione uma prova primeiro!', 'error');
+            return;
+        }
+        
+        console.log(`📝 Salvando gabarito para prova ID: ${provaId}`);
+        
+        showToast('💾 Salvando gabarito...', 'info');
+        
+        const payload = {
+            prova_id: parseInt(provaId),
+            respostas: respostas
+        };
+        
+        console.log('📤 Payload:', payload);
+        
+        const response = await fetch(`${API_URL}/api/gabaritos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('📥 Status:', response.status);
+        
+        const result = await response.json();
+        console.log('📥 Resposta:', result);
+        
+        if (response.ok && result.id) {
+            showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
+            
+            selects.forEach(s => {
+                if (s.value) s.classList.add('filled');
+            });
+            
+            carregarGabaritos();
+            carregarCombos();
+            carregarProvas();
+            
+        } else {
+            const erroMsg = result.erro || 'Erro desconhecido';
+            showToast(`❌ ${erroMsg}`, 'error');
+            console.error('Erro:', result);
+        }
+        
+    } catch (erro) {
+        console.error('❌ Erro:', erro);
+        if (erro.message.includes('Failed to fetch') || erro.message.includes('ERR_CONNECTION_CLOSED')) {
+            showToast('❌ Não foi possível conectar ao servidor. Verifique se o backend está rodando.', 'error');
+        } else {
+            showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+        }
+    }
 }
 
 // ═══════════════════════════════ CÂMERA ═══════════════════════════════
@@ -2403,7 +2432,6 @@ async function processarComIA(imagemBase64) {
     document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
     document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
     
-    // Armazenar dados para correção manual
     correcaoManualData.alunoId = parseInt(alunoId);
     correcaoManualData.alunoNome = dados.aluno || 'Aluno';
     correcaoManualData.provaId = parseInt(provaId);
@@ -2426,36 +2454,25 @@ async function processarComIA(imagemBase64) {
 
 function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
-// ============================================================
-// CORREÇÃO MANUAL - FUNÇÕES COMPLETAS E CORRIGIDAS
-// ============================================================
-
+// ═══════════════════════════════ CORREÇÃO MANUAL ═══════════════════════════════
 function abrirCorrecaoManual() {
-  // Verificar se há dados da última correção
   if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
     showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
     return;
   }
   
-  // Verificar se o gabarito está disponível
   if (!correcaoManualData.gabarito || correcaoManualData.gabarito.length === 0) {
     showToast('❌ Gabarito não disponível para esta prova!', 'error');
     return;
   }
   
-  // Preencher informações do aluno
   document.getElementById('cm-aluno-nome').textContent = correcaoManualData.alunoNome || 'Aluno';
   document.getElementById('cm-prova-titulo').textContent = correcaoManualData.provaTitulo || 'Prova';
   document.getElementById('cm-turma-info').textContent = correcaoManualData.serie + ' | Turma: —';
   document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
   
-  // Gerar grid de respostas
   gerarGridCorrecaoManual();
-  
-  // Atualizar resumo
   atualizarResumoCorrecaoManual();
-  
-  // Abrir modal
   openM('m-correcao-manual');
 }
 
@@ -2478,7 +2495,6 @@ function gerarGridCorrecaoManual() {
     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
     const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
     
-    // Montar opções do select
     let options = '<option value="">—</option>';
     alternativas.forEach(alt => {
       const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
@@ -2509,7 +2525,6 @@ function gerarGridCorrecaoManual() {
       <div style="font-size:8px;color:var(--text3);margin-top:2px;">Gabarito: ${respostaGabarito || '—'}</div>
     `;
     
-    // Se a resposta do aluno estiver correta, marcar o select
     if (isCorreto && respostaAluno) {
       const select = div.querySelector('.q-select');
       if (select) select.className = 'q-select correta';
@@ -2526,14 +2541,12 @@ function atualizarRespostaManual(select) {
   const questaoIndex = parseInt(select.dataset.questao);
   const novaResposta = select.value;
   
-  // Atualizar o array de respostas
   if (novaResposta) {
     correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase();
   } else {
     correcaoManualData.respostasAluno[questaoIndex] = '';
   }
   
-  // Atualizar a exibição da resposta
   const item = select.closest('.correcao-manual-item');
   const qResposta = item.querySelector('.q-resposta');
   const qStatus = item.querySelector('.q-status');
@@ -2542,11 +2555,9 @@ function atualizarRespostaManual(select) {
   
   const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
   
-  // Atualizar texto da resposta
   qResposta.textContent = resposta || '—';
   qResposta.style.color = isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)');
   
-  // Atualizar status
   if (resposta) {
     if (isCorreto) {
       qStatus.textContent = '✅ Correto';
@@ -2563,7 +2574,6 @@ function atualizarRespostaManual(select) {
     select.className = 'q-select';
   }
   
-  // Atualizar resumo
   atualizarResumoCorrecaoManual();
 }
 
@@ -2595,7 +2605,6 @@ function atualizarResumoCorrecaoManual() {
   document.getElementById('cm-erros').textContent = erros;
   document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
   
-  // Atualizar status badge
   const statusBadge = document.getElementById('cm-status-badge');
   const statusAtual = document.getElementById('cm-status-atual');
   if (notaFinal >= (correcaoManualData.notaMinima || 5)) {
@@ -2619,7 +2628,6 @@ function atualizarResumoCorrecaoManual() {
 }
 
 function preencherGabaritoCM() {
-  // Preencher todas as respostas com o gabarito
   const qtd = correcaoManualData.quantidade || 20;
   const gabarito = correcaoManualData.gabarito || [];
   
@@ -2629,7 +2637,6 @@ function preencherGabaritoCM() {
     }
   }
   
-  // Regerar o grid
   gerarGridCorrecaoManual();
   atualizarResumoCorrecaoManual();
   showToast('📋 Respostas preenchidas com o gabarito!', 'success');
@@ -2645,7 +2652,6 @@ function limparRespostasCM() {
   showToast('🗑️ Respostas limpas!', 'info');
 }
 
-// ═══════════════════════════════ SALVAR CORREÇÃO MANUAL - CORRIGIDO ═══════════════════════════════
 function salvarCorrecaoManual() {
     const qtd = correcaoManualData.quantidade || 20;
     const respostas = correcaoManualData.respostasAluno || [];
@@ -2662,10 +2668,8 @@ function salvarCorrecaoManual() {
     
     const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
     
-    // Mostrar toast de carregamento
     showToast('💾 Salvando correção manual...', 'info');
     
-    // Dados para enviar ao backend
     const dadosCorrecao = {
         prova_id: correcaoManualData.provaId,
         aluno_id: correcaoManualData.alunoId,
@@ -2675,7 +2679,6 @@ function salvarCorrecaoManual() {
         total: qtd
     };
     
-    // Enviar para o backend via API
     fetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2687,18 +2690,12 @@ function salvarCorrecaoManual() {
             showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
             closeM('m-correcao-manual');
             
-            // ========================================
-            // ATUALIZAR O CARD DE RESULTADO DA IA
-            // ========================================
-            
-            // 1. Atualizar a nota
             const notaEl = document.getElementById('ia-nota');
             if (notaEl) {
                 notaEl.textContent = nota.toFixed(1);
                 notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)';
             }
             
-            // 2. Atualizar o status
             const statusEl = document.getElementById('ia-status');
             if (statusEl) {
                 const status = nota >= 5 ? 'APROVADO' : 'REPROVADO';
@@ -2707,33 +2704,17 @@ function salvarCorrecaoManual() {
                 statusEl.className = 'badge ' + badgeClass;
             }
             
-            // 3. Atualizar os acertos exibidos no resumo
-            const acertosEl = document.getElementById('ia-acertos');
-            if (acertosEl) {
-                acertosEl.textContent = acertos;
-            }
-            
-            // 4. Atualizar o total de questões
-            const totalEl = document.getElementById('ia-total');
-            if (totalEl) {
-                totalEl.textContent = qtd;
-            }
-            
-            // 5. Adicionar/Atualizar badge de "Manual" no header do card
             const header = document.querySelector('.card-glow-green .card-header .btn-group');
             if (header) {
-                // Remover badge antigo se existir
                 const oldBadge = header.querySelector('.badge-manual');
                 if (oldBadge) oldBadge.remove();
                 
-                // Adicionar badge de manual
                 const manualBadge = document.createElement('span');
                 manualBadge.className = 'badge badge-orange badge-manual';
                 manualBadge.textContent = '✏️ Manual';
                 header.appendChild(manualBadge);
             }
             
-            // 6. Atualizar a lista de respostas detectadas com cores
             const respContainer = document.getElementById('ia-resp');
             if (respContainer && respostas.length > 0) {
                 const gabarito = correcaoManualData.gabarito || [];
@@ -2743,7 +2724,6 @@ function salvarCorrecaoManual() {
                 }).join('');
             }
             
-            // 7. Atualizar o grid de comparação
             const compContainer = document.getElementById('ia-comp');
             if (compContainer && respostas.length > 0) {
                 const gabarito = correcaoManualData.gabarito || [];
@@ -2753,17 +2733,11 @@ function salvarCorrecaoManual() {
                 }).join('');
             }
             
-            // 8. Atualizar a confiança para 100% (já que é manual)
             const confiancaEl = document.getElementById('confianca-badge');
             if (confiancaEl) {
                 confiancaEl.textContent = '100% conf.';
             }
             
-            // ========================================
-            // RECARREGAR OUTRAS PARTES DO SISTEMA
-            // ========================================
-            
-            // Recarregar resultados, dashboard e últimas correções
             setTimeout(() => {
                 carregarResultados();
                 carregarDashboard();
@@ -2998,24 +2972,7 @@ function buscarRelatorioAluno() {
 
 function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
 
-// ═══════════════════════════════ USER DATA ═══════════════════════════════
-function carregarUserData() {
-  carregarUsuarios();
-  
-  const tbody = document.getElementById('u-tb-turmas');
-  if (tbody) { fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => { if (!turmas || turmas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma turma</td></tr>'; return; } tbody.innerHTML = turmas.map(t => { return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td>0</td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>'; }).join(''); }).catch(e => console.error(e)); }
-  const alunoBody = document.getElementById('u-tb-alunos');
-  if (alunoBody) { fetch(API_URL + '/api/alunos').then(r => r.json()).then(alunos => { if (!alunos || alunos.length === 0) { alunoBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum aluno</td></tr>'; return; } const corMap = {'1º Ano':'badge-purple','2º Ano':'badge-purple','3º Ano':'badge-blue','4º Ano':'badge-blue','5º Ano':'badge-blue','6º Ano':'badge-cyan','7º Ano':'badge-cyan','8º Ano':'badge-orange','9º Ano':'badge-orange'}; alunoBody.innerHTML = alunos.slice(0,10).map(a => { return '<tr><td>' + (a.numero_chamada || '—') + '</td><td><span class="chip">' + (a.matricula || '—') + '</span></td><td><strong>' + a.nome + '</strong></td><td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td></tr>'; }).join(''); }).catch(e => console.error(e)); }
-  const provasBody = document.getElementById('u-provas-recentes');
-  if (provasBody) { fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => { if (!provas || provas.length === 0) { provasBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma prova</td></tr>'; return; } provasBody.innerHTML = provas.slice(0,5).map(p => { return '<tr><td>' + p.titulo + '</td><td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td><td>' + (p.data_prova || '—') + '</td><td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Corrigido' : 'Pendente') + '</span></td></tr>'; }).join(''); }).catch(e => console.error(e)); }
-  const resBody = document.getElementById('u-tb-resultados');
-  if (resBody) { fetch(API_URL + '/api/historico').then(r => r.json()).then(historico => { if (!historico || historico.length === 0) { resBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum resultado</td></tr>'; return; } resBody.innerHTML = historico.slice(0,5).map(h => { const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado'; const badge = h.nota >= 6 ? 'badge-green' : 'badge-red'; return '<tr><td>' + h.aluno_nome + '</td><td>' + h.prova_titulo + '</td><td><strong style="color:' + (h.nota >= 6 ? 'var(--green)' : 'var(--red)') + ';">' + h.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>'; }).join(''); }).catch(e => console.error(e)); }
-  const escolaInfo = document.getElementById('u-escola-info');
-  if (escolaInfo) { fetch(API_URL + '/api/escolas').then(r => r.json()).then(escolas => { if (!escolas || escolas.length === 0) { escolaInfo.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);">Nenhuma escola cadastrada</div>'; return; } const e = escolas[0]; escolaInfo.innerHTML = '<div style="display:flex;gap:16px;align-items:center;padding:8px;"><div style="width:52px;height:52px;border-radius:14px;background:rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🏫</div><div><div style="font-size:17px;font-weight:800;">' + e.nome + '</div><p style="color:var(--text2);font-size:13px;margin-top:3px;">INEP: ' + (e.inep || '—') + ' · ' + (e.municipio || '') + (e.estado ? ', ' + e.estado : '') + ' · Diretor: ' + (e.diretor || '—') + '</p></div></div>'; }).catch(e => console.error(e)); }
-  const chart = document.getElementById('u-chart');
-  if (chart) { fetch(API_URL + '/api/historico').then(r => r.json()).then(historico => { if (!historico || historico.length === 0) { chart.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Sem dados para exibir</div>'; return; } const recentes = historico.slice(0,6); let html = ''; const maxNota = Math.max(...recentes.map(h => h.nota), 1); recentes.forEach(h => { const altura = Math.max(20, (h.nota / 10) * 100); const cor = h.nota >= 6 ? 'var(--grad-green)' : 'var(--grad-orange)'; html += '<div class="chart-bar-item"><div class="chart-bar-val">' + h.nota + '</div><div class="chart-bar" style="height:' + altura + 'px;background:' + cor + ';"></div><div class="chart-bar-lbl">' + (h.prova_titulo ? h.prova_titulo.substring(0, 10) : '—') + '</div></div>'; }); chart.innerHTML = html; }).catch(e => console.error(e)); }
-}
-
+// ═══════════════════════════════ DOM READY ═══════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
   const tipoSelect = document.getElementById('modal-prova-tipo');
   if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
@@ -3034,7 +2991,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (tipoProva) gerarGabaritoModal(tipoProva.value);
 });
 
-// Fechar menu ao redimensionar para desktop
 window.addEventListener('resize', function() {
   if (window.innerWidth > 900) {
     const sidebar = document.getElementById('sidebar');
