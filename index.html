@@ -382,6 +382,125 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
   margin-bottom: 2px;
 }
 
+/* ═══════════════ ESTILOS PARA IMPRESSÃO ═══════════════ */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .sidebar, .menu-toggle, .menu-overlay, .sb-footer, .page-actions .btn-outline, .page-actions .btn-green {
+        display: none !important;
+    }
+    
+    .content {
+        padding: 20px !important;
+        background: white !important;
+        width: 100% !important;
+    }
+    
+    .card {
+        background: white !important;
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .card-header {
+        border-bottom: 1px solid #ddd !important;
+    }
+    
+    body {
+        background: white !important;
+        color: #000 !important;
+    }
+    
+    .stat-card {
+        border: 1px solid #ddd !important;
+        background: #f9f9f9 !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .badge {
+        border: 1px solid #ddd !important;
+        background: #f0f0f0 !important;
+        color: #333 !important;
+    }
+    
+    .badge-green { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+    .badge-red { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+    .badge-orange { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+    .badge-purple { border-color: #6f42c1 !important; background: #e8d4ff !important; color: #4a148c !important; }
+    .badge-blue { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+    .badge-gray { border-color: #6c757d !important; background: #e9ecef !important; color: #495057 !important; }
+    
+    .badge-conceito-baixo { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+    .badge-conceito-medio-baixo { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+    .badge-conceito-medio-alto { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+    .badge-conceito-alto { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+    
+    .progress {
+        background: #e9ecef !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    .progress-fill {
+        background: #007bff !important;
+        border-radius: 99px !important;
+    }
+    
+    table {
+        border-collapse: collapse !important;
+        font-size: 11px !important;
+    }
+    
+    th, td {
+        border: 1px solid #ddd !important;
+        padding: 6px 8px !important;
+        color: #000 !important;
+    }
+    
+    th {
+        background: #f5f5f5 !important;
+        color: #333 !important;
+    }
+    
+    .table-wrap {
+        border: 1px solid #ddd !important;
+        border-radius: 4px !important;
+    }
+    
+    #conceito-barras .progress {
+        background: #e9ecef !important;
+        height: 16px !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    #conceito-barras .progress-fill {
+        border-radius: 99px !important;
+    }
+    
+    .stat-card {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .g2, .stats-grid {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    #donut-container canvas {
+        max-width: 180px !important;
+        max-height: 180px !important;
+    }
+    
+    .page-header .page-actions {
+        display: none !important;
+    }
+}
+
 /* ═══════════════ RESPONSIVO ═══════════════ */
 @media (max-width: 900px) {
   .menu-toggle {
@@ -470,6 +589,13 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
   .correcao-aluno-info {
     grid-template-columns: 1fr;
   }
+  /* Ajustes para gráficos em mobile */
+  #donut-container {
+    transform: scale(0.8);
+  }
+  .conceito-graficos {
+    grid-template-columns: 1fr !important;
+  }
 }
 @media (max-width: 640px) {
   .stats-grid {
@@ -547,8 +673,10 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
   .resumo-correcao .valor {
     font-size: 18px;
   }
+  #donut-container {
+    transform: scale(0.7);
+  }
 }
-@media print{.sidebar,.btn,.btn-group,.page-actions{display:none!important}.content{padding:0}body{background:#fff;color:#000}.card{background:#fff;border:1px solid #ddd;box-shadow:none}}
 </style>
 </head>
 <body>
@@ -908,21 +1036,21 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
       <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Turma</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
     </div>
 
-    <!-- ═══ RESULTADOS - COM FILTROS ═══ -->
+    <!-- ═══ RESULTADOS - COM FILTROS E GRÁFICOS ═══ -->
     <div class="page" id="page-resultados">
       <div class="page-header">
         <div>
           <div class="page-title">🏆 Resultados</div>
-          <p class="page-sub">Notas e desempenho dos alunos</p>
+          <p class="page-sub">Notas, desempenho e análise visual</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-          <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
+          <button class="btn btn-outline no-print" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn btn-green no-print" onclick="exportarResultadosFiltrados()">📥 Excel</button>
         </div>
       </div>
 
       <!-- FILTROS -->
-      <div class="card" style="margin-bottom:16px;">
+      <div class="card no-print" style="margin-bottom:16px;">
         <div class="form-row c3">
           <div class="form-group">
             <label class="form-label">Escola</label>
@@ -958,11 +1086,11 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
         </div>
       </div>
 
-      <!-- CARDS DE ESTATÍSTICAS (ATUALIZADOS COM OS DADOS FILTRADOS) -->
+      <!-- CARDS DE ESTATÍSTICAS -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;">
           <div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total-filtrado">0</div>
-          <div style="font-size:11px;color:var(--text2);">Total</div>
+          <div style="font-size:11px;color:var(--text2);">Total de Alunos</div>
         </div>
         <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;">
           <div style="font-size:26px;font-weight:800;color:var(--green);" id="res-aprovados-filtrado">0</div>
@@ -974,12 +1102,88 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
         </div>
         <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;">
           <div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div>
-          <div style="font-size:11px;color:var(--text2);">Média</div>
+          <div style="font-size:11px;color:var(--text2);">Média Geral</div>
+        </div>
+      </div>
+
+      <!-- GRÁFICOS DE CONCEITOS -->
+      <div class="conceito-graficos" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <!-- Gráfico de Barras -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📊 Distribuição por Conceito</div>
+            <span class="badge badge-blue">Barras</span>
+          </div>
+          <div id="conceito-barras" style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                <span>🔴 Baixo (até 40%)</span>
+                <span style="font-weight:700;color:#ef4444;" id="conceito-baixo-count">0</span>
+              </div>
+              <div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);">
+                <div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#ef4444,#dc2626);border-radius:10px;transition:width 0.8s ease;" id="conceito-baixo-bar"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                <span>🟠 Médio Baixo (41% - 60%)</span>
+                <span style="font-weight:700;color:#f59e0b;" id="conceito-medio-baixo-count">0</span>
+              </div>
+              <div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);">
+                <div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:10px;transition:width 0.8s ease;" id="conceito-medio-baixo-bar"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                <span>🔵 Médio Alto (61% - 80%)</span>
+                <span style="font-weight:700;color:#3b82f6;" id="conceito-medio-alto-count">0</span>
+              </div>
+              <div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);">
+                <div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#2563eb);border-radius:10px;transition:width 0.8s ease;" id="conceito-medio-alto-bar"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                <span>🟢 Alto (acima de 80%)</span>
+                <span style="font-weight:700;color:#10b981;" id="conceito-alto-count">0</span>
+              </div>
+              <div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);">
+                <div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#10b981,#059669);border-radius:10px;transition:width 0.8s ease;" id="conceito-alto-bar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico Donut -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🍩 Distribuição Percentual</div>
+            <span class="badge badge-purple">Donut</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;padding:10px 0;">
+            <div style="position:relative;width:200px;height:200px;" id="donut-container">
+              <canvas id="donut-chart" width="200" height="200"></canvas>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+                <div style="font-size:12px;color:var(--text3);">Total</div>
+                <div style="font-size:24px;font-weight:900;color:var(--text);" id="donut-total">0</div>
+              </div>
+            </div>
+            <div style="margin-left:20px;display:flex;flex-direction:column;gap:8px;font-size:12px;">
+              <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#ef4444;vertical-align:middle;margin-right:8px;"></span> Baixo: <strong id="donut-baixo-pct">0%</strong></div>
+              <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#f59e0b;vertical-align:middle;margin-right:8px;"></span> Médio Baixo: <strong id="donut-medio-baixo-pct">0%</strong></div>
+              <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#3b82f6;vertical-align:middle;margin-right:8px;"></span> Médio Alto: <strong id="donut-medio-alto-pct">0%</strong></div>
+              <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#10b981;vertical-align:middle;margin-right:8px;"></span> Alto: <strong id="donut-alto-pct">0%</strong></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- TABELA DE RESULTADOS -->
       <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Lista de Alunos</div>
+          <span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -1439,7 +1643,7 @@ async function carregarResultados() {
         tbody.innerHTML = historico.map((item, index) => {
             const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
             const nota = item.nota || 0;
-            const totalQuestoes = 20; // Idealmente, pegar do backend
+            const totalQuestoes = 20;
             const acertos = item.acertos || 0;
             const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
             const conceito = calcularConceito(porcentagem);
@@ -1447,7 +1651,6 @@ async function carregarResultados() {
             const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
             const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
             
-            // Badge de conceito
             const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
             
             return '<tr>' +
@@ -1766,7 +1969,7 @@ function calcularConceito(porcentagem) {
     return 'Alto';
 }
 
-// ═══════════════════════════════ RESULTADOS - COM FILTROS ═══════════════════════════════
+// ═══════════════════════════════ RESULTADOS - COM FILTROS E GRÁFICOS ═══════════════════════════════
 async function carregarFiltrosResultados() {
     try {
         const respEscolas = await fetch(API_URL + '/api/escolas');
@@ -1808,11 +2011,9 @@ async function carregarTurmasPorEscola(escolaId) {
     const selectTurma = document.getElementById('filtro-turma');
     if (!selectTurma) return;
     
-    // Limpa o select de turmas
     selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
     
     if (!escolaId) {
-        // Se não tiver escola selecionada, carrega todas as turmas
         try {
             const respTurmas = await fetch(API_URL + '/api/turmas');
             const turmas = await respTurmas.json();
@@ -1828,7 +2029,6 @@ async function carregarTurmasPorEscola(escolaId) {
             console.error('Erro ao carregar turmas:', erro);
         }
     } else {
-        // Carrega turmas da escola específica
         try {
             const respTurmas = await fetch(API_URL + '/api/turmas?escola_id=' + escolaId);
             const turmas = await respTurmas.json();
@@ -1845,7 +2045,6 @@ async function carregarTurmasPorEscola(escolaId) {
         }
     }
     
-    // Atualiza os resultados
     carregarResultadosComFiltros();
 }
 
@@ -1873,15 +2072,15 @@ async function carregarResultadosComFiltros() {
             document.getElementById('res-aprovados-filtrado').textContent = '0';
             document.getElementById('res-recuperacao-filtrado').textContent = '0';
             document.getElementById('res-media-filtrado').textContent = '0';
+            atualizarGraficosConceitos([]);
             return;
         }
 
-        // CORREÇÃO: Converter nota para número antes de usar
         const dadosCorrigidos = historico.map(item => ({
             ...item,
             nota: parseFloat(item.nota) || 0,
             acertos: parseInt(item.acertos) || 0,
-            total_questoes: parseInt(item.total_questoes) || 20 // Fallback para 20
+            total_questoes: parseInt(item.total_questoes) || 20
         }));
 
         let total = dadosCorrigidos.length;
@@ -1893,8 +2092,12 @@ async function carregarResultadosComFiltros() {
         document.getElementById('res-aprovados-filtrado').textContent = aprovados;
         document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
         document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
+        document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
         dadosCorrigidos.sort((a, b) => b.nota - a.nota);
+
+        // Atualizar gráficos de conceitos
+        atualizarGraficosConceitos(dadosCorrigidos);
 
         tbody.innerHTML = dadosCorrigidos.map((item, index) => {
             const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
@@ -1908,7 +2111,6 @@ async function carregarResultadosComFiltros() {
             const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
             const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
             
-            // Badge de conceito
             const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
             
             const nome = item.aluno_nome || 'Aluno';
@@ -1934,6 +2136,109 @@ async function carregarResultadosComFiltros() {
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
         }
     }
+}
+
+// ═══════════════════════════════ ATUALIZAR GRÁFICOS DE CONCEITOS ═══════════════════════════════
+function atualizarGraficosConceitos(dados) {
+    const conceitos = { 'Baixo': 0, 'Médio Baixo': 0, 'Médio Alto': 0, 'Alto': 0 };
+    dados.forEach(item => {
+        const totalQuestoes = item.total_questoes || 20;
+        const porcentagem = totalQuestoes > 0 ? Math.round((item.acertos / totalQuestoes) * 100) : 0;
+        const conceito = calcularConceito(porcentagem);
+        conceitos[conceito] = (conceitos[conceito] || 0) + 1;
+    });
+
+    const total = dados.length || 1;
+
+    // Atualizar barras
+    const cores = {
+        'Baixo': { bg: '#ef4444' },
+        'Médio Baixo': { bg: '#f59e0b' },
+        'Médio Alto': { bg: '#3b82f6' },
+        'Alto': { bg: '#10b981' }
+    };
+
+    ['Baixo', 'Médio Baixo', 'Médio Alto', 'Alto'].forEach(conceito => {
+        const count = conceitos[conceito] || 0;
+        const pct = total > 0 ? (count / total) * 100 : 0;
+        
+        const countEl = document.getElementById(`conceito-${conceito.toLowerCase().replace(' ', '-')}-count`);
+        const barEl = document.getElementById(`conceito-${conceito.toLowerCase().replace(' ', '-')}-bar`);
+        
+        if (countEl) countEl.textContent = count;
+        if (barEl) {
+            barEl.style.width = Math.max(pct, 0) + '%';
+            barEl.style.background = `linear-gradient(90deg, ${cores[conceito].bg}, ${cores[conceito].bg}dd)`;
+        }
+    });
+
+    // Atualizar Donut
+    atualizarDonut(conceitos, total);
+}
+
+// ═══════════════════════════════ DONUT CHART ═══════════════════════════════
+function atualizarDonut(conceitos, total) {
+    const canvas = document.getElementById('donut-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - 20;
+    const innerRadius = radius * 0.6;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const labels = ['Baixo', 'Médio Baixo', 'Médio Alto', 'Alto'];
+    const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'];
+    const values = labels.map(l => conceitos[l] || 0);
+    
+    document.getElementById('donut-total').textContent = total;
+
+    const totalVal = values.reduce((a, b) => a + b, 0) || 1;
+    const pcts = values.map(v => (v / totalVal) * 100);
+    
+    document.getElementById('donut-baixo-pct').textContent = pcts[0].toFixed(1) + '%';
+    document.getElementById('donut-medio-baixo-pct').textContent = pcts[1].toFixed(1) + '%';
+    document.getElementById('donut-medio-alto-pct').textContent = pcts[2].toFixed(1) + '%';
+    document.getElementById('donut-alto-pct').textContent = pcts[3].toFixed(1) + '%';
+
+    let startAngle = -Math.PI / 2;
+    
+    values.forEach((value, index) => {
+        if (value === 0) return;
+        
+        const sliceAngle = (value / totalVal) * 2 * Math.PI;
+        const endAngle = startAngle + sliceAngle;
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+        ctx.closePath();
+        
+        ctx.fillStyle = colors[index];
+        ctx.fill();
+        
+        ctx.strokeStyle = 'var(--bg)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        startAngle = endAngle;
+    });
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'var(--border2)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'var(--border2)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 }
 
 function limparFiltrosResultados() {
