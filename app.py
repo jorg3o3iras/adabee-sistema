@@ -202,7 +202,8 @@ def init_database():
                 nota REAL,
                 data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 metodo_ia TEXT DEFAULT 'hibrido',
-                confianca REAL DEFAULT 0
+                confianca REAL DEFAULT 0,
+                tipo_correcao TEXT DEFAULT 'ia'
             )
         ''')
         
@@ -262,7 +263,7 @@ def init_database():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 # ============================================
-# CLASSE CORRETOR HÍBRIDO (CORRIGIDA - DETECÇÃO MELHORADA)
+# CLASSE CORRETOR HÍBRIDO
 # ============================================
 
 class CorretorHibrido:
@@ -277,7 +278,6 @@ class CorretorHibrido:
             if img is None:
                 return None
             
-            # ========== MELHORIA 1: AUMENTAR CONTRASTE ==========
             lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
             l, a, b = cv2.split(lab)
             clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
@@ -304,18 +304,14 @@ class CorretorHibrido:
                 return None
             
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # ========== MELHORIA 2: REDUZIR RUÍDO ==========
             gray = cv2.GaussianBlur(gray, (5, 5), 0)
             
-            # ========== MELHORIA 3: THRESHOLD ADAPTATIVO ==========
             _, binary = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             bolinhas = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                # ========== MELHORIA 4: FAIXA MAIS TOLERANTE ==========
                 if 20 < area < 500:
                     M = cv2.moments(cnt)
                     if M['m00'] > 0:
@@ -324,9 +320,7 @@ class CorretorHibrido:
                         perimeter = cv2.arcLength(cnt, True)
                         if perimeter > 0:
                             circularity = 4 * np.pi * area / (perimeter * perimeter)
-                            # ========== MELHORIA 5: MAIS TOLERANTE ==========
                             if circularity > 0.3:
-                                # ========== MELHORIA 6: ANALISAR PREENCHIMENTO ==========
                                 mask = np.zeros_like(gray)
                                 cv2.drawContours(mask, [cnt], -1, 255, -1)
                                 roi = cv2.bitwise_and(gray, gray, mask=mask)
@@ -355,7 +349,6 @@ class CorretorHibrido:
             
             bolinhas.sort(key=lambda b: b['y'])
             
-            # ========== MELHORIA 7: TOLERÂNCIA DINÂMICA ==========
             alturas = [b['area'] ** 0.5 for b in bolinhas]
             altura_media = np.mean(alturas) if alturas else 30
             tolerancia_y = altura_media * 1.2
@@ -374,7 +367,6 @@ class CorretorHibrido:
             if linha_atual:
                 linhas.append(linha_atual)
             
-            # ========== MELHORIA 8: FILTRAR LINHAS ==========
             linhas_filtradas = []
             for linha in linhas:
                 if len(linha) >= num_opcoes - 1:
@@ -393,7 +385,6 @@ class CorretorHibrido:
                 linha = linha[:num_opcoes]
                 
                 if len(linha) > 0:
-                    # ========== MELHORIA 9: DETECTAR PREENCHIDAS ==========
                     preenchidas = [b for b in linha if b['preenchimento'] > 0.15]
                     
                     if len(preenchidas) == 1:
@@ -405,7 +396,6 @@ class CorretorHibrido:
                         pos = linha.index(melhor)
                         respostas.append(letras[pos] if pos < len(letras) else '?')
                     else:
-                        # Nenhuma preenchida → pegar a maior área
                         melhor = max(linha, key=lambda b: b['area'])
                         pos = linha.index(melhor)
                         respostas.append(letras[pos] if pos < len(letras) else '?')
@@ -854,7 +844,7 @@ def deletar_aluno(aluno_id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS - PROVAS (COM GET POR ID)
+# ROTAS - PROVAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -898,7 +888,6 @@ def listar_provas():
 
 @app.route('/api/provas/<int:prova_id>', methods=['GET'])
 def obter_prova(prova_id):
-    """Busca uma prova específica pelo ID"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1063,7 +1052,7 @@ def salvar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS - CORREÇÃO DE PROVAS
+# ROTAS - CORREÇÃO DE PROVAS (ATUALIZADO)
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1125,16 +1114,36 @@ def corrigir_prova():
         aluno = cursor.fetchone()
         aluno_nome = aluno['nome'] if aluno else 'Aluno'
         
-        cursor.execute("""
-            INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao, metodo_ia, confianca) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now(), metodo, confianca))
+        # Verificar se já existe correção para esta prova e aluno
+        cursor.execute("SELECT id FROM correcoes WHERE prova_id = %s AND aluno_id = %s", (prova_id, aluno_id))
+        existe = cursor.fetchone()
+        
+        if existe:
+            cursor.execute("""
+                UPDATE correcoes SET 
+                    respostas = %s, 
+                    acertos = %s, 
+                    nota = %s, 
+                    data_correcao = %s, 
+                    metodo_ia = %s, 
+                    confianca = %s,
+                    tipo_correcao = 'ia'
+                WHERE id = %s
+            """, (json.dumps(respostas_detectadas), acertos, nota, datetime.now(), metodo, confianca, existe['id']))
+        else:
+            cursor.execute("""
+                INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao, metodo_ia, confianca, tipo_correcao) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'ia')
+            """, (prova_id, aluno_id, json.dumps(respostas_detectadas), acertos, nota, datetime.now(), metodo, confianca))
+        
         conn.commit()
         conn.close()
         
         return jsonify({
             'aluno': aluno_nome,
+            'aluno_id': aluno_id,
             'prova': titulo_prova,
+            'prova_id': prova_id,
             'respostas_detectadas': respostas_detectadas,
             'acertos': acertos,
             'total': len(gabarito),
@@ -1143,14 +1152,138 @@ def corrigir_prova():
             'correcoes': correcoes,
             'confianca': round(confianca, 1),
             'metodo_ia': metodo,
-            'tipo_questoes': tipo_questoes
+            'tipo_questoes': tipo_questoes,
+            'valor_por_questao': round(valor_nota / len(gabarito), 2) if gabarito else 0.5,
+            'gabarito_completo': gabarito
         })
     except Exception as e:
         print(f"Erro na correção: {e}")
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA - CORREÇÃO DE REDAÇÃO (COM GEMINI)
+# NOVA ROTA - SALVAR CORREÇÃO MANUAL
+# ============================================
+
+@app.route('/api/corrigir_manual', methods=['POST'])
+def corrigir_manual():
+    """Salva uma correção feita manualmente pelo usuário"""
+    try:
+        dados = request.json
+        prova_id = dados.get('prova_id')
+        aluno_id = dados.get('aluno_id')
+        respostas = dados.get('respostas')
+        gabarito = dados.get('gabarito')
+        acertos = dados.get('acertos')
+        nota = dados.get('nota')
+        total = dados.get('total', len(respostas) if respostas else 0)
+        
+        if not prova_id or not aluno_id:
+            return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
+        
+        if not respostas or not isinstance(respostas, list):
+            return jsonify({'erro': 'Respostas inválidas'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro no banco de dados'}), 500
+        
+        cursor = conn.cursor()
+        
+        # Verificar se já existe correção
+        cursor.execute("SELECT id FROM correcoes WHERE prova_id = %s AND aluno_id = %s", (prova_id, aluno_id))
+        existe = cursor.fetchone()
+        
+        if existe:
+            cursor.execute("""
+                UPDATE correcoes SET 
+                    respostas = %s, 
+                    acertos = %s, 
+                    nota = %s, 
+                    data_correcao = %s, 
+                    metodo_ia = 'manual',
+                    confianca = 100,
+                    tipo_correcao = 'manual'
+                WHERE id = %s
+            """, (json.dumps(respostas), acertos, nota, datetime.now(), existe['id']))
+        else:
+            cursor.execute("""
+                INSERT INTO correcoes (prova_id, aluno_id, respostas, acertos, nota, data_correcao, metodo_ia, confianca, tipo_correcao) 
+                VALUES (%s, %s, %s, %s, %s, %s, 'manual', 100, 'manual')
+            """, (prova_id, aluno_id, json.dumps(respostas), acertos, nota, datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Correção manual salva com sucesso!',
+            'acertos': acertos,
+            'nota': round(nota, 1),
+            'total': total
+        })
+        
+    except Exception as e:
+        print(f"Erro ao salvar correção manual: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# NOVA ROTA - BUSCAR CORREÇÃO EXISTENTE
+# ============================================
+
+@app.route('/api/correcao_existente', methods=['GET'])
+def buscar_correcao_existente():
+    """Busca uma correção existente para um aluno/prova"""
+    try:
+        prova_id = request.args.get('prova_id')
+        aluno_id = request.args.get('aluno_id')
+        
+        if not prova_id or not aluno_id:
+            return jsonify({'existe': False, 'erro': 'Prova e aluno são obrigatórios'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'existe': False, 'erro': 'Erro no banco de dados'}), 500
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.*, a.nome as aluno_nome, p.titulo as prova_titulo, p.gabarito
+            FROM correcoes c
+            JOIN alunos a ON c.aluno_id = a.id
+            JOIN provas p ON c.prova_id = p.id
+            WHERE c.prova_id = %s AND c.aluno_id = %s
+        """, (prova_id, aluno_id))
+        
+        correcao = cursor.fetchone()
+        conn.close()
+        
+        if correcao:
+            respostas = json.loads(correcao['respostas']) if correcao['respostas'] else []
+            gabarito = json.loads(correcao['gabarito']) if correcao['gabarito'] else []
+            
+            return jsonify({
+                'existe': True,
+                'correcao': {
+                    'id': correcao['id'],
+                    'aluno_nome': correcao['aluno_nome'],
+                    'prova_titulo': correcao['prova_titulo'],
+                    'respostas': respostas,
+                    'gabarito': gabarito,
+                    'acertos': correcao['acertos'],
+                    'nota': correcao['nota'],
+                    'data_correcao': str(correcao['data_correcao']),
+                    'tipo_correcao': correcao.get('tipo_correcao', 'ia'),
+                    'metodo_ia': correcao.get('metodo_ia', '')
+                }
+            })
+        else:
+            return jsonify({'existe': False})
+            
+    except Exception as e:
+        print(f"Erro ao buscar correção: {e}")
+        return jsonify({'existe': False, 'erro': str(e)}), 500
+
+# ============================================
+# ROTAS - CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -1162,18 +1295,15 @@ def corrigir_redacao():
         prova_id = dados.get('prova_id')
         aluno_id = dados.get('aluno_id')
         
-        # Se não houver texto, tentar extrair da imagem
         if not texto and imagem:
             texto = CorretorRedacaoHibrido.extrair_texto_ocr(imagem)
         
         if not texto:
             return jsonify({'erro': 'Forneça imagem ou texto da redação'}), 400
         
-        # Verificar se temos Gemini disponível
         model = get_gemini_model()
         
         if model and len(texto) > 20:
-            # Usar Gemini para correção avançada
             try:
                 prompt = f"""
                 Você é um professor de português experiente. Avalie a seguinte redação:
@@ -1193,7 +1323,6 @@ def corrigir_redacao():
                 
                 response = model.generate_content(prompt)
                 
-                # Tentar extrair JSON
                 import ast
                 json_match = re.search(r'\{[^{}]*\}', response.text)
                 if json_match:
@@ -1210,15 +1339,14 @@ def corrigir_redacao():
                             'nota_gramatica': resultado.get('gramatica', 0)
                         }
                         
-                        # Salvar no banco se tiver prova e aluno
                         if prova_id and aluno_id:
                             conn = get_db_connection()
                             if conn:
                                 cursor = conn.cursor()
                                 cursor.execute("""
                                     INSERT INTO correcoes_redacao (prova_id, aluno_id, texto, nota, feedback, metricas, data_correcao, metodo_ia) 
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                                """, (prova_id, aluno_id, texto, nota, feedback, json.dumps(metricas), datetime.now(), 'Gemini AI'))
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'Gemini AI')
+                                """, (prova_id, aluno_id, texto, nota, feedback, json.dumps(metricas), datetime.now()))
                                 conn.commit()
                                 conn.close()
                         
@@ -1235,16 +1363,13 @@ def corrigir_redacao():
                         pass
             except Exception as e:
                 print(f"Erro no Gemini: {e}")
-                # Fallback para método híbrido
         
-        # Fallback: usar método híbrido (OCR + Análise)
         corretor = CorretorRedacaoHibrido()
         texto_corrigido, nota, conceito, feedback, metricas, metodo = corretor.corrigir_redacao_hibrido(imagem, texto)
         
         if texto_corrigido is None:
             return jsonify({'erro': 'Não foi possível processar a redação'}), 400
         
-        # Salvar no banco se tiver prova e aluno
         if prova_id and aluno_id:
             conn = get_db_connection()
             if conn:
@@ -1278,10 +1403,6 @@ def corrigir_redacao():
         print(f"Erro na correção de redação: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA - CORREÇÃO COM GEMINI PURA
-# ============================================
-
 @app.route('/api/corrigir_gemini', methods=['POST'])
 def corrigir_gemini():
     try:
@@ -1313,7 +1434,6 @@ def corrigir_gemini():
         
         response = model.generate_content(prompt)
         
-        # Tentar extrair JSON
         import ast
         json_match = re.search(r'\{[^{}]*\}', response.text)
         if json_match:
@@ -1334,7 +1454,6 @@ def corrigir_gemini():
             except:
                 pass
         
-        # Fallback
         return jsonify({
             'nota': 0,
             'feedback': response.text,
@@ -1531,8 +1650,17 @@ def historico():
         
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT c.id, a.nome as aluno_nome, p.titulo as prova_titulo, 
-                   c.acertos, c.nota, c.data_correcao, c.metodo_ia
+            SELECT 
+                c.id, 
+                a.nome as aluno_nome, 
+                p.titulo as prova_titulo, 
+                c.acertos, 
+                c.nota, 
+                c.data_correcao, 
+                c.metodo_ia,
+                c.tipo_correcao,
+                a.id as aluno_id,
+                p.id as prova_id
             FROM correcoes c 
             JOIN alunos a ON c.aluno_id = a.id 
             JOIN provas p ON c.prova_id = p.id
@@ -1545,11 +1673,14 @@ def historico():
             historico.append({
                 'id': row['id'],
                 'aluno_nome': row['aluno_nome'],
+                'aluno_id': row['aluno_id'],
                 'prova_titulo': row['prova_titulo'],
+                'prova_id': row['prova_id'],
                 'acertos': row['acertos'],
                 'nota': round(row['nota'], 1),
                 'data_correcao': str(row['data_correcao']),
-                'metodo_ia': row['metodo_ia'] or 'Desconhecido'
+                'metodo_ia': row['metodo_ia'] or 'Desconhecido',
+                'tipo_correcao': row.get('tipo_correcao') or 'ia'
             })
         conn.close()
         return jsonify(historico)
@@ -1611,7 +1742,8 @@ def exportar_resultados():
                 c.acertos,
                 c.nota,
                 c.data_correcao,
-                c.metodo_ia
+                c.metodo_ia,
+                c.tipo_correcao
             FROM correcoes c 
             JOIN alunos a ON c.aluno_id = a.id 
             WHERE c.prova_id = %s
@@ -1623,7 +1755,7 @@ def exportar_resultados():
         
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['Nº Chamada', 'Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA'])
+        writer.writerow(['Nº Chamada', 'Aluno', 'Matrícula', 'Acertos', 'Nota', 'Data', 'Método IA', 'Tipo'])
         for r in resultados:
             writer.writerow([
                 r['numero_chamada'] or '',
@@ -1632,7 +1764,8 @@ def exportar_resultados():
                 r['acertos'],
                 round(r['nota'], 1),
                 str(r['data_correcao']),
-                r['metodo_ia'] or 'Desconhecido'
+                r['metodo_ia'] or 'Desconhecido',
+                r.get('tipo_correcao') or 'ia'
             ])
         
         return output.getvalue(), 200, {
@@ -1643,7 +1776,7 @@ def exportar_resultados():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS - CONFIGURAÇÕES (ATUALIZADO)
+# ROTAS - CONFIGURAÇÕES
 # ============================================
 
 @app.route('/api/configuracoes', methods=['GET'])
@@ -1682,7 +1815,6 @@ def salvar_configuracoes():
                     atualizado_em = EXCLUDED.atualizado_em
             """, (chave, str(valor), datetime.now()))
         
-        # Testar Gemini se chave foi salva
         if 'gemini_api_key' in dados and dados['gemini_api_key']:
             try:
                 genai.configure(api_key=dados['gemini_api_key'])
@@ -1699,7 +1831,7 @@ def salvar_configuracoes():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTAS - USUÁRIOS (NOVO)
+# ROTAS - USUÁRIOS
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -1799,7 +1931,8 @@ def status_ia():
             '✅ Sem limites de uso',
             '✅ Correção de provas com detecção por OpenCV',
             '✅ Correção de redações com OCR e análise avançada',
-            '✅ Correção com Gemini AI (inteligência artificial)'
+            '✅ Correção com Gemini AI (inteligência artificial)',
+            '✅ Correção manual com salvamento no banco de dados'
         ]
     })
 
