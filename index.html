@@ -1307,8 +1307,8 @@ let camStream = null;
 let camFacing = 'environment';
 let delTarget = null;
 let ultimaImagem = null;
-const API_URL = '';
-
+// CORRIJA ESTA LINHA - Adicione a URL completa do seu backend
+const API_URL = 'https://adabee-sistema-3.onrender.com'; // <-- ADICIONE ESTA URL
 // ═══════════════════════════════ CORREÇÃO MANUAL - VARIÁVEIS ═══════════════════════════════
 let correcaoManualData = {
   alunoId: null,
@@ -2497,20 +2497,106 @@ function fillGabRand() {
 
 function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); }); }
 
+// ═══════════════════════════════ SALVAR GABARITO - CORRIGIDO ═══════════════════════════════
 async function saveGab() {
-  const respostas = [];
-  document.querySelectorAll('.gab-select').forEach(s => { if (s.value) respostas.push(s.value); });
-  if (respostas.length === 0) { showToast('⚠️ Preencha o gabarito!', 'error'); return; }
-  const serie = document.getElementById('gab-serie').value || '1º Ano';
-  const provaId = document.getElementById('gab-prova').value || 1;
-  try {
-    const response = await fetch(API_URL + '/api/gabaritos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prova_id: parseInt(provaId), serie: serie, total_questoes: respostas.length, alternativas: 'A,B,C,D', respostas: respostas, pontos_por_acerto: 0.5, penalidade: 0, questoes_anuladas: '' }) });
-    const result = await response.json();
-    if (result.id) { showToast('✅ Gabarito salvo!', 'success'); carregarDados(); } 
-    else { showToast('❌ Erro ao salvar gabarito', 'error'); }
-  } catch (erro) { showToast('❌ Erro ao salvar', 'error'); }
+    try {
+        // Coletar respostas do gabarito
+        const selects = document.querySelectorAll('.gab-select');
+        const respostas = [];
+        let todosPreenchidos = true;
+        
+        selects.forEach(s => {
+            if (s.value) {
+                respostas.push(s.value);
+            } else {
+                todosPreenchidos = false;
+                respostas.push('');
+            }
+        });
+        
+        // Verificar se todas as questões foram preenchidas
+        if (!todosPreenchidos) {
+            const confirmar = confirm('⚠️ Nem todas as questões foram preenchidas. Deseja continuar mesmo assim?');
+            if (!confirmar) return;
+        }
+        
+        // Verificar se há respostas
+        const respostasValidas = respostas.filter(r => r !== '');
+        if (respostasValidas.length === 0) {
+            showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error');
+            return;
+        }
+        
+        // Obter dados adicionais
+        const provaId = document.getElementById('gab-prova').value;
+        const serie = document.getElementById('gab-serie').value;
+        const total = document.getElementById('gab-total').value;
+        const ptsAcerto = document.getElementById('pts-acerto').value || 0.5;
+        const penalidade = document.getElementById('penalidade').value || 'Sem penalidade';
+        const questoesAnuladas = document.getElementById('questoes-anuladas').value || '';
+        
+        if (!provaId) {
+            showToast('❌ Selecione uma prova primeiro!', 'error');
+            return;
+        }
+        
+        console.log('📝 Salvando gabarito para prova ID:', provaId);
+        console.log('📝 Respostas:', respostas);
+        
+        showToast('💾 Salvando gabarito...', 'info');
+        
+        // Construir a URL corretamente
+        const url = API_URL ? `${API_URL}/api/gabaritos` : '/api/gabaritos';
+        console.log('📤 Enviando para:', url);
+        
+        // Enviar para o backend
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prova_id: parseInt(provaId),
+                respostas: respostas,
+                serie: serie,
+                total_questoes: parseInt(total),
+                alternativas: '4',
+                pontos_por_acerto: parseFloat(ptsAcerto),
+                penalidade: penalidade,
+                questoes_anuladas: questoesAnuladas
+            })
+        });
+        
+        const result = await response.json();
+        console.log('📥 Resposta do servidor:', result);
+        
+        if (response.ok && result.id) {
+            showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
+            
+            // Marcar todos os selects como filled
+            selects.forEach(s => {
+                if (s.value) s.classList.add('filled');
+            });
+            
+            // Recarregar a lista de gabaritos
+            carregarGabaritos();
+            
+            // Atualizar o select de provas para mostrar que tem gabarito
+            await carregarProvasSelect();
+            
+            // Recarregar a página de provas
+            carregarProvas();
+            
+        } else {
+            showToast('❌ Erro ao salvar gabarito: ' + (result.erro || 'Erro desconhecido'), 'error');
+            console.error('Erro ao salvar gabarito:', result);
+        }
+        
+    } catch (erro) {
+        console.error('❌ Erro ao salvar gabarito:', erro);
+        showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+    }
 }
-
 // ═══════════════════════════════ CÂMERA ═══════════════════════════════
 async function abrirCamera() {
   document.getElementById('cam-modal').classList.add('show');
