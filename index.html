@@ -2157,7 +2157,10 @@ async function processarComIA(imagemBase64) {
 
 function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
-// ═══════════════════════════════ CORREÇÃO MANUAL ═══════════════════════════════
+// ============================================================
+// CORREÇÃO MANUAL - FUNÇÕES COMPLETAS E CORRIGIDAS
+// ============================================================
+
 function abrirCorrecaoManual() {
   // Verificar se há dados da última correção
   if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
@@ -2373,6 +2376,9 @@ function limparRespostasCM() {
   showToast('🗑️ Respostas limpas!', 'info');
 }
 
+// ============================================================
+// SALVAR CORREÇÃO MANUAL - CORRIGIDO COM ATUALIZAÇÃO DOS RESULTADOS
+// ============================================================
 function salvarCorrecaoManual() {
   const qtd = correcaoManualData.quantidade || 20;
   const respostas = correcaoManualData.respostasAluno || [];
@@ -2389,8 +2395,9 @@ function salvarCorrecaoManual() {
   
   const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
   
-  // Salvar no histórico
+  // Criar objeto do histórico
   const historico = {
+    id: Date.now(),
     aluno_id: correcaoManualData.alunoId,
     aluno_nome: correcaoManualData.alunoNome,
     prova_id: correcaoManualData.provaId,
@@ -2401,19 +2408,45 @@ function salvarCorrecaoManual() {
     nota: nota,
     total: qtd,
     tipo_correcao: 'manual',
-    data_correcao: new Date().toISOString()
+    data_correcao: new Date().toISOString(),
+    metodo_ia: 'manual',
+    confianca: 100
   };
   
-  // Salvar via API (simulado por enquanto)
-  // Em produção, enviar para o backend
+  // Salvar no localStorage
   salvarHistoricoLocal(historico);
   
-  showToast('✅ Correção manual salva com sucesso! Nota: ' + nota.toFixed(1), 'success');
-  closeM('m-correcao-manual');
+  // ATUALIZAR A INTERFACE IMEDIATAMENTE
   
-  // Atualizar resultados
+  // 1. Atualizar a nota exibida no resultado da IA
+  document.getElementById('ia-nota').textContent = nota.toFixed(1);
+  const status = nota >= 5 ? 'APROVADO' : 'REPROVADO';
+  const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
+  document.getElementById('ia-status').textContent = status;
+  document.getElementById('ia-status').className = 'badge ' + badgeClass;
+  
+  // 2. Adicionar badge de "Manual" no resultado
+  const header = document.querySelector('.card-glow-green .card-header .btn-group');
+  if (header) {
+    // Remover badge antigo se existir
+    const oldBadge = header.querySelector('.badge-manual');
+    if (oldBadge) oldBadge.remove();
+    
+    const manualBadge = document.createElement('span');
+    manualBadge.className = 'badge badge-orange badge-manual';
+    manualBadge.textContent = '✏️ Manual';
+    header.appendChild(manualBadge);
+  }
+  
+  // 3. Atualizar as listas de resultados
   carregarResultados();
   carregarDashboard();
+  carregarUltimasCorrecoes();
+  
+  // 4. Fechar modal
+  closeM('m-correcao-manual');
+  
+  showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
 }
 
 function salvarHistoricoLocal(historico) {
