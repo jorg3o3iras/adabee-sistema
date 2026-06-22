@@ -204,7 +204,6 @@ def login():
     if conn:
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            # CORRIGIDO: usando senha_hash em vez de senha
             cur.execute("""
                 SELECT id, nome, username, senha_hash, perfil, ativo 
                 FROM usuarios 
@@ -216,7 +215,6 @@ def login():
             
             if usuario:
                 print(f"✅ Usuário encontrado no banco: {usuario['username']}")
-                # CORRIGIDO: comparando com senha_hash
                 if usuario['senha_hash'] == senha:
                     return jsonify({
                         'sucesso': True,
@@ -257,7 +255,6 @@ def listar_usuarios():
     if conn:
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            # CORRIGIDO: usando senha_hash
             cur.execute("SELECT id, nome, username, email, perfil, ativo, criado_em FROM usuarios ORDER BY id")
             usuarios = cur.fetchall()
             cur.close()
@@ -307,7 +304,6 @@ def criar_usuario():
                 conn.close()
                 return jsonify({'erro': 'Usuário já existe'}), 400
             
-            # CORRIGIDO: usando senha_hash
             cur.execute("""
                 INSERT INTO usuarios (nome, username, senha_hash, email, perfil, ativo)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -617,17 +613,50 @@ def listar_provas():
                 SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
                 FROM provas p
                 LEFT JOIN turmas t ON p.turma_id = t.id
-                ORDER BY p.created_at DESC
+                ORDER BY p.id DESC
             """)
             provas = cur.fetchall()
             cur.close()
             conn.close()
-            if provas:
-                return jsonify(provas)
+            print(f"📋 Listando {len(provas)} provas")
+            return jsonify(provas)
         except Exception as e:
-            print(f"Erro ao listar provas: {e}")
+            print(f"❌ Erro ao listar provas: {e}")
     
     return jsonify([])
+
+# ============================================
+# ROTA ESPECÍFICA PARA BUSCAR UMA PROVA POR ID
+# ============================================
+
+@app.route('/api/provas/<int:id>', methods=['GET'])
+def buscar_prova(id):
+    """Busca uma prova específica pelo ID"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
+                FROM provas p
+                LEFT JOIN turmas t ON p.turma_id = t.id
+                WHERE p.id = %s
+            """, (id,))
+            prova = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if prova:
+                print(f"📖 Prova encontrada: ID={prova['id']}, Título={prova['titulo']}")
+                return jsonify(prova)
+            else:
+                print(f"❌ Prova ID {id} não encontrada")
+                return jsonify({'erro': 'Prova não encontrada'}), 404
+        except Exception as e:
+            print(f"❌ Erro ao buscar prova: {e}")
+            return jsonify({'erro': str(e)}), 500
+    
+    return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
@@ -1066,6 +1095,27 @@ def corrigir_redacao():
             print(f"Erro ao salvar correção de redação: {e}")
     
     return jsonify(resultado)
+
+# ============================================
+# ROTA DE TESTE DO BANCO
+# ============================================
+
+@app.route('/api/teste', methods=['GET'])
+def testar_banco():
+    """Testa a conexão com o banco de dados"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 as test")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        return jsonify({'sucesso': True, 'mensagem': 'Conexão com banco OK!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE GERAR CARTÃO RESPOSTA
