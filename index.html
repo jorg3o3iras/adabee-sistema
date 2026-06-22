@@ -665,7 +665,7 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
       </div>
     </div>
 
-    <!-- ═══ CADASTRAR PROVA ═══ -->
+   <!-- ═══ CADASTRAR PROVA ═══ -->
     <div class="page" id="page-prova-upload">
       <div class="page-header"><div><div class="page-title"> Cadastrar Prova</div><p class="page-sub">Configure os parâmetros da avaliação</p></div></div>
       <div class="g2">
@@ -673,9 +673,15 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
           <div class="card-header"><div class="card-title"> Informações</div></div>
           <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
           <div class="form-row"><div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label><select class="form-control" id="prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select></div><div class="form-group"><label class="form-label">Bimestre</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;">
-                <select class="form-control" id="prova-bimestre1"><option>1º Bimestre</option><option>2º Bimestre</option></select>
-                <select class="form-control" id="prova-bimestre2"><option>3º Bimestre</option><option>4º Bimestre</option></select>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                  <select class="form-control" id="prova-bimestre1"><option>1º Bimestre</option></select>
+                  <select class="form-control" id="prova-bimestre2"><option>2º Bimestre</option></select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                  <select class="form-control" id="prova-bimestre3"><option>3º Bimestre</option></select>
+                  <select class="form-control" id="prova-bimestre4"><option>4º Bimestre</option></select>
+                </div>
               </div>
             </div></div>
           <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="prova-escola" onchange="carregarTurmasProva()"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="prova-serie" onchange="atualizarInfoAlts()"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
