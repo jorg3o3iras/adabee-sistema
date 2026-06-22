@@ -714,7 +714,6 @@ def excluir_prova(id):
 def salvar_gabarito():
     """
     Salva o gabarito de uma prova no banco de dados.
-    Esta é a rota corrigida que agora funciona corretamente.
     """
     try:
         data = request.json
