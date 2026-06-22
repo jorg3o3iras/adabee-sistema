@@ -199,7 +199,6 @@ def login():
     if not username or not senha:
         return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
     
-    # 1. TENTAR BANCO DE DADOS
     conn = get_db_connection()
     if conn:
         try:
@@ -229,7 +228,7 @@ def login():
         except Exception as e:
             print(f"❌ Erro no login via banco: {e}")
     
-    # 2. FALLBACK: USUÁRIOS FIXOS
+    # FALLBACK
     if username in USUARIOS_FIXOS:
         dados = USUARIOS_FIXOS[username]
         if dados['senha'] == senha:
@@ -263,7 +262,6 @@ def listar_usuarios():
         except Exception as e:
             print(f"Erro ao listar usuários: {e}")
     
-    # Fallback: usuários fixos
     resultado = []
     for username, dados in USUARIOS_FIXOS.items():
         resultado.append({
@@ -318,7 +316,6 @@ def criar_usuario():
         except Exception as e:
             print(f"Erro ao criar usuário: {e}")
     
-    # Fallback: adicionar à lista fixa
     USUARIOS_FIXOS[username] = {
         'senha': senha,
         'perfil': perfil,
@@ -723,14 +720,17 @@ def salvar_gabarito():
         prova_id = data.get('prova_id')
         respostas = data.get('respostas', [])
         
-        # Filtrar respostas vazias
-        respostas_validas = [r for r in respostas if r and r.strip()]
-        
         if not prova_id:
             return jsonify({'erro': 'ID da prova é obrigatório'}), 400
         
+        # Filtrar apenas respostas válidas (A, B, C, D)
+        respostas_validas = []
+        for r in respostas:
+            if r and str(r).strip().upper() in ['A', 'B', 'C', 'D']:
+                respostas_validas.append(str(r).strip().upper())
+        
         if not respostas_validas:
-            return jsonify({'erro': 'Respostas do gabarito são obrigatórias'}), 400
+            return jsonify({'erro': 'Respostas do gabarito são obrigatórias (A, B, C ou D)'}), 400
         
         print(f"📝 Salvando gabarito para prova ID: {prova_id}")
         print(f"📝 Respostas: {respostas_validas}")
@@ -742,6 +742,15 @@ def salvar_gabarito():
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             
+            # Primeiro verificar se a prova existe
+            cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (prova_id,))
+            prova = cur.fetchone()
+            
+            if not prova:
+                cur.close()
+                conn.close()
+                return jsonify({'erro': 'Prova não encontrada'}), 404
+            
             # Atualizar a prova com o gabarito
             cur.execute("""
                 UPDATE provas 
@@ -749,7 +758,7 @@ def salvar_gabarito():
                     quantidade_questoes = %s, 
                     tipo_questoes = %s
                 WHERE id = %s
-                RETURNING id, titulo
+                RETURNING id
             """, (respostas_validas, len(respostas_validas), '4', prova_id))
             
             result = cur.fetchone()
@@ -758,15 +767,14 @@ def salvar_gabarito():
             conn.close()
             
             if result:
-                print(f"✅ Gabarito salvo com sucesso para prova: {result['titulo']} (ID: {result['id']})")
+                print(f"✅ Gabarito salvo com sucesso para prova: {prova['titulo']} (ID: {prova['id']})")
                 return jsonify({
                     'id': result['id'],
-                    'mensagem': f'Gabarito salvo com sucesso para "{result["titulo"]}"',
+                    'mensagem': f'Gabarito salvo com sucesso para "{prova["titulo"]}"',
                     'total_questoes': len(respostas_validas)
                 })
             else:
-                print(f"❌ Prova ID {prova_id} não encontrada")
-                return jsonify({'erro': 'Prova não encontrada'}), 404
+                return jsonify({'erro': 'Erro ao salvar gabarito'}), 500
                 
         except Exception as e:
             print(f"❌ Erro ao salvar gabarito: {e}")
@@ -970,7 +978,6 @@ def corrigir_com_ia():
         return jsonify({'erro': 'Imagem, prova e aluno são obrigatórios'}), 400
     
     try:
-        # Decodificar imagem
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
         
@@ -981,7 +988,6 @@ def corrigir_com_ia():
         if img is None:
             return jsonify({'erro': 'Erro ao processar imagem'}), 400
         
-        # Buscar gabarito da prova
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -1002,7 +1008,6 @@ def corrigir_com_ia():
             conn.close()
             return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
         
-        # Buscar nome do aluno
         cur.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cur.fetchone()
         cur.close()
@@ -1010,11 +1015,9 @@ def corrigir_com_ia():
         
         nome_aluno = aluno['nome'] if aluno else 'Aluno'
         
-        # Simular respostas detectadas para demonstração
         random.seed(aluno_id)
         respostas_detectadas = [random.choice(['A', 'B', 'C', 'D']) for _ in range(len(gabarito))]
         
-        # Calcular acertos e nota
         acertos = 0
         valor_por_questao = prova.get('valor_nota', 10) / len(gabarito)
         
@@ -1032,7 +1035,6 @@ def corrigir_com_ia():
         
         nota = acertos * valor_por_questao
         
-        # Salvar no histórico
         conn = get_db_connection()
         if conn:
             try:
@@ -1080,8 +1082,6 @@ def corrigir_redacao():
     if not texto:
         return jsonify({'erro': 'Texto é obrigatório'}), 400
     
-    # Simular avaliação
-    import random
     notas = {
         'nota_coerencia': round(random.uniform(5, 9), 1),
         'nota_estrutura': round(random.uniform(5, 9), 1),
@@ -1092,8 +1092,8 @@ def corrigir_redacao():
     nota_media = round(sum(notas.values()) / 4, 1)
     
     feedbacks = [
-        "O texto apresenta boa estrutura, com introdução, desenvolvimento e conclusão bem definidos. A coerência entre as ideias é satisfatória.",
-        "A redação demonstra compreensão do tema e desenvolve argumentos de forma coerente. A coesão textual é adequada.",
+        "O texto apresenta boa estrutura, com introdução, desenvolvimento e conclusão bem definidos.",
+        "A redação demonstra compreensão do tema e desenvolve argumentos de forma coerente.",
         "O texto é bem escrito e organizado. As ideias são apresentadas de forma clara e objetiva.",
         "Excelente desenvolvimento do tema! A estrutura é muito boa e as ideias são bem articuladas."
     ]
@@ -1104,7 +1104,6 @@ def corrigir_redacao():
         'metricas': notas
     }
     
-    # Salvar no banco se tiver aluno_id
     if aluno_id:
         try:
             conn = get_db_connection()
@@ -1167,25 +1166,21 @@ def gerar_gabarito():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Buscar dados da escola
         cur.execute("SELECT nome FROM escolas WHERE id = %s", (escola_id,))
         escola = cur.fetchone()
         nome_escola = escola['nome'] if escola else 'Escola'
         
-        # Buscar dados da turma
         cur.execute("SELECT nome, serie, turno, professor FROM turmas WHERE id = %s", (turma_id,))
         turma = cur.fetchone()
         nome_turma = turma['nome'] if turma else 'Turma'
         serie = turma['serie'] if turma else ''
         professor = turma['professor'] if turma else ''
         
-        # Buscar dados do aluno
         cur.execute("SELECT nome, numero_chamada FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cur.fetchone()
         nome_aluno = aluno['nome'] if aluno else 'Aluno'
         numero_chamada = aluno['numero_chamada'] if aluno else ''
         
-        # Buscar dados da prova
         cur.execute("SELECT titulo, data_prova FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
         titulo_prova = prova['titulo'] if prova else 'Avaliação'
@@ -1194,7 +1189,6 @@ def gerar_gabarito():
         cur.close()
         conn.close()
         
-        # Gerar HTML do cartão resposta
         html = f"""
         <!DOCTYPE html>
         <html>
@@ -1266,7 +1260,6 @@ def gerar_gabarito():
             <div class="questoes-grid">
         """
         
-        # Gerar questões
         for i in range(1, quantidade_questoes + 1):
             html += f"""
                 <div class="questao-item">
