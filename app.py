@@ -147,7 +147,7 @@ def init_db():
             )
         """)
         
-        # Tabela de usuários - CORRIGIDA com senha_hash
+        # Tabela de usuários
         cur.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
@@ -184,7 +184,7 @@ def init_db():
 init_db()
 
 # ============================================
-# ROTAS DE AUTENTICAÇÃO - CORRIGIDA
+# ROTAS DE AUTENTICAÇÃO
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -245,7 +245,7 @@ def login():
     return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
 
 # ============================================
-# ROTAS DE USUÁRIOS - CORRIGIDA
+# ROTAS DE USUÁRIOS
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -625,10 +625,6 @@ def listar_provas():
     
     return jsonify([])
 
-# ============================================
-# ROTA ESPECÍFICA PARA BUSCAR UMA PROVA POR ID
-# ============================================
-
 @app.route('/api/provas/<int:id>', methods=['GET'])
 def buscar_prova(id):
     """Busca uma prova específica pelo ID"""
@@ -714,29 +710,47 @@ def excluir_prova(id):
     return jsonify({'erro': 'Erro ao excluir prova'}), 500
 
 # ============================================
-# ROTAS DE GABARITOS
+# ROTAS DE GABARITOS - CORRIGIDA
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     """Salva o gabarito de uma prova"""
-    data = request.json
-    prova_id = data.get('prova_id')
-    respostas = data.get('respostas', [])
-    
-    if not prova_id or not respostas:
-        return jsonify({'erro': 'Prova e respostas são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
+    try:
+        data = request.json
+        print(f"📝 Recebendo dados do gabarito: {data}")
+        
+        prova_id = data.get('prova_id')
+        respostas = data.get('respostas', [])
+        
+        # Filtrar respostas vazias
+        respostas_validas = [r for r in respostas if r and r.strip()]
+        
+        if not prova_id:
+            return jsonify({'erro': 'ID da prova é obrigatório'}), 400
+        
+        if not respostas_validas:
+            return jsonify({'erro': 'Respostas do gabarito são obrigatórias'}), 400
+        
+        print(f"📝 Salvando gabarito para prova ID: {prova_id}")
+        print(f"📝 Respostas: {respostas_validas}")
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Atualizar a prova com o gabarito
             cur.execute("""
                 UPDATE provas 
-                SET gabarito = %s, quantidade_questoes = %s, tipo_questoes = %s
+                SET gabarito = %s, 
+                    quantidade_questoes = %s, 
+                    tipo_questoes = %s
                 WHERE id = %s
-                RETURNING id
-            """, (respostas, len(respostas), data.get('alternativas', '4'), prova_id))
+                RETURNING id, titulo
+            """, (respostas_validas, len(respostas_validas), '4', prova_id))
             
             result = cur.fetchone()
             conn.commit()
@@ -744,13 +758,28 @@ def salvar_gabarito():
             conn.close()
             
             if result:
-                return jsonify({'id': result['id'], 'mensagem': 'Gabarito salvo com sucesso'})
+                print(f"✅ Gabarito salvo com sucesso para prova: {result['titulo']} (ID: {result['id']})")
+                return jsonify({
+                    'id': result['id'],
+                    'mensagem': f'Gabarito salvo com sucesso para "{result["titulo"]}"',
+                    'total_questoes': len(respostas_validas)
+                })
             else:
+                print(f"❌ Prova ID {prova_id} não encontrada")
                 return jsonify({'erro': 'Prova não encontrada'}), 404
+                
         except Exception as e:
-            print(f"Erro ao salvar gabarito: {e}")
-    
-    return jsonify({'erro': 'Erro ao salvar gabarito'}), 500
+            print(f"❌ Erro ao salvar gabarito: {e}")
+            if conn:
+                conn.rollback()
+            return jsonify({'erro': str(e)}), 500
+        finally:
+            if conn:
+                conn.close()
+                
+    except Exception as e:
+        print(f"❌ Erro geral ao salvar gabarito: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTAS DE HISTÓRICO / RESULTADOS
