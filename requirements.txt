@@ -1,9 +1,33 @@
+# ============================================
+# CORRIGEPRO - REQUIREMENTS.TXT
+# Versão 2.0 - Melhorias IA e Performance
+# ============================================
+
+# --- FRAMEWORKS WEB ---
 flask==2.3.3
 flask-cors==4.0.0
+gunicorn==21.2.0
+
+# --- PROCESSAMENTO DE IMAGEM ---
 opencv-python-headless==4.8.1.78
 pillow==10.1.0
 numpy==1.24.3
+
+# --- OCR E VISÃO COMPUTACIONAL ---
 pytesseract==0.3.10
+
+# --- BANCO DE DADOS ---
 psycopg2-binary==2.9.9
-gunicorn==21.2.0
+
+# --- IA E MACHINE LEARNING ---
+# Gemini AI (Google Generative AI)
+google-generativeai==0.3.2
+
+# --- UTILIDADES ---
 requests==2.31.0
+python-dotenv==1.0.0
+
+# --- OPCIONAL: PARA MELHOR PERFORMANCE ---
+# Uncomment se precisar de processamento mais rápido
+# scikit-image==0.22.0
+# opencv-contrib-python-headless==4.8.1.78
