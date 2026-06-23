@@ -1478,10 +1478,6 @@ async function doLogin() {
     });
     const data = await response.json();
     if (data.sucesso) {
-      // 🔐 SALVAR TOKEN NO LOCALSTORAGE
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
       startApp(data.perfil, data.usuario);
     } else {
       showToast('❌ Usuário ou senha incorretos!', 'error');
@@ -1490,8 +1486,6 @@ async function doLogin() {
   } catch (erro) {
     if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
         (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
-      // Fallback: gerar token fake
-      localStorage.setItem('token', 'fake-token-' + Date.now());
       startApp(loginType, u);
     } else {
       showToast('❌ Usuário ou senha incorretos!', 'error');
@@ -1528,7 +1522,6 @@ function startApp(role, uname) {
 }
 
 function doLogout() {
-  localStorage.removeItem('token');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('lu').value = '';
@@ -2489,56 +2482,16 @@ async function salvarTurma() {
   } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
 }
 
-// ═══════════════════════════════ SALVAR ALUNO - CORRIGIDO ═══════════════════════════════
 async function salvarAluno() {
-  const dados = { 
-    turma_id: parseInt(document.getElementById('aluno-turma').value) || null, 
-    nome: document.getElementById('aluno-nome').value.trim(), 
-    matricula: document.getElementById('aluno-matricula').value.trim() || '', 
-    numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null, 
-    data_nascimento: document.getElementById('aluno-nascimento').value || null, 
-    genero: document.getElementById('aluno-genero').value || 'Masculino', 
-    responsavel: document.getElementById('aluno-responsavel').value.trim() || '', 
-    telefone: document.getElementById('aluno-telefone').value.trim() || '', 
-    email: document.getElementById('aluno-email').value.trim() || '', 
-    observacoes: document.getElementById('aluno-observacoes').value.trim() || '' 
-  };
-  
-  if (!dados.nome) { 
-    showToast('❌ Nome do aluno é obrigatório!', 'error'); 
-    return; 
-  }
-  if (!dados.turma_id) { 
-    showToast('❌ Selecione a turma do aluno!', 'error'); 
-    return; 
-  }
-  
+  const dados = { turma_id: parseInt(document.getElementById('aluno-turma').value) || null, nome: document.getElementById('aluno-nome').value.trim(), matricula: document.getElementById('aluno-matricula').value.trim() || '', numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null, data_nascimento: document.getElementById('aluno-nascimento').value || null, genero: document.getElementById('aluno-genero').value || 'Masculino', responsavel: document.getElementById('aluno-responsavel').value.trim() || '', telefone: document.getElementById('aluno-telefone').value.trim() || '', email: document.getElementById('aluno-email').value.trim() || '', observacoes: document.getElementById('aluno-observacoes').value.trim() || '' };
+  if (!dados.nome) { showToast('❌ Nome do aluno é obrigatório!', 'error'); return; }
+  if (!dados.turma_id) { showToast('❌ Selecione a turma do aluno!', 'error'); return; }
   try {
-    // 🔐 OBTER TOKEN DO LOCALSTORAGE
-    const token = localStorage.getItem('token');
-    
-    const response = await fetch(API_URL + '/api/alunos', { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + (token || '')
-      }, 
-      body: JSON.stringify(dados) 
-    });
-    
+    const response = await fetch(API_URL + '/api/alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
     const result = await response.json();
-    
-    if (result.id) { 
-      showToast('✅ Aluno "' + dados.nome + '" cadastrado com sucesso!', 'success'); 
-      closeM('m-aluno'); 
-      carregarDados(); 
-    } else { 
-      showToast('❌ Erro ao cadastrar aluno: ' + (result.erro || 'Erro desconhecido'), 'error'); 
-    }
-  } catch (erro) { 
-    showToast('❌ Erro: ' + erro.message, 'error'); 
-    console.error('Erro ao salvar aluno:', erro);
-  }
+    if (result.id) { showToast('✅ Aluno "' + dados.nome + '" cadastrado!', 'success'); closeM('m-aluno'); carregarDados(); } 
+    else { showToast('❌ Erro ao cadastrar aluno', 'error'); }
+  } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
 }
 
 async function salvarProva() {
@@ -2832,139 +2785,20 @@ function capturarFoto() {
   go('corrigir-ia');
 }
 
-// ═══════════════════════════════ ARQUIVO - CORRIGIDO ═══════════════════════════════
-function abrirArquivo() { 
-    console.log('📂 Botão "Escolher Arquivo" clicado');
-    document.getElementById('inp-arq').click(); 
-}
+// ═══════════════════════════════ ARQUIVO ═══════════════════════════════
+function abrirArquivo() { document.getElementById('inp-arq').click(); }
 
 function processarArq(input) {
-    console.log('📂 processarArq() chamado');
-    const file = input.files[0];
-    
-    if (!file) {
-        console.log('❌ Nenhum arquivo selecionado');
-        showToast('❌ Nenhum arquivo selecionado!', 'error');
-        return;
-    }
-    
-    console.log('📄 Arquivo selecionado:', file.name, file.size, 'bytes', file.type);
-    
-    // Verificar se é uma imagem
-    if (!file.type.startsWith('image/')) {
-        showToast('❌ Por favor, selecione uma imagem (JPG, PNG)!', 'error');
-        input.value = '';
-        return;
-    }
-    
-    showToast('📂 Carregando arquivo: ' + file.name, 'info');
-    
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        console.log('✅ Arquivo lido com sucesso!');
-        const imagemBase64 = e.target.result;
-        
-        // Mostrar preview
-        const previewDiv = document.getElementById('arq-preview');
-        const imgPrev = document.getElementById('img-prev');
-        if (previewDiv && imgPrev) {
-            imgPrev.src = imagemBase64;
-            previewDiv.style.display = 'block';
-            console.log('🖼️ Preview exibido');
-        }
-        
-        // Salvar imagem
-        ultimaImagem = imagemBase64;
-        document.getElementById('ia-ultima-imagem').value = imagemBase64;
-        
-        showToast('✅ Imagem carregada! Processando...', 'success');
-        
-        // Processar com IA
-        console.log('🤖 Iniciando processamento com IA...');
-        processarComIA(imagemBase64);
-        
-        // Ir para página de correção
-        go('corrigir-ia');
-    };
-    
-    reader.onerror = function(e) {
-        console.error('❌ Erro ao ler arquivo:', e);
-        showToast('❌ Erro ao ler o arquivo!', 'error');
-    };
-    
-    reader.readAsDataURL(file);
-}
-
-// ═══════════════════════════════ FUNÇÃO EXIBIR RESULTADOS IA ═══════════════════════════════
-function exibirResultadosIA(dados) {
-    // Mostrar o container de resultados
-    const box = document.getElementById('ia-result');
-    if (box) box.style.display = 'block';
-    
-    // Nota
-    const notaEl = document.getElementById('ia-nota');
-    if (notaEl) {
-        notaEl.textContent = (dados.nota || 0).toFixed(1);
-        notaEl.style.color = dados.nota >= 5 ? 'var(--green)' : 'var(--red)';
-    }
-    
-    // Aluno
-    const alunoEl = document.getElementById('ia-aluno');
-    if (alunoEl) alunoEl.textContent = dados.aluno || 'Aluno';
-    
-    // Prova
-    const turmaEl = document.getElementById('ia-turma');
-    if (turmaEl) turmaEl.textContent = dados.prova || 'Prova';
-    
-    // Confiança
-    const confEl = document.getElementById('confianca-badge');
-    if (confEl) confEl.textContent = (dados.confianca || 0) + '% conf.';
-    
-    // Status
-    const statusEl = document.getElementById('ia-status');
-    if (statusEl) {
-        const aprovado = dados.nota >= 5;
-        statusEl.textContent = aprovado ? 'APROVADO' : 'REPROVADO';
-        statusEl.className = 'badge ' + (aprovado ? 'badge-green' : 'badge-red');
-    }
-    
-    // Respostas detectadas
-    const respDiv = document.getElementById('ia-resp');
-    if (respDiv && dados.respostas_detectadas) {
-        respDiv.innerHTML = dados.respostas_detectadas.map((a, i) => {
-            const ok = a === dados.correcoes?.[i]?.gabarito;
-            const cor = ok ? 'var(--green)' : 'var(--red)';
-            const bg = ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
-            return `<span style="background:${bg};border:1px solid ${cor};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${cor};">Q${i+1}:${a || '?'}</span>`;
-        }).join('');
-    }
-    
-    // Comparação
-    const compDiv = document.getElementById('ia-comp');
-    if (compDiv && dados.respostas_detectadas) {
-        compDiv.innerHTML = dados.respostas_detectadas.map((a, i) => {
-            const ok = a === dados.correcoes?.[i]?.gabarito;
-            const cor = ok ? 'var(--green)' : 'var(--red)';
-            const bg = ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
-            return `<div style="text-align:center;">
-                <div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q${i+1}</div>
-                <div style="background:${bg};border:1px solid ${cor};border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:${cor};">${a || '?'}</div>
-            </div>`;
-        }).join('');
-    }
-    
-    // Atualizar dados para correção manual
-    correcaoManualData.alunoId = parseInt(document.getElementById('corrigir-aluno').value);
-    correcaoManualData.alunoNome = dados.aluno || 'Aluno';
-    correcaoManualData.provaId = parseInt(document.getElementById('corrigir-prova').value);
-    correcaoManualData.provaTitulo = dados.prova || 'Prova';
-    correcaoManualData.gabarito = dados.correcoes?.map(c => c.gabarito) || [];
-    correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
-    correcaoManualData.quantidade = dados.total || 20;
-    correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-    correcaoManualData.valorPorQuestao = dados.valor_por_questao || 0.5;
-    correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    showToast('📂 Arquivo carregado!', 'ai');
+    ultimaImagem = e.target.result;
+    processarComIA(e.target.result);
+    go('corrigir-ia');
+  };
+  reader.readAsDataURL(file);
 }
 
 // ═══════════════════════════════ IA CORREÇÃO ═══════════════════════════════
@@ -2980,10 +2814,6 @@ async function processarComIA(imagemBase64) {
     const response = await fetch(API_URL + '/api/corrigir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem: imagemBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) }) });
     const dados = await response.json();
     if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
-    
-    // 🔥 EXIBIR RESULTADOS
-    exibirResultadosIA(dados);
-    
     const rd = document.getElementById('ia-resp');
     if (rd) { rd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados.correcoes?.[i]?.gabarito; return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i+1) + ':' + a + '</span>'; }).join(''); }
     const cd = document.getElementById('ia-comp');
