@@ -1478,6 +1478,10 @@ async function doLogin() {
     });
     const data = await response.json();
     if (data.sucesso) {
+      // 🔐 SALVAR TOKEN NO LOCALSTORAGE
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
       startApp(data.perfil, data.usuario);
     } else {
       showToast('❌ Usuário ou senha incorretos!', 'error');
@@ -1486,6 +1490,8 @@ async function doLogin() {
   } catch (erro) {
     if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
         (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
+      // Fallback: gerar token fake
+      localStorage.setItem('token', 'fake-token-' + Date.now());
       startApp(loginType, u);
     } else {
       showToast('❌ Usuário ou senha incorretos!', 'error');
@@ -1522,13 +1528,13 @@ function startApp(role, uname) {
 }
 
 function doLogout() {
+  localStorage.removeItem('token'); // 🔐 REMOVER TOKEN
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('lu').value = '';
   document.getElementById('lp').value = '';
   fecharCamera();
 }
-
 // ═══════════════════════════════ NAV ═══════════════════════════════
 function go(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2482,16 +2488,56 @@ async function salvarTurma() {
   } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
 }
 
+// ═══════════════════════════════ SALVAR ALUNO - CORRIGIDO ═══════════════════════════════
 async function salvarAluno() {
-  const dados = { turma_id: parseInt(document.getElementById('aluno-turma').value) || null, nome: document.getElementById('aluno-nome').value.trim(), matricula: document.getElementById('aluno-matricula').value.trim() || '', numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null, data_nascimento: document.getElementById('aluno-nascimento').value || null, genero: document.getElementById('aluno-genero').value || 'Masculino', responsavel: document.getElementById('aluno-responsavel').value.trim() || '', telefone: document.getElementById('aluno-telefone').value.trim() || '', email: document.getElementById('aluno-email').value.trim() || '', observacoes: document.getElementById('aluno-observacoes').value.trim() || '' };
-  if (!dados.nome) { showToast('❌ Nome do aluno é obrigatório!', 'error'); return; }
-  if (!dados.turma_id) { showToast('❌ Selecione a turma do aluno!', 'error'); return; }
+  const dados = { 
+    turma_id: parseInt(document.getElementById('aluno-turma').value) || null, 
+    nome: document.getElementById('aluno-nome').value.trim(), 
+    matricula: document.getElementById('aluno-matricula').value.trim() || '', 
+    numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null, 
+    data_nascimento: document.getElementById('aluno-nascimento').value || null, 
+    genero: document.getElementById('aluno-genero').value || 'Masculino', 
+    responsavel: document.getElementById('aluno-responsavel').value.trim() || '', 
+    telefone: document.getElementById('aluno-telefone').value.trim() || '', 
+    email: document.getElementById('aluno-email').value.trim() || '', 
+    observacoes: document.getElementById('aluno-observacoes').value.trim() || '' 
+  };
+  
+  if (!dados.nome) { 
+    showToast('❌ Nome do aluno é obrigatório!', 'error'); 
+    return; 
+  }
+  if (!dados.turma_id) { 
+    showToast('❌ Selecione a turma do aluno!', 'error'); 
+    return; 
+  }
+  
   try {
-    const response = await fetch(API_URL + '/api/alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+    // 🔐 OBTER TOKEN DO LOCALSTORAGE
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(API_URL + '/api/alunos', { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (token || '')
+      }, 
+      body: JSON.stringify(dados) 
+    });
+    
     const result = await response.json();
-    if (result.id) { showToast('✅ Aluno "' + dados.nome + '" cadastrado!', 'success'); closeM('m-aluno'); carregarDados(); } 
-    else { showToast('❌ Erro ao cadastrar aluno', 'error'); }
-  } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
+    
+    if (result.id) { 
+      showToast('✅ Aluno "' + dados.nome + '" cadastrado com sucesso!', 'success'); 
+      closeM('m-aluno'); 
+      carregarDados(); 
+    } else { 
+      showToast('❌ Erro ao cadastrar aluno: ' + (result.erro || 'Erro desconhecido'), 'error'); 
+    }
+  } catch (erro) { 
+    showToast('❌ Erro: ' + erro.message, 'error'); 
+    console.error('Erro ao salvar aluno:', erro);
+  }
 }
 
 async function salvarProva() {
