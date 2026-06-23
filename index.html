@@ -967,91 +967,14 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
           <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="corrigir-serie"><option value="">Selecione...</option><option value="1º Ano">1º Ano</option><option value="2º Ano">2º Ano</option><option value="3º Ano">3º Ano</option><option value="4º Ano">4º Ano</option><option value="5º Ano">5º Ano</option><option value="6º Ano">6º Ano</option><option value="7º Ano">7º Ano</option><option value="8º Ano">8º Ano</option><option value="9º Ano">9º Ano</option></select></div>
           <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
         </div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label>
-          <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label>
-          <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label>
-        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;"><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label></div>
       </div>
-
-      <!-- ═══ PROGRESSO DA CORREÇÃO ═══ -->
-      <div id="progresso-correcao" style="display:none;" class="card">
-        <div class="card-header">
-          <div class="card-title">🔄 Processando Correção</div>
-          <span class="badge badge-cyan" id="progresso-status">0%</span>
-        </div>
-        
-        <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">📷 Original</div>
-            <img id="preview-original" style="height:80px;border-radius:6px;border:1px solid var(--border);object-fit:cover;">
-          </div>
-          <div style="color:var(--text3);font-size:20px;">→</div>
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">🔍 Processada</div>
-            <img id="preview-processada" style="height:80px;border-radius:6px;border:1px solid var(--border);object-fit:cover;">
-          </div>
-          <div style="flex:1;text-align:right;">
-            <span class="badge badge-gray" id="progresso-tamanho">0 KB</span>
-          </div>
-        </div>
-        
-        <div style="margin: 6px 0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px;">
-            <span>📸 Pré-processamento</span>
-            <span id="progresso-preprocessamento">⏳ Aguardando</span>
-          </div>
-          <div class="progress" style="height:6px;">
-            <div class="progress-fill" id="barra-preprocessamento" style="width:0%;background:var(--grad-blue);"></div>
-          </div>
-        </div>
-        
-        <div style="margin: 6px 0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px;">
-            <span>🤖 Análise da IA</span>
-            <span id="progresso-ia">⏳ Aguardando</span>
-          </div>
-          <div class="progress" style="height:6px;">
-            <div class="progress-fill" id="barra-ia" style="width:0%;background:var(--grad-purple);"></div>
-          </div>
-        </div>
-        
-        <div style="margin: 6px 0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px;">
-            <span>✅ Validação</span>
-            <span id="progresso-validacao">⏳ Aguardando</span>
-          </div>
-          <div class="progress" style="height:6px;">
-            <div class="progress-fill" id="barra-validacao" style="width:0%;background:var(--grad-green);"></div>
-          </div>
-        </div>
-        
-        <div style="margin-top:12px;padding:10px;background:var(--bg2);border-radius:6px;border:1px solid var(--border);max-height:80px;overflow-y:auto;font-size:11px;color:var(--text3);font-family:monospace;" id="progresso-log">
-          <div>⏳ Iniciando processamento...</div>
-        </div>
-      </div>
-
       <div id="ia-result" style="display:none;">
         <div class="card card-glow-green">
-          <div class="card-header">
-            <div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div>
-            <div class="btn-group">
-              <span class="badge badge-green">✅ Processado</span>
-              <span class="badge badge-gray" id="confianca-badge">0% conf.</span>
-            </div>
-          </div>
+          <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div><div class="btn-group"><span class="badge badge-green">✅ Processado</span><span class="badge badge-gray" id="confianca-badge">0% conf.</span></div></div>
           <div class="g2" style="margin-bottom:14px;">
             <div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;">
-                <div style="background:var(--surface2);border-radius:8px;padding:9px;">
-                  <div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">ALUNO</div>
-                  <div style="font-weight:700;" id="ia-aluno">—</div>
-                </div>
-                <div style="background:var(--surface2);border-radius:8px;padding:9px;">
-                  <div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">TURMA</div>
-                  <div style="font-weight:700;" id="ia-turma">—</div>
-                </div>
-              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;"><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">ALUNO</div><div style="font-weight:700;" id="ia-aluno">—</div></div><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">TURMA</div><div style="font-weight:700;" id="ia-turma">—</div></div></div>
               <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px;">Respostas detectadas:</div>
               <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ia-resp"></div>
             </div>
@@ -1059,15 +982,11 @@ tbody tr:hover td{background:var(--surface2);color:var(--text)}
               <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
               <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
               <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
-              <button class="btn btn-orange btn-sm" style="margin-top:10px;" onclick="sugerirCorrecaoManual()">✏️ Correção Manual</button>
+              <button class="btn btn-orange btn-sm" style="margin-top:10px;" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
-          <div class="btn-group">
-            <button class="btn btn-green btn-sm" onclick="salvarCorrecao()">💾 Salvar</button>
-            <button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button>
-            <button class="btn btn-purple btn-sm" onclick="processarComIA(document.getElementById('ia-ultima-imagem')?.value)">🔄 Próximo</button>
-          </div>
+          <div class="btn-group"><button class="btn btn-green btn-sm" onclick="salvarCorrecao()">💾 Salvar</button><button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button><button class="btn btn-purple btn-sm" onclick="processarComIA(document.getElementById('ia-ultima-imagem')?.value)">🔄 Próximo</button></div>
           <input type="hidden" id="ia-ultima-imagem">
         </div>
       </div>
@@ -2839,465 +2758,6 @@ async function saveGab() {
     }
 }
 
-// ═══════════════════════════════ PRÉ-PROCESSAMENTO DE IMAGEM ═══════════════════════════════
-
-/**
- * Pré-processa a imagem para melhorar a detecção da IA
- * Aplica contraste, redimensionamento e conversão para tons mais nítidos
- */
-function preprocessarImagem(imagemBase64) {
-    return new Promise((resolve, reject) => {
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            img.onload = function() {
-                // 1. Redimensionar para tamanho padrão (otimiza processamento)
-                const MAX_DIM = 1024;
-                let w = img.width, h = img.height;
-                
-                if (w > MAX_DIM || h > MAX_DIM) {
-                    const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
-                    w = Math.round(w * ratio);
-                    h = Math.round(h * ratio);
-                }
-                
-                canvas.width = w;
-                canvas.height = h;
-                
-                // 2. Aplicar melhorias de contraste e nitidez
-                ctx.filter = 'contrast(1.3) brightness(1.05) saturate(1.1)';
-                ctx.drawImage(img, 0, 0, w, h);
-                
-                // 3. Converter para escala de cinza (melhora significativa para OCR)
-                const imageData = ctx.getImageData(0, 0, w, h);
-                const data = imageData.data;
-                
-                // Aplicar conversão ponderada para escala de cinza
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-                    // Fórmula de luminância perceptualmente correta
-                    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-                    data[i] = gray;
-                    data[i + 1] = gray;
-                    data[i + 2] = gray;
-                }
-                
-                ctx.putImageData(imageData, 0, 0);
-                
-                // 4. Retornar imagem processada em JPEG com qualidade otimizada
-                const imagemProcessada = canvas.toDataURL('image/jpeg', 0.92);
-                resolve(imagemProcessada);
-            };
-            
-            img.onerror = function() {
-                reject(new Error('Erro ao carregar imagem para pré-processamento'));
-            };
-            
-            img.src = imagemBase64;
-        } catch (erro) {
-            reject(erro);
-        }
-    });
-}
-
-/**
- * Detecta se a imagem está rotacionada e corrige automaticamente
- */
-function detectarOrientacaoImagem(imagemBase64) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = function() {
-            // Se largura < altura, provavelmente está rotacionada
-            if (img.width < img.height) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                canvas.width = img.height;
-                canvas.height = img.width;
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.rotate(Math.PI / 2);
-                ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                
-                resolve(canvas.toDataURL('image/jpeg', 0.92));
-            } else {
-                resolve(imagemBase64);
-            }
-        };
-        img.src = imagemBase64;
-    });
-}
-
-/**
- * Calcula a confiança da detecção baseado na quantidade de respostas válidas
- */
-function calcularConfianca(respostas, totalQuestoes) {
-    const preenchidas = respostas.filter(r => r && r !== '' && r !== 'VAZIO' && r !== 'AMBIGUO').length;
-    const razao = preenchidas / totalQuestoes;
-    
-    if (razao >= 0.9) return 95;
-    if (razao >= 0.7) return 80;
-    if (razao >= 0.5) return 60;
-    return 40;
-}
-
-// ═══════════════════════════════ FUNÇÕES DE PROGRESSO ═══════════════════════════════
-
-function mostrarProgresso() {
-    const el = document.getElementById('progresso-correcao');
-    if (el) {
-        el.style.display = 'block';
-        // Resetar progresso
-        ['preprocessamento', 'ia', 'validacao'].forEach(etapa => {
-            document.getElementById('barra-' + etapa).style.width = '0%';
-            document.getElementById('progresso-' + etapa).textContent = '⏳ Aguardando';
-        });
-        document.getElementById('progresso-status').textContent = '0%';
-        document.getElementById('progresso-log').innerHTML = '<div>⏳ Iniciando processamento...</div>';
-    }
-}
-
-function atualizarProgresso(etapa, percentual, mensagem) {
-    const barra = document.getElementById('barra-' + etapa);
-    const status = document.getElementById('progresso-' + etapa);
-    
-    if (barra) barra.style.width = Math.min(percentual, 100) + '%';
-    if (status) status.textContent = mensagem || (percentual + '%');
-    
-    // Atualizar status geral
-    const etapas = ['preprocessamento', 'ia', 'validacao'];
-    const totais = etapas.map(e => {
-        const bar = document.getElementById('barra-' + e);
-        return bar ? parseFloat(bar.style.width) || 0 : 0;
-    });
-    const media = totais.reduce((a, b) => a + b, 0) / etapas.length;
-    document.getElementById('progresso-status').textContent = Math.round(media) + '%';
-}
-
-function adicionarLog(mensagem) {
-    const log = document.getElementById('progresso-log');
-    if (log) {
-        const div = document.createElement('div');
-        div.textContent = mensagem;
-        log.appendChild(div);
-        log.scrollTop = log.scrollHeight;
-    }
-}
-
-function exibirResultadosCorrecao(dados, provaId, alunoId) {
-    const box = document.getElementById('ia-result');
-    if (!box) return;
-    
-    // Preencher dados básicos
-    document.getElementById('ia-nota').textContent = dados.nota || 0;
-    document.getElementById('ia-aluno').textContent = dados.aluno || 'Aluno';
-    document.getElementById('ia-turma').textContent = dados.prova || 'Prova';
-    document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
-    
-    const aprovado = (dados.nota || 0) >= 6;
-    document.getElementById('ia-status').textContent = aprovado ? 'APROVADO' : 'REPROVADO';
-    document.getElementById('ia-status').className = 'badge ' + (aprovado ? 'badge-green' : 'badge-red');
-    
-    // Preencher respostas
-    const rd = document.getElementById('ia-resp');
-    if (rd && dados.respostas_detectadas) {
-        rd.innerHTML = dados.respostas_detectadas.map((a, i) => {
-            const gab = dados.correcoes?.[i]?.gabarito || '';
-            const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
-            return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : (a ? 'rgba(239,68,68,.2)' : 'rgba(100,116,139,.2)')) + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : (a ? 'rgba(239,68,68,.4)' : 'rgba(100,116,139,.3)')) + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : (a ? 'var(--red)' : 'var(--text3)')) + ';">Q' + (i+1) + ':' + (a || '⚪') + '</span>';
-        }).join('');
-    }
-    
-    // Preencher grid comparativo
-    const cd = document.getElementById('ia-comp');
-    if (cd && dados.respostas_detectadas) {
-        cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
-            const gab = dados.correcoes?.[i]?.gabarito || '';
-            const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
-            return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i+1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : (a ? 'rgba(239,68,68,.2)' : 'rgba(100,116,139,.1)')) + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : (a ? 'rgba(239,68,68,.4)' : 'rgba(100,116,139,.2)')) + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : (a ? 'var(--red)' : 'var(--text3)')) + ';">' + (a || '—') + '</div></div>';
-        }).join('');
-    }
-    
-    // Atualizar dados para correção manual
-    correcaoManualData.alunoId = parseInt(alunoId);
-    correcaoManualData.alunoNome = dados.aluno || 'Aluno';
-    correcaoManualData.provaId = parseInt(provaId);
-    correcaoManualData.provaTitulo = dados.prova || 'Prova';
-    correcaoManualData.gabarito = dados.correcoes?.map(c => c.gabarito) || [];
-    correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
-    correcaoManualData.quantidade = dados.total || 20;
-    correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-    correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-    correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
-    correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
-    correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
-    
-    // Mostrar resultados
-    box.style.display = 'block';
-    
-    // Atualizar dashboards
-    carregarDashboard();
-    carregarResultados();
-    
-    showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
-}
-
-// ═══════════════════════════════ VALIDAR ALUNO E PROVA ═══════════════════════════════
-
-async function validarAluno(alunoId) {
-    if (!alunoId || alunoId === '') {
-        return { valido: false, erro: 'Selecione um aluno' };
-    }
-    try {
-        const response = await fetch(API_URL + '/api/alunos/' + alunoId);
-        if (!response.ok) {
-            return { valido: false, erro: 'Aluno não encontrado' };
-        }
-        const aluno = await response.json();
-        return { valido: true, aluno };
-    } catch (erro) {
-        return { valido: false, erro: 'Erro ao validar aluno' };
-    }
-}
-
-async function validarProva(provaId) {
-    if (!provaId || provaId === '') {
-        return { valido: false, erro: 'Selecione uma prova' };
-    }
-    try {
-        const response = await fetch(API_URL + '/api/provas/' + provaId);
-        if (!response.ok) {
-            return { valido: false, erro: 'Prova não encontrada' };
-        }
-        const prova = await response.json();
-        return { valido: true, prova };
-    } catch (erro) {
-        return { valido: false, erro: 'Erro ao validar prova' };
-    }
-}
-
-// ═══════════════════════════════ IA CORREÇÃO - VERSÃO APRIMORADA ═══════════════════════════════
-
-async function processarComIA(imagemBase64) {
-    // Validar entrada
-    if (!imagemBase64) {
-        showToast('❌ Nenhuma imagem para processar!', 'error');
-        return;
-    }
-    
-    // Validar seleções
-    const provaId = document.getElementById('corrigir-prova').value;
-    const alunoId = document.getElementById('corrigir-aluno').value;
-    
-    if (!provaId || provaId === '') {
-        showToast('❌ Selecione uma prova antes de corrigir!', 'error');
-        return;
-    }
-    
-    if (!alunoId || alunoId === '') {
-        showToast('❌ Selecione um aluno antes de corrigir!', 'error');
-        return;
-    }
-    
-    // Validar aluno e prova
-    const validacaoAluno = await validarAluno(alunoId);
-    if (!validacaoAluno.valido) {
-        showToast('❌ ' + validacaoAluno.erro, 'error');
-        return;
-    }
-
-    const validacaoProva = await validarProva(provaId);
-    if (!validacaoProva.valido) {
-        showToast('❌ ' + validacaoProva.erro, 'error');
-        return;
-    }
-    
-    // Mostrar progresso
-    mostrarProgresso();
-    document.getElementById('ia-result').style.display = 'none';
-    
-    try {
-        // === ETAPA 1: PRÉ-PROCESSAMENTO ===
-        atualizarProgresso('preprocessamento', 0, '📸 Processando imagem...');
-        adicionarLog('🔄 Pré-processando imagem para melhorar detecção...');
-        
-        // 1.1 Detectar e corrigir orientação
-        const imagemOrientada = await detectarOrientacaoImagem(imagemBase64);
-        atualizarProgresso('preprocessamento', 40, '🔄 Corrigindo orientação...');
-        
-        // 1.2 Aplicar melhorias de contraste e nitidez
-        const imagemProcessada = await preprocessarImagem(imagemOrientada);
-        atualizarProgresso('preprocessamento', 80, '🎨 Ajustando contraste e nitidez...');
-        
-        // 1.3 Mostrar previews
-        document.getElementById('preview-original').src = imagemBase64;
-        document.getElementById('preview-processada').src = imagemProcessada;
-        
-        // Calcular tamanho aproximado
-        const tamanhoKB = Math.round(imagemProcessada.length / 1024);
-        document.getElementById('progresso-tamanho').textContent = tamanhoKB + ' KB';
-        
-        atualizarProgresso('preprocessamento', 100, '✅ Pré-processamento concluído!');
-        adicionarLog('✅ Imagem processada: ' + tamanhoKB + ' KB');
-        
-        // === ETAPA 2: ENVIO PARA IA ===
-        atualizarProgresso('ia', 10, '🤖 Enviando para IA...');
-        adicionarLog('🤖 Enviando para análise do Gemini AI...');
-        
-        const payload = {
-            imagem: imagemProcessada,
-            prova_id: parseInt(provaId),
-            aluno_id: parseInt(alunoId)
-        };
-        
-        // Simular progresso da IA
-        let progressoIA = 10;
-        const intervaloIA = setInterval(() => {
-            progressoIA += Math.random() * 15;
-            if (progressoIA > 90) progressoIA = 90;
-            atualizarProgresso('ia', Math.min(progressoIA, 90), `🤖 Analisando... ${Math.round(Math.min(progressoIA, 90))}%`);
-        }, 300);
-        
-        // Chamada à API
-        const response = await fetch(API_URL + '/api/corrigir', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        clearInterval(intervaloIA);
-        
-        if (!response.ok) {
-            throw new Error(`Erro na API: ${response.status} - ${response.statusText}`);
-        }
-        
-        const dados = await response.json();
-        
-        if (dados.erro) {
-            throw new Error(dados.erro);
-        }
-        
-        atualizarProgresso('ia', 100, '✅ Análise da IA concluída!');
-        adicionarLog('✅ IA processou ' + (dados.total || 0) + ' questões');
-        
-        // === ETAPA 3: VALIDAÇÃO ===
-        atualizarProgresso('validacao', 0, '🔍 Validando resultados...');
-        adicionarLog('🔍 Validando consistência dos dados...');
-        
-        // Validar respostas
-        const respostas = dados.respostas_detectadas || [];
-        const total = dados.total || 20;
-        const preenchidas = respostas.filter(r => r && r !== '').length;
-        
-        if (preenchidas === 0) {
-            throw new Error('Nenhuma resposta foi detectada na imagem. Verifique se o cartão está bem enquadrado.');
-        }
-        
-        if (preenchidas < total * 0.3) {
-            adicionarLog('⚠️ Apenas ' + preenchidas + ' de ' + total + ' questões detectadas');
-        }
-        
-        // Recalcular confiança
-        const confiancaCalculada = calcularConfianca(respostas, total);
-        dados.confianca = Math.max(dados.confianca || 0, confiancaCalculada);
-        
-        atualizarProgresso('validacao', 60, '🔍 Verificando consistência da nota...');
-        
-        // Recalcular nota se necessário
-        const acertos = dados.acertos || 0;
-        const notaEsperada = acertos * (dados.valor_por_questao || 0.5);
-        if (Math.abs(dados.nota - notaEsperada) > 0.01) {
-            dados.nota = Math.min(notaEsperada, 10);
-            adicionarLog('📊 Nota recalculada para: ' + dados.nota.toFixed(1));
-        }
-        
-        atualizarProgresso('validacao', 100, '✅ Validação concluída!');
-        adicionarLog('✅ Correção validada com ' + dados.confianca + '% de confiança');
-        
-        // === ETAPA 4: EXIBIR RESULTADOS ===
-        atualizarProgresso('validacao', 100, '🎉 Correção finalizada!');
-        adicionarLog('🎉 Processamento concluído com sucesso!');
-        
-        // Esconder progresso e mostrar resultados
-        setTimeout(() => {
-            document.getElementById('progresso-correcao').style.display = 'none';
-            exibirResultadosCorrecao(dados, provaId, alunoId);
-        }, 500);
-        
-    } catch (erro) {
-        console.error('❌ Erro na correção:', erro);
-        document.getElementById('progresso-correcao').style.display = 'none';
-        
-        // Mostrar erro detalhado com opção de correção manual
-        const erroMsg = erro.message || 'Erro desconhecido';
-        showToast('❌ ' + erroMsg, 'error');
-        
-        // Sugerir correção manual se disponível
-        if (correcaoManualData.respostasAluno && correcaoManualData.respostasAluno.length > 0) {
-            setTimeout(() => {
-                if (confirm('A IA encontrou algumas respostas parciais. Deseja revisar manualmente?')) {
-                    abrirCorrecaoManual();
-                }
-            }, 1500);
-        }
-    }
-}
-
-function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
-
-// ═══════════════════════════════ SUGERIR CORREÇÃO MANUAL ═══════════════════════════════
-
-function sugerirCorrecaoManual() {
-    const respostas = correcaoManualData.respostasAluno || [];
-    if (respostas.length === 0) {
-        // Criar um gabarito vazio para correção manual
-        const provaId = document.getElementById('corrigir-prova').value;
-        if (!provaId) {
-            showToast('❌ Selecione uma prova primeiro', 'error');
-            return;
-        }
-        
-        // Buscar gabarito da prova
-        fetch(API_URL + '/api/provas/' + provaId)
-            .then(r => r.json())
-            .then(prova => {
-                if (prova && prova.gabarito) {
-                    correcaoManualData.gabarito = prova.gabarito;
-                    correcaoManualData.quantidade = prova.gabarito.length || 20;
-                    correcaoManualData.provaId = parseInt(provaId);
-                    correcaoManualData.provaTitulo = prova.titulo || 'Prova';
-                    correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-                    correcaoManualData.respostasAluno = new Array(correcaoManualData.quantidade).fill('');
-                    
-                    const alunoId = document.getElementById('corrigir-aluno').value;
-                    if (alunoId) {
-                        fetch(API_URL + '/api/alunos/' + alunoId)
-                            .then(r => r.json())
-                            .then(aluno => {
-                                correcaoManualData.alunoNome = aluno.nome || 'Aluno';
-                                correcaoManualData.alunoId = parseInt(alunoId);
-                                abrirCorrecaoManual();
-                            })
-                            .catch(() => abrirCorrecaoManual());
-                    } else {
-                        abrirCorrecaoManual();
-                    }
-                } else {
-                    showToast('❌ Prova sem gabarito. Cadastre o gabarito primeiro.', 'error');
-                    go('gabarito');
-                }
-            })
-            .catch(() => {
-                showToast('❌ Erro ao buscar prova', 'error');
-            });
-    } else {
-        abrirCorrecaoManual();
-    }
-}
-
 // ═══════════════════════════════ CÂMERA ═══════════════════════════════
 async function abrirCamera() {
   document.getElementById('cam-modal').classList.add('show');
@@ -3312,74 +2772,80 @@ function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'en
 function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; } }
 
 function capturarFoto() {
-    const vid = document.getElementById('cam-video');
-    const canvas = document.getElementById('cam-canvas');
-    const w = vid.videoWidth || 640;
-    const h = vid.videoHeight || 480;
-    
-    // Capturar com alta resolução
-    canvas.width = Math.max(w, 1280);
-    canvas.height = Math.max(h, 720);
-    const ctx = canvas.getContext('2d');
-    
-    // Desenhar com alta qualidade
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-    
-    // Converter para JPEG com qualidade alta
-    const foto = canvas.toDataURL('image/jpeg', 0.95);
-    
-    fecharCamera();
-    showToast('📸 Foto capturada com alta resolução!', 'ai');
-    ultimaImagem = foto;
-    
-    // Processar automaticamente
-    processarComIA(foto);
-    go('corrigir-ia');
+  const vid = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  const foto = canvas.toDataURL('image/jpeg', 0.9);
+  fecharCamera();
+  showToast('📸 Foto capturada!', 'ai');
+  ultimaImagem = foto;
+  processarComIA(foto);
+  go('corrigir-ia');
 }
 
 // ═══════════════════════════════ ARQUIVO ═══════════════════════════════
 function abrirArquivo() { document.getElementById('inp-arq').click(); }
 
 function processarArq(input) {
-    const file = input.files[0];
-    if (!file) return;
-    
-    // Validar tipo de arquivo
-    if (!file.type.startsWith('image/')) {
-        showToast('❌ Por favor, selecione uma imagem (JPG, PNG, etc.)', 'error');
-        return;
-    }
-    
-    // Validar tamanho (máx 20MB)
-    if (file.size > 20 * 1024 * 1024) {
-        showToast('❌ Imagem muito grande. Máximo 20MB.', 'error');
-        return;
-    }
-    
-    // Mostrar preview
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const preview = document.getElementById('arq-preview');
-        const img = document.getElementById('img-prev');
-        if (preview && img) {
-            preview.style.display = 'block';
-            img.src = e.target.result;
-        }
-        
-        showToast('📂 Imagem carregada: ' + file.name, 'ai');
-        ultimaImagem = e.target.result;
-        
-        // Processar automaticamente
-        processarComIA(e.target.result);
-        go('corrigir-ia');
-    };
-    reader.onerror = function() {
-        showToast('❌ Erro ao ler o arquivo.', 'error');
-    };
-    reader.readAsDataURL(file);
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    showToast('📂 Arquivo carregado!', 'ai');
+    ultimaImagem = e.target.result;
+    processarComIA(e.target.result);
+    go('corrigir-ia');
+  };
+  reader.readAsDataURL(file);
 }
+
+// ═══════════════════════════════ IA CORREÇÃO ═══════════════════════════════
+async function processarComIA(imagemBase64) {
+  showToast('🤖 Processando...', 'ai');
+  const box = document.getElementById('ia-result');
+  if (box) box.style.display = 'none';
+  const provaId = document.getElementById('corrigir-prova').value || 1;
+  const alunoId = document.getElementById('corrigir-aluno').value || 1;
+  if (!imagemBase64) { showToast('❌ Nenhuma imagem!', 'error'); return; }
+  document.getElementById('ia-ultima-imagem').value = imagemBase64;
+  try {
+    const response = await fetch(API_URL + '/api/corrigir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem: imagemBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) }) });
+    const dados = await response.json();
+    if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
+    const rd = document.getElementById('ia-resp');
+    if (rd) { rd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados.correcoes?.[i]?.gabarito; return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i+1) + ':' + a + '</span>'; }).join(''); }
+    const cd = document.getElementById('ia-comp');
+    if (cd) { cd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados.correcoes?.[i]?.gabarito; return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i+1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + a + '</div></div>'; }).join(''); }
+    document.getElementById('ia-nota').textContent = dados.nota || 0;
+    document.getElementById('ia-aluno').textContent = dados.aluno || 'Aluno';
+    document.getElementById('ia-turma').textContent = dados.prova || 'Prova';
+    document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
+    document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+    document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+    
+    correcaoManualData.alunoId = parseInt(alunoId);
+    correcaoManualData.alunoNome = dados.aluno || 'Aluno';
+    correcaoManualData.provaId = parseInt(provaId);
+    correcaoManualData.provaTitulo = dados.prova || 'Prova';
+    correcaoManualData.gabarito = dados.correcoes?.map(c => c.gabarito) || [];
+    correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
+    correcaoManualData.quantidade = dados.total || 20;
+    correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+    correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+    correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+    correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+    correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
+    
+    if (box) box.style.display = 'block';
+    showToast('✅ ' + dados.acertos + '/' + dados.total + ' acertos — Nota: ' + dados.nota, 'success');
+    carregarDashboard();
+    carregarResultados();
+  } catch (erro) { showToast('❌ Erro na correção: ' + erro.message, 'error'); console.error(erro); }
+}
+
+function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
 // ═══════════════════════════════ CORREÇÃO MANUAL ═══════════════════════════════
 function abrirCorrecaoManual() {
