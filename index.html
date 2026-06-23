@@ -2896,6 +2896,77 @@ function processarArq(input) {
     reader.readAsDataURL(file);
 }
 
+// ═══════════════════════════════ FUNÇÃO EXIBIR RESULTADOS IA ═══════════════════════════════
+function exibirResultadosIA(dados) {
+    // Mostrar o container de resultados
+    const box = document.getElementById('ia-result');
+    if (box) box.style.display = 'block';
+    
+    // Nota
+    const notaEl = document.getElementById('ia-nota');
+    if (notaEl) {
+        notaEl.textContent = (dados.nota || 0).toFixed(1);
+        notaEl.style.color = dados.nota >= 5 ? 'var(--green)' : 'var(--red)';
+    }
+    
+    // Aluno
+    const alunoEl = document.getElementById('ia-aluno');
+    if (alunoEl) alunoEl.textContent = dados.aluno || 'Aluno';
+    
+    // Prova
+    const turmaEl = document.getElementById('ia-turma');
+    if (turmaEl) turmaEl.textContent = dados.prova || 'Prova';
+    
+    // Confiança
+    const confEl = document.getElementById('confianca-badge');
+    if (confEl) confEl.textContent = (dados.confianca || 0) + '% conf.';
+    
+    // Status
+    const statusEl = document.getElementById('ia-status');
+    if (statusEl) {
+        const aprovado = dados.nota >= 5;
+        statusEl.textContent = aprovado ? 'APROVADO' : 'REPROVADO';
+        statusEl.className = 'badge ' + (aprovado ? 'badge-green' : 'badge-red');
+    }
+    
+    // Respostas detectadas
+    const respDiv = document.getElementById('ia-resp');
+    if (respDiv && dados.respostas_detectadas) {
+        respDiv.innerHTML = dados.respostas_detectadas.map((a, i) => {
+            const ok = a === dados.correcoes?.[i]?.gabarito;
+            const cor = ok ? 'var(--green)' : 'var(--red)';
+            const bg = ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
+            return `<span style="background:${bg};border:1px solid ${cor};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${cor};">Q${i+1}:${a || '?'}</span>`;
+        }).join('');
+    }
+    
+    // Comparação
+    const compDiv = document.getElementById('ia-comp');
+    if (compDiv && dados.respostas_detectadas) {
+        compDiv.innerHTML = dados.respostas_detectadas.map((a, i) => {
+            const ok = a === dados.correcoes?.[i]?.gabarito;
+            const cor = ok ? 'var(--green)' : 'var(--red)';
+            const bg = ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
+            return `<div style="text-align:center;">
+                <div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q${i+1}</div>
+                <div style="background:${bg};border:1px solid ${cor};border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:${cor};">${a || '?'}</div>
+            </div>`;
+        }).join('');
+    }
+    
+    // Atualizar dados para correção manual
+    correcaoManualData.alunoId = parseInt(document.getElementById('corrigir-aluno').value);
+    correcaoManualData.alunoNome = dados.aluno || 'Aluno';
+    correcaoManualData.provaId = parseInt(document.getElementById('corrigir-prova').value);
+    correcaoManualData.provaTitulo = dados.prova || 'Prova';
+    correcaoManualData.gabarito = dados.correcoes?.map(c => c.gabarito) || [];
+    correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
+    correcaoManualData.quantidade = dados.total || 20;
+    correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+    correcaoManualData.valorPorQuestao = dados.valor_por_questao || 0.5;
+    correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
+}
+
 // ═══════════════════════════════ IA CORREÇÃO ═══════════════════════════════
 async function processarComIA(imagemBase64) {
   showToast('🤖 Processando...', 'ai');
@@ -2909,6 +2980,10 @@ async function processarComIA(imagemBase64) {
     const response = await fetch(API_URL + '/api/corrigir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem: imagemBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) }) });
     const dados = await response.json();
     if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
+    
+    // 🔥 EXIBIR RESULTADOS
+    exibirResultadosIA(dados);
+    
     const rd = document.getElementById('ia-resp');
     if (rd) { rd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados.correcoes?.[i]?.gabarito; return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i+1) + ':' + a + '</span>'; }).join(''); }
     const cd = document.getElementById('ia-comp');
