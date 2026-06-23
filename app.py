@@ -399,6 +399,44 @@ def criar_escola():
     
     return jsonify({'erro': 'Erro ao criar escola'}), 500
 
+@app.route('/api/escolas/<int:id>', methods=['PUT'])
+def atualizar_escola(id):
+    """Atualiza uma escola existente"""
+    data = request.json
+    
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                UPDATE escolas 
+                SET nome = %s, inep = %s, municipio = %s, estado = %s, telefone = %s, diretor = %s
+                WHERE id = %s
+                RETURNING id
+            """, (
+                data.get('nome'),
+                data.get('inep', ''),
+                data.get('municipio', ''),
+                data.get('estado', 'PA'),
+                data.get('telefone', ''),
+                data.get('diretor', ''),
+                id
+            ))
+            
+            result = cur.fetchone()
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            if result:
+                return jsonify({'mensagem': 'Escola atualizada com sucesso'})
+            else:
+                return jsonify({'erro': 'Escola não encontrada'}), 404
+        except Exception as e:
+            print(f"Erro ao atualizar escola: {e}")
+    
+    return jsonify({'erro': 'Erro ao atualizar escola'}), 500
+
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
     """Exclui uma escola"""
@@ -423,19 +461,31 @@ def excluir_escola(id):
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
     """Lista todas as turmas com informações da escola"""
+    escola_id = request.args.get('escola_id')
+    
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
+            
+            query = """
                 SELECT t.*, e.nome as escola_nome 
                 FROM turmas t
                 LEFT JOIN escolas e ON t.escola_id = e.id
-                ORDER BY t.nome
-            """)
+            """
+            params = []
+            
+            if escola_id:
+                query += " WHERE t.escola_id = %s"
+                params.append(escola_id)
+            
+            query += " ORDER BY t.nome"
+            
+            cur.execute(query, params)
             turmas = cur.fetchall()
             cur.close()
             conn.close()
+            
             if turmas:
                 return jsonify(turmas)
         except Exception as e:
@@ -478,6 +528,44 @@ def criar_turma():
             print(f"Erro ao criar turma: {e}")
     
     return jsonify({'erro': 'Erro ao criar turma'}), 500
+
+@app.route('/api/turmas/<int:id>', methods=['PUT'])
+def atualizar_turma(id):
+    """Atualiza uma turma existente"""
+    data = request.json
+    
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                UPDATE turmas 
+                SET nome = %s, serie = %s, turno = %s, professor = %s, capacidade = %s, ano_letivo = %s
+                WHERE id = %s
+                RETURNING id
+            """, (
+                data.get('nome'),
+                data.get('serie', '1º Ano'),
+                data.get('turno', 'Manhã'),
+                data.get('professor', ''),
+                data.get('capacidade', 35),
+                data.get('ano_letivo', 2025),
+                id
+            ))
+            
+            result = cur.fetchone()
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            if result:
+                return jsonify({'mensagem': 'Turma atualizada com sucesso'})
+            else:
+                return jsonify({'erro': 'Turma não encontrada'}), 404
+        except Exception as e:
+            print(f"Erro ao atualizar turma: {e}")
+    
+    return jsonify({'erro': 'Erro ao atualizar turma'}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
@@ -579,6 +667,48 @@ def criar_aluno():
     
     return jsonify({'erro': 'Erro ao criar aluno'}), 500
 
+@app.route('/api/alunos/<int:id>', methods=['PUT'])
+def atualizar_aluno(id):
+    """Atualiza um aluno existente"""
+    data = request.json
+    
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                UPDATE alunos 
+                SET nome = %s, matricula = %s, numero_chamada = %s, data_nascimento = %s, 
+                    genero = %s, responsavel = %s, telefone = %s, email = %s, observacoes = %s
+                WHERE id = %s
+                RETURNING id
+            """, (
+                data.get('nome'),
+                data.get('matricula', ''),
+                data.get('numero_chamada'),
+                data.get('data_nascimento'),
+                data.get('genero', 'Masculino'),
+                data.get('responsavel', ''),
+                data.get('telefone', ''),
+                data.get('email', ''),
+                data.get('observacoes', ''),
+                id
+            ))
+            
+            result = cur.fetchone()
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            if result:
+                return jsonify({'mensagem': 'Aluno atualizado com sucesso'})
+            else:
+                return jsonify({'erro': 'Aluno não encontrado'}), 404
+        except Exception as e:
+            print(f"Erro ao atualizar aluno: {e}")
+    
+    return jsonify({'erro': 'Erro ao atualizar aluno'}), 500
+
 @app.route('/api/alunos/<int:id>', methods=['DELETE'])
 def excluir_aluno(id):
     """Exclui um aluno"""
@@ -660,6 +790,12 @@ def criar_prova():
     if not data.get('titulo') or not data.get('turma_id'):
         return jsonify({'erro': 'Título da prova e turma são obrigatórios'}), 400
     
+    # Garantir que quantidade_questoes seja definido
+    quantidade_questoes = data.get('quantidade_questoes')
+    if not quantidade_questoes:
+        gabarito = data.get('gabarito', [])
+        quantidade_questoes = len(gabarito) if gabarito else 20
+    
     conn = get_db_connection()
     if conn:
         try:
@@ -676,7 +812,7 @@ def criar_prova():
                 data.get('data_prova'),
                 data.get('valor_nota', 10),
                 data.get('tipo_questoes', '4'),
-                data.get('quantidade_questoes', 20),
+                quantidade_questoes,
                 data.get('gabarito', [])
             ))
             
@@ -689,6 +825,47 @@ def criar_prova():
             print(f"Erro ao criar prova: {e}")
     
     return jsonify({'erro': 'Erro ao criar prova'}), 500
+
+@app.route('/api/provas/<int:id>', methods=['PUT'])
+def atualizar_prova(id):
+    """Atualiza uma prova existente"""
+    data = request.json
+    
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                UPDATE provas 
+                SET titulo = %s, disciplina = %s, bimestre = %s, data_prova = %s, 
+                    valor_nota = %s, tipo_questoes = %s, quantidade_questoes = %s, gabarito = %s
+                WHERE id = %s
+                RETURNING id
+            """, (
+                data.get('titulo'),
+                data.get('disciplina', ''),
+                data.get('bimestre', ''),
+                data.get('data_prova'),
+                data.get('valor_nota', 10),
+                data.get('tipo_questoes', '4'),
+                data.get('quantidade_questoes', 20),
+                data.get('gabarito', []),
+                id
+            ))
+            
+            result = cur.fetchone()
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            if result:
+                return jsonify({'mensagem': 'Prova atualizada com sucesso'})
+            else:
+                return jsonify({'erro': 'Prova não encontrada'}), 404
+        except Exception as e:
+            print(f"Erro ao atualizar prova: {e}")
+    
+    return jsonify({'erro': 'Erro ao atualizar prova'}), 500
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
@@ -711,7 +888,6 @@ def excluir_prova(id):
 def salvar_gabarito():
     """
     Salva o gabarito de uma prova no banco de dados.
-    CORRIGIDO: Usa ::text[] para forçar o PostgreSQL a interpretar como array.
     """
     try:
         print("=" * 60)
@@ -757,10 +933,7 @@ def salvar_gabarito():
             
             print(f"✅ Prova encontrada: {prova[1]} (ID: {prova[0]})")
             
-            # ============================================================
-            # CORREÇÃO AQUI! Usar %s::text[] para forçar o PostgreSQL
-            # a interpretar a lista como um array de texto
-            # ============================================================
+            # Atualizar a prova com o gabarito
             cur.execute("""
                 UPDATE provas 
                 SET gabarito = %s::text[],
@@ -774,12 +947,6 @@ def salvar_gabarito():
             if result:
                 conn.commit()
                 print(f"✅ Gabarito salvo: {result[1]}")
-                
-                # Buscar para confirmar
-                cur.execute("SELECT gabarito, quantidade_questoes FROM provas WHERE id = %s", (prova_id,))
-                confirm = cur.fetchone()
-                print(f"📊 Confirmação - Gabarito: {confirm[0]}")
-                print(f"📊 Confirmação - Questões: {confirm[1]}")
                 
                 cur.close()
                 conn.close()
@@ -858,6 +1025,8 @@ def listar_historico():
     escola_id = request.args.get('escola_id')
     serie = request.args.get('serie')
     turma_id = request.args.get('turma_id')
+    aluno_id = request.args.get('aluno_id')
+    prova_id = request.args.get('prova_id')
     
     conn = get_db_connection()
     if conn:
@@ -869,6 +1038,7 @@ def listar_historico():
                     h.*, 
                     a.nome as aluno_nome,
                     p.titulo as prova_titulo,
+                    p.quantidade_questoes as total_questoes,
                     t.serie as serie,
                     t.nome as turma_nome,
                     e.nome as escola_nome
@@ -893,6 +1063,14 @@ def listar_historico():
                 query += " AND t.id = %s"
                 params.append(turma_id)
             
+            if aluno_id:
+                query += " AND h.aluno_id = %s"
+                params.append(aluno_id)
+            
+            if prova_id:
+                query += " AND h.prova_id = %s"
+                params.append(prova_id)
+            
             query += " ORDER BY h.data_correcao DESC"
             
             cur.execute(query, params)
@@ -900,9 +1078,14 @@ def listar_historico():
             cur.close()
             conn.close()
             
+            print(f"📊 Histórico retornado: {len(historico)} registros")
+            if len(historico) > 0:
+                print(f"📝 Primeiro registro: {historico[0]}")
+            
             return jsonify(historico)
         except Exception as e:
             print(f"Erro ao listar histórico: {e}")
+            return jsonify([])
     
     return jsonify([])
 
@@ -1125,6 +1308,7 @@ def corrigir_com_ia():
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
         gabarito = prova.get('gabarito', [])
+        quantidade_questoes = prova.get('quantidade_questoes', len(gabarito) or 20)
         
         if not gabarito:
             cur.close()
@@ -1138,6 +1322,7 @@ def corrigir_com_ia():
         
         nome_aluno = aluno['nome'] if aluno else 'Aluno'
         
+        # Simulação de detecção de respostas
         random.seed(aluno_id)
         respostas_detectadas = [random.choice(['A', 'B', 'C', 'D']) for _ in range(len(gabarito))]
         
@@ -1165,7 +1350,7 @@ def corrigir_com_ia():
                 cur.execute("""
                     INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
                     VALUES (%s, %s, %s, %s, %s, %s, 'ia')
-                """, (prova_id, aluno_id, respostas_detectadas, acertos, nota, len(gabarito)))
+                """, (prova_id, aluno_id, respostas_detectadas, acertos, nota, quantidade_questoes))
                 conn.commit()
                 cur.close()
             except Exception as e:
@@ -1176,7 +1361,7 @@ def corrigir_com_ia():
         return jsonify({
             'aluno': nome_aluno,
             'prova': prova.get('titulo', 'Prova'),
-            'total': len(gabarito),
+            'total': quantidade_questoes,
             'acertos': acertos,
             'nota': round(nota, 1),
             'respostas_detectadas': respostas_detectadas,
@@ -1438,6 +1623,7 @@ def listar_resultados():
                     h.*, 
                     a.nome as aluno_nome,
                     p.titulo as prova_titulo,
+                    p.quantidade_questoes as total_questoes,
                     t.serie as serie,
                     t.nome as turma_nome
                 FROM historico h
