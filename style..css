@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CorrigePro — Sistema de Correção de Provas</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════ BOTÃO MENU HAMBÚRGUER ══════════ -->
+<button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">☰</button>
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="login-screen">
+  <div class="login-bg">
+    <div class="login-blob lb1"></div>
+    <div class="login-blob lb2"></div>
+    <div class="login-blob lb3"></div>
+  </div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="l-icon">🎓</div>
+      <h1>CorrigePro</h1>
+      <p>Sistema Inteligente de Correção de Provas</p>
+    </div>
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
+      <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
+    </div>
+    <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
+    <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
+    <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
+      <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app">
+  <div class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">🎓</div>
+      <div class="sb-brand-name">Corrije<span>Pro</span></div>
+    </div>
+    <div class="sb-nav">
+      <div id="adm-sb">
+        <div class="sb-section">Principal</div>
+        <div class="sb-item active" onclick="go('dashboard')" data-p="dashboard"><span class="sb-ico">🏠</span> Dashboard</div>
+        <div class="sb-section">Cadastros</div>
+        <div class="sb-item" onclick="go('escola')" data-p="escola"><span class="sb-ico">🏫</span> Escolas</div>
+        <div class="sb-item" onclick="go('turmas')" data-p="turmas"><span class="sb-ico">👥</span> Turmas</div>
+        <div class="sb-item" onclick="go('alunos')" data-p="alunos"><span class
