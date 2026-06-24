@@ -1,9 +1,9 @@
-flask==2.3.3
+Flask==2.3.2
 flask-cors==4.0.0
-opencv-python-headless==4.8.1.78
-pillow==10.1.0
+opencv-python==4.8.0.74
 numpy==1.24.3
+Pillow==10.0.0
+psycopg2-binary==2.9.7
 pytesseract==0.3.10
-psycopg2-binary==2.9.9
-gunicorn==21.2.0
-requests==2.31.0
+google-generativeai==0.3.0
+python-dotenv==1.0.0
