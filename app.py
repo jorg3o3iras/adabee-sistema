@@ -701,6 +701,63 @@ def dashboard():
     return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
 
 # ============================================
+# ROTA DE DESEMPENHO REAL PARA O DASHBOARD
+# ============================================
+
+@app.route('/api/dashboard/desempenho', methods=['GET'])
+def dashboard_desempenho():
+    """Retorna dados reais de desempenho por turma para o dashboard"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Buscar todas as turmas com suas médias de notas
+        cur.execute("""
+            SELECT 
+                t.id,
+                t.nome as turma_nome,
+                COALESCE(AVG(h.nota), 0) as media,
+                COUNT(DISTINCT h.aluno_id) as total_alunos,
+                COUNT(DISTINCT h.id) as total_correcoes
+            FROM turmas t
+            LEFT JOIN provas p ON p.turma_id = t.id
+            LEFT JOIN historico h ON h.prova_id = p.id
+            GROUP BY t.id, t.nome
+            ORDER BY t.nome
+        """)
+        
+        turmas = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Calcular porcentagem de desempenho (media / nota_maxima * 100)
+        nota_maxima = 10
+        resultado = []
+        for turma in turmas:
+            if turma['total_correcoes'] > 0:
+                porcentagem = round((turma['media'] / nota_maxima) * 100)
+            else:
+                porcentagem = 0
+            
+            resultado.append({
+                'id': turma['id'],
+                'nome': turma['turma_nome'],
+                'media': round(turma['media'], 1),
+                'porcentagem': porcentagem,
+                'total_alunos': turma['total_alunos'],
+                'total_correcoes': turma['total_correcoes']
+            })
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar desempenho: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
 # ROTAS BÁSICAS (ESCOLAS, TURMAS, ALUNOS, PROVAS)
 # ============================================
 
