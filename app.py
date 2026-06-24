@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ============================================
-# CONFIGURAÇÃO GEMINI (COM TRATAMENTO DE ERRO)
+# CONFIGURAÇÃO GEMINI - CORRIGIDA!
 # ============================================
 GEMINI_AVAILABLE = False
 model = None
@@ -30,24 +30,32 @@ GEMINI_MODEL = None
 try:
     import google.generativeai as genai
     
-    # Configurar a chave da API - NOVA CHAVE INSERIDA AQUI!
+    # ✅ Lê a chave do .env (formato AIzaSy...)
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     
     if GEMINI_API_KEY:
+        # ✅ CONFIGURAÇÃO CORRETA
         genai.configure(api_key=GEMINI_API_KEY)
+        
         GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
         model = genai.GenerativeModel(GEMINI_MODEL)
         GEMINI_AVAILABLE = True
+        
+        print("=" * 60)
         print("✅ Gemini AI configurado com sucesso!")
         print(f"📌 Modelo: {GEMINI_MODEL}")
         print(f"🔑 Chave: {GEMINI_API_KEY[:10]}...")
+        print("=" * 60)
     else:
-        print("⚠️ Chave Gemini não configurada - usando simulação")
+        print("⚠️ GEMINI_API_KEY não encontrada no .env")
+        print("   Usando simulação como fallback")
         
-except ImportError:
-    print("⚠️ Gemini AI não instalado. Execute: pip install google-generativeai")
+except ImportError as e:
+    print(f"⚠️ Erro ao importar Gemini: {e}")
+    print("   Execute: pip install google-generativeai>=0.5.0")
 except Exception as e:
     print(f"⚠️ Erro ao configurar Gemini: {e}")
+    print(f"   Detalhes: {str(e)}")
 
 app = Flask(__name__)
 CORS(app)
