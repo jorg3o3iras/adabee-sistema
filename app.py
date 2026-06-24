@@ -21,48 +21,38 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ============================================
-# CONFIGURAÇÃO GEMINI - VERSÃO ROBUSTA
+# CONFIGURAÇÃO GEMINI - COM A NOVA CHAVE
 # ============================================
 GEMINI_AVAILABLE = False
 model = None
 GEMINI_MODEL = None
 
+# 🔥 CHAVE NOVA
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AQ.Ab8RN6LNNYrR0_9R6hcAVWY3Z3CDuupWKhESBoRYlkWm5Autdg')
+
 try:
     import google.generativeai as genai
-    from google.api_core import client_options
-
-    # Pega a chave do ambiente (a que você já gerou e colocou no .env)
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-
+    
     if GEMINI_API_KEY:
-        try:
-            # 🔥 Tentativa 1: Configuração com REST (recomendada para API Keys)
-            genai.configure(
-                api_key=GEMINI_API_KEY,
-                transport='rest'
-            )
-            print("✅ Gemini configurado com REST.")
-        except Exception as e_rest:
-            print(f"⚠️ Falha na config REST ({e_rest}). Tentando configuração padrão...")
-            # 🔥 Tentativa 2: Configuração padrão (fallback)
-            genai.configure(api_key=GEMINI_API_KEY)
-
+        # Tenta configurar
+        genai.configure(api_key=GEMINI_API_KEY)
         GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
         model = genai.GenerativeModel(GEMINI_MODEL)
         GEMINI_AVAILABLE = True
-
         print("=" * 60)
         print("✅ Gemini AI configurado com sucesso!")
         print(f"📌 Modelo: {GEMINI_MODEL}")
+        print(f"🔑 Chave: {GEMINI_API_KEY[:10]}...")
         print("=" * 60)
     else:
-        print("⚠️ GEMINI_API_KEY não encontrada no .env - usando simulação")
-
+        print("⚠️ GEMINI_API_KEY não encontrada - usando simulação")
+        
 except ImportError as e:
     print(f"❌ Erro ao importar google-generativeai: {e}")
     print("   Execute: pip install google-generativeai>=0.5.0")
 except Exception as e:
-    print(f"❌ Erro geral ao configurar Gemini: {e}")
+    print(f"⚠️ Erro ao configurar Gemini: {e}")
+    print("   Usando simulação como fallback")
 
 app = Flask(__name__)
 CORS(app)
@@ -74,7 +64,6 @@ CORS(app)
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
 
 def get_db_connection():
-    """Obtém conexão com o banco de dados Supabase"""
     try:
         conn = psycopg2.connect(SUPABASE_URL)
         return conn
@@ -83,7 +72,7 @@ def get_db_connection():
         return None
 
 # ============================================
-# USUÁRIOS FIXOS (FALLBACK)
+# USUÁRIOS FIXOS
 # ============================================
 
 USUARIOS_FIXOS = {
@@ -97,7 +86,6 @@ USUARIOS_FIXOS = {
 # ============================================
 
 def init_db():
-    """Inicializa as tabelas do banco de dados se não existirem"""
     conn = get_db_connection()
     if not conn:
         print("⚠️ Banco não disponível, usando dados em memória")
@@ -106,7 +94,6 @@ def init_db():
     try:
         cur = conn.cursor()
         
-        # Tabela de escolas
         cur.execute("""
             CREATE TABLE IF NOT EXISTS escolas (
                 id SERIAL PRIMARY KEY,
@@ -120,7 +107,6 @@ def init_db():
             )
         """)
         
-        # Tabela de turmas
         cur.execute("""
             CREATE TABLE IF NOT EXISTS turmas (
                 id SERIAL PRIMARY KEY,
@@ -135,7 +121,6 @@ def init_db():
             )
         """)
         
-        # Tabela de alunos
         cur.execute("""
             CREATE TABLE IF NOT EXISTS alunos (
                 id SERIAL PRIMARY KEY,
@@ -153,7 +138,6 @@ def init_db():
             )
         """)
         
-        # Tabela de provas
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provas (
                 id SERIAL PRIMARY KEY,
@@ -170,7 +154,6 @@ def init_db():
             )
         """)
         
-        # Tabela de histórico de correções
         cur.execute("""
             CREATE TABLE IF NOT EXISTS historico (
                 id SERIAL PRIMARY KEY,
@@ -185,7 +168,6 @@ def init_db():
             )
         """)
         
-        # Tabela de usuários
         cur.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
@@ -199,7 +181,6 @@ def init_db():
             )
         """)
         
-        # Inserir usuários padrão se não existirem
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
@@ -218,107 +199,62 @@ def init_db():
         if conn:
             conn.close()
 
-# Inicializar banco ao iniciar a aplicação
 init_db()
 
 # ============================================
-# FUNÇÃO PARA CORRIGIR COM GEMINI (COM FALLBACK)
+# FUNÇÃO DE CORREÇÃO COM FALLBACK
 # ============================================
 
 def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
-    """
-    Corrige um cartão resposta usando Gemini AI.
-    Se Gemini não estiver disponível, usa simulação.
-    """
-    # Se Gemini não está disponível, usar simulação
     if not GEMINI_AVAILABLE or model is None:
         print("⚠️ Gemini não disponível - usando simulação")
         return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
     
     try:
-        # Decodificar imagem
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
         
         image_data = base64.b64decode(imagem_base64)
-        
-        # Criar prompt para o Gemini
         alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
         
         prompt = f"""
         Você é um assistente especializado em correção de provas.
-        
-        Analise a imagem do cartão resposta enviada e identifique as respostas marcadas pelo aluno.
-        
+        Analise a imagem do cartão resposta e identifique as respostas.
         A prova tem {len(gabarito)} questões e as alternativas são: {alternativas}.
-        
         O gabarito correto é: {gabarito}
-        
-        Responda em formato JSON com a seguinte estrutura:
-        {{
-            "respostas": ["A", "B", "C", ...],
-            "confianca": 85,
-            "aluno_nome": "{aluno_nome}",
-            "serie": "{serie}"
-        }}
-        
-        IMPORTANTE: Retorne APENAS o JSON, sem texto adicional.
+        Responda em JSON: {{"respostas": ["A", "B", ...], "confianca": 85}}
         """
         
-        # Enviar para o Gemini
         response = model.generate_content([
             prompt,
             {"mime_type": "image/jpeg", "data": image_data}
         ])
         
-        # Processar resposta
         resposta_texto = response.text
-        
-        # Extrair JSON da resposta
         json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
+        
         if json_match:
-            try:
-                dados = json.loads(json_match.group())
-                respostas_detectadas = dados.get('respostas', [])
-                confianca = dados.get('confianca', 70)
-            except:
-                respostas_detectadas = []
-                confianca = 50
+            dados = json.loads(json_match.group())
+            respostas_detectadas = dados.get('respostas', [])
+            confianca = dados.get('confianca', 70)
         else:
             respostas_detectadas = []
             confianca = 50
         
-        # Se não detectou respostas, usar simulação
-        if not respostas_detectadas or len(respostas_detectadas) == 0:
-            print("⚠️ Gemini não detectou respostas - usando simulação")
+        if not respostas_detectadas:
             return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
         
-        # Garantir que temos a quantidade correta de respostas
         if len(respostas_detectadas) < len(gabarito):
             for i in range(len(respostas_detectadas), len(gabarito)):
                 respostas_detectadas.append(random.choice(['A', 'B', 'C', 'D'][:tipo_questoes]))
         
-        # Calcular acertos
         acertos = 0
-        correcoes = []
         for i, (resp, gab) in enumerate(zip(respostas_detectadas[:len(gabarito)], gabarito)):
-            resp = str(resp).strip().upper()
-            gab = str(gab).strip().upper()
-            is_correto = resp == gab and resp != ''
-            if is_correto:
+            if resp == gab:
                 acertos += 1
-            correcoes.append({
-                'questao': i + 1,
-                'resposta': resp,
-                'gabarito': gab,
-                'correto': is_correto
-            })
         
-        # Calcular nota
-        valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0.5
+        valor_por_questao = 10 / len(gabarito)
         nota = acertos * valor_por_questao
-        
-        print(f"✅ Gemini corrigiu: {acertos}/{len(gabarito)} acertos")
         
         return {
             'aluno': aluno_nome,
@@ -327,25 +263,18 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             'acertos': acertos,
             'nota': round(nota, 1),
             'respostas_detectadas': respostas_detectadas[:len(gabarito)],
-            'correcoes': correcoes,
             'gabarito': gabarito,
             'tipo_questoes': str(tipo_questoes),
             'confianca': confianca,
-            'valor_por_questao': round(valor_por_questao, 2),
             'modo': 'gemini'
         }
         
     except Exception as e:
-        print(f"❌ Erro ao corrigir com Gemini: {e}")
-        print(traceback.format_exc())
+        print(f"❌ Erro no Gemini: {e}")
         return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
 
 def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
-    """
-    Simula a correção (fallback quando Gemini não está disponível)
-    """
     try:
-        # Decodificar imagem
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
         
@@ -353,41 +282,29 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         nparr = np.frombuffer(image_data, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Simular detecção de respostas
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         respostas_detectadas = []
         
         if img is not None:
-            # Usar um seed baseado no hash da imagem para consistência
             import hashlib
             hash_val = int(hashlib.md5(image_data).hexdigest()[:8], 16)
             random.seed(hash_val)
             
             for i in range(len(gabarito)):
-                # Simular com 70-80% de acerto
                 if random.random() < 0.75:
                     respostas_detectadas.append(gabarito[i])
                 else:
-                    # Errar com uma das outras alternativas
                     erradas = [a for a in alternativas if a != gabarito[i]]
                     respostas_detectadas.append(random.choice(erradas) if erradas else gabarito[i])
         else:
             respostas_detectadas = [random.choice(alternativas) for _ in range(len(gabarito))]
         
         acertos = 0
-        correcoes = []
         for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-            is_correto = resp == gab
-            if is_correto:
+            if resp == gab:
                 acertos += 1
-            correcoes.append({
-                'questao': i + 1,
-                'resposta': resp,
-                'gabarito': gab,
-                'correto': is_correto
-            })
         
-        valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0.5
+        valor_por_questao = 10 / len(gabarito)
         nota = acertos * valor_por_questao
         
         return {
@@ -397,16 +314,13 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'acertos': acertos,
             'nota': round(nota, 1),
             'respostas_detectadas': respostas_detectadas,
-            'correcoes': correcoes,
             'gabarito': gabarito,
             'tipo_questoes': str(tipo_questoes),
             'confianca': 70,
-            'valor_por_questao': round(valor_por_questao, 2),
             'modo': 'simulado'
         }
     except Exception as e:
         print(f"❌ Erro na simulação: {e}")
-        # Fallback extremo
         return {
             'aluno': aluno_nome,
             'serie': serie,
@@ -414,52 +328,35 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'acertos': 0,
             'nota': 0,
             'respostas_detectadas': [],
-            'correcoes': [],
             'gabarito': gabarito,
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
-            'valor_por_questao': 0,
             'modo': 'erro'
         }
 
 # ============================================
-# ROTAS DE CORREÇÃO COM GEMINI
+# ROTAS DA API
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_com_ia():
-    """Corrige uma prova usando Gemini AI"""
     try:
-        print("=" * 60)
-        print("🤖 INICIANDO CORREÇÃO")
-        print("=" * 60)
-        
         data = request.json
         imagem_base64 = data.get('imagem')
         prova_id = data.get('prova_id')
         aluno_id = data.get('aluno_id')
         
-        if not imagem_base64:
-            return jsonify({'erro': 'Imagem é obrigatória'}), 400
+        if not imagem_base64 or not prova_id or not aluno_id:
+            return jsonify({'erro': 'Dados incompletos'}), 400
         
-        if not prova_id:
-            return jsonify({'erro': 'ID da prova é obrigatório'}), 400
-        
-        if not aluno_id:
-            return jsonify({'erro': 'ID do aluno é obrigatório'}), 400
-        
-        # Buscar dados da prova
         conn = get_db_connection()
         if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+            return jsonify({'erro': 'Erro no banco'}), 500
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Buscar prova
         cur.execute("""
             SELECT p.*, t.serie, t.nome as turma_nome
-            FROM provas p
-            LEFT JOIN turmas t ON p.turma_id = t.id
+            FROM provas p LEFT JOIN turmas t ON p.turma_id = t.id
             WHERE p.id = %s
         """, (prova_id,))
         prova = cur.fetchone()
@@ -469,7 +366,12 @@ def corrigir_com_ia():
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
         
-        # Buscar aluno
+        gabarito = prova.get('gabarito', [])
+        if not gabarito:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Gabarito não cadastrado'}), 400
+        
         cur.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cur.fetchone()
         cur.close()
@@ -477,30 +379,10 @@ def corrigir_com_ia():
         
         nome_aluno = aluno['nome'] if aluno else 'Aluno'
         serie = prova.get('serie', '1º Ano')
-        gabarito = prova.get('gabarito', [])
         tipo_questoes = int(prova.get('tipo_questoes', 4))
         
-        if not gabarito:
-            return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
+        resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
         
-        print(f"📝 Corrigindo prova: {prova.get('titulo')}")
-        print(f"👤 Aluno: {nome_aluno}")
-        print(f"📊 Total questões: {len(gabarito)}")
-        print(f"🤖 Modo: {'Gemini' if GEMINI_AVAILABLE else 'Simulação'}")
-        
-        # Corrigir com Gemini
-        resultado = corrigir_com_gemini(
-            imagem_base64,
-            gabarito,
-            nome_aluno,
-            serie,
-            tipo_questoes
-        )
-        
-        print(f"✅ Corrigido: {resultado['acertos']}/{resultado['total']} acertos")
-        print(f"📌 Modo usado: {resultado.get('modo', 'desconhecido')}")
-        
-        # Salvar no histórico
         try:
             conn = get_db_connection()
             if conn:
@@ -508,41 +390,23 @@ def corrigir_com_ia():
                 cur.execute("""
                     INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
                     VALUES (%s, %s, %s::text[], %s, %s, %s, %s)
-                """, (
-                    prova_id,
-                    aluno_id,
-                    resultado['respostas_detectadas'],
-                    resultado['acertos'],
-                    resultado['nota'],
-                    resultado['total'],
-                    resultado.get('modo', 'ia')
-                ))
+                """, (prova_id, aluno_id, resultado['respostas_detectadas'], 
+                      resultado['acertos'], resultado['nota'], resultado['total'], resultado.get('modo', 'ia')))
                 conn.commit()
                 cur.close()
                 conn.close()
-                print("💾 Correção salva no histórico")
         except Exception as e:
             print(f"⚠️ Erro ao salvar histórico: {e}")
         
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"❌ Erro na correção: {e}")
-        print(traceback.format_exc())
-        return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
-
-# ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO COM GEMINI
-# ============================================
+        print(f"❌ Erro: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
-    """Corrige uma redação usando Gemini AI"""
     try:
-        print("=" * 60)
-        print("✍️ INICIANDO CORREÇÃO DE REDAÇÃO")
-        print("=" * 60)
-        
         data = request.json
         texto = data.get('texto')
         aluno_id = data.get('aluno_id')
@@ -550,12 +414,8 @@ def corrigir_redacao():
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
         
-        if len(texto) < 10:
-            return jsonify({'erro': 'Texto muito curto para avaliação (mínimo 10 caracteres)'}), 400
-        
         if not GEMINI_AVAILABLE or model is None:
-            # Fallback para simulação de redação
-            resultado = {
+            return jsonify({
                 'nota': 7.0,
                 'metricas': {
                     'nota_coerencia': 7.0,
@@ -563,162 +423,36 @@ def corrigir_redacao():
                     'nota_gramatica': 7.0,
                     'nota_vocabulario': 7.0
                 },
-                'feedback': 'Texto avaliado em modo simulação. O Gemini não está disponível.',
+                'feedback': 'Simulação - Gemini indisponível',
                 'modo': 'simulado'
-            }
-            
-            if aluno_id:
-                try:
-                    conn = get_db_connection()
-                    if conn:
-                        cur = conn.cursor()
-                        cur.execute("""
-                            SELECT id FROM provas 
-                            WHERE titulo ILIKE '%redação%' OR titulo ILIKE '%produção textual%'
-                            ORDER BY id DESC LIMIT 1
-                        """)
-                        prova = cur.fetchone()
-                        if prova:
-                            cur.execute("""
-                                INSERT INTO historico (prova_id, aluno_id, nota, tipo_correcao)
-                                VALUES (%s, %s, %s, 'simulado')
-                            """, (prova[0], aluno_id, resultado.get('nota', 0)))
-                            conn.commit()
-                        cur.close()
-                        conn.close()
-                except Exception as e:
-                    print(f"⚠️ Erro ao salvar: {e}")
-            
-            return jsonify(resultado)
+            })
         
-        # Buscar nome do aluno
-        aluno_nome = 'Aluno'
-        if aluno_id:
-            conn = get_db_connection()
-            if conn:
-                try:
-                    cur = conn.cursor(cursor_factory=RealDictCursor)
-                    cur.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
-                    aluno = cur.fetchone()
-                    if aluno:
-                        aluno_nome = aluno['nome']
-                    cur.close()
-                    conn.close()
-                except Exception as e:
-                    print(f"Erro ao buscar aluno: {e}")
-        
-        # Criar prompt para o Gemini
         prompt = f"""
-        Você é um professor especialista em avaliação de redações.
-        
-        Analise a seguinte redação escrita por um aluno:
-        
-        ---
-        {texto}
-        ---
-        
-        Avalie a redação de acordo com os seguintes critérios (nota de 0 a 10 para cada):
-        1. Coerência e Coesão
-        2. Adequação ao Tema
-        3. Ortografia e Gramática
-        4. Riqueza Vocabular
-        
-        Responda em formato JSON com a seguinte estrutura:
-        {{
-            "nota": 7.5,
-            "metricas": {{
-                "nota_coerencia": 8.0,
-                "nota_estrutura": 7.5,
-                "nota_gramatica": 7.0,
-                "nota_vocabulario": 7.5
-            }},
-            "feedback": "Texto bem estruturado..."
-        }}
-        
-        IMPORTANTE: Retorne APENAS o JSON, sem texto adicional.
+        Avalie a redação: {texto}
+        Responda em JSON: {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
         """
         
-        # Enviar para o Gemini
         response = model.generate_content(prompt)
-        resposta_texto = response.text
+        json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
         
-        print(f"📥 Resposta do Gemini recebida")
-        
-        # Extrair JSON da resposta
-        json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
         if json_match:
-            try:
-                resultado = json.loads(json_match.group())
-                print("✅ JSON extraído com sucesso!")
-                resultado['modo'] = 'gemini'
-                resultado['aluno_nome'] = aluno_nome
-            except json.JSONDecodeError as e:
-                print(f"❌ Erro ao parsear JSON: {e}")
-                resultado = {
-                    'nota': 7.0,
-                    'metricas': {
-                        'nota_coerencia': 7.0,
-                        'nota_estrutura': 7.0,
-                        'nota_gramatica': 7.0,
-                        'nota_vocabulario': 7.0
-                    },
-                    'feedback': 'Redação avaliada automaticamente.',
-                    'modo': 'gemini_erro',
-                    'aluno_nome': aluno_nome
-                }
+            resultado = json.loads(json_match.group())
+            resultado['modo'] = 'gemini'
         else:
-            print("❌ Nenhum JSON encontrado na resposta")
             resultado = {
                 'nota': 7.0,
-                'metricas': {
-                    'nota_coerencia': 7.0,
-                    'nota_estrutura': 7.0,
-                    'nota_gramatica': 7.0,
-                    'nota_vocabulario': 7.0
-                },
-                'feedback': 'Redação avaliada automaticamente.',
-                'modo': 'gemini_erro',
-                'aluno_nome': aluno_nome
+                'metricas': {'nota_coerencia': 7, 'nota_estrutura': 7, 'nota_gramatica': 7, 'nota_vocabulario': 7},
+                'feedback': 'Erro ao processar resposta',
+                'modo': 'erro'
             }
-        
-        # Salvar no histórico
-        if aluno_id:
-            try:
-                conn = get_db_connection()
-                if conn:
-                    cur = conn.cursor()
-                    cur.execute("""
-                        SELECT id FROM provas 
-                        WHERE titulo ILIKE '%redação%' OR titulo ILIKE '%produção textual%'
-                        ORDER BY id DESC LIMIT 1
-                    """)
-                    prova = cur.fetchone()
-                    if prova:
-                        cur.execute("""
-                            INSERT INTO historico (prova_id, aluno_id, nota, tipo_correcao)
-                            VALUES (%s, %s, %s, 'gemini_redacao')
-                        """, (prova[0], aluno_id, resultado.get('nota', 0)))
-                        conn.commit()
-                        print(f"💾 Correção de redação salva para {aluno_nome}")
-                    cur.close()
-                    conn.close()
-            except Exception as e:
-                print(f"⚠️ Erro ao salvar: {e}")
         
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"❌ Erro na correção de redação: {e}")
-        print(traceback.format_exc())
-        return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
-
-# ============================================
-# ROTA DE TESTE DO GEMINI
-# ============================================
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/gemini/teste', methods=['GET'])
 def testar_gemini():
-    """Testa se o Gemini está funcionando"""
     if not GEMINI_AVAILABLE or model is None:
         return jsonify({
             'disponivel': False,
@@ -741,13 +475,8 @@ def testar_gemini():
             'status': 'erro'
         }), 500
 
-# ============================================
-# ROTA DE HEALTH CHECK
-# ============================================
-
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check para o Render"""
     return jsonify({
         'status': 'healthy',
         'service': 'CorrigePro',
@@ -755,60 +484,38 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
-# ============================================
-# ROTAS DE AUTENTICAÇÃO (RESUMIDAS)
-# ============================================
-
 @app.route('/api/login', methods=['POST'])
 def login():
-    """Autenticação de usuário"""
     data = request.json
     username = data.get('username')
     senha = data.get('senha')
     
-    if not username or not senha:
-        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
-    
-    # FALLBACK
-    if username in USUARIOS_FIXOS:
-        dados = USUARIOS_FIXOS[username]
-        if dados['senha'] == senha:
-            return jsonify({
-                'sucesso': True,
-                'perfil': dados['perfil'],
-                'usuario': username,
-                'nome': dados['nome']
-            })
+    if username in USUARIOS_FIXOS and USUARIOS_FIXOS[username]['senha'] == senha:
+        return jsonify({
+            'sucesso': True,
+            'perfil': USUARIOS_FIXOS[username]['perfil'],
+            'usuario': username,
+            'nome': USUARIOS_FIXOS[username]['nome']
+        })
     
     return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
 
-# ============================================
-# ROTAS DE DASHBOARD
-# ============================================
-
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
-    """Retorna estatísticas para o dashboard"""
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            
             cur.execute("SELECT COUNT(*) as total FROM escolas")
             total_escolas = cur.fetchone()['total']
-            
             cur.execute("SELECT COUNT(*) as total FROM turmas")
             total_turmas = cur.fetchone()['total']
-            
             cur.execute("SELECT COUNT(*) as total FROM alunos")
             total_alunos = cur.fetchone()['total']
-            
             cur.execute("SELECT COUNT(*) as total FROM provas")
             total_provas = cur.fetchone()['total']
-            
             cur.close()
             conn.close()
-            
             return jsonify({
                 'total_escolas': total_escolas,
                 'total_turmas': total_turmas,
@@ -816,15 +523,10 @@ def dashboard():
                 'total_provas': total_provas
             })
         except Exception as e:
-            print(f"Erro ao buscar dashboard: {e}")
-    
+            print(f"Erro: {e}")
     return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
 
-# ============================================
-# ROTAS DE ESCOLAS, TURMAS, ALUNOS, PROVAS
-# ============================================
-
-# ===== ESCOLAS =====
+# ===== ROTAS BÁSICAS =====
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
@@ -837,7 +539,7 @@ def listar_escolas():
             conn.close()
             return jsonify(escolas)
         except Exception as e:
-            print(f"Erro ao listar escolas: {e}")
+            print(f"Erro: {e}")
     return jsonify([])
 
 @app.route('/api/escolas', methods=['POST'])
@@ -845,7 +547,7 @@ def criar_escola():
     data = request.json
     nome = data.get('nome')
     if not nome:
-        return jsonify({'erro': 'Nome da escola é obrigatório'}), 400
+        return jsonify({'erro': 'Nome é obrigatório'}), 400
     conn = get_db_connection()
     if conn:
         try:
@@ -861,8 +563,8 @@ def criar_escola():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Escola criada com sucesso'})
         except Exception as e:
-            print(f"Erro ao criar escola: {e}")
-    return jsonify({'erro': 'Erro ao criar escola'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao criar'}), 500
 
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
@@ -876,10 +578,9 @@ def excluir_escola(id):
             conn.close()
             return jsonify({'mensagem': 'Escola excluída com sucesso'})
         except Exception as e:
-            print(f"Erro ao excluir escola: {e}")
-    return jsonify({'erro': 'Erro ao excluir escola'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao excluir'}), 500
 
-# ===== TURMAS =====
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
     conn = get_db_connection()
@@ -896,14 +597,14 @@ def listar_turmas():
             conn.close()
             return jsonify(turmas)
         except Exception as e:
-            print(f"Erro ao listar turmas: {e}")
+            print(f"Erro: {e}")
     return jsonify([])
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
     data = request.json
     if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome da turma e escola são obrigatórios'}), 400
+        return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
     conn = get_db_connection()
     if conn:
         try:
@@ -920,8 +621,8 @@ def criar_turma():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
         except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao criar'}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
@@ -935,10 +636,9 @@ def excluir_turma(id):
             conn.close()
             return jsonify({'mensagem': 'Turma excluída com sucesso'})
         except Exception as e:
-            print(f"Erro ao excluir turma: {e}")
-    return jsonify({'erro': 'Erro ao excluir turma'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao excluir'}), 500
 
-# ===== ALUNOS =====
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
     conn = get_db_connection()
@@ -957,14 +657,14 @@ def listar_alunos():
             conn.close()
             return jsonify(alunos)
         except Exception as e:
-            print(f"Erro ao listar alunos: {e}")
+            print(f"Erro: {e}")
     return jsonify([])
 
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
     data = request.json
     if not data.get('nome') or not data.get('turma_id'):
-        return jsonify({'erro': 'Nome do aluno e turma são obrigatórios'}), 400
+        return jsonify({'erro': 'Nome e turma são obrigatórios'}), 400
     conn = get_db_connection()
     if conn:
         try:
@@ -983,8 +683,8 @@ def criar_aluno():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Aluno criado com sucesso'})
         except Exception as e:
-            print(f"Erro ao criar aluno: {e}")
-    return jsonify({'erro': 'Erro ao criar aluno'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao criar'}), 500
 
 @app.route('/api/alunos/<int:id>', methods=['DELETE'])
 def excluir_aluno(id):
@@ -998,10 +698,9 @@ def excluir_aluno(id):
             conn.close()
             return jsonify({'mensagem': 'Aluno excluído com sucesso'})
         except Exception as e:
-            print(f"Erro ao excluir aluno: {e}")
-    return jsonify({'erro': 'Erro ao excluir aluno'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao excluir'}), 500
 
-# ===== PROVAS =====
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     conn = get_db_connection()
@@ -1018,16 +717,14 @@ def listar_provas():
             conn.close()
             return jsonify(provas)
         except Exception as e:
-            print(f"Erro ao listar provas: {e}")
+            print(f"Erro: {e}")
     return jsonify([])
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
     data = request.json
     if not data.get('titulo') or not data.get('turma_id'):
-        return jsonify({'erro': 'Título da prova e turma são obrigatórios'}), 400
-    
-    quantidade_questoes = data.get('quantidade_questoes', len(data.get('gabarito', [])) or 20)
+        return jsonify({'erro': 'Título e turma são obrigatórios'}), 400
     conn = get_db_connection()
     if conn:
         try:
@@ -1038,15 +735,16 @@ def criar_prova():
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
             """, (data['turma_id'], data['titulo'], data.get('disciplina', ''),
                   data.get('bimestre', ''), data.get('data_prova'), data.get('valor_nota', 10),
-                  data.get('tipo_questoes', '4'), quantidade_questoes, data.get('gabarito', [])))
+                  data.get('tipo_questoes', '4'), data.get('quantidade_questoes', 20), 
+                  data.get('gabarito', [])))
             result = cur.fetchone()
             conn.commit()
             cur.close()
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Prova criada com sucesso'})
         except Exception as e:
-            print(f"Erro ao criar prova: {e}")
-    return jsonify({'erro': 'Erro ao criar prova'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao criar'}), 500
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
@@ -1060,10 +758,9 @@ def excluir_prova(id):
             conn.close()
             return jsonify({'mensagem': 'Prova excluída com sucesso'})
         except Exception as e:
-            print(f"Erro ao excluir prova: {e}")
-    return jsonify({'erro': 'Erro ao excluir prova'}), 500
+            print(f"Erro: {e}")
+    return jsonify({'erro': 'Erro ao excluir'}), 500
 
-# ===== GABARITOS =====
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     try:
@@ -1071,15 +768,13 @@ def salvar_gabarito():
         prova_id = data.get('prova_id')
         respostas = data.get('respostas', [])
         
-        if not prova_id:
-            return jsonify({'erro': 'ID da prova é obrigatório'}), 400
-        if not respostas:
-            return jsonify({'erro': 'Respostas são obrigatórias'}), 400
+        if not prova_id or not respostas:
+            return jsonify({'erro': 'Dados incompletos'}), 400
         
         respostas_validas = [str(r).strip().upper() for r in respostas if r]
         conn = get_db_connection()
         if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+            return jsonify({'erro': 'Erro no banco'}), 500
         
         cur = conn.cursor()
         cur.execute("SELECT id FROM provas WHERE id = %s", (prova_id,))
@@ -1106,7 +801,6 @@ def salvar_gabarito():
         print(f"❌ Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ===== HISTÓRICO =====
 @app.route('/api/historico', methods=['GET'])
 def listar_historico():
     conn = get_db_connection()
@@ -1128,10 +822,9 @@ def listar_historico():
             conn.close()
             return jsonify(historico)
         except Exception as e:
-            print(f"Erro ao listar histórico: {e}")
+            print(f"Erro: {e}")
     return jsonify([])
 
-# ===== CORREÇÃO MANUAL =====
 @app.route('/api/corrigir_manual', methods=['POST'])
 def corrigir_manual():
     try:
@@ -1148,7 +841,7 @@ def corrigir_manual():
         
         conn = get_db_connection()
         if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+            return jsonify({'erro': 'Erro no banco'}), 500
         
         cur = conn.cursor()
         cur.execute("""
@@ -1169,10 +862,6 @@ def corrigir_manual():
         print(f"❌ Erro: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA PRINCIPAL
-# ============================================
-
 @app.route('/')
 def index():
     try:
@@ -1190,10 +879,6 @@ def serve_static(path):
         return send_from_directory('.', path)
     except:
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
-
-# ============================================
-# INICIAR SERVIDOR
-# ============================================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
