@@ -140,7 +140,7 @@ def init_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provas (
                 id SERIAL PRIMARY KEY,
-                turma_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
                 titulo TEXT NOT NULL,
                 disciplina TEXT,
                 bimestre TEXT,
@@ -619,20 +619,62 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+# ============================================
+# ROTA DE LOGIN - CORRIGIDA (VERIFICA BANCO)
+# ============================================
+
 @app.route('/api/login', methods=['POST'])
 def login():
+    """Autenticação de usuário - verifica banco E fixos"""
     data = request.json
     username = data.get('username')
     senha = data.get('senha')
     
-    if username in USUARIOS_FIXOS and USUARIOS_FIXOS[username]['senha'] == senha:
-        return jsonify({
-            'sucesso': True,
-            'perfil': USUARIOS_FIXOS[username]['perfil'],
-            'usuario': username,
-            'nome': USUARIOS_FIXOS[username]['nome']
-        })
+    if not username or not senha:
+        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
     
+    # 1. VERIFICAR NO BANCO DE DADOS PRIMEIRO
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT id, nome, username, senha_hash, perfil, ativo 
+                FROM usuarios 
+                WHERE username = %s AND ativo = TRUE
+            """, (username,))
+            usuario = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if usuario:
+                print(f"✅ Usuário encontrado no banco: {usuario['username']}")
+                # Comparar senha (em produção, use hash!)
+                if usuario['senha_hash'] == senha:
+                    return jsonify({
+                        'sucesso': True,
+                        'perfil': usuario['perfil'],
+                        'usuario': usuario['username'],
+                        'nome': usuario['nome']
+                    })
+                else:
+                    print(f"❌ Senha incorreta para: {username}")
+        except Exception as e:
+            print(f"❌ Erro no login via banco: {e}")
+    
+    # 2. FALLBACK: USUÁRIOS FIXOS
+    if username in USUARIOS_FIXOS:
+        dados = USUARIOS_FIXOS[username]
+        if dados['senha'] == senha:
+            print(f"✅ Login via fallback: {username}")
+            return jsonify({
+                'sucesso': True,
+                'perfil': dados['perfil'],
+                'usuario': username,
+                'nome': dados['nome']
+            })
+    
+    print(f"❌ Falha no login para: {username}")
     return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
 
 @app.route('/api/dashboard', methods=['GET'])
