@@ -131,15 +131,17 @@
                     <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">✍️</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
                 </div>
                 <div class="g2">
+                    <!-- ═══ GRÁFICO DE DESEMPENHO COM DADOS REAIS ═══ -->
                     <div class="card">
-                        <div class="card-header"><div class="card-title">📊 Desempenho por Turma</div></div>
-                        <div class="chart-bars">
-                            <div class="chart-bar-item"><div class="chart-bar-val">82%</div><div class="chart-bar" style="height:107px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">1ºA</div></div>
-                            <div class="chart-bar-item"><div class="chart-bar-val">75%</div><div class="chart-bar" style="height:98px;background:linear-gradient(180deg,#06b6d4,#0e7490);"></div><div class="chart-bar-lbl">3ºA</div></div>
-                            <div class="chart-bar-item"><div class="chart-bar-val">91%</div><div class="chart-bar" style="height:118px;background:linear-gradient(180deg,#8b5cf6,#6d28d9);"></div><div class="chart-bar-lbl">5ºA</div></div>
-                            <div class="chart-bar-item"><div class="chart-bar-val">68%</div><div class="chart-bar" style="height:88px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">6ºA</div></div>
-                            <div class="chart-bar-item"><div class="chart-bar-val">79%</div><div class="chart-bar" style="height:103px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8ºA</div></div>
-                            <div class="chart-bar-item"><div class="chart-bar-val">85%</div><div class="chart-bar" style="height:110px;background:linear-gradient(180deg,#ec4899,#be185d);"></div><div class="chart-bar-lbl">9ºA</div></div>
+                        <div class="card-header">
+                            <div class="card-title">📊 Desempenho por Turma</div>
+                            <span class="badge badge-green" id="total-turmas-badge">0 turmas</span>
+                        </div>
+                        <div id="grafico-desempenho" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:20px;">
+                            <div style="text-align:center;color:var(--text3);">
+                                <div style="font-size:40px;margin-bottom:10px;">📊</div>
+                                <p>Carregando dados de desempenho...</p>
+                            </div>
                         </div>
                     </div>
                     <div class="card">
@@ -902,7 +904,8 @@
                     carregarCombos(),
                     carregarRelatorios(),
                     carregarUltimasCorrecoes(),
-                    carregarUserData()
+                    carregarUserData(),
+                    carregarDesempenhoReal()  // ✅ NOVA LINHA!
                 ]);
 
                 console.log('✅ Todos os dados carregados com sucesso!');
@@ -931,6 +934,74 @@
             } catch (erro) {
                 console.error('❌ Erro ao carregar dados:', erro);
                 showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+            }
+        }
+
+        // ═══════════════════════════════ CARREGAR DESEMPENHO REAL ═══════════════════════════════
+        async function carregarDesempenhoReal() {
+            try {
+                const response = await fetch(`${API_URL}/api/dashboard/desempenho`);
+                const dados = await response.json();
+                
+                const container = document.getElementById('grafico-desempenho');
+                const badge = document.getElementById('total-turmas-badge');
+                
+                if (!container) return;
+                
+                if (dados.erro || !dados || dados.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align:center;color:var(--text3);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">📭</div>
+                            <p>Nenhuma turma com correções ainda.</p>
+                            <p style="font-size:12px;">Cadastre turmas e faça correções para ver o desempenho.</p>
+                        </div>
+                    `;
+                    if (badge) badge.textContent = '0 turmas';
+                    return;
+                }
+                
+                if (badge) badge.textContent = dados.length + ' turmas';
+                
+                let html = '<div class="chart-bars">';
+                
+                dados.sort((a, b) => b.porcentagem - a.porcentagem);
+                
+                const cores = [
+                    'linear-gradient(180deg,#3b82f6,#1d4ed8)',
+                    'linear-gradient(180deg,#06b6d4,#0e7490)',
+                    'linear-gradient(180deg,#8b5cf6,#6d28d9)',
+                    'linear-gradient(180deg,#10b981,#047857)',
+                    'linear-gradient(180deg,#f59e0b,#b45309)',
+                    'linear-gradient(180deg,#ec4899,#be185d)'
+                ];
+                
+                dados.forEach((turma, index) => {
+                    const altura = Math.max(20, (turma.porcentagem / 100) * 130);
+                    const cor = cores[index % cores.length];
+                    html += `
+                        <div class="chart-bar-item" title="${turma.nome} - Média: ${turma.media}">
+                            <div class="chart-bar-val">${turma.porcentagem}%</div>
+                            <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                            <div class="chart-bar-lbl">${turma.nome}</div>
+                            <div style="font-size:8px;color:var(--text3);margin-top:2px;">${turma.total_correcoes} corr.</div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+            } catch (erro) {
+                console.error('Erro ao carregar desempenho:', erro);
+                const container = document.getElementById('grafico-desempenho');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align:center;color:var(--red);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
+                            <p>Erro ao carregar dados de desempenho.</p>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -2781,6 +2852,7 @@
             carregarDados();
             carregarFiltrosResultados();
             carregarResultadosComFiltros();
+            carregarDesempenhoReal(); // ✅ CARREGA DADOS REAIS
             const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
         });
