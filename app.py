@@ -34,7 +34,6 @@ try:
     import google.generativeai as genai
     
     if GEMINI_API_KEY:
-        # Tenta configurar
         genai.configure(api_key=GEMINI_API_KEY)
         GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
         model = genai.GenerativeModel(GEMINI_MODEL)
@@ -141,7 +140,7 @@ def init_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provas (
                 id SERIAL PRIMARY KEY,
-                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+                turma_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
                 titulo TEXT NOT NULL,
                 disciplina TEXT,
                 bimestre TEXT,
@@ -333,6 +332,142 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'confianca': 0,
             'modo': 'erro'
         }
+
+# ============================================
+# ROTAS DE USUÁRIOS (NOVAS)
+# ============================================
+
+@app.route('/api/usuarios', methods=['GET'])
+def listar_usuarios():
+    """Lista todos os usuários"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT id, nome, username, email, perfil, ativo, criado_em FROM usuarios ORDER BY id")
+            usuarios = cur.fetchall()
+            cur.close()
+            conn.close()
+            return jsonify(usuarios)
+        except Exception as e:
+            print(f"Erro ao listar usuários: {e}")
+    
+    # Fallback
+    resultado = []
+    for username, dados in USUARIOS_FIXOS.items():
+        resultado.append({
+            'id': 0,
+            'nome': dados['nome'],
+            'username': username,
+            'email': '',
+            'perfil': dados['perfil'],
+            'ativo': True,
+            'criado_em': datetime.now().isoformat()
+        })
+    return jsonify(resultado)
+
+@app.route('/api/usuarios', methods=['POST'])
+def criar_usuario():
+    """Cria um novo usuário"""
+    try:
+        data = request.json
+        nome = data.get('nome')
+        username = data.get('username')
+        senha = data.get('senha')
+        email = data.get('email', '')
+        perfil = data.get('perfil', 'usuario')
+        ativo = data.get('ativo', True)
+        
+        if not nome or not username or not senha:
+            return jsonify({'erro': 'Nome, usuário e senha são obrigatórios'}), 400
+        
+        if len(senha) < 4:
+            return jsonify({'erro': 'Senha deve ter pelo menos 4 caracteres'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se usuário já existe
+        cur.execute("SELECT id FROM usuarios WHERE username = %s", (username,))
+        if cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Usuário já existe'}), 400
+        
+        # Inserir novo usuário
+        cur.execute("""
+            INSERT INTO usuarios (nome, username, senha_hash, email, perfil, ativo)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (nome, username, senha, email, perfil, ativo))
+        
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'id': result['id'],
+            'mensagem': 'Usuário criado com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"Erro ao criar usuário: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/usuarios/<int:id>', methods=['DELETE'])
+def excluir_usuario(id):
+    """Exclui um usuário"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor()
+        cur.execute("DELETE FROM usuarios WHERE id = %s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({'mensagem': 'Usuário excluído com sucesso'})
+        
+    except Exception as e:
+        print(f"Erro ao excluir usuário: {e}")
+        return jsonify({'erro': 'Erro ao excluir usuário'}), 500
+
+@app.route('/api/usuarios/<int:id>', methods=['PUT'])
+def atualizar_usuario(id):
+    """Atualiza um usuário"""
+    try:
+        data = request.json
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE usuarios 
+            SET nome = %s, email = %s, perfil = %s, ativo = %s
+            WHERE id = %s
+            RETURNING id
+        """, (data.get('nome'), data.get('email'), data.get('perfil'), data.get('ativo'), id))
+        
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        if result:
+            return jsonify({'mensagem': 'Usuário atualizado com sucesso'})
+        else:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+            
+    except Exception as e:
+        print(f"Erro ao atualizar usuário: {e}")
+        return jsonify({'erro': 'Erro ao atualizar usuário'}), 500
 
 # ============================================
 # ROTAS DA API
