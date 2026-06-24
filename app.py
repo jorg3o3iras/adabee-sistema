@@ -30,16 +30,17 @@ GEMINI_MODEL = None
 try:
     import google.generativeai as genai
     
-    # Configurar a chave da API
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AQ.Ab8RN6I2xKJfgmXTatMFhKJWzNJKc42AJ25EG_W8E0c0eA86-w')
+    # Configurar a chave da API - NOVA CHAVE INSERIDA AQUI!
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AQ.Ab8RN6JbOlFhIxMao78p7BcO2Fa1NGV_ItEk--TPdt7ZMvHUGg')
     
-    if GEMINI_API_KEY and GEMINI_API_KEY != 'AQ.Ab8RN6I2xKJfgmXTatMFhKJWzNJKc42AJ25EG_W8E0c0eA86-w':
+    if GEMINI_API_KEY:
         genai.configure(api_key=GEMINI_API_KEY)
         GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
         model = genai.GenerativeModel(GEMINI_MODEL)
         GEMINI_AVAILABLE = True
         print("✅ Gemini AI configurado com sucesso!")
         print(f"📌 Modelo: {GEMINI_MODEL}")
+        print(f"🔑 Chave: {GEMINI_API_KEY[:10]}...")
     else:
         print("⚠️ Chave Gemini não configurada - usando simulação")
         
