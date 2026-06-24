@@ -137,6 +137,7 @@ def init_db():
             )
         """)
         
+        # ✅ TABELA PROVAS CORRIGIDA (LINHA DUPLICADA REMOVIDA)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provas (
                 id SERIAL PRIMARY KEY,
@@ -334,7 +335,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         }
 
 # ============================================
-# ROTAS DE USUÁRIOS (NOVAS)
+# ROTAS DE USUÁRIOS
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -352,7 +353,6 @@ def listar_usuarios():
         except Exception as e:
             print(f"Erro ao listar usuários: {e}")
     
-    # Fallback
     resultado = []
     for username, dados in USUARIOS_FIXOS.items():
         resultado.append({
@@ -390,14 +390,12 @@ def criar_usuario():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Verificar se usuário já existe
         cur.execute("SELECT id FROM usuarios WHERE username = %s", (username,))
         if cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Usuário já existe'}), 400
         
-        # Inserir novo usuário
         cur.execute("""
             INSERT INTO usuarios (nome, username, senha_hash, email, perfil, ativo)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -468,6 +466,63 @@ def atualizar_usuario(id):
     except Exception as e:
         print(f"Erro ao atualizar usuário: {e}")
         return jsonify({'erro': 'Erro ao atualizar usuário'}), 500
+
+# ============================================
+# ROTA DE LOGIN - CORRIGIDA (VERIFICA BANCO)
+# ============================================
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """Autenticação de usuário - verifica banco E fixos"""
+    data = request.json
+    username = data.get('username')
+    senha = data.get('senha')
+    
+    if not username or not senha:
+        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
+    
+    # 1. VERIFICAR NO BANCO DE DADOS PRIMEIRO
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT id, nome, username, senha_hash, perfil, ativo 
+                FROM usuarios 
+                WHERE username = %s AND ativo = TRUE
+            """, (username,))
+            usuario = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if usuario:
+                print(f"✅ Usuário encontrado no banco: {usuario['username']}")
+                if usuario['senha_hash'] == senha:
+                    return jsonify({
+                        'sucesso': True,
+                        'perfil': usuario['perfil'],
+                        'usuario': usuario['username'],
+                        'nome': usuario['nome']
+                    })
+                else:
+                    print(f"❌ Senha incorreta para: {username}")
+        except Exception as e:
+            print(f"❌ Erro no login via banco: {e}")
+    
+    # 2. FALLBACK: USUÁRIOS FIXOS
+    if username in USUARIOS_FIXOS:
+        dados = USUARIOS_FIXOS[username]
+        if dados['senha'] == senha:
+            print(f"✅ Login via fallback: {username}")
+            return jsonify({
+                'sucesso': True,
+                'perfil': dados['perfil'],
+                'usuario': username,
+                'nome': dados['nome']
+            })
+    
+    print(f"❌ Falha no login para: {username}")
+    return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
 
 # ============================================
 # ROTAS DA API
@@ -619,64 +674,6 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
-# ============================================
-# ROTA DE LOGIN - CORRIGIDA (VERIFICA BANCO)
-# ============================================
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    """Autenticação de usuário - verifica banco E fixos"""
-    data = request.json
-    username = data.get('username')
-    senha = data.get('senha')
-    
-    if not username or not senha:
-        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
-    
-    # 1. VERIFICAR NO BANCO DE DADOS PRIMEIRO
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT id, nome, username, senha_hash, perfil, ativo 
-                FROM usuarios 
-                WHERE username = %s AND ativo = TRUE
-            """, (username,))
-            usuario = cur.fetchone()
-            cur.close()
-            conn.close()
-            
-            if usuario:
-                print(f"✅ Usuário encontrado no banco: {usuario['username']}")
-                # Comparar senha (em produção, use hash!)
-                if usuario['senha_hash'] == senha:
-                    return jsonify({
-                        'sucesso': True,
-                        'perfil': usuario['perfil'],
-                        'usuario': usuario['username'],
-                        'nome': usuario['nome']
-                    })
-                else:
-                    print(f"❌ Senha incorreta para: {username}")
-        except Exception as e:
-            print(f"❌ Erro no login via banco: {e}")
-    
-    # 2. FALLBACK: USUÁRIOS FIXOS
-    if username in USUARIOS_FIXOS:
-        dados = USUARIOS_FIXOS[username]
-        if dados['senha'] == senha:
-            print(f"✅ Login via fallback: {username}")
-            return jsonify({
-                'sucesso': True,
-                'perfil': dados['perfil'],
-                'usuario': username,
-                'nome': dados['nome']
-            })
-    
-    print(f"❌ Falha no login para: {username}")
-    return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
-
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     conn = get_db_connection()
@@ -703,7 +700,10 @@ def dashboard():
             print(f"Erro: {e}")
     return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
 
-# ===== ROTAS BÁSICAS =====
+# ============================================
+# ROTAS BÁSICAS (ESCOLAS, TURMAS, ALUNOS, PROVAS)
+# ============================================
+
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
     conn = get_db_connection()
