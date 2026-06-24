@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ============================================
-# CONFIGURAÇÃO GEMINI - CORRIGIDA!
+# CONFIGURAÇÃO GEMINI - VERSÃO ROBUSTA
 # ============================================
 GEMINI_AVAILABLE = False
 model = None
@@ -29,33 +29,40 @@ GEMINI_MODEL = None
 
 try:
     import google.generativeai as genai
-    
-    # ✅ Lê a chave do .env (formato AIzaSy...)
+    from google.api_core import client_options
+
+    # Pega a chave do ambiente (a que você já gerou e colocou no .env)
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-    
+
     if GEMINI_API_KEY:
-        # ✅ CONFIGURAÇÃO CORRETA
-        genai.configure(api_key=GEMINI_API_KEY)
-        
+        try:
+            # 🔥 Tentativa 1: Configuração com REST (recomendada para API Keys)
+            genai.configure(
+                api_key=GEMINI_API_KEY,
+                transport='rest'
+            )
+            print("✅ Gemini configurado com REST.")
+        except Exception as e_rest:
+            print(f"⚠️ Falha na config REST ({e_rest}). Tentando configuração padrão...")
+            # 🔥 Tentativa 2: Configuração padrão (fallback)
+            genai.configure(api_key=GEMINI_API_KEY)
+
         GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
         model = genai.GenerativeModel(GEMINI_MODEL)
         GEMINI_AVAILABLE = True
-        
+
         print("=" * 60)
         print("✅ Gemini AI configurado com sucesso!")
         print(f"📌 Modelo: {GEMINI_MODEL}")
-        print(f"🔑 Chave: {GEMINI_API_KEY[:10]}...")
         print("=" * 60)
     else:
-        print("⚠️ GEMINI_API_KEY não encontrada no .env")
-        print("   Usando simulação como fallback")
-        
+        print("⚠️ GEMINI_API_KEY não encontrada no .env - usando simulação")
+
 except ImportError as e:
-    print(f"⚠️ Erro ao importar Gemini: {e}")
+    print(f"❌ Erro ao importar google-generativeai: {e}")
     print("   Execute: pip install google-generativeai>=0.5.0")
 except Exception as e:
-    print(f"⚠️ Erro ao configurar Gemini: {e}")
-    print(f"   Detalhes: {str(e)}")
+    print(f"❌ Erro geral ao configurar Gemini: {e}")
 
 app = Flask(__name__)
 CORS(app)
