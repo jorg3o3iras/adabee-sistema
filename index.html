@@ -412,6 +412,7 @@
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
                         <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
                         <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
+                        <button class="btn btn-outline btn-sm" onclick="restaurarTodosAlunos()">↩️ Restaurar Todos</button>
                     </div>
                 </div>
 
@@ -526,11 +527,12 @@
                                     <th>Conceito</th>
                                     <th>Nota</th>
                                     <th>Status</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="tb-resultados-filtrado">
                                 <tr>
-                                    <td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td>
+                                    <td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -770,6 +772,7 @@
         let camFacing = 'environment';
         let delTarget = null;
         let ultimaImagem = null;
+        let alunosOcultos = []; // Array para armazenar IDs de alunos ocultos da lista
 
         // ═══════════════════════════════ CORREÇÃO MANUAL - VARIÁVEIS ═══════════════════════════════
         let correcaoManualData = {
@@ -786,6 +789,86 @@
             valorPorQuestao: 0.5,
             serie: '1º Ano'
         };
+
+        // ═══════════════════════════════ EXCLUIR ALUNO DA LISTA DE RESULTADOS ═══════════════════════════════
+        function excluirAlunoDaLista(btn, alunoId, alunoNome) {
+            const row = btn.closest('tr');
+            if (!row) return;
+
+            if (!confirm(`Deseja remover "${alunoNome}" da lista de resultados?`)) return;
+
+            if (alunoId) {
+                alunosOcultos.push(alunoId);
+            }
+
+            row.style.transition = 'all 0.3s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'scale(0.95)';
+
+            setTimeout(() => {
+                row.remove();
+                atualizarContadoresAposExclusao();
+                showToast(`👤 "${alunoNome}" removido da lista de resultados`, 'info');
+            }, 300);
+        }
+
+        function restaurarTodosAlunos() {
+            if (alunosOcultos.length === 0) {
+                showToast('ℹ️ Nenhum aluno removido para restaurar', 'info');
+                return;
+            }
+
+            if (!confirm('Restaurar todos os ' + alunosOcultos.length + ' aluno(s) removido(s) da lista?')) return;
+
+            alunosOcultos = [];
+            carregarResultadosComFiltros();
+            showToast('✅ Todos os alunos foram restaurados!', 'success');
+        }
+
+        function atualizarContadoresAposExclusao() {
+            const tbody = document.getElementById('tb-resultados-filtrado');
+            if (!tbody) return;
+
+            const rows = tbody.querySelectorAll('tr:not(.deleted)');
+            const total = rows.length;
+
+            document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+
+            let aprovados = 0;
+            let recuperacao = 0;
+            let somaNotas = 0;
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 10) {
+                    const statusText = cells[8]?.textContent?.trim() || '';
+                    const notaText = cells[7]?.textContent?.trim() || '0';
+                    const nota = parseFloat(notaText.replace(',', '.')) || 0;
+
+                    if (statusText === 'Aprovado') aprovados++;
+                    if (statusText === 'Recuperação') recuperacao++;
+                    somaNotas += nota;
+                }
+            });
+
+            const media = total > 0 ? (somaNotas / total) : 0;
+
+            document.getElementById('res-total-filtrado').textContent = total;
+            document.getElementById('res-aprovados-filtrado').textContent = aprovados;
+            document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
+            document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
+
+            const dadosAtuais = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 6) {
+                    const acertos = parseInt(cells[4]?.textContent) || 0;
+                    const totalQuestoes = 20;
+                    dadosAtuais.push({ acertos: acertos, total_questoes: totalQuestoes });
+                }
+            });
+            atualizarGraficosConceitos(dadosAtuais);
+        }
 
         // ═══════════════════════════════ LOGIN ═══════════════════════════════
         function setLTab(t) {
@@ -905,7 +988,7 @@
                     carregarRelatorios(),
                     carregarUltimasCorrecoes(),
                     carregarUserData(),
-                    carregarDesempenhoReal()  // ✅ NOVA LINHA!
+                    carregarDesempenhoReal()
                 ]);
 
                 console.log('✅ Todos os dados carregados com sucesso!');
@@ -942,12 +1025,12 @@
             try {
                 const response = await fetch(`${API_URL}/api/dashboard/desempenho`);
                 const dados = await response.json();
-                
+
                 const container = document.getElementById('grafico-desempenho');
                 const badge = document.getElementById('total-turmas-badge');
-                
+
                 if (!container) return;
-                
+
                 if (dados.erro || !dados || dados.length === 0) {
                     container.innerHTML = `
                         <div style="text-align:center;color:var(--text3);padding:20px;">
@@ -959,13 +1042,13 @@
                     if (badge) badge.textContent = '0 turmas';
                     return;
                 }
-                
+
                 if (badge) badge.textContent = dados.length + ' turmas';
-                
+
                 let html = '<div class="chart-bars">';
-                
+
                 dados.sort((a, b) => b.porcentagem - a.porcentagem);
-                
+
                 const cores = [
                     'linear-gradient(180deg,#3b82f6,#1d4ed8)',
                     'linear-gradient(180deg,#06b6d4,#0e7490)',
@@ -974,7 +1057,7 @@
                     'linear-gradient(180deg,#f59e0b,#b45309)',
                     'linear-gradient(180deg,#ec4899,#be185d)'
                 ];
-                
+
                 dados.forEach((turma, index) => {
                     const altura = Math.max(20, (turma.porcentagem / 100) * 130);
                     const cor = cores[index % cores.length];
@@ -987,10 +1070,10 @@
                         </div>
                     `;
                 });
-                
+
                 html += '</div>';
                 container.innerHTML = html;
-                
+
             } catch (erro) {
                 console.error('Erro ao carregar desempenho:', erro);
                 const container = document.getElementById('grafico-desempenho');
@@ -1014,7 +1097,9 @@
                     fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
                         if (turmas && turmas.length > 0) {
                             tbody.innerHTML = turmas.map(t => {
-                                return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td>0</td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                                return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t
+                                    .serie || '—') + '</span></td><td>' + (t.professor || '—') +
+                                    '</td><td>0</td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
                             }).join('');
                         }
                     }).catch(e => console.error(e));
@@ -1094,14 +1179,17 @@
                         const turmasCount = turmas.filter(t => t.escola_id === e.id).length;
                         const alunosCount = alunos.filter(a => a.escola_id === e.id).length;
                         return '<tr data-id="' + e.id + '" data-nome="' + e.nome + '">' +
-                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') +
+                            '</span></td>' +
                             '<td><strong>' + e.nome + '</strong></td>' +
                             '<td>' + (e.municipio || '—') + (e.estado ? ' — ' + e.estado : '') + '</td>' +
                             '<td><span class="chip">' + (e.inep || '—') + '</span></td>' +
                             '<td>' + (e.diretor || '—') + '</td>' +
                             '<td>' + turmasCount + '</td>' +
                             '<td>' + alunosCount + '</td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarEscola(' + e.id + ')">✏️ Editar</button><button class="btn-del" onclick="excluirEscola(' + e.id + ', \'' + e.nome + '\')" title="Excluir">🗑️</button></div></td></tr>';
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarEscola(' +
+                            e.id + ')">✏️ Editar</button><button class="btn-del" onclick="excluirEscola(' + e
+                            .id + ', \'' + e.nome + '\')" title="Excluir">🗑️</button></div></td></tr>';
                     }).join('');
                 }
             } catch (erro) {
@@ -1110,7 +1198,8 @@
         }
 
         async function excluirEscola(id, nome) {
-            if (!confirm('Excluir a escola "' + nome + '"? Isso também excluirá todas as turmas e alunos vinculados.')) return;
+            if (!confirm('Excluir a escola "' + nome + '"? Isso também excluirá todas as turmas e alunos vinculados.'))
+                return;
             try {
                 const response = await fetch(API_URL + '/api/escolas/' + id, { method: 'DELETE' });
                 if (response.ok) {
@@ -1140,17 +1229,24 @@
                 if (!turmas || turmas.length === 0 || turmas.erro) {
                     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
                 } else {
-                    const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue', '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan', '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
+                    const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+                        '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+                        '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
                     tbody.innerHTML = turmas.map((t, i) => {
-                        return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
-                            '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
+                        return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie ||
+                            '') + '">' +
+                            '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') +
+                            '</span></td>' +
                             '<td><strong>' + t.nome + '</strong></td>' +
-                            '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
+                            '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie ||
+                                '—') + '</span></td>' +
                             '<td>' + (t.turno || 'Manhã') + '</td>' +
                             '<td>' + (t.escola_nome || '—') + '</td>' +
                             '<td>' + (t.professor || '—') + '</td>' +
                             '<td>0</td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' +
+                            t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' +
+                            t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
                     }).join('');
                 }
             } catch (erro) {
@@ -1189,17 +1285,24 @@
                 if (!alunos || alunos.length === 0 || alunos.erro) {
                     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>';
                 } else {
-                    const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue', '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan', '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
+                    const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+                        '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+                        '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
                     tbody.innerHTML = alunos.map((a, i) => {
                         return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
-                            '<td><span class="badge badge-blue">' + String(a.numero_chamada || i + 1).padStart(2, '0') + '</span></td>' +
+                            '<td><span class="badge badge-blue">' + String(a.numero_chamada || i + 1).padStart(
+                                2, '0') + '</span></td>' +
                             '<td><span class="chip">' + (a.matricula || '—') + '</span></td>' +
                             '<td><strong>' + a.nome + '</strong></td>' +
-                            '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td>' +
+                            '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a
+                                .turma_serie || '—') + '</span></td>' +
                             '<td>' + (a.turma_nome || '—') + '</td>' +
                             '<td>' + (a.escola_nome || '—') + '</td>' +
-                            '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
+                            '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() :
+                                '—') + '</td>' +
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' +
+                            a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id +
+                            ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
                     }).join('');
                 }
             } catch (erro) {
@@ -1240,13 +1343,20 @@
                 } else {
                     tbody.innerHTML = provas.map((p, i) => {
                         return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') +
+                            '</span></td>' +
                             '<td><strong>' + p.titulo + '</strong></td>' +
                             '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
                             '<td>' + (p.turma_nome || '—') + '</td>' +
                             '<td>' + (p.data_prova || '—') + '</td>' +
-                            '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                            '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ?
+                                'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length >
+                                0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' +
+                            p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' :
+                                '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>'
+                                ) + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p
+                            .titulo + '\')">🗑️</button></div></td></tr>';
                     }).join('');
                 }
             } catch (erro) {
@@ -1276,12 +1386,41 @@
                 const is1Ano = prova.turma_serie && prova.turma_serie.startsWith('1');
                 const gabarito = prova.gabarito || [];
                 const container = document.createElement('div');
-                container.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
-                let html = '<div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 32px 80px rgba(0,0,0,0.6);">';
-                html += '<button onclick="this.closest(\'div[style]\').remove()" style="position:sticky;top:0;float:right;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#fc8181;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">✕</button>';
-                html += '<div style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px;"><h2 style="font-size:22px;font-weight:800;color:var(--text);">📄 ' + (prova.titulo || 'Prova') + '</h2><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px;color:var(--text2);"><span>🏷️ Disciplina: <strong style="color:var(--text);">' + (prova.disciplina || '—') + '</strong></span><span>📚 Série: <strong style="color:var(--text);">' + (prova.turma_serie || '—') + '</strong></span><span>👥 Turma: <strong style="color:var(--text);">' + (prova.turma_nome || '—') + '</strong></span><span>📅 Data: <strong style="color:var(--text);">' + (prova.data_prova || '—') + '</strong></span><span>📊 Questões: <strong style="color:var(--text);">' + (gabarito.length || 0) + '</strong></span><span style="background:' + (is1Ano ? 'rgba(139,92,246,0.15)' : 'rgba(59,130,246,0.15)') + ';padding:2px 10px;border-radius:20px;border:1px solid ' + (is1Ano ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') + ';">' + (is1Ano ? '🔵 3 alternativas (A,B,C)' : '🟦 4 alternativas (A,B,C,D)') + '</span></div></div>';
-                html += '<div style="margin-bottom:20px;"><h3 style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">✅ Gabarito da Prova</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;max-height:300px;overflow-y:auto;padding:4px;">' + (gabarito.map((resp, i) => '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:8px 4px;text-align:center;"><div style="font-size:9px;color:var(--text3);font-weight:700;margin-bottom:2px;">Q' + (i + 1) + '</div><div style="font-size:16px;font-weight:800;color:var(--green);background:rgba(16,185,129,0.1);border-radius:6px;padding:4px 0;">' + (resp || '—') + '</div></div>').join('') || '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:20px;">⚠️ Nenhum gabarito cadastrado</div>') + '</div></div>';
-                html += '<div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--border);"><button onclick="go(\'corrigir-ia\')" class="btn btn-purple" style="flex:1;justify-content:center;">🤖 Corrigir com IA</button><button onclick="this.closest(\'div[style]\').remove()" class="btn btn-outline" style="flex:1;justify-content:center;">✕ Fechar</button><button onclick="window.print()" class="btn btn-outline">🖨️ Imprimir</button></div></div>';
+                container.style.cssText =
+                    'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+                let html =
+                    '<div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 32px 80px rgba(0,0,0,0.6);">';
+                html +=
+                    '<button onclick="this.closest(\'div[style]\').remove()" style="position:sticky;top:0;float:right;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#fc8181;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">✕</button>';
+                html +=
+                    '<div style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px;"><h2 style="font-size:22px;font-weight:800;color:var(--text);">📄 ' + (
+                        prova.titulo || 'Prova') +
+                    '</h2><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px;color:var(--text2);"><span>🏷️ Disciplina: <strong style="color:var(--text);">' + (
+                        prova.disciplina || '—') +
+                    '</strong></span><span>📚 Série: <strong style="color:var(--text);">' + (prova
+                        .turma_serie || '—') +
+                    '</strong></span><span>👥 Turma: <strong style="color:var(--text);">' + (prova
+                        .turma_nome || '—') +
+                    '</strong></span><span>📅 Data: <strong style="color:var(--text);">' + (prova
+                        .data_prova || '—') +
+                    '</strong></span><span>📊 Questões: <strong style="color:var(--text);">' + (gabarito
+                        .length || 0) +
+                    '</strong></span><span style="background:' + (is1Ano ? 'rgba(139,92,246,0.15)' :
+                        'rgba(59,130,246,0.15)') + ';padding:2px 10px;border-radius:20px;border:1px solid ' + (
+                        is1Ano ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') + ';">' + (is1Ano ?
+                        '🔵 3 alternativas (A,B,C)' : '🟦 4 alternativas (A,B,C,D)') + '</span></div></div>';
+                html +=
+                    '<div style="margin-bottom:20px;"><h3 style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">✅ Gabarito da Prova</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;max-height:300px;overflow-y:auto;padding:4px;">' + (
+                        gabarito.map((resp, i) =>
+                            '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:8px 4px;text-align:center;"><div style="font-size:9px;color:var(--text3);font-weight:700;margin-bottom:2px;">Q' + (
+                                i + 1) +
+                            '</div><div style="font-size:16px;font-weight:800;color:var(--green);background:rgba(16,185,129,0.1);border-radius:6px;padding:4px 0;">' + (
+                                resp || '—') + '</div></div>'
+                        ).join('') ||
+                        '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:20px;">⚠️ Nenhum gabarito cadastrado</div>'
+                        ) + '</div></div>';
+                html +=
+                    '<div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--border);"><button onclick="go(\'corrigir-ia\')" class="btn btn-purple" style="flex:1;justify-content:center;">🤖 Corrigir com IA</button><button onclick="this.closest(\'div[style]\').remove()" class="btn btn-outline" style="flex:1;justify-content:center;">✕ Fechar</button><button onclick="window.print()" class="btn btn-outline">🖨️ Imprimir</button></div></div>';
                 container.innerHTML = html;
                 document.body.appendChild(container);
                 container.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
@@ -1299,17 +1438,23 @@
                 if (!tbody) return;
                 const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
                 if (!comGabarito || comGabarito.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
                 } else {
                     tbody.innerHTML = comGabarito.map((p, i) => {
                         return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') +
+                            '</span></td>' +
                             '<td>' + p.titulo + '</td>' +
                             '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
                             '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
-                            '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
+                            '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' :
+                                'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') +
+                            '</span></td>' +
                             '<td>' + (p.data_prova || '—') + '</td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' +
+                            p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p
+                            .id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
                     }).join('');
                 }
             } catch (erro) { console.error('Erro ao carregar gabaritos:', erro); }
@@ -1350,14 +1495,18 @@
                 const tbody = document.getElementById('ultimas-correcoes');
                 if (!tbody) return;
                 if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
                 } else {
                     const recentes = historico.slice(0, 4);
                     tbody.innerHTML = recentes.map(item => {
                         const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
                         const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
                         const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
-                        return '<tr><td><strong>' + item.aluno_nome + '</strong></td><td>' + item.prova_titulo + '</td><td><strong style="color:' + cor + ';">' + item.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+                        return '<tr><td><strong>' + item.aluno_nome + '</strong></td><td>' + item
+                            .prova_titulo + '</td><td><strong style="color:' + cor + ';">' + item
+                            .nota + '</strong></td><td><span class="badge ' + badge + '">' + status +
+                            '</span></td></tr>';
                     }).join('');
                 }
             } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
@@ -1469,7 +1618,8 @@
                 if (!tbody) return;
 
                 if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                     document.getElementById('res-total-filtrado').textContent = '0';
                     document.getElementById('res-aprovados-filtrado').textContent = '0';
                     document.getElementById('res-recuperacao-filtrado').textContent = '0';
@@ -1485,10 +1635,13 @@
                     total_questoes: parseInt(item.total_questoes) || 20
                 }));
 
-                let total = dadosCorrigidos.length;
-                let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
-                let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
-                let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
+                // Filtrar alunos ocultos
+                const dadosFiltrados = dadosCorrigidos.filter(item => !alunosOcultos.includes(item.aluno_id));
+
+                let total = dadosFiltrados.length;
+                let aprovados = dadosFiltrados.filter(c => c.nota >= 5).length;
+                let recuperacao = dadosFiltrados.filter(c => c.nota >= 3 && c.nota < 5).length;
+                let media = total > 0 ? (dadosFiltrados.reduce((s, c) => s + c.nota, 0) / total) : 0;
 
                 document.getElementById('res-total-filtrado').textContent = total;
                 document.getElementById('res-aprovados-filtrado').textContent = aprovados;
@@ -1496,12 +1649,17 @@
                 document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                dadosCorrigidos.sort((a, b) => b.nota - a.nota);
+                dadosFiltrados.sort((a, b) => b.nota - a.nota);
 
-                // Atualizar gráficos de conceitos
-                atualizarGraficosConceitos(dadosCorrigidos);
+                atualizarGraficosConceitos(dadosFiltrados);
 
-                tbody.innerHTML = dadosCorrigidos.map((item, index) => {
+                if (total === 0) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = dadosFiltrados.map((item, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     const nota = item.nota || 0;
                     const acertos = item.acertos || 0;
@@ -1517,8 +1675,9 @@
 
                     const nome = item.aluno_nome || 'Aluno';
                     const serieAluno = item.serie || '—';
+                    const alunoId = item.aluno_id || index;
 
-                    return '<tr>' +
+                    return '<tr data-aluno-id="' + alunoId + '">' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
                         '<td><strong>' + nome + '</strong></td>' +
@@ -1528,6 +1687,12 @@
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                         '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
                         '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                        '<td>' +
+                        '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirAlunoDaLista(this, ' +
+                        alunoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Remover da lista">' +
+                        '🗑️' +
+                        '</button>' +
+                        '</td>' +
                         '</tr>';
                 }).join('');
 
@@ -1535,7 +1700,8 @@
                 console.error('Erro ao carregar resultados:', erro);
                 const tbody = document.getElementById('tb-resultados-filtrado');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
                 }
             }
         }
@@ -1552,7 +1718,6 @@
 
             const total = dados.length || 1;
 
-            // Atualizar barras
             const cores = {
                 'Baixo': { bg: '#ef4444' },
                 'Médio Baixo': { bg: '#f59e0b' },
@@ -1574,7 +1739,6 @@
                 }
             });
 
-            // Atualizar Donut
             atualizarDonut(conceitos, total);
         }
 
@@ -1691,13 +1855,18 @@
                 const totalAlunos = alunos.length || 0,
                     aprovados = correcoes.filter(c => c.nota >= 6).length || 0,
                     recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0,
-                    media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+                    media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) :
+                    0;
                 document.getElementById('rel-total-alunos').textContent = totalAlunos;
                 document.getElementById('rel-aprovados').textContent = aprovados;
                 document.getElementById('rel-recuperacao').textContent = recuperacao;
                 document.getElementById('rel-media').textContent = media.toFixed(1);
                 const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-                correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++; else if (c.nota < 4) faixas['2-4']++; else if (c.nota < 6) faixas['4-6']++; else if (c.nota < 8) faixas['6-8']++; else faixas['8-10']++; });
+                correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
+                    else if (c.nota < 4) faixas['2-4']++;
+                    else if (c.nota < 6) faixas['4-6']++;
+                    else if (c.nota < 8) faixas['6-8']++;
+                    else faixas['8-10']++; });
                 const maxVal = Math.max(...Object.values(faixas), 1);
                 document.getElementById('d0-2').textContent = faixas['0-2'];
                 document.getElementById('d2-4').textContent = faixas['2-4'];
@@ -1706,7 +1875,8 @@
                 document.getElementById('d8-10').textContent = faixas['8-10'];
                 const bars = document.querySelectorAll('#dist-notas .chart-bar');
                 const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
-                vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
+                vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) *
+                        110) : 10) + 'px'; } });
                 await carregarRelatorioEscola();
             } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
         }
@@ -1724,16 +1894,26 @@
                 const tbody = document.getElementById('tb-rel-escola');
                 if (!tbody) return;
                 if (!escolas || escolas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
                 } else {
                     tbody.innerHTML = escolas.map(e => {
                         const turmasEscola = turmas.filter(t => t.escola_id === e.id);
                         const alunosEscola = alunos.filter(a => a.escola_id === e.id);
-                        const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
-                        const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
+                        const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a =>
+                                a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
+                        const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s +
+                            c.nota, 0) / correcoesEscola.length) : 0;
                         const aprovados = correcoesEscola.filter(c => c.nota >= 6).length;
-                        const perc = correcoesEscola.length > 0 ? Math.round((aprovados / correcoesEscola.length) * 100) : 0;
-                        return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+                        const perc = correcoesEscola.length > 0 ? Math.round((aprovados / correcoesEscola
+                            .length) * 100) : 0;
+                        return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length +
+                            '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >=
+                                6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) +
+                            '</strong></td><td>' + perc +
+                            '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' +
+                            (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc +
+                            '%;"></div></div></td></tr>';
                     }).join('');
                 }
             } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
@@ -1749,7 +1929,8 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione a escola</option>';
-                        if (escolas && !escolas.erro) { escolas.forEach(e => { const opt = document.createElement('option');
+                        if (escolas && !escolas.erro) { escolas.forEach(e => { const opt = document
+                                .createElement('option');
                                 opt.value = e.id;
                                 opt.textContent = e.nome;
                                 select.appendChild(opt); }); }
@@ -1763,7 +1944,8 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione a turma</option>';
-                        if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option');
+                        if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document
+                                .createElement('option');
                                 opt.value = t.id;
                                 opt.textContent = t.nome + ' - ' + (t.serie || '—');
                                 select.appendChild(opt); }); }
@@ -1777,7 +1959,8 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione a prova</option>';
-                        if (provas && !provas.erro) { provas.forEach(p => { const opt = document.createElement('option');
+                        if (provas && !provas.erro) { provas.forEach(p => { const opt = document
+                                .createElement('option');
                                 opt.value = p.id;
                                 const serie = p.turma_serie || 'Série não definida';
                                 opt.textContent = p.titulo + ' - ' + serie;
@@ -1793,7 +1976,8 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione o aluno</option>';
-                        if (alunos && !alunos.erro) { alunos.forEach(a => { const opt = document.createElement('option');
+                        if (alunos && !alunos.erro) { alunos.forEach(a => { const opt = document
+                                .createElement('option');
                                 opt.value = a.id;
                                 opt.textContent = a.nome;
                                 select.appendChild(opt); }); }
@@ -1810,12 +1994,14 @@
                             const options = selectSerie.options;
                             let found = false;
                             for (let i = 0; i < options.length; i++) {
-                                if (options[i].text === serie || options[i].value === serie) { selectSerie.value = options[i].value;
+                                if (options[i].text === serie || options[i].value === serie) { selectSerie
+                                        .value = options[i].value;
                                     found = true; break; }
                             }
                             if (!found) {
                                 for (let i = 0; i < options.length; i++) {
-                                    if (options[i].text.includes(serie) || serie.includes(options[i].text)) { selectSerie.value = options[i].value;
+                                    if (options[i].text.includes(serie) || serie.includes(options[i]
+                                        .text)) { selectSerie.value = options[i].value;
                                         found = true; break; }
                                 }
                             }
@@ -1841,20 +2027,34 @@
                 const turma = turmas.find(t => t.id == turmaId);
                 const container = document.getElementById('lista-resultado');
                 if (!container) return;
-                if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+                if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML =
+                        '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
                     showToast('❌ Nenhum aluno na turma!', 'error'); return; }
                 const provasResp = await fetch(API_URL + '/api/provas');
                 const provas = await provasResp.json();
                 const prova = provas.find(p => p.turma_id == turmaId);
-                if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
+                if (!prova) { container.innerHTML =
+                        '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
                     showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
                 const escolaResp = await fetch(API_URL + '/api/escolas');
                 const escolas = await escolaResp.json();
                 const escola = escolas.find(e => e.id == turma?.escola_id);
-                let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
+                let html =
+                    '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (
+                        escola?.nome || 'Escola') +
+                    '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (
+                        turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' +
+                    alunos.length + ' alunos</div></div>';
                 html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-                alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
-                html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
+                alunos.forEach(aluno => { html +=
+                        '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' +
+                        aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno
+                        .numero_chamada || '—') +
+                        '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' +
+                        escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>';
+                });
+                html +=
+                    '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
                 container.innerHTML = html;
                 showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
             } catch (erro) { console.error('Erro ao gerar lista:', erro);
@@ -1871,14 +2071,19 @@
                 const response = await fetch(API_URL + '/api/gerar_gabarito', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
+                    body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId),
+                        aluno_id: parseInt(alunoId), prova_id: parseInt(provaId),
+                        quantidade_questoes: qtdQuestoes })
                 });
                 if (response.ok) {
                     const html = await response.text();
                     const novaAba = window.open('', '_blank');
                     novaAba.document.write(html);
                     novaAba.document.close();
-                    document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
+                    document.getElementById('lista-resultado').innerHTML =
+                        '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' +
+                        qtdQuestoes +
+                        ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
                     showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
                 } else {
                     const erro = await response.json();
@@ -1890,10 +2095,15 @@
 
         // ═══════════════════════════════ SALVAR DADOS ═══════════════════════════════
         async function salvarEscola() {
-            const dados = { nome: document.getElementById('escola-nome').value.trim(), inep: document.getElementById('escola-inep').value.trim() || '', municipio: document.getElementById('escola-municipio').value.trim() || '', estado: document.getElementById('escola-estado').value || 'SP', telefone: document.getElementById('escola-telefone').value.trim() || '', diretor: document.getElementById('escola-diretor').value.trim() || '' };
+            const dados = { nome: document.getElementById('escola-nome').value.trim(), inep: document.getElementById(
+                    'escola-inep').value.trim() || '', municipio: document.getElementById('escola-municipio')
+                    .value.trim() || '', estado: document.getElementById('escola-estado').value || 'SP',
+                telefone: document.getElementById('escola-telefone').value.trim() || '', diretor: document
+                    .getElementById('escola-diretor').value.trim() || '' };
             if (!dados.nome) { showToast('❌ Nome da escola é obrigatório!', 'error'); return; }
             try {
-                const response = await fetch(API_URL + '/api/escolas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+                const response = await fetch(API_URL + '/api/escolas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados) });
                 const result = await response.json();
                 if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success');
                     closeM('m-escola');
@@ -1902,11 +2112,17 @@
         }
 
         async function salvarTurma() {
-            const dados = { escola_id: parseInt(document.getElementById('turma-escola').value) || null, nome: document.getElementById('turma-nome').value.trim(), serie: document.getElementById('turma-serie').value || '1º Ano', turno: document.getElementById('turma-turno').value || 'Manhã', professor: document.getElementById('turma-professor').value.trim() || '', capacidade: parseInt(document.getElementById('turma-capacidade').value) || 35, ano_letivo: parseInt(document.getElementById('turma-ano').value) || 2025 };
+            const dados = { escola_id: parseInt(document.getElementById('turma-escola').value) || null, nome: document
+                    .getElementById('turma-nome').value.trim(), serie: document.getElementById('turma-serie')
+                    .value || '1º Ano', turno: document.getElementById('turma-turno').value || 'Manhã',
+                professor: document.getElementById('turma-professor').value.trim() || '', capacidade: parseInt(
+                    document.getElementById('turma-capacidade').value) || 35, ano_letivo: parseInt(document
+                    .getElementById('turma-ano').value) || 2025 };
             if (!dados.escola_id) { showToast('❌ Selecione uma escola!', 'error'); return; }
             if (!dados.nome) { showToast('❌ Nome da turma é obrigatório!', 'error'); return; }
             try {
-                const response = await fetch(API_URL + '/api/turmas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+                const response = await fetch(API_URL + '/api/turmas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados) });
                 const result = await response.json();
                 if (result.id) { showToast('✅ Turma "' + dados.nome + '" cadastrada!', 'success');
                     closeM('m-turma');
@@ -1915,11 +2131,19 @@
         }
 
         async function salvarAluno() {
-            const dados = { turma_id: parseInt(document.getElementById('aluno-turma').value) || null, nome: document.getElementById('aluno-nome').value.trim(), matricula: document.getElementById('aluno-matricula').value.trim() || '', numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null, data_nascimento: document.getElementById('aluno-nascimento').value || null, genero: document.getElementById('aluno-genero').value || 'Masculino', responsavel: document.getElementById('aluno-responsavel').value.trim() || '', telefone: document.getElementById('aluno-telefone').value.trim() || '', email: document.getElementById('aluno-email').value.trim() || '', observacoes: document.getElementById('aluno-observacoes').value.trim() || '' };
+            const dados = { turma_id: parseInt(document.getElementById('aluno-turma').value) || null, nome: document
+                    .getElementById('aluno-nome').value.trim(), matricula: document.getElementById('aluno-matricula')
+                    .value.trim() || '', numero_chamada: parseInt(document.getElementById('aluno-numero').value) ||
+                    null, data_nascimento: document.getElementById('aluno-nascimento').value || null,
+                genero: document.getElementById('aluno-genero').value || 'Masculino', responsavel: document
+                    .getElementById('aluno-responsavel').value.trim() || '', telefone: document.getElementById(
+                    'aluno-telefone').value.trim() || '', email: document.getElementById('aluno-email').value
+                    .trim() || '', observacoes: document.getElementById('aluno-observacoes').value.trim() || '' };
             if (!dados.nome) { showToast('❌ Nome do aluno é obrigatório!', 'error'); return; }
             if (!dados.turma_id) { showToast('❌ Selecione a turma do aluno!', 'error'); return; }
             try {
-                const response = await fetch(API_URL + '/api/alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+                const response = await fetch(API_URL + '/api/alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados) });
                 const result = await response.json();
                 if (result.id) { showToast('✅ Aluno "' + dados.nome + '" cadastrado!', 'success');
                     closeM('m-aluno');
@@ -1928,12 +2152,19 @@
         }
 
         async function salvarProva() {
-            const dados = { turma_id: parseInt(document.getElementById('prova-turma').value) || null, titulo: document.getElementById('prova-titulo').value.trim(), disciplina: document.getElementById('prova-disciplina').value || '', bimestre: document.getElementById('prova-bimestre').value || '', data_prova: document.getElementById('prova-data').value || null, valor_nota: parseFloat(document.getElementById('prova-nota').value) || 10, tipo_questoes: document.getElementById('prova-serie').value ? (document.getElementById('prova-serie').value.startsWith('1') ? '3' : '4') : '4', gabarito: [] };
+            const dados = { turma_id: parseInt(document.getElementById('prova-turma').value) || null, titulo: document
+                    .getElementById('prova-titulo').value.trim(), disciplina: document.getElementById(
+                    'prova-disciplina').value || '', bimestre: document.getElementById('prova-bimestre')
+                    .value || '', data_prova: document.getElementById('prova-data').value || null,
+                valor_nota: parseFloat(document.getElementById('prova-nota').value) || 10, tipo_questoes: document
+                    .getElementById('prova-serie').value ? (document.getElementById('prova-serie').value
+                        .startsWith('1') ? '3' : '4') : '4', gabarito: [] };
             if (!dados.turma_id) { showToast('❌ Selecione a turma!', 'error'); return; }
             if (!dados.titulo) { showToast('❌ Título da prova é obrigatório!', 'error'); return; }
             if (!dados.data_prova) { showToast('❌ Data da prova é obrigatória!', 'error'); return; }
             try {
-                const response = await fetch(API_URL + '/api/provas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+                const response = await fetch(API_URL + '/api/provas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados) });
                 const result = await response.json();
                 if (result.id) { showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success');
                     document.getElementById('up-ok').style.display = 'block';
@@ -1942,7 +2173,13 @@
         }
 
         async function salvarProvaModal() {
-            const dados = { turma_id: parseInt(document.getElementById('modal-prova-turma').value) || null, titulo: document.getElementById('modal-prova-titulo').value.trim(), disciplina: document.getElementById('modal-prova-disciplina').value || '', bimestre: document.getElementById('modal-prova-bimestre').value || '', data_prova: document.getElementById('modal-prova-data').value || null, valor_nota: parseFloat(document.getElementById('modal-prova-valor').value) || 10, tipo_questoes: document.getElementById('modal-prova-tipo').value || '4', gabarito: [] };
+            const dados = { turma_id: parseInt(document.getElementById('modal-prova-turma').value) || null,
+                titulo: document.getElementById('modal-prova-titulo').value.trim(), disciplina: document
+                    .getElementById('modal-prova-disciplina').value || '', bimestre: document.getElementById(
+                    'modal-prova-bimestre').value || '', data_prova: document.getElementById('modal-prova-data')
+                    .value || null, valor_nota: parseFloat(document.getElementById('modal-prova-valor')
+                    .value) || 10, tipo_questoes: document.getElementById('modal-prova-tipo').value || '4',
+                gabarito: [] };
             const gabInputs = document.querySelectorAll('#modal-gabarito-grid input');
             gabInputs.forEach(input => { if (input.value) dados.gabarito.push(input.value.toUpperCase()); });
             if (!dados.turma_id) { showToast('❌ Selecione a turma!', 'error'); return; }
@@ -1950,7 +2187,8 @@
             if (!dados.data_prova) { showToast('❌ Data da prova é obrigatória!', 'error'); return; }
             if (dados.gabarito.length === 0) { showToast('❌ Preencha o gabarito!', 'error'); return; }
             try {
-                const response = await fetch(API_URL + '/api/provas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+                const response = await fetch(API_URL + '/api/provas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados) });
                 const result = await response.json();
                 if (result.id) { showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success');
                     closeM('m-prova');
@@ -2013,7 +2251,8 @@
                 if (!tbody) return;
 
                 if (!usuarios || usuarios.length === 0 || usuarios.erro) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário cadastrado</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário cadastrado</td></tr>';
                     return;
                 }
 
@@ -2024,15 +2263,19 @@
                     const isAdmin = u.username === 'admin';
 
                     return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
-                        '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
-                        '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
+                        '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (
+                            u.nome || '') + '</small></td>' +
+                        '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' :
+                            'Usuário') + '</span></td>' +
                         '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
                         '<td>' +
                         '<div class="btn-group">' +
                         (isAdmin ?
                             '<span style="font-size:10px;color:var(--text3);">Sistema</span>' :
-                            '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button>' +
-                            '<button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>'
+                            '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u
+                            .id + ')">✏️</button>' +
+                            '<button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u
+                            .username + '\')">🗑️</button>'
                         ) +
                         '</div>' +
                         '</td></tr>';
@@ -2088,14 +2331,16 @@
             const total = parseInt(totalEl.value) || 20;
             const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
             const lbl = document.getElementById('gab-label');
-            if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
+            if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' :
+                '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
             grid.innerHTML = '';
             for (let i = 1; i <= total; i++) {
                 const div = document.createElement('div');
                 div.className = 'gab-item';
                 let opts = '<option value="">—</option>';
                 alts.forEach(a => { opts += '<option>' + a + '</option>'; });
-                div.innerHTML = '<div class="gab-num">Q' + i + '</div><select class="gab-select" onchange="this.classList.toggle(\'filled\', this.value!=\'\')">' + opts + '</select>';
+                div.innerHTML = '<div class="gab-num">Q' + i + '</div><select class="gab-select" onchange="this.classList.toggle(\'filled\', this.value!=\'\')">' +
+                    opts + '</select>';
                 grid.appendChild(div);
             }
         }
@@ -2103,7 +2348,8 @@
         function fillGabRand() {
             const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
             const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-            document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)];
+            document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts
+                    .length)];
                 s.classList.add('filled'); });
             showToast('🎲 Gabarito de teste preenchido!');
         }
@@ -2188,7 +2434,8 @@
             } catch (erro) {
                 console.error('❌ Erro:', erro);
                 if (erro.message.includes('Failed to fetch') || erro.message.includes('ERR_CONNECTION_CLOSED')) {
-                    showToast('❌ Não foi possível conectar ao servidor. Verifique se o backend está rodando.', 'error');
+                    showToast('❌ Não foi possível conectar ao servidor. Verifique se o backend está rodando.',
+                        'error');
                 } else {
                     showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
                 }
@@ -2200,7 +2447,8 @@
             document.getElementById('cam-modal').classList.add('show');
             try {
                 if (camStream) camStream.getTracks().forEach(t => t.stop());
-                camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } } });
+                camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing,
+                        width: { ideal: 1280 }, height: { ideal: 720 } } });
                 document.getElementById('cam-video').srcObject = camStream;
             } catch (e) { showToast('❌ Câmera não disponível: ' + e.message, 'error');
                 fecharCamera(); }
@@ -2208,7 +2456,8 @@
 
         function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';
             abrirCamera(); }
-        function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop());
+        function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream
+                    .getTracks().forEach(t => t.stop());
                 camStream = null; } }
 
         function capturarFoto() {
@@ -2251,19 +2500,35 @@
             if (!imagemBase64) { showToast('❌ Nenhuma imagem!', 'error'); return; }
             document.getElementById('ia-ultima-imagem').value = imagemBase64;
             try {
-                const response = await fetch(API_URL + '/api/corrigir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem: imagemBase64, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) }) });
+                const response = await fetch(API_URL + '/api/corrigir', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imagem: imagemBase64, prova_id: parseInt(provaId),
+                            aluno_id: parseInt(alunoId) }) });
                 const dados = await response.json();
                 if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
                 const rd = document.getElementById('ia-resp');
-                if (rd) { rd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados.correcoes?.[i]?.gabarito; return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + a + '</span>'; }).join(''); }
+                if (rd) { rd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados
+                        .correcoes?.[i]?.gabarito; return '<span style="background:' + (ok ?
+                            'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ?
+                            'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') +
+                        ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ?
+                            'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + a + '</span>'; })
+                        .join(''); }
                 const cd = document.getElementById('ia-comp');
-                if (cd) { cd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados.correcoes?.[i]?.gabarito; return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + a + '</div></div>'; }).join(''); }
+                if (cd) { cd.innerHTML = dados.respostas_detectadas.map((a, i) => { const ok = a === dados
+                        .correcoes?.[i]?.gabarito; return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (
+                            i + 1) +
+                        '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' :
+                            'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ?
+                            'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') +
+                        ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ?
+                            'var(--green)' : 'var(--red)') + ';">' + a + '</div></div>'; }).join(''); }
                 document.getElementById('ia-nota').textContent = dados.nota || 0;
                 document.getElementById('ia-aluno').textContent = dados.aluno || 'Aluno';
                 document.getElementById('ia-turma').textContent = dados.prova || 'Prova';
                 document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
                 document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' :
+                    'badge-red');
 
                 correcaoManualData.alunoId = parseInt(alunoId);
                 correcaoManualData.alunoNome = dados.aluno || 'Aluno';
@@ -2275,7 +2540,8 @@
                 correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                 correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                 correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
-                correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+                correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima /
+                    correcaoManualData.quantidade);
                 correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
 
                 if (box) box.style.display = 'block';
@@ -2327,7 +2593,8 @@
 
                 const respostaAluno = (i < respostas.length) ? respostas[i] : '';
                 const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
-                const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+                const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito
+                    .toUpperCase();
 
                 let options = '<option value="">—</option>';
                 alternativas.forEach(alt => {
@@ -2348,16 +2615,16 @@
                 }
 
                 div.innerHTML = `
-          <div class="q-num">Q${i+1}</div>
-          <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">
-            ${respostaAluno || '—'}
-          </div>
-          <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">
-            ${options}
-          </select>
-          <div class="q-status ${statusClass}">${statusText}</div>
-          <div style="font-size:8px;color:var(--text3);margin-top:2px;">Gabarito: ${respostaGabarito || '—'}</div>
-        `;
+              <div class="q-num">Q${i+1}</div>
+              <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">
+                ${respostaAluno || '—'}
+              </div>
+              <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">
+                ${options}
+              </select>
+              <div class="q-status ${statusClass}">${statusText}</div>
+              <div style="font-size:8px;color:var(--text3);margin-top:2px;">Gabarito: ${respostaGabarito || '—'}</div>
+            `;
 
                 if (isCorreto && respostaAluno) {
                     const select = div.querySelector('.q-select');
@@ -2554,7 +2821,12 @@
                             const gabarito = correcaoManualData.gabarito || [];
                             respContainer.innerHTML = respostas.map((resp, i) => {
                                 const ok = resp === gabarito[i];
-                                return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + resp + '</span>';
+                                return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' :
+                                    'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ?
+                                    'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') +
+                                    ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (
+                                    ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + resp +
+                                    '</span>';
                             }).join('');
                         }
 
@@ -2563,7 +2835,14 @@
                             const gabarito = correcaoManualData.gabarito || [];
                             compContainer.innerHTML = respostas.map((resp, i) => {
                                 const ok = resp === gabarito[i];
-                                return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + resp + '</div></div>';
+                                return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (
+                                        i + 1) +
+                                    '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' :
+                                        'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ?
+                                        'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') +
+                                    ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (
+                                        ok ? 'var(--green)' : 'var(--red)') + ';">' + resp +
+                                    '</div></div>';
                             }).join('');
                         }
 
@@ -2601,7 +2880,8 @@
         async function avaliarTexto() {
             const texto = document.getElementById('txt-aluno').value;
             const alunoId = document.getElementById('txt-aluno-select').value;
-            if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error'); return; }
+            if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!',
+                'error'); return; }
             document.getElementById('txt-waiting').style.display = 'none';
             document.getElementById('txt-loading').style.display = 'block';
             document.getElementById('txt-res').style.display = 'none';
@@ -2618,23 +2898,29 @@
 
         async function processarAvaliacaoTexto(texto, alunoId) {
             try {
-                const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: texto, aluno_id: alunoId || null }) });
+                const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ texto: texto, aluno_id: alunoId || null }) });
                 const dados = await response.json();
                 document.getElementById('txt-loading').style.display = 'none';
                 document.getElementById('txt-res').style.display = 'block';
                 if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
                 document.getElementById('txt-nota').textContent = dados.nota || 0;
                 document.getElementById('txt-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' :
+                    'badge-red');
                 if (dados.metricas) {
                     document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
                     document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
                     document.getElementById('c-ort').textContent = dados.metricas.nota_gramatica || 0;
                     document.getElementById('c-voc').textContent = dados.metricas.nota_vocabulario || 0;
-                    document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
-                    document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
-                    document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
-                    document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
+                    document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 *
+                        100) + '%';
+                    document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 *
+                        100) + '%';
+                    document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 *
+                        100) + '%';
+                    document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 *
+                        100) + '%';
                 }
                 const fb = document.getElementById('txt-fb');
                 if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
@@ -2659,14 +2945,18 @@
             if (parent) { parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active'); }
             const card = btn.closest('.card');
-            if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
+            if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' :
+                        'none'; }); }
         }
 
         // ═══════════════════════════════ MODALS ═══════════════════════════════
-        function openM(id) { document.getElementById(id).classList.add('show'); if (id === 'm-turma' || id === 'm-aluno') carregarCombos(); if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value;
+        function openM(id) { document.getElementById(id).classList.add('show'); if (id === 'm-turma' || id === 'm-aluno')
+                carregarCombos(); if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById(
+                    'modal-prova-tipo').value;
                 gerarGabaritoModal(tipo); } }
         function closeM(id) { document.getElementById(id).classList.remove('show'); }
-        document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
+        document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target ===
+                    m) m.classList.remove('show'); }); });
 
         // ═══════════════════════════════ GABARITO MODAL ═══════════════════════════════
         function gerarGabaritoModal(tipo) {
@@ -2691,7 +2981,8 @@
                 input.style.textTransform = 'uppercase';
                 input.placeholder = i;
                 input.title = 'Questão ' + i;
-                input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
+                input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g,
+                        ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
                 grid.appendChild(input);
             }
         }
@@ -2711,7 +3002,8 @@
             const { row, tipo, nome } = delTarget;
             row.classList.add('deleting');
             setTimeout(() => { row.remove();
-                showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
+                showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).',
+                    'error');
                 delTarget = null;
                 renumerarTabela(row.closest('tbody')); }, 350);
         }
@@ -2732,11 +3024,13 @@
         // ═══════════════════════════════ FILTRAR ═══════════════════════════════
         function filtrarTabela(input, tbodyId) {
             const val = input.value.toLowerCase();
-            document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none'; });
+            document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent
+                    .toLowerCase().includes(val) ? '' : 'none'; });
         }
         function filtrarSerie(sel) {
             const val = sel.value;
-            document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
+            document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset
+                    .serie === val) ? '' : 'none'; });
         }
 
         // ═══════════════════════════════ TOAST ═══════════════════════════════
@@ -2761,7 +3055,8 @@
             const info = document.getElementById('info-alts');
             if (!s || !info) return;
             const is1 = s.value.startsWith('1');
-            info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
+            info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value +
+                ' — Gabarito com 4 alternativas: A, B, C, D';
             info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
             info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
             info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
@@ -2773,7 +3068,8 @@
             const select = document.getElementById('prova-turma');
             select.innerHTML = '<option value="">Selecione a turma</option>';
             fetch(API_URL + '/api/turmas?escola_id=' + escolaId).then(r => r.json()).then(turmas => {
-                if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option');
+                if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement(
+                            'option');
                         opt.value = t.id;
                         opt.textContent = t.nome + ' - ' + (t.serie || '—');
                         select.appendChild(opt); }); }
@@ -2785,7 +3081,9 @@
             fetch(API_URL + '/api/alunos').then(r => r.json()).then(alunos => {
                 if (!alunos || alunos.length === 0) { showToast('⚠️ Nenhum aluno para exportar', 'error'); return; }
                 let csv = 'Nº,Matrícula,Nome,Série,Turma, Escola,Data Nasc.\n';
-                alunos.forEach(a => { csv += (a.numero_chamada || '') + ',' + (a.matricula || '') + ',' + a.nome + ',' + (a.turma_serie || '') + ',' + (a.turma_nome || '') + ',' + (a.escola_nome || '') + ',' + (a.data_nascimento || '') + '\n'; });
+                alunos.forEach(a => { csv += (a.numero_chamada || '') + ',' + (a.matricula || '') + ',' + a
+                        .nome + ',' + (a.turma_serie || '') + ',' + (a.turma_nome || '') + ',' + (a
+                        .escola_nome || '') + ',' + (a.data_nascimento || '') + '\n'; });
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -2809,7 +3107,9 @@
             let csv = 'Escola,Turmas,Alunos,Média,Aprovação\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + '\n'; }
+                if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent
+                        .trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() +
+                        ',' + cells[4].textContent.trim() + '\n'; }
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
@@ -2826,12 +3126,22 @@
             if (!alunoId) { showToast('❌ Selecione um aluno!', 'error'); return; }
             showToast('🔍 Buscando histórico do aluno...', 'info');
             const tbody = document.getElementById('rel-aluno-historico');
-            if (tbody) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>'; }
+            if (tbody) { tbody.innerHTML =
+                    '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>'; }
             fetch(API_URL + '/api/historico').then(r => r.json()).then(historico => {
                 const filtrado = historico.filter(h => h.aluno_id == alunoId);
-                if (filtrado.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>'; return; }
-                tbody.innerHTML = filtrado.map(h => { const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado'; const badge = h.nota >= 6 ? 'badge-green' : 'badge-red'; return '<tr><td>' + h.prova_titulo + '</td><td>' + (h.data_correcao ? new Date(h.data_correcao).toLocaleDateString() : '—') + '</td><td><strong style="color:' + (h.nota >= 6 ? 'var(--green)' : 'var(--red)') + ';">' + h.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>'; }).join('');
-            }).catch(e => { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+                if (filtrado.length === 0) { tbody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                    return; }
+                tbody.innerHTML = filtrado.map(h => { const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado'; const
+                        badge = h.nota >= 6 ? 'badge-green' : 'badge-red'; return '<tr><td>' + h
+                        .prova_titulo + '</td><td>' + (h.data_correcao ? new Date(h.data_correcao)
+                        .toLocaleDateString() : '—') + '</td><td><strong style="color:' + (h.nota >= 6 ?
+                        'var(--green)' : 'var(--red)') + ';">' + h.nota +
+                        '</strong></td><td><span class="badge ' + badge + '">' + status +
+                        '</span></td></tr>'; }).join('');
+            }).catch(e => { tbody.innerHTML =
+                    '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
                 console.error(e); });
         }
 
@@ -2843,7 +3153,8 @@
             if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
         });
 
-        document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
+        document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget)
+                cancelarDel(); });
 
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Inicializando sistema...');
@@ -2852,7 +3163,7 @@
             carregarDados();
             carregarFiltrosResultados();
             carregarResultadosComFiltros();
-            carregarDesempenhoReal(); // ✅ CARREGA DADOS REAIS
+            carregarDesempenhoReal();
             const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
         });
