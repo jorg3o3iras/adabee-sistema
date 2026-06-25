@@ -131,7 +131,6 @@
                     <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">✍️</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
                 </div>
                 <div class="g2">
-                    <!-- ═══ GRÁFICO DE DESEMPENHO COM DADOS REAIS ═══ -->
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title">📊 Desempenho por Turma</div>
@@ -412,7 +411,6 @@
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
                         <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
                         <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
-                        <button class="btn btn-outline btn-sm" onclick="restaurarTodosAlunos()">↩️ Restaurar Todos</button>
                     </div>
                 </div>
 
@@ -772,7 +770,6 @@
         let camFacing = 'environment';
         let delTarget = null;
         let ultimaImagem = null;
-        let alunosOcultos = []; // Array para armazenar IDs de alunos ocultos da lista
 
         // ═══════════════════════════════ CORREÇÃO MANUAL - VARIÁVEIS ═══════════════════════════════
         let correcaoManualData = {
@@ -790,39 +787,42 @@
             serie: '1º Ano'
         };
 
-        // ═══════════════════════════════ EXCLUIR ALUNO DA LISTA DE RESULTADOS ═══════════════════════════════
-        function excluirAlunoDaLista(btn, alunoId, alunoNome) {
+        // ═══════════════════════════════ EXCLUIR CORREÇÃO DO HISTÓRICO ═══════════════════════════════
+        async function excluirCorrecao(btn, correcaoId, alunoNome) {
             const row = btn.closest('tr');
             if (!row) return;
 
-            if (!confirm(`Deseja remover "${alunoNome}" da lista de resultados?`)) return;
-
-            if (alunoId) {
-                alunosOcultos.push(alunoId);
-            }
-
-            row.style.transition = 'all 0.3s ease';
-            row.style.opacity = '0';
-            row.style.transform = 'scale(0.95)';
-
-            setTimeout(() => {
-                row.remove();
-                atualizarContadoresAposExclusao();
-                showToast(`👤 "${alunoNome}" removido da lista de resultados`, 'info');
-            }, 300);
-        }
-
-        function restaurarTodosAlunos() {
-            if (alunosOcultos.length === 0) {
-                showToast('ℹ️ Nenhum aluno removido para restaurar', 'info');
+            if (!correcaoId) {
+                showToast('❌ Não foi possível identificar a correção', 'error');
                 return;
             }
 
-            if (!confirm('Restaurar todos os ' + alunosOcultos.length + ' aluno(s) removido(s) da lista?')) return;
+            if (!confirm(`Deseja excluir esta correção do aluno "${alunoNome}"? Esta ação não pode ser desfeita.`)) return;
 
-            alunosOcultos = [];
-            carregarResultadosComFiltros();
-            showToast('✅ Todos os alunos foram restaurados!', 'success');
+            try {
+                const response = await fetch(`${API_URL}/api/historico/${correcaoId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.opacity = '0';
+                    row.style.transform = 'scale(0.95)';
+
+                    setTimeout(() => {
+                        row.remove();
+                        atualizarContadoresAposExclusao();
+                        showToast(`🗑️ Correção de "${alunoNome}" excluída do histórico`, 'success');
+                    }, 300);
+                } else {
+                    showToast('❌ Erro ao excluir: ' + (result.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao excluir correção:', error);
+                showToast('❌ Erro ao conectar ao servidor', 'error');
+            }
         }
 
         function atualizarContadoresAposExclusao() {
@@ -1635,13 +1635,10 @@
                     total_questoes: parseInt(item.total_questoes) || 20
                 }));
 
-                // Filtrar alunos ocultos
-                const dadosFiltrados = dadosCorrigidos.filter(item => !alunosOcultos.includes(item.aluno_id));
-
-                let total = dadosFiltrados.length;
-                let aprovados = dadosFiltrados.filter(c => c.nota >= 5).length;
-                let recuperacao = dadosFiltrados.filter(c => c.nota >= 3 && c.nota < 5).length;
-                let media = total > 0 ? (dadosFiltrados.reduce((s, c) => s + c.nota, 0) / total) : 0;
+                let total = dadosCorrigidos.length;
+                let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
+                let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
+                let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
 
                 document.getElementById('res-total-filtrado').textContent = total;
                 document.getElementById('res-aprovados-filtrado').textContent = aprovados;
@@ -1649,9 +1646,9 @@
                 document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                dadosFiltrados.sort((a, b) => b.nota - a.nota);
+                dadosCorrigidos.sort((a, b) => b.nota - a.nota);
 
-                atualizarGraficosConceitos(dadosFiltrados);
+                atualizarGraficosConceitos(dadosCorrigidos);
 
                 if (total === 0) {
                     tbody.innerHTML =
@@ -1659,7 +1656,7 @@
                     return;
                 }
 
-                tbody.innerHTML = dadosFiltrados.map((item, index) => {
+                tbody.innerHTML = dadosCorrigidos.map((item, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     const nota = item.nota || 0;
                     const acertos = item.acertos || 0;
@@ -1675,9 +1672,9 @@
 
                     const nome = item.aluno_nome || 'Aluno';
                     const serieAluno = item.serie || '—';
-                    const alunoId = item.aluno_id || index;
+                    const correcaoId = item.id;
 
-                    return '<tr data-aluno-id="' + alunoId + '">' +
+                    return '<tr data-correcao-id="' + correcaoId + '">' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
                         '<td><strong>' + nome + '</strong></td>' +
@@ -1688,8 +1685,8 @@
                         '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
                         '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                         '<td>' +
-                        '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirAlunoDaLista(this, ' +
-                        alunoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Remover da lista">' +
+                        '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' +
+                        correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">' +
                         '🗑️' +
                         '</button>' +
                         '</td>' +
@@ -2357,20 +2354,18 @@
         function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = '';
                 s.classList.remove('filled'); }); }
 
-        // ═══════════════════════════════ SALVAR GABARITO - CORRIGIDO ═══════════════════════════════
+        // ═══════════════════════════════ SALVAR GABARITO ═══════════════════════════════
         async function saveGab() {
             try {
                 console.log('🔄 Iniciando salvamento do gabarito...');
 
                 const selects = document.querySelectorAll('.gab-select');
                 const respostas = [];
-                let todosPreenchidos = true;
 
                 selects.forEach(s => {
                     if (s.value) {
                         respostas.push(s.value);
                     } else {
-                        todosPreenchidos = false;
                         respostas.push('');
                     }
                 });
