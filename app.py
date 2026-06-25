@@ -992,6 +992,51 @@ def listar_historico():
     return jsonify([])
 
 # ============================================
+# ROTA PARA EXCLUIR CORREÇÃO DO HISTÓRICO - NOVA ROTA
+# ============================================
+
+@app.route('/api/historico/<int:id>', methods=['DELETE'])
+def excluir_correcao(id):
+    """Exclui uma correção específica do histórico"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor()
+        
+        # Verificar se a correção existe
+        cur.execute("SELECT id FROM historico WHERE id = %s", (id,))
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Correção não encontrada'}), 404
+        
+        # Excluir a correção
+        cur.execute("DELETE FROM historico WHERE id = %s", (id,))
+        conn.commit()
+        
+        # Verificar se deletou
+        if cur.rowcount == 0:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Erro ao excluir correção'}), 500
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Correção excluída com sucesso',
+            'id': id
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir correção: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
 # ROTA DE DASHBOARD
 # ============================================
 
@@ -1373,6 +1418,7 @@ def index():
                 '/api/provas',
                 '/api/gabaritos',
                 '/api/historico',
+                '/api/historico/<id>',
                 '/api/dashboard',
                 '/api/dashboard/desempenho',
                 '/api/gerar_gabarito'
