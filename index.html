@@ -1324,9 +1324,6 @@
             }
         }
 
-        // ═══ O resto do código permanece o mesmo ═══
-        // [Continuação do código...]
-
         // ═══════════════════════════════ CARREGAR DADOS ═══════════════════════════════
         async function carregarDados() {
             console.log('🔄 Carregando dados do sistema...');
@@ -2896,13 +2893,22 @@
 
         // ═══════════════════════════════ CORREÇÃO MANUAL ═══════════════════════════════
         function abrirCorrecaoManual() {
+            // Validação robusta para evitar o erro "Gabarito não disponível"
             if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
                 showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
                 return;
             }
 
-            if (!correcaoManualData.gabarito || correcaoManualData.gabarito.length === 0) {
+            // Verifica se o gabarito existe e tem dados
+            if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData.gabarito.length === 0) {
                 showToast('❌ Gabarito não disponível para esta prova!', 'error');
+                return;
+            }
+
+            // Verifica se o gabarito tem pelo menos uma resposta válida
+            const temGabaritoValido = correcaoManualData.gabarito.some(g => g && g.trim() !== '');
+            if (!temGabaritoValido) {
+                showToast('❌ Gabarito vazio ou inválido para esta prova!', 'error');
                 return;
             }
 
@@ -2966,12 +2972,14 @@
               <div style="font-size:8px;color:var(--text3);margin-top:2px;">Gabarito: ${respostaGabarito || '—'}</div>
             `;
 
-                if (isCorreto && respostaAluno) {
-                    const select = div.querySelector('.q-select');
-                    if (select) select.className = 'q-select correta';
-                } else if (respostaAluno && !isCorreto) {
-                    const select = div.querySelector('.q-select');
-                    if (select) select.className = 'q-select errada';
+                // Aplica as cores verde/vermelho nos selects
+                const select = div.querySelector('.q-select');
+                if (select) {
+                    if (isCorreto && respostaAluno) {
+                        select.className = 'q-select correta';
+                    } else if (respostaAluno && !isCorreto) {
+                        select.className = 'q-select errada';
+                    }
                 }
 
                 grid.appendChild(div);
