@@ -251,9 +251,12 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 respostas_detectadas.append(random.choice(['A', 'B', 'C', 'D'][:tipo_questoes]))
         
         acertos = 0
+        correcoes = []
         for i, (resp, gab) in enumerate(zip(respostas_detectadas[:len(gabarito)], gabarito)):
-            if resp == gab:
+            is_correto = resp == gab
+            if is_correto:
                 acertos += 1
+            correcoes.append({'questao': i+1, 'resposta': resp, 'gabarito': gab, 'correto': is_correto})
         
         valor_por_questao = 10 / len(gabarito)
         nota = acertos * valor_por_questao
@@ -266,13 +269,16 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             'nota': round(nota, 1),
             'respostas_detectadas': respostas_detectadas[:len(gabarito)],
             'gabarito': gabarito,
+            'correcoes': correcoes,
             'tipo_questoes': str(tipo_questoes),
             'confianca': confianca,
-            'modo': 'gemini'
+            'modo': 'gemini',
+            'valor_por_questao': round(valor_por_questao, 2)
         }
         
     except Exception as e:
         print(f"❌ Erro no Gemini: {e}")
+        traceback.print_exc()
         return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
 
 def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
@@ -286,25 +292,29 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         respostas_detectadas = []
+        correcoes = []
         
         if img is not None:
             import hashlib
             hash_val = int(hashlib.md5(image_data).hexdigest()[:8], 16)
             random.seed(hash_val)
             
-            for i in range(len(gabarito)):
+            for i, gab in enumerate(gabarito):
+                # Simula detecção com 75% de chance de acerto
                 if random.random() < 0.75:
-                    respostas_detectadas.append(gabarito[i])
+                    respostas_detectadas.append(gab)
                 else:
-                    erradas = [a for a in alternativas if a != gabarito[i]]
-                    respostas_detectadas.append(random.choice(erradas) if erradas else gabarito[i])
+                    erradas = [a for a in alternativas if a != gab]
+                    respostas_detectadas.append(random.choice(erradas) if erradas else gab)
         else:
             respostas_detectadas = [random.choice(alternativas) for _ in range(len(gabarito))]
         
         acertos = 0
         for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-            if resp == gab:
+            is_correto = resp == gab
+            if is_correto:
                 acertos += 1
+            correcoes.append({'questao': i+1, 'resposta': resp, 'gabarito': gab, 'correto': is_correto})
         
         valor_por_questao = 10 / len(gabarito)
         nota = acertos * valor_por_questao
@@ -317,9 +327,11 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'nota': round(nota, 1),
             'respostas_detectadas': respostas_detectadas,
             'gabarito': gabarito,
+            'correcoes': correcoes,
             'tipo_questoes': str(tipo_questoes),
             'confianca': 70,
-            'modo': 'simulado'
+            'modo': 'simulado',
+            'valor_por_questao': round(valor_por_questao, 2)
         }
     except Exception as e:
         print(f"❌ Erro na simulação: {e}")
@@ -331,9 +343,11 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'nota': 0,
             'respostas_detectadas': [],
             'gabarito': gabarito,
+            'correcoes': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
-            'modo': 'erro'
+            'modo': 'erro',
+            'valor_por_questao': 0
         }
 
 # ============================================
@@ -1255,13 +1269,31 @@ def corrigir_com_ia():
             conn.close()
             return jsonify({'erro': 'Gabarito não cadastrado'}), 400
         
-        cur.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
+        # Buscar informações do aluno
+        cur.execute("SELECT nome, turma_id FROM alunos WHERE id = %s", (aluno_id,))
         aluno = cur.fetchone()
         cur.close()
         conn.close()
         
         nome_aluno = aluno['nome'] if aluno else 'Aluno'
-        serie = prova.get('serie', '1º Ano')
+        turma_id = aluno['turma_id'] if aluno else None
+        
+        # Buscar série da turma
+        serie = '1º Ano'
+        if turma_id:
+            try:
+                conn2 = get_db_connection()
+                if conn2:
+                    cur2 = conn2.cursor(cursor_factory=RealDictCursor)
+                    cur2.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
+                    turma = cur2.fetchone()
+                    if turma:
+                        serie = turma['serie']
+                    cur2.close()
+                    conn2.close()
+            except Exception as e:
+                print(f"⚠️ Erro ao buscar série: {e}")
+        
         tipo_questoes = int(prova.get('tipo_questoes', 4))
         
         resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
