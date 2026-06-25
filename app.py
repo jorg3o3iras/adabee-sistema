@@ -590,6 +590,29 @@ def criar_escola():
             print(f"Erro: {e}")
     return jsonify({'erro': 'Erro ao criar'}), 500
 
+@app.route('/api/escolas/<int:id>', methods=['GET'])
+def buscar_escola(id):
+    """Busca uma escola específica pelo ID"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM escolas WHERE id = %s", (id,))
+        escola = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not escola:
+            return jsonify({'erro': 'Escola não encontrada'}), 404
+        
+        return jsonify(escola)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar escola: {e}")
+        return jsonify({'erro': str(e)}), 500
+
 @app.route('/api/escolas/<int:id>', methods=['PUT'])
 def editar_escola(id):
     """Edita uma escola existente"""
@@ -711,6 +734,34 @@ def criar_turma():
         except Exception as e:
             print(f"Erro: {e}")
     return jsonify({'erro': 'Erro ao criar'}), 500
+
+@app.route('/api/turmas/<int:id>', methods=['GET'])
+def buscar_turma(id):
+    """Busca uma turma específica pelo ID"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT t.*, e.nome as escola_nome 
+            FROM turmas t 
+            LEFT JOIN escolas e ON t.escola_id = e.id 
+            WHERE t.id = %s
+        """, (id,))
+        turma = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not turma:
+            return jsonify({'erro': 'Turma não encontrada'}), 404
+        
+        return jsonify(turma)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar turma: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['PUT'])
 def editar_turma(id):
@@ -838,6 +889,35 @@ def criar_aluno():
         except Exception as e:
             print(f"Erro: {e}")
     return jsonify({'erro': 'Erro ao criar'}), 500
+
+@app.route('/api/alunos/<int:id>', methods=['GET'])
+def buscar_aluno(id):
+    """Busca um aluno específico pelo ID"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE a.id = %s
+        """, (id,))
+        aluno = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not aluno:
+            return jsonify({'erro': 'Aluno não encontrado'}), 404
+        
+        return jsonify(aluno)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar aluno: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/alunos/<int:id>', methods=['PUT'])
 def editar_aluno(id):
@@ -969,6 +1049,34 @@ def criar_prova():
         except Exception as e:
             print(f"Erro: {e}")
     return jsonify({'erro': 'Erro ao criar'}), 500
+
+@app.route('/api/provas/<int:id>', methods=['GET'])
+def buscar_prova(id):
+    """Busca uma prova específica pelo ID"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
+            FROM provas p 
+            LEFT JOIN turmas t ON p.turma_id = t.id 
+            WHERE p.id = %s
+        """, (id,))
+        prova = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not prova:
+            return jsonify({'erro': 'Prova não encontrada'}), 404
+        
+        return jsonify(prova)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar prova: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas/<int:id>', methods=['PUT'])
 def editar_prova(id):
@@ -1719,9 +1827,13 @@ def index():
                 '/api/corrigir_redacao',
                 '/api/login',
                 '/api/escolas',
+                '/api/escolas/<id>',
                 '/api/turmas',
+                '/api/turmas/<id>',
                 '/api/alunos',
+                '/api/alunos/<id>',
                 '/api/provas',
+                '/api/provas/<id>',
                 '/api/gabaritos',
                 '/api/historico',
                 '/api/historico/<id>',
