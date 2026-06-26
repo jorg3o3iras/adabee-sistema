@@ -572,11 +572,30 @@ def listar_escolas():
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT * FROM escolas ORDER BY nome")
             escolas = cur.fetchall()
+            
+            # Buscar contagem de turmas e alunos para cada escola
+            for escola in escolas:
+                # Contar turmas
+                cur.execute("SELECT COUNT(*) as total FROM turmas WHERE escola_id = %s", (escola['id'],))
+                turmas_count = cur.fetchone()
+                escola['total_turmas'] = turmas_count['total'] if turmas_count else 0
+                
+                # Contar alunos (através das turmas)
+                cur.execute("""
+                    SELECT COUNT(*) as total 
+                    FROM alunos a 
+                    JOIN turmas t ON a.turma_id = t.id 
+                    WHERE t.escola_id = %s
+                """, (escola['id'],))
+                alunos_count = cur.fetchone()
+                escola['total_alunos'] = alunos_count['total'] if alunos_count else 0
+            
             cur.close()
             conn.close()
             return jsonify(escolas)
         except Exception as e:
-            print(f"Erro: {e}")
+            print(f"Erro ao listar escolas: {e}")
+            traceback.print_exc()
     return jsonify([])
 
 @app.route('/api/escolas', methods=['POST'])
@@ -601,8 +620,9 @@ def criar_escola():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Escola criada com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao criar'}), 500
+            print(f"Erro ao criar escola: {e}")
+            traceback.print_exc()
+    return jsonify({'erro': 'Erro ao criar escola'}), 500
 
 @app.route('/api/escolas/<int:id>', methods=['GET'])
 def buscar_escola(id):
@@ -698,8 +718,8 @@ def excluir_escola(id):
             conn.close()
             return jsonify({'mensagem': 'Escola excluída com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao excluir'}), 500
+            print(f"Erro ao excluir escola: {e}")
+    return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
 # ROTAS DE TURMAS
@@ -721,7 +741,8 @@ def listar_turmas():
             conn.close()
             return jsonify(turmas)
         except Exception as e:
-            print(f"Erro: {e}")
+            print(f"Erro ao listar turmas: {e}")
+            traceback.print_exc()
     return jsonify([])
 
 @app.route('/api/turmas', methods=['POST'])
@@ -746,8 +767,9 @@ def criar_turma():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao criar'}), 500
+            print(f"Erro ao criar turma: {e}")
+            traceback.print_exc()
+    return jsonify({'erro': 'Erro ao criar turma'}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['GET'])
 def buscar_turma(id):
@@ -849,8 +871,8 @@ def excluir_turma(id):
             conn.close()
             return jsonify({'mensagem': 'Turma excluída com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao excluir'}), 500
+            print(f"Erro ao excluir turma: {e}")
+    return jsonify({'erro': 'Erro ao excluir turma'}), 500
 
 # ============================================
 # ROTAS DE ALUNOS - CORRIGIDA COM FILTRO POR ESCOLA
@@ -871,9 +893,10 @@ def listar_alunos():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Construir a query com filtros
+        # Construir a query com filtros - INCLUINDO escola_id via JOIN
         query = """
-            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, 
+                   e.id as escola_id, e.nome as escola_nome
             FROM alunos a
             LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
@@ -882,7 +905,7 @@ def listar_alunos():
         conditions = []
         params = []
         
-        # Filtrar por escola
+        # Filtrar por escola (AGORA FUNCIONA porque usa e.id via JOIN)
         if escola_id and escola_id != '':
             conditions.append("e.id = %s")
             params.append(int(escola_id))
@@ -939,8 +962,9 @@ def criar_aluno():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Aluno criado com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao criar'}), 500
+            print(f"Erro ao criar aluno: {e}")
+            traceback.print_exc()
+    return jsonify({'erro': 'Erro ao criar aluno'}), 500
 
 @app.route('/api/alunos/<int:id>', methods=['GET'])
 def buscar_aluno(id):
@@ -1049,8 +1073,8 @@ def excluir_aluno(id):
             conn.close()
             return jsonify({'mensagem': 'Aluno excluído com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao excluir'}), 500
+            print(f"Erro ao excluir aluno: {e}")
+    return jsonify({'erro': 'Erro ao excluir aluno'}), 500
 
 # ============================================
 # ROTAS DE PROVAS
@@ -1072,7 +1096,8 @@ def listar_provas():
             conn.close()
             return jsonify(provas)
         except Exception as e:
-            print(f"Erro: {e}")
+            print(f"Erro ao listar provas: {e}")
+            traceback.print_exc()
     return jsonify([])
 
 @app.route('/api/provas', methods=['POST'])
@@ -1099,8 +1124,9 @@ def criar_prova():
             conn.close()
             return jsonify({'id': result['id'], 'mensagem': 'Prova criada com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao criar'}), 500
+            print(f"Erro ao criar prova: {e}")
+            traceback.print_exc()
+    return jsonify({'erro': 'Erro ao criar prova'}), 500
 
 @app.route('/api/provas/<int:id>', methods=['GET'])
 def buscar_prova(id):
@@ -1206,8 +1232,8 @@ def excluir_prova(id):
             conn.close()
             return jsonify({'mensagem': 'Prova excluída com sucesso'})
         except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify({'erro': 'Erro ao excluir'}), 500
+            print(f"Erro ao excluir prova: {e}")
+    return jsonify({'erro': 'Erro ao excluir prova'}), 500
 
 # ============================================
 # ROTA DE GABARITOS
@@ -1355,7 +1381,7 @@ def corrigir_com_ia():
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"❌ Erro na correção: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
@@ -1397,7 +1423,8 @@ def corrigir_manual():
             'mensagem': 'Correção manual salva com sucesso'
         })
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"❌ Erro na correção manual: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -1586,7 +1613,8 @@ def dashboard():
                 'total_provas': total_provas
             })
         except Exception as e:
-            print(f"Erro: {e}")
+            print(f"Erro no dashboard: {e}")
+            traceback.print_exc()
     return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
 
 @app.route('/api/dashboard/desempenho', methods=['GET'])
@@ -1638,6 +1666,7 @@ def dashboard_desempenho():
         
     except Exception as e:
         print(f"❌ Erro ao buscar desempenho: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
