@@ -198,7 +198,7 @@
                 </div>
                 <div class="card">
                     <div class="form-row c3">
-                        <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="lista-escola"><option value="">Selecione a escola</option></select></div>
+                        <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="lista-escola" onchange="carregarTurmasLista(this.value)"><option value="">Selecione a escola</option></select></div>
                         <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="lista-serie"><option value="">Todas</option><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div>
                         <div class="form-group"><label class="form-label">Turma</label><select class="form-control" id="lista-turma"><option value="">Selecione a turma</option></select></div>
                     </div>
@@ -207,13 +207,16 @@
                 <div class="card" id="lista-resultado"><div style="text-align:center;padding:20px;color:var(--text3);">Selecione os filtros e clique em "Gerar Lista"</div></div>
             </div>
 
-            <!-- ═══ ALUNOS COM FILTRO POR ESCOLA ═══ -->
+            <!-- ═══ ALUNOS COM FILTRO POR ESCOLA - CORRIGIDO ═══ -->
             <div class="page" id="page-alunos">
                 <div class="page-header">
                     <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Filtrar por escola</p></div>
                     <div class="page-actions">
                         <select class="form-control" style="width:160px;padding:8px 11px;font-size:12px;" id="filtro-escola-alunos" onchange="filtrarAlunosPorEscola(this.value)">
                             <option value="">Todas as escolas</option>
+                        </select>
+                        <select class="form-control" style="width:140px;padding:8px 11px;font-size:12px;" id="filtro-turma-alunos" onchange="carregarAlunos(document.getElementById('filtro-escola-alunos').value)">
+                            <option value="">Todas as turmas</option>
                         </select>
                         <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar aluno..." oninput="filtrarTabela(this,'tb-alunos')"></div>
                         <select class="form-control" style="width:120px;padding:8px 11px;font-size:12px;" id="filtro-serie-alunos" onchange="filtrarAlunosPorSerie(this.value)">
@@ -987,7 +990,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA CARREGAR ESCOLAS NO FILTRO DE ALUNOS
+        // CARREGAR ESCOLAS NO FILTRO DE ALUNOS
         // ============================================
         async function carregarEscolasFiltroAlunos() {
             try {
@@ -1011,43 +1014,86 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA FILTRAR ALUNOS POR ESCOLA
+        // FILTRAR ALUNOS POR ESCOLA - CORRIGIDA
         // ============================================
         async function filtrarAlunosPorEscola(escolaId) {
+            console.log('🔍 Filtrando alunos por escola:', escolaId);
+            
+            // Limpar seleção de turma quando mudar a escola
+            const selectTurma = document.getElementById('filtro-turma-alunos');
+            if (selectTurma) {
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                if (escolaId && escolaId !== '') {
+                    try {
+                        const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                        const turmas = await response.json();
+                        if (turmas && !turmas.erro) {
+                            turmas.forEach(t => {
+                                const opt = document.createElement('option');
+                                opt.value = t.id;
+                                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                                selectTurma.appendChild(opt);
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Erro ao carregar turmas:', e);
+                    }
+                }
+            }
+            
+            // Recarregar alunos com o filtro de escola
             await carregarAlunos(escolaId);
         }
 
         // ============================================
-        // FUNÇÃO PARA FILTRAR ALUNOS POR SÉRIE
+        // FILTRAR ALUNOS POR SÉRIE - CORRIGIDA
         // ============================================
-        function filtrarAlunosPorSerie(serie) {
-            const rows = document.querySelectorAll('#tb-alunos tr');
-            rows.forEach(row => {
-                if (row.querySelector('td[colspan]')) return;
-                const serieCell = row.querySelector('td:nth-child(4)');
-                if (!serieCell) return;
-                const rowSerie = serieCell.textContent.trim();
-                row.style.display = (!serie || rowSerie === serie) ? '' : 'none';
-            });
+        async function filtrarAlunosPorSerie(serie) {
+            console.log('🔍 Filtrando alunos por série:', serie);
+            // Recarregar alunos com todos os filtros ativos
+            const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+            await carregarAlunos(escolaId);
         }
 
         // ============================================
-        // CARREGAR ALUNOS COM FILTRO POR ESCOLA
+        // CARREGAR ALUNOS COM FILTRO POR ESCOLA - CORRIGIDA
         // ============================================
         async function carregarAlunos(escolaId = null) {
             try {
                 let url = API_URL + '/api/alunos';
-                if (escolaId && escolaId !== '') {
-                    url += '?escola_id=' + encodeURIComponent(escolaId);
+                const params = new URLSearchParams();
+                
+                // Adicionar filtro de escola se fornecido
+                if (escolaId && escolaId !== '' && escolaId !== 'null' && escolaId !== 'undefined') {
+                    params.append('escola_id', escolaId);
                 }
-
+                
+                // Adicionar filtro de turma se existir
+                const selectTurma = document.getElementById('filtro-turma-alunos');
+                if (selectTurma && selectTurma.value && selectTurma.value !== '') {
+                    params.append('turma_id', selectTurma.value);
+                }
+                
+                // Adicionar filtro de série
+                const selectSerie = document.getElementById('filtro-serie-alunos');
+                if (selectSerie && selectSerie.value && selectSerie.value !== '') {
+                    params.append('serie', selectSerie.value);
+                }
+                
+                const queryString = params.toString();
+                if (queryString) {
+                    url += '?' + queryString;
+                }
+                
+                console.log('📤 URL da requisição:', url);
+                
                 const response = await fetch(url);
                 const alunos = await response.json();
                 const tbody = document.getElementById('tb-alunos');
                 if (!tbody) return;
 
                 if (!alunos || alunos.length === 0 || alunos.erro) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado com os filtros selecionados</td></tr>';
                 } else {
                     const corMap = {
                         '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
@@ -1061,7 +1107,7 @@
                             '<td><strong>' + a.nome + '</strong></td>' +
                             '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td>' +
                             '<td>' + (a.turma_nome || '—') + '</td>' +
-                            '<td>' + (a.escola_nome || '—') + '</td>' +
+                            '<td><span class="badge badge-gray">' + (a.escola_nome || '—') + '</span></td>' +
                             '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
                             '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
                     }).join('');
@@ -1425,44 +1471,43 @@
         }
 
         // ============================================
-// CARREGAR TURMAS - CORRIGIDA
-// ============================================
-async function carregarTurmas() {
-    try {
-        const response = await fetch(API_URL + '/api/turmas');
-        const turmas = await response.json();
-        const tbody = document.getElementById('tb-turmas');
-        if (!tbody) return;
+        // CARREGAR TURMAS - CORRIGIDA
+        // ============================================
+        async function carregarTurmas() {
+            try {
+                const response = await fetch(API_URL + '/api/turmas');
+                const turmas = await response.json();
+                const tbody = document.getElementById('tb-turmas');
+                if (!tbody) return;
 
-        if (!turmas || turmas.length === 0 || turmas.erro) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
-        } else {
-            const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
-                '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
-                '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
-            
-            tbody.innerHTML = turmas.map((t, i) => {
-                // USANDO O total_alunos DA API
-                const totalAlunos = t.total_alunos || 0;
-                return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
-                    '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
-                    '<td><strong>' + t.nome + '</strong></td>' +
-                    '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
-                    '<td>' + (t.turno || 'Manhã') + '</td>' +
-                    '<td>' + (t.escola_nome || '—') + '</td>' +
-                    '<td>' + (t.professor || '—') + '</td>' +
-                    '<td><span class="badge badge-blue">' + totalAlunos + '</span></td>' +  // ← AQUI ESTÁ A CORREÇÃO
-                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
-            }).join('');
+                if (!turmas || turmas.length === 0 || turmas.erro) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
+                } else {
+                    const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+                        '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+                        '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
+                    
+                    tbody.innerHTML = turmas.map((t, i) => {
+                        const totalAlunos = t.total_alunos || 0;
+                        return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
+                            '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
+                            '<td><strong>' + t.nome + '</strong></td>' +
+                            '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
+                            '<td>' + (t.turno || 'Manhã') + '</td>' +
+                            '<td>' + (t.escola_nome || '—') + '</td>' +
+                            '<td>' + (t.professor || '—') + '</td>' +
+                            '<td><span class="badge badge-blue">' + totalAlunos + '</span></td>' +
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
+                    }).join('');
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar turmas:', erro);
+                const tbody = document.getElementById('tb-turmas');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar turmas</td></tr>';
+                }
+            }
         }
-    } catch (erro) {
-        console.error('Erro ao carregar turmas:', erro);
-        const tbody = document.getElementById('tb-turmas');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar turmas</td></tr>';
-        }
-    }
-}
 
         // ============================================
         // CARREGAR PROVAS
@@ -1908,6 +1953,26 @@ async function carregarTurmas() {
         // ============================================
         // LISTA POR TURMA
         // ============================================
+        async function carregarTurmasLista(escolaId) {
+            const select = document.getElementById('lista-turma');
+            select.innerHTML = '<option value="">Selecione a turma</option>';
+            if (!escolaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
         async function gerarListaTurma() {
             const escolaId = document.getElementById('lista-escola').value;
             const turmaId = document.getElementById('lista-turma').value;
@@ -2869,21 +2934,21 @@ async function carregarTurmas() {
         function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
 
         function carregarUserData() {
-    console.log('🔄 Carregando dados do usuário...');
-    try {
-        const tbody = document.getElementById('u-tb-turmas');
-        if (tbody) {
-            fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
-                if (turmas && turmas.length > 0) {
-                    tbody.innerHTML = turmas.map(t => {
-                        const totalAlunos = t.total_alunos || 0;
-                        return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
-                    }).join('');
+            console.log('🔄 Carregando dados do usuário...');
+            try {
+                const tbody = document.getElementById('u-tb-turmas');
+                if (tbody) {
+                    fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                        if (turmas && turmas.length > 0) {
+                            tbody.innerHTML = turmas.map(t => {
+                                const totalAlunos = t.total_alunos || 0;
+                                return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                            }).join('');
+                        }
+                    }).catch(e => console.error(e));
                 }
-            }).catch(e => console.error(e));
+            } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
         }
-    } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
-}
 
         // ============================================
         // DOM READY
