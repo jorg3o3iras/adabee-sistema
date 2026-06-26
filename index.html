@@ -1862,188 +1862,209 @@
             return 'Alto';
         }
 
-        // ═══════════════════════════════ RESULTADOS - COM FILTROS E GRÁFICOS ═══════════════════════════════
-        async function carregarFiltrosResultados() {
-            try {
-                const respEscolas = await fetch(API_URL + '/api/escolas');
-                const escolas = await respEscolas.json();
-                const selectEscola = document.getElementById('filtro-escola');
-                if (selectEscola && escolas && !escolas.erro) {
-                    const current = selectEscola.value;
-                    selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
-                    escolas.forEach(e => {
-                        const opt = document.createElement('option');
-                        opt.value = e.id;
-                        opt.textContent = e.nome;
-                        selectEscola.appendChild(opt);
-                    });
-                    if (current) selectEscola.value = current;
-                }
+        // ============================================
+// RESULTADOS - COM FILTROS E GRÁFICOS - CORRIGIDO
+// ============================================
 
-                const respTurmas = await fetch(API_URL + '/api/turmas');
-                const turmas = await respTurmas.json();
-                const selectTurma = document.getElementById('filtro-turma');
-                if (selectTurma && turmas && !turmas.erro) {
-                    const current = selectTurma.value;
-                    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        selectTurma.appendChild(opt);
-                    });
-                    if (current) selectTurma.value = current;
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar filtros:', erro);
-            }
+async function carregarFiltrosResultados() {
+    try {
+        const respEscolas = await fetch(API_URL + '/api/escolas');
+        const escolas = await respEscolas.json();
+        const selectEscola = document.getElementById('filtro-escola');
+        if (selectEscola && escolas && !escolas.erro) {
+            const current = selectEscola.value;
+            selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                selectEscola.appendChild(opt);
+            });
+            if (current) selectEscola.value = current;
         }
 
-        // Função para carregar turmas com base na escola selecionada
-        async function carregarTurmasPorEscola(escolaId) {
-            const selectTurma = document.getElementById('filtro-turma');
-            if (!selectTurma) return;
-
+        const respTurmas = await fetch(API_URL + '/api/turmas');
+        const turmas = await respTurmas.json();
+        const selectTurma = document.getElementById('filtro-turma');
+        if (selectTurma && turmas && !turmas.erro) {
+            const current = selectTurma.value;
             selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                selectTurma.appendChild(opt);
+            });
+            if (current) selectTurma.value = current;
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar filtros:', erro);
+    }
+}
 
-            if (!escolaId) {
-                try {
-                    const respTurmas = await fetch(API_URL + '/api/turmas');
-                    const turmas = await respTurmas.json();
-                    if (turmas && !turmas.erro) {
-                        turmas.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            selectTurma.appendChild(opt);
-                        });
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar turmas:', erro);
-                }
-            } else {
-                try {
-                    const respTurmas = await fetch(API_URL + '/api/turmas?escola_id=' + escolaId);
-                    const turmas = await respTurmas.json();
-                    if (turmas && !turmas.erro) {
-                        turmas.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            selectTurma.appendChild(opt);
-                        });
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar turmas da escola:', erro);
-                }
+// Função para carregar turmas com base na escola selecionada - CORRIGIDA
+async function carregarTurmasPorEscola(escolaId) {
+    const selectTurma = document.getElementById('filtro-turma');
+    if (!selectTurma) return;
+
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+
+    try {
+        const respTurmas = await fetch(API_URL + '/api/turmas');
+        const turmas = await respTurmas.json();
+        if (turmas && !turmas.erro) {
+            // Filtrar turmas pela escola selecionada, ou mostrar todas se nenhuma escola for selecionada
+            const turmasFiltradas = escolaId && escolaId !== '' 
+                ? turmas.filter(t => t.escola_id == escolaId) 
+                : turmas;
+            
+            turmasFiltradas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                selectTurma.appendChild(opt);
+            });
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar turmas:', erro);
+    }
+
+    // Dispara o filtro automaticamente após carregar as turmas
+    carregarResultadosComFiltros();
+}
+
+// Função para carregar resultados com filtros - CORRIGIDA
+async function carregarResultadosComFiltros() {
+    try {
+        const escolaId = document.getElementById('filtro-escola').value;
+        const serie = document.getElementById('filtro-serie').value;
+        const turmaId = document.getElementById('filtro-turma').value;
+
+        // Construir URL com parâmetros corretos
+        let url = API_URL + '/api/historico';
+        const params = new URLSearchParams();
+        if (escolaId && escolaId !== '') params.append('escola', escolaId);
+        if (serie && serie !== '') params.append('serie', serie);
+        if (turmaId && turmaId !== '') params.append('turma', turmaId);
+        if (params.toString()) url += '?' + params.toString();
+
+        console.log('🔍 URL com filtros:', url); // Debug
+
+        const response = await fetch(url);
+        const historico = await response.json();
+        const tbody = document.getElementById('tb-resultados-filtrado');
+        if (!tbody) return;
+
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML =
+                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+            document.getElementById('res-total-filtrado').textContent = '0';
+            document.getElementById('res-aprovados-filtrado').textContent = '0';
+            document.getElementById('res-recuperacao-filtrado').textContent = '0';
+            document.getElementById('res-media-filtrado').textContent = '0';
+            atualizarGraficosConceitos([]);
+            return;
+        }
+
+        const dadosCorrigidos = historico.map(item => ({
+            ...item,
+            nota: parseFloat(item.nota) || 0,
+            acertos: parseInt(item.acertos) || 0,
+            total_questoes: parseInt(item.total_questoes) || 20
+        }));
+
+        let total = dadosCorrigidos.length;
+        let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
+        let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
+        let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
+
+        document.getElementById('res-total-filtrado').textContent = total;
+        document.getElementById('res-aprovados-filtrado').textContent = aprovados;
+        document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
+        document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
+        document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+
+        dadosCorrigidos.sort((a, b) => b.nota - a.nota);
+
+        atualizarGraficosConceitos(dadosCorrigidos);
+
+        if (total === 0) {
+            tbody.innerHTML =
+                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = dadosCorrigidos.map((item, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            const nota = item.nota || 0;
+            const acertos = item.acertos || 0;
+            const totalQuestoes = item.total_questoes || 20;
+            const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+            const conceito = calcularConceito(porcentagem);
+
+            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
+            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+
+            const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
+
+            const nome = item.aluno_nome || 'Aluno';
+            const serieAluno = item.serie || '—';
+            const correcaoId = item.id;
+
+            return '<tr data-correcao-id="' + correcaoId + '">' +
+                '<td>' + medalha + '</td>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td><strong>' + nome + '</strong></td>' +
+                '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
+                '<td>' + acertos + '</td>' +
+                '<td><strong>' + porcentagem + '%</strong></td>' +
+                '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
+                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
+                '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                '<td>' +
+                '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' +
+                correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">' +
+                '🗑️' +
+                '</button>' +
+                '</td>' +
+                '</tr>';
+        }).join('');
+
+    } catch (erro) {
+        console.error('Erro ao carregar resultados:', erro);
+        const tbody = document.getElementById('tb-resultados-filtrado');
+        if (tbody) {
+            tbody.innerHTML =
+                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+        }
+    }
+}
+
+function limparFiltrosResultados() {
+    document.getElementById('filtro-escola').value = '';
+    document.getElementById('filtro-serie').value = '';
+    
+    // Recarregar todas as turmas
+    const selectTurma = document.getElementById('filtro-turma');
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+    
+    // Carregar todas as turmas novamente
+    fetch(API_URL + '/api/turmas')
+        .then(r => r.json())
+        .then(turmas => {
+            if (turmas && !turmas.erro) {
+                turmas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    selectTurma.appendChild(opt);
+                });
             }
-
             carregarResultadosComFiltros();
-        }
-
-        async function carregarResultadosComFiltros() {
-            try {
-                const escolaId = document.getElementById('filtro-escola').value;
-                const serie = document.getElementById('filtro-serie').value;
-                const turmaId = document.getElementById('filtro-turma').value;
-
-                let url = API_URL + '/api/historico';
-                const params = new URLSearchParams();
-                if (escolaId) params.append('escola_id', escolaId);
-                if (serie) params.append('serie', serie);
-                if (turmaId) params.append('turma_id', turmaId);
-                if (params.toString()) url += '?' + params.toString();
-
-                const response = await fetch(url);
-                const historico = await response.json();
-                const tbody = document.getElementById('tb-resultados-filtrado');
-                if (!tbody) return;
-
-                if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML =
-                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-                    document.getElementById('res-total-filtrado').textContent = '0';
-                    document.getElementById('res-aprovados-filtrado').textContent = '0';
-                    document.getElementById('res-recuperacao-filtrado').textContent = '0';
-                    document.getElementById('res-media-filtrado').textContent = '0';
-                    atualizarGraficosConceitos([]);
-                    return;
-                }
-
-                const dadosCorrigidos = historico.map(item => ({
-                    ...item,
-                    nota: parseFloat(item.nota) || 0,
-                    acertos: parseInt(item.acertos) || 0,
-                    total_questoes: parseInt(item.total_questoes) || 20
-                }));
-
-                let total = dadosCorrigidos.length;
-                let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
-                let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
-                let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
-
-                document.getElementById('res-total-filtrado').textContent = total;
-                document.getElementById('res-aprovados-filtrado').textContent = aprovados;
-                document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
-                document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
-                document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
-
-                dadosCorrigidos.sort((a, b) => b.nota - a.nota);
-
-                atualizarGraficosConceitos(dadosCorrigidos);
-
-                if (total === 0) {
-                    tbody.innerHTML =
-                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = dadosCorrigidos.map((item, index) => {
-                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-                    const nota = item.nota || 0;
-                    const acertos = item.acertos || 0;
-                    const totalQuestoes = item.total_questoes || 20;
-                    const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-                    const conceito = calcularConceito(porcentagem);
-
-                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
-                    const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
-                    const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
-
-                    const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
-
-                    const nome = item.aluno_nome || 'Aluno';
-                    const serieAluno = item.serie || '—';
-                    const correcaoId = item.id;
-
-                    return '<tr data-correcao-id="' + correcaoId + '">' +
-                        '<td>' + medalha + '</td>' +
-                        '<td>' + (index + 1) + '</td>' +
-                        '<td><strong>' + nome + '</strong></td>' +
-                        '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
-                        '<td>' + acertos + '</td>' +
-                        '<td><strong>' + porcentagem + '%</strong></td>' +
-                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
-                        '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
-                        '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
-                        '<td>' +
-                        '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' +
-                        correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">' +
-                        '🗑️' +
-                        '</button>' +
-                        '</td>' +
-                        '</tr>';
-                }).join('');
-
-            } catch (erro) {
-                console.error('Erro ao carregar resultados:', erro);
-                const tbody = document.getElementById('tb-resultados-filtrado');
-                if (tbody) {
-                    tbody.innerHTML =
-                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
-                }
-            }
-        }
+        })
+        .catch(e => console.error('Erro ao recarregar turmas:', e));
+}
 
         // ═══════════════════════════════ ATUALIZAR GRÁFICOS DE CONCEITOS ═══════════════════════════════
         function atualizarGraficosConceitos(dados) {
