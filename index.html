@@ -167,7 +167,7 @@
                 </div>
             </div>
 
-            <!-- ═══ TURMAS ═══ -->
+            <!-- ═══ TURMAS - CORRIGIDA COM BOTÃO LISTAR ALUNOS ═══ -->
             <div class="page" id="page-turmas">
                 <div class="page-header">
                     <div><div class="page-title">👥 Turmas</div><p class="page-sub">1º Ano ao 9º Ano do Ensino Fundamental</p></div>
@@ -207,10 +207,10 @@
                 <div class="card" id="lista-resultado"><div style="text-align:center;padding:20px;color:var(--text3);">Selecione os filtros e clique em "Gerar Lista"</div></div>
             </div>
 
-            <!-- ═══ ALUNOS COM FILTRO POR ESCOLA - CORRIGIDO ═══ -->
+            <!-- ═══ ALUNOS COM FILTRO POR ESCOLA E TURMA ═══ -->
             <div class="page" id="page-alunos">
                 <div class="page-header">
-                    <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Filtrar por escola</p></div>
+                    <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Filtrar por escola, turma e série</p></div>
                     <div class="page-actions">
                         <select class="form-control" style="width:160px;padding:8px 11px;font-size:12px;" id="filtro-escola-alunos" onchange="filtrarAlunosPorEscola(this.value)">
                             <option value="">Todas as escolas</option>
@@ -990,6 +990,82 @@
         }
 
         // ============================================
+        // FUNÇÃO PARA LISTAR ALUNOS DE UMA TURMA ESPECÍFICA
+        // ============================================
+        function verAlunosDaTurma(turmaId) {
+            console.log('📋 Ver alunos da turma ID:', turmaId);
+            
+            // Ir para página de alunos
+            go('alunos');
+            
+            // Aguardar a página carregar e então aplicar o filtro
+            setTimeout(() => {
+                const selectTurma = document.getElementById('filtro-turma-alunos');
+                if (selectTurma) {
+                    // Tentar encontrar e selecionar a turma
+                    let encontrou = false;
+                    for (let i = 0; i < selectTurma.options.length; i++) {
+                        if (selectTurma.options[i].value == turmaId) {
+                            selectTurma.selectedIndex = i;
+                            encontrou = true;
+                            break;
+                        }
+                    }
+                    
+                    if (encontrou) {
+                        // Disparar evento para carregar os alunos
+                        selectTurma.dispatchEvent(new Event('change'));
+                        showToast('📋 Mostrando alunos da turma selecionada', 'success');
+                    } else {
+                        // Se não encontrou, tentar recarregar as turmas primeiro
+                        const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                        if (escolaId) {
+                            carregarTurmasFiltro(escolaId, turmaId);
+                        } else {
+                            showToast('⚠️ Selecione uma escola primeiro para ver as turmas', 'warning');
+                        }
+                    }
+                }
+            }, 300);
+        }
+        
+        // Função auxiliar para carregar turmas no filtro e selecionar uma específica
+        async function carregarTurmasFiltro(escolaId, turmaIdSelecionada) {
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                const selectTurma = document.getElementById('filtro-turma-alunos');
+                
+                if (selectTurma && turmas && !turmas.erro) {
+                    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                    
+                    // Selecionar a turma específica
+                    let encontrou = false;
+                    for (let i = 0; i < selectTurma.options.length; i++) {
+                        if (selectTurma.options[i].value == turmaIdSelecionada) {
+                            selectTurma.selectedIndex = i;
+                            encontrou = true;
+                            break;
+                        }
+                    }
+                    
+                    if (encontrou) {
+                        selectTurma.dispatchEvent(new Event('change'));
+                        showToast('📋 Mostrando alunos da turma selecionada', 'success');
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        // ============================================
         // CARREGAR ESCOLAS NO FILTRO DE ALUNOS
         // ============================================
         async function carregarEscolasFiltroAlunos() {
@@ -1014,7 +1090,7 @@
         }
 
         // ============================================
-        // FILTRAR ALUNOS POR ESCOLA - CORRIGIDA
+        // FILTRAR ALUNOS POR ESCOLA
         // ============================================
         async function filtrarAlunosPorEscola(escolaId) {
             console.log('🔍 Filtrando alunos por escola:', escolaId);
@@ -1046,17 +1122,16 @@
         }
 
         // ============================================
-        // FILTRAR ALUNOS POR SÉRIE - CORRIGIDA
+        // FILTRAR ALUNOS POR SÉRIE
         // ============================================
         async function filtrarAlunosPorSerie(serie) {
             console.log('🔍 Filtrando alunos por série:', serie);
-            // Recarregar alunos com todos os filtros ativos
             const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
             await carregarAlunos(escolaId);
         }
 
         // ============================================
-        // CARREGAR ALUNOS COM FILTRO POR ESCOLA - CORRIGIDA
+        // CARREGAR ALUNOS COM FILTRO
         // ============================================
         async function carregarAlunos(escolaId = null) {
             try {
@@ -1471,7 +1546,7 @@
         }
 
         // ============================================
-        // CARREGAR TURMAS - CORRIGIDA
+        // CARREGAR TURMAS - CORRIGIDA COM BOTÃO 📋
         // ============================================
         async function carregarTurmas() {
             try {
@@ -1497,7 +1572,11 @@
                             '<td>' + (t.escola_nome || '—') + '</td>' +
                             '<td>' + (t.professor || '—') + '</td>' +
                             '<td><span class="badge badge-blue">' + totalAlunos + '</span></td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
+                            '<td><div class="btn-group">' +
+                            '<button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button>' +
+                            '<button class="btn btn-green btn-sm" onclick="verAlunosDaTurma(' + t.id + ')" title="Lista de Alunos">📋</button>' +
+                            '<button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button>' +
+                            '</div></td></tr>';
                     }).join('');
                 }
             } catch (erro) {
