@@ -858,25 +858,62 @@ def excluir_turma(id):
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
-                FROM alunos a
-                LEFT JOIN turmas t ON a.turma_id = t.id
-                LEFT JOIN escolas e ON t.escola_id = e.id
-                ORDER BY a.numero_chamada, a.nome
-            """)
-            alunos = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(alunos)
-        except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify([])
-
+    """Lista alunos com filtro por escola, turma e série"""
+    try:
+        # Obter parâmetros de filtro
+        escola_id = request.args.get('escola_id')
+        turma_id = request.args.get('turma_id')
+        serie = request.args.get('serie')
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify([])
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Construir a query com filtros
+        query = """
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+        """
+        
+        conditions = []
+        params = []
+        
+        # Filtrar por escola
+        if escola_id and escola_id != '':
+            conditions.append("e.id = %s")
+            params.append(int(escola_id))
+        
+        # Filtrar por turma
+        if turma_id and turma_id != '':
+            conditions.append("t.id = %s")
+            params.append(int(turma_id))
+        
+        # Filtrar por série
+        if serie and serie != '':
+            conditions.append("t.serie = %s")
+            params.append(serie)
+        
+        # Adicionar WHERE se houver condições
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        
+        query += " ORDER BY a.numero_chamada, a.nome"
+        
+        cur.execute(query, params)
+        alunos = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify(alunos)
+        
+    except Exception as e:
+        print(f"❌ Erro ao listar alunos: {e}")
+        traceback.print_exc()
+        return jsonify([])
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
     data = request.json
