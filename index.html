@@ -1425,37 +1425,44 @@
         }
 
         // ============================================
-        // CARREGAR TURMAS
-        // ============================================
-        async function carregarTurmas() {
-            try {
-                const response = await fetch(API_URL + '/api/turmas');
-                const turmas = await response.json();
-                const tbody = document.getElementById('tb-turmas');
-                if (!tbody) return;
+// CARREGAR TURMAS - CORRIGIDA
+// ============================================
+async function carregarTurmas() {
+    try {
+        const response = await fetch(API_URL + '/api/turmas');
+        const turmas = await response.json();
+        const tbody = document.getElementById('tb-turmas');
+        if (!tbody) return;
 
-                if (!turmas || turmas.length === 0 || turmas.erro) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
-                } else {
-                    const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
-                        '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
-                        '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
-                    tbody.innerHTML = turmas.map((t, i) => {
-                        return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
-                            '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
-                            '<td><strong>' + t.nome + '</strong></td>' +
-                            '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
-                            '<td>' + (t.turno || 'Manhã') + '</td>' +
-                            '<td>' + (t.escola_nome || '—') + '</td>' +
-                            '<td>' + (t.professor || '—') + '</td>' +
-                            '<td>0</td>' +
-                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
-                    }).join('');
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar turmas:', erro);
-            }
+        if (!turmas || turmas.length === 0 || turmas.erro) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
+        } else {
+            const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+                '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+                '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
+            
+            tbody.innerHTML = turmas.map((t, i) => {
+                // USANDO O total_alunos DA API
+                const totalAlunos = t.total_alunos || 0;
+                return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '">' +
+                    '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
+                    '<td><strong>' + t.nome + '</strong></td>' +
+                    '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
+                    '<td>' + (t.turno || 'Manhã') + '</td>' +
+                    '<td>' + (t.escola_nome || '—') + '</td>' +
+                    '<td>' + (t.professor || '—') + '</td>' +
+                    '<td><span class="badge badge-blue">' + totalAlunos + '</span></td>' +  // ← AQUI ESTÁ A CORREÇÃO
+                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')" title="Lista de Alunos">📋</button><button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button></div></td></tr>';
+            }).join('');
         }
+    } catch (erro) {
+        console.error('Erro ao carregar turmas:', erro);
+        const tbody = document.getElementById('tb-turmas');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar turmas</td></tr>';
+        }
+    }
+}
 
         // ============================================
         // CARREGAR PROVAS
@@ -2862,18 +2869,21 @@
         function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
 
         function carregarUserData() {
-            console.log('🔄 Carregando dados do usuário...');
-            try {
-                const tbody = document.getElementById('u-tb-turmas');
-                if (tbody) {
-                    fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
-                        if (turmas && turmas.length > 0) {
-                            tbody.innerHTML = turmas.map(t => { return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td>0</td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>'; }).join('');
-                        }
-                    }).catch(e => console.error(e));
+    console.log('🔄 Carregando dados do usuário...');
+    try {
+        const tbody = document.getElementById('u-tb-turmas');
+        if (tbody) {
+            fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                if (turmas && turmas.length > 0) {
+                    tbody.innerHTML = turmas.map(t => {
+                        const totalAlunos = t.total_alunos || 0;
+                        return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                    }).join('');
                 }
-            } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
+            }).catch(e => console.error(e));
         }
+    } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
+}
 
         // ============================================
         // DOM READY
