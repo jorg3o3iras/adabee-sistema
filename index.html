@@ -1901,74 +1901,87 @@
 
         // Função para carregar turmas com base na escola selecionada
         async function carregarTurmasPorEscola(escolaId) {
-            const selectTurma = document.getElementById('filtro-turma');
-            if (!selectTurma) return;
+    const selectTurma = document.getElementById('filtro-turma');
+    if (!selectTurma) return;
 
-            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
 
-            if (!escolaId) {
-                try {
-                    const respTurmas = await fetch(API_URL + '/api/turmas');
-                    const turmas = await respTurmas.json();
-                    if (turmas && !turmas.erro) {
-                        turmas.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            selectTurma.appendChild(opt);
-                        });
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar turmas:', erro);
-                }
-            } else {
-                try {
-                    const respTurmas = await fetch(API_URL + '/api/turmas?escola_id=' + escolaId);
-                    const turmas = await respTurmas.json();
-                    if (turmas && !turmas.erro) {
-                        turmas.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            selectTurma.appendChild(opt);
-                        });
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar turmas da escola:', erro);
-                }
+    if (!escolaId || escolaId === '') {
+        // Carregar todas as turmas
+        try {
+            const respTurmas = await fetch(API_URL + '/api/turmas');
+            const turmas = await respTurmas.json();
+            if (turmas && !turmas.erro) {
+                turmas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    selectTurma.appendChild(opt);
+                });
             }
-
-            carregarResultadosComFiltros();
+        } catch (erro) {
+            console.error('Erro ao carregar turmas:', erro);
         }
+    } else {
+        try {
+            const respTurmas = await fetch(API_URL + '/api/turmas');
+            const turmas = await respTurmas.json();
+            if (turmas && !turmas.erro) {
+                // Filtrar turmas pela escola selecionada
+                const turmasFiltradas = turmas.filter(t => t.escola_id == escolaId);
+                turmasFiltradas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    selectTurma.appendChild(opt);
+                });
+            }
+        } catch (erro) {
+            console.error('Erro ao carregar turmas da escola:', erro);
+        }
+    }
+
+    // Dispara o filtro automaticamente após carregar as turmas
+    carregarResultadosComFiltros();
+}
 
         async function carregarResultadosComFiltros() {
-            try {
-                const escolaId = document.getElementById('filtro-escola').value;
-                const serie = document.getElementById('filtro-serie').value;
-                const turmaId = document.getElementById('filtro-turma').value;
+    try {
+        const escolaId = document.getElementById('filtro-escola').value;
+        const serie = document.getElementById('filtro-serie').value;
+        const turmaId = document.getElementById('filtro-turma').value;
 
-                let url = API_URL + '/api/historico';
-                const params = new URLSearchParams();
-                if (escolaId) params.append('escola_id', escolaId);
-                if (serie) params.append('serie', serie);
-                if (turmaId) params.append('turma_id', turmaId);
-                if (params.toString()) url += '?' + params.toString();
+        let url = API_URL + '/api/historico';
+        const params = new URLSearchParams();
+        if (escolaId) params.append('escola', escolaId);
+        if (serie) params.append('serie', serie);
+        if (turmaId) params.append('turma', turmaId);
+        if (params.toString()) url += '?' + params.toString();
 
-                const response = await fetch(url);
-                const historico = await response.json();
-                const tbody = document.getElementById('tb-resultados-filtrado');
-                if (!tbody) return;
+        console.log('🔍 URL com filtros:', url); // Debug
 
-                if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML =
-                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-                    document.getElementById('res-total-filtrado').textContent = '0';
-                    document.getElementById('res-aprovados-filtrado').textContent = '0';
-                    document.getElementById('res-recuperacao-filtrado').textContent = '0';
-                    document.getElementById('res-media-filtrado').textContent = '0';
-                    atualizarGraficosConceitos([]);
-                    return;
-                }
+        const response = await fetch(url);
+        const historico = await response.json();
+        const tbody = document.getElementById('tb-resultados-filtrado');
+        if (!tbody) return;
+
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML =
+                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+            document.getElementById('res-total-filtrado').textContent = '0';
+            document.getElementById('res-aprovados-filtrado').textContent = '0';
+            document.getElementById('res-recuperacao-filtrado').textContent = '0';
+            document.getElementById('res-media-filtrado').textContent = '0';
+            atualizarGraficosConceitos([]);
+            return;
+        }
+
+        // ... resto do código permanece igual
+    } catch (erro) {
+        console.error('Erro ao carregar resultados:', erro);
+        // ... resto do código
+    }
+}
 
                 const dadosCorrigidos = historico.map(item => ({
                     ...item,
@@ -2147,11 +2160,29 @@
         }
 
         function limparFiltrosResultados() {
-            document.getElementById('filtro-escola').value = '';
-            document.getElementById('filtro-serie').value = '';
-            document.getElementById('filtro-turma').innerHTML = '<option value="">Todas as turmas</option>';
+    document.getElementById('filtro-escola').value = '';
+    document.getElementById('filtro-serie').value = '';
+    
+    // Recarregar todas as turmas
+    const selectTurma = document.getElementById('filtro-turma');
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+    
+    // Carregar todas as turmas novamente
+    fetch(API_URL + '/api/turmas')
+        .then(r => r.json())
+        .then(turmas => {
+            if (turmas && !turmas.erro) {
+                turmas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    selectTurma.appendChild(opt);
+                });
+            }
             carregarResultadosComFiltros();
-        }
+        })
+        .catch(e => console.error('Erro ao recarregar turmas:', e));
+}
 
         function exportarResultadosFiltrados() {
             showToast('📥 Exportando resultados filtrados...', 'info');
