@@ -722,12 +722,12 @@ def excluir_escola(id):
     return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
-# ROTAS DE TURMAS
+# ROTAS DE TURMAS - CORRIGIDA
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
-@app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
+    """Lista todas as turmas com contagem de alunos"""
     conn = get_db_connection()
     if conn:
         try:
@@ -788,10 +788,15 @@ def buscar_turma(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT t.*, e.nome as escola_nome 
+            SELECT 
+                t.*, 
+                e.nome as escola_nome,
+                COUNT(a.id) as total_alunos
             FROM turmas t 
             LEFT JOIN escolas e ON t.escola_id = e.id 
+            LEFT JOIN alunos a ON a.turma_id = t.id
             WHERE t.id = %s
+            GROUP BY t.id, e.nome
         """, (id,))
         turma = cur.fetchone()
         cur.close()
@@ -882,7 +887,7 @@ def excluir_turma(id):
     return jsonify({'erro': 'Erro ao excluir turma'}), 500
 
 # ============================================
-# ROTAS DE ALUNOS - CORRIGIDA COM FILTRO POR ESCOLA
+# ROTAS DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -900,7 +905,7 @@ def listar_alunos():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Construir a query com filtros - INCLUINDO escola_id via JOIN
+        # Construir a query com filtros
         query = """
             SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, 
                    e.id as escola_id, e.nome as escola_nome
@@ -912,7 +917,7 @@ def listar_alunos():
         conditions = []
         params = []
         
-        # Filtrar por escola (AGORA FUNCIONA porque usa e.id via JOIN)
+        # Filtrar por escola
         if escola_id and escola_id != '':
             conditions.append("e.id = %s")
             params.append(int(escola_id))
@@ -1486,7 +1491,7 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO - CORRIGIDA COM SUPORTE A FILTROS
+# ROTA DE HISTÓRICO
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
