@@ -1414,32 +1414,71 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO
+# ROTA DE HISTÓRICO - CORRIGIDA COM SUPORTE A FILTROS
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
 def listar_historico():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT h.*, a.nome as aluno_nome, p.titulo as prova_titulo,
-                       t.serie, t.nome as turma_nome, e.nome as escola_nome
-                FROM historico h
-                LEFT JOIN alunos a ON h.aluno_id = a.id
-                LEFT JOIN provas p ON h.prova_id = p.id
-                LEFT JOIN turmas t ON p.turma_id = t.id
-                LEFT JOIN escolas e ON t.escola_id = e.id
-                ORDER BY h.data_correcao DESC
-            """)
-            historico = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(historico)
-        except Exception as e:
-            print(f"Erro: {e}")
-    return jsonify([])
+    """Lista histórico com suporte a filtros por escola, série e turma"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        # Obter parâmetros de filtro
+        escola_id = request.args.get('escola')
+        serie = request.args.get('serie')
+        turma_id = request.args.get('turma')
+        
+        query = """
+            SELECT h.*, a.nome as aluno_nome, p.titulo as prova_titulo,
+                   t.serie, t.nome as turma_nome, e.nome as escola_nome,
+                   t.id as turma_id, e.id as escola_id,
+                   p.quantidade_questoes as total_questoes
+            FROM historico h
+            LEFT JOIN alunos a ON h.aluno_id = a.id
+            LEFT JOIN provas p ON h.prova_id = p.id
+            LEFT JOIN turmas t ON p.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+        """
+        
+        conditions = []
+        params = []
+        
+        if turma_id and turma_id != '':
+            conditions.append("t.id = %s")
+            params.append(int(turma_id))
+        
+        if escola_id and escola_id != '':
+            conditions.append("e.id = %s")
+            params.append(int(escola_id))
+        
+        if serie and serie != '':
+            conditions.append("t.serie = %s")
+            params.append(serie)
+        
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        
+        query += " ORDER BY h.data_correcao DESC"
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(query, params)
+        historico = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Adicionar total_questoes aos itens que não tem
+        for item in historico:
+            if 'total_questoes' not in item or item['total_questoes'] is None:
+                item['total_questoes'] = 20  # valor padrão
+        
+        return jsonify(historico)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar histórico: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/historico/<int:id>', methods=['DELETE'])
 def excluir_correcao(id):
