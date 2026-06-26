@@ -726,14 +726,21 @@ def excluir_escola(id):
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
+@app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("""
-                SELECT t.*, e.nome as escola_nome 
-                FROM turmas t LEFT JOIN escolas e ON t.escola_id = e.id 
+                SELECT 
+                    t.*, 
+                    e.nome as escola_nome,
+                    COUNT(a.id) as total_alunos
+                FROM turmas t 
+                LEFT JOIN escolas e ON t.escola_id = e.id 
+                LEFT JOIN alunos a ON a.turma_id = t.id
+                GROUP BY t.id, e.nome
                 ORDER BY t.nome
             """)
             turmas = cur.fetchall()
