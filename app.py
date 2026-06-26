@@ -853,7 +853,7 @@ def excluir_turma(id):
     return jsonify({'erro': 'Erro ao excluir'}), 500
 
 # ============================================
-# ROTAS DE ALUNOS
+# ROTAS DE ALUNOS - CORRIGIDA COM FILTRO POR ESCOLA
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -914,6 +914,7 @@ def listar_alunos():
         print(f"❌ Erro ao listar alunos: {e}")
         traceback.print_exc()
         return jsonify([])
+
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
     data = request.json
