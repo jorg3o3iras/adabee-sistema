@@ -4,7 +4,859 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CorrigePro — Sistema de Correção de Provas</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ============================================
+           CSS COMPLETO - CORRIGEPRO
+           ============================================ */
+        :root {
+            --bg: #0b0e17;
+            --bg2: #111827;
+            --surface: #1a2234;
+            --surface2: #1f2a3f;
+            --border: #2a3a55;
+            --border2: #3a4a6a;
+            --text: #e8edf5;
+            --text2: #94a3b8;
+            --text3: #64748b;
+            --blue: #3b82f6;
+            --cyan: #06b6d4;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+            --grad-blue: linear-gradient(135deg, #3b82f6, #06b6d4);
+            --grad-green: linear-gradient(135deg, #10b981, #059669);
+            --grad-orange: linear-gradient(135deg, #f59e0b, #d97706);
+            --grad-red: linear-gradient(135deg, #ef4444, #dc2626);
+            --grad-purple: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            --r: 12px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+            --transition: all 0.25s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg2); }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+        /* ===== LOGIN ===== */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            background: var(--bg);
+            padding: 20px;
+        }
+        .login-bg {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .login-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.25;
+            animation: floatBlob 12s ease-in-out infinite alternate;
+        }
+        .lb1 { width: 400px; height: 400px; background: var(--blue); top: -100px; left: -100px; }
+        .lb2 { width: 350px; height: 350px; background: var(--purple); bottom: -80px; right: -80px; animation-delay: 2s; }
+        .lb3 { width: 250px; height: 250px; background: var(--cyan); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: 4s; }
+        @keyframes floatBlob {
+            0% { transform: translate(0,0) scale(1); }
+            100% { transform: translate(30px,-30px) scale(1.1); }
+        }
+
+        .login-card {
+            position: relative;
+            z-index: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 36px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+        .login-logo { text-align: center; margin-bottom: 28px; }
+        .login-logo .l-icon { font-size: 48px; margin-bottom: 8px; }
+        .login-logo h1 { font-size: 28px; font-weight: 900; background: var(--grad-blue); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .login-logo p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+        .login-tabs { display: flex; gap: 8px; margin-bottom: 24px; background: var(--bg2); border-radius: 10px; padding: 4px; }
+        .login-tab { flex: 1; padding: 10px; border: none; border-radius: 8px; background: transparent; color: var(--text2); font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition); }
+        .login-tab.active { background: var(--blue); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+        .login-tab:hover:not(.active) { color: var(--text); }
+
+        .lf-group { margin-bottom: 16px; }
+        .lf-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+        .lf-input { width: 100%; padding: 12px 16px; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; transition: var(--transition); }
+        .lf-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+        .lf-input::placeholder { color: var(--text3); }
+
+        .btn-login { width: 100%; padding: 14px; background: var(--grad-blue); border: none; border-radius: 12px; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; transition: var(--transition); box-shadow: 0 4px 16px rgba(59,130,246,0.25); }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,0.35); }
+
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+        /* ===== APP ===== */
+        #app { display: none; min-height: 100vh; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 260px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .sidebar::-webkit-scrollbar { width: 3px; }
+
+        .sb-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 18px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sb-logo { font-size: 28px; }
+        .sb-brand-name { font-size: 20px; font-weight: 800; }
+        .sb-brand-name span { color: var(--blue); }
+
+        .sb-nav { flex: 1; padding: 12px 0; }
+        .sb-section { padding: 12px 20px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; }
+        .sb-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: var(--text2);
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .sb-item:hover { background: var(--bg2); color: var(--text); }
+        .sb-item.active { background: var(--bg2); color: var(--blue); border-left-color: var(--blue); }
+        .sb-item .sb-ico { font-size: 18px; width: 24px; text-align: center; }
+        .sb-badge { background: var(--purple); color: #fff; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: auto; }
+
+        .sb-footer {
+            border-top: 1px solid var(--border);
+            padding: 14px 18px 18px;
+            margin-top: auto;
+        }
+        .sb-user { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .sb-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--grad-blue); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #fff; flex-shrink: 0; }
+        .sb-uname { font-weight: 700; font-size: 14px; }
+        .sb-urole { font-size: 11px; color: var(--text3); }
+        .sb-logout { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+        .sb-logout:hover { background: rgba(239,68,68,0.1); border-color: var(--red); color: var(--red); }
+
+        /* Menu Toggle */
+        .menu-toggle {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 1100;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .menu-toggle:hover { background: var(--bg2); }
+        .menu-toggle.active { left: 270px; }
+
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+            display: none;
+            backdrop-filter: blur(4px);
+        }
+        .menu-overlay.show { display: block; }
+
+        /* ===== CONTENT ===== */
+        .content {
+            margin-left: 260px;
+            padding: 24px 28px 40px;
+            min-height: 100vh;
+            flex: 1;
+        }
+
+        /* ===== PAGES ===== */
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .page-title { font-size: 26px; font-weight: 800; }
+        .page-sub { font-size: 14px; color: var(--text2); margin-top: 2px; }
+        .page-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 20px 22px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        .card:hover { border-color: var(--border2); }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .card-title { font-size: 16px; font-weight: 700; }
+        .card-glow-blue { border-color: rgba(59,130,246,0.3); }
+        .card-glow-green { border-color: rgba(16,185,129,0.3); }
+        .card-glow-purple { border-color: rgba(139,92,246,0.3); }
+
+        /* ===== STATS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: var(--transition);
+        }
+        .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .stat-icon.blue { background: rgba(59,130,246,0.15); }
+        .stat-icon.green { background: rgba(16,185,129,0.15); }
+        .stat-icon.orange { background: rgba(245,158,11,0.15); }
+        .stat-icon.purple { background: rgba(139,92,246,0.15); }
+        .stat-val { font-size: 28px; font-weight: 900; }
+        .stat-label { font-size: 12px; color: var(--text2); font-weight: 600; }
+        .stat-card.blue .stat-val { color: var(--blue); }
+        .stat-card.green .stat-val { color: var(--green); }
+        .stat-card.orange .stat-val { color: var(--orange); }
+        .stat-card.purple .stat-val { color: var(--purple); }
+
+        /* ===== AI HERO ===== */
+        .ai-hero {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .ai-hero-icon { font-size: 48px; }
+        .ai-hero-text { flex: 1; }
+        .ai-hero-text h3 { font-size: 18px; margin-bottom: 4px; }
+        .ai-hero-text p { font-size: 13px; color: var(--text2); }
+        .ai-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .ai-feature-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 16px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .ai-feature-btn:hover { transform: translateY(-3px); border-color: var(--border2); }
+        .ai-feature-btn .af-ico { font-size: 32px; margin-bottom: 4px; }
+        .ai-feature-btn .af-title { font-weight: 700; font-size: 13px; }
+        .ai-feature-btn .af-sub { font-size: 10px; color: var(--text3); }
+        .afb-purple:hover { border-color: var(--purple); }
+        .afb-blue:hover { border-color: var(--blue); }
+        .afb-green:hover { border-color: var(--green); }
+        .afb-red:hover { border-color: var(--red); }
+
+        /* ===== G2 ===== */
+        .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        /* ===== FORMS ===== */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row.c1 { grid-template-columns: 1fr; }
+        .form-row.c3 { grid-template-columns: 1fr 1fr 1fr; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.3px; }
+        .form-label .req { color: var(--red); }
+        .form-control {
+            padding: 10px 14px;
+            background: var(--bg2);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .form-control:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .form-control::placeholder { color: var(--text3); }
+        .form-control option { background: var(--bg2); }
+        .form-hint { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+        /* ===== BTNS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            background: var(--bg2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: var(--grad-blue); color: #fff; border: none; box-shadow: 0 4px 12px rgba(59,130,246,0.25); }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(59,130,246,0.35); }
+        .btn-green { background: var(--grad-green); color: #fff; border: none; box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+        .btn-green:hover { box-shadow: 0 6px 20px rgba(16,185,129,0.35); }
+        .btn-purple { background: var(--grad-purple); color: #fff; border: none; box-shadow: 0 4px 12px rgba(139,92,246,0.25); }
+        .btn-purple:hover { box-shadow: 0 6px 20px rgba(139,92,246,0.35); }
+        .btn-red { background: var(--grad-red); color: #fff; border: none; }
+        .btn-orange { background: var(--grad-orange); color: #fff; border: none; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+        .btn-outline:hover { background: var(--bg2); color: var(--text); }
+        .btn-ghost { background: transparent; border: none; color: var(--text2); }
+        .btn-ghost:hover { color: var(--text); background: var(--bg2); }
+        .btn-sm { padding: 5px 12px; font-size: 11px; border-radius: 6px; }
+        .btn-lg { padding: 12px 28px; font-size: 15px; }
+        .btn-full { width: 100%; justify-content: center; }
+        .btn-del { background: transparent; border: none; color: var(--red); font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: var(--transition); }
+        .btn-del:hover { background: rgba(239,68,68,0.15); }
+        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+        /* ===== BADGES ===== */
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+        .badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge-orange { background: rgba(245,158,11,0.15); color: var(--orange); }
+        .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge-purple { background: rgba(139,92,246,0.15); color: var(--purple); }
+        .badge-cyan { background: rgba(6,182,212,0.15); color: var(--cyan); }
+        .badge-gray { background: var(--bg2); color: var(--text3); }
+        .badge-conceito-baixo { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .badge-conceito-medio-baixo { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .badge-conceito-medio-alto { background: rgba(59,130,246,0.2); color: #3b82f6; }
+        .badge-conceito-alto { background: rgba(16,185,129,0.2); color: #10b981; }
+        .chip { display: inline-block; padding: 2px 10px; background: var(--bg2); border-radius: 12px; font-size: 11px; color: var(--text2); border: 1px solid var(--border); }
+
+        /* ===== TABLES ===== */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; padding: 10px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); font-weight: 700; border-bottom: 2px solid var(--border); }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:hover td { background: var(--bg2); }
+        tr.deleting { opacity: 0; transform: scale(0.95); transition: all 0.3s ease; }
+
+        /* ===== SEARCH ===== */
+        .search-wrap {
+            display: flex;
+            align-items: center;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 12px;
+            transition: var(--transition);
+        }
+        .search-wrap:focus-within { border-color: var(--blue); }
+        .search-ico { color: var(--text3); font-size: 14px; margin-right: 8px; }
+        .search-wrap input { background: transparent; border: none; padding: 8px 0; color: var(--text); font-size: 13px; outline: none; width: 140px; }
+        .search-wrap input::placeholder { color: var(--text3); }
+
+        /* ===== GABARITO GRID ===== */
+        .gab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .gab-item {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 4px;
+            text-align: center;
+        }
+        .gab-num { font-size: 9px; color: var(--text3); font-weight: 700; margin-bottom: 3px; }
+        .gab-select {
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 4px 2px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            width: 100%;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .gab-select:focus { outline: none; border-color: var(--blue); }
+        .gab-select.filled { border-color: var(--green); color: var(--green); }
+
+        /* ===== UPLOAD ZONE ===== */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--r);
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg2);
+        }
+        .upload-zone:hover { border-color: var(--blue); background: var(--surface); }
+        .upload-zone .uz-ico { font-size: 48px; margin-bottom: 8px; }
+        .upload-zone .uz-hint { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+        /* ===== CHARTS ===== */
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            gap: 8px;
+            padding: 10px 0;
+            min-height: 150px;
+        }
+        .chart-bar-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            text-align: center;
+        }
+        .chart-bar {
+            width: 100%;
+            max-width: 40px;
+            min-height: 10px;
+            border-radius: 6px 6px 0 0;
+            transition: height 0.6s ease;
+            background: var(--blue);
+        }
+        .chart-bar-val { font-size: 11px; font-weight: 700; margin-bottom: 4px; color: var(--text2); }
+        .chart-bar-lbl { font-size: 10px; color: var(--text3); margin-top: 4px; max-width: 60px; word-break: break-all; }
+
+        /* ===== CONCEITO GRÁFICOS ===== */
+        .conceito-graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+        /* ===== PROGRESS ===== */
+        .progress { width: 100%; height: 6px; background: var(--bg2); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 10px; transition: width 0.8s ease; }
+        .pf-blue { background: var(--grad-blue); }
+        .pf-green { background: var(--grad-green); }
+        .pf-orange { background: var(--grad-orange); }
+        .pf-red { background: var(--grad-red); }
+        .pf-purple { background: var(--grad-purple); }
+
+        /* ===== AI CRITERIA ===== */
+        .ai-criteria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+        .ai-crit { background: var(--bg2); border-radius: 8px; padding: 12px 14px; border: 1px solid var(--border); }
+        .ai-crit-name { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+        .ai-crit-val { font-size: 20px; font-weight: 800; color: var(--purple); margin-bottom: 6px; }
+        .ai-feedback-box { background: var(--bg2); border-radius: 8px; padding: 14px; border: 1px solid var(--border); font-size: 13px; line-height: 1.6; color: var(--text2); margin-top: 10px; }
+
+        /* ===== CORREÇÃO MANUAL ===== */
+        .correcao-aluno-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            background: var(--bg2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+        }
+        .correcao-aluno-info .info-item { display: flex; flex-direction: column; }
+        .correcao-aluno-info .info-item .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); font-weight: 700; }
+        .correcao-aluno-info .info-item strong { font-size: 13px; margin-top: 2px; }
+
+        .correcao-manual-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 6px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 4px 2px;
+        }
+        .correcao-manual-item {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 4px;
+            text-align: center;
+        }
+        .correcao-manual-item .q-num { font-size: 9px; color: var(--text3); font-weight: 700; }
+        .correcao-manual-item .q-resposta { font-size: 14px; font-weight: 800; margin: 2px 0; }
+        .correcao-manual-item .q-select {
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 3px 2px;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            width: 100%;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .correcao-manual-item .q-select:focus { outline: none; border-color: var(--blue); }
+        .correcao-manual-item .q-select.correta { border-color: var(--green); color: var(--green); }
+        .correcao-manual-item .q-select.errada { border-color: var(--red); color: var(--red); }
+        .correcao-manual-item .q-status { font-size: 9px; font-weight: 700; margin-top: 2px; }
+        .correcao-manual-item .q-status.correta { color: var(--green); }
+        .correcao-manual-item .q-status.errada { color: var(--red); }
+
+        .resumo-correcao {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin: 12px 0;
+            padding: 12px;
+            background: var(--bg2);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .resumo-correcao .item { text-align: center; }
+        .resumo-correcao .item .valor { font-size: 24px; font-weight: 900; }
+        .resumo-correcao .item .valor.acertos { color: var(--green); }
+        .resumo-correcao .item .valor.erros { color: var(--red); }
+        .resumo-correcao .item .valor.nota { color: var(--blue); }
+        .resumo-correcao .item .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+
+        /* ===== TABS ===== */
+        .tab-nav { display: flex; gap: 4px; background: var(--bg2); border-radius: 8px; padding: 4px; margin-bottom: 12px; }
+        .tab-btn { padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--text2); font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition); }
+        .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .tab-btn:hover:not(.active) { color: var(--text); }
+        .tab-c { display: block; }
+
+        /* ===== SPINNER ===== */
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 30px;
+            max-width: 620px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 { font-size: 20px; font-weight: 800; }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text2);
+            font-size: 28px;
+            cursor: pointer;
+            transition: var(--transition);
+            padding: 0 6px;
+        }
+        .modal-close:hover { color: var(--red); transform: rotate(90deg); }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ===== CAMERA MODAL ===== */
+        .cam-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .cam-modal.show { display: flex; }
+        .cam-container {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 640px;
+            width: 100%;
+            border: 1px solid var(--border);
+            box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+        }
+        .cam-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .cam-header h3 { font-size: 18px; font-weight: 700; }
+        .cam-video-wrap {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 4/3;
+        }
+        .cam-video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+        .cam-frame {
+            position: absolute;
+            inset: 10%;
+            border: 2px solid rgba(16,185,129,0.6);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        .cam-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: var(--green);
+            border-style: solid;
+            border-width: 0;
+        }
+        .cc-tl { top: -2px; left: -2px; border-top-width: 4px; border-left-width: 4px; border-radius: 4px 0 0 0; }
+        .cc-tr { top: -2px; right: -2px; border-top-width: 4px; border-right-width: 4px; border-radius: 0 4px 0 0; }
+        .cc-bl { bottom: -2px; left: -2px; border-bottom-width: 4px; border-left-width: 4px; border-radius: 0 0 0 4px; }
+        .cc-br { bottom: -2px; right: -2px; border-bottom-width: 4px; border-right-width: 4px; border-radius: 0 0 4px 0; }
+        .cam-scan-line {
+            position: absolute;
+            top: 15%;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: var(--green);
+            box-shadow: 0 0 20px rgba(16,185,129,0.6);
+            animation: scanMove 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes scanMove {
+            0% { top: 15%; opacity: 0.3; }
+            50% { top: 75%; opacity: 1; }
+            100% { top: 15%; opacity: 0.3; }
+        }
+        .cam-controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .cam-hint { text-align: center; font-size: 12px; color: var(--text3); margin-top: 10px; }
+
+        /* ===== DELETE MODAL ===== */
+        .del-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .del-modal.show { display: flex; }
+        .del-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 36px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .del-icon { font-size: 48px; margin-bottom: 12px; }
+        .del-box h3 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        .del-box p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+        .del-box .del-name { color: var(--red); font-weight: 700; }
+        .del-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+
+        /* ===== TOAST ===== */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 360px;
+        }
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow);
+            animation: slideInToast 0.3s ease;
+            font-size: 14px;
+        }
+        .toast-success { border-left: 4px solid var(--green); }
+        .toast-error { border-left: 4px solid var(--red); }
+        .toast-ai { border-left: 4px solid var(--purple); }
+        .toast-info { border-left: 4px solid var(--blue); }
+        @keyframes slideInToast { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .g2 { grid-template-columns: 1fr; }
+            .form-row.c3 { grid-template-columns: 1fr 1fr; }
+            .conceito-graficos { grid-template-columns: 1fr; }
+            .correcao-aluno-info { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle { display: flex; }
+            .sidebar { transform: translateX(-100%); width: 280px; }
+            .sidebar.open { transform: translateX(0); }
+            .content { margin-left: 0; padding: 16px; }
+            .page-header { flex-direction: column; align-items: stretch; }
+            .page-actions { flex-wrap: wrap; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .form-row { grid-template-columns: 1fr; }
+            .form-row.c3 { grid-template-columns: 1fr; }
+            .ai-hero { flex-direction: column; text-align: center; }
+            .ai-hero-actions { justify-content: center; }
+            .ai-feature-btn { flex: 1; min-width: 120px; }
+            .modal { padding: 20px; margin: 10px; }
+            .correcao-aluno-info { grid-template-columns: 1fr; }
+            .resumo-correcao { grid-template-columns: 1fr; }
+            .ai-criteria-grid { grid-template-columns: 1fr; }
+            .gab-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
+            .correcao-manual-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+            .login-card { padding: 28px 20px; }
+            .cam-container { padding: 12px; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .page-title { font-size: 20px; }
+            .sb-brand { padding: 14px; }
+            .sb-item { padding: 8px 14px; font-size: 13px; }
+            .search-wrap input { width: 100px; }
+            .modal { padding: 16px; }
+            .toast-container { right: 12px; bottom: 12px; max-width: calc(100% - 24px); }
+            .login-tabs { flex-direction: column; }
+        }
+
+        /* ===== PRINT ===== */
+        @media print {
+            .sidebar, .menu-toggle, .menu-overlay, .no-print, .btn, .btn-group, .page-actions, .upload-zone, .search-wrap, .card-header .btn-group { display: none !important; }
+            .content { margin-left: 0 !important; padding: 10px !important; }
+            .page { display: block !important; }
+            .page:not(.active) { display: none !important; }
+            .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
+            body { background: #fff !important; color: #000 !important; }
+            .stat-card, .ai-hero, .ai-feature-btn { border: 1px solid #ddd !important; background: #f9f9f9 !important; }
+            .badge { border: 1px solid #ccc !important; }
+            .table-wrap { overflow: visible !important; }
+            table { font-size: 11px !important; }
+            th { background: #f0f0f0 !important; }
+            .modal-overlay { display: none !important; }
+        }
+    </style>
 </head>
 <body>
 
@@ -1862,209 +2714,181 @@
             return 'Alto';
         }
 
-        // ============================================
-// RESULTADOS - COM FILTROS E GRÁFICOS - CORRIGIDO
-// ============================================
+        // ═══════════════════════════════ RESULTADOS - COM FILTROS E GRÁFICOS - CORRIGIDO ═══════════════════════════════
+        async function carregarFiltrosResultados() {
+            try {
+                const respEscolas = await fetch(API_URL + '/api/escolas');
+                const escolas = await respEscolas.json();
+                const selectEscola = document.getElementById('filtro-escola');
+                if (selectEscola && escolas && !escolas.erro) {
+                    const current = selectEscola.value;
+                    selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        selectEscola.appendChild(opt);
+                    });
+                    if (current) selectEscola.value = current;
+                }
 
-async function carregarFiltrosResultados() {
-    try {
-        const respEscolas = await fetch(API_URL + '/api/escolas');
-        const escolas = await respEscolas.json();
-        const selectEscola = document.getElementById('filtro-escola');
-        if (selectEscola && escolas && !escolas.erro) {
-            const current = selectEscola.value;
-            selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                selectEscola.appendChild(opt);
-            });
-            if (current) selectEscola.value = current;
-        }
-
-        const respTurmas = await fetch(API_URL + '/api/turmas');
-        const turmas = await respTurmas.json();
-        const selectTurma = document.getElementById('filtro-turma');
-        if (selectTurma && turmas && !turmas.erro) {
-            const current = selectTurma.value;
-            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-            turmas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                selectTurma.appendChild(opt);
-            });
-            if (current) selectTurma.value = current;
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar filtros:', erro);
-    }
-}
-
-// Função para carregar turmas com base na escola selecionada - CORRIGIDA
-async function carregarTurmasPorEscola(escolaId) {
-    const selectTurma = document.getElementById('filtro-turma');
-    if (!selectTurma) return;
-
-    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-
-    try {
-        const respTurmas = await fetch(API_URL + '/api/turmas');
-        const turmas = await respTurmas.json();
-        if (turmas && !turmas.erro) {
-            // Filtrar turmas pela escola selecionada, ou mostrar todas se nenhuma escola for selecionada
-            const turmasFiltradas = escolaId && escolaId !== '' 
-                ? turmas.filter(t => t.escola_id == escolaId) 
-                : turmas;
-            
-            turmasFiltradas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                selectTurma.appendChild(opt);
-            });
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar turmas:', erro);
-    }
-
-    // Dispara o filtro automaticamente após carregar as turmas
-    carregarResultadosComFiltros();
-}
-
-// Função para carregar resultados com filtros - CORRIGIDA
-async function carregarResultadosComFiltros() {
-    try {
-        const escolaId = document.getElementById('filtro-escola').value;
-        const serie = document.getElementById('filtro-serie').value;
-        const turmaId = document.getElementById('filtro-turma').value;
-
-        // Construir URL com parâmetros corretos
-        let url = API_URL + '/api/historico';
-        const params = new URLSearchParams();
-        if (escolaId && escolaId !== '') params.append('escola', escolaId);
-        if (serie && serie !== '') params.append('serie', serie);
-        if (turmaId && turmaId !== '') params.append('turma', turmaId);
-        if (params.toString()) url += '?' + params.toString();
-
-        console.log('🔍 URL com filtros:', url); // Debug
-
-        const response = await fetch(url);
-        const historico = await response.json();
-        const tbody = document.getElementById('tb-resultados-filtrado');
-        if (!tbody) return;
-
-        if (!historico || historico.length === 0 || historico.erro) {
-            tbody.innerHTML =
-                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-            document.getElementById('res-total-filtrado').textContent = '0';
-            document.getElementById('res-aprovados-filtrado').textContent = '0';
-            document.getElementById('res-recuperacao-filtrado').textContent = '0';
-            document.getElementById('res-media-filtrado').textContent = '0';
-            atualizarGraficosConceitos([]);
-            return;
-        }
-
-        const dadosCorrigidos = historico.map(item => ({
-            ...item,
-            nota: parseFloat(item.nota) || 0,
-            acertos: parseInt(item.acertos) || 0,
-            total_questoes: parseInt(item.total_questoes) || 20
-        }));
-
-        let total = dadosCorrigidos.length;
-        let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
-        let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
-        let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
-
-        document.getElementById('res-total-filtrado').textContent = total;
-        document.getElementById('res-aprovados-filtrado').textContent = aprovados;
-        document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
-        document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
-        document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
-
-        dadosCorrigidos.sort((a, b) => b.nota - a.nota);
-
-        atualizarGraficosConceitos(dadosCorrigidos);
-
-        if (total === 0) {
-            tbody.innerHTML =
-                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = dadosCorrigidos.map((item, index) => {
-            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-            const nota = item.nota || 0;
-            const acertos = item.acertos || 0;
-            const totalQuestoes = item.total_questoes || 20;
-            const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-            const conceito = calcularConceito(porcentagem);
-
-            const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
-            const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
-            const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
-
-            const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
-
-            const nome = item.aluno_nome || 'Aluno';
-            const serieAluno = item.serie || '—';
-            const correcaoId = item.id;
-
-            return '<tr data-correcao-id="' + correcaoId + '">' +
-                '<td>' + medalha + '</td>' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td><strong>' + nome + '</strong></td>' +
-                '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
-                '<td>' + acertos + '</td>' +
-                '<td><strong>' + porcentagem + '%</strong></td>' +
-                '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
-                '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
-                '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
-                '<td>' +
-                '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' +
-                correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">' +
-                '🗑️' +
-                '</button>' +
-                '</td>' +
-                '</tr>';
-        }).join('');
-
-    } catch (erro) {
-        console.error('Erro ao carregar resultados:', erro);
-        const tbody = document.getElementById('tb-resultados-filtrado');
-        if (tbody) {
-            tbody.innerHTML =
-                '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
-        }
-    }
-}
-
-function limparFiltrosResultados() {
-    document.getElementById('filtro-escola').value = '';
-    document.getElementById('filtro-serie').value = '';
-    
-    // Recarregar todas as turmas
-    const selectTurma = document.getElementById('filtro-turma');
-    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-    
-    // Carregar todas as turmas novamente
-    fetch(API_URL + '/api/turmas')
-        .then(r => r.json())
-        .then(turmas => {
-            if (turmas && !turmas.erro) {
-                turmas.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = t.nome + ' - ' + (t.serie || '');
-                    selectTurma.appendChild(opt);
-                });
+                const respTurmas = await fetch(API_URL + '/api/turmas');
+                const turmas = await respTurmas.json();
+                const selectTurma = document.getElementById('filtro-turma');
+                if (selectTurma && turmas && !turmas.erro) {
+                    const current = selectTurma.value;
+                    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                    if (current) selectTurma.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar filtros:', erro);
             }
+        }
+
+        // Função para carregar turmas com base na escola selecionada - CORRIGIDA
+        async function carregarTurmasPorEscola(escolaId) {
+            const selectTurma = document.getElementById('filtro-turma');
+            if (!selectTurma) return;
+
+            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+
+            try {
+                const respTurmas = await fetch(API_URL + '/api/turmas');
+                const turmas = await respTurmas.json();
+                if (turmas && !turmas.erro) {
+                    // Filtrar turmas pela escola selecionada, ou mostrar todas se nenhuma escola for selecionada
+                    const turmasFiltradas = escolaId && escolaId !== '' 
+                        ? turmas.filter(t => t.escola_id == escolaId) 
+                        : turmas;
+                    
+                    turmasFiltradas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar turmas:', erro);
+            }
+
+            // Dispara o filtro automaticamente após carregar as turmas
             carregarResultadosComFiltros();
-        })
-        .catch(e => console.error('Erro ao recarregar turmas:', e));
-}
+        }
+
+        // Função para carregar resultados com filtros - CORRIGIDA
+        async function carregarResultadosComFiltros() {
+            try {
+                const escolaId = document.getElementById('filtro-escola').value;
+                const serie = document.getElementById('filtro-serie').value;
+                const turmaId = document.getElementById('filtro-turma').value;
+
+                // Construir URL com parâmetros corretos
+                let url = API_URL + '/api/historico';
+                const params = new URLSearchParams();
+                if (escolaId && escolaId !== '') params.append('escola', escolaId);
+                if (serie && serie !== '') params.append('serie', serie);
+                if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                if (params.toString()) url += '?' + params.toString();
+
+                console.log('🔍 URL com filtros:', url); // Debug
+
+                const response = await fetch(url);
+                const historico = await response.json();
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (!tbody) return;
+
+                if (!historico || historico.length === 0 || historico.erro) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                    document.getElementById('res-total-filtrado').textContent = '0';
+                    document.getElementById('res-aprovados-filtrado').textContent = '0';
+                    document.getElementById('res-recuperacao-filtrado').textContent = '0';
+                    document.getElementById('res-media-filtrado').textContent = '0';
+                    atualizarGraficosConceitos([]);
+                    return;
+                }
+
+                const dadosCorrigidos = historico.map(item => ({
+                    ...item,
+                    nota: parseFloat(item.nota) || 0,
+                    acertos: parseInt(item.acertos) || 0,
+                    total_questoes: parseInt(item.total_questoes) || 20
+                }));
+
+                let total = dadosCorrigidos.length;
+                let aprovados = dadosCorrigidos.filter(c => c.nota >= 5).length;
+                let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
+                let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
+
+                document.getElementById('res-total-filtrado').textContent = total;
+                document.getElementById('res-aprovados-filtrado').textContent = aprovados;
+                document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
+                document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
+                document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+
+                dadosCorrigidos.sort((a, b) => b.nota - a.nota);
+
+                atualizarGraficosConceitos(dadosCorrigidos);
+
+                if (total === 0) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = dadosCorrigidos.map((item, index) => {
+                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+                    const nota = item.nota || 0;
+                    const acertos = item.acertos || 0;
+                    const totalQuestoes = item.total_questoes || 20;
+                    const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+                    const conceito = calcularConceito(porcentagem);
+
+                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+                    const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
+                    const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+
+                    const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
+
+                    const nome = item.aluno_nome || 'Aluno';
+                    const serieAluno = item.serie || '—';
+                    const correcaoId = item.id;
+
+                    return '<tr data-correcao-id="' + correcaoId + '">' +
+                        '<td>' + medalha + '</td>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td><strong>' + nome + '</strong></td>' +
+                        '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
+                        '<td>' + acertos + '</td>' +
+                        '<td><strong>' + porcentagem + '%</strong></td>' +
+                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
+                        '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
+                        '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                        '<td>' +
+                        '<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' +
+                        correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">' +
+                        '🗑️' +
+                        '</button>' +
+                        '</td>' +
+                        '</tr>';
+                }).join('');
+
+            } catch (erro) {
+                console.error('Erro ao carregar resultados:', erro);
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (tbody) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                }
+            }
+        }
 
         // ═══════════════════════════════ ATUALIZAR GRÁFICOS DE CONCEITOS ═══════════════════════════════
         function atualizarGraficosConceitos(dados) {
@@ -2170,8 +2994,26 @@ function limparFiltrosResultados() {
         function limparFiltrosResultados() {
             document.getElementById('filtro-escola').value = '';
             document.getElementById('filtro-serie').value = '';
-            document.getElementById('filtro-turma').innerHTML = '<option value="">Todas as turmas</option>';
-            carregarResultadosComFiltros();
+            
+            // Recarregar todas as turmas
+            const selectTurma = document.getElementById('filtro-turma');
+            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+            
+            // Carregar todas as turmas novamente
+            fetch(API_URL + '/api/turmas')
+                .then(r => r.json())
+                .then(turmas => {
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                    carregarResultadosComFiltros();
+                })
+                .catch(e => console.error('Erro ao recarregar turmas:', e));
         }
 
         function exportarResultadosFiltrados() {
