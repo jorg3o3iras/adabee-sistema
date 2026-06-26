@@ -908,12 +908,12 @@ def excluir_turma(id):
     return jsonify({'erro': 'Erro ao excluir turma'}), 500
 
 # ============================================
-# ROTAS DE ALUNOS - CORRIGIDAS
+# ROTAS DE ALUNOS - CORRIGIDAS COM PRIORIDADE POR TURMA
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    """Lista alunos com filtro por escola, turma e série - CORRIGIDO"""
+    """Lista alunos com filtro por turma (prioridade), escola ou série - CORRIGIDO"""
     try:
         # Obter parâmetros de filtro
         escola_id = request.args.get('escola_id')
@@ -929,7 +929,7 @@ def listar_alunos():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Construir a query com filtros
+        # Construir a query com filtros - PRIORIDADE: TURMA > ESCOLA > SÉRIE
         query = """
             SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, 
                    e.id as escola_id, e.nome as escola_nome
@@ -941,8 +941,18 @@ def listar_alunos():
         
         params = []
         
-        # Filtrar por escola - CORRIGIDO: verifica se o ID é válido
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+        # PRIORIDADE 1: Filtrar por turma (quando clica no ícone 📋)
+        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
+            try:
+                turma_id_int = int(turma_id)
+                query += " AND t.id = %s"
+                params.append(turma_id_int)
+                print(f"📌 FILTRO PRIORITÁRIO: Turma ID: {turma_id_int}")
+            except ValueError:
+                print(f"⚠️ Turma ID inválido: {turma_id}")
+        
+        # PRIORIDADE 2: Filtrar por escola (apenas se não tiver turma específica)
+        elif escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
             try:
                 escola_id_int = int(escola_id)
                 query += " AND e.id = %s"
@@ -951,17 +961,7 @@ def listar_alunos():
             except ValueError:
                 print(f"⚠️ Escola ID inválido: {escola_id}")
         
-        # Filtrar por turma
-        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
-            try:
-                turma_id_int = int(turma_id)
-                query += " AND t.id = %s"
-                params.append(turma_id_int)
-                print(f"📌 Filtrando por turma ID: {turma_id_int}")
-            except ValueError:
-                print(f"⚠️ Turma ID inválido: {turma_id}")
-        
-        # Filtrar por série
+        # PRIORIDADE 3: Filtrar por série (opcional, pode combinar com os anteriores)
         if serie and serie != '' and serie != 'null' and serie != 'undefined':
             query += " AND t.serie = %s"
             params.append(serie)
@@ -988,7 +988,7 @@ def listar_alunos():
 
 @app.route('/api/alunos/por_turma', methods=['GET'])
 def listar_alunos_por_turma():
-    """Lista alunos de uma turma específica com verificação de escola - NOVA ROTA"""
+    """Lista alunos de uma turma específica com verificação de escola - ROTA ESPECÍFICA"""
     try:
         turma_id = request.args.get('turma_id')
         escola_id = request.args.get('escola_id')
@@ -1004,7 +1004,7 @@ def listar_alunos_por_turma():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Verificar se a turma pertence à escola selecionada
+        # Verificar se a turma pertence à escola selecionada (opcional)
         if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
             try:
                 escola_id_int = int(escola_id)
