@@ -561,7 +561,7 @@ def excluir_usuario(id):
         return jsonify({'erro': 'Erro ao excluir usuário'}), 500
 
 # ============================================
-# ROTAS DE ESCOLAS
+# ROTAS DE ESCOLAS - CORRIGIDAS
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -722,17 +722,23 @@ def excluir_escola(id):
     return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
-# ROTAS DE TURMAS - CORRIGIDA
+# ROTAS DE TURMAS - CORRIGIDAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
-    """Lista todas as turmas com contagem de alunos"""
-    conn = get_db_connection()
-    if conn:
-        try:
+    """Lista todas as turmas com contagem de alunos e filtro por escola"""
+    try:
+        escola_id = request.args.get('escola_id')
+        
+        print(f"🔍 Listando turmas - Escola ID: {escola_id}")
+        
+        conn = get_db_connection()
+        if conn:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
+            
+            # Construir query com filtro opcional por escola
+            query = """
                 SELECT 
                     t.*, 
                     e.nome as escola_nome,
@@ -740,16 +746,31 @@ def listar_turmas():
                 FROM turmas t 
                 LEFT JOIN escolas e ON t.escola_id = e.id 
                 LEFT JOIN alunos a ON a.turma_id = t.id
-                GROUP BY t.id, e.nome
-                ORDER BY t.nome
-            """)
+            """
+            
+            params = []
+            
+            if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+                try:
+                    escola_id_int = int(escola_id)
+                    query += " WHERE t.escola_id = %s"
+                    params.append(escola_id_int)
+                    print(f"📌 Filtrando turmas por escola ID: {escola_id_int}")
+                except ValueError:
+                    print(f"⚠️ Escola ID inválido: {escola_id}")
+            
+            query += " GROUP BY t.id, e.nome ORDER BY t.nome"
+            
+            cur.execute(query, params)
             turmas = cur.fetchall()
             cur.close()
             conn.close()
+            
+            print(f"✅ Encontradas {len(turmas)} turmas")
             return jsonify(turmas)
-        except Exception as e:
-            print(f"Erro ao listar turmas: {e}")
-            traceback.print_exc()
+    except Exception as e:
+        print(f"❌ Erro ao listar turmas: {e}")
+        traceback.print_exc()
     return jsonify([])
 
 @app.route('/api/turmas', methods=['POST'])
@@ -887,20 +908,23 @@ def excluir_turma(id):
     return jsonify({'erro': 'Erro ao excluir turma'}), 500
 
 # ============================================
-# ROTAS DE ALUNOS
+# ROTAS DE ALUNOS - CORRIGIDAS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    """Lista alunos com filtro por escola, turma e série"""
+    """Lista alunos com filtro por escola, turma e série - CORRIGIDO"""
     try:
         # Obter parâmetros de filtro
         escola_id = request.args.get('escola_id')
         turma_id = request.args.get('turma_id')
         serie = request.args.get('serie')
         
+        print(f"🔍 Filtrando alunos - Escola: {escola_id}, Turma: {turma_id}, Série: {serie}")
+        
         conn = get_db_connection()
         if not conn:
+            print("❌ Erro ao conectar ao banco")
             return jsonify([])
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -912,41 +936,113 @@ def listar_alunos():
             FROM alunos a
             LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE 1=1
         """
         
-        conditions = []
         params = []
         
-        # Filtrar por escola
-        if escola_id and escola_id != '':
-            conditions.append("e.id = %s")
-            params.append(int(escola_id))
+        # Filtrar por escola - CORRIGIDO: verifica se o ID é válido
+        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+            try:
+                escola_id_int = int(escola_id)
+                query += " AND e.id = %s"
+                params.append(escola_id_int)
+                print(f"📌 Filtrando por escola ID: {escola_id_int}")
+            except ValueError:
+                print(f"⚠️ Escola ID inválido: {escola_id}")
         
         # Filtrar por turma
-        if turma_id and turma_id != '':
-            conditions.append("t.id = %s")
-            params.append(int(turma_id))
+        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
+            try:
+                turma_id_int = int(turma_id)
+                query += " AND t.id = %s"
+                params.append(turma_id_int)
+                print(f"📌 Filtrando por turma ID: {turma_id_int}")
+            except ValueError:
+                print(f"⚠️ Turma ID inválido: {turma_id}")
         
         # Filtrar por série
-        if serie and serie != '':
-            conditions.append("t.serie = %s")
+        if serie and serie != '' and serie != 'null' and serie != 'undefined':
+            query += " AND t.serie = %s"
             params.append(serie)
-        
-        # Adicionar WHERE se houver condições
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+            print(f"📌 Filtrando por série: {serie}")
         
         query += " ORDER BY a.numero_chamada, a.nome"
+        
+        print(f"📝 Query: {query}")
+        print(f"📝 Parâmetros: {params}")
         
         cur.execute(query, params)
         alunos = cur.fetchall()
         cur.close()
         conn.close()
         
+        print(f"✅ Encontrados {len(alunos)} alunos")
+        
         return jsonify(alunos)
         
     except Exception as e:
         print(f"❌ Erro ao listar alunos: {e}")
+        traceback.print_exc()
+        return jsonify([])
+
+@app.route('/api/alunos/por_turma', methods=['GET'])
+def listar_alunos_por_turma():
+    """Lista alunos de uma turma específica com verificação de escola - NOVA ROTA"""
+    try:
+        turma_id = request.args.get('turma_id')
+        escola_id = request.args.get('escola_id')
+        
+        print(f"🔍 Buscando alunos por turma - Turma: {turma_id}, Escola: {escola_id}")
+        
+        if not turma_id:
+            return jsonify({'erro': 'Turma ID é obrigatório'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify([])
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se a turma pertence à escola selecionada
+        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+            try:
+                escola_id_int = int(escola_id)
+                cur.execute("""
+                    SELECT id FROM turmas 
+                    WHERE id = %s AND escola_id = %s
+                """, (turma_id, escola_id_int))
+                if not cur.fetchone():
+                    cur.close()
+                    conn.close()
+                    print(f"⚠️ Turma {turma_id} não pertence à escola {escola_id_int}")
+                    return jsonify({
+                        'erro': 'Turma não pertence à escola selecionada',
+                        'alunos': []
+                    }), 400
+            except ValueError:
+                print(f"⚠️ Escola ID inválido: {escola_id}")
+        
+        # Buscar alunos da turma
+        cur.execute("""
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie,
+                   e.nome as escola_nome, e.id as escola_id
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE a.turma_id = %s
+            ORDER BY a.numero_chamada, a.nome
+        """, (turma_id,))
+        
+        alunos = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        print(f"✅ Encontrados {len(alunos)} alunos na turma {turma_id}")
+        return jsonify(alunos)
+        
+    except Exception as e:
+        print(f"❌ Erro ao listar alunos por turma: {e}")
         traceback.print_exc()
         return jsonify([])
 
@@ -1982,6 +2078,7 @@ def index():
                 '/api/turmas/<id>',
                 '/api/alunos',
                 '/api/alunos/<id>',
+                '/api/alunos/por_turma',
                 '/api/provas',
                 '/api/provas/<id>',
                 '/api/gabaritos',
