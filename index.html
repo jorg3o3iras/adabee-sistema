@@ -432,8 +432,8 @@
                         <div style="font-size:11px;color:var(--text2);">Total de Alunos</div>
                     </div>
                     <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;">
-                        <div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Adquiriu Habilidades-filtrado">0</div>
-                        <div style="font-size:11px;color:var(--text2);">Adquiriu Habilidades</div>
+                        <div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div>
+                        <div style="font-size:11px;color:var(--text2);">Habilidades</div>
                     </div>
                     <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;">
                         <div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div>
@@ -552,7 +552,7 @@
             <!-- ═══ RELATÓRIOS ═══ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header"><div><div class="page-title">📊 Relatório por Turma</div></div><div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button></div></div>
-                <div class="stats-grid"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Adquiriu Habilidades">0</div><div class="stat-label">Adquiriu Habilidades</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recuperação</div></div></div><div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div></div>
+                <div class="stats-grid"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Habilidades</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recuperação</div></div></div><div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div></div>
                 <div class="card"><div class="card-header"><div class="card-title">📈 Distribuição de Notas</div></div><div class="chart-bars" id="dist-notas"><div class="chart-bar-item"><div class="chart-bar-val" id="d0-2">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div><div class="chart-bar-lbl">0–2</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d2-4">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">2–4</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d4-6">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">4–6</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d6-8">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">6–8</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d8-10">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8–10</div></div></div></div>
             </div>
 
@@ -1829,11 +1829,11 @@
                 const correcoesResp = await fetch(API_URL + '/api/historico');
                 const correcoes = await correcoesResp.json();
                 const totalAlunos = alunos.length || 0,
-                    Adquiriu Habilidades = correcoes.filter(c => c.nota >= 6).length || 0,
+                    Habilidades = correcoes.filter(c => c.nota >= 6).length || 0,
                     recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0,
                     media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
                 document.getElementById('rel-total-alunos').textContent = totalAlunos;
-                document.getElementById('rel-Adquiriu Habilidades').textContent = Adquiriu Habilidades;
+                document.getElementById('rel-Habilidades').textContent = Habilidades;
                 document.getElementById('rel-recuperacao').textContent = recuperacao;
                 document.getElementById('rel-media').textContent = media.toFixed(1);
                 const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
@@ -1871,8 +1871,8 @@
                         const alunosEscola = alunos.filter(a => a.escola_id === e.id);
                         const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
                         const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
-                        const Adquiriu Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
-                        const perc = correcoesEscola.length > 0 ? Math.round((Adquiriu Habilidades / correcoesEscola.length) * 100) : 0;
+                        const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
+                        const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
                         return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
                     }).join('');
                 }
@@ -2472,7 +2472,7 @@
                 if (!historico || historico.length === 0 || historico.erro) {
                     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                     document.getElementById('res-total-filtrado').textContent = '0';
-                    document.getElementById('res-Adquiriu Habilidades-filtrado').textContent = '0';
+                    document.getElementById('res-Habilidades-filtrado').textContent = '0';
                     document.getElementById('res-recuperacao-filtrado').textContent = '0';
                     document.getElementById('res-media-filtrado').textContent = '0';
                     atualizarGraficosConceitos([]);
@@ -2480,11 +2480,11 @@
                 }
                 const dadosCorrigidos = historico.map(item => ({ ...item, nota: parseFloat(item.nota) || 0, acertos: parseInt(item.acertos) || 0, total_questoes: parseInt(item.total_questoes) || 20 }));
                 let total = dadosCorrigidos.length;
-                let Adquiriu Habilidades = dadosCorrigidos.filter(c => c.nota >= 5).length;
+                let Habilidades = dadosCorrigidos.filter(c => c.nota >= 5).length;
                 let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
                 let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
                 document.getElementById('res-total-filtrado').textContent = total;
-                document.getElementById('res-Adquiriu Habilidades-filtrado').textContent = Adquiriu Habilidades;
+                document.getElementById('res-Habilidades-filtrado').textContent = Habilidades;
                 document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
                 document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
@@ -2561,7 +2561,7 @@
             const rows = tbody.querySelectorAll('tr:not(.deleted)');
             const total = rows.length;
             document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
-            let Adquiriu Habilidades = 0,
+            let Habilidades = 0,
                 recuperacao = 0,
                 somaNotas = 0;
             rows.forEach(row => {
@@ -2570,14 +2570,14 @@
                     const statusText = cells[8]?.textContent?.trim() || '';
                     const notaText = cells[7]?.textContent?.trim() || '0';
                     const nota = parseFloat(notaText.replace(',', '.')) || 0;
-                    if (statusText === 'Aprovado') Adquiriu Habilidades++;
+                    if (statusText === 'Aprovado') Habilidades++;
                     if (statusText === 'Recuperação') recuperacao++;
                     somaNotas += nota;
                 }
             });
             const media = total > 0 ? (somaNotas / total) : 0;
             document.getElementById('res-total-filtrado').textContent = total;
-            document.getElementById('res-Adquiriu Habilidades-filtrado').textContent = Adquiriu Habilidades;
+            document.getElementById('res-Habilidades-filtrado').textContent = Habilidades;
             document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
             document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
             const dadosAtuais = [];
@@ -3042,7 +3042,7 @@
             carregarResultadosComFiltros();
             carregarDesempenhoReal();
             carregarEscolasFiltroAlunos();
-            const tipoProva = document.getElementById('modal-prova-tipo');
+            const tipoProva = document.getElementById('modal-prova-tipo');a
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
         });
 
