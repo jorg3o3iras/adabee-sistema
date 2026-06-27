@@ -167,7 +167,7 @@
                 </div>
             </div>
 
-            <!-- ═══ TURMAS - CORRIGIDA COM BOTÃO LISTAR ALUNOS ═══ -->
+            <!-- ═══ TURMAS ═══ -->
             <div class="page" id="page-turmas">
                 <div class="page-header">
                     <div><div class="page-title">👥 Turmas</div><p class="page-sub">1º Ano ao 9º Ano do Ensino Fundamental</p></div>
@@ -207,7 +207,7 @@
                 <div class="card" id="lista-resultado"><div style="text-align:center;padding:20px;color:var(--text3);">Selecione os filtros e clique em "Gerar Lista"</div></div>
             </div>
 
-            <!-- ═══ ALUNOS COM FILTRO POR ESCOLA E TURMA ═══ -->
+            <!-- ═══ ALUNOS ═══ -->
             <div class="page" id="page-alunos">
                 <div class="page-header">
                     <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Filtrar por escola, turma e série</p></div>
@@ -375,7 +375,7 @@
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Turma</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
-            <!-- ═══ RESULTADOS - COM FILTROS E GRÁFICOS ═══ -->
+            <!-- ═══ RESULTADOS ═══ -->
             <div class="page" id="page-resultados">
                 <div class="page-header">
                     <div>
@@ -433,11 +433,11 @@
                     </div>
                     <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;">
                         <div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div>
-                        <div style="font-size:11px;color:var(--text2);">Habilidades</div>
+                        <div style="font-size:11px;color:var(--text2);">Adquiriu as Habilidades</div>
                     </div>
                     <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;">
                         <div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div>
-                        <div style="font-size:11px;color:var(--text2);">Recuperação</div>
+                        <div style="font-size:11px;color:var(--text2);">Recomposição da Aprendizagem</div>
                     </div>
                     <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;">
                         <div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div>
@@ -552,7 +552,7 @@
             <!-- ═══ RELATÓRIOS ═══ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header"><div><div class="page-title">📊 Relatório por Turma</div></div><div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button></div></div>
-                <div class="stats-grid"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Habilidades</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recuperação</div></div></div><div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div></div>
+                <div class="stats-grid"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Adquiriu as Habilidades</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recomposição da Aprendizagem</div></div></div><div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div></div>
                 <div class="card"><div class="card-header"><div class="card-title">📈 Distribuição de Notas</div></div><div class="chart-bars" id="dist-notas"><div class="chart-bar-item"><div class="chart-bar-val" id="d0-2">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div><div class="chart-bar-lbl">0–2</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d2-4">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">2–4</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d4-6">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">4–6</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d6-8">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">6–8</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d8-10">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8–10</div></div></div></div>
             </div>
 
@@ -1546,7 +1546,7 @@
         }
 
         // ============================================
-        // CARREGAR TURMAS - CORRIGIDA COM BOTÃO 📋
+        // CARREGAR TURMAS
         // ============================================
         async function carregarTurmas() {
             try {
@@ -1712,7 +1712,7 @@
                     const acertos = item.acertos || 0;
                     const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
                     const conceito = calcularConceito(porcentagem);
-                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
                     const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
                     const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
                     const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
@@ -2498,7 +2498,7 @@
                     const totalQuestoes = item.total_questoes || 20;
                     const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
                     const conceito = calcularConceito(porcentagem);
-                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recuperação' : 'Reprovado');
+                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
                     const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
                     const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
                     const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
@@ -2571,7 +2571,7 @@
                     const notaText = cells[7]?.textContent?.trim() || '0';
                     const nota = parseFloat(notaText.replace(',', '.')) || 0;
                     if (statusText === 'Aprovado') Habilidades++;
-                    if (statusText === 'Recuperação') recuperacao++;
+                    if (statusText === 'Recomposição da Aprendizagem') recuperacao++;
                     somaNotas += nota;
                 }
             });
@@ -3042,7 +3042,7 @@
             carregarResultadosComFiltros();
             carregarDesempenhoReal();
             carregarEscolasFiltroAlunos();
-            const tipoProva = document.getElementById('modal-prova-tipo');a
+            const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
         });
 
