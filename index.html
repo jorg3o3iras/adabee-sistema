@@ -12,32 +12,44 @@
     <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">☰</button>
     <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
-    <!-- ══════════ LOGIN ══════════ -->
-    <div id="login-screen">
-        <div class="login-bg">
-            <div class="login-blob lb1"></div>
-            <div class="login-blob lb2"></div>
-            <div class="login-blob lb3"></div>
+   <!-- ══════════ LOGIN ══════════ -->
+<div id="login-screen">
+    <div class="login-bg">
+        <div class="login-blob lb1"></div>
+        <div class="login-blob lb2"></div>
+        <div class="login-blob lb3"></div>
+    </div>
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="l-icon">🎓</div>
+            <h1>CorrigePro</h1>
+            <p>Sistema Inteligente de Correção de Provas</p>
+            
+            <!-- ══════════ NOVO TEXTO - PREFEITURA E SISAM ══════════ -->
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+                <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Prefeitura Municipal de</div>
+                <div style="font-size:14px;font-weight:800;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.3px;">São Sebastião da Boa Vista</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin:4px 0 2px;">Secretaria Municipal de Educação</div>
+                <div style="font-size:13px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;margin-top:4px;">SISAM 2026</div>
+            </div>
+            <!-- ══════════ FIM DO NOVO TEXTO ══════════ -->
+            
         </div>
-        <div class="login-card">
-            <div class="login-logo">
-                <div class="l-icon">🎓</div>
-                <h1>CorrigePro</h1>
-                <p>Sistema Inteligente de Correção de Provas</p>
-            </div>
-            <div class="login-tabs">
-                <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
-                <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
-            </div>
-            <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
-            <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
-            <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
-            <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
-                <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli & Jorge Antonio</div>
-            </div>
+        <div class="login-tabs">
+            <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
+            <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
+        </div>
+        <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
+        <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
+        <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
+        
+        <!-- ══════════ RODAPÉ DO LOGIN — DESENVOLVEDORES ══════════ -->
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
+            <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli & Jorge Antonio</div>
         </div>
     </div>
+</div>
 
     <!-- ══════════ APP ══════════ -->
     <div id="app">
