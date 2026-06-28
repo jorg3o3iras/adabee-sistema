@@ -630,7 +630,7 @@
                     </div>
                     <div class="form-row c3" style="margin-top:8px;">
                         <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
-                        <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="corrigir-serie"><option value="">Selecione...</option><option value="1º Ano">1º Ano</option><option value="2º Ano">2º Ano</option><option value="3º Ano">3º Ano</option><option value="4º Ano">4º Ano</option><option value="5º Ano">5º Ano</option><option value="6º Ano">6º Ano</option><option value="7º Ano">7º Ano</option><option value="8º Ano">8º Ano</option><option value="9º Ano">9º Ano</option></select></div>
+                        <div></div>
                         <div></div>
                     </div>
                     <div style="display:flex;gap:14px;flex-wrap:wrap;"><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label></div>
@@ -2588,7 +2588,7 @@
                 correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                 correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
                 correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
-                correcaoManualData.serie = document.getElementById('corrigir-serie').value || '1º Ano';
+                correcaoManualData.serie = dados.serie || '1º Ano';
                 
                 if (box) box.style.display = 'block';
                 showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
