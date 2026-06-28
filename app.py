@@ -543,7 +543,7 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO
+# ROTA DE HISTÓRICO - ATUALIZADA COM FILTROS
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -553,23 +553,62 @@ def listar_historico():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
+        # Obter parâmetros de filtro
+        escola_id = request.args.get('escola')
+        serie = request.args.get('serie')
+        turma_id = request.args.get('turma')
+        
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT h.*, a.nome as aluno_nome, p.titulo as prova_titulo,
-                   t.serie, t.nome as turma_nome, e.nome as escola_nome,
-                   t.id as turma_id, e.id as escola_id,
-                   p.quantidade_questoes as total_questoes
+        
+        # Construir query com filtros
+        query = """
+            SELECT 
+                h.*, 
+                a.nome as aluno_nome, 
+                p.titulo as prova_titulo,
+                t.serie, 
+                t.nome as turma_nome, 
+                e.nome as escola_nome,
+                t.id as turma_id, 
+                e.id as escola_id,
+                p.quantidade_questoes as total_questoes
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
             LEFT JOIN turmas t ON p.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
-            ORDER BY h.data_correcao DESC
-        """)
+            WHERE 1=1
+        """
+        params = []
+        
+        if escola_id and escola_id != '' and escola_id != 'null':
+            try:
+                escola_id_int = int(escola_id)
+                query += " AND e.id = %s"
+                params.append(escola_id_int)
+            except ValueError:
+                pass
+        
+        if serie and serie != '' and serie != 'null':
+            query += " AND t.serie = %s"
+            params.append(serie)
+        
+        if turma_id and turma_id != '' and turma_id != 'null':
+            try:
+                turma_id_int = int(turma_id)
+                query += " AND t.id = %s"
+                params.append(turma_id_int)
+            except ValueError:
+                pass
+        
+        query += " ORDER BY h.data_correcao DESC"
+        
+        cur.execute(query, params)
         historico = cur.fetchall()
         cur.close()
         conn.close()
         
+        # Garantir que total_questoes exista
         for item in historico:
             if 'total_questoes' not in item or item['total_questoes'] is None:
                 item['total_questoes'] = 20
@@ -1339,7 +1378,8 @@ def dashboard_desempenho():
             LEFT JOIN provas p ON p.turma_id = t.id
             LEFT JOIN historico h ON h.prova_id = p.id
             GROUP BY t.id, t.nome
-            ORDER BY t.nome
+            HAVING COUNT(DISTINCT h.id) > 0
+            ORDER BY media DESC
         """)
         turmas = cur.fetchall()
         cur.close()
@@ -1361,6 +1401,9 @@ def dashboard_desempenho():
                 'total_alunos': turma['total_alunos'],
                 'total_correcoes': turma['total_correcoes']
             })
+        
+        # Limitar a 5 turmas com melhor desempenho
+        resultado = sorted(resultado, key=lambda x: x['porcentagem'], reverse=True)[:5]
         
         return jsonify(resultado)
         
