@@ -320,13 +320,419 @@
             .gab-grid { grid-template-columns:repeat(auto-fill,minmax(55px,1fr)); }
             .modal { padding:16px; }
         }
+
+        /* ============================================
+           ══ NOVO: REGRAS PARA IMPRESSÃO ══
+           ============================================ */
+        @media print {
+            /* Ocultar elementos que não devem ser impressos */
+            .no-print,
+            .menu-toggle,
+            .menu-overlay,
+            .sidebar,
+            .sb-nav,
+            .sb-footer,
+            .sb-brand,
+            .sb-user,
+            .sb-logout,
+            .page-actions .btn,
+            .page-actions .btn-outline,
+            .page-actions .btn-green,
+            .search-wrap,
+            .form-row:not(.print-row),
+            .form-row .btn,
+            .btn-group .btn:not(.no-print),
+            .card-header .btn-group,
+            .card-header .btn,
+            .modal-overlay,
+            .del-modal,
+            .toast-container,
+            .cam-modal,
+            .upload-zone,
+            .tab-nav,
+            .tab-c .btn,
+            .btn-full,
+            .btn-lg,
+            .ai-feature-btn,
+            .ai-hero-actions,
+            .afb-blue,
+            .afb-green,
+            .afb-purple,
+            .afb-red,
+            #menuToggle,
+            #menuOverlay,
+            .login-screen {
+                display: none !important;
+            }
+
+            /* Mostrar apenas a página ativa */
+            .page {
+                display: none !important;
+            }
+            .page.active {
+                display: block !important;
+                animation: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* Ajustes de layout para impressão */
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
+            }
+
+            #app {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+            }
+
+            .content {
+                padding: 15px !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+                height: auto !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Cards e containers */
+            .card {
+                background: #ffffff !important;
+                border: 1px solid #dddddd !important;
+                border-radius: 4px !important;
+                box-shadow: none !important;
+                padding: 12px 14px !important;
+                margin-bottom: 12px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .card-header {
+                border-bottom: 1px solid #dddddd !important;
+                padding-bottom: 8px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .card-title {
+                color: #000000 !important;
+                font-size: 13pt !important;
+            }
+
+            .stats-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 10px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .stat-card {
+                background: #f9f9f9 !important;
+                border: 1px solid #dddddd !important;
+                border-radius: 4px !important;
+                box-shadow: none !important;
+                padding: 10px 12px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .stat-val {
+                font-size: 20pt !important;
+                color: #000000 !important;
+            }
+
+            .stat-label {
+                color: #555555 !important;
+                font-size: 9pt !important;
+            }
+
+            .stat-icon {
+                display: none !important;
+            }
+
+            /* Tabelas */
+            .table-wrap {
+                border: 1px solid #dddddd !important;
+                border-radius: 4px !important;
+                overflow: visible !important;
+                margin-bottom: 10px !important;
+            }
+
+            table {
+                border-collapse: collapse !important;
+                width: 100% !important;
+                font-size: 9pt !important;
+                color: #000000 !important;
+            }
+
+            thead {
+                background: #f5f5f5 !important;
+            }
+
+            th {
+                background: #f0f0f0 !important;
+                color: #000000 !important;
+                font-weight: 700 !important;
+                border: 1px solid #cccccc !important;
+                padding: 6px 8px !important;
+                text-align: left !important;
+                font-size: 8pt !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+            }
+
+            td {
+                border: 1px solid #cccccc !important;
+                padding: 6px 8px !important;
+                color: #000000 !important;
+                background: #ffffff !important;
+            }
+
+            tbody tr:hover td {
+                background: #ffffff !important;
+            }
+
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Badges */
+            .badge {
+                border: 1px solid #999999 !important;
+                background: #f0f0f0 !important;
+                color: #000000 !important;
+                padding: 1px 8px !important;
+                font-size: 7pt !important;
+                border-radius: 12px !important;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+            }
+
+            .badge-green {
+                border-color: #28a745 !important;
+                background: #d4edda !important;
+                color: #155724 !important;
+            }
+            .badge-red {
+                border-color: #dc3545 !important;
+                background: #f8d7da !important;
+                color: #721c24 !important;
+            }
+            .badge-orange {
+                border-color: #fd7e14 !important;
+                background: #fff3cd !important;
+                color: #856404 !important;
+            }
+            .badge-purple {
+                border-color: #6f42c1 !important;
+                background: #e8d4ff !important;
+                color: #4a148c !important;
+            }
+            .badge-blue {
+                border-color: #007bff !important;
+                background: #cce5ff !important;
+                color: #004085 !important;
+            }
+            .badge-gray {
+                border-color: #6c757d !important;
+                background: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .badge-conceito-baixo {
+                border-color: #dc3545 !important;
+                background: #f8d7da !important;
+                color: #721c24 !important;
+            }
+            .badge-conceito-medio-baixo {
+                border-color: #fd7e14 !important;
+                background: #fff3cd !important;
+                color: #856404 !important;
+            }
+            .badge-conceito-medio-alto {
+                border-color: #007bff !important;
+                background: #cce5ff !important;
+                color: #004085 !important;
+            }
+            .badge-conceito-alto {
+                border-color: #28a745 !important;
+                background: #d4edda !important;
+                color: #155724 !important;
+            }
+
+            /* Progress bars */
+            .progress {
+                background: #e9ecef !important;
+                border: 1px solid #cccccc !important;
+                border-radius: 4px !important;
+                height: 10px !important;
+                overflow: hidden !important;
+            }
+
+            .progress-fill {
+                border-radius: 4px !important;
+                background: #007bff !important;
+            }
+
+            .pf-green {
+                background: #28a745 !important;
+            }
+            .pf-orange {
+                background: #fd7e14 !important;
+            }
+            .pf-purple {
+                background: #6f42c1 !important;
+            }
+            .pf-blue {
+                background: #007bff !important;
+            }
+
+            /* Gráficos */
+            .chart-bars {
+                height: 100px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .chart-bar-val {
+                font-size: 8pt !important;
+                color: #000000 !important;
+            }
+
+            .chart-bar-lbl {
+                font-size: 7pt !important;
+                color: #555555 !important;
+            }
+
+            .conceito-graficos {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 15px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            #conceito-barras .progress {
+                height: 14px !important;
+            }
+
+            #conceito-barras .progress-fill {
+                height: 14px !important;
+                border-radius: 4px !important;
+            }
+
+            /* Donut chart */
+            #donut-container {
+                transform: scale(0.9) !important;
+            }
+
+            #donut-container canvas {
+                max-width: 160px !important;
+                max-height: 160px !important;
+            }
+
+            /* Cabeçalho da página */
+            .page-header {
+                margin-bottom: 15px !important;
+                padding-bottom: 10px !important;
+                border-bottom: 2px solid #333333 !important;
+            }
+
+            .page-title {
+                font-size: 16pt !important;
+                color: #000000 !important;
+            }
+
+            .page-sub {
+                color: #555555 !important;
+                font-size: 10pt !important;
+            }
+
+            /* Configurações de página */
+            @page {
+                size: A4 !important;
+                margin: 15mm 12mm !important;
+                margin-top: 10mm !important;
+                margin-bottom: 10mm !important;
+            }
+
+            /* Quebra de páginas para tabelas grandes */
+            .card {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Permitir quebra de página dentro de cards grandes */
+            .card.allow-break {
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+            }
+
+            /* Forçar quebra de página após um elemento */
+            .page-break {
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+
+            /* Imagens não devem quebrar */
+            img {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Ocultar o toast */
+            .toast-container {
+                display: none !important;
+            }
+
+            /* Cabeçalho do relatório na impressão */
+            .print-header {
+                display: block !important;
+                text-align: center !important;
+                margin-bottom: 20px !important;
+                padding-bottom: 12px !important;
+                border-bottom: 2px solid #333333 !important;
+            }
+
+            .print-header h2 {
+                font-size: 16pt !important;
+                margin: 0 !important;
+                color: #000000 !important;
+            }
+
+            .print-header p {
+                font-size: 10pt !important;
+                color: #555555 !important;
+                margin: 4px 0 0 0 !important;
+            }
+        }
+
+        /* Classe auxiliar para mostrar apenas na impressão */
+        .print-only {
+            display: none !important;
+        }
+
+        @media print {
+            .print-only {
+                display: block !important;
+            }
+        }
     </style>
 </head>
 <body>
 
     <!-- ══════════ BOTÃO MENU HAMBÚRGUER ══════════ -->
-    <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">☰</button>
-    <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+    <button class="menu-toggle no-print" id="menuToggle" onclick="toggleMenu()">☰</button>
+    <div class="menu-overlay no-print" id="menuOverlay" onclick="toggleMenu()"></div>
 
     <!-- ══════════ LOGIN ══════════ -->
     <div id="login-screen">
@@ -347,7 +753,7 @@
                     <div style="font-size:13px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;margin-top:4px;">SISAM 2026</div>
                 </div>
             </div>
-            <div class="login-tabs">
+            <div class="login-tabs no-print">
                 <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
                 <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
             </div>
@@ -363,7 +769,7 @@
 
     <!-- ══════════ APP ══════════ -->
     <div id="app">
-        <div class="sidebar" id="sidebar">
+        <div class="sidebar no-print" id="sidebar">
             <div class="sb-brand">
                 <div class="sb-logo">🎓</div>
                 <div class="sb-brand-name">Corrije<span>Pro</span></div>
@@ -427,18 +833,26 @@
             <div class="page active" id="page-dashboard">
                 <div class="page-header">
                     <div><div class="page-title">🏠 Dashboard</div><p class="page-sub">Visão geral do sistema</p></div>
-                    <div class="page-actions">
+                    <div class="page-actions no-print">
                         <button class="btn btn-outline" onclick="abrirCamera()">📱 Câmera</button>
                         <button class="btn btn-primary" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
                     </div>
                 </div>
+                
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Desempenho</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-dash"></span></p>
+                </div>
+
                 <div class="stats-grid">
                     <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
                     <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
                     <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
                     <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
                 </div>
-                <div class="ai-hero">
+                <div class="ai-hero no-print">
                     <div class="ai-hero-icon">🤖</div>
                     <div class="ai-hero-text"><h3>Ferramentas de Inteligência Artificial</h3><p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p></div>
                     <div class="ai-hero-actions">
@@ -446,7 +860,7 @@
                         <button class="btn btn-outline" onclick="go('correcao-texto')">✍️ Correção de Texto</button>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;" class="no-print">
                     <div class="ai-feature-btn afb-purple" onclick="go('corrigir-ia')"><div class="af-ico">🤖</div><div class="af-title">Corrigir com IA</div><div class="af-sub">Detecção automática</div></div>
                     <div class="ai-feature-btn afb-blue" onclick="abrirCamera()"><div class="af-ico">📱</div><div class="af-title">Câmera do Celular</div><div class="af-sub">Scan em tempo real</div></div>
                     <div class="ai-feature-btn afb-green" onclick="abrirArquivo()"><div class="af-ico">📂</div><div class="af-title">Escolher Arquivo</div><div class="af-sub">Imagem do cartão</div></div>
@@ -476,7 +890,7 @@
             <div class="page" id="page-escola">
                 <div class="page-header">
                     <div><div class="page-title">🏫 Escolas</div><p class="page-sub">Gerencie as unidades de ensino cadastradas</p></div>
-                    <div class="page-actions">
+                    <div class="page-actions no-print">
                         <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar escola..." oninput="filtrarTabela(this,'tb-escola')"></div>
                         <button class="btn btn-primary" onclick="openM('m-escola')">+ Nova Escola</button>
                     </div>
@@ -493,7 +907,7 @@
             <div class="page" id="page-turmas">
                 <div class="page-header">
                     <div><div class="page-title">👥 Turmas</div><p class="page-sub">1º Ano ao 9º Ano do Ensino Fundamental</p></div>
-                    <div class="page-actions">
+                    <div class="page-actions no-print">
                         <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar turma..." oninput="filtrarTabela(this,'tb-turmas')"></div>
                         <select class="form-control" style="width:140px;padding:8px 12px;font-size:12px;" onchange="filtrarSerie(this)">
                             <option value="">Todas as séries</option>
@@ -516,9 +930,9 @@
             <div class="page" id="page-lista-turma">
                 <div class="page-header">
                     <div><div class="page-title">📋 Lista de Alunos por Turma</div><p class="page-sub">Emissão oficial da lista de chamada</p></div>
-                    <div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green">📥 Exportar PDF</button></div>
+                    <div class="page-actions no-print"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green">📥 Exportar PDF</button></div>
                 </div>
-                <div class="card">
+                <div class="card no-print">
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="lista-escola" onchange="carregarTurmasLista(this.value)"><option value="">Selecione a escola</option></select></div>
                         <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="lista-serie"><option value="">Todas</option><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div>
@@ -533,7 +947,7 @@
             <div class="page" id="page-alunos">
                 <div class="page-header">
                     <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Filtrar por escola, turma e série</p></div>
-                    <div class="page-actions">
+                    <div class="page-actions no-print">
                         <select class="form-control" style="width:160px;padding:8px 11px;font-size:12px;" id="filtro-escola-alunos" onchange="filtrarAlunosPorEscola(this.value)">
                             <option value="">Todas as escolas</option>
                         </select>
@@ -563,7 +977,7 @@
             <!-- ========== CADASTRAR PROVA ========== -->
             <div class="page" id="page-prova-upload">
                 <div class="page-header"><div><div class="page-title">📤 Cadastrar Prova</div><p class="page-sub">Configure os parâmetros da avaliação</p></div></div>
-                <div class="g2">
+                <div class="g2 no-print">
                     <div class="card">
                         <div class="card-header"><div class="card-title">📝 Informações</div></div>
                         <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
@@ -585,7 +999,7 @@
             <!-- ========== GABARITO ========== -->
             <div class="page" id="page-gabarito">
                 <div class="page-header"><div><div class="page-title">✅ Cadastrar Gabarito</div><p class="page-sub">1º Ano: A,B,C &nbsp;|&nbsp; 2º ao 9º Ano: A,B,C,D</p></div></div>
-                <div class="card">
+                <div class="card no-print">
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
                         <div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="gab-serie" onchange="buildGabGrid()"><option value="1">1º Ano — A, B, C</option><option value="2" selected>2º Ano — A, B, C, D</option><option value="3">3º Ano — A, B, C, D</option><option value="4">4º Ano — A, B, C, D</option><option value="5">5º Ano — A, B, C, D</option><option value="6">6º Ano — A, B, C, D</option><option value="7">7º Ano — A, B, C, D</option><option value="8">8º Ano — A, B, C, D</option><option value="9">9º Ano — A, B, C, D</option></select></div>
@@ -594,18 +1008,18 @@
                     <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div><div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div></div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><div class="card-title">📝 Gabarito das Questões</div><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button><button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button></div></div>
+                    <div class="card-header"><div class="card-title">📝 Gabarito das Questões</div><div class="btn-group no-print"><button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button><button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button></div></div>
                     <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
                     <div class="gab-grid" id="gab-grid"></div>
-                    <div class="form-row c3" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
-                    <div class="btn-group"><button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button><button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button></div>
+                    <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
+                    <div class="btn-group no-print"><button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button><button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button></div>
                 </div>
             </div>
 
             <!-- ========== CORRIGIR COM IA ========== -->
             <div class="page" id="page-corrigir-ia">
                 <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção e correção automática de cartões resposta</p></div></div>
-                <div class="g2" style="margin-bottom:18px;">
+                <div class="g2 no-print" style="margin-bottom:18px;">
                     <div class="card card-glow-blue" style="border-color:rgba(6,182,212,.3);">
                         <div class="card-header"><div class="card-title" style="color:var(--cyan);">📱 Câmera do Celular</div><span class="badge badge-cyan">Real-time</span></div>
                         <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Aponte a câmera para o cartão resposta. O sistema detecta as marcações com IA automaticamente.</p>
@@ -621,7 +1035,7 @@
                         <input type="file" id="inp-arq" accept="image/*" style="display:none" onchange="processarArq(this)">
                     </div>
                 </div>
-                <div class="card">
+                <div class="card no-print">
                     <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select></div>
@@ -648,11 +1062,11 @@
                                 <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
                                 <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
                                 <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
-                                <button class="btn btn-orange btn-sm" style="margin-top:10px;" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
+                                <button class="btn btn-orange btn-sm no-print" style="margin-top:10px;" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
                             </div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
-                        <div class="btn-group"><button class="btn btn-green btn-sm" onclick="salvarCorrecao()">💾 Salvar</button><button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button><button class="btn btn-purple btn-sm" onclick="processarComIA(document.getElementById('ia-ultima-imagem')?.value)">🔄 Próximo</button></div>
+                        <div class="btn-group no-print"><button class="btn btn-green btn-sm" onclick="salvarCorrecao()">💾 Salvar</button><button class="btn btn-primary btn-sm" onclick="go('resultados')">📊 Resultados</button><button class="btn btn-purple btn-sm" onclick="processarComIA(document.getElementById('ia-ultima-imagem')?.value)">🔄 Próximo</button></div>
                         <input type="hidden" id="ia-ultima-imagem">
                     </div>
                 </div>
@@ -661,7 +1075,7 @@
             <!-- ========== CORREÇÃO DE TEXTO IA ========== -->
             <div class="page" id="page-correcao-texto">
                 <div class="page-header"><div><div class="page-title">✍️ Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
-                <div class="g2">
+                <div class="g2 no-print">
                     <div>
                         <div class="card">
                             <div class="card-header"><div class="card-title">📥 Enviar Texto</div></div>
@@ -695,7 +1109,7 @@
                             <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;"><div><div style="font-size:60px;font-weight:900;line-height:1;color:#a78bfa;" id="txt-nota">0</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Nota Final</div></div><div style="flex:1;"><div style="font-weight:700;font-size:15px;margin-bottom:8px;" id="txt-aluno-nome">—</div><span class="badge badge-green" id="txt-status">AGUARDANDO</span></div></div>
                             <div class="ai-criteria-grid"><div class="ai-crit"><div class="ai-crit-name">Coerência e Coesão</div><div class="ai-crit-val" id="c-coe">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-coe" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Adequação ao Tema</div><div class="ai-crit-val" id="c-tema">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-tema" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Ortografia e Gramática</div><div class="ai-crit-val" id="c-ort">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-ort" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Riqueza Vocabular</div><div class="ai-crit-val" id="c-voc">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-voc" style="width:0%;"></div></div></div></div>
                             <div class="ai-feedback-box"><strong style="color:#a78bfa;">📝 Feedback:</strong><br><br><span id="txt-fb">Aguardando avaliação...</span></div>
-                            <div class="btn-group" style="margin-top:14px;"><button class="btn btn-green btn-sm" onclick="salvarAvaliacaoTexto()">💾 Salvar</button><button class="btn btn-outline btn-sm" onclick="window.print()">🖨️</button><button class="btn btn-purple btn-sm" onclick="avaliarTexto()">🔄 Reavaliar</button></div>
+                            <div class="btn-group no-print" style="margin-top:14px;"><button class="btn btn-green btn-sm" onclick="salvarAvaliacaoTexto()">💾 Salvar</button><button class="btn btn-outline btn-sm" onclick="window.print()">🖨️</button><button class="btn btn-purple btn-sm" onclick="avaliarTexto()">🔄 Reavaliar</button></div>
                         </div>
                     </div>
                 </div>
@@ -703,13 +1117,13 @@
 
             <!-- ========== GABARITOS LIST ========== -->
             <div class="page" id="page-gabaritos">
-                <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
+                <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== PROVAS ========== -->
             <div class="page" id="page-provas">
-                <div class="page-header"><div><div class="page-title">📑 Provas</div></div><div class="page-actions"><button class="btn btn-primary" onclick="go('prova-upload')">+ Nova Prova</button></div></div>
+                <div class="page-header"><div><div class="page-title">📑 Provas</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('prova-upload')">+ Nova Prova</button></div></div>
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Turma</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
@@ -720,11 +1134,19 @@
                         <div class="page-title">🏆 Resultados</div>
                         <p class="page-sub">Notas, desempenho e análise visual</p>
                     </div>
-                    <div class="page-actions">
-                        <button class="btn btn-outline no-print" onclick="window.print()">🖨️ Imprimir</button>
-                        <button class="btn btn-green no-print" onclick="exportarResultadosFiltrados()">📥 Excel</button>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
                     </div>
                 </div>
+
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Resultados</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-resultados"></span></p>
+                </div>
+
                 <div class="card no-print" style="margin-bottom:16px;">
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)"><option value="">Todas as escolas</option></select></div>
@@ -744,7 +1166,7 @@
                 </div>
                 <div class="conceito-graficos" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                     <div class="card">
-                        <div class="card-header"><div class="card-title">📊 Distribuição por Conceito</div><span class="badge badge-blue">Barras</span></div>
+                        <div class="card-header"><div class="card-title">📊 Distribuição por Conceito</div><span class="badge badge-blue no-print">Barras</span></div>
                         <div id="conceito-barras" style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
                             <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔴 Baixo (até 40%)</span><span style="font-weight:700;color:#ef4444;" id="conceito-baixo-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#ef4444,#dc2626);border-radius:10px;transition:width 0.8s ease;" id="conceito-baixo-bar"></div></div></div>
                             <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟠 Médio Baixo (41% - 60%)</span><span style="font-weight:700;color:#f59e0b;" id="conceito-medio-baixo-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:10px;transition:width 0.8s ease;" id="conceito-medio-baixo-bar"></div></div></div>
@@ -753,7 +1175,7 @@
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-header"><div class="card-title">🍩 Distribuição Percentual</div><span class="badge badge-purple">Donut</span></div>
+                        <div class="card-header"><div class="card-title">🍩 Distribuição Percentual</div><span class="badge badge-purple no-print">Donut</span></div>
                         <div style="display:flex;align-items:center;justify-content:center;padding:10px 0;">
                             <div style="position:relative;width:200px;height:200px;" id="donut-container"><canvas id="donut-chart" width="200" height="200"></canvas><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:12px;color:var(--text3);">Total</div><div style="font-size:24px;font-weight:900;color:var(--text);" id="donut-total">0</div></div></div>
                             <div style="margin-left:20px;display:flex;flex-direction:column;gap:8px;font-size:12px;">
@@ -773,26 +1195,50 @@
 
             <!-- ========== RELATÓRIOS ========== -->
             <div class="page" id="page-rel-turma">
-                <div class="page-header"><div><div class="page-title">📊 Relatório por Turma</div></div><div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button></div></div>
+                <div class="page-header"><div><div class="page-title">📊 Relatório por Turma</div></div><div class="page-actions no-print"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button></div></div>
+
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>📊 Relatório por Turma</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
+                </div>
+
                 <div class="stats-grid"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Adquiriu as Habilidades</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recomposição da Aprendizagem</div></div></div><div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div></div>
                 <div class="card"><div class="card-header"><div class="card-title">📈 Distribuição de Notas</div></div><div class="chart-bars" id="dist-notas"><div class="chart-bar-item"><div class="chart-bar-val" id="d0-2">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div><div class="chart-bar-lbl">0–2</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d2-4">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">2–4</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d4-6">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">4–6</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d6-8">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">6–8</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d8-10">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8–10</div></div></div></div>
             </div>
 
             <div class="page" id="page-rel-aluno">
-                <div class="page-header"><div><div class="page-title">👤 Relatório por Aluno</div></div><div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button></div></div>
-                <div class="card"><div class="form-row c3"><div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="rel-aluno-select"><option value="">Selecione...</option></select></div><div class="form-group"><label class="form-label">Prova</label><select class="form-control" id="rel-prova-select"><option value="">Todas</option></select></div><div class="form-group" style="justify-content:flex-end;"><button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button></div></div></div>
+                <div class="page-header"><div><div class="page-title">👤 Relatório por Aluno</div></div><div class="page-actions no-print"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button></div></div>
+
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>👤 Relatório por Aluno</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-aluno"></span></p>
+                </div>
+
+                <div class="card no-print"><div class="form-row c3"><div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="rel-aluno-select"><option value="">Selecione...</option></select></div><div class="form-group"><label class="form-label">Prova</label><select class="form-control" id="rel-prova-select"><option value="">Todas</option></select></div><div class="form-group" style="justify-content:flex-end;"><button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button></div></div></div>
                 <div class="g2"><div class="card"><div class="card-header"><div class="card-title">📋 Histórico</div></div><div class="table-wrap"><table><thead><tr><th>Prova</th><th>Data</th><th>Nota</th><th>Status</th></tr></thead><tbody id="rel-aluno-historico"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr></tbody></table></div></div><div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div><div class="chart-bars" style="height:100px;" id="rel-evolucao"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Selecione um aluno</div></div></div></div>
             </div>
 
             <div class="page" id="page-rel-escola">
-                <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
+                <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
+
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>🏫 Relatório por Escola</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-escola"></span></p>
+                </div>
+
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Desempenho</th></tr></thead><tbody id="tb-rel-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== CONFIG ========== -->
             <div class="page" id="page-config">
-                <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
-                <div class="g2">
+                <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
+                <div class="g2 no-print">
                     <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
                     <div class="card"><div class="card-header"><div class="card-title">🤖 IA & Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
                     <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div><div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div><div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div></div>
@@ -803,19 +1249,36 @@
             <!-- ========== USER PAGES ========== -->
             <div class="page" id="page-u-dashboard">
                 <div class="page-header"><div><div class="page-title">🏠 Início</div><p class="page-sub">Portal do Usuário</p></div></div>
+
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>📊 Painel do Usuário</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-u-dash"></span></p>
+                </div>
+
                 <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="u-total-escolas">0</div><div class="stat-label">Escola</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="u-total-turmas">0</div><div class="stat-label">Turmas</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="u-total-alunos">0</div><div class="stat-label">Alunos</div></div></div></div>
                 <div class="card"><div class="card-header"><div class="card-title">📋 Provas Recentes</div></div><div class="table-wrap"><table><thead><tr><th>Prova</th><th>Série</th><th>Data</th><th>Status</th></tr></thead><tbody id="u-provas-recentes"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
-            <div class="page" id="page-u-escola"><div class="page-header"><div><div class="page-title">🏫 Escola</div></div><button class="btn btn-primary" onclick="openM('m-escola')">+ Nova</button></div><div class="card" id="u-escola-info"><div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div></div></div>
-            <div class="page" id="page-u-turmas"><div class="page-header"><div><div class="page-title">👥 Turmas</div></div><button class="btn btn-primary" onclick="openM('m-turma')">+ Nova</button></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Turma</th><th>Série</th><th>Professor</th><th>Alunos</th><th>Lista</th></tr></thead><tbody id="u-tb-turmas"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
-            <div class="page" id="page-u-alunos"><div class="page-header"><div><div class="page-title">🎒 Alunos</div></div><button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo</button></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th></tr></thead><tbody id="u-tb-alunos"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
+            <div class="page" id="page-u-escola"><div class="page-header"><div><div class="page-title">🏫 Escola</div></div><button class="btn btn-primary no-print" onclick="openM('m-escola')">+ Nova</button></div><div class="card" id="u-escola-info"><div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div></div></div>
+            <div class="page" id="page-u-turmas"><div class="page-header"><div><div class="page-title">👥 Turmas</div></div><button class="btn btn-primary no-print" onclick="openM('m-turma')">+ Nova</button></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Turma</th><th>Série</th><th>Professor</th><th>Alunos</th><th>Lista</th></tr></thead><tbody id="u-tb-turmas"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
+            <div class="page" id="page-u-alunos"><div class="page-header"><div><div class="page-title">🎒 Alunos</div></div><button class="btn btn-primary no-print" onclick="openM('m-aluno')">+ Novo</button></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th></tr></thead><tbody id="u-tb-alunos"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
             <div class="page" id="page-u-resultados"><div class="page-header"><div><div class="page-title">🏆 Resultados</div></div></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Nota</th><th>Status</th></tr></thead><tbody id="u-tb-resultados"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
-            <div class="page" id="page-u-relatorios"><div class="page-header"><div><div class="page-title">📊 Relatórios</div></div><div class="page-actions"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green">📥 PDF</button></div></div><div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div></div>
+            <div class="page" id="page-u-relatorios"><div class="page-header"><div><div class="page-title">📊 Relatórios</div></div><div class="page-actions no-print"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green">📥 PDF</button></div></div>
+
+                <!-- Cabeçalho que aparece apenas na impressão -->
+                <div class="print-header print-only">
+                    <h2>📊 Relatórios</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-u-rel"></span></p>
+                </div>
+
+                <div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div></div>
         </div>
     </div>
 
     <!-- ========== CÂMERA MODAL ========== -->
-    <div class="cam-modal" id="cam-modal">
+    <div class="cam-modal no-print" id="cam-modal">
         <div class="cam-container">
             <div class="cam-header"><h3>📱 Scanner — Câmera do Celular</h3><button class="modal-close" onclick="fecharCamera()">×</button></div>
             <div class="cam-video-wrap"><video id="cam-video" autoplay playsinline></video><div class="cam-frame"><div class="cam-corner cc-tl"></div><div class="cam-corner cc-tr"></div><div class="cam-corner cc-bl"></div><div class="cam-corner cc-br"></div></div><div class="cam-scan-line"></div></div>
@@ -826,7 +1289,7 @@
     </div>
 
     <!-- ========== MODAL CORREÇÃO MANUAL ========== -->
-    <div class="modal-overlay" id="m-correcao-manual">
+    <div class="modal-overlay no-print" id="m-correcao-manual">
         <div class="modal" style="max-width:750px;width:95vw;">
             <div class="modal-header"><h3>✏️ Correção Manual — <span id="cm-aluno-nome">Aluno</span></h3><button class="modal-close" onclick="closeM('m-correcao-manual')">×</button></div>
             <div class="correcao-aluno-info">
@@ -837,7 +1300,7 @@
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
                 <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Respostas do Aluno</span>
-                <div class="btn-group">
+                <div class="btn-group no-print">
                     <button class="btn btn-outline btn-sm" onclick="preencherGabaritoCM()">📋 Preencher com Gabarito</button>
                     <button class="btn btn-ghost btn-sm" onclick="limparRespostasCM()">🗑️ Limpar</button>
                 </div>
@@ -852,7 +1315,7 @@
                 <span id="cm-status-badge" class="badge badge-gray">AGUARDANDO</span>
                 <span id="cm-porcentagem" style="font-size:12px;color:var(--text2);">0% de aproveitamento</span>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer no-print">
                 <button class="btn btn-outline" onclick="closeM('m-correcao-manual')">✕ Fechar</button>
                 <button class="btn btn-green" onclick="salvarCorrecaoManual()">💾 Salvar Correção</button>
             </div>
@@ -860,7 +1323,7 @@
     </div>
 
     <!-- ========== MODAL EDITAR ESCOLA ========== -->
-    <div class="modal-overlay" id="m-editar-escola">
+    <div class="modal-overlay no-print" id="m-editar-escola">
         <div class="modal">
             <div class="modal-header"><h3>✏️ Editar Escola</h3><button class="modal-close" onclick="closeM('m-editar-escola')">×</button></div>
             <input type="hidden" id="editar-escola-id">
@@ -868,12 +1331,12 @@
             <div class="form-row"><div class="form-group"><label class="form-label">INEP</label><input class="form-control" id="editar-escola-inep" placeholder="8 dígitos"></div><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="editar-escola-municipio" placeholder="Cidade"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Estado</label><select class="form-control" id="editar-escola-estado"><option>PA</option></select></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="editar-escola-telefone" placeholder="(00) 0000-0000"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Diretor(a)</label><input class="form-control" id="editar-escola-diretor" placeholder="Nome completo"></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-editar-escola')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoEscola()">💾 Salvar Alterações</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-escola')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoEscola()">💾 Salvar Alterações</button></div>
         </div>
     </div>
 
     <!-- ========== MODAL EDITAR TURMA ========== -->
-    <div class="modal-overlay" id="m-editar-turma">
+    <div class="modal-overlay no-print" id="m-editar-turma">
         <div class="modal">
             <div class="modal-header"><h3>✏️ Editar Turma</h3><button class="modal-close" onclick="closeM('m-editar-turma')">×</button></div>
             <input type="hidden" id="editar-turma-id">
@@ -881,12 +1344,12 @@
             <div class="form-row"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="editar-turma-nome" placeholder="Ex: 3ºA"></div><div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="editar-turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="editar-turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div><div class="form-group"><label class="form-label">Capacidade</label><input class="form-control" id="editar-turma-capacidade" type="number" placeholder="35"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Professor(a)</label><input class="form-control" id="editar-turma-professor" placeholder="Nome do professor"></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-editar-turma')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoTurma()">💾 Salvar Alterações</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-turma')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoTurma()">💾 Salvar Alterações</button></div>
         </div>
     </div>
 
     <!-- ========== MODAL EDITAR ALUNO ========== -->
-    <div class="modal-overlay" id="m-editar-aluno">
+    <div class="modal-overlay no-print" id="m-editar-aluno">
         <div class="modal">
             <div class="modal-header"><h3>✏️ Editar Aluno</h3><button class="modal-close" onclick="closeM('m-editar-aluno')">×</button></div>
             <input type="hidden" id="editar-aluno-id">
@@ -896,40 +1359,40 @@
             <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="editar-aluno-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="editar-aluno-responsavel" placeholder="Pai, mãe ou responsável"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="editar-aluno-telefone" placeholder="(00) 99999-9999"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="editar-aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="editar-aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-editar-aluno')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoAluno()">💾 Salvar Alterações</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-aluno')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoAluno()">💾 Salvar Alterações</button></div>
         </div>
     </div>
 
     <!-- ========== DELETE CONFIRM MODAL ========== -->
-    <div class="del-modal" id="del-modal">
+    <div class="del-modal no-print" id="del-modal">
         <div class="del-box"><div class="del-icon">🗑️</div><h3>Confirmar Exclusão</h3><p>Tem certeza que deseja excluir<br><span class="del-name" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p><div class="del-actions"><button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button><button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button></div></div>
     </div>
 
     <!-- ========== MODALS ========== -->
     <!-- Modal Escola -->
-    <div class="modal-overlay" id="m-escola">
+    <div class="modal-overlay no-print" id="m-escola">
         <div class="modal"><div class="modal-header"><h3>🏫 Cadastrar Escola</h3><button class="modal-close" onclick="closeM('m-escola')">×</button></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="escola-nome" placeholder="Ex: E.E. Prof. João Ribeiro"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">INEP</label><input class="form-control" id="escola-inep" placeholder="8 dígitos"></div><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="escola-municipio" placeholder="Cidade"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Estado</label><select class="form-control" id="escola-estado"><option>PA</option></select></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="escola-telefone" placeholder="(00) 0000-0000"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Diretor(a)</label><input class="form-control" id="escola-diretor" placeholder="Nome completo"></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-escola')">Cancelar</button><button class="btn btn-green" onclick="salvarEscola()">💾 Salvar</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-escola')">Cancelar</button><button class="btn btn-green" onclick="salvarEscola()">💾 Salvar</button></div>
         </div>
     </div>
 
     <!-- Modal Turma -->
-    <div class="modal-overlay" id="m-turma">
+    <div class="modal-overlay no-print" id="m-turma">
         <div class="modal"><div class="modal-header"><h3>👥 Cadastrar Turma</h3><button class="modal-close" onclick="closeM('m-turma')">×</button></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="turma-escola"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Ano Letivo</label><input class="form-control" id="turma-ano" value="2025" type="number"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="turma-nome" placeholder="Ex: 3ºA"></div><div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div><div class="form-group"><label class="form-label">Capacidade</label><input class="form-control" id="turma-capacidade" type="number" placeholder="35"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Professor(a)</label><input class="form-control" id="turma-professor" placeholder="Nome do professor"></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-turma')">Cancelar</button><button class="btn btn-green" onclick="salvarTurma()">💾 Salvar</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-turma')">Cancelar</button><button class="btn btn-green" onclick="salvarTurma()">💾 Salvar</button></div>
         </div>
     </div>
 
     <!-- Modal Aluno -->
-    <div class="modal-overlay" id="m-aluno">
+    <div class="modal-overlay no-print" id="m-aluno">
         <div class="modal"><div class="modal-header"><h3>🎒 Cadastrar Aluno</h3><div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');">📋 Lista</button><button class="modal-close" onclick="closeM('m-aluno')">×</button></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60"><div class="form-hint">Número sequencial na lista de chamada</div></div><div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="aluno-nome" placeholder="Nome completo do aluno"></div></div>
@@ -937,36 +1400,36 @@
             <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="aluno-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="aluno-telefone" placeholder="(00) 99999-9999"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div></div>
-            <div class="modal-footer"><button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');" style="margin-right:auto;">📋 Ver Lista</button><button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button><button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');" style="margin-right:auto;">📋 Ver Lista</button><button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button><button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button></div>
         </div>
     </div>
 
     <!-- Modal Prova -->
-    <div class="modal-overlay" id="m-prova">
+    <div class="modal-overlay no-print" id="m-prova">
         <div class="modal"><div class="modal-header"><h3>📝 Cadastrar Prova</h3><button class="modal-close" onclick="closeM('m-prova')">×</button></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="modal-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Disciplina</label><select class="form-control" id="modal-prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select></div><div class="form-group"><label class="form-label">Bimestre</label><select class="form-control" id="modal-prova-bimestre"><option>1º Bimestre</option><option>2º Bimestre</option><option>3º Bimestre</option><option>4º Bimestre</option></select></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="modal-prova-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Data <span class="req">*</span></label><input class="form-control" id="modal-prova-data" type="date"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Valor Nota</label><input class="form-control" id="modal-prova-valor" type="number" value="10"></div><div class="form-group"><label class="form-label">Tipo</label><select class="form-control" id="modal-prova-tipo"><option value="4">4 Opções (A,B,C,D)</option><option value="3">3 Opções (A,B,C)</option></select></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Gabarito</label><div style="display:flex;flex-wrap:wrap;gap:6px;" id="modal-gabarito-grid"></div></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-prova')">Cancelar</button><button class="btn btn-green" onclick="salvarProvaModal()">💾 Salvar</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-prova')">Cancelar</button><button class="btn btn-green" onclick="salvarProvaModal()">💾 Salvar</button></div>
         </div>
     </div>
 
     <!-- ========== MODAL USUÁRIO ========== -->
-    <div class="modal-overlay" id="m-usuario">
+    <div class="modal-overlay no-print" id="m-usuario">
         <div class="modal">
             <div class="modal-header"><h3>👤 Cadastrar Usuário</h3><button class="modal-close" onclick="closeM('m-usuario')">×</button></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="usuario-nome" placeholder="Nome completo"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Usuário (Login) <span class="req">*</span></label><input class="form-control" id="usuario-username" placeholder="Ex: professor1"></div><div class="form-group"><label class="form-label">Senha <span class="req">*</span></label><input class="form-control" id="usuario-senha" type="password" placeholder="Mínimo 4 caracteres"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="usuario-email" type="email" placeholder="email@exemplo.com"></div><div class="form-group"><label class="form-label">Perfil <span class="req">*</span></label><select class="form-control" id="usuario-perfil"><option value="usuario">Usuário</option><option value="admin">Administrador</option></select></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="usuario-ativo" checked style="width:16px;height:16px;"> Usuário ativo</label></div></div>
-            <div class="modal-footer"><button class="btn btn-outline" onclick="closeM('m-usuario')">Cancelar</button><button class="btn btn-green" onclick="salvarUsuario()">💾 Salvar Usuário</button></div>
+            <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-usuario')">Cancelar</button><button class="btn btn-green" onclick="salvarUsuario()">💾 Salvar Usuário</button></div>
         </div>
     </div>
 
     <!-- TOAST -->
-    <div class="toast-container" id="toast-c"></div>
+    <div class="toast-container no-print" id="toast-c"></div>
 
     <script>
         // ============================================
@@ -992,6 +1455,35 @@
             valorPorQuestao: 0.5,
             serie: '1º Ano'
         };
+
+        // ============================================
+        // FUNÇÃO PARA ATUALIZAR DATAS NOS CABEÇALHOS DE IMPRESSÃO
+        // ============================================
+        function atualizarDatasImpressao() {
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const elementosData = [
+                'print-data-dash',
+                'print-data-resultados',
+                'print-data-rel-turma',
+                'print-data-rel-aluno',
+                'print-data-rel-escola',
+                'print-data-u-dash',
+                'print-data-u-rel'
+            ];
+            
+            elementosData.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = dataFormatada;
+            });
+        }
 
         // ============================================
         // MENU TOGGLE
@@ -1065,6 +1557,7 @@
             go(isAdmin ? 'dashboard' : 'u-dashboard');
             buildGabGrid();
             carregarDados();
+            atualizarDatasImpressao();
         }
 
         function doLogout() {
@@ -1095,6 +1588,9 @@
             if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
             if (page === 'gabaritos') carregarGabaritos();
             if (page === 'rel-turma' || page === 'rel-aluno' || page === 'rel-escola') carregarRelatorios();
+            
+            // Atualizar datas de impressão sempre que navegar
+            atualizarDatasImpressao();
 
             if (window.innerWidth <= 900) {
                 const sidebar = document.getElementById('sidebar');
@@ -1415,6 +1911,7 @@
                     carregarEscolasTexto()
                 ]);
                 console.log('✅ Todos os dados carregados com sucesso!');
+                atualizarDatasImpressao();
             } catch (erro) {
                 console.error('❌ Erro ao carregar dados:', erro);
                 showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
@@ -2120,6 +2617,7 @@
                 const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
                 vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
                 await carregarRelatorioEscola();
+                atualizarDatasImpressao();
             } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
         }
 
@@ -3382,6 +3880,7 @@
             carregarEscolasFiltroAlunos();
             const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
+            atualizarDatasImpressao();
         });
 
         document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
