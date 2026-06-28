@@ -625,16 +625,8 @@
                     <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select></div>
-                        <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
-                            <select class="form-control" id="corrigir-turma" onchange="carregarAlunosPorTurma(this.value)">
-                                <option value="">Selecione a turma...</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
-                            <select class="form-control" id="corrigir-escola" onchange="carregarTurmasCorrigir(this.value)">
-                                <option value="">Selecione a escola...</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="corrigir-escola" onchange="carregarTurmasCorrigir(this.value)"><option value="">Selecione a escola...</option></select></div>
+                        <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="corrigir-turma" onchange="carregarAlunosPorTurma(this.value)"><option value="">Selecione a turma...</option></select></div>
                     </div>
                     <div class="form-row c3" style="margin-top:8px;">
                         <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
@@ -683,20 +675,12 @@
                             <div class="tab-c" id="tabc-2" style="display:none;"><div class="form-group" style="margin-bottom:12px;"><label class="form-label">Texto do Aluno</label><textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea></div></div>
                             <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
                                 <div class="form-row">
-                                    <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
-                                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-turma" onchange="carregarAlunosPorTurmaTexto(this.value)">
-                                            <option value="">Selecione a turma...</option>
-                                        </select>
-                                    </div>
+                                    <div class="form-group"><label class="form-label">Prova</label><select class="form-control" id="txt-prova"><option value="">Selecione...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)"><option value="">Selecione a escola...</option></select></div>
                                 </div>
                                 <div class="form-row">
-                                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)">
-                                            <option value="">Selecione a escola...</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="txt-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div>
+                                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="txt-turma" onchange="carregarAlunosPorTurmaTexto(this.value)"><option value="">Selecione a turma...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
                                 </div>
                                 <div style="margin-bottom:14px;"><label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label><div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Coerência e Coesão</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Adequação ao Tema</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Ortografia e Gramática</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Riqueza Vocabular</label></div></div>
                                 <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
@@ -2196,7 +2180,7 @@
                 });
                 const respProvas = await fetch(API_URL + '/api/provas');
                 const provas = await respProvas.json();
-                ['gab-prova', 'corrigir-prova', 'rel-prova-select'].forEach(id => {
+                ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
                         const current = select.value;
