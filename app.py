@@ -1074,7 +1074,7 @@ def criar_aluno():
 
 @app.route('/api/alunos/<int:id>', methods=['GET'])
 def buscar_aluno(id):
-    """Busca um aluno específico pelo ID"""
+    """Busca um aluno específico pelo ID - CORRIGIDO para incluir escola"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1082,7 +1082,8 @@ def buscar_aluno(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, t.escola_id,
+                   e.nome as escola_nome
             FROM alunos a
             LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
@@ -1402,7 +1403,7 @@ def salvar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO COM IA - CORRIGIDA
+# ROTA DE CORREÇÃO COM IA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1541,7 +1542,7 @@ def corrigir_manual():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO
+# ROTA DE CORREÇÃO DE REDAÇÃO - CORRIGIDA
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -1554,8 +1555,39 @@ def corrigir_redacao():
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
         
+        if not aluno_id:
+            return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
+        
+        # Buscar informações do aluno para enriquecer o resultado
+        conn = get_db_connection()
+        aluno_info = {}
+        if conn:
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                cur.execute("""
+                    SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, t.escola_id,
+                           e.nome as escola_nome
+                    FROM alunos a
+                    LEFT JOIN turmas t ON a.turma_id = t.id
+                    LEFT JOIN escolas e ON t.escola_id = e.id
+                    WHERE a.id = %s
+                """, (aluno_id,))
+                aluno = cur.fetchone()
+                cur.close()
+                conn.close()
+                
+                if aluno:
+                    aluno_info = {
+                        'nome': aluno['nome'],
+                        'turma_nome': aluno.get('turma_nome', ''),
+                        'escola_nome': aluno.get('escola_nome', ''),
+                        'serie': aluno.get('turma_serie', '')
+                    }
+            except Exception as e:
+                print(f"⚠️ Erro ao buscar informações do aluno: {e}")
+        
         if not GEMINI_AVAILABLE or model is None:
-            return jsonify({
+            resultado = {
                 'nota': 7.0,
                 'metricas': {
                     'nota_coerencia': 7.0,
@@ -1565,7 +1597,10 @@ def corrigir_redacao():
                 },
                 'feedback': 'Simulação - Gemini indisponível',
                 'modo': 'simulado'
-            })
+            }
+            # Adicionar informações do aluno
+            resultado['aluno_info'] = aluno_info
+            return jsonify(resultado)
         
         prompt = f"""
         Avalie a redação: {texto}
@@ -1586,9 +1621,14 @@ def corrigir_redacao():
                 'modo': 'erro'
             }
         
+        # Adicionar informações do aluno
+        resultado['aluno_info'] = aluno_info
+        
         return jsonify(resultado)
         
     except Exception as e:
+        print(f"❌ Erro na correção de redação: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
