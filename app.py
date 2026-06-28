@@ -561,7 +561,7 @@ def excluir_usuario(id):
         return jsonify({'erro': 'Erro ao excluir usuário'}), 500
 
 # ============================================
-# ROTAS DE ESCOLAS - CORRIGIDAS
+# ROTAS DE ESCOLAS
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -722,7 +722,7 @@ def excluir_escola(id):
     return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
-# ROTAS DE TURMAS - CORRIGIDAS
+# ROTAS DE TURMAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -908,14 +908,13 @@ def excluir_turma(id):
     return jsonify({'erro': 'Erro ao excluir turma'}), 500
 
 # ============================================
-# ROTAS DE ALUNOS - CORRIGIDAS COM PRIORIDADE POR TURMA
+# ROTAS DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
-    """Lista alunos com filtro por turma (prioridade), escola ou série - CORRIGIDO"""
+    """Lista alunos com filtro por turma (prioridade), escola ou série"""
     try:
-        # Obter parâmetros de filtro
         escola_id = request.args.get('escola_id')
         turma_id = request.args.get('turma_id')
         serie = request.args.get('serie')
@@ -929,7 +928,6 @@ def listar_alunos():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Construir a query com filtros - PRIORIDADE: TURMA > ESCOLA > SÉRIE
         query = """
             SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, 
                    e.id as escola_id, e.nome as escola_nome
@@ -941,7 +939,7 @@ def listar_alunos():
         
         params = []
         
-        # PRIORIDADE 1: Filtrar por turma (quando clica no ícone 📋)
+        # PRIORIDADE 1: Filtrar por turma
         if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
             try:
                 turma_id_int = int(turma_id)
@@ -951,7 +949,7 @@ def listar_alunos():
             except ValueError:
                 print(f"⚠️ Turma ID inválido: {turma_id}")
         
-        # PRIORIDADE 2: Filtrar por escola (apenas se não tiver turma específica)
+        # PRIORIDADE 2: Filtrar por escola
         elif escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
             try:
                 escola_id_int = int(escola_id)
@@ -961,7 +959,7 @@ def listar_alunos():
             except ValueError:
                 print(f"⚠️ Escola ID inválido: {escola_id}")
         
-        # PRIORIDADE 3: Filtrar por série (opcional, pode combinar com os anteriores)
+        # PRIORIDADE 3: Filtrar por série
         if serie and serie != '' and serie != 'null' and serie != 'undefined':
             query += " AND t.serie = %s"
             params.append(serie)
@@ -988,7 +986,7 @@ def listar_alunos():
 
 @app.route('/api/alunos/por_turma', methods=['GET'])
 def listar_alunos_por_turma():
-    """Lista alunos de uma turma específica com verificação de escola - ROTA ESPECÍFICA"""
+    """Lista alunos de uma turma específica"""
     try:
         turma_id = request.args.get('turma_id')
         escola_id = request.args.get('escola_id')
@@ -1004,7 +1002,7 @@ def listar_alunos_por_turma():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Verificar se a turma pertence à escola selecionada (opcional)
+        # Verificar se a turma pertence à escola selecionada
         if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
             try:
                 escola_id_int = int(escola_id)
@@ -1404,7 +1402,7 @@ def salvar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO COM IA
+# ROTA DE CORREÇÃO COM IA - CORRIGIDA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1423,9 +1421,14 @@ def corrigir_com_ia():
             return jsonify({'erro': 'Erro no banco'}), 500
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Buscar prova com informações da turma e escola
         cur.execute("""
-            SELECT p.*, t.serie, t.nome as turma_nome
-            FROM provas p LEFT JOIN turmas t ON p.turma_id = t.id
+            SELECT p.*, t.serie, t.nome as turma_nome, t.escola_id,
+                   e.nome as escola_nome
+            FROM provas p 
+            LEFT JOIN turmas t ON p.turma_id = t.id 
+            LEFT JOIN escolas e ON t.escola_id = e.id
             WHERE p.id = %s
         """, (prova_id,))
         prova = cur.fetchone()
@@ -1441,34 +1444,36 @@ def corrigir_com_ia():
             conn.close()
             return jsonify({'erro': 'Gabarito não cadastrado'}), 400
         
-        # Buscar informações do aluno
-        cur.execute("SELECT nome, turma_id FROM alunos WHERE id = %s", (aluno_id,))
+        # Buscar informações do aluno com turma e escola
+        cur.execute("""
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, t.escola_id,
+                   e.nome as escola_nome
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE a.id = %s
+        """, (aluno_id,))
         aluno = cur.fetchone()
         cur.close()
         conn.close()
         
-        nome_aluno = aluno['nome'] if aluno else 'Aluno'
-        turma_id = aluno['turma_id'] if aluno else None
+        if not aluno:
+            return jsonify({'erro': 'Aluno não encontrado'}), 404
         
-        # Buscar série da turma
-        serie = '1º Ano'
-        if turma_id:
-            try:
-                conn2 = get_db_connection()
-                if conn2:
-                    cur2 = conn2.cursor(cursor_factory=RealDictCursor)
-                    cur2.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
-                    turma = cur2.fetchone()
-                    if turma:
-                        serie = turma['serie']
-                    cur2.close()
-                    conn2.close()
-            except Exception as e:
-                print(f"⚠️ Erro ao buscar série: {e}")
+        nome_aluno = aluno['nome']
+        turma_id = aluno['turma_id']
+        escola_nome = aluno.get('escola_nome', '')
+        turma_nome = aluno.get('turma_nome', '')
+        serie = aluno.get('turma_serie', '1º Ano')
         
         tipo_questoes = int(prova.get('tipo_questoes', 4))
         
+        # Adicionar informações extras para o resultado
         resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
+        resultado['escola_nome'] = escola_nome
+        resultado['turma_nome'] = turma_nome
+        resultado['aluno_id'] = aluno_id
+        resultado['prova_id'] = prova_id
         
         # Salvar no histórico
         try:
@@ -1598,7 +1603,6 @@ def listar_historico():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
-        # Obter parâmetros de filtro
         escola_id = request.args.get('escola')
         serie = request.args.get('serie')
         turma_id = request.args.get('turma')
@@ -1641,10 +1645,9 @@ def listar_historico():
         cur.close()
         conn.close()
         
-        # Adicionar total_questoes aos itens que não tem
         for item in historico:
             if 'total_questoes' not in item or item['total_questoes'] is None:
-                item['total_questoes'] = 20  # valor padrão
+                item['total_questoes'] = 20
         
         return jsonify(historico)
         
@@ -1663,18 +1666,15 @@ def excluir_correcao(id):
         
         cur = conn.cursor()
         
-        # Verificar se a correção existe
         cur.execute("SELECT id FROM historico WHERE id = %s", (id,))
         if not cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Correção não encontrada'}), 404
         
-        # Excluir a correção
         cur.execute("DELETE FROM historico WHERE id = %s", (id,))
         conn.commit()
         
-        # Verificar se deletou
         if cur.rowcount == 0:
             cur.close()
             conn.close()
@@ -1842,7 +1842,13 @@ def gerar_gabarito():
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Buscar informações do aluno
-        cur.execute("SELECT nome FROM alunos WHERE id = %s", (aluno_id,))
+        cur.execute("""
+            SELECT a.*, t.nome as turma_nome, t.serie, e.nome as escola_nome
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE a.id = %s
+        """, (aluno_id,))
         aluno = cur.fetchone()
         
         # Buscar informações da prova
@@ -1862,8 +1868,9 @@ def gerar_gabarito():
         
         # Gerar HTML do cartão resposta
         nome_aluno = aluno['nome']
-        turma_nome = prova.get('turma_nome', '')
-        serie = prova.get('serie', '')
+        turma_nome = aluno.get('turma_nome', '')
+        escola_nome = aluno.get('escola_nome', '')
+        serie = aluno.get('serie', '')
         titulo_prova = prova.get('titulo', 'Prova')
         
         tipo_questoes = int(prova.get('tipo_questoes', 4))
@@ -2002,6 +2009,7 @@ def gerar_gabarito():
                 
                 <div class="info-grid">
                     <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
+                    <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
                     <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
                     <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
                     <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
