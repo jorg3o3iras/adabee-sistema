@@ -12,38 +12,44 @@
     <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">☰</button>
     <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
-    <!-- ══════════ LOGIN ══════════ -->
-    <div id="login-screen">
-        <div class="login-bg">
-            <div class="login-blob lb1"></div>
-            <div class="login-blob lb2"></div>
-            <div class="login-blob lb3"></div>
+  <!-- ══════════ LOGIN ══════════ -->
+<div id="login-screen">
+    <div class="login-bg">
+        <div class="login-blob lb1"></div>
+        <div class="login-blob lb2"></div>
+        <div class="login-blob lb3"></div>
+    </div>
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="l-icon">🎓</div>
+            <h1>CorrigePro</h1>
+            <p>Sistema Inteligente de Correção de Provas</p>
+            
+            <!-- ══════════ NOVO TEXTO - PREFEITURA E SISAM ══════════ -->
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+                <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Prefeitura Municipal de</div>
+                <div style="font-size:15px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.3px;">São Sebastião da Boa Vista</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin:4px 0 2px;">Secretaria Municipal de Educação</div>
+                <div style="font-size:13px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;margin-top:4px;">SISAM 2026</div>
+            </div>
+            <!-- ══════════ FIM DO NOVO TEXTO ══════════ -->
+            
         </div>
-        <div class="login-card">
-            <div class="login-logo">
-                <div class="l-icon">🎓</div>
-                <h1>CorrigePro</h1>
-                <p>Sistema Inteligente de Correção de Provas</p>
-                <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
-                    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Prefeitura Municipal de</div>
-                    <div style="font-size:15px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.3px;">São Sebastião da Boa Vista</div>
-                    <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin:4px 0 2px;">Secretaria Municipal de Educação</div>
-                    <div style="font-size:13px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;margin-top:4px;">SISAM 2026</div>
-                </div>
-            </div>
-            <div class="login-tabs">
-                <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
-                <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
-            </div>
-            <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
-            <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
-            <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
-            <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
-                <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli & Jorge Antonio</div>
-            </div>
+        <div class="login-tabs">
+            <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
+            <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
+        </div>
+        <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
+        <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
+        <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
+        
+        <!-- ══════════ RODAPÉ DO LOGIN — DESENVOLVEDORES ══════════ -->
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
+            <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli & Jorge Antonio</div>
         </div>
     </div>
+</div>
 
     <!-- ══════════ APP ══════════ -->
     <div id="app">
@@ -306,25 +312,28 @@
                     </div>
                 </div>
                 
-                <!-- ═══ CONFIGURAÇÕES DA CORREÇÃO COM ESCOLA → TURMA → ALUNO ═══ -->
+                <!-- ═══ NOVA SEÇÃO: CONFIGURAÇÕES DA CORREÇÃO COM ESCOLA → TURMA → ALUNO ═══ -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">⚙️ Configurações da Correção</div>
                         <span style="font-size:11px;color:var(--text3);">Selecione: Escola → Turma → Aluno</span>
                     </div>
                     <div class="form-row c3">
+                        <!-- CAMPO ESCOLA (substitui SÉRIE) -->
                         <div class="form-group">
                             <label class="form-label">🏫 Escola <span class="req">*</span></label>
                             <select class="form-control" id="corrigir-escola" onchange="carregarTurmasPorEscolaCorrigir(this.value)">
                                 <option value="">Selecione a escola</option>
                             </select>
                         </div>
+                        <!-- CAMPO TURMA -->
                         <div class="form-group">
                             <label class="form-label">👥 Turma <span class="req">*</span></label>
                             <select class="form-control" id="corrigir-turma" onchange="carregarAlunosPorTurmaCorrigir(this.value)">
                                 <option value="">Selecione a turma</option>
                             </select>
                         </div>
+                        <!-- CAMPO ALUNO -->
                         <div class="form-group">
                             <label class="form-label">🎒 Aluno <span class="req">*</span></label>
                             <select class="form-control" id="corrigir-aluno">
@@ -332,6 +341,7 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Campo Prova (mantido) -->
                     <div class="form-row c3" style="margin-top:10px;">
                         <div class="form-group">
                             <label class="form-label">📄 Prova <span class="req">*</span></label>
@@ -366,7 +376,7 @@
                     </div>
                 </div>
                 
-                <!-- Resultado da correção -->
+                <!-- Resultado da correção (mantido) -->
                 <div id="ia-result" style="display:none;">
                     <div class="card card-glow-green">
                         <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div><div class="btn-group"><span class="badge badge-green">✅ Processado</span><span class="badge badge-gray" id="confianca-badge">0% conf.</span></div></div>
@@ -405,165 +415,31 @@
 
             <!-- ═══ CORREÇÃO DE TEXTO IA ═══ -->
             <div class="page" id="page-correcao-texto">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">✍️ Correção de Texto com IA</div>
-                        <p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p>
-                    </div>
-                </div>
+                <div class="page-header"><div><div class="page-title">✍️ Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
                 <div class="g2">
                     <div>
                         <div class="card">
-                            <div class="card-header">
-                                <div class="card-title">📥 Enviar Texto</div>
-                                <span class="badge badge-purple">ESCOLA → TURMA → ALUNO</span>
-                            </div>
-                            <div class="tab-nav">
-                                <button class="tab-btn active" onclick="switchTab(0,this)">📱 Câmera</button>
-                                <button class="tab-btn" onclick="switchTab(1,this)">📂 Arquivo</button>
-                                <button class="tab-btn" onclick="switchTab(2,this)">⌨️ Digitar</button>
-                            </div>
-                            <div class="tab-c" id="tabc-0">
-                                <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:12px;" onclick="abrirCamera()">
-                                    <div style="font-size:46px;margin-bottom:8px;">📱</div>
-                                    <p style="color:var(--text2);font-size:13px;">Fotografe a redação do aluno</p>
-                                </div>
-                                <button class="btn btn-full btn-lg" style="background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.3);" onclick="abrirCamera()">📱 Abrir Câmera</button>
-                            </div>
-                            <div class="tab-c" id="tabc-1" style="display:none;">
-                                <div class="upload-zone" onclick="document.getElementById('inp-txt').click()" style="margin-bottom:12px;">
-                                    <div class="uz-ico">📸</div>
-                                    <p><strong>Escolher foto da redação</strong></p>
-                                    <p class="uz-hint">JPG, PNG, PDF</p>
-                                </div>
-                                <input type="file" id="inp-txt" accept="image/*,application/pdf" style="display:none" onchange="prevTexto(this)">
-                                <div id="txt-img-prev" style="display:none;text-align:center;margin-bottom:12px;">
-                                    <img id="txt-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src="" alt="">
-                                </div>
-                                <button class="btn btn-full btn-green" onclick="document.getElementById('inp-txt').click()">📂 Escolher Arquivo</button>
-                            </div>
-                            <div class="tab-c" id="tabc-2" style="display:none;">
-                                <div class="form-group" style="margin-bottom:12px;">
-                                    <label class="form-label">Texto do Aluno</label>
-                                    <textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea>
-                                </div>
-                            </div>
-                            
+                            <div class="card-header"><div class="card-title">📥 Enviar Texto</div></div>
+                            <div class="tab-nav"><button class="tab-btn active" onclick="switchTab(0,this)">📱 Câmera</button><button class="tab-btn" onclick="switchTab(1,this)">📂 Arquivo</button><button class="tab-btn" onclick="switchTab(2,this)">⌨️ Digitar</button></div>
+                            <div class="tab-c" id="tabc-0"><div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:12px;" onclick="abrirCamera()"><div style="font-size:46px;margin-bottom:8px;">📱</div><p style="color:var(--text2);font-size:13px;">Fotografe a redação do aluno</p></div><button class="btn btn-full btn-lg" style="background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.3);" onclick="abrirCamera()">📱 Abrir Câmera</button></div>
+                            <div class="tab-c" id="tabc-1" style="display:none;"><div class="upload-zone" onclick="document.getElementById('inp-txt').click()" style="margin-bottom:12px;"><div class="uz-ico">📸</div><p><strong>Escolher foto da redação</strong></p><p class="uz-hint">JPG, PNG, PDF</p></div><input type="file" id="inp-txt" accept="image/*,application/pdf" style="display:none" onchange="prevTexto(this)"><div id="txt-img-prev" style="display:none;text-align:center;margin-bottom:12px;"><img id="txt-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src="" alt=""></div><button class="btn btn-full btn-green" onclick="document.getElementById('inp-txt').click()">📂 Escolher Arquivo</button></div>
+                            <div class="tab-c" id="tabc-2" style="display:none;"><div class="form-group" style="margin-bottom:12px;"><label class="form-label">Texto do Aluno</label><textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea></div></div>
                             <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                                <!-- ═══ NOVA HIERARQUIA: ESCOLA → TURMA → ALUNO ═══ -->
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label">🏫 Escola <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)">
-                                            <option value="">Selecione a escola</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">👥 Turma <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-turma" onchange="carregarAlunosTexto(this.value)">
-                                            <option value="">Selecione a turma</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label">🎒 Aluno <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-aluno-select">
-                                            <option value="">Selecione o aluno</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">📄 Série</label>
-                                        <input class="form-control" id="txt-serie-display" disabled placeholder="Será preenchido automaticamente">
-                                    </div>
-                                </div>
-                                
-                                <div style="margin-bottom:14px;margin-top:12px;">
-                                    <label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label>
-                                    <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;">
-                                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);">
-                                            <input type="checkbox" checked> Coerência e Coesão
-                                        </label>
-                                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);">
-                                            <input type="checkbox" checked> Adequação ao Tema
-                                        </label>
-                                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);">
-                                            <input type="checkbox" checked> Ortografia e Gramática
-                                        </label>
-                                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);">
-                                            <input type="checkbox" checked> Riqueza Vocabular
-                                        </label>
-                                    </div>
-                                </div>
+                                <div class="form-row"><div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div><div class="form-group"><label class="form-label">Série</label><select class="form-control" id="txt-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
+                                <div style="margin-bottom:14px;"><label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label><div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Coerência e Coesão</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Adequação ao Tema</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Ortografia e Gramática</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Riqueza Vocabular</label></div></div>
                                 <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
                             </div>
                         </div>
                     </div>
                     <div>
-                        <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-                            <div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div>
-                            <h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3>
-                            <p style="font-size:13px;color:var(--text2);">
-                                Selecione <strong>Escola → Turma → Aluno</strong>, 
-                                envie a foto ou cole o texto e clique em <strong>"Avaliar com Gemini AI"</strong>
-                            </p>
-                        </div>
-                        <div id="txt-loading" style="display:none;" class="card">
-                            <div style="text-align:center;padding:32px;">
-                                <div class="spinner" style="margin-bottom:14px;"></div>
-                                <p style="font-size:14px;font-weight:700;">Gemini AI processando...</p>
-                                <p style="font-size:12px;color:var(--text2);margin-top:5px;">Analisando critérios textuais</p>
-                                <div class="progress" style="margin-top:14px;height:4px;">
-                                    <div class="progress-fill pf-purple" id="txt-pb" style="width:0%;transition:width .15s;"></div>
-                                </div>
-                            </div>
-                        </div>
+                        <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div><h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3><p style="font-size:13px;color:var(--text2);">Envie a foto ou cole o texto e clique em <strong>"Avaliar com Gemini AI"</strong></p></div>
+                        <div id="txt-loading" style="display:none;" class="card"><div style="text-align:center;padding:32px;"><div class="spinner" style="margin-bottom:14px;"></div><p style="font-size:14px;font-weight:700;">Gemini AI processando...</p><p style="font-size:12px;color:var(--text2);margin-top:5px;">Analisando critérios textuais</p><div class="progress" style="margin-top:14px;height:4px;"><div class="progress-fill pf-purple" id="txt-pb" style="width:0%;transition:width .15s;"></div></div></div></div>
                         <div id="txt-res" style="display:none;" class="card card-glow-purple">
-                            <div class="card-header">
-                                <div class="card-title" style="color:#a78bfa;">🤖 Avaliação Gemini AI</div>
-                                <span class="badge badge-purple">IA</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;">
-                                <div>
-                                    <div style="font-size:60px;font-weight:900;line-height:1;color:#a78bfa;" id="txt-nota">0</div>
-                                    <div style="font-size:12px;color:var(--text2);margin-top:3px;">Nota Final</div>
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="font-weight:700;font-size:15px;margin-bottom:8px;" id="txt-aluno-nome">—</div>
-                                    <span class="badge badge-green" id="txt-status">AGUARDANDO</span>
-                                </div>
-                            </div>
-                            <div class="ai-criteria-grid">
-                                <div class="ai-crit">
-                                    <div class="ai-crit-name">Coerência e Coesão</div>
-                                    <div class="ai-crit-val" id="c-coe">0</div>
-                                    <div class="progress"><div class="progress-fill pf-purple" id="b-coe" style="width:0%;"></div></div>
-                                </div>
-                                <div class="ai-crit">
-                                    <div class="ai-crit-name">Adequação ao Tema</div>
-                                    <div class="ai-crit-val" id="c-tema">0</div>
-                                    <div class="progress"><div class="progress-fill pf-purple" id="b-tema" style="width:0%;"></div></div>
-                                </div>
-                                <div class="ai-crit">
-                                    <div class="ai-crit-name">Ortografia e Gramática</div>
-                                    <div class="ai-crit-val" id="c-ort">0</div>
-                                    <div class="progress"><div class="progress-fill pf-purple" id="b-ort" style="width:0%;"></div></div>
-                                </div>
-                                <div class="ai-crit">
-                                    <div class="ai-crit-name">Riqueza Vocabular</div>
-                                    <div class="ai-crit-val" id="c-voc">0</div>
-                                    <div class="progress"><div class="progress-fill pf-purple" id="b-voc" style="width:0%;"></div></div>
-                                </div>
-                            </div>
-                            <div class="ai-feedback-box">
-                                <strong style="color:#a78bfa;">📝 Feedback:</strong><br><br>
-                                <span id="txt-fb">Aguardando avaliação...</span>
-                            </div>
-                            <div class="btn-group" style="margin-top:14px;">
-                                <button class="btn btn-green btn-sm" onclick="salvarAvaliacaoTexto()">💾 Salvar</button>
-                                <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️</button>
-                                <button class="btn btn-purple btn-sm" onclick="avaliarTexto()">🔄 Reavaliar</button>
-                            </div>
+                            <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação Gemini AI</div><span class="badge badge-purple">IA</span></div>
+                            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;"><div><div style="font-size:60px;font-weight:900;line-height:1;color:#a78bfa;" id="txt-nota">0</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Nota Final</div></div><div style="flex:1;"><div style="font-weight:700;font-size:15px;margin-bottom:8px;" id="txt-aluno-nome">—</div><span class="badge badge-green" id="txt-status">AGUARDANDO</span></div></div>
+                            <div class="ai-criteria-grid"><div class="ai-crit"><div class="ai-crit-name">Coerência e Coesão</div><div class="ai-crit-val" id="c-coe">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-coe" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Adequação ao Tema</div><div class="ai-crit-val" id="c-tema">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-tema" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Ortografia e Gramática</div><div class="ai-crit-val" id="c-ort">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-ort" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Riqueza Vocabular</div><div class="ai-crit-val" id="c-voc">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-voc" style="width:0%;"></div></div></div></div>
+                            <div class="ai-feedback-box"><strong style="color:#a78bfa;">📝 Feedback:</strong><br><br><span id="txt-fb">Aguardando avaliação...</span></div>
+                            <div class="btn-group" style="margin-top:14px;"><button class="btn btn-green btn-sm" onclick="salvarAvaliacaoTexto()">💾 Salvar</button><button class="btn btn-outline btn-sm" onclick="window.print()">🖨️</button><button class="btn btn-purple btn-sm" onclick="avaliarTexto()">🔄 Reavaliar</button></div>
                         </div>
                     </div>
                 </div>
@@ -653,6 +529,7 @@
 
                 <!-- GRÁFICOS DE CONCEITOS -->
                 <div class="conceito-graficos" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <!-- Gráfico de Barras -->
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title">📊 Distribuição por Conceito</div>
@@ -697,6 +574,8 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Gráfico Donut -->
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title">🍩 Distribuição Percentual</div>
@@ -1051,7 +930,6 @@
     <!-- TOAST -->
     <div class="toast-container" id="toast-c"></div>
 
-    <!-- ══════════ SCRIPTS ══════════ -->
     <script>
         // ============================================
         // CONFIGURAÇÃO DA API
@@ -1397,8 +1275,7 @@
                     carregarDesempenhoReal(),
                     carregarUsuarios(),
                     carregarEscolasFiltroAlunos(),
-                    carregarEscolasCorrigir(),
-                    carregarEscolasTexto()  // Nova função para correção de texto
+                    carregarEscolasCorrigir() // Nova função para carregar escolas na correção IA
                 ]);
                 console.log('✅ Todos os dados carregados com sucesso!');
             } catch (erro) {
@@ -1462,7 +1339,6 @@
                     carregarEscolas();
                     carregarEscolasFiltroAlunos();
                     carregarEscolasCorrigir();
-                    carregarEscolasTexto();
                 } else {
                     showToast('❌ Erro: ' + (result.erro || 'Erro desconhecido'), 'error');
                 }
@@ -1545,7 +1421,6 @@
                     closeM('m-editar-turma');
                     carregarTurmas();
                     carregarEscolasCorrigir();
-                    carregarEscolasTexto();
                 } else {
                     showToast('❌ Erro: ' + (result.erro || 'Erro desconhecido'), 'error');
                 }
@@ -1654,7 +1529,6 @@
                     carregarDados();
                     carregarEscolasFiltroAlunos();
                     carregarEscolasCorrigir();
-                    carregarEscolasTexto();
                 } else {
                     const erro = await response.json();
                     showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
@@ -1672,7 +1546,6 @@
                     showToast('🗑️ Turma "' + nome + '" excluída!', 'error');
                     carregarDados();
                     carregarEscolasCorrigir();
-                    carregarEscolasTexto();
                 } else {
                     const erro = await response.json();
                     showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
@@ -2109,7 +1982,7 @@
                 });
                 const respAlunos = await fetch(API_URL + '/api/alunos');
                 const alunos = await respAlunos.json();
-                ['rel-aluno-select'].forEach(id => {
+                ['txt-aluno-select', 'rel-aluno-select'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
                         const current = select.value;
@@ -2235,112 +2108,6 @@
                 }
             } catch (erro) {
                 console.error('Erro ao carregar provas:', erro);
-            }
-        }
-
-        // ============================================
-        // CARREGAR ESCOLAS PARA CORREÇÃO DE TEXTO
-        // ============================================
-        async function carregarEscolasTexto() {
-            try {
-                const response = await fetch(API_URL + '/api/escolas');
-                const escolas = await response.json();
-                const select = document.getElementById('txt-escola');
-                if (select && escolas && !escolas.erro) {
-                    const current = select.value;
-                    select.innerHTML = '<option value="">Selecione a escola</option>';
-                    escolas.forEach(e => {
-                        const opt = document.createElement('option');
-                        opt.value = e.id;
-                        opt.textContent = e.nome;
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar escolas para texto:', erro);
-            }
-        }
-
-        // ============================================
-        // CARREGAR TURMAS PARA CORREÇÃO DE TEXTO
-        // ============================================
-        async function carregarTurmasTexto(escolaId) {
-            const selectTurma = document.getElementById('txt-turma');
-            const selectAluno = document.getElementById('txt-aluno-select');
-            const serieDisplay = document.getElementById('txt-serie-display');
-            
-            if (selectAluno) {
-                selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
-            }
-            if (serieDisplay) {
-                serieDisplay.value = '';
-            }
-            
-            if (!selectTurma) return;
-            selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
-            
-            if (!escolaId || escolaId === '') {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                const turmas = await response.json();
-                if (turmas && !turmas.erro) {
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.dataset.serie = t.serie || '';
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        selectTurma.appendChild(opt);
-                    });
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar turmas para texto:', erro);
-                showToast('❌ Erro ao carregar turmas', 'error');
-            }
-        }
-
-        // ============================================
-        // CARREGAR ALUNOS PARA CORREÇÃO DE TEXTO
-        // ============================================
-        async function carregarAlunosTexto(turmaId) {
-            const selectAluno = document.getElementById('txt-aluno-select');
-            const serieDisplay = document.getElementById('txt-serie-display');
-            const selectTurma = document.getElementById('txt-turma');
-            
-            if (!selectAluno) return;
-            selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
-            
-            // Atualizar série automaticamente
-            if (serieDisplay && selectTurma) {
-                const selectedOption = selectTurma.options[selectTurma.selectedIndex];
-                serieDisplay.value = selectedOption?.dataset?.serie || '';
-            }
-            
-            if (!turmaId || turmaId === '') {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                const alunos = await response.json();
-                if (alunos && !alunos.erro && alunos.length > 0) {
-                    alunos.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = a.id;
-                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                        selectAluno.appendChild(opt);
-                    });
-                    showToast('✅ ' + alunos.length + ' alunos carregados', 'success');
-                } else {
-                    selectAluno.innerHTML = '<option value="">Nenhum aluno encontrado</option>';
-                    showToast('⚠️ Nenhum aluno nesta turma', 'warning');
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar alunos para texto:', erro);
-                showToast('❌ Erro ao carregar alunos', 'error');
             }
         }
 
@@ -3204,118 +2971,43 @@
         }
 
         // ============================================
-        // TEXTO IA - CORRIGIDO
+        // TEXTO IA
         // ============================================
         function prevTexto(input) {
             const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = e => {
-                document.getElementById('txt-img-prev').style.display = 'block';
-                document.getElementById('txt-img').src = e.target.result;
-            };
+            reader.onload = e => { document.getElementById('txt-img-prev').style.display = 'block'; document.getElementById('txt-img').src = e.target.result; };
             reader.readAsDataURL(file);
         }
 
         async function avaliarTexto() {
             const texto = document.getElementById('txt-aluno').value;
             const alunoId = document.getElementById('txt-aluno-select').value;
-            const turmaId = document.getElementById('txt-turma').value;
-            const escolaId = document.getElementById('txt-escola').value;
-            
-            if (!texto || texto.trim().length < 5) {
-                showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error');
-                return;
-            }
-            
-            if (!alunoId || alunoId === '') {
-                showToast('❌ Selecione um aluno!', 'error');
-                return;
-            }
-            
-            if (!turmaId || turmaId === '') {
-                showToast('❌ Selecione uma turma!', 'error');
-                return;
-            }
-            
-            if (!escolaId || escolaId === '') {
-                showToast('❌ Selecione uma escola!', 'error');
-                return;
-            }
-            
+            if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error'); return; }
             document.getElementById('txt-waiting').style.display = 'none';
             document.getElementById('txt-loading').style.display = 'block';
             document.getElementById('txt-res').style.display = 'none';
-            
             const pb = document.getElementById('txt-pb');
             let p = 0;
             const iv = setInterval(() => {
                 p += Math.random() * 12;
                 if (p > 100) p = 100;
                 if (pb) pb.style.width = p + '%';
-                if (p >= 100) {
-                    clearInterval(iv);
-                    processarAvaliacaoTexto(texto, alunoId);
-                }
+                if (p >= 100) { clearInterval(iv); processarAvaliacaoTexto(texto, alunoId); }
             }, 120);
         }
 
         async function processarAvaliacaoTexto(texto, alunoId) {
             try {
-                // Buscar informações do aluno para exibição
-                let alunoNome = '—';
-                let escolaNome = '—';
-                let turmaNome = '—';
-                let serieNome = '—';
-                
-                try {
-                    const respAlunos = await fetch(`${API_URL}/api/alunos/${alunoId}`);
-                    const aluno = await respAlunos.json();
-                    if (aluno && !aluno.erro) {
-                        alunoNome = aluno.nome || '—';
-                        turmaNome = aluno.turma_nome || '—';
-                        serieNome = aluno.turma_serie || '—';
-                        
-                        if (aluno.escola_id) {
-                            const respEscola = await fetch(`${API_URL}/api/escolas/${aluno.escola_id}`);
-                            const escola = await respEscola.json();
-                            if (escola && !escola.erro) {
-                                escolaNome = escola.nome || '—';
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error('Erro ao buscar dados do aluno:', e);
-                }
-                
-                const response = await fetch(API_URL + '/api/corrigir_redacao', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texto: texto, aluno_id: alunoId || null })
-                });
-                
+                const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: texto, aluno_id: alunoId || null }) });
                 const dados = await response.json();
-                
                 document.getElementById('txt-loading').style.display = 'none';
                 document.getElementById('txt-res').style.display = 'block';
-                
-                if (dados.erro) {
-                    showToast('❌ ' + dados.erro, 'error');
-                    return;
-                }
-                
+                if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
                 document.getElementById('txt-nota').textContent = dados.nota || 0;
                 document.getElementById('txt-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
                 document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
-                
-                // Exibir informações completas do aluno
-                document.getElementById('txt-aluno-nome').innerHTML = `
-                    <strong>${alunoNome}</strong>
-                    <br><small style="color:var(--text3);font-size:11px;">
-                        🏫 ${escolaNome} | 👥 ${turmaNome} | 📚 ${serieNome}
-                    </small>
-                `;
-                
                 if (dados.metricas) {
                     document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
                     document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
@@ -3326,17 +3018,18 @@
                     document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
                     document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
                 }
-                
                 const fb = document.getElementById('txt-fb');
                 if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
-                
+                if (alunoId) {
+                    try {
+                        const respAlunos = await fetch(API_URL + '/api/alunos');
+                        const alunos = await respAlunos.json();
+                        const aluno = alunos.find(a => a.id == alunoId);
+                        document.getElementById('txt-aluno-nome').textContent = aluno ? aluno.nome : '—';
+                    } catch (e) {}
+                }
                 showToast('✅ Avaliação concluída!', 'success');
-                
-            } catch (erro) {
-                document.getElementById('txt-loading').style.display = 'none';
-                showToast('❌ Erro: ' + erro.message, 'error');
-                console.error('Erro ao avaliar texto:', erro);
-            }
+            } catch (erro) { document.getElementById('txt-loading').style.display = 'none'; showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
         function salvarAvaliacaoTexto() { showToast('💾 Avaliação salva com sucesso!', 'success'); }
@@ -3561,7 +3254,6 @@
             carregarDesempenhoReal();
             carregarEscolasFiltroAlunos();
             carregarEscolasCorrigir();
-            carregarEscolasTexto();
             const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
         });
