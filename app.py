@@ -1074,7 +1074,7 @@ def criar_aluno():
 
 @app.route('/api/alunos/<int:id>', methods=['GET'])
 def buscar_aluno(id):
-    """Busca um aluno específico pelo ID - CORRIGIDO para incluir escola"""
+    """Busca um aluno específico pelo ID"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1082,8 +1082,7 @@ def buscar_aluno(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, t.escola_id,
-                   e.nome as escola_nome
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
             FROM alunos a
             LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
@@ -1403,7 +1402,7 @@ def salvar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO COM IA
+# ROTA DE CORREÇÃO COM IA - CORRIGIDA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1542,7 +1541,7 @@ def corrigir_manual():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO - CORRIGIDA
+# ROTA DE CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -1555,42 +1554,8 @@ def corrigir_redacao():
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
         
-        # Buscar informações do aluno (se aluno_id for fornecido)
-        aluno_info = {}
-        if aluno_id:
-            try:
-                conn = get_db_connection()
-                if conn:
-                    cur = conn.cursor(cursor_factory=RealDictCursor)
-                    cur.execute("""
-                        SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, t.escola_id,
-                               e.nome as escola_nome
-                        FROM alunos a
-                        LEFT JOIN turmas t ON a.turma_id = t.id
-                        LEFT JOIN escolas e ON t.escola_id = e.id
-                        WHERE a.id = %s
-                    """, (aluno_id,))
-                    aluno = cur.fetchone()
-                    cur.close()
-                    conn.close()
-                    
-                    if aluno:
-                        aluno_info = {
-                            'nome': aluno.get('nome', 'Aluno'),
-                            'turma_nome': aluno.get('turma_nome', ''),
-                            'escola_nome': aluno.get('escola_nome', ''),
-                            'serie': aluno.get('turma_serie', '')
-                        }
-                        print(f"✅ Aluno encontrado: {aluno_info['nome']}")
-                    else:
-                        print(f"⚠️ Aluno ID {aluno_id} não encontrado")
-            except Exception as e:
-                print(f"⚠️ Erro ao buscar informações do aluno: {e}")
-                # Continua mesmo com erro na busca do aluno
-        
-        # Se não tiver Gemini, retorna simulação
         if not GEMINI_AVAILABLE or model is None:
-            resultado = {
+            return jsonify({
                 'nota': 7.0,
                 'metricas': {
                     'nota_coerencia': 7.0,
@@ -1598,79 +1563,33 @@ def corrigir_redacao():
                     'nota_gramatica': 7.0,
                     'nota_vocabulario': 7.0
                 },
-                'feedback': 'Simulação - Gemini indisponível. Seu texto foi avaliado com critérios simulados.',
+                'feedback': 'Simulação - Gemini indisponível',
                 'modo': 'simulado'
-            }
-            resultado['aluno_info'] = aluno_info
-            return jsonify(resultado)
+            })
         
-        # Usar Gemini para avaliar
         prompt = f"""
-        Você é um professor especialista em avaliação de redações.
-        Analise a seguinte redação e avalie os critérios abaixo:
-        
-        Redação: "{texto}"
-        
-        Avalie os seguintes critérios de 0 a 10:
-        1. Coerência e Coesão: O texto tem uma estrutura lógica? As ideias estão conectadas?
-        2. Adequação ao Tema: O texto aborda o tema proposto adequadamente?
-        3. Ortografia e Gramática: O texto tem erros ortográficos ou gramaticais?
-        4. Riqueza Vocabular: O vocabulário é variado e adequado?
-        
-        Responda APENAS em formato JSON:
-        {{
-            "nota": 7.5,
-            "metricas": {{
-                "nota_coerencia": 8,
-                "nota_estrutura": 7.5,
-                "nota_gramatica": 7,
-                "nota_vocabulario": 7.5
-            }},
-            "feedback": "Seu texto apresenta boas ideias, mas precisa melhorar a organização..."
-        }}
+        Avalie a redação: {texto}
+        Responda em JSON: {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
         """
         
         response = model.generate_content(prompt)
-        print(f"📝 Resposta do Gemini: {response.text[:200]}...")
-        
         json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
         
         if json_match:
-            try:
-                resultado = json.loads(json_match.group())
-                resultado['modo'] = 'gemini'
-            except json.JSONDecodeError as e:
-                print(f"❌ Erro ao decodificar JSON: {e}")
-                resultado = {
-                    'nota': 6.0,
-                    'metricas': {'nota_coerencia': 6, 'nota_estrutura': 6, 'nota_gramatica': 6, 'nota_vocabulario': 6},
-                    'feedback': 'Erro ao processar a resposta da IA. Tente novamente.',
-                    'modo': 'erro'
-                }
+            resultado = json.loads(json_match.group())
+            resultado['modo'] = 'gemini'
         else:
-            print(f"⚠️ Resposta sem JSON válido: {response.text[:200]}")
             resultado = {
-                'nota': 6.0,
-                'metricas': {'nota_coerencia': 6, 'nota_estrutura': 6, 'nota_gramatica': 6, 'nota_vocabulario': 6},
-                'feedback': 'Não foi possível avaliar a redação. Tente novamente.',
+                'nota': 7.0,
+                'metricas': {'nota_coerencia': 7, 'nota_estrutura': 7, 'nota_gramatica': 7, 'nota_vocabulario': 7},
+                'feedback': 'Erro ao processar resposta',
                 'modo': 'erro'
             }
-        
-        # Adicionar informações do aluno
-        resultado['aluno_info'] = aluno_info
         
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"❌ Erro na correção de redação: {e}")
-        traceback.print_exc()
-        return jsonify({
-            'erro': str(e),
-            'nota': 0,
-            'metricas': {'nota_coerencia': 0, 'nota_estrutura': 0, 'nota_gramatica': 0, 'nota_vocabulario': 0},
-            'feedback': f'Erro ao processar: {str(e)}',
-            'modo': 'erro'
-        }), 500
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTA DE HISTÓRICO
