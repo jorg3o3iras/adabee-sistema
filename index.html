@@ -625,8 +625,21 @@
                     <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select></div>
-                        <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="corrigir-serie"><option value="">Selecione...</option><option value="1º Ano">1º Ano</option><option value="2º Ano">2º Ano</option><option value="3º Ano">3º Ano</option><option value="4º Ano">4º Ano</option><option value="5º Ano">5º Ano</option><option value="6º Ano">6º Ano</option><option value="7º Ano">7º Ano</option><option value="8º Ano">8º Ano</option><option value="9º Ano">9º Ano</option></select></div>
+                        <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-turma" onchange="carregarAlunosPorTurma(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-escola" onchange="carregarTurmasCorrigir(this.value)">
+                                <option value="">Selecione a escola...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row c3" style="margin-top:8px;">
                         <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
+                        <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="corrigir-serie"><option value="">Selecione...</option><option value="1º Ano">1º Ano</option><option value="2º Ano">2º Ano</option><option value="3º Ano">3º Ano</option><option value="4º Ano">4º Ano</option><option value="5º Ano">5º Ano</option><option value="6º Ano">6º Ano</option><option value="7º Ano">7º Ano</option><option value="8º Ano">8º Ano</option><option value="9º Ano">9º Ano</option></select></div>
+                        <div></div>
                     </div>
                     <div style="display:flex;gap:14px;flex-wrap:wrap;"><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label></div>
                 </div>
@@ -669,7 +682,22 @@
                             <div class="tab-c" id="tabc-1" style="display:none;"><div class="upload-zone" onclick="document.getElementById('inp-txt').click()" style="margin-bottom:12px;"><div class="uz-ico">📸</div><p><strong>Escolher foto da redação</strong></p><p class="uz-hint">JPG, PNG, PDF</p></div><input type="file" id="inp-txt" accept="image/*,application/pdf" style="display:none" onchange="prevTexto(this)"><div id="txt-img-prev" style="display:none;text-align:center;margin-bottom:12px;"><img id="txt-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src="" alt=""></div><button class="btn btn-full btn-green" onclick="document.getElementById('inp-txt').click()">📂 Escolher Arquivo</button></div>
                             <div class="tab-c" id="tabc-2" style="display:none;"><div class="form-group" style="margin-bottom:12px;"><label class="form-label">Texto do Aluno</label><textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea></div></div>
                             <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                                <div class="form-row"><div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div><div class="form-group"><label class="form-label">Série</label><select class="form-control" id="txt-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
+                                <div class="form-row">
+                                    <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+                                        <select class="form-control" id="txt-turma" onchange="carregarAlunosPorTurmaTexto(this.value)">
+                                            <option value="">Selecione a turma...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
+                                        <select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)">
+                                            <option value="">Selecione a escola...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="txt-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div>
+                                </div>
                                 <div style="margin-bottom:14px;"><label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label><div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Coerência e Coesão</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Adequação ao Tema</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Ortografia e Gramática</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Riqueza Vocabular</label></div></div>
                                 <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
                             </div>
@@ -1278,6 +1306,106 @@
         }
 
         // ============================================
+        // CARREGAR TURMAS PARA CORRIGIR IA
+        // ============================================
+        async function carregarTurmasCorrigir(escolaId) {
+            const selectTurma = document.getElementById('corrigir-turma');
+            const selectAluno = document.getElementById('corrigir-aluno');
+            if (!selectTurma) return;
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            if (selectAluno) selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            if (!escolaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        // ============================================
+        // CARREGAR ALUNOS POR TURMA PARA CORRIGIR IA
+        // ============================================
+        async function carregarAlunosPorTurma(turmaId) {
+            const selectAluno = document.getElementById('corrigir-aluno');
+            if (!selectAluno) return;
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            if (!turmaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        // ============================================
+        // CARREGAR TURMAS PARA TEXTO IA
+        // ============================================
+        async function carregarTurmasTexto(escolaId) {
+            const selectTurma = document.getElementById('txt-turma');
+            const selectAluno = document.getElementById('txt-aluno-select');
+            if (!selectTurma) return;
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            if (selectAluno) selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            if (!escolaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        // ============================================
+        // CARREGAR ALUNOS POR TURMA PARA TEXTO IA
+        // ============================================
+        async function carregarAlunosPorTurmaTexto(turmaId) {
+            const selectAluno = document.getElementById('txt-aluno-select');
+            if (!selectAluno) return;
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            if (!turmaId) return;
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        // ============================================
         // CARREGAR DADOS - CHAMADA INICIAL
         // ============================================
         async function carregarDados() {
@@ -1297,12 +1425,59 @@
                     carregarUserData(),
                     carregarDesempenhoReal(),
                     carregarUsuarios(),
-                    carregarEscolasFiltroAlunos()
+                    carregarEscolasFiltroAlunos(),
+                    // Carregar escolas para os selects de correção
+                    carregarEscolasCorrigir(),
+                    carregarEscolasTexto()
                 ]);
                 console.log('✅ Todos os dados carregados com sucesso!');
             } catch (erro) {
                 console.error('❌ Erro ao carregar dados:', erro);
                 showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+            }
+        }
+
+        // ============================================
+        // CARREGAR ESCOLAS PARA CORRIGIR IA
+        // ============================================
+        async function carregarEscolasCorrigir() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('corrigir-escola');
+                if (select && escolas && !escolas.erro) {
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para correção:', erro);
+            }
+        }
+
+        // ============================================
+        // CARREGAR ESCOLAS PARA TEXTO IA
+        // ============================================
+        async function carregarEscolasTexto() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('txt-escola');
+                if (select && escolas && !escolas.erro) {
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para texto:', erro);
             }
         }
 
@@ -1360,6 +1535,8 @@
                     closeM('m-editar-escola');
                     carregarEscolas();
                     carregarEscolasFiltroAlunos();
+                    carregarEscolasCorrigir();
+                    carregarEscolasTexto();
                 } else {
                     showToast('❌ Erro: ' + (result.erro || 'Erro desconhecido'), 'error');
                 }
@@ -1548,6 +1725,8 @@
                     showToast('🗑️ Escola "' + nome + '" excluída!', 'error');
                     carregarDados();
                     carregarEscolasFiltroAlunos();
+                    carregarEscolasCorrigir();
+                    carregarEscolasTexto();
                 } else {
                     const erro = await response.json();
                     showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
@@ -1871,31 +2050,59 @@
                 const badge = document.getElementById('total-turmas-badge');
                 if (!container) return;
 
+                // Se não houver dados, mostrar mensagem
                 if (dados.erro || !dados || dados.length === 0) {
-                    container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;"><div style="font-size:30px;margin-bottom:10px;">📭</div><p>Nenhuma turma com correções ainda.</p><p style="font-size:12px;">Cadastre turmas e faça correções para ver o desempenho.</p></div>`;
+                    container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
+                        <div style="font-size:30px;margin-bottom:10px;">📭</div>
+                        <p>Nenhuma turma com correções ainda.</p>
+                        <p style="font-size:12px;">Cadastre turmas e faça correções para ver o desempenho.</p>
+                    </div>`;
                     if (badge) badge.textContent = '0 turmas';
                     return;
                 }
 
                 if (badge) badge.textContent = dados.length + ' turmas';
 
-                let html = '<div class="chart-bars">';
-                dados.sort((a, b) => b.porcentagem - a.porcentagem);
-                const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)', 'linear-gradient(180deg,#ec4899,#be185d)'];
+                // Limitar a quantidade de barras para não sobrecarregar
+                const maxBarras = 5;
+                let dadosFiltrados = dados;
+                if (dados.length > maxBarras) {
+                    // Ordenar por porcentagem e pegar as top 5
+                    dadosFiltrados = [...dados].sort((a, b) => b.porcentagem - a.porcentagem).slice(0, maxBarras);
+                }
 
-                dados.forEach((turma, index) => {
+                let html = '<div class="chart-bars">';
+                const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
+
+                dadosFiltrados.forEach((turma, index) => {
                     const altura = Math.max(20, (turma.porcentagem / 100) * 130);
                     const cor = cores[index % cores.length];
-                    html += `<div class="chart-bar-item" title="${turma.nome} - Média: ${turma.media}"><div class="chart-bar-val">${turma.porcentagem}%</div><div class="chart-bar" style="height:${altura}px;background:${cor};"></div><div class="chart-bar-lbl">${turma.nome}</div><div style="font-size:8px;color:var(--text3);margin-top:2px;">${turma.total_correcoes} corr.</div></div>`;
+                    // Mostrar apenas a porcentagem e a turma, sem informações extras
+                    html += `<div class="chart-bar-item" title="${turma.nome} - Média: ${turma.media}">
+                        <div class="chart-bar-val">${turma.porcentagem}%</div>
+                        <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                        <div class="chart-bar-lbl">${turma.nome}</div>
+                    </div>`;
                 });
                 html += '</div>';
+
+                // Adicionar legenda com informações resumidas
+                html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
+                dadosFiltrados.forEach(turma => {
+                    html += `<span>${turma.nome}: ${turma.total_correcoes} corr.</span>`;
+                });
+                html += `</div>`;
+
                 container.innerHTML = html;
 
             } catch (erro) {
                 console.error('Erro ao carregar desempenho:', erro);
                 const container = document.getElementById('grafico-desempenho');
                 if (container) {
-                    container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;"><div style="font-size:30px;margin-bottom:10px;">⚠️</div><p>Erro ao carregar dados de desempenho.</p></div>`;
+                    container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
+                        <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
+                        <p>Erro ao carregar dados de desempenho.</p>
+                    </div>`;
                 }
             }
         }
@@ -2200,7 +2407,7 @@
             try {
                 const response = await fetch(API_URL + '/api/escolas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 const result = await response.json();
-                if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success'); closeM('m-escola'); carregarDados(); carregarEscolasFiltroAlunos(); } else { showToast('❌ Erro ao cadastrar escola', 'error'); }
+                if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success'); closeM('m-escola'); carregarDados(); carregarEscolasFiltroAlunos(); carregarEscolasCorrigir(); carregarEscolasTexto(); } else { showToast('❌ Erro ao cadastrar escola', 'error'); }
             } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
