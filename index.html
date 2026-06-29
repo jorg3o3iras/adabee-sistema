@@ -157,10 +157,10 @@
         .badge-purple { background:rgba(139,92,246,0.15); color:var(--purple); }
         .badge-cyan { background:rgba(6,182,212,0.15); color:var(--cyan); }
         .badge-gray { background:rgba(148,163,184,0.12); color:var(--text3); }
-        .badge-conceito-baixo { background:rgba(239,68,68,0.2); color:#ef4444; }
-        .badge-conceito-medio-baixo { background:rgba(245,158,11,0.2); color:#f59e0b; }
-        .badge-conceito-medio-alto { background:rgba(59,130,246,0.2); color:#3b82f6; }
-        .badge-conceito-alto { background:rgba(16,185,129,0.2); color:#10b981; }
+        .badge-conceito-inicial { background:rgba(239,68,68,0.2); color:#ef4444; }
+        .badge-conceito-basico { background:rgba(245,158,11,0.2); color:#f59e0b; }
+        .badge-conceito-proficiente { background:rgba(59,130,246,0.2); color:#3b82f6; }
+        .badge-conceito-avancado { background:rgba(16,185,129,0.2); color:#10b981; }
 
         .chip { display:inline-block; padding:2px 10px; background:var(--bg2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--text2); }
 
@@ -548,22 +548,22 @@
                 color: #495057 !important;
             }
 
-            .badge-conceito-baixo {
+            .badge-conceito-inicial {
                 border-color: #dc3545 !important;
                 background: #f8d7da !important;
                 color: #721c24 !important;
             }
-            .badge-conceito-medio-baixo {
+            .badge-conceito-basico {
                 border-color: #fd7e14 !important;
                 background: #fff3cd !important;
                 color: #856404 !important;
             }
-            .badge-conceito-medio-alto {
+            .badge-conceito-proficiente {
                 border-color: #007bff !important;
                 background: #cce5ff !important;
                 color: #004085 !important;
             }
-            .badge-conceito-alto {
+            .badge-conceito-avancado {
                 border-color: #28a745 !important;
                 background: #d4edda !important;
                 color: #155724 !important;
@@ -1168,10 +1168,10 @@
                     <div class="card">
                         <div class="card-header"><div class="card-title">📊 Distribuição por Conceito</div><span class="badge badge-blue no-print">Barras</span></div>
                         <div id="conceito-barras" style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔴 Baixo (até 40%)</span><span style="font-weight:700;color:#ef4444;" id="conceito-baixo-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#ef4444,#dc2626);border-radius:10px;transition:width 0.8s ease;" id="conceito-baixo-bar"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟠 Médio Baixo (41% - 60%)</span><span style="font-weight:700;color:#f59e0b;" id="conceito-medio-baixo-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:10px;transition:width 0.8s ease;" id="conceito-medio-baixo-bar"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔵 Médio Alto (61% - 80%)</span><span style="font-weight:700;color:#3b82f6;" id="conceito-medio-alto-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#2563eb);border-radius:10px;transition:width 0.8s ease;" id="conceito-medio-alto-bar"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟢 Alto (acima de 80%)</span><span style="font-weight:700;color:#10b981;" id="conceito-alto-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#10b981,#059669);border-radius:10px;transition:width 0.8s ease;" id="conceito-alto-bar"></div></div></div>
+                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔴 inicial (até 40%)</span><span style="font-weight:700;color:#ef4444;" id="conceito-inicial-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#ef4444,#dc2626);border-radius:10px;transition:width 0.8s ease;" id="conceito-inicial-bar"></div></div></div>
+                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟠 básico (41% - 60%)</span><span style="font-weight:700;color:#f59e0b;" id="conceito-basico-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:10px;transition:width 0.8s ease;" id="conceito-basico-bar"></div></div></div>
+                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔵 proficiente (61% - 80%)</span><span style="font-weight:700;color:#3b82f6;" id="conceito-proficiente-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#2563eb);border-radius:10px;transition:width 0.8s ease;" id="conceito-proficiente-bar"></div></div></div>
+                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟢 avançado (acima de 80%)</span><span style="font-weight:700;color:#10b981;" id="conceito-avancado-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#10b981,#059669);border-radius:10px;transition:width 0.8s ease;" id="conceito-avancado-bar"></div></div></div>
                         </div>
                     </div>
                     <div class="card">
@@ -1179,10 +1179,10 @@
                         <div style="display:flex;align-items:center;justify-content:center;padding:10px 0;">
                             <div style="position:relative;width:200px;height:200px;" id="donut-container"><canvas id="donut-chart" width="200" height="200"></canvas><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:12px;color:var(--text3);">Total</div><div style="font-size:24px;font-weight:900;color:var(--text);" id="donut-total">0</div></div></div>
                             <div style="margin-left:20px;display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#ef4444;vertical-align:middle;margin-right:8px;"></span> Baixo: <strong id="donut-baixo-pct">0%</strong></div>
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#f59e0b;vertical-align:middle;margin-right:8px;"></span> Médio Baixo: <strong id="donut-medio-baixo-pct">0%</strong></div>
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#3b82f6;vertical-align:middle;margin-right:8px;"></span> Médio Alto: <strong id="donut-medio-alto-pct">0%</strong></div>
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#10b981;vertical-align:middle;margin-right:8px;"></span> Alto: <strong id="donut-alto-pct">0%</strong></div>
+                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#ef4444;vertical-align:middle;margin-right:8px;"></span> inicial: <strong id="donut-inicial-pct">0%</strong></div>
+                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#f59e0b;vertical-align:middle;margin-right:8px;"></span> básico: <strong id="donut-basico-pct">0%</strong></div>
+                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#3b82f6;vertical-align:middle;margin-right:8px;"></span> proficiente: <strong id="donut-proficiente-pct">0%</strong></div>
+                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#10b981;vertical-align:middle;margin-right:8px;"></span> avançado: <strong id="donut-avancado-pct">0%</strong></div>
                             </div>
                         </div>
                     </div>
@@ -2456,7 +2456,7 @@
                     const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
                     const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
                     const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
-                    const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
+                    const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
 
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
@@ -3337,7 +3337,7 @@
                     const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
                     const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
                     const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
-                    const badgeConceito = `badge-conceito-${conceito.toLowerCase().replace(' ', '-')}`;
+                    const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
                     const nome = item.aluno_nome || 'Aluno';
                     const serieAluno = item.serie || '—';
                     const correcaoId = item.id;
@@ -3432,17 +3432,17 @@
         // FUNÇÃO PARA CALCULAR CONCEITO
         // ============================================
         function calcularConceito(porcentagem) {
-            if (porcentagem <= 40) return 'Baixo';
-            if (porcentagem <= 60) return 'Médio Baixo';
-            if (porcentagem <= 80) return 'Médio Alto';
-            return 'Alto';
+            if (porcentagem <= 40) return 'inicial';
+            if (porcentagem <= 60) return 'basico';
+            if (porcentagem <= 80) return 'proficiente';
+            return 'avancado';
         }
 
         // ============================================
         // ATUALIZAR GRÁFICOS DE CONCEITOS
         // ============================================
         function atualizarGraficosConceitos(dados) {
-            const conceitos = { 'Baixo': 0, 'Médio Baixo': 0, 'Médio Alto': 0, 'Alto': 0 };
+            const conceitos = { 'inicial': 0, 'basico': 0, 'proficiente': 0, 'avancado': 0 };
             dados.forEach(item => {
                 const totalQuestoes = item.total_questoes || 20;
                 const porcentagem = totalQuestoes > 0 ? Math.round((item.acertos / totalQuestoes) * 100) : 0;
@@ -3450,12 +3450,12 @@
                 conceitos[conceito] = (conceitos[conceito] || 0) + 1;
             });
             const total = dados.length || 1;
-            const cores = { 'Baixo': { bg: '#ef4444' }, 'Médio Baixo': { bg: '#f59e0b' }, 'Médio Alto': { bg: '#3b82f6' }, 'Alto': { bg: '#10b981' } };
-            ['Baixo', 'Médio Baixo', 'Médio Alto', 'Alto'].forEach(conceito => {
+            const cores = { 'inicial': { bg: '#ef4444' }, 'basico': { bg: '#f59e0b' }, 'proficiente': { bg: '#3b82f6' }, 'avancado': { bg: '#10b981' } };
+            ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
                 const count = conceitos[conceito] || 0;
                 const pct = total > 0 ? (count / total) * 100 : 0;
-                const countEl = document.getElementById(`conceito-${conceito.toLowerCase().replace(' ', '-')}-count`);
-                const barEl = document.getElementById(`conceito-${conceito.toLowerCase().replace(' ', '-')}-bar`);
+                const countEl = document.getElementById(`conceito-${conceito}-count`);
+                const barEl = document.getElementById(`conceito-${conceito}-bar`);
                 if (countEl) countEl.textContent = count;
                 if (barEl) {
                     barEl.style.width = Math.max(pct, 0) + '%';
@@ -3479,16 +3479,16 @@
             const radius = Math.min(width, height) / 2 - 20;
             const innerRadius = radius * 0.6;
             ctx.clearRect(0, 0, width, height);
-            const labels = ['Baixo', 'Médio Baixo', 'Médio Alto', 'Alto'];
+            const labels = ['inicial', 'basico', 'proficiente', 'avancado'];
             const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'];
             const values = labels.map(l => conceitos[l] || 0);
             document.getElementById('donut-total').textContent = total;
             const totalVal = values.reduce((a, b) => a + b, 0) || 1;
             const pcts = values.map(v => (v / totalVal) * 100);
-            document.getElementById('donut-baixo-pct').textContent = pcts[0].toFixed(1) + '%';
-            document.getElementById('donut-medio-baixo-pct').textContent = pcts[1].toFixed(1) + '%';
-            document.getElementById('donut-medio-alto-pct').textContent = pcts[2].toFixed(1) + '%';
-            document.getElementById('donut-alto-pct').textContent = pcts[3].toFixed(1) + '%';
+            document.getElementById('donut-inicial-pct').textContent = pcts[0].toFixed(1) + '%';
+            document.getElementById('donut-basico-pct').textContent = pcts[1].toFixed(1) + '%';
+            document.getElementById('donut-proficiente-pct').textContent = pcts[2].toFixed(1) + '%';
+            document.getElementById('donut-avancado-pct').textContent = pcts[3].toFixed(1) + '%';
             let startAngle = -Math.PI / 2;
             values.forEach((value, index) => {
                 if (value === 0) return;
