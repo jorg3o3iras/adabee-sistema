@@ -77,6 +77,45 @@ USUARIOS_FIXOS = {
 }
 
 # ============================================
+# FUNÇÃO PARA CALCULAR CONCEITO
+# ============================================
+
+def calcular_conceito(porcentagem):
+    """Calcula o conceito baseado na porcentagem de acertos"""
+    if porcentagem <= 40:
+        return {
+            'nome': 'inicial',
+            'rotulo': '🔴 inicial',
+            'faixa': 'até 40%',
+            'cor': '#ef4444',
+            'badge': 'badge-conceito-inicial'
+        }
+    elif porcentagem <= 60:
+        return {
+            'nome': 'basico',
+            'rotulo': '🟠 básico',
+            'faixa': '41% - 60%',
+            'cor': '#f59e0b',
+            'badge': 'badge-conceito-basico'
+        }
+    elif porcentagem <= 80:
+        return {
+            'nome': 'proficiente',
+            'rotulo': '🔵 proficiente',
+            'faixa': '61% - 80%',
+            'cor': '#3b82f6',
+            'badge': 'badge-conceito-proficiente'
+        }
+    else:
+        return {
+            'nome': 'avancado',
+            'rotulo': '🟢 avançado',
+            'faixa': 'acima de 80%',
+            'cor': '#10b981',
+            'badge': 'badge-conceito-avancado'
+        }
+
+# ============================================
 # FUNÇÃO DE CORREÇÃO COM GEMINI - CORRIGIDA
 # ============================================
 
@@ -85,6 +124,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
     
     # Se não tiver gabarito, retorna erro
     if not gabarito or len(gabarito) == 0:
+        conceito = calcular_conceito(0)
         return {
             'erro': 'Gabarito não disponível',
             'aluno': aluno_nome,
@@ -92,6 +132,8 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             'total': 0,
             'acertos': 0,
             'nota': 0,
+            'porcentagem': 0,
+            'conceito': conceito,
             'respostas_detectadas': [],
             'gabarito': gabarito,
             'correcoes': [],
@@ -156,6 +198,8 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 
                 valor_por_questao = 10 / len(gabarito)
                 nota = acertos * valor_por_questao
+                porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
+                conceito = calcular_conceito(porcentagem)
                 
                 return {
                     'aluno': aluno_nome,
@@ -163,6 +207,8 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                     'total': len(gabarito),
                     'acertos': acertos,
                     'nota': round(nota, 1),
+                    'porcentagem': porcentagem,
+                    'conceito': conceito,
                     'respostas_detectadas': respostas_detectadas[:len(gabarito)],
                     'gabarito': gabarito,
                     'correcoes': correcoes,
@@ -219,6 +265,8 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         
         valor_por_questao = 10 / len(gabarito)
         nota = acertos * valor_por_questao
+        porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
+        conceito = calcular_conceito(porcentagem)
         
         return {
             'aluno': aluno_nome,
@@ -226,6 +274,8 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'total': len(gabarito),
             'acertos': acertos,
             'nota': round(nota, 1),
+            'porcentagem': porcentagem,
+            'conceito': conceito,
             'respostas_detectadas': respostas_detectadas,
             'gabarito': gabarito,
             'correcoes': correcoes,
@@ -237,12 +287,15 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
     except Exception as e:
         print(f"❌ Erro na simulação: {e}")
         traceback.print_exc()
+        conceito = calcular_conceito(0)
         return {
             'aluno': aluno_nome,
             'serie': serie,
             'total': len(gabarito),
             'acertos': 0,
             'nota': 0,
+            'porcentagem': 0,
+            'conceito': conceito,
             'respostas_detectadas': [],
             'gabarito': gabarito,
             'correcoes': [],
@@ -480,10 +533,16 @@ def corrigir_manual():
         cur.close()
         conn.close()
         
+        # Calcular conceito
+        porcentagem = round((acertos / total) * 100) if total > 0 else 0
+        conceito = calcular_conceito(porcentagem)
+        
         return jsonify({
             'sucesso': True,
             'id': result[0],
-            'mensagem': 'Correção manual salva com sucesso'
+            'mensagem': 'Correção manual salva com sucesso',
+            'conceito': conceito,
+            'porcentagem': porcentagem
         })
     except Exception as e:
         print(f"❌ Erro na correção manual: {e}")
@@ -543,7 +602,7 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO - ATUALIZADA COM FILTROS
+# ROTA DE HISTÓRICO - ATUALIZADA COM FILTROS E CONCEITOS
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -608,10 +667,22 @@ def listar_historico():
         cur.close()
         conn.close()
         
-        # Garantir que total_questoes exista
+        # Garantir que total_questoes exista e calcular conceito
         for item in historico:
             if 'total_questoes' not in item or item['total_questoes'] is None:
                 item['total_questoes'] = 20
+            
+            # Calcular porcentagem
+            total = item.get('total_questoes', 20)
+            acertos = item.get('acertos', 0)
+            porcentagem = round((acertos / total) * 100) if total > 0 else 0
+            
+            # Adicionar conceito
+            conceito = calcular_conceito(porcentagem)
+            item['conceito'] = conceito['nome']
+            item['conceito_rotulo'] = conceito['rotulo']
+            item['conceito_cor'] = conceito['cor']
+            item['porcentagem'] = porcentagem
         
         return jsonify(historico)
         
@@ -1373,7 +1444,9 @@ def dashboard_desempenho():
                 t.nome as turma_nome,
                 COALESCE(AVG(h.nota), 0) as media,
                 COUNT(DISTINCT h.aluno_id) as total_alunos,
-                COUNT(DISTINCT h.id) as total_correcoes
+                COUNT(DISTINCT h.id) as total_correcoes,
+                COALESCE(AVG(h.acertos), 0) as media_acertos,
+                COALESCE(AVG(h.total), 20) as media_total
             FROM turmas t
             LEFT JOIN provas p ON p.turma_id = t.id
             LEFT JOIN historico h ON h.prova_id = p.id
@@ -1390,14 +1463,19 @@ def dashboard_desempenho():
         for turma in turmas:
             if turma['total_correcoes'] > 0:
                 porcentagem = round((turma['media'] / nota_maxima) * 100)
+                conceito = calcular_conceito(porcentagem)
             else:
                 porcentagem = 0
+                conceito = calcular_conceito(0)
             
             resultado.append({
                 'id': turma['id'],
                 'nome': turma['turma_nome'],
                 'media': round(turma['media'], 1),
                 'porcentagem': porcentagem,
+                'conceito': conceito['nome'],
+                'conceito_rotulo': conceito['rotulo'],
+                'conceito_cor': conceito['cor'],
                 'total_alunos': turma['total_alunos'],
                 'total_correcoes': turma['total_correcoes']
             })
