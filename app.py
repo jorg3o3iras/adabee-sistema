@@ -24,33 +24,55 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO GEMINI
+# CONFIGURAÇÃO GEMINI - CORRIGIDA
 # ============================================
+
 GEMINI_AVAILABLE = False
 model = None
 GEMINI_MODEL = None
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AQ.Ab8RN6LNNYrR0_9R6hcAVWY3Z3CDuupWKhESBoRYlkWm5Autdg')
+# CORREÇÃO: Usar a chave de API corretamente (aceita qualquer formato)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 try:
     import google.generativeai as genai
     
-    if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-        GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        GEMINI_AVAILABLE = True
-        print("=" * 60)
-        print("✅ Gemini AI configurado com sucesso!")
-        print(f"📌 Modelo: {GEMINI_MODEL}")
-        print("=" * 60)
+    # Verifica se a chave existe (qualquer formato)
+    if GEMINI_API_KEY and GEMINI_API_KEY != '':
+        try:
+            # Configurar a API key (qualquer formato é aceito)
+            genai.configure(api_key=GEMINI_API_KEY)
+            GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
+            model = genai.GenerativeModel(GEMINI_MODEL)
+            
+            # Testar se a chave funciona com uma requisição simples
+            test_response = model.generate_content("Teste de conexão - responda apenas OK")
+            if test_response and test_response.text:
+                GEMINI_AVAILABLE = True
+                print("=" * 60)
+                print("✅ Gemini AI configurado com sucesso!")
+                print(f"📌 Modelo: {GEMINI_MODEL}")
+                print(f"🔑 Chave: {GEMINI_API_KEY[:15]}... (válida)")
+                print("=" * 60)
+            else:
+                print("⚠️ Chave configurada, mas falha no teste")
+                GEMINI_AVAILABLE = False
+                
+        except Exception as e:
+            print(f"⚠️ Erro ao configurar Gemini: {e}")
+            print("💡 Usando modo simulação")
+            GEMINI_AVAILABLE = False
     else:
         print("⚠️ GEMINI_API_KEY não encontrada - usando simulação")
+        print("💡 Configure a variável de ambiente GEMINI_API_KEY no arquivo .env")
         
 except ImportError as e:
     print(f"❌ Erro ao importar google-generativeai: {e}")
+    print("💡 Instale com: pip install google-generativeai")
+    GEMINI_AVAILABLE = False
 except Exception as e:
     print(f"⚠️ Erro ao configurar Gemini: {e}")
+    GEMINI_AVAILABLE = False
 
 # ============================================
 # CONFIGURAÇÃO DO BANCO DE DADOS
@@ -145,58 +167,100 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
     
     try:
         # Limpar a imagem base64 se necessário
+        imagem_limpa = imagem_base64
         if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
+            imagem_limpa = imagem_base64.split(',')[1]
         
-        # Se Gemini estiver disponível, usar
+        # CORREÇÃO: Verificar se Gemini está disponível e configurado
         if GEMINI_AVAILABLE and model is not None:
             try:
-                image_data = base64.b64decode(imagem_base64)
+                # Decodificar a imagem
+                image_data = base64.b64decode(imagem_limpa)
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
                 
+                # CORREÇÃO: Prompt mais detalhado e estruturado
                 prompt = f"""
-                Você é um assistente especializado em correção de provas.
+                Você é um assistente especializado em correção de provas escolares.
+                
                 Analise a imagem do cartão resposta e identifique as respostas marcadas.
-                A prova tem {len(gabarito)} questões e as alternativas são: {alternativas}.
-                O gabarito correto é: {gabarito}
-                Responda APENAS em formato JSON: {{"respostas": ["A", "B", ...], "confianca": 85}}
+                
+                INFORMAÇÕES DA PROVA:
+                - Total de questões: {len(gabarito)}
+                - Alternativas disponíveis: {alternativas}
+                - Gabarito correto: {gabarito}
+                
+                INSTRUÇÕES:
+                1. Analise cada questão e identifique qual alternativa foi marcada
+                2. Se a marcação não estiver clara, faça a melhor estimativa
+                3. Compare com o gabarito e determine se está correta
+                4. Retorne APENAS o JSON com as respostas
+                
+                Responda APENAS em formato JSON válido:
+                {{
+                    "respostas": ["A", "B", "C", ...],
+                    "confianca": 85
+                }}
                 """
                 
+                # Usar o modelo corretamente
                 response = model.generate_content([
                     prompt,
                     {"mime_type": "image/jpeg", "data": image_data}
                 ])
                 
                 resposta_texto = response.text
+                print(f"📝 Resposta Gemini: {resposta_texto[:200]}...")
+                
+                # Extrair JSON da resposta
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
                 
                 if json_match:
-                    dados = json.loads(json_match.group())
-                    respostas_detectadas = dados.get('respostas', [])
-                    confianca = dados.get('confianca', 70)
+                    try:
+                        dados = json.loads(json_match.group())
+                        respostas_detectadas = dados.get('respostas', [])
+                        confianca = dados.get('confianca', 70)
+                    except:
+                        respostas_detectadas = []
+                        confianca = 50
                 else:
+                    print("⚠️ Não foi possível extrair JSON da resposta Gemini")
                     respostas_detectadas = []
                     confianca = 50
                 
-                if not respostas_detectadas:
+                # Se não detectou respostas, usar simulação
+                if not respostas_detectadas or len(respostas_detectadas) == 0:
+                    print("⚠️ Nenhuma resposta detectada, usando simulação")
                     return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
                 
-                # Preencher respostas faltantes
-                if len(respostas_detectadas) < len(gabarito):
-                    alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
-                    for i in range(len(respostas_detectadas), len(gabarito)):
-                        respostas_detectadas.append(random.choice(alternativas_lista))
+                # Garantir que o número de respostas corresponde ao gabarito
+                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
+                
+                # Preencher respostas faltantes com aleatórias
+                while len(respostas_detectadas) < len(gabarito):
+                    respostas_detectadas.append(random.choice(alternativas_lista))
+                
+                # Truncar se houver mais respostas que o gabarito
+                respostas_detectadas = respostas_detectadas[:len(gabarito)]
+                
+                # Normalizar respostas (maiúsculas)
+                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
                 
                 # Calcular acertos
                 acertos = 0
                 correcoes = []
-                for i, (resp, gab) in enumerate(zip(respostas_detectadas[:len(gabarito)], gabarito)):
-                    is_correto = resp == gab if resp else False
+                for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
+                    gab_normalizado = str(gab).strip().upper() if gab else ''
+                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
                     if is_correto:
                         acertos += 1
-                    correcoes.append({'questao': i+1, 'resposta': resp, 'gabarito': gab, 'correto': is_correto})
+                    correcoes.append({
+                        'questao': i+1, 
+                        'resposta': resp, 
+                        'gabarito': gab_normalizado, 
+                        'correto': is_correto
+                    })
                 
-                valor_por_questao = 10 / len(gabarito)
+                valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
                 nota = acertos * valor_por_questao
                 porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
                 conceito = calcular_conceito(porcentagem)
@@ -209,7 +273,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                     'nota': round(nota, 1),
                     'porcentagem': porcentagem,
                     'conceito': conceito,
-                    'respostas_detectadas': respostas_detectadas[:len(gabarito)],
+                    'respostas_detectadas': respostas_detectadas,
                     'gabarito': gabarito,
                     'correcoes': correcoes,
                     'tipo_questoes': str(tipo_questoes),
@@ -217,10 +281,14 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                     'modo': 'gemini',
                     'valor_por_questao': round(valor_por_questao, 2)
                 }
+                
             except Exception as e:
-                print(f"❌ Erro no Gemini, usando simulação: {e}")
+                print(f"❌ Erro no Gemini: {e}")
+                traceback.print_exc()
+                print("⚠️ Usando simulação como fallback")
                 return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
         else:
+            print("⚠️ Gemini não disponível, usando simulação")
             return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
             
     except Exception as e:
@@ -263,7 +331,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
                 acertos += 1
             correcoes.append({'questao': i+1, 'resposta': resp, 'gabarito': gab, 'correto': is_correto})
         
-        valor_por_questao = 10 / len(gabarito)
+        valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
         nota = acertos * valor_por_questao
         porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
         conceito = calcular_conceito(porcentagem)
@@ -585,8 +653,16 @@ def corrigir_redacao():
         json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
         
         if json_match:
-            resultado = json.loads(json_match.group())
-            resultado['modo'] = 'gemini'
+            try:
+                resultado = json.loads(json_match.group())
+                resultado['modo'] = 'gemini'
+            except:
+                resultado = {
+                    'nota': 7.0,
+                    'metricas': {'nota_coerencia': 7, 'nota_estrutura': 7, 'nota_gramatica': 7, 'nota_vocabulario': 7},
+                    'feedback': 'Erro ao processar resposta',
+                    'modo': 'erro'
+                }
         else:
             resultado = {
                 'nota': 7.0,
@@ -1966,6 +2042,19 @@ def init_db():
 init_db()
 
 # ============================================
+# ROTA DE SAÚDE (HEALTH CHECK)
+# ============================================
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    status = {
+        'status': 'online',
+        'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível (simulação)',
+        'database': 'conectado' if get_db_connection() else 'desconectado'
+    }
+    return jsonify(status)
+
+# ============================================
 # INICIALIZAÇÃO DO SERVIDOR
 # ============================================
 
@@ -1975,8 +2064,24 @@ if __name__ == '__main__':
     print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
-    print(f"🤖 Gemini: {'✅ Disponível' if GEMINI_AVAILABLE else '❌ Indisponível'}")
+    print(f"🤖 Gemini: {'✅ Disponível' if GEMINI_AVAILABLE else '❌ Indisponível - usando simulação'}")
     if GEMINI_AVAILABLE:
         print(f"📌 Modelo: {GEMINI_MODEL}")
+        print(f"🔑 Chave: {GEMINI_API_KEY[:15]}...")
+    print("=" * 60)
+    print("📋 Endpoints disponíveis:")
+    print("   - /health - Verificar status")
+    print("   - /api/login - Login")
+    print("   - /api/corrigir - Correção com IA")
+    print("   - /api/corrigir_manual - Correção manual")
+    print("   - /api/corrigir_redacao - Correção de redação")
+    print("   - /api/escolas - Gerenciar escolas")
+    print("   - /api/turmas - Gerenciar turmas")
+    print("   - /api/alunos - Gerenciar alunos")
+    print("   - /api/provas - Gerenciar provas")
+    print("   - /api/gabaritos - Gerenciar gabaritos")
+    print("   - /api/historico - Histórico de correções")
+    print("   - /api/dashboard - Dados do dashboard")
+    print("   - /api/gerar_gabarito - Gerar cartão resposta")
     print("=" * 60)
     app.run(host='0.0.0.0', port=port, debug=False)
