@@ -24,25 +24,24 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO GEMINI - CORRIGIDA
+# CONFIGURAÇÃO GEMINI - COM SUA CHAVE API
 # ============================================
 
 GEMINI_AVAILABLE = False
 model = None
 GEMINI_MODEL = None
 
-# CORREÇÃO: Usar a chave de API corretamente (aceita qualquer formato)
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+# SUA CHAVE API GEMINI INSERIDA DIRETAMENTE
+GEMINI_API_KEY = 'AQ.Ab8RN6KoiQ2pEQvl-C5FPN5Zvb_2rbf3qhmy19xl3vrIR7Blsw'
 
 try:
     import google.generativeai as genai
     
-    # Verifica se a chave existe (qualquer formato)
     if GEMINI_API_KEY and GEMINI_API_KEY != '':
         try:
-            # Configurar a API key (qualquer formato é aceito)
+            # Configurar a API key
             genai.configure(api_key=GEMINI_API_KEY)
-            GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
+            GEMINI_MODEL = 'gemini-1.5-flash'
             model = genai.GenerativeModel(GEMINI_MODEL)
             
             # Testar se a chave funciona com uma requisição simples
@@ -64,7 +63,6 @@ try:
             GEMINI_AVAILABLE = False
     else:
         print("⚠️ GEMINI_API_KEY não encontrada - usando simulação")
-        print("💡 Configure a variável de ambiente GEMINI_API_KEY no arquivo .env")
         
 except ImportError as e:
     print(f"❌ Erro ao importar google-generativeai: {e}")
@@ -171,14 +169,14 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
         if ',' in imagem_base64:
             imagem_limpa = imagem_base64.split(',')[1]
         
-        # CORREÇÃO: Verificar se Gemini está disponível e configurado
+        # Verificar se Gemini está disponível e configurado
         if GEMINI_AVAILABLE and model is not None:
             try:
                 # Decodificar a imagem
                 image_data = base64.b64decode(imagem_limpa)
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
                 
-                # CORREÇÃO: Prompt mais detalhado e estruturado
+                # Prompt mais detalhado e estruturado
                 prompt = f"""
                 Você é um assistente especializado em correção de provas escolares.
                 
@@ -303,7 +301,6 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         respostas_detectadas = []
         
         # Gerar respostas simuladas baseadas no gabarito
-        # Simula uma taxa de acerto de ~75%
         import hashlib
         
         # Usar a imagem para gerar um seed consistente
@@ -425,17 +422,15 @@ def login():
     return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
 
 # ============================================
-# ROTA DE CORREÇÃO COM IA - CORRIGIDA
+# ROTA DE CORREÇÃO COM IA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_com_ia():
     """Endpoint principal para correção de provas com IA"""
     try:
-        # Log da requisição
         print("📥 Recebendo requisição de correção...")
         
-        # Obter dados
         data = request.json
         if not data:
             print("❌ Nenhum dado recebido")
@@ -449,7 +444,6 @@ def corrigir_com_ia():
         print(f"📤 Aluno ID: {aluno_id}")
         print(f"📤 Imagem recebida: {'Sim' if imagem_base64 else 'Não'}")
         
-        # Validar dados
         if not imagem_base64:
             print("❌ Imagem não fornecida")
             return jsonify({'erro': 'Imagem é obrigatória'}), 400
@@ -462,7 +456,6 @@ def corrigir_com_ia():
             print("❌ Aluno ID não fornecido")
             return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
         
-        # Conectar ao banco
         conn = get_db_connection()
         if not conn:
             print("❌ Erro ao conectar ao banco")
@@ -471,7 +464,6 @@ def corrigir_com_ia():
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             
-            # Buscar prova com gabarito
             cur.execute("""
                 SELECT p.*, t.serie, t.nome as turma_nome
                 FROM provas p 
@@ -495,7 +487,6 @@ def corrigir_com_ia():
             
             print(f"✅ Gabarito encontrado: {len(gabarito)} questões")
             
-            # Buscar informações do aluno
             cur.execute("SELECT nome, turma_id FROM alunos WHERE id = %s", (aluno_id,))
             aluno = cur.fetchone()
             cur.close()
@@ -504,7 +495,6 @@ def corrigir_com_ia():
             nome_aluno = aluno['nome'] if aluno else 'Aluno'
             turma_id = aluno['turma_id'] if aluno else None
             
-            # Buscar série da turma
             serie = '1º Ano'
             if turma_id:
                 try:
@@ -522,18 +512,15 @@ def corrigir_com_ia():
             
             tipo_questoes = int(prova.get('tipo_questoes', 4))
             
-            # Executar correção
             print(f"🤖 Iniciando correção para {nome_aluno}...")
             resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
             
-            # Verificar se houve erro
             if resultado.get('erro'):
                 print(f"❌ Erro na correção: {resultado.get('erro')}")
                 return jsonify(resultado), 400
             
             print(f"✅ Correção concluída: {resultado.get('acertos', 0)}/{resultado.get('total', 0)} acertos")
             
-            # Salvar no histórico
             try:
                 conn = get_db_connection()
                 if conn:
@@ -601,7 +588,6 @@ def corrigir_manual():
         cur.close()
         conn.close()
         
-        # Calcular conceito
         porcentagem = round((acertos / total) * 100) if total > 0 else 0
         conceito = calcular_conceito(porcentagem)
         
@@ -678,7 +664,99 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO - ATUALIZADA COM FILTROS E CONCEITOS
+# ROTA PARA SALVAR CORREÇÃO DE TEXTO - NOVA
+# ============================================
+
+@app.route('/api/salvar_correcao_texto', methods=['POST'])
+def salvar_correcao_texto():
+    try:
+        data = request.json
+        aluno_id = data.get('aluno_id')
+        prova_id = data.get('prova_id')
+        texto = data.get('texto')
+        nota = data.get('nota')
+        metricas = data.get('metricas', {})
+        feedback = data.get('feedback', '')
+        
+        if not aluno_id:
+            return jsonify({'erro': 'Aluno é obrigatório'}), 400
+        
+        if not texto:
+            return jsonify({'erro': 'Texto é obrigatório'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO correcoes_texto 
+            (aluno_id, prova_id, texto, nota, metrica_coerencia, metrica_estrutura, 
+             metrica_gramatica, metrica_vocabulario, feedback, tipo_correcao)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            aluno_id,
+            prova_id,
+            texto,
+            nota,
+            metricas.get('nota_coerencia', 0),
+            metricas.get('nota_estrutura', 0),
+            metricas.get('nota_gramatica', 0),
+            metricas.get('nota_vocabulario', 0),
+            feedback,
+            'ia'
+        ))
+        
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'id': result[0],
+            'mensagem': 'Correção de texto salva com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao salvar correção de texto: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA PARA LISTAR CORREÇÕES DE TEXTO - NOVA
+# ============================================
+
+@app.route('/api/correcoes_texto', methods=['GET'])
+def listar_correcoes_texto():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT ct.*, a.nome as aluno_nome, t.serie
+            FROM correcoes_texto ct
+            LEFT JOIN alunos a ON ct.aluno_id = a.id
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            ORDER BY ct.data_correcao DESC
+        """)
+        
+        resultados = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify(resultados)
+        
+    except Exception as e:
+        print(f"❌ Erro ao listar correções de texto: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA DE HISTÓRICO
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -688,14 +766,12 @@ def listar_historico():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
-        # Obter parâmetros de filtro
         escola_id = request.args.get('escola')
         serie = request.args.get('serie')
         turma_id = request.args.get('turma')
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Construir query com filtros
         query = """
             SELECT 
                 h.*, 
@@ -743,17 +819,14 @@ def listar_historico():
         cur.close()
         conn.close()
         
-        # Garantir que total_questoes exista e calcular conceito
         for item in historico:
             if 'total_questoes' not in item or item['total_questoes'] is None:
                 item['total_questoes'] = 20
             
-            # Calcular porcentagem
             total = item.get('total_questoes', 20)
             acertos = item.get('acertos', 0)
             porcentagem = round((acertos / total) * 100) if total > 0 else 0
             
-            # Adicionar conceito
             conceito = calcular_conceito(porcentagem)
             item['conceito'] = conceito['nome']
             item['conceito_rotulo'] = conceito['rotulo']
@@ -1556,7 +1629,6 @@ def dashboard_desempenho():
                 'total_correcoes': turma['total_correcoes']
             })
         
-        # Limitar a 5 turmas com melhor desempenho
         resultado = sorted(resultado, key=lambda x: x['porcentagem'], reverse=True)[:5]
         
         return jsonify(resultado)
@@ -1908,10 +1980,12 @@ def index():
             'status': 'online',
             'endpoints': [
                 '/health',
+                '/api/login',
                 '/api/corrigir',
                 '/api/corrigir_manual',
                 '/api/corrigir_redacao',
-                '/api/login',
+                '/api/salvar_correcao_texto',
+                '/api/correcoes_texto',
                 '/api/escolas',
                 '/api/turmas',
                 '/api/alunos',
@@ -1929,6 +2003,19 @@ def serve_static(path):
         return send_from_directory('.', path)
     except:
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
+
+# ============================================
+# ROTA DE SAÚDE (HEALTH CHECK)
+# ============================================
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    status = {
+        'status': 'online',
+        'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível (simulação)',
+        'database': 'conectado' if get_db_connection() else 'desconectado'
+    }
+    return jsonify(status)
 
 # ============================================
 # INICIALIZAÇÃO DO BANCO
@@ -2023,6 +2110,23 @@ def init_db():
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # NOVA TABELA: correcoes_texto
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS correcoes_texto (
+                id SERIAL PRIMARY KEY,
+                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                prova_id INTEGER REFERENCES provas(id) ON DELETE SET NULL,
+                texto TEXT NOT NULL,
+                nota DECIMAL(5,2),
+                metrica_coerencia DECIMAL(5,2),
+                metrica_estrutura DECIMAL(5,2),
+                metrica_gramatica DECIMAL(5,2),
+                metrica_vocabulario DECIMAL(5,2),
+                feedback TEXT,
+                tipo_correcao TEXT DEFAULT 'ia',
+                data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
@@ -2040,19 +2144,6 @@ def init_db():
         print(f"❌ Erro ao inicializar banco: {e}")
 
 init_db()
-
-# ============================================
-# ROTA DE SAÚDE (HEALTH CHECK)
-# ============================================
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    status = {
-        'status': 'online',
-        'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível (simulação)',
-        'database': 'conectado' if get_db_connection() else 'desconectado'
-    }
-    return jsonify(status)
 
 # ============================================
 # INICIALIZAÇÃO DO SERVIDOR
@@ -2075,6 +2166,8 @@ if __name__ == '__main__':
     print("   - /api/corrigir - Correção com IA")
     print("   - /api/corrigir_manual - Correção manual")
     print("   - /api/corrigir_redacao - Correção de redação")
+    print("   - /api/salvar_correcao_texto - Salvar correção de texto")
+    print("   - /api/correcoes_texto - Listar correções de texto")
     print("   - /api/escolas - Gerenciar escolas")
     print("   - /api/turmas - Gerenciar turmas")
     print("   - /api/alunos - Gerenciar alunos")
