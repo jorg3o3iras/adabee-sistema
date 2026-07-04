@@ -359,6 +359,78 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         }
 
 # ============================================
+# ROTA DE LOGIN - CORRIGIDA
+# ============================================
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    senha = data.get('senha')
+    
+    if not username or not senha:
+        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
+    
+    print(f"🔑 Tentativa de login: {username}")
+    
+    # ============================================
+    # PRIMEIRO: Verificar no banco de dados
+    # ============================================
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT id, nome, username, senha_hash, perfil, ativo 
+                FROM usuarios 
+                WHERE username = %s
+            """, (username,))
+            usuario = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if usuario:
+                print(f"📌 Usuário encontrado no banco: {usuario['username']}")
+                print(f"📌 Senha no banco: {usuario['senha_hash']}")
+                print(f"📌 Senha digitada: {senha}")
+                print(f"📌 Ativo: {usuario['ativo']}")
+                
+                # Verifica se a senha bate e se está ativo
+                if usuario['senha_hash'] == senha and usuario['ativo'] == True:
+                    print(f"✅ Login via banco: {username}")
+                    return jsonify({
+                        'sucesso': True,
+                        'perfil': usuario['perfil'],
+                        'usuario': usuario['username'],
+                        'nome': usuario['nome']
+                    })
+                else:
+                    print(f"❌ Senha incorreta ou usuário inativo")
+            else:
+                print(f"❌ Usuário não encontrado no banco: {username}")
+                
+        except Exception as e:
+            print(f"❌ Erro no banco: {e}")
+            traceback.print_exc()
+    
+    # ============================================
+    # SEGUNDO: Fallback para usuários fixos
+    # ============================================
+    if username in USUARIOS_FIXOS:
+        dados = USUARIOS_FIXOS[username]
+        if dados['senha'] == senha:
+            print(f"✅ Login via usuário fixo: {username}")
+            return jsonify({
+                'sucesso': True,
+                'perfil': dados['perfil'],
+                'usuario': username,
+                'nome': dados['nome']
+            })
+    
+    print(f"❌ Login falhou para: {username}")
+    return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
+
+# ============================================
 # ROTA DE CORREÇÃO COM IA (usando RelayFreeLLM)
 # ============================================
 
