@@ -18,11 +18,6 @@ venv/
 env/
 .venv/
 
-# Banco de dados
-*.db
-*.sqlite
-*.sqlite3
-
 # IDE
 .vscode/
 .idea/
@@ -31,3 +26,6 @@ env/
 
 # Logs
 *.log
+*.db
+*.sqlite
+*.sqlite3
