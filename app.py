@@ -1268,7 +1268,7 @@ def excluir_escola(id):
     return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
-# ROTA DE TURMAS
+# ROTA DE TURMAS - CORRIGIDA
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -1276,37 +1276,72 @@ def listar_turmas():
     try:
         escola_id = request.args.get('escola_id')
         conn = get_db_connection()
-        if conn:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            query = """
-                SELECT 
-                    t.*, 
-                    e.nome as escola_nome,
-                    COUNT(a.id) as total_alunos
-                FROM turmas t 
-                LEFT JOIN escolas e ON t.escola_id = e.id 
-                LEFT JOIN alunos a ON a.turma_id = t.id
-            """
-            params = []
-            
-            if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-                try:
-                    escola_id_int = int(escola_id)
-                    query += " WHERE t.escola_id = %s"
-                    params.append(escola_id_int)
-                except ValueError:
-                    pass
-            
-            query += " GROUP BY t.id, e.nome ORDER BY t.nome"
-            
-            cur.execute(query, params)
-            turmas = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(turmas)
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Consulta com contagem de alunos e lista de alunos
+        query = """
+            SELECT 
+                t.id,
+                t.nome,
+                t.serie,
+                t.turno,
+                t.professor,
+                t.capacidade,
+                t.ano_letivo,
+                t.escola_id,
+                e.nome as escola_nome,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', a.id,
+                            'nome', a.nome,
+                            'matricula', a.matricula,
+                            'numero_chamada', a.numero_chamada,
+                            'responsavel', a.responsavel,
+                            'telefone', a.telefone,
+                            'email', a.email
+                        )
+                    ) FILTER (WHERE a.id IS NOT NULL),
+                    '[]'
+                ) as alunos,
+                COUNT(a.id) as total_alunos
+            FROM turmas t 
+            LEFT JOIN escolas e ON t.escola_id = e.id 
+            LEFT JOIN alunos a ON a.turma_id = t.id
+        """
+        params = []
+        
+        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+            try:
+                escola_id_int = int(escola_id)
+                query += " WHERE t.escola_id = %s"
+                params.append(escola_id_int)
+            except ValueError:
+                pass
+        
+        query += " GROUP BY t.id, e.nome ORDER BY t.nome"
+        
+        cur.execute(query, params)
+        turmas = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Converter JSON para lista
+        for turma in turmas:
+            if turma['alunos']:
+                turma['alunos'] = turma['alunos']
+            else:
+                turma['alunos'] = []
+        
+        return jsonify(turmas)
+        
     except Exception as e:
         print(f"❌ Erro ao listar turmas: {e}")
-    return jsonify([])
+        traceback.print_exc()
+        return jsonify([])
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
@@ -1344,8 +1379,29 @@ def buscar_turma(id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             SELECT 
-                t.*, 
+                t.id,
+                t.nome,
+                t.serie,
+                t.turno,
+                t.professor,
+                t.capacidade,
+                t.ano_letivo,
+                t.escola_id,
                 e.nome as escola_nome,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', a.id,
+                            'nome', a.nome,
+                            'matricula', a.matricula,
+                            'numero_chamada', a.numero_chamada,
+                            'responsavel', a.responsavel,
+                            'telefone', a.telefone,
+                            'email', a.email
+                        )
+                    ) FILTER (WHERE a.id IS NOT NULL),
+                    '[]'
+                ) as alunos,
                 COUNT(a.id) as total_alunos
             FROM turmas t 
             LEFT JOIN escolas e ON t.escola_id = e.id 
@@ -1360,10 +1416,17 @@ def buscar_turma(id):
         if not turma:
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
+        # Converter JSON para lista
+        if turma['alunos']:
+            turma['alunos'] = turma['alunos']
+        else:
+            turma['alunos'] = []
+        
         return jsonify(turma)
         
     except Exception as e:
         print(f"❌ Erro ao buscar turma: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['PUT'])
@@ -1430,7 +1493,62 @@ def excluir_turma(id):
     return jsonify({'erro': 'Erro ao excluir turma'}), 500
 
 # ============================================
-# ROTA DE ALUNOS
+# ROTA PARA LISTAR ALUNOS POR TURMA
+# ============================================
+
+@app.route('/api/turmas/<int:id>/alunos', methods=['GET'])
+def listar_alunos_por_turma(id):
+    """Lista todos os alunos de uma turma específica"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se a turma existe
+        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
+        turma = cur.fetchone()
+        if not turma:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Turma não encontrada'}), 404
+        
+        # Buscar alunos da turma
+        cur.execute("""
+            SELECT 
+                id,
+                nome,
+                matricula,
+                numero_chamada,
+                data_nascimento,
+                genero,
+                responsavel,
+                telefone,
+                email,
+                observacoes
+            FROM alunos
+            WHERE turma_id = %s
+            ORDER BY numero_chamada NULLS LAST, nome
+        """, (id,))
+        
+        alunos = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'turma': turma,
+            'total_alunos': len(alunos),
+            'alunos': alunos
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao listar alunos da turma: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA DE ALUNOS - CORRIGIDA
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -1445,9 +1563,26 @@ def listar_alunos():
             return jsonify([])
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Consulta principal com dados da turma e escola
         query = """
-            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, 
-                   e.id as escola_id, e.nome as escola_nome
+            SELECT 
+                a.id,
+                a.nome,
+                a.matricula,
+                a.numero_chamada,
+                a.data_nascimento,
+                a.genero,
+                a.responsavel,
+                a.telefone,
+                a.email,
+                a.observacoes,
+                a.turma_id,
+                t.nome as turma_nome,
+                t.serie as turma_serie,
+                t.turno as turma_turno,
+                e.id as escola_id,
+                e.nome as escola_nome
             FROM alunos a
             LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
@@ -1455,13 +1590,15 @@ def listar_alunos():
         """
         params = []
         
+        # Filtro por turma (prioridade)
         if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
             try:
                 turma_id_int = int(turma_id)
-                query += " AND t.id = %s"
+                query += " AND a.turma_id = %s"
                 params.append(turma_id_int)
             except ValueError:
                 pass
+        # Filtro por escola (se não houver filtro de turma)
         elif escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
             try:
                 escola_id_int = int(escola_id)
@@ -1470,20 +1607,23 @@ def listar_alunos():
             except ValueError:
                 pass
         
+        # Filtro por série
         if serie and serie != '' and serie != 'null' and serie != 'undefined':
             query += " AND t.serie = %s"
             params.append(serie)
         
-        query += " ORDER BY a.numero_chamada, a.nome"
+        query += " ORDER BY a.numero_chamada NULLS LAST, a.nome"
         
         cur.execute(query, params)
         alunos = cur.fetchall()
         cur.close()
         conn.close()
+        
         return jsonify(alunos)
         
     except Exception as e:
         print(f"❌ Erro ao listar alunos: {e}")
+        traceback.print_exc()
         return jsonify([])
 
 @app.route('/api/alunos', methods=['POST'])
@@ -1844,6 +1984,103 @@ def dashboard_desempenho():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
+# ROTA DE DASHBOARD TURMAS E ALUNOS
+# ============================================
+
+@app.route('/api/dashboard/turmas_alunos', methods=['GET'])
+def dashboard_turmas_alunos():
+    """Retorna todas as turmas com seus alunos para o dashboard"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT 
+                t.id,
+                t.nome as turma_nome,
+                t.serie,
+                e.nome as escola_nome,
+                COUNT(a.id) as total_alunos,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', a.id,
+                            'nome', a.nome,
+                            'numero_chamada', a.numero_chamada
+                        )
+                    ) FILTER (WHERE a.id IS NOT NULL),
+                    '[]'
+                ) as alunos
+            FROM turmas t
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            LEFT JOIN alunos a ON a.turma_id = t.id
+            GROUP BY t.id, e.nome
+            ORDER BY t.nome
+        """)
+        
+        turmas = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Converter JSON para lista
+        for turma in turmas:
+            if turma['alunos']:
+                turma['alunos'] = turma['alunos']
+            else:
+                turma['alunos'] = []
+        
+        return jsonify(turmas)
+        
+    except Exception as e:
+        print(f"❌ Erro no dashboard turmas-alunos: {e}")
+        return jsonify([])
+
+# ============================================
+# ROTA DE ESTATÍSTICAS DE TURMAS
+# ============================================
+
+@app.route('/api/turmas/estatisticas', methods=['GET'])
+def estatisticas_turmas():
+    """Retorna estatísticas de todas as turmas"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT 
+                t.id,
+                t.nome as turma_nome,
+                t.serie,
+                e.nome as escola_nome,
+                COUNT(DISTINCT a.id) as total_alunos,
+                COUNT(DISTINCT p.id) as total_provas,
+                COUNT(DISTINCT h.id) as total_correcoes,
+                COALESCE(AVG(h.nota), 0) as media_notas,
+                COALESCE(AVG(h.acertos), 0) as media_acertos
+            FROM turmas t
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            LEFT JOIN alunos a ON a.turma_id = t.id
+            LEFT JOIN provas p ON p.turma_id = t.id
+            LEFT JOIN historico h ON h.prova_id = p.id AND h.aluno_id = a.id
+            GROUP BY t.id, e.nome
+            ORDER BY t.nome
+        """)
+        
+        estatisticas = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify(estatisticas)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar estatísticas: {e}")
+        return jsonify([])
+
+# ============================================
 # ROTA DE USUÁRIOS
 # ============================================
 
@@ -2192,11 +2429,14 @@ def index():
                 '/api/correcoes_texto',
                 '/api/escolas',
                 '/api/turmas',
+                '/api/turmas/<id>/alunos',
+                '/api/turmas/estatisticas',
                 '/api/alunos',
                 '/api/provas',
                 '/api/gabaritos',
                 '/api/historico',
                 '/api/dashboard',
+                '/api/dashboard/turmas_alunos',
                 '/api/gerar_gabarito'
             ]
         })
@@ -2376,12 +2616,15 @@ if __name__ == '__main__':
     print("   - /api/salvar_correcao_texto - Salvar correção de texto")
     print("   - /api/correcoes_texto - Listar correções de texto")
     print("   - /api/escolas - Gerenciar escolas")
-    print("   - /api/turmas - Gerenciar turmas")
+    print("   - /api/turmas - Gerenciar turmas (COM ALUNOS)")
+    print("   - /api/turmas/<id>/alunos - Listar alunos de uma turma")
+    print("   - /api/turmas/estatisticas - Estatísticas de turmas")
     print("   - /api/alunos - Gerenciar alunos")
     print("   - /api/provas - Gerenciar provas")
     print("   - /api/gabaritos - Gerenciar gabaritos")
     print("   - /api/historico - Histórico de correções")
     print("   - /api/dashboard - Dados do dashboard")
+    print("   - /api/dashboard/turmas_alunos - Turmas com alunos")
     print("   - /api/gerar_gabarito - Gerar cartão resposta")
     print("=" * 60)
     app.run(host='0.0.0.0', port=port, debug=False)
