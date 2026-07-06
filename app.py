@@ -24,20 +24,60 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO RELAYFREELLM
+# CONFIGURAÇÃO GEMINI - LENDO DO .env
 # ============================================
 
 GEMINI_AVAILABLE = False
-RELAY_AVAILABLE = False
 model = None
-RELAY_MODEL = None
+GEMINI_MODEL = None
 
-# Configuração para RelayFreeLLM (servidor local)
+# LER A CHAVE DO .env (SEGURANÇA!)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
+
+try:
+    import google.generativeai as genai
+    
+    if GEMINI_API_KEY and GEMINI_API_KEY != '':
+        try:
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel(GEMINI_MODEL)
+            
+            # Testar a chave
+            test_response = model.generate_content("Teste de conexão - responda apenas OK")
+            if test_response and test_response.text:
+                GEMINI_AVAILABLE = True
+                print("=" * 60)
+                print("✅ Gemini AI configurado com sucesso!")
+                print(f"📌 Modelo: {GEMINI_MODEL}")
+                print("=" * 60)
+            else:
+                print("⚠️ Falha no teste da chave")
+                GEMINI_AVAILABLE = False
+                
+        except Exception as e:
+            print(f"⚠️ Erro ao configurar Gemini: {e}")
+            GEMINI_AVAILABLE = False
+    else:
+        print("⚠️ GEMINI_API_KEY não encontrada no .env")
+        
+except ImportError as e:
+    print(f"❌ Erro ao importar google-generativeai: {e}")
+    print("💡 Instale com: pip install google-generativeai")
+    GEMINI_AVAILABLE = False
+except Exception as e:
+    print(f"⚠️ Erro ao configurar Gemini: {e}")
+    GEMINI_AVAILABLE = False
+
+# ============================================
+# CONFIGURAÇÃO RELAYFREELLM (FALLBACK)
+# ============================================
+
+RELAY_AVAILABLE = False
 RELAY_API_URL = os.getenv('RELAY_API_URL', 'http://localhost:8080')
-RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')  # Pode ser vazio se não precisar
+RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')
 RELAY_MODEL = os.getenv('RELAY_MODEL', 'gemini-1.5-flash')
 
-# Tentar configurar RelayFreeLLM (compatível com OpenAI)
 try:
     import openai
     
@@ -45,37 +85,10 @@ try:
         openai.api_base = RELAY_API_URL + "/v1"
         openai.api_key = RELAY_API_KEY or "sk-placeholder"
         RELAY_AVAILABLE = True
-        print("=" * 60)
-        print("✅ RelayFreeLLM configurado com sucesso!")
-        print(f"📌 URL: {RELAY_API_URL}")
-        print(f"📌 Modelo: {RELAY_MODEL}")
-        print("=" * 60)
-except ImportError as e:
-    print(f"❌ Erro ao importar openai: {e}")
-    print("💡 Instale com: pip install openai")
+        print("✅ RelayFreeLLM configurado como fallback!")
 except Exception as e:
-    print(f"⚠️ Erro ao configurar RelayFreeLLM: {e}")
+    print(f"⚠️ RelayFreeLLM não disponível: {e}")
     RELAY_AVAILABLE = False
-
-# Tentar configurar Gemini também (fallback)
-try:
-    import google.generativeai as genai
-    
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-    if GEMINI_API_KEY and GEMINI_API_KEY != '':
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
-            model = genai.GenerativeModel(GEMINI_MODEL)
-            
-            test_response = model.generate_content("Teste de conexão - responda apenas OK")
-            if test_response and test_response.text:
-                GEMINI_AVAILABLE = True
-                print("✅ Gemini AI configurado como fallback!")
-        except Exception as e:
-            print(f"⚠️ Erro ao configurar Gemini: {e}")
-except ImportError:
-    pass
 
 # ============================================
 # CONFIGURAÇÃO DO BANCO DE DADOS
@@ -141,8 +154,145 @@ def calcular_conceito(porcentagem):
         }
 
 # ============================================
-# FUNÇÃO DE CORREÇÃO COM RELAYFREELLM
+# FUNÇÃO DE CORREÇÃO COM GEMINI
 # ============================================
+
+def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
+    """Corrige a prova usando Gemini ou simulação"""
+    
+    if not gabarito or len(gabarito) == 0:
+        conceito = calcular_conceito(0)
+        return {
+            'erro': 'Gabarito não disponível',
+            'aluno': aluno_nome,
+            'serie': serie,
+            'total': 0,
+            'acertos': 0,
+            'nota': 0,
+            'porcentagem': 0,
+            'conceito': conceito,
+            'respostas_detectadas': [],
+            'gabarito': gabarito,
+            'correcoes': [],
+            'tipo_questoes': str(tipo_questoes),
+            'confianca': 0,
+            'modo': 'erro',
+            'valor_por_questao': 0
+        }
+    
+    try:
+        imagem_limpa = imagem_base64
+        if ',' in imagem_base64:
+            imagem_limpa = imagem_base64.split(',')[1]
+        
+        if GEMINI_AVAILABLE and model is not None:
+            try:
+                image_data = base64.b64decode(imagem_limpa)
+                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
+                
+                prompt = f"""
+                Você é um assistente especializado em correção de provas escolares.
+                
+                Analise a imagem do cartão resposta e identifique as respostas marcadas.
+                
+                INFORMAÇÕES DA PROVA:
+                - Total de questões: {len(gabarito)}
+                - Alternativas disponíveis: {alternativas}
+                - Gabarito correto: {gabarito}
+                
+                INSTRUÇÕES:
+                1. Analise cada questão e identifique qual alternativa foi marcada
+                2. Se a marcação não estiver clara, faça a melhor estimativa
+                3. Compare com o gabarito e determine se está correta
+                
+                Responda APENAS em formato JSON válido:
+                {{
+                    "respostas": ["A", "B", "C", ...],
+                    "confianca": 85
+                }}
+                """
+                
+                response = model.generate_content([
+                    prompt,
+                    {"mime_type": "image/jpeg", "data": image_data}
+                ])
+                
+                resposta_texto = response.text
+                print(f"📝 Resposta Gemini: {resposta_texto[:200]}...")
+                
+                json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
+                
+                if json_match:
+                    try:
+                        dados = json.loads(json_match.group())
+                        respostas_detectadas = dados.get('respostas', [])
+                        confianca = dados.get('confianca', 70)
+                    except:
+                        respostas_detectadas = []
+                        confianca = 50
+                else:
+                    respostas_detectadas = []
+                    confianca = 50
+                
+                if not respostas_detectadas or len(respostas_detectadas) == 0:
+                    print("⚠️ Nenhuma resposta detectada, tentando Relay...")
+                    return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+                
+                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
+                
+                while len(respostas_detectadas) < len(gabarito):
+                    respostas_detectadas.append(random.choice(alternativas_lista))
+                
+                respostas_detectadas = respostas_detectadas[:len(gabarito)]
+                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
+                
+                acertos = 0
+                correcoes = []
+                for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
+                    gab_normalizado = str(gab).strip().upper() if gab else ''
+                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
+                    if is_correto:
+                        acertos += 1
+                    correcoes.append({
+                        'questao': i+1, 
+                        'resposta': resp, 
+                        'gabarito': gab_normalizado, 
+                        'correto': is_correto
+                    })
+                
+                valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
+                nota = acertos * valor_por_questao
+                porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
+                conceito = calcular_conceito(porcentagem)
+                
+                return {
+                    'aluno': aluno_nome,
+                    'serie': serie,
+                    'total': len(gabarito),
+                    'acertos': acertos,
+                    'nota': round(nota, 1),
+                    'porcentagem': porcentagem,
+                    'conceito': conceito,
+                    'respostas_detectadas': respostas_detectadas,
+                    'gabarito': gabarito,
+                    'correcoes': correcoes,
+                    'tipo_questoes': str(tipo_questoes),
+                    'confianca': confianca,
+                    'modo': 'gemini',
+                    'valor_por_questao': round(valor_por_questao, 2)
+                }
+                
+            except Exception as e:
+                print(f"❌ Erro no Gemini: {e}")
+                print("⚠️ Tentando RelayFreeLLM...")
+                return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+        else:
+            print("⚠️ Gemini não disponível, tentando RelayFreeLLM...")
+            return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+            
+    except Exception as e:
+        print(f"❌ Erro geral: {e}")
+        return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
 
 def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
     """Corrige a prova usando RelayFreeLLM ou simulação"""
@@ -172,7 +322,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             try:
                 import openai
                 
-                # Limpar a imagem
                 imagem_limpa = imagem_base64
                 if ',' in imagem_base64:
                     imagem_limpa = imagem_base64.split(',')[1]
@@ -201,7 +350,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 }}
                 """
                 
-                # Usar a API compatível com OpenAI
                 response = openai.ChatCompletion.create(
                     model=RELAY_MODEL,
                     messages=[
@@ -359,7 +507,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         }
 
 # ============================================
-# ROTA DE LOGIN - CORRIGIDA
+# ROTA DE LOGIN
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -373,9 +521,6 @@ def login():
     
     print(f"🔑 Tentativa de login: {username}")
     
-    # ============================================
-    # PRIMEIRO: Verificar no banco de dados
-    # ============================================
     conn = get_db_connection()
     if conn:
         try:
@@ -395,7 +540,6 @@ def login():
                 print(f"📌 Senha digitada: {senha}")
                 print(f"📌 Ativo: {usuario['ativo']}")
                 
-                # Verifica se a senha bate e se está ativo
                 if usuario['senha_hash'] == senha and usuario['ativo'] == True:
                     print(f"✅ Login via banco: {username}")
                     return jsonify({
@@ -413,9 +557,6 @@ def login():
             print(f"❌ Erro no banco: {e}")
             traceback.print_exc()
     
-    # ============================================
-    # SEGUNDO: Fallback para usuários fixos
-    # ============================================
     if username in USUARIOS_FIXOS:
         dados = USUARIOS_FIXOS[username]
         if dados['senha'] == senha:
@@ -431,12 +572,11 @@ def login():
     return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
 
 # ============================================
-# ROTA DE CORREÇÃO COM IA (usando RelayFreeLLM)
+# ROTA DE CORREÇÃO COM IA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
 def corrigir_com_ia():
-    """Endpoint principal para correção de provas com IA"""
     try:
         print("📥 Recebendo requisição de correção...")
         
@@ -509,7 +649,7 @@ def corrigir_com_ia():
             tipo_questoes = int(prova.get('tipo_questoes', 4))
             
             print(f"🤖 Iniciando correção para {nome_aluno}...")
-            resultado = corrigir_com_relay(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
+            resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
             
             if resultado.get('erro'):
                 return jsonify(resultado), 400
@@ -596,7 +736,7 @@ def corrigir_manual():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO COM RELAYFREELLM
+# ROTA DE CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -609,7 +749,26 @@ def corrigir_redacao():
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
         
-        # TENTAR USAR RELAYFREELLM PRIMEIRO
+        # TENTAR USAR GEMINI
+        if GEMINI_AVAILABLE and model is not None:
+            try:
+                prompt = f"""
+                Avalie a redação: {texto}
+                Responda em JSON: {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
+                """
+                response = model.generate_content(prompt)
+                json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                if json_match:
+                    try:
+                        resultado = json.loads(json_match.group())
+                        resultado['modo'] = 'gemini'
+                        return jsonify(resultado)
+                    except:
+                        pass
+            except Exception as e:
+                print(f"⚠️ Erro no Gemini para redação: {e}")
+        
+        # TENTAR USAR RELAYFREELLM
         if RELAY_AVAILABLE:
             try:
                 import openai
@@ -2057,8 +2216,8 @@ def serve_static(path):
 def health_check():
     status = {
         'status': 'online',
+        'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível',
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
-        'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível (fallback)',
         'database': 'conectado' if get_db_connection() else 'desconectado'
     }
     return jsonify(status)
@@ -2200,11 +2359,13 @@ if __name__ == '__main__':
     print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
+    print(f"🤖 Gemini: {'✅ Disponível' if GEMINI_AVAILABLE else '❌ Indisponível'}")
+    if GEMINI_AVAILABLE:
+        print(f"📌 Modelo: {GEMINI_MODEL}")
     print(f"🤖 RelayFreeLLM: {'✅ Disponível' if RELAY_AVAILABLE else '❌ Indisponível'}")
     if RELAY_AVAILABLE:
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
-    print(f"🤖 Gemini (fallback): {'✅ Disponível' if GEMINI_AVAILABLE else '❌ Indisponível'}")
     print("=" * 60)
     print("📋 Endpoints disponíveis:")
     print("   - /health - Verificar status")
