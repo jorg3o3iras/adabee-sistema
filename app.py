@@ -24,14 +24,13 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURAÇÃO GEMINI - LENDO DO .env
+# CONFIGURAÇÃO GEMINI
 # ============================================
 
 GEMINI_AVAILABLE = False
 model = None
 GEMINI_MODEL = None
 
-# LER A CHAVE DO .env (SEGURANÇA!)
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
 
@@ -43,7 +42,6 @@ try:
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel(GEMINI_MODEL)
             
-            # Testar a chave
             test_response = model.generate_content("Teste de conexão - responda apenas OK")
             if test_response and test_response.text:
                 GEMINI_AVAILABLE = True
@@ -63,14 +61,13 @@ try:
         
 except ImportError as e:
     print(f"❌ Erro ao importar google-generativeai: {e}")
-    print("💡 Instale com: pip install google-generativeai")
     GEMINI_AVAILABLE = False
 except Exception as e:
     print(f"⚠️ Erro ao configurar Gemini: {e}")
     GEMINI_AVAILABLE = False
 
 # ============================================
-# CONFIGURAÇÃO RELAYFREELLM (FALLBACK)
+# CONFIGURAÇÃO RELAYFREELLM
 # ============================================
 
 RELAY_AVAILABLE = False
@@ -536,8 +533,6 @@ def login():
             
             if usuario:
                 print(f"📌 Usuário encontrado no banco: {usuario['username']}")
-                print(f"📌 Senha no banco: {usuario['senha_hash']}")
-                print(f"📌 Senha digitada: {senha}")
                 print(f"📌 Ativo: {usuario['ativo']}")
                 
                 if usuario['senha_hash'] == senha and usuario['ativo'] == True:
@@ -996,7 +991,8 @@ def listar_historico():
                 e.nome as escola_nome,
                 t.id as turma_id, 
                 e.id as escola_id,
-                p.quantidade_questoes as total_questoes
+                p.quantidade_questoes as total_questoes,
+                p.tipo_questoes
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
@@ -1268,7 +1264,7 @@ def excluir_escola(id):
     return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
-# ROTA DE TURMAS - CORRIGIDA
+# ROTA DE TURMAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -1281,7 +1277,6 @@ def listar_turmas():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Consulta com contagem de alunos e lista de alunos
         query = """
             SELECT 
                 t.id,
@@ -1329,7 +1324,6 @@ def listar_turmas():
         cur.close()
         conn.close()
         
-        # Converter JSON para lista
         for turma in turmas:
             if turma['alunos']:
                 turma['alunos'] = turma['alunos']
@@ -1416,7 +1410,6 @@ def buscar_turma(id):
         if not turma:
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
-        # Converter JSON para lista
         if turma['alunos']:
             turma['alunos'] = turma['alunos']
         else:
@@ -1498,7 +1491,6 @@ def excluir_turma(id):
 
 @app.route('/api/turmas/<int:id>/alunos', methods=['GET'])
 def listar_alunos_por_turma(id):
-    """Lista todos os alunos de uma turma específica"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1506,7 +1498,6 @@ def listar_alunos_por_turma(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Verificar se a turma existe
         cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
         turma = cur.fetchone()
         if not turma:
@@ -1514,7 +1505,6 @@ def listar_alunos_por_turma(id):
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
-        # Buscar alunos da turma
         cur.execute("""
             SELECT 
                 id,
@@ -1548,7 +1538,7 @@ def listar_alunos_por_turma(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ALUNOS - CORRIGIDA
+# ROTA DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -1564,7 +1554,6 @@ def listar_alunos():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Consulta principal com dados da turma e escola
         query = """
             SELECT 
                 a.id,
@@ -1590,7 +1579,6 @@ def listar_alunos():
         """
         params = []
         
-        # Filtro por turma (prioridade)
         if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
             try:
                 turma_id_int = int(turma_id)
@@ -1598,7 +1586,6 @@ def listar_alunos():
                 params.append(turma_id_int)
             except ValueError:
                 pass
-        # Filtro por escola (se não houver filtro de turma)
         elif escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
             try:
                 escola_id_int = int(escola_id)
@@ -1607,7 +1594,6 @@ def listar_alunos():
             except ValueError:
                 pass
         
-        # Filtro por série
         if serie and serie != '' and serie != 'null' and serie != 'undefined':
             query += " AND t.serie = %s"
             params.append(serie)
@@ -1936,7 +1922,7 @@ def dashboard_desempenho():
         cur.execute("""
             SELECT 
                 t.id,
-                t.nome as turma_nome,
+                t.nome as nome,
                 COALESCE(AVG(h.nota), 0) as media,
                 COUNT(DISTINCT h.aluno_id) as total_alunos,
                 COUNT(DISTINCT h.id) as total_correcoes,
@@ -1965,7 +1951,7 @@ def dashboard_desempenho():
             
             resultado.append({
                 'id': turma['id'],
-                'nome': turma['turma_nome'],
+                'nome': turma['nome'],
                 'media': round(turma['media'], 1),
                 'porcentagem': porcentagem,
                 'conceito': conceito['nome'],
@@ -1989,7 +1975,6 @@ def dashboard_desempenho():
 
 @app.route('/api/dashboard/turmas_alunos', methods=['GET'])
 def dashboard_turmas_alunos():
-    """Retorna todas as turmas com seus alunos para o dashboard"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2024,7 +2009,6 @@ def dashboard_turmas_alunos():
         cur.close()
         conn.close()
         
-        # Converter JSON para lista
         for turma in turmas:
             if turma['alunos']:
                 turma['alunos'] = turma['alunos']
@@ -2043,7 +2027,6 @@ def dashboard_turmas_alunos():
 
 @app.route('/api/turmas/estatisticas', methods=['GET'])
 def estatisticas_turmas():
-    """Retorna estatísticas de todas as turmas"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2449,7 +2432,7 @@ def serve_static(path):
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
 
 # ============================================
-# ROTA DE SAÚDE (HEALTH CHECK)
+# ROTA DE SAÚDE
 # ============================================
 
 @app.route('/health', methods=['GET'])
@@ -2616,7 +2599,7 @@ if __name__ == '__main__':
     print("   - /api/salvar_correcao_texto - Salvar correção de texto")
     print("   - /api/correcoes_texto - Listar correções de texto")
     print("   - /api/escolas - Gerenciar escolas")
-    print("   - /api/turmas - Gerenciar turmas (COM ALUNOS)")
+    print("   - /api/turmas - Gerenciar turmas")
     print("   - /api/turmas/<id>/alunos - Listar alunos de uma turma")
     print("   - /api/turmas/estatisticas - Estatísticas de turmas")
     print("   - /api/alunos - Gerenciar alunos")
