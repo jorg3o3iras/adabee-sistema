@@ -234,6 +234,16 @@
         .modal-close:hover { color:var(--text); }
         .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
 
+        .multi-import-area { background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; margin:8px 0; }
+        .multi-import-area textarea { width:100%; background:transparent; border:none; color:var(--text); font-size:13px; outline:none; resize:vertical; min-height:80px; font-family:inherit; padding:4px 0; }
+        .multi-import-area textarea::placeholder { color:var(--text3); }
+        .multi-import-hint { font-size:10px; color:var(--text3); margin-top:4px; line-height:1.5; }
+        .multi-import-hint strong { color:var(--text2); }
+        .multi-status { padding:8px 12px; border-radius:6px; margin:6px 0; font-size:12px; }
+        .multi-status.success { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.2); color:var(--green); }
+        .multi-status.error { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); color:var(--red); }
+        .multi-status.info { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2); color:var(--blue); }
+
         .correcao-manual-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:8px; margin:12px 0; }
         .correcao-manual-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:8px 6px; text-align:center; }
         .correcao-manual-item .q-num { font-size:9px; color:var(--text3); font-weight:700; }
@@ -325,7 +335,6 @@
            ══ NOVO: REGRAS PARA IMPRESSÃO ══
            ============================================ */
         @media print {
-            /* Ocultar elementos que não devem ser impressos */
             .no-print,
             .menu-toggle,
             .menu-overlay,
@@ -364,368 +373,66 @@
             .login-screen {
                 display: none !important;
             }
-
-            /* Mostrar apenas a página ativa */
-            .page {
-                display: none !important;
-            }
-            .page.active {
-                display: block !important;
-                animation: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-
-            /* Ajustes de layout para impressão */
-            body {
-                background: #ffffff !important;
-                color: #000000 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                font-size: 11pt !important;
-                line-height: 1.5 !important;
-            }
-
-            #app {
-                display: block !important;
-                height: auto !important;
-                overflow: visible !important;
-                background: #ffffff !important;
-            }
-
-            .content {
-                padding: 15px !important;
-                margin: 0 !important;
-                background: #ffffff !important;
-                overflow: visible !important;
-                height: auto !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-            }
-
-            /* Cards e containers */
-            .card {
-                background: #ffffff !important;
-                border: 1px solid #dddddd !important;
-                border-radius: 4px !important;
-                box-shadow: none !important;
-                padding: 12px 14px !important;
-                margin-bottom: 12px !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            .card-header {
-                border-bottom: 1px solid #dddddd !important;
-                padding-bottom: 8px !important;
-                margin-bottom: 10px !important;
-            }
-
-            .card-title {
-                color: #000000 !important;
-                font-size: 13pt !important;
-            }
-
-            .stats-grid {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 10px !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            .stat-card {
-                background: #f9f9f9 !important;
-                border: 1px solid #dddddd !important;
-                border-radius: 4px !important;
-                box-shadow: none !important;
-                padding: 10px 12px !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            .stat-val {
-                font-size: 20pt !important;
-                color: #000000 !important;
-            }
-
-            .stat-label {
-                color: #555555 !important;
-                font-size: 9pt !important;
-            }
-
-            .stat-icon {
-                display: none !important;
-            }
-
-            /* Tabelas */
-            .table-wrap {
-                border: 1px solid #dddddd !important;
-                border-radius: 4px !important;
-                overflow: visible !important;
-                margin-bottom: 10px !important;
-            }
-
-            table {
-                border-collapse: collapse !important;
-                width: 100% !important;
-                font-size: 9pt !important;
-                color: #000000 !important;
-            }
-
-            thead {
-                background: #f5f5f5 !important;
-            }
-
-            th {
-                background: #f0f0f0 !important;
-                color: #000000 !important;
-                font-weight: 700 !important;
-                border: 1px solid #cccccc !important;
-                padding: 6px 8px !important;
-                text-align: left !important;
-                font-size: 8pt !important;
-                text-transform: uppercase !important;
-                letter-spacing: 0.5px !important;
-            }
-
-            td {
-                border: 1px solid #cccccc !important;
-                padding: 6px 8px !important;
-                color: #000000 !important;
-                background: #ffffff !important;
-            }
-
-            tbody tr:hover td {
-                background: #ffffff !important;
-            }
-
-            tr {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            /* Badges */
-            .badge {
-                border: 1px solid #999999 !important;
-                background: #f0f0f0 !important;
-                color: #000000 !important;
-                padding: 1px 8px !important;
-                font-size: 7pt !important;
-                border-radius: 12px !important;
-                font-weight: 700 !important;
-                text-transform: uppercase !important;
-            }
-
-            .badge-green {
-                border-color: #28a745 !important;
-                background: #d4edda !important;
-                color: #155724 !important;
-            }
-            .badge-red {
-                border-color: #dc3545 !important;
-                background: #f8d7da !important;
-                color: #721c24 !important;
-            }
-            .badge-orange {
-                border-color: #fd7e14 !important;
-                background: #fff3cd !important;
-                color: #856404 !important;
-            }
-            .badge-purple {
-                border-color: #6f42c1 !important;
-                background: #e8d4ff !important;
-                color: #4a148c !important;
-            }
-            .badge-blue {
-                border-color: #007bff !important;
-                background: #cce5ff !important;
-                color: #004085 !important;
-            }
-            .badge-gray {
-                border-color: #6c757d !important;
-                background: #e9ecef !important;
-                color: #495057 !important;
-            }
-
-            .badge-conceito-inicial {
-                border-color: #dc3545 !important;
-                background: #f8d7da !important;
-                color: #721c24 !important;
-            }
-            .badge-conceito-basico {
-                border-color: #fd7e14 !important;
-                background: #fff3cd !important;
-                color: #856404 !important;
-            }
-            .badge-conceito-proficiente {
-                border-color: #007bff !important;
-                background: #cce5ff !important;
-                color: #004085 !important;
-            }
-            .badge-conceito-avancado {
-                border-color: #28a745 !important;
-                background: #d4edda !important;
-                color: #155724 !important;
-            }
-
-            /* Progress bars */
-            .progress {
-                background: #e9ecef !important;
-                border: 1px solid #cccccc !important;
-                border-radius: 4px !important;
-                height: 10px !important;
-                overflow: hidden !important;
-            }
-
-            .progress-fill {
-                border-radius: 4px !important;
-                background: #007bff !important;
-            }
-
-            .pf-green {
-                background: #28a745 !important;
-            }
-            .pf-orange {
-                background: #fd7e14 !important;
-            }
-            .pf-purple {
-                background: #6f42c1 !important;
-            }
-            .pf-blue {
-                background: #007bff !important;
-            }
-
-            /* Gráficos */
-            .chart-bars {
-                height: 100px !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            .chart-bar-val {
-                font-size: 8pt !important;
-                color: #000000 !important;
-            }
-
-            .chart-bar-lbl {
-                font-size: 7pt !important;
-                color: #555555 !important;
-            }
-
-            .conceito-graficos {
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 15px !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            #conceito-barras .progress {
-                height: 14px !important;
-            }
-
-            #conceito-barras .progress-fill {
-                height: 14px !important;
-                border-radius: 4px !important;
-            }
-
-            /* Donut chart */
-            #donut-container {
-                transform: scale(0.9) !important;
-            }
-
-            #donut-container canvas {
-                max-width: 160px !important;
-                max-height: 160px !important;
-            }
-
-            /* Cabeçalho da página */
-            .page-header {
-                margin-bottom: 15px !important;
-                padding-bottom: 10px !important;
-                border-bottom: 2px solid #333333 !important;
-            }
-
-            .page-title {
-                font-size: 16pt !important;
-                color: #000000 !important;
-            }
-
-            .page-sub {
-                color: #555555 !important;
-                font-size: 10pt !important;
-            }
-
-            /* Configurações de página */
-            @page {
-                size: A4 !important;
-                margin: 15mm 12mm !important;
-                margin-top: 10mm !important;
-                margin-bottom: 10mm !important;
-            }
-
-            /* Quebra de páginas para tabelas grandes */
-            .card {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            /* Permitir quebra de página dentro de cards grandes */
-            .card.allow-break {
-                page-break-inside: auto !important;
-                break-inside: auto !important;
-            }
-
-            /* Forçar quebra de página após um elemento */
-            .page-break {
-                page-break-after: always !important;
-                break-after: page !important;
-            }
-
-            /* Imagens não devem quebrar */
-            img {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            /* Ocultar o toast */
-            .toast-container {
-                display: none !important;
-            }
-
-            /* Cabeçalho do relatório na impressão */
-            .print-header {
-                display: block !important;
-                text-align: center !important;
-                margin-bottom: 20px !important;
-                padding-bottom: 12px !important;
-                border-bottom: 2px solid #333333 !important;
-            }
-
-            .print-header h2 {
-                font-size: 16pt !important;
-                margin: 0 !important;
-                color: #000000 !important;
-            }
-
-            .print-header p {
-                font-size: 10pt !important;
-                color: #555555 !important;
-                margin: 4px 0 0 0 !important;
-            }
+            .page { display: none !important; }
+            .page.active { display: block !important; animation: none !important; padding: 0 !important; margin: 0 !important; }
+            body { background: #ffffff !important; color: #000000 !important; margin: 0 !important; padding: 0 !important; font-size: 11pt !important; line-height: 1.5 !important; }
+            #app { display: block !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }
+            .content { padding: 15px !important; margin: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; width: 100% !important; box-sizing: border-box !important; }
+            .card { background: #ffffff !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 12px 14px !important; margin-bottom: 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .card-header { border-bottom: 1px solid #dddddd !important; padding-bottom: 8px !important; margin-bottom: 10px !important; }
+            .card-title { color: #000000 !important; font-size: 13pt !important; }
+            .stats-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .stat-card { background: #f9f9f9 !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 10px 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .stat-val { font-size: 20pt !important; color: #000000 !important; }
+            .stat-label { color: #555555 !important; font-size: 9pt !important; }
+            .stat-icon { display: none !important; }
+            .table-wrap { border: 1px solid #dddddd !important; border-radius: 4px !important; overflow: visible !important; margin-bottom: 10px !important; }
+            table { border-collapse: collapse !important; width: 100% !important; font-size: 9pt !important; color: #000000 !important; }
+            thead { background: #f5f5f5 !important; }
+            th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 6px 8px !important; text-align: left !important; font-size: 8pt !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
+            td { border: 1px solid #cccccc !important; padding: 6px 8px !important; color: #000000 !important; background: #ffffff !important; }
+            tbody tr:hover td { background: #ffffff !important; }
+            tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .badge { border: 1px solid #999999 !important; background: #f0f0f0 !important; color: #000000 !important; padding: 1px 8px !important; font-size: 7pt !important; border-radius: 12px !important; font-weight: 700 !important; text-transform: uppercase !important; }
+            .badge-green { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+            .badge-red { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+            .badge-orange { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+            .badge-purple { border-color: #6f42c1 !important; background: #e8d4ff !important; color: #4a148c !important; }
+            .badge-blue { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+            .badge-gray { border-color: #6c757d !important; background: #e9ecef !important; color: #495057 !important; }
+            .badge-conceito-inicial { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+            .badge-conceito-basico { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+            .badge-conceito-proficiente { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+            .badge-conceito-avancado { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+            .progress { background: #e9ecef !important; border: 1px solid #cccccc !important; border-radius: 4px !important; height: 10px !important; overflow: hidden !important; }
+            .progress-fill { border-radius: 4px !important; background: #007bff !important; }
+            .pf-green { background: #28a745 !important; }
+            .pf-orange { background: #fd7e14 !important; }
+            .pf-purple { background: #6f42c1 !important; }
+            .pf-blue { background: #007bff !important; }
+            .chart-bars { height: 100px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .chart-bar-val { font-size: 8pt !important; color: #000000 !important; }
+            .chart-bar-lbl { font-size: 7pt !important; color: #555555 !important; }
+            .conceito-graficos { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            #conceito-barras .progress { height: 14px !important; }
+            #conceito-barras .progress-fill { height: 14px !important; border-radius: 4px !important; }
+            #donut-container { transform: scale(0.9) !important; }
+            #donut-container canvas { max-width: 160px !important; max-height: 160px !important; }
+            .page-header { margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
+            .page-title { font-size: 16pt !important; color: #000000 !important; }
+            .page-sub { color: #555555 !important; font-size: 10pt !important; }
+            @page { size: A4 !important; margin: 15mm 12mm !important; margin-top: 10mm !important; margin-bottom: 10mm !important; }
+            .card { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .card.allow-break { page-break-inside: auto !important; break-inside: auto !important; }
+            .page-break { page-break-after: always !important; break-after: page !important; }
+            img { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .toast-container { display: none !important; }
+            .print-header { display: block !important; text-align: center !important; margin-bottom: 20px !important; padding-bottom: 12px !important; border-bottom: 2px solid #333333 !important; }
+            .print-header h2 { font-size: 16pt !important; margin: 0 !important; color: #000000 !important; }
+            .print-header p { font-size: 10pt !important; color: #555555 !important; margin: 4px 0 0 0 !important; }
         }
-
-        /* Classe auxiliar para mostrar apenas na impressão */
-        .print-only {
-            display: none !important;
-        }
-
-        @media print {
-            .print-only {
-                display: block !important;
-            }
-        }
+        .print-only { display: none !important; }
+        @media print { .print-only { display: block !important; } }
     </style>
 </head>
 <body>
@@ -1393,14 +1100,71 @@
 
     <!-- Modal Aluno -->
     <div class="modal-overlay no-print" id="m-aluno">
-        <div class="modal"><div class="modal-header"><h3>🎒 Cadastrar Aluno</h3><div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');">📋 Lista</button><button class="modal-close" onclick="closeM('m-aluno')">×</button></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60"><div class="form-hint">Número sequencial na lista de chamada</div></div><div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001"></div></div>
-            <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="aluno-nome" placeholder="Nome completo do aluno"></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div><div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="aluno-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="aluno-telefone" placeholder="(00) 99999-9999"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
-            <div class="form-row c1"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div></div>
-            <div class="modal-footer no-print"><button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');" style="margin-right:auto;">📋 Ver Lista</button><button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button><button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button></div>
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🎒 Cadastrar Aluno</h3>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button class="btn btn-green btn-sm" onclick="fecharAbaMulti()">📋 Lista</button>
+                    <button class="modal-close" onclick="closeM('m-aluno')">×</button>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Número na Turma</label>
+                    <input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60">
+                    <div class="form-hint">Número sequencial na lista de chamada</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Matrícula</label>
+                    <input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001">
+                </div>
+            </div>
+            <div class="form-row c1">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo <span class="req">*</span></label>
+                    <input class="form-control" id="aluno-nome" placeholder="Nome completo do aluno">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div>
+                <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="aluno-turma"><option value="">Selecione a turma</option></select></div>
+                <div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="aluno-telefone" placeholder="(00) 99999-9999"></div>
+                <div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="aluno-email" type="email" placeholder="email@exemplo.com"></div>
+            </div>
+            <div class="form-row c1">
+                <div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div>
+            </div>
+
+            <!-- ========== NOVO: ÁREA PARA CADASTRO MÚLTIPLO ========== -->
+            <div class="multi-import-area no-print">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+                    <span style="font-size:12px;font-weight:700;color:var(--text2);">📋 Cadastro Múltiplo</span>
+                    <button class="btn btn-primary btn-sm" onclick="processarListaAlunos()">➕ Adicionar Múltiplos</button>
+                </div>
+                <textarea id="multi-alunos-input" placeholder="Cole a lista de alunos aqui.&#10;Exemplos de formatos:&#10;João Silva, 2025001, 01&#10;Maria Santos - 2025002 - 02&#10;Pedro Costa (2025003)&#10;Ana Lima" rows="3"></textarea>
+                <div class="multi-import-hint">
+                    💡 <strong>Formatos aceitos:</strong> 
+                    <code>Nome, Matrícula, Número</code> ou 
+                    <code>Nome - Matrícula - Número</code> ou 
+                    <code>Nome (Matrícula)</code> ou 
+                    apenas <code>Nome</code> (matrícula e número serão gerados automaticamente)
+                </div>
+                <div id="multi-status" class="multi-status info" style="display:none;">
+                    <span id="multi-status-text">Pronto para importar</span>
+                </div>
+            </div>
+
+            <div class="modal-footer no-print">
+                <button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');" style="margin-right:auto;">📋 Ver Lista</button>
+                <button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button>
+                <button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button>
+            </div>
         </div>
     </div>
 
@@ -2878,6 +2642,264 @@
                     showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
                 }
             } catch (erro) { console.error('Erro ao gerar cartão:', erro); showToast('❌ Erro: ' + erro.message, 'error'); }
+        }
+
+        // ============================================
+        // ============================================
+        // ═══ NOVA FUNÇÃO: CADASTRO MÚLTIPLO DE ALUNOS ═══
+        // ============================================
+        // ============================================
+        function processarListaAlunos() {
+            const textarea = document.getElementById('multi-alunos-input');
+            const statusDiv = document.getElementById('multi-status');
+            const statusText = document.getElementById('multi-status-text');
+            
+            if (!textarea) return;
+            
+            const texto = textarea.value.trim();
+            if (!texto) {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status error';
+                statusText.textContent = '⚠️ Cole a lista de alunos antes de importar!';
+                return;
+            }
+            
+            // Verificar se a turma está selecionada
+            const turmaSelect = document.getElementById('aluno-turma');
+            if (!turmaSelect || !turmaSelect.value) {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status error';
+                statusText.textContent = '❌ Selecione uma turma antes de importar!';
+                return;
+            }
+            
+            // Dividir por linhas e processar
+            const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            if (linhas.length === 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status error';
+                statusText.textContent = '⚠️ Nenhuma linha com dados encontrada!';
+                return;
+            }
+            
+            // Processar cada linha
+            const alunos = [];
+            let processados = 0;
+            let erros = 0;
+            
+            linhas.forEach((linha, index) => {
+                let nome = '';
+                let matricula = '';
+                let numero = '';
+                
+                // Tentar diferentes formatos
+                // Formato 1: "Nome, Matrícula, Número" (CSV)
+                if (linha.includes(',')) {
+                    const partes = linha.split(',').map(p => p.trim());
+                    nome = partes[0] || '';
+                    matricula = partes[1] || '';
+                    numero = partes[2] || '';
+                }
+                // Formato 2: "Nome - Matrícula - Número"
+                else if (linha.includes(' - ')) {
+                    const partes = linha.split(' - ').map(p => p.trim());
+                    nome = partes[0] || '';
+                    matricula = partes[1] || '';
+                    numero = partes[2] || '';
+                }
+                // Formato 3: "Nome (Matrícula)"
+                else if (linha.includes('(') && linha.includes(')')) {
+                    const match = linha.match(/^(.+?)\s*\((.+?)\)\s*$/);
+                    if (match) {
+                        nome = match[1].trim();
+                        matricula = match[2].trim();
+                    } else {
+                        nome = linha;
+                    }
+                }
+                // Formato 4: "Nome Matrícula Número" (espaço simples)
+                else {
+                    const partes = linha.split(/\s+/);
+                    if (partes.length >= 3) {
+                        // Tentar identificar: se a última parte parece número
+                        const ultimo = partes[partes.length - 1];
+                        const penultimo = partes[partes.length - 2];
+                        if (!isNaN(ultimo) && ultimo.length <= 3) {
+                            numero = ultimo;
+                            matricula = penultimo || '';
+                            nome = partes.slice(0, partes.length - 2).join(' ');
+                        } else if (!isNaN(penultimo) && penultimo.length <= 3) {
+                            numero = penultimo;
+                            matricula = ultimo || '';
+                            nome = partes.slice(0, partes.length - 2).join(' ');
+                        } else {
+                            nome = linha;
+                        }
+                    } else {
+                        nome = linha;
+                    }
+                }
+                
+                // Limpeza
+                nome = nome.trim();
+                matricula = matricula.trim();
+                numero = numero.trim();
+                
+                // Se o nome estiver vazio, pular
+                if (!nome) {
+                    erros++;
+                    return;
+                }
+                
+                // Gerar matrícula automaticamente se vazia
+                if (!matricula) {
+                    const ano = new Date().getFullYear();
+                    const aleatorio = String(Math.floor(100 + Math.random() * 900));
+                    matricula = `${ano}${aleatorio}`;
+                }
+                
+                // Gerar número automaticamente se vazio
+                if (!numero) {
+                    numero = String(processados + 1).padStart(2, '0');
+                }
+                
+                alunos.push({
+                    nome: nome,
+                    matricula: matricula,
+                    numero: numero
+                });
+                processados++;
+            });
+            
+            if (alunos.length === 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status error';
+                statusText.textContent = `⚠️ Nenhum aluno válido encontrado! ${erros > 0 ? `(${erros} linhas ignoradas)` : ''}`;
+                return;
+            }
+            
+            // Mostrar status
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'multi-status info';
+            statusText.textContent = `📋 ${alunos.length} alunos identificados. Enviando para cadastro...`;
+            
+            // Salvar cada aluno
+            const turmaId = parseInt(turmaSelect.value);
+            let salvos = 0;
+            let errosSalvamento = 0;
+            
+            // Limpar o modal de status anterior
+            const multiStatus = document.getElementById('multi-status');
+            multiStatus.style.display = 'block';
+            multiStatus.className = 'multi-status info';
+            document.getElementById('multi-status-text').textContent = `⏳ Cadastrando ${alunos.length} alunos...`;
+            
+            // Salvar em lote
+            alunos.forEach((aluno, index) => {
+                const dados = {
+                    turma_id: turmaId,
+                    nome: aluno.nome,
+                    matricula: aluno.matricula,
+                    numero_chamada: parseInt(aluno.numero) || null,
+                    data_nascimento: null,
+                    genero: 'Masculino',
+                    responsavel: '',
+                    telefone: '',
+                    email: '',
+                    observacoes: 'Importado em lote'
+                };
+                
+                // Tentar salvar
+                fetch(API_URL + '/api/alunos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.id) {
+                        salvos++;
+                    } else {
+                        errosSalvamento++;
+                        console.error('Erro ao salvar aluno:', aluno.nome, result);
+                    }
+                    
+                    // Atualizar status
+                    const total = salvos + errosSalvamento;
+                    document.getElementById('multi-status-text').textContent = 
+                        `⏳ Cadastrando ${total}/${alunos.length}... (${salvos} salvos, ${errosSalvamento} erros)`;
+                    
+                    // Se todos foram processados
+                    if (total === alunos.length) {
+                        const statusDiv = document.getElementById('multi-status');
+                        if (errosSalvamento === 0) {
+                            statusDiv.className = 'multi-status success';
+                            document.getElementById('multi-status-text').textContent = 
+                                `✅ ${salvos} alunos cadastrados com sucesso!`;
+                            showToast(`✅ ${salvos} alunos cadastrados em lote!`, 'success');
+                        } else {
+                            statusDiv.className = 'multi-status error';
+                            document.getElementById('multi-status-text').textContent = 
+                                `⚠️ ${salvos} salvos, ${errosSalvamento} erros. Verifique o console.`;
+                            showToast(`⚠️ ${salvos} alunos salvos, ${errosSalvamento} com erro.`, 'warning');
+                        }
+                        
+                        // Recarregar lista de alunos
+                        setTimeout(() => {
+                            const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                            carregarAlunos(escolaId);
+                            // Limpar o textarea
+                            document.getElementById('multi-alunos-input').value = '';
+                        }, 1000);
+                    }
+                })
+                .catch(err => {
+                    errosSalvamento++;
+                    console.error('Erro ao salvar aluno:', aluno.nome, err);
+                    const total = salvos + errosSalvamento;
+                    document.getElementById('multi-status-text').textContent = 
+                        `⏳ Cadastrando ${total}/${alunos.length}... (${salvos} salvos, ${errosSalvamento} erros)`;
+                    
+                    if (total === alunos.length) {
+                        const statusDiv = document.getElementById('multi-status');
+                        if (errosSalvamento === 0) {
+                            statusDiv.className = 'multi-status success';
+                            document.getElementById('multi-status-text').textContent = 
+                                `✅ ${salvos} alunos cadastrados com sucesso!`;
+                            showToast(`✅ ${salvos} alunos cadastrados em lote!`, 'success');
+                        } else {
+                            statusDiv.className = 'multi-status error';
+                            document.getElementById('multi-status-text').textContent = 
+                                `⚠️ ${salvos} salvos, ${errosSalvamento} erros.`;
+                            showToast(`⚠️ ${salvos} alunos salvos, ${errosSalvamento} com erro.`, 'warning');
+                        }
+                        
+                        setTimeout(() => {
+                            const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                            carregarAlunos(escolaId);
+                            document.getElementById('multi-alunos-input').value = '';
+                        }, 1000);
+                    }
+                });
+            });
+        }
+
+        // ============================================
+        // FUNÇÃO PARA FECHAR ABA DE CADASTRO MÚLTIPLO
+        // ============================================
+        function fecharAbaMulti() {
+            // Limpar o status e o textarea ao fechar
+            const statusDiv = document.getElementById('multi-status');
+            if (statusDiv) {
+                statusDiv.style.display = 'none';
+            }
+            const textarea = document.getElementById('multi-alunos-input');
+            if (textarea) {
+                textarea.value = '';
+            }
+            closeM('m-aluno');
+            go('lista-turma');
         }
 
         // ============================================
