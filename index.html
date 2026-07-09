@@ -75,6 +75,8 @@
         .sb-item.active { background:rgba(59,130,246,0.12); color:var(--blue); }
         .sb-item .sb-ico { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
         .sb-badge { font-size:8px; font-weight:700; background:var(--purple); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; }
+        .sb-badge-new { font-size:8px; font-weight:700; background:var(--orange); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
         .sb-footer { padding:14px 16px 0; border-top:1px solid var(--border); margin-top:8px; }
         .sb-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
         .sb-avatar { width:36px; height:36px; border-radius:50%; background:var(--grad-blue); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0; }
@@ -138,6 +140,7 @@
         .btn-red { background:var(--red); color:#fff; }
         .btn-red:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(239,68,68,.35); }
         .btn-orange { background:var(--orange); color:#fff; }
+        .btn-orange:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(245,158,11,.35); }
         .btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--text2); }
         .btn-outline:hover { border-color:var(--text); color:var(--text); background:rgba(255,255,255,0.04); }
         .btn-ghost { background:transparent; color:var(--text2); }
@@ -495,16 +498,34 @@
                     <div class="sb-item" onclick="go('provas')" data-p="provas"><span class="sb-ico">📑</span> Provas</div>
                     <div class="sb-item" onclick="go('gabarito')" data-p="gabarito"><span class="sb-ico">✅</span> Gabarito</div>
                     <div class="sb-item" onclick="go('gabaritos')" data-p="gabaritos"><span class="sb-ico">📋</span> Gabaritos</div>
+                    
+                    <!-- ══════════════════════════════════════════ -->
+                    <!-- SEÇÃO IA & CORREÇÃO COM NOVO BOTÃO         -->
+                    <!-- ══════════════════════════════════════════ -->
                     <div class="sb-section">IA & Correção</div>
-                    <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia"><span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span></div>
-                    <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto"><span class="sb-ico">✍️</span> Texto com IA <span class="sb-badge">IA</span></div>
-                    <div class="sb-item" onclick="abrirCamera()"><span class="sb-ico">📱</span> Câmera do Celular</div>
-                    <div class="sb-item" onclick="abrirArquivo()"><span class="sb-ico">📂</span> Escolher Arquivo</div>
+                    <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia">
+                        <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
+                    </div>
+                    <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
+                        <span class="sb-ico">✍️</span> Texto com IA <span class="sb-badge">IA</span>
+                    </div>
+                    <div class="sb-item" onclick="abrirCamera()">
+                        <span class="sb-ico">📱</span> Câmera do Celular
+                    </div>
+                    <div class="sb-item" onclick="abrirArquivo()">
+                        <span class="sb-ico">📂</span> Escolher Arquivo
+                    </div>
+                    <!-- ═══ NOVO BOTÃO CORREÇÃO MANUAL ═══ -->
+                    <div class="sb-item" onclick="go('corrigir-ia'); setTimeout(abrirCorrecaoManual, 500);" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
+                        <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
+                    </div>
+                    <!-- ════════════════════════════════════ -->
+                    
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
                     <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
-                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV </div>
+                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
                     <div class="sb-section">Sistema</div>
                     <div class="sb-item" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
                 </div>
@@ -775,15 +796,10 @@
                                 <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
                                 <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
                                 <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
-                                <!-- ========================================== -->
-                                <!-- BOTÃO CORREÇÃO MANUAL SEPARADO              -->
-                                <!-- ========================================== -->
                                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center;">
-                                    <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
                                     <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecao()">💾 Salvar</button>
                                     <button class="btn btn-primary btn-sm no-print" onclick="go('resultados')">📊 Resultados</button>
                                 </div>
-                                <!-- ========================================== -->
                             </div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
@@ -3139,11 +3155,12 @@
         function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
         // ============================================
-        // CORREÇÃO MANUAL
+        // CORREÇÃO MANUAL - AGORA ACESSÍVEL PELO MENU
         // ============================================
         function abrirCorrecaoManual() {
+            // Verificar se há dados de correção disponíveis
             if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
-                showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
+                showToast('❌ Primeiro faça uma correção com IA para editar manualmente!', 'error');
                 return;
             }
             if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData.gabarito.length === 0) {
