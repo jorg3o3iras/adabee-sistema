@@ -565,7 +565,7 @@
                     <div class="sb-item" onclick="abrirArquivo()">
                         <span class="sb-ico">📂</span> Escolher Arquivo
                     </div>
-                    <!-- ═══ NOVO BOTÃO CORREÇÃO MANUAL (INDEPENDENTE) ═══ -->
+                    <!-- ═══ BOTÃO CORREÇÃO MANUAL NO MENU (INDEPENDENTE) ═══ -->
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -845,10 +845,15 @@
                                 <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
                                 <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
                                 <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
+                                <!-- ========================================== -->
+                                <!-- BOTÃO CORREÇÃO MANUAL DENTRO DO RESULTADO DA IA -->
+                                <!-- ========================================== -->
                                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center;">
+                                    <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
                                     <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecao()">💾 Salvar</button>
                                     <button class="btn btn-primary btn-sm no-print" onclick="go('resultados')">📊 Resultados</button>
                                 </div>
+                                <!-- ========================================== -->
                             </div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
@@ -1076,17 +1081,47 @@
         <canvas id="cam-canvas" style="display:none;"></canvas>
     </div>
 
-    <!-- ========== MODAL CORREÇÃO MANUAL INDEPENDENTE ========== -->
+    <!-- ========== MODAL CORREÇÃO MANUAL (DENTRO DA IA) ========== -->
+    <div class="modal-overlay no-print" id="m-correcao-manual">
+        <div class="modal" style="max-width:750px;width:95vw;">
+            <div class="modal-header"><h3>✏️ Correção Manual — <span id="cm-aluno-nome">Aluno</span></h3><button class="modal-close" onclick="closeM('m-correcao-manual')">×</button></div>
+            <div class="correcao-aluno-info">
+                <div class="info-item"><span class="label">Prova</span><strong id="cm-prova-titulo">—</strong></div>
+                <div class="info-item"><span class="label">Série / Turma</span><strong id="cm-turma-info">—</strong></div>
+                <div class="info-item"><span class="label">Data da Correção</span><strong id="cm-data-correcao">—</strong></div>
+                <div class="info-item"><span class="label">Status</span><strong id="cm-status-atual">—</strong></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Respostas do Aluno</span>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="preencherGabaritoCM()">📋 Preencher com Gabarito</button>
+                    <button class="btn btn-ghost btn-sm" onclick="limparRespostasCM()">🗑️ Limpar</button>
+                </div>
+            </div>
+            <div id="cm-grid" class="correcao-manual-grid"></div>
+            <div class="resumo-correcao">
+                <div class="item"><div class="valor acertos" id="cm-acertos">0</div><div class="label">Acertos</div></div>
+                <div class="item"><div class="valor erros" id="cm-erros">0</div><div class="label">Erros</div></div>
+                <div class="item"><div class="valor nota" id="cm-nota">0,0</div><div class="label">Nota Final</div></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
+                <span id="cm-status-badge" class="badge badge-gray">AGUARDANDO</span>
+                <span id="cm-porcentagem" style="font-size:12px;color:var(--text2);">0% de aproveitamento</span>
+            </div>
+            <div class="modal-footer no-print">
+                <button class="btn btn-outline" onclick="closeM('m-correcao-manual')">✕ Fechar</button>
+                <button class="btn btn-green" onclick="salvarCorrecaoManual()">💾 Salvar Correção</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL CORREÇÃO MANUAL INDEPENDENTE (MENU) ========== -->
     <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
         <div class="modal" style="max-width:800px;width:95vw;">
             <div class="modal-header">
                 <h3>✏️ Correção Manual</h3>
                 <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
             </div>
-            
-            <!-- ========================================== -->
-            <!-- ORDEM: ESCOLA → TURMA → PROVA → ALUNO      -->
-            <!-- ========================================== -->
             
             <!-- 1. ESCOLA -->
             <div class="form-group" style="margin-bottom:12px;">
@@ -1120,12 +1155,10 @@
                 </select>
             </div>
             
-            <!-- Botão Iniciar Correção -->
             <button class="btn btn-primary btn-full" onclick="iniciarCorrecaoManualStandalone()" style="margin-top:8px;">
                 📝 Iniciar Correção
             </button>
             
-            <!-- Informações do Aluno e Prova -->
             <div id="cm-info-standalone" style="display:none;" class="correcao-aluno-info" style="margin-top:16px;">
                 <div class="info-item"><span class="label">Aluno</span><strong id="cm-sa-aluno">—</strong></div>
                 <div class="info-item"><span class="label">Turma / Série</span><strong id="cm-sa-turma">—</strong></div>
@@ -1133,7 +1166,6 @@
                 <div class="info-item"><span class="label">Data</span><strong id="cm-sa-data">—</strong></div>
             </div>
             
-            <!-- Grid de Questões -->
             <div id="cm-grid-standalone-container" style="display:none;">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;margin-top:16px;">
                     <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Marque as respostas do aluno</span>
@@ -1144,7 +1176,6 @@
                 </div>
                 <div id="cm-grid-standalone" class="cm-grid-standalone"></div>
                 
-                <!-- Resumo -->
                 <div class="resumo-correcao">
                     <div class="item"><div class="valor acertos" id="cm-sa-acertos">0</div><div class="label">Acertos</div></div>
                     <div class="item"><div class="valor erros" id="cm-sa-erros">0</div><div class="label">Erros</div></div>
@@ -1275,7 +1306,6 @@
                 <div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div>
             </div>
 
-            <!-- Área para cadastro múltiplo -->
             <div class="multi-import-area no-print">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
                     <span style="font-size:12px;font-weight:700;color:var(--text2);">📋 Cadastro Múltiplo</span>
@@ -1340,7 +1370,23 @@
         let delTarget = null;
         let ultimaImagem = null;
         
-        // Dados para correção manual standalone
+        // Dados para correção manual (dentro da IA)
+        let correcaoManualData = {
+            alunoId: null,
+            alunoNome: '',
+            provaId: null,
+            provaTitulo: '',
+            gabarito: [],
+            respostasAluno: [],
+            quantidade: 20,
+            alternativas: ['A', 'B', 'C', 'D'],
+            notaMaxima: 10,
+            notaMinima: 5,
+            valorPorQuestao: 0.5,
+            serie: '1º Ano'
+        };
+
+        // Dados para correção manual standalone (menu)
         let cmStandaloneData = {
             escolaId: null,
             turmaId: null,
@@ -1511,16 +1557,162 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL (INDEPENDENTE)
+        // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL (DENTRO DA IA)
+        // ============================================
+        function abrirCorrecaoManual() {
+            if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
+                showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
+                return;
+            }
+            if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData.gabarito.length === 0) {
+                showToast('❌ Gabarito não disponível para esta prova!', 'error');
+                return;
+            }
+            const temGabaritoValido = correcaoManualData.gabarito.some(g => g && g.trim() !== '');
+            if (!temGabaritoValido) {
+                showToast('❌ Gabarito vazio ou inválido para esta prova!', 'error');
+                return;
+            }
+            document.getElementById('cm-aluno-nome').textContent = correcaoManualData.alunoNome || 'Aluno';
+            document.getElementById('cm-prova-titulo').textContent = correcaoManualData.provaTitulo || 'Prova';
+            document.getElementById('cm-turma-info').textContent = correcaoManualData.serie + ' | Turma: —';
+            document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
+            gerarGridCorrecaoManual();
+            atualizarResumoCorrecaoManual();
+            openM('m-correcao-manual');
+        }
+
+        function gerarGridCorrecaoManual() {
+            const grid = document.getElementById('cm-grid');
+            if (!grid) return;
+            const qtd = correcaoManualData.quantidade || 20;
+            const alternativas = correcaoManualData.alternativas || ['A', 'B', 'C', 'D'];
+            const respostas = correcaoManualData.respostasAluno || [];
+            const gabarito = correcaoManualData.gabarito || [];
+            grid.innerHTML = '';
+            for (let i = 0; i < qtd; i++) {
+                const div = document.createElement('div');
+                div.className = 'correcao-manual-item';
+                const respostaAluno = (i < respostas.length) ? respostas[i] : '';
+                const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
+                const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+                let options = '<option value="">—</option>';
+                alternativas.forEach(alt => {
+                    const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
+                    options += `<option value="${alt}" ${selected}>${alt}</option>`;
+                });
+                let statusClass = '';
+                let statusText = '';
+                if (respostaAluno) {
+                    if (isCorreto) { statusClass = 'correta'; statusText = '✅ Correto'; } else { statusClass = 'errada'; statusText = '❌ Errado'; }
+                }
+                div.innerHTML = `<div class="q-num">Q${i+1}</div><div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div><select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select><div class="q-status ${statusClass}">${statusText}</div><div style="font-size:8px;color:var(--text3);margin-top:2px;">Gabarito: ${respostaGabarito || '—'}</div>`;
+                const select = div.querySelector('.q-select');
+                if (select) {
+                    if (isCorreto && respostaAluno) { select.className = 'q-select correta'; } else if (respostaAluno && !isCorreto) { select.className = 'q-select errada'; }
+                }
+                grid.appendChild(div);
+            }
+        }
+
+        function atualizarRespostaManual(select) {
+            const questaoIndex = parseInt(select.dataset.questao);
+            const novaResposta = select.value;
+            if (novaResposta) { correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase(); } else { correcaoManualData.respostasAluno[questaoIndex] = ''; }
+            const item = select.closest('.correcao-manual-item');
+            const qResposta = item.querySelector('.q-resposta');
+            const qStatus = item.querySelector('.q-status');
+            const gabarito = correcaoManualData.gabarito[questaoIndex] || '';
+            const resposta = correcaoManualData.respostasAluno[questaoIndex] || '';
+            const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+            qResposta.textContent = resposta || '—';
+            qResposta.style.color = isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)');
+            if (resposta) {
+                if (isCorreto) { qStatus.textContent = '✅ Correto'; qStatus.className = 'q-status correta'; select.className = 'q-select correta'; } else { qStatus.textContent = '❌ Errado'; qStatus.className = 'q-status errada'; select.className = 'q-select errada'; }
+            } else { qStatus.textContent = ''; qStatus.className = 'q-status'; select.className = 'q-select'; }
+            atualizarResumoCorrecaoManual();
+        }
+
+        function atualizarResumoCorrecaoManual() {
+            const qtd = correcaoManualData.quantidade || 20;
+            const respostas = correcaoManualData.respostasAluno || [];
+            const gabarito = correcaoManualData.gabarito || [];
+            let acertos = 0,
+                respondidas = 0;
+            for (let i = 0; i < qtd; i++) {
+                const resp = i < respostas.length ? respostas[i] : '';
+                const gab = i < gabarito.length ? gabarito[i] : '';
+                if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) { acertos++; } }
+            }
+            const erros = respondidas - acertos;
+            const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
+            const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
+            const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+            document.getElementById('cm-acertos').textContent = acertos;
+            document.getElementById('cm-erros').textContent = erros;
+            document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
+            const statusBadge = document.getElementById('cm-status-badge');
+            const statusAtual = document.getElementById('cm-status-atual');
+            if (notaFinal >= (correcaoManualData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO'; statusBadge.className = 'badge badge-green'; statusAtual.textContent = 'Aprovado'; statusAtual.style.color = 'var(--green)'; } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO'; statusBadge.className = 'badge badge-orange'; statusAtual.textContent = 'Recuperação'; statusAtual.style.color = 'var(--orange)'; } else { statusBadge.textContent = '❌ REPROVADO'; statusBadge.className = 'badge badge-red'; statusAtual.textContent = 'Reprovado'; statusAtual.style.color = 'var(--red)'; }
+            document.getElementById('cm-porcentagem').textContent = porcentagem + '% de aproveitamento';
+        }
+
+        function preencherGabaritoCM() {
+            const qtd = correcaoManualData.quantidade || 20;
+            const gabarito = correcaoManualData.gabarito || [];
+            for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) { correcaoManualData.respostasAluno[i] = gabarito[i]; } }
+            gerarGridCorrecaoManual();
+            atualizarResumoCorrecaoManual();
+            showToast('📋 Respostas preenchidas com o gabarito!', 'success');
+        }
+
+        function limparRespostasCM() {
+            const qtd = correcaoManualData.quantidade || 20;
+            for (let i = 0; i < qtd; i++) { correcaoManualData.respostasAluno[i] = ''; }
+            gerarGridCorrecaoManual();
+            atualizarResumoCorrecaoManual();
+            showToast('🗑️ Respostas limpas!', 'info');
+        }
+
+        function salvarCorrecaoManual() {
+            const qtd = correcaoManualData.quantidade || 20;
+            const respostas = correcaoManualData.respostasAluno || [];
+            const gabarito = correcaoManualData.gabarito || [];
+            let acertos = 0;
+            for (let i = 0; i < qtd; i++) {
+                const resp = i < respostas.length ? respostas[i] : '';
+                const gab = i < gabarito.length ? gabarito[i] : '';
+                if (resp && resp.toUpperCase() === gab.toUpperCase()) { acertos++; }
+            }
+            const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
+            showToast('💾 Salvando correção manual...', 'info');
+            const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acertos: acertos, nota: nota, total: qtd };
+            fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
+                        closeM('m-correcao-manual');
+                        const notaEl = document.getElementById('ia-nota'); if (notaEl) { notaEl.textContent = nota.toFixed(1); notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)'; }
+                        const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ? 'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red'; statusEl.textContent = status; statusEl.className = 'badge ' + badgeClass; }
+                        const header = document.querySelector('.card-glow-green .card-header .btn-group'); if (header) { const oldBadge = header.querySelector('.badge-manual'); if (oldBadge) oldBadge.remove(); const manualBadge = document.createElement('span'); manualBadge.className = 'badge badge-orange badge-manual'; manualBadge.textContent = '✏️ Manual'; header.appendChild(manualBadge); }
+                        const respContainer = document.getElementById('ia-resp'); if (respContainer && respostas.length > 0) { const gabarito = correcaoManualData.gabarito || []; respContainer.innerHTML = respostas.map((resp, i) => { const ok = resp === gabarito[i]; return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + resp + '</span>'; }).join(''); }
+                        const compContainer = document.getElementById('ia-comp'); if (compContainer && respostas.length > 0) { const gabarito = correcaoManualData.gabarito || []; compContainer.innerHTML = respostas.map((resp, i) => { const ok = resp === gabarito[i]; return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + resp + '</div></div>'; }).join(''); }
+                        const confiancaEl = document.getElementById('confianca-badge'); if (confiancaEl) { confiancaEl.textContent = '100% conf.'; }
+                        setTimeout(() => { carregarResultados(); carregarDashboard(); carregarUltimasCorrecoes(); }, 500);
+                    } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
+                })
+                .catch(erro => { showToast('❌ Erro ao salvar correção: ' + erro.message, 'error'); console.error('Erro ao salvar correção manual:', erro); });
+        }
+
+        // ============================================
+        // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL (STANDALONE - MENU)
         // ============================================
         function abrirCorrecaoManualStandalone() {
-            // Carregar escolas no select
             carregarEscolasParaCorrecaoManual();
-            // Resetar os selects encadeados
             document.getElementById('cm-turma-select').innerHTML = '<option value="">Selecione a turma...</option>';
             document.getElementById('cm-prova-select').innerHTML = '<option value="">Selecione a prova...</option>';
             document.getElementById('cm-aluno-select').innerHTML = '<option value="">Selecione o aluno...</option>';
-            // Resetar dados
             document.getElementById('cm-info-standalone').style.display = 'none';
             document.getElementById('cm-grid-standalone-container').style.display = 'none';
             document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
@@ -1535,7 +1727,7 @@
         }
 
         // ============================================
-        // CARREGAR ESCOLAS PARA CORREÇÃO MANUAL
+        // CARREGAR ESCOLAS PARA CORREÇÃO MANUAL (STANDALONE)
         // ============================================
         async function carregarEscolasParaCorrecaoManual() {
             try {
@@ -1552,7 +1744,6 @@
                         select.appendChild(opt);
                     });
                     if (current) select.value = current;
-                    // Se já tinha uma escola selecionada, carregar suas turmas
                     if (current) {
                         carregarTurmasParaCorrecaoManual(current);
                     }
@@ -1563,7 +1754,7 @@
         }
 
         // ============================================
-        // CARREGAR TURMAS PARA CORREÇÃO MANUAL
+        // CARREGAR TURMAS PARA CORREÇÃO MANUAL (STANDALONE)
         // ============================================
         async function carregarTurmasParaCorrecaoManual(escolaId) {
             const selectTurma = document.getElementById('cm-turma-select');
@@ -1579,7 +1770,6 @@
             cmStandaloneData.escolaId = parseInt(escolaId);
             
             try {
-                // Buscar turmas da escola
                 const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                 const turmas = await response.json();
                 if (turmas && !turmas.erro) {
@@ -1597,7 +1787,7 @@
         }
 
         // ============================================
-        // CARREGAR ALUNOS PARA CORREÇÃO MANUAL
+        // CARREGAR ALUNOS PARA CORREÇÃO MANUAL (STANDALONE)
         // ============================================
         async function carregarAlunosParaCorrecaoManual(turmaId) {
             const selectAluno = document.getElementById('cm-aluno-select');
@@ -1607,7 +1797,6 @@
             
             cmStandaloneData.turmaId = parseInt(turmaId);
             
-            // Pegar o nome da turma e série
             const selectTurma = document.getElementById('cm-turma-select');
             const turmaOption = selectTurma.options[selectTurma.selectedIndex];
             if (turmaOption) {
@@ -1632,7 +1821,7 @@
         }
 
         // ============================================
-        // CARREGAR PROVAS PARA CORREÇÃO MANUAL (POR TURMA)
+        // CARREGAR PROVAS PARA CORREÇÃO MANUAL (STANDALONE)
         // ============================================
         async function carregarProvasParaCorrecaoManualPorTurma(turmaId) {
             const selectProva = document.getElementById('cm-prova-select');
@@ -1664,13 +1853,12 @@
         }
 
         // ============================================
-        // CARREGAR GABARITO PARA CORREÇÃO MANUAL
+        // CARREGAR GABARITO PARA CORREÇÃO MANUAL (STANDALONE)
         // ============================================
         function carregarGabaritoParaCorrecaoManual() {
             const select = document.getElementById('cm-prova-select');
             const option = select.options[select.selectedIndex];
             if (!option || !option.value) {
-                // Resetar dados da prova
                 cmStandaloneData.provaId = null;
                 cmStandaloneData.provaTitulo = '';
                 cmStandaloneData.provaData = '';
@@ -1695,7 +1883,6 @@
                 cmStandaloneData.valorPorQuestao = 10 / quantidade;
                 cmStandaloneData.respostas = new Array(quantidade).fill('');
                 
-                // Atualizar série se não tiver vindo da turma
                 if (!cmStandaloneData.serie) {
                     cmStandaloneData.serie = option.dataset.serie || '';
                 }
@@ -1733,17 +1920,14 @@
                 return;
             }
             
-            // Atualizar dados do aluno
             const alunoOption = alunoSelect.options[alunoSelect.selectedIndex];
             cmStandaloneData.alunoId = parseInt(alunoSelect.value);
             cmStandaloneData.alunoNome = alunoOption.text.split(' (')[0] || 'Aluno';
             
-            // Atualizar escola
             const escolaOption = escolaSelect.options[escolaSelect.selectedIndex];
             cmStandaloneData.escolaNome = escolaOption.text || '';
             cmStandaloneData.escolaId = parseInt(escolaSelect.value);
             
-            // Verificar se o gabarito já foi carregado
             if (!cmStandaloneData.gabarito || cmStandaloneData.gabarito.length === 0) {
                 const provaOption = provaSelect.options[provaSelect.selectedIndex];
                 try {
@@ -1760,25 +1944,21 @@
                 }
             }
             
-            // Verificar se o gabarito tem dados
             const temGabarito = cmStandaloneData.gabarito.some(g => g && g.trim() !== '');
             if (!temGabarito) {
                 showToast('⚠️ Esta prova não tem gabarito cadastrado!', 'warning');
                 return;
             }
             
-            // Preencher informações do aluno
             document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
             document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
             document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
             document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
             
-            // Mostrar informações e grid
             document.getElementById('cm-info-standalone').style.display = 'grid';
             document.getElementById('cm-grid-standalone-container').style.display = 'block';
             document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
             
-            // Gerar grid
             gerarGridCorrecaoManualSA();
             atualizarResumoCorrecaoManualSA();
             
@@ -1807,20 +1987,17 @@
                 const resp = (i < respostas.length) ? respostas[i] : '';
                 const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
                 
-                // Criar opções do select
                 let options = '<option value="">—</option>';
                 alternativas.forEach(alt => {
                     const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
                     options += `<option value="${alt}" ${selected}>${alt}</option>`;
                 });
                 
-                // Ícone de status
                 let statusIcon = '';
                 if (resp) {
                     statusIcon = isCorreto ? '✅' : '❌';
                 }
                 
-                // Classe do select
                 let selectClass = 'q-select-manual';
                 if (resp) {
                     selectClass += isCorreto ? ' correta' : ' errada';
@@ -1846,34 +2023,29 @@
             const questaoIndex = parseInt(select.dataset.questao);
             const novaResposta = select.value;
             
-            // Atualizar dados
             if (novaResposta) {
                 cmStandaloneData.respostas[questaoIndex] = novaResposta.toUpperCase();
             } else {
                 cmStandaloneData.respostas[questaoIndex] = '';
             }
             
-            // Atualizar visual do item
             const item = select.closest('.cm-item-standalone');
             const statusIcon = item.querySelector('.q-status-icon');
             const gabarito = cmStandaloneData.gabarito[questaoIndex] || '';
             const resposta = cmStandaloneData.respostas[questaoIndex] || '';
             const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
             
-            // Atualizar classe do select
             select.className = 'q-select-manual';
             if (resposta) {
                 select.className += isCorreto ? ' correta' : ' errada';
             }
             
-            // Atualizar ícone
             if (resposta) {
                 statusIcon.textContent = isCorreto ? '✅' : '❌';
             } else {
                 statusIcon.textContent = '';
             }
             
-            // Atualizar resumo
             atualizarResumoCorrecaoManualSA();
         }
 
@@ -1936,7 +2108,6 @@
                 }
             }
             
-            // Recriar grid
             gerarGridCorrecaoManualSA();
             atualizarResumoCorrecaoManualSA();
             
@@ -1953,7 +2124,6 @@
                 cmStandaloneData.respostas[i] = '';
             }
             
-            // Recriar grid
             gerarGridCorrecaoManualSA();
             atualizarResumoCorrecaoManualSA();
             
@@ -1968,14 +2138,12 @@
             const respostas = cmStandaloneData.respostas || [];
             const gabarito = cmStandaloneData.gabarito || [];
             
-            // Verificar se pelo menos uma resposta foi dada
             const temResposta = respostas.some(r => r && r.trim() !== '');
             if (!temResposta) {
                 showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning');
                 return;
             }
             
-            // Calcular acertos
             let acertos = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
@@ -2009,7 +2177,6 @@
                     showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
                     closeM('m-correcao-manual-standalone');
                     
-                    // Atualizar resultados e dashboard
                     setTimeout(() => {
                         carregarResultados();
                         carregarDashboard();
@@ -3717,6 +3884,20 @@
                 document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
                 document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
                 document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                
+                // Salvar dados para correção manual (dentro da IA)
+                correcaoManualData.alunoId = parseInt(alunoId);
+                correcaoManualData.alunoNome = dados.aluno || 'Aluno';
+                correcaoManualData.provaId = parseInt(provaId);
+                correcaoManualData.provaTitulo = dados.prova || 'Prova';
+                correcaoManualData.gabarito = dados.gabarito || [];
+                correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
+                correcaoManualData.quantidade = dados.total || 20;
+                correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+                correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+                correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+                correcaoManualData.serie = dados.serie || '1º Ano';
                 
                 if (box) box.style.display = 'block';
                 showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
