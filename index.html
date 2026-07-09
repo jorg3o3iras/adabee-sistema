@@ -122,6 +122,8 @@
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
         .form-row.c1 { grid-template-columns:1fr; }
         .form-row.c3 { grid-template-columns:1fr 1fr 1fr; }
+        .form-row.c4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+        .form-row.c5 { grid-template-columns:1fr 1fr 1fr 1fr 1fr; }
         .form-group { display:flex; flex-direction:column; gap:4px; }
         .form-label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.4px; }
         .form-control { padding:9px 12px; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; outline:none; transition:border .3s; width:100%; }
@@ -362,6 +364,8 @@
             .g2 { grid-template-columns:1fr; }
             .form-row { grid-template-columns:1fr; }
             .form-row.c3 { grid-template-columns:1fr; }
+            .form-row.c4 { grid-template-columns:1fr; }
+            .form-row.c5 { grid-template-columns:1fr; }
             .conceito-graficos { grid-template-columns:1fr; }
             .ai-hero { flex-direction:column; text-align:center; }
             .ai-hero-actions { justify-content:center; }
@@ -1001,6 +1005,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📈 Distribuição de Notas</div></div><div class="chart-bars" id="dist-notas"><div class="chart-bar-item"><div class="chart-bar-val" id="d0-2">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div><div class="chart-bar-lbl">0–2</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d2-4">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">2–4</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d4-6">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">4–6</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d6-8">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">6–8</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d8-10">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8–10</div></div></div></div>
             </div>
 
+            <!-- ========== RELATÓRIO POR ALUNO (ATUALIZADO) ========== -->
             <div class="page" id="page-rel-aluno">
                 <div class="page-header">
                     <div><div class="page-title">👤 Relatório por Aluno</div></div>
@@ -1017,42 +1022,54 @@
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-aluno"></span></p>
                 </div>
 
+                <!-- CARD DE FILTROS COM SELECTS E BOTÃO IMPRIMIR -->
                 <div class="card no-print">
-                    <div class="form-row c3">
+                    <div class="form-row c4">
                         <div class="form-group">
-                            <label class="form-label">Aluno</label>
+                            <label class="form-label">Escola <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-escola" onchange="carregarTurmasRelAluno(this.value)">
+                                <option value="">Selecione a escola...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-serie" onchange="carregarAlunosRelAluno()">
+                                <option value="">Selecione a série...</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno()">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-prova" onchange="carregarAlunosRelAluno()">
+                                <option value="">Selecione a prova...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Aluno <span class="req">*</span></label>
                             <select class="form-control" id="rel-aluno-select">
-                                <option value="">Selecione...</option>
+                                <option value="">Selecione o aluno...</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Prova</label>
-                            <select class="form-control" id="rel-prova-select">
-                                <option value="">Todas</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="justify-content:flex-end;">
+                        <div class="form-group" style="justify-content:flex-end; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
                             <button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button>
+                            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
                         </div>
-                    </div>
-                    <!-- NOVOS CAMPOS: ESCOLA, TURMA e ANO -->
-                    <div class="form-row c3" style="margin-top:10px; border-top:1px solid var(--border); padding-top:14px;">
-                        <div class="form-group">
-                            <label class="form-label">Escola</label>
-                            <input class="form-control" id="rel-aluno-escola" readonly style="background:var(--bg2); color:var(--text2);" value="—">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma</label>
-                            <input class="form-control" id="rel-aluno-turma" readonly style="background:var(--bg2); color:var(--text2);" value="—">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Ano Letivo</label>
-                            <input class="form-control" id="rel-aluno-ano" readonly style="background:var(--bg2); color:var(--text2);" value="—">
-                        </div>
-                    </div>
-                    <!-- BOTÃO DE IMPRESSÃO ADICIONADO -->
-                    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
                     </div>
                 </div>
 
@@ -1572,6 +1589,7 @@
             carregarDados();
             atualizarDatasImpressao();
             carregarEscolasParaCorrecaoManual();
+            carregarEscolasRelAluno();
         }
 
         function doLogout() {
@@ -1603,6 +1621,10 @@
             if (page === 'gabaritos') carregarGabaritos();
             if (page === 'rel-turma' || page === 'rel-aluno' || page === 'rel-escola') carregarRelatorios();
             
+            if (page === 'rel-aluno') {
+                carregarEscolasRelAluno();
+            }
+            
             atualizarDatasImpressao();
 
             if (window.innerWidth <= 900) {
@@ -1615,6 +1637,108 @@
                     toggle.classList.remove('active');
                     toggle.innerHTML = '☰';
                 }
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES PARA RELATÓRIO POR ALUNO
+        // ============================================
+        async function carregarEscolasRelAluno() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('rel-aluno-escola');
+                if (select && escolas && !escolas.erro) {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas:', erro);
+            }
+        }
+
+        async function carregarTurmasRelAluno(escolaId) {
+            const selectTurma = document.getElementById('rel-aluno-turma');
+            const selectProva = document.getElementById('rel-aluno-prova');
+            const selectAluno = document.getElementById('rel-aluno-select');
+            
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+            
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        async function carregarAlunosRelAluno() {
+            const turmaId = document.getElementById('rel-aluno-turma').value;
+            const serie = document.getElementById('rel-aluno-serie').value;
+            const escolaId = document.getElementById('rel-aluno-escola').value;
+            const selectAluno = document.getElementById('rel-aluno-select');
+            const selectProva = document.getElementById('rel-aluno-prova');
+            
+            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+            
+            if (!turmaId && !serie) return;
+            
+            try {
+                let url = API_URL + '/api/alunos?';
+                const params = [];
+                if (escolaId) params.push(`escola_id=${escolaId}`);
+                if (turmaId) params.push(`turma_id=${turmaId}`);
+                if (serie) params.push(`serie=${encodeURIComponent(serie)}`);
+                url += params.join('&');
+                
+                const response = await fetch(url);
+                const alunos = await response.json();
+                
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+                
+                // Carregar provas da turma
+                if (turmaId) {
+                    const provasResp = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
+                    const provas = await provasResp.json();
+                    selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                    if (provas && !provas.erro) {
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                            selectProva.appendChild(opt);
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
             }
         }
 
@@ -2557,7 +2681,8 @@
                     carregarEscolasFiltroAlunos(),
                     carregarEscolasCorrigir(),
                     carregarEscolasTexto(),
-                    carregarEscolasParaCorrecaoManual()
+                    carregarEscolasParaCorrecaoManual(),
+                    carregarEscolasRelAluno()
                 ]);
                 console.log('✅ Todos os dados carregados com sucesso!');
                 atualizarDatasImpressao();
@@ -2668,6 +2793,7 @@
                     carregarEscolasCorrigir();
                     carregarEscolasTexto();
                     carregarEscolasParaCorrecaoManual();
+                    carregarEscolasRelAluno();
                 } else {
                     showToast('❌ Erro: ' + (result.erro || 'Erro desconhecido'), 'error');
                 }
@@ -2859,6 +2985,7 @@
                     carregarEscolasCorrigir();
                     carregarEscolasTexto();
                     carregarEscolasParaCorrecaoManual();
+                    carregarEscolasRelAluno();
                 } else {
                     const erro = await response.json();
                     showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
@@ -3324,7 +3451,7 @@
                 });
                 const respProvas = await fetch(API_URL + '/api/provas');
                 const provas = await respProvas.json();
-                ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova'].forEach(id => {
+                ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
                         const current = select.value;
@@ -3765,7 +3892,7 @@
             try {
                 const response = await fetch(API_URL + '/api/escolas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 const result = await response.json();
-                if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success'); closeM('m-escola'); carregarDados(); carregarEscolasFiltroAlunos(); carregarEscolasCorrigir(); carregarEscolasTexto(); carregarEscolasParaCorrecaoManual(); } else { showToast('❌ Erro ao cadastrar escola', 'error'); }
+                if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success'); closeM('m-escola'); carregarDados(); carregarEscolasFiltroAlunos(); carregarEscolasCorrigir(); carregarEscolasTexto(); carregarEscolasParaCorrecaoManual(); carregarEscolasRelAluno(); } else { showToast('❌ Erro ao cadastrar escola', 'error'); }
             } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
@@ -4304,28 +4431,16 @@
         }
 
         // ============================================
-        // BUSCAR RELATÓRIO DO ALUNO
+        // BUSCAR RELATÓRIO DO ALUNO (ATUALIZADO COM SELECTS)
         // ============================================
         function buscarRelatorioAluno() {
             const alunoId = document.getElementById('rel-aluno-select').value;
+            const provaId = document.getElementById('rel-aluno-prova').value;
+            
             if (!alunoId) {
                 showToast('❌ Selecione um aluno!', 'error');
                 return;
             }
-            
-            // Buscar dados do aluno para preencher escola, turma e ano
-            fetch(`${API_URL}/api/alunos/${alunoId}`)
-                .then(r => r.json())
-                .then(aluno => {
-                    if (aluno && !aluno.erro) {
-                        document.getElementById('rel-aluno-escola').value = aluno.escola_nome || '—';
-                        document.getElementById('rel-aluno-turma').value = aluno.turma_nome || '—';
-                        document.getElementById('rel-aluno-ano').value = aluno.ano_letivo || '—';
-                    }
-                })
-                .catch(e => {
-                    console.error('Erro ao buscar dados do aluno:', e);
-                });
             
             showToast('🔍 Buscando histórico do aluno...', 'info');
             const tbody = document.getElementById('rel-aluno-historico');
@@ -4333,19 +4448,42 @@
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
             }
             
-            fetch(API_URL + '/api/historico')
+            let url = API_URL + '/api/historico?aluno_id=' + alunoId;
+            if (provaId && provaId !== '') {
+                url += '&prova_id=' + provaId;
+            }
+            
+            fetch(url)
                 .then(r => r.json())
                 .then(historico => {
-                    const filtrado = historico.filter(h => h.aluno_id == alunoId);
-                    if (filtrado.length === 0) {
+                    if (!historico || historico.length === 0 || historico.erro) {
                         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
                         return;
                     }
-                    tbody.innerHTML = filtrado.map(h => {
+                    tbody.innerHTML = historico.map(h => {
                         const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado';
                         const badge = h.nota >= 6 ? 'badge-green' : 'badge-red';
                         return '<tr><td>' + h.prova_titulo + '</td><td>' + (h.data_correcao ? new Date(h.data_correcao).toLocaleDateString() : '—') + '</td><td><strong style="color:' + (h.nota >= 6 ? 'var(--green)' : 'var(--red)') + ';">' + h.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
                     }).join('');
+                    
+                    // Atualizar gráfico de evolução
+                    const evolucao = document.getElementById('rel-evolucao');
+                    if (evolucao && historico.length > 0) {
+                        const notas = historico.map(h => h.nota).sort((a, b) => a - b);
+                        const maxNota = Math.max(...notas, 1);
+                        let html = '<div class="chart-bars" style="height:100px;">';
+                        historico.forEach((h, index) => {
+                            const altura = Math.max(10, (h.nota / 10) * 80);
+                            const cor = h.nota >= 6 ? '#10b981' : '#ef4444';
+                            html += `<div class="chart-bar-item">
+                                <div class="chart-bar-val">${h.nota}</div>
+                                <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                                <div class="chart-bar-lbl">${h.prova_titulo.substring(0, 10)}</div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                        evolucao.innerHTML = html;
+                    }
                 })
                 .catch(e => {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
@@ -4640,6 +4778,7 @@
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
             atualizarDatasImpressao();
             carregarEscolasParaCorrecaoManual();
+            carregarEscolasRelAluno();
         });
 
         document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
