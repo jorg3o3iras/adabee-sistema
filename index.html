@@ -1084,27 +1084,49 @@
                 <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
             </div>
             
-            <!-- Seleção de Prova e Aluno -->
-            <div class="form-row c3">
-                <div class="form-group">
-                    <label class="form-label">Prova <span class="req">*</span></label>
-                    <select class="form-control" id="cm-prova-select" onchange="carregarGabaritoParaCorrecaoManual()">
-                        <option value="">Selecione uma prova...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Aluno <span class="req">*</span></label>
-                    <select class="form-control" id="cm-aluno-select" onchange="carregarAlunoParaCorrecaoManual()">
-                        <option value="">Selecione um aluno...</option>
-                    </select>
-                </div>
-                <div class="form-group" style="justify-content:flex-end;">
-                    <button class="btn btn-primary" style="margin-top:auto;" onclick="iniciarCorrecaoManualStandalone()">📝 Iniciar Correção</button>
-                </div>
+            <!-- ========================================== -->
+            <!-- ORDEM: ESCOLA → TURMA → PROVA → ALUNO      -->
+            <!-- ========================================== -->
+            
+            <!-- 1. ESCOLA -->
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Escola <span class="req">*</span></label>
+                <select class="form-control" id="cm-escola-select" onchange="carregarTurmasParaCorrecaoManual(this.value)">
+                    <option value="">Selecione a escola...</option>
+                </select>
             </div>
             
+            <!-- 2. TURMA -->
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Turma <span class="req">*</span></label>
+                <select class="form-control" id="cm-turma-select" onchange="carregarAlunosParaCorrecaoManual(this.value); carregarProvasParaCorrecaoManualPorTurma(this.value);">
+                    <option value="">Selecione a turma...</option>
+                </select>
+            </div>
+            
+            <!-- 3. PROVA -->
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Prova <span class="req">*</span></label>
+                <select class="form-control" id="cm-prova-select" onchange="carregarGabaritoParaCorrecaoManual()">
+                    <option value="">Selecione a prova...</option>
+                </select>
+            </div>
+            
+            <!-- 4. ALUNO -->
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Aluno <span class="req">*</span></label>
+                <select class="form-control" id="cm-aluno-select">
+                    <option value="">Selecione o aluno...</option>
+                </select>
+            </div>
+            
+            <!-- Botão Iniciar Correção -->
+            <button class="btn btn-primary btn-full" onclick="iniciarCorrecaoManualStandalone()" style="margin-top:8px;">
+                📝 Iniciar Correção
+            </button>
+            
             <!-- Informações do Aluno e Prova -->
-            <div id="cm-info-standalone" style="display:none;" class="correcao-aluno-info">
+            <div id="cm-info-standalone" style="display:none;" class="correcao-aluno-info" style="margin-top:16px;">
                 <div class="info-item"><span class="label">Aluno</span><strong id="cm-sa-aluno">—</strong></div>
                 <div class="info-item"><span class="label">Turma / Série</span><strong id="cm-sa-turma">—</strong></div>
                 <div class="info-item"><span class="label">Prova</span><strong id="cm-sa-prova">—</strong></div>
@@ -1113,7 +1135,7 @@
             
             <!-- Grid de Questões -->
             <div id="cm-grid-standalone-container" style="display:none;">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;margin-top:16px;">
                     <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Marque as respostas do aluno</span>
                     <div class="btn-group no-print">
                         <button class="btn btn-outline btn-sm" onclick="preencherGabaritoManualSA()">📋 Preencher com Gabarito</button>
@@ -1320,11 +1342,14 @@
         
         // Dados para correção manual standalone
         let cmStandaloneData = {
+            escolaId: null,
+            turmaId: null,
             provaId: null,
             alunoId: null,
             alunoNome: '',
             turmaNome: '',
             serie: '',
+            escolaNome: '',
             gabarito: [],
             respostas: [],
             quantidade: 20,
@@ -1438,8 +1463,7 @@
             buildGabGrid();
             carregarDados();
             atualizarDatasImpressao();
-            carregarProvasParaCorrecaoManual();
-            carregarAlunosParaCorrecaoManual();
+            carregarEscolasParaCorrecaoManual();
         }
 
         function doLogout() {
@@ -1490,10 +1514,13 @@
         // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL (INDEPENDENTE)
         // ============================================
         function abrirCorrecaoManualStandalone() {
-            // Carregar provas e alunos nos selects
-            carregarProvasParaCorrecaoManual();
-            carregarAlunosParaCorrecaoManual();
-            // Resetar o modal
+            // Carregar escolas no select
+            carregarEscolasParaCorrecaoManual();
+            // Resetar os selects encadeados
+            document.getElementById('cm-turma-select').innerHTML = '<option value="">Selecione a turma...</option>';
+            document.getElementById('cm-prova-select').innerHTML = '<option value="">Selecione a prova...</option>';
+            document.getElementById('cm-aluno-select').innerHTML = '<option value="">Selecione o aluno...</option>';
+            // Resetar dados
             document.getElementById('cm-info-standalone').style.display = 'none';
             document.getElementById('cm-grid-standalone-container').style.display = 'none';
             document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
@@ -1508,20 +1535,119 @@
         }
 
         // ============================================
-        // CARREGAR PROVAS PARA CORREÇÃO MANUAL
+        // CARREGAR ESCOLAS PARA CORREÇÃO MANUAL
         // ============================================
-        async function carregarProvasParaCorrecaoManual() {
+        async function carregarEscolasParaCorrecaoManual() {
             try {
-                const response = await fetch(API_URL + '/api/provas');
-                const provas = await response.json();
-                const select = document.getElementById('cm-prova-select');
-                if (select && provas && !provas.erro) {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('cm-escola-select');
+                if (select && escolas && !escolas.erro) {
                     const current = select.value;
-                    select.innerHTML = '<option value="">Selecione uma prova...</option>';
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                    // Se já tinha uma escola selecionada, carregar suas turmas
+                    if (current) {
+                        carregarTurmasParaCorrecaoManual(current);
+                    }
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para correção manual:', erro);
+            }
+        }
+
+        // ============================================
+        // CARREGAR TURMAS PARA CORREÇÃO MANUAL
+        // ============================================
+        async function carregarTurmasParaCorrecaoManual(escolaId) {
+            const selectTurma = document.getElementById('cm-turma-select');
+            const selectProva = document.getElementById('cm-prova-select');
+            const selectAluno = document.getElementById('cm-aluno-select');
+            
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+            
+            if (!escolaId) return;
+            
+            cmStandaloneData.escolaId = parseInt(escolaId);
+            
+            try {
+                // Buscar turmas da escola
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        // ============================================
+        // CARREGAR ALUNOS PARA CORREÇÃO MANUAL
+        // ============================================
+        async function carregarAlunosParaCorrecaoManual(turmaId) {
+            const selectAluno = document.getElementById('cm-aluno-select');
+            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+            
+            if (!turmaId) return;
+            
+            cmStandaloneData.turmaId = parseInt(turmaId);
+            
+            // Pegar o nome da turma e série
+            const selectTurma = document.getElementById('cm-turma-select');
+            const turmaOption = selectTurma.options[selectTurma.selectedIndex];
+            if (turmaOption) {
+                cmStandaloneData.turmaNome = turmaOption.text || '';
+                cmStandaloneData.serie = turmaOption.dataset.serie || '';
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        // ============================================
+        // CARREGAR PROVAS PARA CORREÇÃO MANUAL (POR TURMA)
+        // ============================================
+        async function carregarProvasParaCorrecaoManualPorTurma(turmaId) {
+            const selectProva = document.getElementById('cm-prova-select');
+            selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+            
+            if (!turmaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
+                const provas = await response.json();
+                if (provas && !provas.erro) {
                     provas.forEach(p => {
                         const opt = document.createElement('option');
                         opt.value = p.id;
-                        const serie = p.turma_serie || 'Série não definida';
+                        const serie = p.turma_serie || '';
                         opt.textContent = p.titulo + ' - ' + serie;
                         opt.dataset.serie = serie;
                         opt.dataset.turma = p.turma_nome || '';
@@ -1529,38 +1655,11 @@
                         opt.dataset.tipo = p.tipo_questoes || '4';
                         opt.dataset.data = p.data_prova || '';
                         opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
-                        select.appendChild(opt);
+                        selectProva.appendChild(opt);
                     });
-                    if (current) select.value = current;
                 }
-            } catch (erro) {
-                console.error('Erro ao carregar provas para correção manual:', erro);
-            }
-        }
-
-        // ============================================
-        // CARREGAR ALUNOS PARA CORREÇÃO MANUAL
-        // ============================================
-        async function carregarAlunosParaCorrecaoManual() {
-            try {
-                const response = await fetch(API_URL + '/api/alunos');
-                const alunos = await response.json();
-                const select = document.getElementById('cm-aluno-select');
-                if (select && alunos && !alunos.erro) {
-                    const current = select.value;
-                    select.innerHTML = '<option value="">Selecione um aluno...</option>';
-                    alunos.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = a.id;
-                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                        opt.dataset.turma = a.turma_nome || '';
-                        opt.dataset.serie = a.turma_serie || '';
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar alunos para correção manual:', erro);
+            } catch (e) {
+                console.error('Erro ao carregar provas:', e);
             }
         }
 
@@ -1570,7 +1669,16 @@
         function carregarGabaritoParaCorrecaoManual() {
             const select = document.getElementById('cm-prova-select');
             const option = select.options[select.selectedIndex];
-            if (!option || !option.value) return;
+            if (!option || !option.value) {
+                // Resetar dados da prova
+                cmStandaloneData.provaId = null;
+                cmStandaloneData.provaTitulo = '';
+                cmStandaloneData.provaData = '';
+                cmStandaloneData.gabarito = [];
+                cmStandaloneData.quantidade = 20;
+                cmStandaloneData.alternativas = ['A', 'B', 'C', 'D'];
+                return;
+            }
             
             try {
                 const gabarito = JSON.parse(option.dataset.gabarito || '[]');
@@ -1584,22 +1692,13 @@
                 cmStandaloneData.gabarito = gabarito;
                 cmStandaloneData.quantidade = quantidade;
                 cmStandaloneData.alternativas = alternativas;
-                cmStandaloneData.serie = option.dataset.serie || '';
-                cmStandaloneData.turmaNome = option.dataset.turma || '';
                 cmStandaloneData.valorPorQuestao = 10 / quantidade;
-                
-                // Verificar se já tem aluno selecionado
-                const alunoSelect = document.getElementById('cm-aluno-select');
-                const alunoOption = alunoSelect.options[alunoSelect.selectedIndex];
-                if (alunoOption && alunoOption.value) {
-                    cmStandaloneData.alunoId = parseInt(alunoOption.value);
-                    cmStandaloneData.alunoNome = alunoOption.text.split(' (')[0] || 'Aluno';
-                    cmStandaloneData.turmaNome = alunoOption.dataset.turma || cmStandaloneData.turmaNome;
-                    cmStandaloneData.serie = alunoOption.dataset.serie || cmStandaloneData.serie;
-                }
-                
-                // Limpar respostas anteriores
                 cmStandaloneData.respostas = new Array(quantidade).fill('');
+                
+                // Atualizar série se não tiver vindo da turma
+                if (!cmStandaloneData.serie) {
+                    cmStandaloneData.serie = option.dataset.serie || '';
+                }
                 
                 showToast('✅ Gabarito carregado! Selecione o aluno e clique em "Iniciar Correção"', 'success');
             } catch (e) {
@@ -1609,33 +1708,22 @@
         }
 
         // ============================================
-        // CARREGAR ALUNO PARA CORREÇÃO MANUAL
-        // ============================================
-        function carregarAlunoParaCorrecaoManual() {
-            const select = document.getElementById('cm-aluno-select');
-            const option = select.options[select.selectedIndex];
-            if (!option || !option.value) return;
-            
-            cmStandaloneData.alunoId = parseInt(option.value);
-            cmStandaloneData.alunoNome = option.text.split(' (')[0] || 'Aluno';
-            cmStandaloneData.turmaNome = option.dataset.turma || cmStandaloneData.turmaNome;
-            cmStandaloneData.serie = option.dataset.serie || cmStandaloneData.serie;
-            
-            // Verificar se já tem prova selecionada
-            const provaSelect = document.getElementById('cm-prova-select');
-            const provaOption = provaSelect.options[provaSelect.selectedIndex];
-            if (provaOption && provaOption.value) {
-                showToast('✅ Aluno selecionado! Clique em "Iniciar Correção"', 'success');
-            }
-        }
-
-        // ============================================
         // INICIAR CORREÇÃO MANUAL (STANDALONE)
         // ============================================
         function iniciarCorrecaoManualStandalone() {
+            const escolaSelect = document.getElementById('cm-escola-select');
+            const turmaSelect = document.getElementById('cm-turma-select');
             const provaSelect = document.getElementById('cm-prova-select');
             const alunoSelect = document.getElementById('cm-aluno-select');
             
+            if (!escolaSelect.value) {
+                showToast('❌ Selecione uma escola!', 'error');
+                return;
+            }
+            if (!turmaSelect.value) {
+                showToast('❌ Selecione uma turma!', 'error');
+                return;
+            }
             if (!provaSelect.value) {
                 showToast('❌ Selecione uma prova!', 'error');
                 return;
@@ -1649,8 +1737,11 @@
             const alunoOption = alunoSelect.options[alunoSelect.selectedIndex];
             cmStandaloneData.alunoId = parseInt(alunoSelect.value);
             cmStandaloneData.alunoNome = alunoOption.text.split(' (')[0] || 'Aluno';
-            cmStandaloneData.turmaNome = alunoOption.dataset.turma || cmStandaloneData.turmaNome;
-            cmStandaloneData.serie = alunoOption.dataset.serie || cmStandaloneData.serie;
+            
+            // Atualizar escola
+            const escolaOption = escolaSelect.options[escolaSelect.selectedIndex];
+            cmStandaloneData.escolaNome = escolaOption.text || '';
+            cmStandaloneData.escolaId = parseInt(escolaSelect.value);
             
             // Verificar se o gabarito já foi carregado
             if (!cmStandaloneData.gabarito || cmStandaloneData.gabarito.length === 0) {
@@ -2237,8 +2328,7 @@
                     carregarEscolasFiltroAlunos(),
                     carregarEscolasCorrigir(),
                     carregarEscolasTexto(),
-                    carregarProvasParaCorrecaoManual(),
-                    carregarAlunosParaCorrecaoManual()
+                    carregarEscolasParaCorrecaoManual()
                 ]);
                 console.log('✅ Todos os dados carregados com sucesso!');
                 atualizarDatasImpressao();
@@ -2348,6 +2438,7 @@
                     carregarEscolasFiltroAlunos();
                     carregarEscolasCorrigir();
                     carregarEscolasTexto();
+                    carregarEscolasParaCorrecaoManual();
                 } else {
                     showToast('❌ Erro: ' + (result.erro || 'Erro desconhecido'), 'error');
                 }
@@ -2538,6 +2629,7 @@
                     carregarEscolasFiltroAlunos();
                     carregarEscolasCorrigir();
                     carregarEscolasTexto();
+                    carregarEscolasParaCorrecaoManual();
                 } else {
                     const erro = await response.json();
                     showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
@@ -2695,7 +2787,6 @@
                 if (response.ok) {
                     showToast('🗑️ Prova "' + titulo + '" excluída!', 'error');
                     carregarDados();
-                    carregarProvasParaCorrecaoManual();
                 } else {
                     const erro = await response.json();
                     showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error');
@@ -2756,7 +2847,7 @@
             if (!confirm('Excluir o gabarito da prova "' + titulo + '"?')) return;
             try {
                 const response = await fetch(API_URL + '/api/provas/' + id, { method: 'DELETE' });
-                if (response.ok) { showToast('🗑️ Gabarito da prova "' + titulo + '" excluído!', 'error'); carregarDados(); carregarProvasParaCorrecaoManual(); } else { const erro = await response.json(); showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error'); }
+                if (response.ok) { showToast('🗑️ Gabarito da prova "' + titulo + '" excluído!', 'error'); carregarDados(); } else { const erro = await response.json(); showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error'); }
             } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
         }
 
@@ -3110,7 +3201,6 @@
                     carregarGabaritos();
                     carregarCombos();
                     carregarProvas();
-                    carregarProvasParaCorrecaoManual();
                 } else {
                     const erroMsg = result.erro || 'Erro desconhecido';
                     showToast(`❌ ${erroMsg}`, 'error');
@@ -3390,7 +3480,6 @@
                             const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
                             carregarAlunos(escolaId);
                             document.getElementById('multi-alunos-input').value = '';
-                            carregarAlunosParaCorrecaoManual();
                         }, 1000);
                     }
                 })
@@ -3419,7 +3508,6 @@
                             const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
                             carregarAlunos(escolaId);
                             document.getElementById('multi-alunos-input').value = '';
-                            carregarAlunosParaCorrecaoManual();
                         }, 1000);
                     }
                 });
@@ -3448,7 +3536,7 @@
             try {
                 const response = await fetch(API_URL + '/api/escolas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 const result = await response.json();
-                if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success'); closeM('m-escola'); carregarDados(); carregarEscolasFiltroAlunos(); carregarEscolasCorrigir(); carregarEscolasTexto(); } else { showToast('❌ Erro ao cadastrar escola', 'error'); }
+                if (result.id) { showToast('✅ Escola "' + dados.nome + '" cadastrada!', 'success'); closeM('m-escola'); carregarDados(); carregarEscolasFiltroAlunos(); carregarEscolasCorrigir(); carregarEscolasTexto(); carregarEscolasParaCorrecaoManual(); } else { showToast('❌ Erro ao cadastrar escola', 'error'); }
             } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
@@ -3470,7 +3558,7 @@
             try {
                 const response = await fetch(API_URL + '/api/alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 const result = await response.json();
-                if (result.id) { showToast('✅ Aluno "' + dados.nome + '" cadastrado!', 'success'); closeM('m-aluno'); carregarDados(); carregarAlunosParaCorrecaoManual(); } else { showToast('❌ Erro ao cadastrar aluno', 'error'); }
+                if (result.id) { showToast('✅ Aluno "' + dados.nome + '" cadastrado!', 'success'); closeM('m-aluno'); carregarDados(); } else { showToast('❌ Erro ao cadastrar aluno', 'error'); }
             } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
@@ -3482,7 +3570,7 @@
             try {
                 const response = await fetch(API_URL + '/api/provas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 const result = await response.json();
-                if (result.id) { showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success'); document.getElementById('up-ok').style.display = 'block'; carregarDados(); carregarProvasParaCorrecaoManual(); } else { showToast('❌ Erro ao cadastrar prova', 'error'); }
+                if (result.id) { showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success'); document.getElementById('up-ok').style.display = 'block'; carregarDados(); } else { showToast('❌ Erro ao cadastrar prova', 'error'); }
             } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
@@ -3497,7 +3585,7 @@
             try {
                 const response = await fetch(API_URL + '/api/provas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 const result = await response.json();
-                if (result.id) { showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success'); closeM('m-prova'); carregarDados(); carregarProvasParaCorrecaoManual(); } else { showToast('❌ Erro ao cadastrar prova', 'error'); }
+                if (result.id) { showToast('✅ Prova "' + dados.titulo + '" cadastrada!', 'success'); closeM('m-prova'); carregarDados(); } else { showToast('❌ Erro ao cadastrar prova', 'error'); }
             } catch (erro) { showToast('❌ Erro: ' + erro.message, 'error'); }
         }
 
@@ -4274,8 +4362,7 @@
             const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
             atualizarDatasImpressao();
-            carregarProvasParaCorrecaoManual();
-            carregarAlunosParaCorrecaoManual();
+            carregarEscolasParaCorrecaoManual();
         });
 
         document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
