@@ -593,9 +593,27 @@
                     <div class="sb-section">Consultas</div>
                     <div class="sb-item" onclick="go('u-resultados')" data-p="u-resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('u-relatorios')" data-p="u-relatorios"><span class="sb-ico">📊</span> Relatórios</div>
-                    <div class="sb-section">IA</div>
-                    <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto"><span class="sb-ico">✍️</span> Correção Texto IA <span class="sb-badge">IA</span></div>
-                    <div class="sb-item" onclick="abrirCamera()"><span class="sb-ico">📱</span> Câmera</div>
+                    <!-- =============================================== -->
+                    <!-- SEÇÃO IA PARA USUÁRIO (VISÍVEL)                -->
+                    <!-- =============================================== -->
+                    <div class="sb-section">IA & Correção</div>
+                    <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia">
+                        <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
+                    </div>
+                    <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
+                        <span class="sb-ico">✍️</span> Texto com IA <span class="sb-badge">IA</span>
+                    </div>
+                    <div class="sb-item" onclick="abrirCamera()">
+                        <span class="sb-ico">📱</span> Câmera do Celular
+                    </div>
+                    <div class="sb-item" onclick="abrirArquivo()">
+                        <span class="sb-ico">📂</span> Escolher Arquivo
+                    </div>
+                    <!-- ═══ BOTÃO CORREÇÃO MANUAL NO MENU (INDEPENDENTE) ═══ -->
+                    <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
+                        <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
+                    </div>
+                    <!-- =============================================== -->
                 </div>
             </div>
             <div class="sb-footer">
@@ -986,7 +1004,22 @@
                 </div>
                 <div class="card">
                     <div class="card-header"><div class="card-title">📋 Lista de Alunos</div><span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span></div>
-                    <div class="table-wrap"><table><thead><tr><th>Pos.</th><th>Nº</th><th>Nome</th><th>Série</th><th>Acertos</th><th>%</th><th>Conceito</th><th>Nota</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-resultados-filtrado"><tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div>
+                    <div class="table-wrap"><table>
+                        <thead>
+                            <tr>
+                                <th>Pos.</th>
+                                <th>Nº</th>
+                                <th>Nome</th>
+                                <th>Série</th>
+                                <th>Acertos</th>
+                                <th>%</th>
+                                <th>Conceito</th>
+                                <th>Nota</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tb-resultados-filtrado"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
+                    </table></div>
                 </div>
             </div>
 
@@ -4150,7 +4183,7 @@
                 const tbody = document.getElementById('tb-resultados-filtrado');
                 if (!tbody) return;
                 if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                     document.getElementById('res-total-filtrado').textContent = '0';
                     document.getElementById('res-Habilidades-filtrado').textContent = '0';
                     document.getElementById('res-recuperacao-filtrado').textContent = '0';
@@ -4170,7 +4203,7 @@
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
                 dadosCorrigidos.sort((a, b) => b.nota - a.nota);
                 atualizarGraficosConceitos(dadosCorrigidos);
-                if (total === 0) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>'; return; }
+                if (total === 0) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>'; return; }
                 tbody.innerHTML = dadosCorrigidos.map((item, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     const nota = item.nota || 0;
@@ -4194,13 +4227,12 @@
                         '<td><strong>' + porcentagem + '%</strong></td>' +
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                         '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
-                        '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                         '<td><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' + correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">🗑️</button></td></tr>';
                 }).join('');
             } catch (erro) {
                 console.error('Erro ao carregar resultados:', erro);
                 const tbody = document.getElementById('tb-resultados-filtrado');
-                if (tbody) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>'; }
+                if (tbody) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>'; }
             }
         }
 
@@ -4246,12 +4278,12 @@
                 somaNotas = 0;
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 10) {
-                    const statusText = cells[8]?.textContent?.trim() || '';
+                if (cells.length >= 8) {
                     const notaText = cells[7]?.textContent?.trim() || '0';
                     const nota = parseFloat(notaText.replace(',', '.')) || 0;
-                    if (statusText === 'Aprovado') Habilidades++;
-                    if (statusText === 'Recomposição da Aprendizagem') recuperacao++;
+                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
+                    if (status === 'Aprovado') Habilidades++;
+                    if (status === 'Recomposição da Aprendizagem') recuperacao++;
                     somaNotas += nota;
                 }
             });
@@ -4263,7 +4295,7 @@
             const dadosAtuais = [];
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 6) {
+                if (cells.length >= 5) {
                     const acertos = parseInt(cells[4]?.textContent) || 0;
                     const totalQuestoes = 20;
                     dadosAtuais.push({ acertos: acertos, total_questoes: totalQuestoes });
@@ -4368,11 +4400,11 @@
             showToast('📥 Exportando resultados filtrados...', 'info');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (!tbody) return;
-            let csv = 'Posição,Número,Nome,Série,Acertos,%,Conceito,Nota,Status\n';
+            let csv = 'Posição,Número,Nome,Série,Acertos,%,Conceito,Nota\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 9) {
-                    csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + ',' + cells[5].textContent.trim() + ',' + cells[6].textContent.trim() + ',' + cells[7].textContent.trim() + ',' + cells[8].textContent.trim() + '\n';
+                if (cells.length >= 8) {
+                    csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + ',' + cells[5].textContent.trim() + ',' + cells[6].textContent.trim() + ',' + cells[7].textContent.trim() + '\n';
                 }
             });
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
