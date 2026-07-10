@@ -151,10 +151,42 @@ def calcular_conceito(porcentagem):
         }
 
 # ============================================
+# FUNÇÃO PARA IDENTIFICAR DISCIPLINA
+# ============================================
+
+def identificar_disciplina(prova_titulo, disciplina, serie):
+    """
+    Identifica o tipo de avaliação com base no título, disciplina e série
+    Retorna: 'Portugues', 'Matematica', 'Producao' ou 'Geral'
+    """
+    texto = f"{prova_titulo or ''} {disciplina or ''}".lower()
+    
+    # Verificar por palavras-chave
+    if 'português' in texto or 'portugues' in texto or 'língua' in texto or 'port' in texto:
+        return 'Portugues'
+    if 'matemática' in texto or 'matematica' in texto or 'mat' in texto:
+        return 'Matematica'
+    if 'produção' in texto or 'producao' in texto or 'texto' in texto or 'redação' in texto or 'redacao' in texto or 'escrita' in texto:
+        return 'Producao'
+    
+    # Se não identificou, usar a série como referência
+    # 1º ao 5º Ano → Português, 6º ao 9º → Matemática
+    if serie:
+        serie_num = re.search(r'(\d+)', serie)
+        if serie_num:
+            num = int(serie_num.group(1))
+            if num <= 5:
+                return 'Portugues'
+            else:
+                return 'Matematica'
+    
+    return 'Geral'
+
+# ============================================
 # FUNÇÃO DE CORREÇÃO COM GEMINI
 # ============================================
 
-def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
+def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     """Corrige a prova usando Gemini ou simulação"""
     
     if not gabarito or len(gabarito) == 0:
@@ -163,6 +195,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             'erro': 'Gabarito não disponível',
             'aluno': aluno_nome,
             'serie': serie,
+            'disciplina': disciplina,
             'total': 0,
             'acertos': 0,
             'nota': 0,
@@ -233,7 +266,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
                     print("⚠️ Nenhuma resposta detectada, tentando Relay...")
-                    return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+                    return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
                 
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
                 
@@ -265,6 +298,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 return {
                     'aluno': aluno_nome,
                     'serie': serie,
+                    'disciplina': disciplina,
                     'total': len(gabarito),
                     'acertos': acertos,
                     'nota': round(nota, 1),
@@ -282,16 +316,16 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             except Exception as e:
                 print(f"❌ Erro no Gemini: {e}")
                 print("⚠️ Tentando RelayFreeLLM...")
-                return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+                return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
         else:
             print("⚠️ Gemini não disponível, tentando RelayFreeLLM...")
-            return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+            return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
             
     except Exception as e:
         print(f"❌ Erro geral: {e}")
-        return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+        return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
+def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     """Corrige a prova usando RelayFreeLLM ou simulação"""
     
     if not gabarito or len(gabarito) == 0:
@@ -300,6 +334,7 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             'erro': 'Gabarito não disponível',
             'aluno': aluno_nome,
             'serie': serie,
+            'disciplina': disciplina,
             'total': 0,
             'acertos': 0,
             'nota': 0,
@@ -375,7 +410,7 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                     confianca = 50
                 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
-                    return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+                    return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
                 
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
                 
@@ -407,6 +442,7 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 return {
                     'aluno': aluno_nome,
                     'serie': serie,
+                    'disciplina': disciplina,
                     'total': len(gabarito),
                     'acertos': acertos,
                     'nota': round(nota, 1),
@@ -423,16 +459,16 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 
             except Exception as e:
                 print(f"❌ Erro no RelayFreeLLM: {e}")
-                return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+                return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
         else:
             print("⚠️ RelayFreeLLM não disponível, usando simulação")
-            return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+            return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
             
     except Exception as e:
         print(f"❌ Erro geral: {e}")
-        return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes)
+        return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4):
+def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     """Correção simulada quando nenhuma IA está disponível"""
     try:
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
@@ -469,6 +505,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         return {
             'aluno': aluno_nome,
             'serie': serie,
+            'disciplina': disciplina,
             'total': len(gabarito),
             'acertos': acertos,
             'nota': round(nota, 1),
@@ -488,6 +525,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         return {
             'aluno': aluno_nome,
             'serie': serie,
+            'disciplina': disciplina,
             'total': len(gabarito),
             'acertos': 0,
             'nota': 0,
@@ -642,35 +680,89 @@ def corrigir_com_ia():
                     print(f"⚠️ Erro ao buscar série: {e}")
             
             tipo_questoes = int(prova.get('tipo_questoes', 4))
+            disciplina = prova.get('disciplina', '')
+            prova_titulo = prova.get('titulo', '')
             
             print(f"🤖 Iniciando correção para {nome_aluno}...")
-            resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes)
+            print(f"📌 Disciplina: {disciplina}")
+            print(f"📌 Série: {serie}")
+            
+            resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes, disciplina)
             
             if resultado.get('erro'):
                 return jsonify(resultado), 400
+            
+            # Identificar o tipo de avaliação
+            tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
+            print(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
             
             try:
                 conn = get_db_connection()
                 if conn:
                     cur = conn.cursor()
+                    
+                    # Verificar se já existe um registro para esta prova e aluno
                     cur.execute("""
-                        INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
-                        VALUES (%s, %s, %s::text[], %s, %s, %s, %s)
-                    """, (
-                        prova_id, 
-                        aluno_id, 
-                        resultado.get('respostas_detectadas', []), 
-                        resultado.get('acertos', 0), 
-                        resultado.get('nota', 0), 
-                        resultado.get('total', 0), 
-                        resultado.get('modo', 'ia')
-                    ))
+                        SELECT id FROM historico 
+                        WHERE prova_id = %s AND aluno_id = %s
+                    """, (prova_id, aluno_id))
+                    existe = cur.fetchone()
+                    
+                    if existe:
+                        # Atualizar registro existente
+                        cur.execute("""
+                            UPDATE historico 
+                            SET respostas = %s::text[], 
+                                acertos = %s, 
+                                nota = %s, 
+                                total = %s, 
+                                tipo_correcao = %s,
+                                disciplina = %s,
+                                tipo_avaliacao = %s,
+                                data_correcao = CURRENT_TIMESTAMP
+                            WHERE prova_id = %s AND aluno_id = %s
+                        """, (
+                            resultado.get('respostas_detectadas', []), 
+                            resultado.get('acertos', 0), 
+                            resultado.get('nota', 0), 
+                            resultado.get('total', 0), 
+                            resultado.get('modo', 'ia'),
+                            disciplina,
+                            tipo_avaliacao,
+                            prova_id, 
+                            aluno_id
+                        ))
+                        print("✅ Histórico atualizado com sucesso")
+                    else:
+                        # Inserir novo registro
+                        cur.execute("""
+                            INSERT INTO historico 
+                            (prova_id, aluno_id, respostas, acertos, nota, total, 
+                             tipo_correcao, disciplina, tipo_avaliacao)
+                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s)
+                        """, (
+                            prova_id, 
+                            aluno_id, 
+                            resultado.get('respostas_detectadas', []), 
+                            resultado.get('acertos', 0), 
+                            resultado.get('nota', 0), 
+                            resultado.get('total', 0), 
+                            resultado.get('modo', 'ia'),
+                            disciplina,
+                            tipo_avaliacao
+                        ))
+                        print("✅ Histórico salvo com sucesso")
+                    
                     conn.commit()
                     cur.close()
                     conn.close()
-                    print("✅ Histórico salvo com sucesso")
+                    
             except Exception as e:
                 print(f"⚠️ Erro ao salvar histórico: {e}")
+                traceback.print_exc()
+            
+            resultado['tipo_avaliacao'] = tipo_avaliacao
+            resultado['disciplina'] = disciplina
             
             return jsonify(resultado)
             
@@ -707,11 +799,54 @@ def corrigir_manual():
             return jsonify({'erro': 'Erro no banco'}), 500
         
         cur = conn.cursor()
+        
+        # Buscar disciplina da prova
+        cur.execute("SELECT disciplina, titulo FROM provas WHERE id = %s", (prova_id,))
+        prova = cur.fetchone()
+        disciplina = prova[0] if prova else ''
+        prova_titulo = prova[1] if prova else ''
+        
+        # Buscar série do aluno
         cur.execute("""
-            INSERT INTO historico (prova_id, aluno_id, respostas, acertos, nota, total, tipo_correcao)
-            VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual') RETURNING id
-        """, (prova_id, aluno_id, respostas, acertos, nota, total))
-        result = cur.fetchone()
+            SELECT t.serie FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            WHERE a.id = %s
+        """, (aluno_id,))
+        serie_result = cur.fetchone()
+        serie = serie_result[0] if serie_result else '1º Ano'
+        
+        tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
+        
+        # Verificar se já existe um registro
+        cur.execute("""
+            SELECT id FROM historico 
+            WHERE prova_id = %s AND aluno_id = %s
+        """, (prova_id, aluno_id))
+        existe = cur.fetchone()
+        
+        if existe:
+            cur.execute("""
+                UPDATE historico 
+                SET respostas = %s::text[], 
+                    acertos = %s, 
+                    nota = %s, 
+                    total = %s, 
+                    tipo_correcao = 'manual',
+                    disciplina = %s,
+                    tipo_avaliacao = %s,
+                    data_correcao = CURRENT_TIMESTAMP
+                WHERE prova_id = %s AND aluno_id = %s
+            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, prova_id, aluno_id))
+        else:
+            cur.execute("""
+                INSERT INTO historico 
+                (prova_id, aluno_id, respostas, acertos, nota, total, 
+                 tipo_correcao, disciplina, tipo_avaliacao)
+                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s) 
+                RETURNING id
+            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao))
+            result = cur.fetchone()
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -721,10 +856,11 @@ def corrigir_manual():
         
         return jsonify({
             'sucesso': True,
-            'id': result[0],
+            'id': result[0] if not existe else existe[0],
             'mensagem': 'Correção manual salva com sucesso',
             'conceito': conceito,
-            'porcentagem': porcentagem
+            'porcentagem': porcentagem,
+            'tipo_avaliacao': tipo_avaliacao
         })
     except Exception as e:
         print(f"❌ Erro na correção manual: {e}")
@@ -965,7 +1101,7 @@ def listar_correcoes_texto():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO (CORRIGIDA - SEM DEPENDÊNCIA DO CAMPO SÉRIE)
+# ROTA DE HISTÓRICO - VERSÃO COM 3 AVALIAÇÕES SEPARADAS
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -987,6 +1123,7 @@ def listar_historico():
                 h.*, 
                 a.nome as aluno_nome, 
                 p.titulo as prova_titulo,
+                p.disciplina,
                 t.serie, 
                 t.nome as turma_nome, 
                 e.nome as escola_nome,
@@ -1055,11 +1192,156 @@ def listar_historico():
             item['conceito_rotulo'] = conceito['rotulo']
             item['conceito_cor'] = conceito['cor']
             item['porcentagem'] = porcentagem
+            
+            # Adicionar tipo de avaliação se não existir
+            if 'tipo_avaliacao' not in item or not item['tipo_avaliacao']:
+                disciplina = item.get('disciplina', '')
+                prova_titulo = item.get('prova_titulo', '')
+                serie = item.get('serie', '')
+                item['tipo_avaliacao'] = identificar_disciplina(prova_titulo, disciplina, serie)
         
         return jsonify(historico)
         
     except Exception as e:
         print(f"❌ Erro ao buscar histórico: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (3 AVALIAÇÕES)
+# ============================================
+
+@app.route('/api/historico/agrupado', methods=['GET'])
+def historico_agrupado():
+    """
+    Retorna o histórico agrupado por aluno com as 3 avaliações separadas
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        escola_id = request.args.get('escola')
+        turma_id = request.args.get('turma')
+        aluno_id = request.args.get('aluno_id')
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        query = """
+            SELECT 
+                h.*, 
+                a.nome as aluno_nome, 
+                p.titulo as prova_titulo,
+                p.disciplina,
+                t.serie, 
+                t.nome as turma_nome, 
+                e.nome as escola_nome
+            FROM historico h
+            LEFT JOIN alunos a ON h.aluno_id = a.id
+            LEFT JOIN provas p ON h.prova_id = p.id
+            LEFT JOIN turmas t ON p.turma_id = t.id
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE 1=1
+        """
+        params = []
+        
+        if escola_id and escola_id != '' and escola_id != 'null':
+            try:
+                escola_id_int = int(escola_id)
+                query += " AND e.id = %s"
+                params.append(escola_id_int)
+            except ValueError:
+                pass
+        
+        if turma_id and turma_id != '' and turma_id != 'null':
+            try:
+                turma_id_int = int(turma_id)
+                query += " AND t.id = %s"
+                params.append(turma_id_int)
+            except ValueError:
+                pass
+        
+        if aluno_id and aluno_id != '' and aluno_id != 'null':
+            try:
+                aluno_id_int = int(aluno_id)
+                query += " AND h.aluno_id = %s"
+                params.append(aluno_id_int)
+            except ValueError:
+                pass
+        
+        query += " ORDER BY a.nome, h.data_correcao DESC"
+        
+        cur.execute(query, params)
+        historico = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Agrupar por aluno
+        alunos_map = {}
+        for item in historico:
+            aluno_key = item.get('aluno_id') or item.get('aluno_nome')
+            if not aluno_key:
+                continue
+                
+            if aluno_key not in alunos_map:
+                alunos_map[aluno_key] = {
+                    'aluno_id': item.get('aluno_id'),
+                    'aluno_nome': item.get('aluno_nome', 'Aluno'),
+                    'serie': item.get('serie', ''),
+                    'turma': item.get('turma_nome', ''),
+                    'escola': item.get('escola_nome', ''),
+                    'avaliacoes': {}
+                }
+            
+            # Identificar o tipo de avaliação
+            disciplina = item.get('disciplina', '')
+            prova_titulo = item.get('prova_titulo', '')
+            serie = item.get('serie', '')
+            tipo = identificar_disciplina(prova_titulo, disciplina, serie)
+            
+            # Armazenar a nota no tipo correspondente
+            alunos_map[aluno_key]['avaliacoes'][tipo] = {
+                'nota': float(item.get('nota', 0)),
+                'acertos': int(item.get('acertos', 0)),
+                'total': int(item.get('total_questoes', 20)),
+                'prova': prova_titulo,
+                'data': item.get('data_correcao', ''),
+                'disciplina': disciplina
+            }
+        
+        # Converter para lista
+        resultado = []
+        for aluno_key, dados in alunos_map.items():
+            avaliacoes = dados['avaliacoes']
+            
+            # Calcular soma e média
+            notas = []
+            for tipo in ['Portugues', 'Matematica', 'Producao']:
+                if tipo in avaliacoes:
+                    notas.append(avaliacoes[tipo]['nota'])
+                else:
+                    notas.append(0)
+            
+            soma = sum(notas)
+            media = soma / 3 if notas else 0
+            
+            resultado.append({
+                'aluno_id': dados['aluno_id'],
+                'aluno_nome': dados['aluno_nome'],
+                'serie': dados['serie'],
+                'turma': dados['turma'],
+                'escola': dados['escola'],
+                'portugues': avaliacoes.get('Portugues', {'nota': 0, 'acertos': 0, 'total': 20}),
+                'matematica': avaliacoes.get('Matematica', {'nota': 0, 'acertos': 0, 'total': 20}),
+                'producao': avaliacoes.get('Producao', {'nota': 0, 'acertos': 0, 'total': 20}),
+                'soma': round(soma, 1),
+                'media': round(media, 1)
+            })
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar histórico agrupado: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
@@ -2432,6 +2714,7 @@ def index():
                 '/api/provas',
                 '/api/gabaritos',
                 '/api/historico',
+                '/api/historico/agrupado',
                 '/api/dashboard',
                 '/api/dashboard/turmas_alunos',
                 '/api/gerar_gabarito'
@@ -2537,6 +2820,8 @@ def init_db():
                 nota DECIMAL(5,2),
                 total INTEGER,
                 tipo_correcao TEXT DEFAULT 'ia',
+                disciplina TEXT,
+                tipo_avaliacao TEXT,
                 data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -2569,6 +2854,13 @@ def init_db():
             )
         """)
         
+        # Adicionar colunas se não existirem (para compatibilidade)
+        try:
+            cur.execute("ALTER TABLE historico ADD COLUMN IF NOT EXISTS disciplina TEXT")
+            cur.execute("ALTER TABLE historico ADD COLUMN IF NOT EXISTS tipo_avaliacao TEXT")
+        except Exception as e:
+            print(f"⚠️ Colunas já existem: {e}")
+        
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
@@ -2583,6 +2875,7 @@ def init_db():
         print("✅ Banco de dados inicializado com sucesso!")
     except Exception as e:
         print(f"❌ Erro ao inicializar banco: {e}")
+        traceback.print_exc()
 
 init_db()
 
@@ -2620,6 +2913,7 @@ if __name__ == '__main__':
     print("   - /api/provas - Gerenciar provas")
     print("   - /api/gabaritos - Gerenciar gabaritos")
     print("   - /api/historico - Histórico de correções")
+    print("   - /api/historico/agrupado - Histórico agrupado por aluno (3 avaliações)")
     print("   - /api/dashboard - Dados do dashboard")
     print("   - /api/dashboard/turmas_alunos - Turmas com alunos")
     print("   - /api/gerar_gabarito - Gerar cartão resposta")
