@@ -1024,6 +1024,7 @@
 
                 <!-- CARD DE FILTROS COM SELECTS E BOTÃO IMPRIMIR -->
                 <!-- REMOVIDO O CAMPO "SÉRIE" CONFORME SOLICITADO -->
+                <!-- REMOVIDO onchange do select de prova para evitar recarregamento -->
                 <div class="card no-print">
                     <div class="form-row c3">
                         <div class="form-group">
@@ -1034,13 +1035,13 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Turma <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno()">
+                            <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno(this.value)">
                                 <option value="">Selecione a turma...</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Prova <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-prova" onchange="carregarAlunosRelAluno()">
+                            <select class="form-control" id="rel-aluno-prova">
                                 <option value="">Selecione a prova...</option>
                             </select>
                         </div>
@@ -1678,8 +1679,8 @@
             }
         }
 
-        async function carregarAlunosRelAluno() {
-            const turmaId = document.getElementById('rel-aluno-turma').value;
+        // CORRIGIDA: função agora recebe turmaId como parâmetro e só recarrega provas quando a turma muda
+        async function carregarAlunosRelAluno(turmaId) {
             const escolaId = document.getElementById('rel-aluno-escola').value;
             const selectAluno = document.getElementById('rel-aluno-select');
             const selectProva = document.getElementById('rel-aluno-prova');
@@ -1707,10 +1708,12 @@
                     });
                 }
                 
-                // Carregar provas da turma
-                if (turmaId) {
+                // Só carrega as provas se a turma mudou (evita recarregar quando a prova é selecionada)
+                const turmaAnterior = selectProva.dataset.turmaId || '';
+                if (turmaId !== turmaAnterior) {
                     const provasResp = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
                     const provas = await provasResp.json();
+                    const currentProva = selectProva.value;
                     selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
                     if (provas && !provas.erro) {
                         provas.forEach(p => {
@@ -1720,7 +1723,13 @@
                             selectProva.appendChild(opt);
                         });
                     }
+                    // Restaura a prova selecionada se possível
+                    if (currentProva) {
+                        selectProva.value = currentProva;
+                    }
+                    selectProva.dataset.turmaId = turmaId;
                 }
+                
             } catch (e) {
                 console.error('Erro ao carregar alunos:', e);
             }
