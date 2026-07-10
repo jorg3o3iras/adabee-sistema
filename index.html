@@ -1005,7 +1005,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📈 Distribuição de Notas</div></div><div class="chart-bars" id="dist-notas"><div class="chart-bar-item"><div class="chart-bar-val" id="d0-2">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div><div class="chart-bar-lbl">0–2</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d2-4">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div><div class="chart-bar-lbl">2–4</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d4-6">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">4–6</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d6-8">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div><div class="chart-bar-lbl">6–8</div></div><div class="chart-bar-item"><div class="chart-bar-val" id="d8-10">0</div><div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div><div class="chart-bar-lbl">8–10</div></div></div></div>
             </div>
 
-            <!-- ========== RELATÓRIO POR ALUNO (ATUALIZADO) ========== -->
+            <!-- ========== RELATÓRIO POR ALUNO (ATUALIZADO - SEM CAMPO SÉRIE) ========== -->
             <div class="page" id="page-rel-aluno">
                 <div class="page-header">
                     <div><div class="page-title">👤 Relatório por Aluno</div></div>
@@ -1023,27 +1023,13 @@
                 </div>
 
                 <!-- CARD DE FILTROS COM SELECTS E BOTÃO IMPRIMIR -->
+                <!-- REMOVIDO O CAMPO "SÉRIE" CONFORME SOLICITADO -->
                 <div class="card no-print">
-                    <div class="form-row c4">
+                    <div class="form-row c3">
                         <div class="form-group">
                             <label class="form-label">Escola <span class="req">*</span></label>
                             <select class="form-control" id="rel-aluno-escola" onchange="carregarTurmasRelAluno(this.value)">
                                 <option value="">Selecione a escola...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Série <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-serie" onchange="carregarAlunosRelAluno()">
-                                <option value="">Selecione a série...</option>
-                                <option value="1º Ano">1º Ano</option>
-                                <option value="2º Ano">2º Ano</option>
-                                <option value="3º Ano">3º Ano</option>
-                                <option value="4º Ano">4º Ano</option>
-                                <option value="5º Ano">5º Ano</option>
-                                <option value="6º Ano">6º Ano</option>
-                                <option value="7º Ano">7º Ano</option>
-                                <option value="8º Ano">8º Ano</option>
-                                <option value="9º Ano">9º Ano</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1145,7 +1131,7 @@
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-u-rel"></span></p>
                 </div>
 
-                <div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div></div>
+                <div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
         </div>
     </div>
 
@@ -1694,21 +1680,19 @@
 
         async function carregarAlunosRelAluno() {
             const turmaId = document.getElementById('rel-aluno-turma').value;
-            const serie = document.getElementById('rel-aluno-serie').value;
             const escolaId = document.getElementById('rel-aluno-escola').value;
             const selectAluno = document.getElementById('rel-aluno-select');
             const selectProva = document.getElementById('rel-aluno-prova');
             
             selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
             
-            if (!turmaId && !serie) return;
+            if (!turmaId) return;
             
             try {
                 let url = API_URL + '/api/alunos?';
                 const params = [];
                 if (escolaId) params.push(`escola_id=${escolaId}`);
                 if (turmaId) params.push(`turma_id=${turmaId}`);
-                if (serie) params.push(`serie=${encodeURIComponent(serie)}`);
                 url += params.join('&');
                 
                 const response = await fetch(url);
