@@ -632,6 +632,33 @@
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
+
+        /* Estilos para as avaliações separadas */
+        .avaliacao-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-right: 4px;
+        }
+        .tag-portugues { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .tag-matematica { background: rgba(16,185,129,0.15); color: #10b981; }
+        .tag-producao { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+        .tag-soma { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        
+        .nota-pequena {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .nota-destaque {
+            font-weight: 800;
+        }
+        .col-avaliacao {
+            min-width: 80px;
+        }
     </style>
 </head>
 <body>
@@ -916,7 +943,18 @@
                     <div class="card">
                         <div class="card-header"><div class="card-title">📝 Informações</div></div>
                         <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
-                        <div class="form-row"><div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label><select class="form-control" id="prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select></div><div class="form-group"><label class="form-label">Bimestre</label>
+                        <div class="form-row"><div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label>
+                            <select class="form-control" id="prova-disciplina">
+                                <option value="Matemática">Matemática</option>
+                                <option value="Português">Português</option>
+                                <option value="Produção de Texto">Produção de Texto</option>
+                                <option value="Ciências">Ciências</option>
+                                <option value="História">História</option>
+                                <option value="Geografia">Geografia</option>
+                                <option value="Inglês">Inglês</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label">Bimestre</label>
                             <select class="form-control" id="prova-bimestre">
                                 <option value="1º e 2º bimestre" selected>1º e 2º bimestre</option>
                                 <option value="3º e 4º bimestre">3º e 4º bimestre</option>
@@ -1134,23 +1172,31 @@
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><div class="card-title">📋 Lista de Alunos</div><span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span></div>
-                    <div class="table-wrap"><table>
-                        <thead>
-                            <tr>
-                                <th>Pos.</th>
-                                <th>Nº</th>
-                                <th>Nome</th>
-                                <th>Série</th>
-                                <th>Acertos</th>
-                                <th>%</th>
-                                <th>Conceito</th>
-                                <th>Nota</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tb-resultados-filtrado"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
-                    </table></div>
+                    <div class="card-header">
+                        <div class="card-title">📋 Lista de Alunos</div>
+                        <span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pos.</th>
+                                    <th>Nº</th>
+                                    <th>Nome</th>
+                                    <th>Série</th>
+                                    <th class="col-avaliacao">🇵🇹 Português</th>
+                                    <th class="col-avaliacao">📐 Matemática</th>
+                                    <th class="col-avaliacao">✍️ Produção</th>
+                                    <th class="col-avaliacao" style="background:rgba(245,158,11,0.08);border-bottom:2px solid var(--orange);">📊 Soma</th>
+                                    <th>Conceito</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-resultados-filtrado">
+                                <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -1226,9 +1272,19 @@
                         <div class="card-header"><div class="card-title">📋 Histórico</div></div>
                         <div class="table-wrap">
                             <table>
-                                <thead><tr><th>Prova</th><th>Data</th><th>Nota</th><th>Status</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>Prova</th>
+                                        <th>Data</th>
+                                        <th class="col-avaliacao">🇵🇹 Português</th>
+                                        <th class="col-avaliacao">📐 Matemática</th>
+                                        <th class="col-avaliacao">✍️ Produção</th>
+                                        <th class="col-avaliacao" style="background:rgba(245,158,11,0.08);border-bottom:2px solid var(--orange);">📊 Soma</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="rel-aluno-historico">
-                                    <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
+                                    <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -3355,54 +3411,436 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS
+        // CARREGAR RESULTADOS COM AVALIAÇÕES SEPARADAS
         // ============================================
         async function carregarResultados() {
             try {
+                // Buscar todas as correções do histórico
                 const response = await fetch(`${API_URL}/api/historico`);
                 const historico = await response.json();
                 const tbody = document.getElementById('tb-resultados');
                 if (!tbody) return;
 
                 if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
                     return;
                 }
 
-                historico.sort((a, b) => b.nota - a.nota);
+                // Agrupar por aluno para mostrar as 3 avaliações
+                const alunosMap = new Map();
+                historico.forEach(item => {
+                    const key = item.aluno_id || item.aluno_nome;
+                    if (!alunosMap.has(key)) {
+                        alunosMap.set(key, {
+                            aluno_id: item.aluno_id,
+                            aluno_nome: item.aluno_nome,
+                            serie: item.serie || '—',
+                            provas: {}
+                        });
+                    }
+                    const aluno = alunosMap.get(key);
+                    const disciplina = item.disciplina || 'Geral';
+                    // Usar a disciplina para identificar o tipo de avaliação
+                    let tipo = 'Geral';
+                    if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                        tipo = 'Portugues';
+                    } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                        tipo = 'Matematica';
+                    } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                        tipo = 'Producao';
+                    }
+                    // Se não tiver disciplina definida, usar o título da prova para tentar identificar
+                    if (tipo === 'Geral' && item.prova_titulo) {
+                        const titulo = item.prova_titulo.toLowerCase();
+                        if (titulo.includes('português') || titulo.includes('portugues')) tipo = 'Portugues';
+                        else if (titulo.includes('matemática') || titulo.includes('matematica') || titulo.includes('mat')) tipo = 'Matematica';
+                        else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto') || titulo.includes('redação')) tipo = 'Producao';
+                    }
+                    // Se ainda for Geral, tentar pela série ou por padrão
+                    if (tipo === 'Geral') {
+                        // Se a série for 1º ao 5º, assumir Português, senão Matemática
+                        const serie = item.serie || '';
+                        if (serie.includes('1') || serie.includes('2') || serie.includes('3') || serie.includes('4') || serie.includes('5')) {
+                            tipo = 'Portugues';
+                        } else {
+                            tipo = 'Matematica';
+                        }
+                    }
+                    // Atribuir a nota à disciplina correspondente
+                    aluno.provas[tipo] = item.nota || 0;
+                });
 
-                tbody.innerHTML = historico.map((item, index) => {
+                // Converter para array e calcular soma
+                const alunosArray = Array.from(alunosMap.values()).map(aluno => {
+                    const notaPortugues = aluno.provas.Portugues || 0;
+                    const notaMatematica = aluno.provas.Matematica || 0;
+                    const notaProducao = aluno.provas.Producao || 0;
+                    const soma = notaPortugues + notaMatematica + notaProducao;
+                    const media = (notaPortugues + notaMatematica + notaProducao) / 3;
+                    return {
+                        ...aluno,
+                        notaPortugues,
+                        notaMatematica,
+                        notaProducao,
+                        soma,
+                        media
+                    };
+                });
+
+                // Ordenar por soma (maior para menor)
+                alunosArray.sort((a, b) => b.soma - a.soma);
+
+                if (alunosArray.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    return;
+                }
+
+                // Atualizar estatísticas
+                const total = alunosArray.length;
+                const Habilidades = alunosArray.filter(a => a.soma >= 15).length;
+                const recuperacao = alunosArray.filter(a => a.soma >= 9 && a.soma < 15).length;
+                const mediaGeral = total > 0 ? alunosArray.reduce((s, a) => s + a.media, 0) / total : 0;
+
+                document.getElementById('res-total-filtrado').textContent = total;
+                document.getElementById('res-Habilidades-filtrado').textContent = Habilidades;
+                document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
+                document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
+                document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+
+                // Gerar tabela com 3 avaliações separadas
+                tbody.innerHTML = alunosArray.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-                    const nota = item.nota || 0;
-                    const totalQuestoes = 20;
-                    const acertos = item.acertos || 0;
-                    const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+                    const soma = aluno.soma || 0;
+                    const media = aluno.media || 0;
+                    const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
                     const conceito = calcularConceito(porcentagem);
-                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
-                    const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
-                    const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
+                    const status = media >= 5 ? 'Aprovado' : (media >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
+                    const badge = media >= 5 ? 'badge-green' : (media >= 3 ? 'badge-orange' : 'badge-red');
                     const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
+                    
+                    // Cor para cada nota
+                    const corPortugues = aluno.notaPortugues >= 5 ? 'var(--green)' : 'var(--red)';
+                    const corMatematica = aluno.notaMatematica >= 5 ? 'var(--green)' : 'var(--red)';
+                    const corProducao = aluno.notaProducao >= 5 ? 'var(--green)' : 'var(--red)';
+                    const corSoma = soma >= 15 ? 'var(--green)' : (soma >= 9 ? 'var(--orange)' : 'var(--red)');
 
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
-                        '<td><strong>' + (item.aluno_nome || 'Aluno') + '</strong></td>' +
-                        '<td><span class="badge badge-purple">' + (item.serie || '—') + '</span></td>' +
-                        '<td>' + acertos + '</td>' +
-                        '<td><strong>' + porcentagem + '%</strong></td>' +
+                        '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                        '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><strong style="color:' + corPortugues + ';">' + aluno.notaPortugues.toFixed(1) + '</strong></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><strong style="color:' + corMatematica + ';">' + aluno.notaMatematica.toFixed(1) + '</strong></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><strong style="color:' + corProducao + ';">' + aluno.notaProducao.toFixed(1) + '</strong></td>' +
+                        '<td class="col-avaliacao" style="background:rgba(245,158,11,0.05);"><span class="avaliacao-tag tag-soma">📊</span><strong style="color:' + corSoma + ';font-size:14px;">' + soma.toFixed(1) + '</strong></td>' +
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
-                        '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
                         '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                         '</tr>';
                 }).join('');
+
+                // Atualizar gráficos
+                const dadosParaGraficos = alunosArray.map(a => ({
+                    acertos: Math.round(a.media * 2),
+                    total_questoes: 20
+                }));
+                atualizarGraficosConceitos(dadosParaGraficos);
 
             } catch (erro) {
                 console.error('Erro ao carregar resultados:', erro);
                 const tbody = document.getElementById('tb-resultados');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
                 }
             }
+        }
+
+        // ============================================
+        // CARREGAR RESULTADOS COM FILTROS (VERSÃO COM 3 AVALIAÇÕES)
+        // ============================================
+        async function carregarResultadosComFiltros() {
+            try {
+                const escolaId = document.getElementById('filtro-escola').value;
+                const serie = document.getElementById('filtro-serie').value;
+                const turmaId = document.getElementById('filtro-turma').value;
+                
+                let url = API_URL + '/api/historico';
+                const params = new URLSearchParams();
+                if (escolaId && escolaId !== '') params.append('escola', escolaId);
+                if (serie && serie !== '') params.append('serie', serie);
+                if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
+                const historico = await response.json();
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (!tbody) return;
+
+                if (!historico || historico.length === 0 || historico.erro) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                    document.getElementById('res-total-filtrado').textContent = '0';
+                    document.getElementById('res-Habilidades-filtrado').textContent = '0';
+                    document.getElementById('res-recuperacao-filtrado').textContent = '0';
+                    document.getElementById('res-media-filtrado').textContent = '0';
+                    atualizarGraficosConceitos([]);
+                    return;
+                }
+
+                // Agrupar por aluno para mostrar as 3 avaliações
+                const alunosMap = new Map();
+                historico.forEach(item => {
+                    const key = item.aluno_id || item.aluno_nome;
+                    if (!alunosMap.has(key)) {
+                        alunosMap.set(key, {
+                            aluno_id: item.aluno_id,
+                            aluno_nome: item.aluno_nome,
+                            serie: item.serie || '—',
+                            provas: {}
+                        });
+                    }
+                    const aluno = alunosMap.get(key);
+                    const disciplina = item.disciplina || 'Geral';
+                    let tipo = 'Geral';
+                    if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                        tipo = 'Portugues';
+                    } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                        tipo = 'Matematica';
+                    } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                        tipo = 'Producao';
+                    }
+                    if (tipo === 'Geral' && item.prova_titulo) {
+                        const titulo = item.prova_titulo.toLowerCase();
+                        if (titulo.includes('português') || titulo.includes('portugues')) tipo = 'Portugues';
+                        else if (titulo.includes('matemática') || titulo.includes('matematica') || titulo.includes('mat')) tipo = 'Matematica';
+                        else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto') || titulo.includes('redação')) tipo = 'Producao';
+                    }
+                    if (tipo === 'Geral') {
+                        const serieItem = item.serie || '';
+                        if (serieItem.includes('1') || serieItem.includes('2') || serieItem.includes('3') || serieItem.includes('4') || serieItem.includes('5')) {
+                            tipo = 'Portugues';
+                        } else {
+                            tipo = 'Matematica';
+                        }
+                    }
+                    aluno.provas[tipo] = item.nota || 0;
+                });
+
+                const alunosArray = Array.from(alunosMap.values()).map(aluno => {
+                    const notaPortugues = aluno.provas.Portugues || 0;
+                    const notaMatematica = aluno.provas.Matematica || 0;
+                    const notaProducao = aluno.provas.Producao || 0;
+                    const soma = notaPortugues + notaMatematica + notaProducao;
+                    const media = (notaPortugues + notaMatematica + notaProducao) / 3;
+                    return {
+                        ...aluno,
+                        notaPortugues,
+                        notaMatematica,
+                        notaProducao,
+                        soma,
+                        media
+                    };
+                });
+
+                alunosArray.sort((a, b) => b.soma - a.soma);
+
+                if (alunosArray.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    return;
+                }
+
+                // Estatísticas
+                const total = alunosArray.length;
+                const Habilidades = alunosArray.filter(a => a.soma >= 15).length;
+                const recuperacao = alunosArray.filter(a => a.soma >= 9 && a.soma < 15).length;
+                const mediaGeral = total > 0 ? alunosArray.reduce((s, a) => s + a.media, 0) / total : 0;
+
+                document.getElementById('res-total-filtrado').textContent = total;
+                document.getElementById('res-Habilidades-filtrado').textContent = Habilidades;
+                document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
+                document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
+                document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+
+                tbody.innerHTML = alunosArray.map((aluno, index) => {
+                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+                    const soma = aluno.soma || 0;
+                    const media = aluno.media || 0;
+                    const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
+                    const conceito = calcularConceito(porcentagem);
+                    const status = media >= 5 ? 'Aprovado' : (media >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
+                    const badge = media >= 5 ? 'badge-green' : (media >= 3 ? 'badge-orange' : 'badge-red');
+                    const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
+                    
+                    const corPortugues = aluno.notaPortugues >= 5 ? 'var(--green)' : 'var(--red)';
+                    const corMatematica = aluno.notaMatematica >= 5 ? 'var(--green)' : 'var(--red)';
+                    const corProducao = aluno.notaProducao >= 5 ? 'var(--green)' : 'var(--red)';
+                    const corSoma = soma >= 15 ? 'var(--green)' : (soma >= 9 ? 'var(--orange)' : 'var(--red)');
+
+                    return '<tr>' +
+                        '<td>' + medalha + '</td>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                        '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><strong style="color:' + corPortugues + ';">' + aluno.notaPortugues.toFixed(1) + '</strong></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><strong style="color:' + corMatematica + ';">' + aluno.notaMatematica.toFixed(1) + '</strong></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><strong style="color:' + corProducao + ';">' + aluno.notaProducao.toFixed(1) + '</strong></td>' +
+                        '<td class="col-avaliacao" style="background:rgba(245,158,11,0.05);"><span class="avaliacao-tag tag-soma">📊</span><strong style="color:' + corSoma + ';font-size:14px;">' + soma.toFixed(1) + '</strong></td>' +
+                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
+                        '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                        '</tr>';
+                }).join('');
+
+                // Atualizar gráficos com os dados filtrados
+                const dadosParaGraficos = alunosArray.map(a => ({
+                    acertos: Math.round(a.media * 2),
+                    total_questoes: 20
+                }));
+                atualizarGraficosConceitos(dadosParaGraficos);
+
+            } catch (erro) {
+                console.error('Erro ao carregar resultados com filtros:', erro);
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                }
+            }
+        }
+
+        // ============================================
+        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO (COM 3 AVALIAÇÕES)
+        // ============================================
+        function buscarRelatorioAluno() {
+            const alunoId = document.getElementById('rel-aluno-select').value;
+            const provaId = document.getElementById('rel-aluno-prova').value;
+            
+            if (!alunoId) {
+                showToast('❌ Selecione um aluno!', 'error');
+                return;
+            }
+            
+            showToast('🔍 Buscando histórico do aluno...', 'info');
+            const tbody = document.getElementById('rel-aluno-historico');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
+            }
+            
+            let url = API_URL + '/api/historico?aluno_id=' + alunoId;
+            if (provaId && provaId !== '') {
+                url += '&prova_id=' + provaId;
+            }
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(historico => {
+                    if (!historico || historico.length === 0 || historico.erro) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                        return;
+                    }
+                    
+                    // Agrupar por prova para mostrar as 3 avaliações
+                    const provasMap = new Map();
+                    historico.forEach(item => {
+                        const key = item.prova_id || item.prova_titulo;
+                        if (!provasMap.has(key)) {
+                            provasMap.set(key, {
+                                prova_id: item.prova_id,
+                                prova_titulo: item.prova_titulo || 'Prova',
+                                data: item.data_correcao || item.data_prova || '',
+                                avaliacoes: {}
+                            });
+                        }
+                        const prova = provasMap.get(key);
+                        const disciplina = item.disciplina || 'Geral';
+                        let tipo = 'Geral';
+                        if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                            tipo = 'Portugues';
+                        } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                            tipo = 'Matematica';
+                        } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                            tipo = 'Producao';
+                        }
+                        if (tipo === 'Geral' && item.prova_titulo) {
+                            const titulo = item.prova_titulo.toLowerCase();
+                            if (titulo.includes('português') || titulo.includes('portugues')) tipo = 'Portugues';
+                            else if (titulo.includes('matemática') || titulo.includes('matematica') || titulo.includes('mat')) tipo = 'Matematica';
+                            else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto') || titulo.includes('redação')) tipo = 'Producao';
+                        }
+                        if (tipo === 'Geral') {
+                            const serie = item.serie || '';
+                            if (serie.includes('1') || serie.includes('2') || serie.includes('3') || serie.includes('4') || serie.includes('5')) {
+                                tipo = 'Portugues';
+                            } else {
+                                tipo = 'Matematica';
+                            }
+                        }
+                        prova.avaliacoes[tipo] = item.nota || 0;
+                    });
+                    
+                    const provasArray = Array.from(provasMap.values()).map(prova => {
+                        const notaPortugues = prova.avaliacoes.Portugues || 0;
+                        const notaMatematica = prova.avaliacoes.Matematica || 0;
+                        const notaProducao = prova.avaliacoes.Producao || 0;
+                        const soma = notaPortugues + notaMatematica + notaProducao;
+                        return {
+                            ...prova,
+                            notaPortugues,
+                            notaMatematica,
+                            notaProducao,
+                            soma
+                        };
+                    });
+                    
+                    if (provasArray.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = provasArray.map(p => {
+                        const status = p.soma >= 15 ? 'Aprovado' : (p.soma >= 9 ? 'Recuperação' : 'Reprovado');
+                        const badge = p.soma >= 15 ? 'badge-green' : (p.soma >= 9 ? 'badge-orange' : 'badge-red');
+                        const corPortugues = p.notaPortugues >= 5 ? 'var(--green)' : 'var(--red)';
+                        const corMatematica = p.notaMatematica >= 5 ? 'var(--green)' : 'var(--red)';
+                        const corProducao = p.notaProducao >= 5 ? 'var(--green)' : 'var(--red)';
+                        const corSoma = p.soma >= 15 ? 'var(--green)' : (p.soma >= 9 ? 'var(--orange)' : 'var(--red)');
+                        
+                        const data = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '—';
+                        return '<tr>' +
+                            '<td>' + p.prova_titulo + '</td>' +
+                            '<td>' + data + '</td>' +
+                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><strong style="color:' + corPortugues + ';">' + p.notaPortugues.toFixed(1) + '</strong></td>' +
+                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><strong style="color:' + corMatematica + ';">' + p.notaMatematica.toFixed(1) + '</strong></td>' +
+                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><strong style="color:' + corProducao + ';">' + p.notaProducao.toFixed(1) + '</strong></td>' +
+                            '<td class="col-avaliacao" style="background:rgba(245,158,11,0.05);"><span class="avaliacao-tag tag-soma">📊</span><strong style="color:' + corSoma + ';font-size:14px;">' + p.soma.toFixed(1) + '</strong></td>' +
+                            '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                            '</tr>';
+                    }).join('');
+                    
+                    // Atualizar gráfico de evolução (usando a soma)
+                    const evolucao = document.getElementById('rel-evolucao');
+                    if (evolucao && provasArray.length > 0) {
+                        const provasOrdenadas = [...provasArray].sort((a, b) => {
+                            const dataA = a.data ? new Date(a.data) : 0;
+                            const dataB = b.data ? new Date(b.data) : 0;
+                            return dataA - dataB;
+                        });
+                        const maxSoma = Math.max(...provasOrdenadas.map(p => p.soma), 1);
+                        let html = '<div class="chart-bars" style="height:100px;">';
+                        provasOrdenadas.forEach((p, index) => {
+                            const altura = Math.max(10, (p.soma / 30) * 80);
+                            const cor = p.soma >= 15 ? '#10b981' : (p.soma >= 9 ? '#f59e0b' : '#ef4444');
+                            const label = p.prova_titulo.substring(0, 10);
+                            html += `<div class="chart-bar-item" title="${p.prova_titulo} - Soma: ${p.soma.toFixed(1)}">
+                                <div class="chart-bar-val">${p.soma.toFixed(1)}</div>
+                                <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                                <div class="chart-bar-lbl">${label}</div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                        evolucao.innerHTML = html;
+                    }
+                })
+                .catch(e => {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+                    console.error(e);
+                });
         }
 
         // ============================================
@@ -4288,75 +4726,6 @@
             carregarResultadosComFiltros();
         }
 
-        async function carregarResultadosComFiltros() {
-            try {
-                const escolaId = document.getElementById('filtro-escola').value;
-                const serie = document.getElementById('filtro-serie').value;
-                const turmaId = document.getElementById('filtro-turma').value;
-                let url = API_URL + '/api/historico';
-                const params = new URLSearchParams();
-                if (escolaId && escolaId !== '') params.append('escola', escolaId);
-                if (serie && serie !== '') params.append('serie', serie);
-                if (turmaId && turmaId !== '') params.append('turma', turmaId);
-                if (params.toString()) url += '?' + params.toString();
-                const response = await fetch(url);
-                const historico = await response.json();
-                const tbody = document.getElementById('tb-resultados-filtrado');
-                if (!tbody) return;
-                if (!historico || historico.length === 0 || historico.erro) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-                    document.getElementById('res-total-filtrado').textContent = '0';
-                    document.getElementById('res-Habilidades-filtrado').textContent = '0';
-                    document.getElementById('res-recuperacao-filtrado').textContent = '0';
-                    document.getElementById('res-media-filtrado').textContent = '0';
-                    atualizarGraficosConceitos([]);
-                    return;
-                }
-                const dadosCorrigidos = historico.map(item => ({ ...item, nota: parseFloat(item.nota) || 0, acertos: parseInt(item.acertos) || 0, total_questoes: parseInt(item.total_questoes) || 20 }));
-                let total = dadosCorrigidos.length;
-                let Habilidades = dadosCorrigidos.filter(c => c.nota >= 5).length;
-                let recuperacao = dadosCorrigidos.filter(c => c.nota >= 3 && c.nota < 5).length;
-                let media = total > 0 ? (dadosCorrigidos.reduce((s, c) => s + c.nota, 0) / total) : 0;
-                document.getElementById('res-total-filtrado').textContent = total;
-                document.getElementById('res-Habilidades-filtrado').textContent = Habilidades;
-                document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
-                document.getElementById('res-media-filtrado').textContent = media.toFixed(1);
-                document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
-                dadosCorrigidos.sort((a, b) => b.nota - a.nota);
-                atualizarGraficosConceitos(dadosCorrigidos);
-                if (total === 0) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados</td></tr>'; return; }
-                tbody.innerHTML = dadosCorrigidos.map((item, index) => {
-                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-                    const nota = item.nota || 0;
-                    const acertos = item.acertos || 0;
-                    const totalQuestoes = item.total_questoes || 20;
-                    const porcentagem = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-                    const conceito = calcularConceito(porcentagem);
-                    const status = nota >= 5 ? 'Aprovado' : (nota >= 3 ? 'Recomposição da Aprendizagem' : 'Reprovado');
-                    const badge = nota >= 5 ? 'badge-green' : (nota >= 3 ? 'badge-orange' : 'badge-red');
-                    const cor = nota >= 5 ? 'var(--green)' : (nota >= 3 ? 'var(--orange)' : 'var(--red)');
-                    const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
-                    const nome = item.aluno_nome || 'Aluno';
-                    const serieAluno = item.serie || '—';
-                    const correcaoId = item.id;
-                    return '<tr data-correcao-id="' + correcaoId + '">' +
-                        '<td>' + medalha + '</td>' +
-                        '<td>' + (index + 1) + '</td>' +
-                        '<td><strong>' + nome + '</strong></td>' +
-                        '<td><span class="badge badge-purple">' + serieAluno + '</span></td>' +
-                        '<td>' + acertos + '</td>' +
-                        '<td><strong>' + porcentagem + '%</strong></td>' +
-                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
-                        '<td><strong style="color:' + cor + ';">' + nota.toFixed(1) + '</strong></td>' +
-                        '<td><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3);" onclick="excluirCorrecao(this, ' + correcaoId + ', \'' + nome.replace(/'/g, "\\'") + '\')" title="Excluir esta correção">🗑️</button></td></tr>';
-                }).join('');
-            } catch (erro) {
-                console.error('Erro ao carregar resultados:', erro);
-                const tbody = document.getElementById('tb-resultados-filtrado');
-                if (tbody) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>'; }
-            }
-        }
-
         function limparFiltrosResultados() {
             document.getElementById('filtro-escola').value = '';
             document.getElementById('filtro-serie').value = '';
@@ -4521,11 +4890,19 @@
             showToast('📥 Exportando resultados filtrados...', 'info');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (!tbody) return;
-            let csv = 'Posição,Número,Nome,Série,Acertos,%,Conceito,Nota\n';
+            let csv = 'Posição,Número,Nome,Série,Português,Matemática,Produção de Texto,Soma,Conceito\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 8) {
-                    csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + ',' + cells[5].textContent.trim() + ',' + cells[6].textContent.trim() + ',' + cells[7].textContent.trim() + '\n';
+                if (cells.length >= 10) {
+                    csv += cells[0].textContent.trim() + ',' + 
+                           cells[1].textContent.trim() + ',' + 
+                           cells[2].textContent.trim() + ',' + 
+                           cells[3].textContent.trim() + ',' + 
+                           cells[4].textContent.trim() + ',' + 
+                           cells[5].textContent.trim() + ',' + 
+                           cells[6].textContent.trim() + ',' + 
+                           cells[7].textContent.trim() + ',' + 
+                           cells[8].textContent.trim() + '\n';
                 }
             });
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -4574,67 +4951,6 @@
             a.click();
             URL.revokeObjectURL(url);
             showToast('✅ Relatório exportado!', 'success');
-        }
-
-        // ============================================
-        // BUSCAR RELATÓRIO DO ALUNO
-        // ============================================
-        function buscarRelatorioAluno() {
-            const alunoId = document.getElementById('rel-aluno-select').value;
-            const provaId = document.getElementById('rel-aluno-prova').value;
-            
-            if (!alunoId) {
-                showToast('❌ Selecione um aluno!', 'error');
-                return;
-            }
-            
-            showToast('🔍 Buscando histórico do aluno...', 'info');
-            const tbody = document.getElementById('rel-aluno-historico');
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
-            }
-            
-            let url = API_URL + '/api/historico?aluno_id=' + alunoId;
-            if (provaId && provaId !== '') {
-                url += '&prova_id=' + provaId;
-            }
-            
-            fetch(url)
-                .then(r => r.json())
-                .then(historico => {
-                    if (!historico || historico.length === 0 || historico.erro) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
-                        return;
-                    }
-                    tbody.innerHTML = historico.map(h => {
-                        const status = h.nota >= 6 ? 'Aprovado' : 'Reprovado';
-                        const badge = h.nota >= 6 ? 'badge-green' : 'badge-red';
-                        return '<tr><td>' + h.prova_titulo + '</td><td>' + (h.data_correcao ? new Date(h.data_correcao).toLocaleDateString() : '—') + '</td><td><strong style="color:' + (h.nota >= 6 ? 'var(--green)' : 'var(--red)') + ';">' + h.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
-                    }).join('');
-                    
-                    // Atualizar gráfico de evolução
-                    const evolucao = document.getElementById('rel-evolucao');
-                    if (evolucao && historico.length > 0) {
-                        const notas = historico.map(h => h.nota).sort((a, b) => a - b);
-                        const maxNota = Math.max(...notas, 1);
-                        let html = '<div class="chart-bars" style="height:100px;">';
-                        historico.forEach((h, index) => {
-                            const altura = Math.max(10, (h.nota / 10) * 80);
-                            const cor = h.nota >= 6 ? '#10b981' : '#ef4444';
-                            html += `<div class="chart-bar-item">
-                                <div class="chart-bar-val">${h.nota}</div>
-                                <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
-                                <div class="chart-bar-lbl">${h.prova_titulo.substring(0, 10)}</div>
-                            </div>`;
-                        });
-                        html += '</div>';
-                        evolucao.innerHTML = html;
-                    }
-                })
-                .catch(e => {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
-                    console.error(e);
-                });
         }
 
         // ============================================
