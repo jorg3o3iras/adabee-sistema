@@ -965,7 +965,7 @@ def listar_correcoes_texto():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO
+# ROTA DE HISTÓRICO (CORRIGIDA - SEM DEPENDÊNCIA DO CAMPO SÉRIE)
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -976,8 +976,9 @@ def listar_historico():
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
         escola_id = request.args.get('escola')
-        serie = request.args.get('serie')
         turma_id = request.args.get('turma')
+        aluno_id = request.args.get('aluno_id')
+        prova_id = request.args.get('prova_id')
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -1010,15 +1011,27 @@ def listar_historico():
             except ValueError:
                 pass
         
-        if serie and serie != '' and serie != 'null':
-            query += " AND t.serie = %s"
-            params.append(serie)
-        
         if turma_id and turma_id != '' and turma_id != 'null':
             try:
                 turma_id_int = int(turma_id)
                 query += " AND t.id = %s"
                 params.append(turma_id_int)
+            except ValueError:
+                pass
+        
+        if aluno_id and aluno_id != '' and aluno_id != 'null':
+            try:
+                aluno_id_int = int(aluno_id)
+                query += " AND h.aluno_id = %s"
+                params.append(aluno_id_int)
+            except ValueError:
+                pass
+        
+        if prova_id and prova_id != '' and prova_id != 'null':
+            try:
+                prova_id_int = int(prova_id)
+                query += " AND h.prova_id = %s"
+                params.append(prova_id_int)
             except ValueError:
                 pass
         
@@ -1047,6 +1060,7 @@ def listar_historico():
         
     except Exception as e:
         print(f"❌ Erro ao buscar histórico: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/historico/<int:id>', methods=['DELETE'])
