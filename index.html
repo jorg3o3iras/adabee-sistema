@@ -1132,22 +1132,54 @@
                 </div>
 
                 <div class="card no-print" style="margin-bottom:16px;">
-                    <div class="form-row c3">
-                        <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)"><option value="">Todas as escolas</option></select></div>
-                        <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="filtro-serie" onchange="carregarResultadosComFiltros()"><option value="">Todas as séries</option><option value="1º Ano">1º Ano</option><option value="2º Ano">2º Ano</option><option value="3º Ano">3º Ano</option><option value="4º Ano">4º Ano</option><option value="5º Ano">5º Ano</option><option value="6º Ano">6º Ano</option><option value="7º Ano">7º Ano</option><option value="8º Ano">8º Ano</option><option value="9º Ano">9º Ano</option></select></div>
-                        <div class="form-group"><label class="form-label">Turma</label><select class="form-control" id="filtro-turma" onchange="carregarResultadosComFiltros()"><option value="">Todas as turmas</option></select></div>
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Escola</label>
+                            <select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)">
+                                <option value="">Todas as escolas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série</label>
+                            <select class="form-control" id="filtro-serie" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as séries</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="filtro-turma" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as turmas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova</label>
+                            <select class="form-control" id="filtro-prova" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as provas</option>
+                            </select>
+                        </div>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
                         <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
                         <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
                     </div>
                 </div>
+
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
                     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Total de Alunos</div></div>
                     <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Adquiriu as Habilidades</div></div>
                     <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Recomposição da Aprendizagem</div></div>
                     <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Média Geral</div></div>
                 </div>
+
                 <div class="conceito-graficos" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                     <div class="card">
                         <div class="card-header"><div class="card-title">📊 Distribuição por Conceito</div><span class="badge badge-blue no-print">Barras</span></div>
@@ -1171,6 +1203,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📋 Lista de Alunos</div>
@@ -1516,7 +1549,7 @@
 
     <!-- ========== DELETE CONFIRM MODAL ========== -->
     <div class="del-modal no-print" id="del-modal">
-        <div class="del-box"><div class="del-icon">🗑️</div><h3>Confirmar Exclusão</h3><p>Tem certeza que deseja excluir<br><span class="del-name" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p><div class="del-actions"><button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button><button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button></div></div>
+        <div class="del-box"><div class="del-icon">🗑️</div><h3>Confirmar Exclusão</h3><p>Tem certeza que deseja excluir<br><span class="del-nome-txt" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p><div class="del-actions"><button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button><button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button></div></div>
     </div>
 
     <!-- ========== MODALS ========== -->
@@ -3510,13 +3543,14 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM FILTROS (VERSÃO COM 3 AVALIAÇÕES)
+        // CARREGAR RESULTADOS COM FILTROS (VERSÃO COM 3 AVALIAÇÕES E FILTRO DE PROVA)
         // ============================================
         async function carregarResultadosComFiltros() {
             try {
                 const escolaId = document.getElementById('filtro-escola').value;
                 const serie = document.getElementById('filtro-serie').value;
                 const turmaId = document.getElementById('filtro-turma').value;
+                const provaId = document.getElementById('filtro-prova').value;
                 
                 // Usar o endpoint agrupado
                 let url = API_URL + '/api/historico/agrupado';
@@ -3524,6 +3558,7 @@
                 if (escolaId && escolaId !== '') params.append('escola', escolaId);
                 if (serie && serie !== '') params.append('serie', serie);
                 if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                if (provaId && provaId !== '') params.append('prova', provaId);
                 if (params.toString()) url += '?' + params.toString();
                 
                 console.log('📤 URL da requisição:', url);
@@ -4614,6 +4649,7 @@
                     escolas.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.nome; selectEscola.appendChild(opt); });
                     if (current) selectEscola.value = current;
                 }
+                
                 const respTurmas = await fetch(API_URL + '/api/turmas');
                 const turmas = await respTurmas.json();
                 const selectTurma = document.getElementById('filtro-turma');
@@ -4622,6 +4658,22 @@
                     selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
                     turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || ''); selectTurma.appendChild(opt); });
                     if (current) selectTurma.value = current;
+                }
+                
+                // Carregar provas
+                const respProvas = await fetch(API_URL + '/api/provas');
+                const provas = await respProvas.json();
+                const selectProva = document.getElementById('filtro-prova');
+                if (selectProva && provas && !provas.erro) {
+                    const current = selectProva.value;
+                    selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                    provas.forEach(p => { 
+                        const opt = document.createElement('option'); 
+                        opt.value = p.id; 
+                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || ''); 
+                        selectProva.appendChild(opt); 
+                    });
+                    if (current) selectProva.value = current;
                 }
             } catch (erro) { console.error('Erro ao carregar filtros:', erro); }
         }
@@ -4644,12 +4696,28 @@
         function limparFiltrosResultados() {
             document.getElementById('filtro-escola').value = '';
             document.getElementById('filtro-serie').value = '';
+            document.getElementById('filtro-prova').value = '';
+            
             const selectTurma = document.getElementById('filtro-turma');
             selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
             fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
                 if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || ''); selectTurma.appendChild(opt); }); }
                 carregarResultadosComFiltros();
             }).catch(e => console.error('Erro ao recarregar turmas:', e));
+            
+            // Recarregar provas no select
+            const selectProva = document.getElementById('filtro-prova');
+            fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
+                if (provas && !provas.erro) {
+                    selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                    provas.forEach(p => { 
+                        const opt = document.createElement('option'); 
+                        opt.value = p.id; 
+                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || ''); 
+                        selectProva.appendChild(opt); 
+                    });
+                }
+            }).catch(e => console.error('Erro ao recarregar provas:', e));
         }
 
         // ============================================
