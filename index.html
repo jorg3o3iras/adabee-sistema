@@ -175,9 +175,9 @@
         td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
         tr:hover td { background:rgba(255,255,255,0.02); }
 
-        /* Estilos para as células de acertos/erros */
-        .col-acertos { color: var(--green); font-weight: 700; }
-        .col-erros { color: var(--red); font-weight: 700; }
+        /* Estilos para as células de ac./Er. */
+        .col-ac. { color: var(--green); font-weight: 700; }
+        .col-Er. { color: var(--red); font-weight: 700; }
         .col-avaliacao { 
             min-width: 80px; 
             text-align: center;
@@ -198,10 +198,10 @@
             font-size: 11px;
             font-weight: 600;
         }
-        .col-avaliacao .valores .acertos {
+        .col-avaliacao .valores .ac. {
             color: var(--green);
         }
-        .col-avaliacao .valores .erros {
+        .col-avaliacao .valores .Er. {
             color: var(--red);
         }
         .col-avaliacao .cabecalho-disciplina {
@@ -459,8 +459,8 @@
         .resumo-correcao { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:12px 0; }
         .resumo-correcao .item { text-align:center; background:var(--bg2); border-radius:8px; padding:8px; }
         .resumo-correcao .item .valor { font-size:24px; font-weight:800; }
-        .resumo-correcao .item .valor.acertos { color:var(--green); }
-        .resumo-correcao .item .valor.erros { color:var(--red); }
+        .resumo-correcao .item .valor.ac. { color:var(--green); }
+        .resumo-correcao .item .valor.Er. { color:var(--red); }
         .resumo-correcao .item .valor.nota { color:var(--blue); }
         .resumo-correcao .item .label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.3px; }
 
@@ -708,10 +708,10 @@
             font-size: 12px;
             font-weight: 600;
         }
-        .col-avaliacao .valores .acertos {
+        .col-avaliacao .valores .ac. {
             color: var(--green);
         }
-        .col-avaliacao .valores .erros {
+        .col-avaliacao .valores .Er. {
             color: var(--red);
         }
         .col-avaliacao .label-disciplina {
@@ -1298,12 +1298,12 @@
                                 </tr>
                                 <tr>
                                     <th colspan="4"></th>
-                                    <th style="font-size:9px;color:var(--green);">Acertos</th>
-                                    <th style="font-size:9px;color:var(--red);">Erros</th>
-                                    <th style="font-size:9px;color:var(--green);">Acertos</th>
-                                    <th style="font-size:9px;color:var(--red);">Erros</th>
-                                    <th style="font-size:9px;color:var(--green);">Acertos</th>
-                                    <th style="font-size:9px;color:var(--red);">Erros</th>
+                                    <th style="font-size:9px;color:var(--green);">ac.</th>
+                                    <th style="font-size:9px;color:var(--red);">Er.</th>
+                                    <th style="font-size:9px;color:var(--green);">ac.</th>
+                                    <th style="font-size:9px;color:var(--red);">Er.</th>
+                                    <th style="font-size:9px;color:var(--green);">ac.</th>
+                                    <th style="font-size:9px;color:var(--red);">Er.</th>
                                     <th colspan="2"></th>
                                 </tr>
                             </thead>
@@ -1400,12 +1400,12 @@
                                     </tr>
                                     <tr>
                                         <th colspan="2"></th>
-                                        <th style="font-size:9px;color:var(--green);">Acertos</th>
-                                        <th style="font-size:9px;color:var(--red);">Erros</th>
-                                        <th style="font-size:9px;color:var(--green);">Acertos</th>
-                                        <th style="font-size:9px;color:var(--red);">Erros</th>
-                                        <th style="font-size:9px;color:var(--green);">Acertos</th>
-                                        <th style="font-size:9px;color:var(--red);">Erros</th>
+                                        <th style="font-size:9px;color:var(--green);">ac.</th>
+                                        <th style="font-size:9px;color:var(--red);">Er.</th>
+                                        <th style="font-size:9px;color:var(--green);">ac.</th>
+                                        <th style="font-size:9px;color:var(--red);">Er.</th>
+                                        <th style="font-size:9px;color:var(--green);">ac.</th>
+                                        <th style="font-size:9px;color:var(--red);">Er.</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -1509,8 +1509,8 @@
             </div>
             <div id="cm-grid" class="correcao-manual-grid"></div>
             <div class="resumo-correcao">
-                <div class="item"><div class="valor acertos" id="cm-acertos">0</div><div class="label">Acertos</div></div>
-                <div class="item"><div class="valor erros" id="cm-erros">0</div><div class="label">Erros</div></div>
+                <div class="item"><div class="valor ac." id="cm-ac.">0</div><div class="label">ac.</div></div>
+                <div class="item"><div class="valor Er." id="cm-Er.">0</div><div class="label">Er.</div></div>
                 <div class="item"><div class="valor nota" id="cm-nota">0,0</div><div class="label">Nota Final</div></div>
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
@@ -1582,8 +1582,8 @@
                 <div id="cm-grid-standalone" class="cm-grid-standalone"></div>
                 
                 <div class="resumo-correcao">
-                    <div class="item"><div class="valor acertos" id="cm-sa-acertos">0</div><div class="label">Acertos</div></div>
-                    <div class="item"><div class="valor erros" id="cm-sa-erros">0</div><div class="label">Erros</div></div>
+                    <div class="item"><div class="valor ac." id="cm-sa-ac.">0</div><div class="label">ac.</div></div>
+                    <div class="item"><div class="valor Er." id="cm-sa-Er.">0</div><div class="label">Er.</div></div>
                     <div class="item"><div class="valor nota" id="cm-sa-nota">0,0</div><div class="label">Nota Final</div></div>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
@@ -2152,19 +2152,19 @@
             const qtd = correcaoManualData.quantidade || 20;
             const respostas = correcaoManualData.respostasAluno || [];
             const gabarito = correcaoManualData.gabarito || [];
-            let acertos = 0,
+            let ac. = 0,
                 respondidas = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
                 const gab = i < gabarito.length ? gabarito[i] : '';
-                if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) { acertos++; } }
+                if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) { ac.++; } }
             }
-            const erros = respondidas - acertos;
-            const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
+            const Er. = respondidas - ac.;
+            const nota = (ac. * correcaoManualData.valorPorQuestao) || 0;
             const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
-            const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
-            document.getElementById('cm-acertos').textContent = acertos;
-            document.getElementById('cm-erros').textContent = erros;
+            const porcentagem = qtd > 0 ? Math.round((ac. / qtd) * 100) : 0;
+            document.getElementById('cm-ac.').textContent = ac.;
+            document.getElementById('cm-Er.').textContent = Er.;
             document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
             const statusBadge = document.getElementById('cm-status-badge');
             const statusAtual = document.getElementById('cm-status-atual');
@@ -2193,15 +2193,15 @@
             const qtd = correcaoManualData.quantidade || 20;
             const respostas = correcaoManualData.respostasAluno || [];
             const gabarito = correcaoManualData.gabarito || [];
-            let acertos = 0;
+            let ac. = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
                 const gab = i < gabarito.length ? gabarito[i] : '';
-                if (resp && resp.toUpperCase() === gab.toUpperCase()) { acertos++; }
+                if (resp && resp.toUpperCase() === gab.toUpperCase()) { ac.++; }
             }
-            const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
+            const nota = Math.min((ac. * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
             showToast('💾 Salvando correção manual...', 'info');
-            const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acertos: acertos, nota: nota, total: qtd };
+            const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, ac.: ac., nota: nota, total: qtd };
             fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
                 .then(response => response.json())
                 .then(data => {
@@ -2232,8 +2232,8 @@
             document.getElementById('cm-grid-standalone-container').style.display = 'none';
             document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
             document.getElementById('cm-grid-standalone').innerHTML = '';
-            document.getElementById('cm-sa-acertos').textContent = '0';
-            document.getElementById('cm-sa-erros').textContent = '0';
+            document.getElementById('cm-sa-ac.').textContent = '0';
+            document.getElementById('cm-sa-Er.').textContent = '0';
             document.getElementById('cm-sa-nota').textContent = '0,0';
             document.getElementById('cm-sa-status-badge').textContent = 'AGUARDANDO';
             document.getElementById('cm-sa-status-badge').className = 'badge badge-gray';
@@ -2572,7 +2572,7 @@
             const respostas = cmStandaloneData.respostas || [];
             const gabarito = cmStandaloneData.gabarito || [];
             
-            let acertos = 0;
+            let ac. = 0;
             let respondidas = 0;
             
             for (let i = 0; i < qtd; i++) {
@@ -2581,18 +2581,18 @@
                 if (resp) {
                     respondidas++;
                     if (resp.toUpperCase() === gab.toUpperCase()) {
-                        acertos++;
+                        ac.++;
                     }
                 }
             }
             
-            const erros = respondidas - acertos;
-            const nota = (acertos * cmStandaloneData.valorPorQuestao) || 0;
+            const Er. = respondidas - ac.;
+            const nota = (ac. * cmStandaloneData.valorPorQuestao) || 0;
             const notaFinal = Math.min(nota, cmStandaloneData.notaMaxima || 10);
-            const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+            const porcentagem = qtd > 0 ? Math.round((ac. / qtd) * 100) : 0;
             
-            document.getElementById('cm-sa-acertos').textContent = acertos;
-            document.getElementById('cm-sa-erros').textContent = erros;
+            document.getElementById('cm-sa-ac.').textContent = ac.;
+            document.getElementById('cm-sa-Er.').textContent = Er.;
             document.getElementById('cm-sa-nota').textContent = notaFinal.toFixed(1);
             
             const statusBadge = document.getElementById('cm-sa-status-badge');
@@ -2659,16 +2659,16 @@
                 return;
             }
             
-            let acertos = 0;
+            let ac. = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
                 const gab = i < gabarito.length ? gabarito[i] : '';
                 if (resp && resp.toUpperCase() === gab.toUpperCase()) {
-                    acertos++;
+                    ac.++;
                 }
             }
             
-            const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
+            const nota = Math.min((ac. * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
             
             showToast('💾 Salvando correção manual...', 'info');
             
@@ -2676,7 +2676,7 @@
                 prova_id: cmStandaloneData.provaId,
                 aluno_id: cmStandaloneData.alunoId,
                 respostas: respostas,
-                acertos: acertos,
+                ac.: ac.,
                 nota: nota,
                 total: qtd
             };
@@ -3537,7 +3537,7 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM AVALIAÇÕES SEPARADAS (APENAS ACERTOS E ERROS, SEM NOTAS)
+        // CARREGAR RESULTADOS COM AVALIAÇÕES SEPARADAS (APENAS ac. E Er., SEM NOTAS)
         // ============================================
         async function carregarResultados() {
             try {
@@ -3583,17 +3583,17 @@
                 const totalAlunosTabela = document.getElementById('total-alunos-tabela');
                 if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
 
-                // Gerar tabela com apenas ACERTOS e ERROS (sem notas)
+                // Gerar tabela com apenas ac. e Er. (sem notas)
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
-                    // Extrair acertos e erros de cada disciplina
-                    const acertosPortugues = aluno.portugues?.acertos || 0;
-                    const errosPortugues = aluno.portugues?.erros || 0;
-                    const acertosMatematica = aluno.matematica?.acertos || 0;
-                    const errosMatematica = aluno.matematica?.erros || 0;
-                    const acertosProducao = aluno.producao?.acertos || 0;
-                    const errosProducao = aluno.producao?.erros || 0;
+                    // Extrair ac. e Er. de cada disciplina
+                    const ac.Portugues = aluno.portugues?.ac. || 0;
+                    const Er.Portugues = aluno.portugues?.Er. || 0;
+                    const ac.Matematica = aluno.matematica?.ac. || 0;
+                    const Er.Matematica = aluno.matematica?.Er. || 0;
+                    const ac.Producao = aluno.producao?.ac. || 0;
+                    const Er.Producao = aluno.producao?.Er. || 0;
                     
                     const media = aluno.media || 0;
                     const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
@@ -3607,9 +3607,9 @@
                         '<td>' + (index + 1) + '</td>' +
                         '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><div class="valores"><span class="acertos">' + acertosPortugues + '</span>/<span class="erros">' + errosPortugues + '</span></div></td>' +
-                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><div class="valores"><span class="acertos">' + acertosMatematica + '</span>/<span class="erros">' + errosMatematica + '</span></div></td>' +
-                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><div class="valores"><span class="acertos">' + acertosProducao + '</span>/<span class="erros">' + errosProducao + '</span></div></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><div class="valores"><span class="ac.">' + ac.Portugues + '</span>/<span class="Er.">' + Er.Portugues + '</span></div></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><div class="valores"><span class="ac.">' + ac.Matematica + '</span>/<span class="Er.">' + Er.Matematica + '</span></div></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><div class="valores"><span class="ac.">' + ac.Producao + '</span>/<span class="Er.">' + Er.Producao + '</span></div></td>' +
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                         '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                         '</tr>';
@@ -3617,7 +3617,7 @@
 
                 // Atualizar gráficos
                 const dadosParaGraficos = dadosAlunos.map(a => ({
-                    acertos: Math.round((a.media || 0) * 2),
+                    ac.: Math.round((a.media || 0) * 2),
                     total_questoes: 20
                 }));
                 atualizarGraficosConceitos(dadosParaGraficos);
@@ -3632,7 +3632,7 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM FILTROS (APENAS ACERTOS E ERROS, SEM NOTAS)
+        // CARREGAR RESULTADOS COM FILTROS (APENAS ac. E Er., SEM NOTAS)
         // ============================================
         async function carregarResultadosComFiltros() {
             try {
@@ -3691,17 +3691,17 @@
                 document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                // Gerar tabela com apenas ACERTOS e ERROS (sem notas e sem soma)
+                // Gerar tabela com apenas ac. e Er. (sem notas e sem soma)
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
-                    // Extrair acertos e erros de cada disciplina
-                    const acertosPortugues = aluno.portugues?.acertos || 0;
-                    const errosPortugues = aluno.portugues?.erros || 0;
-                    const acertosMatematica = aluno.matematica?.acertos || 0;
-                    const errosMatematica = aluno.matematica?.erros || 0;
-                    const acertosProducao = aluno.producao?.acertos || 0;
-                    const errosProducao = aluno.producao?.erros || 0;
+                    // Extrair ac. e Er. de cada disciplina
+                    const ac.Portugues = aluno.portugues?.ac. || 0;
+                    const Er.Portugues = aluno.portugues?.Er. || 0;
+                    const ac.Matematica = aluno.matematica?.ac. || 0;
+                    const Er.Matematica = aluno.matematica?.Er. || 0;
+                    const ac.Producao = aluno.producao?.ac. || 0;
+                    const Er.Producao = aluno.producao?.Er. || 0;
                     
                     const media = aluno.media || 0;
                     const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
@@ -3715,9 +3715,9 @@
                         '<td>' + (index + 1) + '</td>' +
                         '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><div class="valores"><span class="acertos">' + acertosPortugues + '</span>/<span class="erros">' + errosPortugues + '</span></div></td>' +
-                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><div class="valores"><span class="acertos">' + acertosMatematica + '</span>/<span class="erros">' + errosMatematica + '</span></div></td>' +
-                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><div class="valores"><span class="acertos">' + acertosProducao + '</span>/<span class="erros">' + errosProducao + '</span></div></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><div class="valores"><span class="ac.">' + ac.Portugues + '</span>/<span class="Er.">' + Er.Portugues + '</span></div></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><div class="valores"><span class="ac.">' + ac.Matematica + '</span>/<span class="Er.">' + Er.Matematica + '</span></div></td>' +
+                        '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><div class="valores"><span class="ac.">' + ac.Producao + '</span>/<span class="Er.">' + Er.Producao + '</span></div></td>' +
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                         '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                         '</tr>';
@@ -3725,7 +3725,7 @@
 
                 // Atualizar gráficos com os dados
                 const dadosParaGraficos = dadosAlunos.map(a => ({
-                    acertos: Math.round((a.media || 0) * 2),
+                    ac.: Math.round((a.media || 0) * 2),
                     total_questoes: 20
                 }));
                 atualizarGraficosConceitos(dadosParaGraficos);
@@ -3740,7 +3740,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO (APENAS ACERTOS E ERROS, SEM NOTAS)
+        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO (APENAS ac. E Er., SEM NOTAS)
         // ============================================
         function buscarRelatorioAluno() {
             const alunoId = document.getElementById('rel-aluno-select').value;
@@ -3806,17 +3806,17 @@
                                 tipo = 'Matematica';
                             }
                         }
-                        // Extrair acertos e erros
-                        const acertos = parseInt(item.acertos) || 0;
-                        const erros = parseInt(item.erros) || 0;
-                        prova.avaliacoes[tipo] = { acertos: acertos, erros: erros };
+                        // Extrair ac. e Er.
+                        const ac. = parseInt(item.ac.) || 0;
+                        const Er. = parseInt(item.Er.) || 0;
+                        prova.avaliacoes[tipo] = { ac.: ac., Er.: Er. };
                     });
                     
                     const provasArray = Array.from(provasMap.values()).map(prova => {
-                        const portugues = prova.avaliacoes.Portugues || { acertos: 0, erros: 0 };
-                        const matematica = prova.avaliacoes.Matematica || { acertos: 0, erros: 0 };
-                        const producao = prova.avaliacoes.Producao || { acertos: 0, erros: 0 };
-                        const soma = (portugues.acertos || 0) + (matematica.acertos || 0) + (producao.acertos || 0);
+                        const portugues = prova.avaliacoes.Portugues || { ac.: 0, Er.: 0 };
+                        const matematica = prova.avaliacoes.Matematica || { ac.: 0, Er.: 0 };
+                        const producao = prova.avaliacoes.Producao || { ac.: 0, Er.: 0 };
+                        const soma = (portugues.ac. || 0) + (matematica.ac. || 0) + (producao.ac. || 0);
                         const totalQuestoes = 20;
                         const media = totalQuestoes > 0 ? (soma / (totalQuestoes * 3)) * 10 : 0;
                         return {
@@ -3842,9 +3842,9 @@
                         return '<tr>' +
                             '<td>' + p.prova_titulo + '</td>' +
                             '<td>' + data + '</td>' +
-                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><div class="valores"><span class="acertos">' + p.portugues.acertos + '</span>/<span class="erros">' + p.portugues.erros + '</span></div></td>' +
-                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><div class="valores"><span class="acertos">' + p.matematica.acertos + '</span>/<span class="erros">' + p.matematica.erros + '</span></div></td>' +
-                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><div class="valores"><span class="acertos">' + p.producao.acertos + '</span>/<span class="erros">' + p.producao.erros + '</span></div></td>' +
+                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-portugues">🇵🇹</span><div class="valores"><span class="ac.">' + p.portugues.ac. + '</span>/<span class="Er.">' + p.portugues.Er. + '</span></div></td>' +
+                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-matematica">📐</span><div class="valores"><span class="ac.">' + p.matematica.ac. + '</span>/<span class="Er.">' + p.matematica.Er. + '</span></div></td>' +
+                            '<td class="col-avaliacao"><span class="avaliacao-tag tag-producao">✍️</span><div class="valores"><span class="ac.">' + p.producao.ac. + '</span>/<span class="Er.">' + p.producao.Er. + '</span></div></td>' +
                             '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                             '</tr>';
                     }).join('');
@@ -3863,7 +3863,7 @@
                             const altura = Math.max(10, (p.soma / 60) * 80);
                             const cor = p.media >= 5 ? '#10b981' : (p.media >= 3 ? '#f59e0b' : '#ef4444');
                             const label = p.prova_titulo.substring(0, 10);
-                            html += `<div class="chart-bar-item" title="${p.prova_titulo} - Total Acertos: ${p.soma}">
+                            html += `<div class="chart-bar-item" title="${p.prova_titulo} - Total ac.: ${p.soma}">
                                 <div class="chart-bar-val">${p.soma}</div>
                                 <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
                                 <div class="chart-bar-lbl">${label}</div>
@@ -4429,7 +4429,7 @@
             
             const alunos = [];
             let processados = 0;
-            let erros = 0;
+            let Er. = 0;
             
             linhas.forEach((linha, index) => {
                 let nome = '';
@@ -4483,7 +4483,7 @@
                 numero = numero.trim();
                 
                 if (!nome) {
-                    erros++;
+                    Er.++;
                     return;
                 }
                 
@@ -4508,7 +4508,7 @@
             if (alunos.length === 0) {
                 statusDiv.style.display = 'block';
                 statusDiv.className = 'multi-status error';
-                statusText.textContent = `⚠️ Nenhum aluno válido encontrado! ${erros > 0 ? `(${erros} linhas ignoradas)` : ''}`;
+                statusText.textContent = `⚠️ Nenhum aluno válido encontrado! ${Er. > 0 ? `(${Er.} linhas ignoradas)` : ''}`;
                 return;
             }
             
@@ -4518,7 +4518,7 @@
             
             const turmaId = parseInt(turmaSelect.value);
             let salvos = 0;
-            let errosSalvamento = 0;
+            let Er.Salvamento = 0;
             
             const multiStatus = document.getElementById('multi-status');
             multiStatus.style.display = 'block';
@@ -4549,17 +4549,17 @@
                     if (result.id) {
                         salvos++;
                     } else {
-                        errosSalvamento++;
+                        Er.Salvamento++;
                         console.error('Erro ao salvar aluno:', aluno.nome, result);
                     }
                     
-                    const total = salvos + errosSalvamento;
+                    const total = salvos + Er.Salvamento;
                     document.getElementById('multi-status-text').textContent = 
-                        `⏳ Cadastrando ${total}/${alunos.length}... (${salvos} salvos, ${errosSalvamento} erros)`;
+                        `⏳ Cadastrando ${total}/${alunos.length}... (${salvos} salvos, ${Er.Salvamento} Er.)`;
                     
                     if (total === alunos.length) {
                         const statusDiv = document.getElementById('multi-status');
-                        if (errosSalvamento === 0) {
+                        if (Er.Salvamento === 0) {
                             statusDiv.className = 'multi-status success';
                             document.getElementById('multi-status-text').textContent = 
                                 `✅ ${salvos} alunos cadastrados com sucesso!`;
@@ -4567,8 +4567,8 @@
                         } else {
                             statusDiv.className = 'multi-status error';
                             document.getElementById('multi-status-text').textContent = 
-                                `⚠️ ${salvos} salvos, ${errosSalvamento} erros. Verifique o console.`;
-                            showToast(`⚠️ ${salvos} alunos salvos, ${errosSalvamento} com erro.`, 'warning');
+                                `⚠️ ${salvos} salvos, ${Er.Salvamento} Er.. Verifique o console.`;
+                            showToast(`⚠️ ${salvos} alunos salvos, ${Er.Salvamento} com erro.`, 'warning');
                         }
                         
                         setTimeout(() => {
@@ -4579,15 +4579,15 @@
                     }
                 })
                 .catch(err => {
-                    errosSalvamento++;
+                    Er.Salvamento++;
                     console.error('Erro ao salvar aluno:', aluno.nome, err);
-                    const total = salvos + errosSalvamento;
+                    const total = salvos + Er.Salvamento;
                     document.getElementById('multi-status-text').textContent = 
-                        `⏳ Cadastrando ${total}/${alunos.length}... (${salvos} salvos, ${errosSalvamento} erros)`;
+                        `⏳ Cadastrando ${total}/${alunos.length}... (${salvos} salvos, ${Er.Salvamento} Er.)`;
                     
                     if (total === alunos.length) {
                         const statusDiv = document.getElementById('multi-status');
-                        if (errosSalvamento === 0) {
+                        if (Er.Salvamento === 0) {
                             statusDiv.className = 'multi-status success';
                             document.getElementById('multi-status-text').textContent = 
                                 `✅ ${salvos} alunos cadastrados com sucesso!`;
@@ -4595,8 +4595,8 @@
                         } else {
                             statusDiv.className = 'multi-status error';
                             document.getElementById('multi-status-text').textContent = 
-                                `⚠️ ${salvos} salvos, ${errosSalvamento} erros.`;
-                            showToast(`⚠️ ${salvos} alunos salvos, ${errosSalvamento} com erro.`, 'warning');
+                                `⚠️ ${salvos} salvos, ${Er.Salvamento} Er..`;
+                            showToast(`⚠️ ${salvos} alunos salvos, ${Er.Salvamento} com erro.`, 'warning');
                         }
                         
                         setTimeout(() => {
@@ -4828,7 +4828,7 @@
                 correcaoManualData.serie = dados.serie || '1º Ano';
                 
                 if (box) box.style.display = 'block';
-                showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
+                showToast('✅ ' + (dados.ac. || 0) + '/' + (dados.total || 0) + ' ac. — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
                 carregarDashboard();
                 carregarResultados();
             } catch (erro) {
@@ -4973,9 +4973,9 @@
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length >= 5) {
-                    const acertos = parseInt(cells[4]?.textContent) || 0;
+                    const ac. = parseInt(cells[4]?.textContent) || 0;
                     const totalQuestoes = 20;
-                    dadosAtuais.push({ acertos: acertos, total_questoes: totalQuestoes });
+                    dadosAtuais.push({ ac.: ac., total_questoes: totalQuestoes });
                 }
             });
             atualizarGraficosConceitos(dadosAtuais);
@@ -4998,7 +4998,7 @@
             const conceitos = { 'inicial': 0, 'basico': 0, 'proficiente': 0, 'avancado': 0 };
             dados.forEach(item => {
                 const totalQuestoes = item.total_questoes || 20;
-                const porcentagem = totalQuestoes > 0 ? Math.round((item.acertos / totalQuestoes) * 100) : 0;
+                const porcentagem = totalQuestoes > 0 ? Math.round((item.ac. / totalQuestoes) * 100) : 0;
                 const conceito = calcularConceito(porcentagem);
                 conceitos[conceito] = (conceitos[conceito] || 0) + 1;
             });
@@ -5077,33 +5077,33 @@
             showToast('📥 Exportando resultados filtrados...', 'info');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (!tbody) return;
-            let csv = 'Posição,Número,Nome,Série,Português Acertos,Português Erros,Matemática Acertos,Matemática Erros,Produção Acertos,Produção Erros,Conceito\n';
+            let csv = 'Posição,Número,Nome,Série,Português ac.,Português Er.,Matemática ac.,Matemática Er.,Produção ac.,Produção Er.,Conceito\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length >= 10) {
-                    // Extrair acertos e erros de cada disciplina
+                    // Extrair ac. e Er. de cada disciplina
                     const portuguesText = cells[4]?.textContent?.trim() || '0/0';
                     const portuguesParts = portuguesText.split('/');
-                    const portuguesAcertos = portuguesParts[0] || '0';
-                    const portuguesErros = portuguesParts[1] || '0';
+                    const portuguesAc. = portuguesParts[0] || '0';
+                    const portuguesEr. = portuguesParts[1] || '0';
                     
                     const matematicaText = cells[5]?.textContent?.trim() || '0/0';
                     const matematicaParts = matematicaText.split('/');
-                    const matematicaAcertos = matematicaParts[0] || '0';
-                    const matematicaErros = matematicaParts[1] || '0';
+                    const matematicaAc. = matematicaParts[0] || '0';
+                    const matematicaEr. = matematicaParts[1] || '0';
                     
                     const producaoText = cells[6]?.textContent?.trim() || '0/0';
                     const producaoParts = producaoText.split('/');
-                    const producaoAcertos = producaoParts[0] || '0';
-                    const producaoErros = producaoParts[1] || '0';
+                    const producaoAc. = producaoParts[0] || '0';
+                    const producaoEr. = producaoParts[1] || '0';
                     
                     csv += cells[0].textContent.trim() + ',' + 
                            cells[1].textContent.trim() + ',' + 
                            cells[2].textContent.trim() + ',' + 
                            cells[3].textContent.trim() + ',' + 
-                           portuguesAcertos + ',' + portuguesErros + ',' +
-                           matematicaAcertos + ',' + matematicaErros + ',' +
-                           producaoAcertos + ',' + producaoErros + ',' +
+                           portuguesAc. + ',' + portuguesEr. + ',' +
+                           matematicaAc. + ',' + matematicaEr. + ',' +
+                           producaoAc. + ',' + producaoEr. + ',' +
                            cells[7]?.textContent?.trim() + '\n';
                 }
             });
