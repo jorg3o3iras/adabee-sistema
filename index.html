@@ -1296,6 +1296,8 @@
                         <div class="form-group" style="justify-content:flex-end; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
                             <button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button>
                             <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                            <button class="btn btn-orange" onclick="editarGabaritoAluno()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
+                            <button class="btn btn-red" onclick="excluirAlunoRelatorio()" title="Excluir Aluno">🗑️ Excluir Aluno</button>
                         </div>
                     </div>
                 </div>
@@ -3790,6 +3792,124 @@
                 .catch(e => {
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
                     console.error(e);
+                });
+        }
+
+        // ============================================
+        // FUNÇÃO PARA EDITAR GABARITO DO ALUNO
+        // ============================================
+        function editarGabaritoAluno() {
+            const alunoId = document.getElementById('rel-aluno-select').value;
+            const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+            const provaId = document.getElementById('rel-aluno-prova').value;
+            
+            if (!alunoId) {
+                showToast('❌ Selecione um aluno!', 'error');
+                return;
+            }
+            
+            if (!provaId) {
+                showToast('❌ Selecione uma prova!', 'error');
+                return;
+            }
+            
+            // Buscar as respostas do aluno para esta prova
+            fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`)
+                .then(r => r.json())
+                .then(historico => {
+                    if (!historico || historico.length === 0 || historico.erro) {
+                        showToast('❌ Nenhuma correção encontrada para este aluno e prova!', 'error');
+                        return;
+                    }
+                    
+                    // Pegar a primeira correção
+                    const correcao = historico[0];
+                    
+                    // Buscar o gabarito da prova
+                    fetch(`${API_URL}/api/provas/${provaId}`)
+                        .then(r => r.json())
+                        .then(prova => {
+                            if (!prova || prova.erro) {
+                                showToast('❌ Erro ao carregar dados da prova!', 'error');
+                                return;
+                            }
+                            
+                            // Preparar dados para edição
+                            correcaoManualData.alunoId = parseInt(alunoId);
+                            correcaoManualData.alunoNome = alunoNome;
+                            correcaoManualData.provaId = parseInt(provaId);
+                            correcaoManualData.provaTitulo = prova.titulo || 'Prova';
+                            correcaoManualData.gabarito = prova.gabarito || [];
+                            correcaoManualData.respostasAluno = correcao.respostas || [];
+                            correcaoManualData.quantidade = prova.quantidade_questoes || 20;
+                            correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                            correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+                            correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+                            correcaoManualData.valorPorQuestao = correcaoManualData.notaMaxima / correcaoManualData.quantidade;
+                            correcaoManualData.serie = prova.turma_serie || '1º Ano';
+                            
+                            // Abrir modal de correção manual
+                            document.getElementById('cm-aluno-nome').textContent = alunoNome;
+                            document.getElementById('cm-prova-titulo').textContent = prova.titulo || 'Prova';
+                            document.getElementById('cm-turma-info').textContent = (prova.turma_serie || '') + ' | Turma: ' + (prova.turma_nome || '');
+                            document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
+                            gerarGridCorrecaoManual();
+                            atualizarResumoCorrecaoManual();
+                            openM('m-correcao-manual');
+                        })
+                        .catch(e => {
+                            console.error('Erro ao carregar prova:', e);
+                            showToast('❌ Erro ao carregar dados da prova', 'error');
+                        });
+                })
+                .catch(e => {
+                    console.error('Erro ao carregar histórico:', e);
+                    showToast('❌ Erro ao carregar histórico do aluno', 'error');
+                });
+        }
+
+        // ============================================
+        // FUNÇÃO PARA EXCLUIR ALUNO
+        // ============================================
+        function excluirAlunoRelatorio() {
+            const alunoId = document.getElementById('rel-aluno-select').value;
+            const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+            
+            if (!alunoId) {
+                showToast('❌ Selecione um aluno!', 'error');
+                return;
+            }
+            
+            if (!confirm('Tem certeza que deseja excluir o aluno "' + alunoNome + '" e todas as suas correções?')) {
+                return;
+            }
+            
+            fetch(API_URL + '/api/alunos/' + alunoId, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        showToast('🗑️ Aluno "' + alunoNome + '" excluído com sucesso!', 'error');
+                        // Limpar o select e recarregar
+                        const selectAluno = document.getElementById('rel-aluno-select');
+                        if (selectAluno) {
+                            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                        }
+                        const tbody = document.getElementById('rel-aluno-historico');
+                        if (tbody) {
+                            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>';
+                        }
+                        const evolucao = document.getElementById('rel-evolucao');
+                        if (evolucao) {
+                            evolucao.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Selecione um aluno</div>';
+                        }
+                        carregarAlunos();
+                    } else {
+                        showToast('❌ Erro ao excluir: ' + (data.erro || 'Erro desconhecido'), 'error');
+                    }
+                })
+                .catch(e => {
+                    console.error('Erro ao excluir aluno:', e);
+                    showToast('❌ Erro ao excluir aluno', 'error');
                 });
         }
 
