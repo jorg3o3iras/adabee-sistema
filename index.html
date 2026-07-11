@@ -3702,11 +3702,11 @@
                         const prova = provasMap.get(key);
                         const disciplina = item.disciplina || 'Geral';
                         let tipo = 'Geral';
-                        if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                        if (disciplina && (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues'))) {
                             tipo = 'Portugues';
-                        } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                        } else if (disciplina && (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica'))) {
                             tipo = 'Matematica';
-                        } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                        } else if (disciplina && (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação'))) {
                             tipo = 'Producao';
                         }
                         if (tipo === 'Geral' && item.prova_titulo) {
@@ -3723,6 +3723,10 @@
                                 tipo = 'Matematica';
                             }
                         }
+                        // Se ainda for Geral, usa o valor da nota como Português por padrão
+                        if (tipo === 'Geral') {
+                            tipo = 'Portugues';
+                        }
                         prova.avaliacoes[tipo] = item.nota || 0;
                     });
                     
@@ -3733,10 +3737,10 @@
                         const soma = notaPortugues + notaMatematica + notaProducao;
                         return {
                             ...prova,
-                            notaPortugues,
-                            notaMatematica,
-                            notaProducao,
-                            soma
+                            notaPortugues: Number(notaPortugues),
+                            notaMatematica: Number(notaMatematica),
+                            notaProducao: Number(notaProducao),
+                            soma: Number(soma)
                         };
                     });
                     
@@ -3790,8 +3794,8 @@
                     }
                 })
                 .catch(e => {
+                    console.error('Erro ao carregar histórico:', e);
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
-                    console.error(e);
                 });
         }
 
