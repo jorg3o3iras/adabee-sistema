@@ -170,9 +170,9 @@
         .chip { display:inline-block; padding:2px 10px; background:var(--bg2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--text2); }
 
         .table-wrap { overflow-x:auto; }
-        table { width:100%; border-collapse:collapse; font-size:13px; }
-        th { text-align:center; padding:8px 6px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
-        td { padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; }
+        table { width:100%; border-collapse:collapse; font-size:12px; }
+        th { text-align:center; padding:5px 3px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:8px; text-transform:uppercase; letter-spacing:.2px; }
+        td { padding:5px 3px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; vertical-align:middle; font-size:11px; }
         tr:hover td { background:rgba(255,255,255,0.02); }
         .search-wrap { display:flex; align-items:center; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; padding:0 12px; transition:border .3s; }
         .search-wrap:focus-within { border-color:var(--blue); }
@@ -485,28 +485,27 @@
         @keyframes spin { to { transform:rotate(360deg); } }
 
         /* ============================================
-           ESTILOS PARA ACERTOS E ERROS NA TABELA DE RESULTADOS
+           ESTILOS PARA A TABELA DE RESULTADOS
            ============================================ */
         .disciplina-cell {
-            padding: 4px 6px;
+            padding: 3px 4px;
             text-align: center;
-            border-radius: 6px;
-            min-width: 70px;
+            border-radius: 4px;
+            min-width: 60px;
         }
-        .disciplina-cell .disciplina-nome {
-            font-size: 10px;
+        .disciplina-cell .disciplina-tag {
+            font-size: 7px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
             display: block;
-            margin-bottom: 3px;
-            color: var(--text3);
+            margin-bottom: 2px;
         }
         .disciplina-cell .acertos-erros {
             display: flex;
             justify-content: center;
-            gap: 8px;
-            font-size: 13px;
+            gap: 4px;
+            font-size: 11px;
             font-weight: 700;
         }
         .disciplina-cell .acertos-erros .acertos {
@@ -519,31 +518,29 @@
             color: var(--text3);
             font-weight: 300;
         }
-        .disciplina-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
+        .disciplina-cell .conceito {
+            display: block;
+            margin-top: 2px;
             font-size: 8px;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-right: 4px;
         }
-        .tag-portugues { background: rgba(59,130,246,0.15); color: #3b82f6; }
-        .tag-matematica { background: rgba(16,185,129,0.15); color: #10b981; }
-        .tag-producao { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+        .tag-portugues { color: #3b82f6; }
+        .tag-matematica { color: #10b981; }
+        .tag-producao { color: #8b5cf6; }
 
-        .col-acerto {
-            min-width: 50px;
-            padding: 4px 4px;
-            font-size: 12px;
-            font-weight: 600;
+        /* Badges menores para conceitos na tabela */
+        .badge-conceito-inicial-sm { background:rgba(239,68,68,0.2); color:#ef4444; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+        .badge-conceito-basico-sm { background:rgba(245,158,11,0.2); color:#f59e0b; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+        .badge-conceito-proficiente-sm { background:rgba(59,130,246,0.2); color:#3b82f6; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+        .badge-conceito-avancado-sm { background:rgba(16,185,129,0.2); color:#10b981; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+
+        .col-disciplina {
+            min-width: 75px;
+            padding: 4px 2px;
         }
-        .col-acerto .acerto-val {
-            color: var(--green);
-        }
-        .col-acerto .erro-val {
-            color: var(--red);
+        .col-escola, .col-turma {
+            min-width: 80px;
+            font-size: 10px;
         }
 
         /* ============================================
@@ -577,21 +574,20 @@
                 grid-template-columns: repeat(5, 1fr);
             }
             .disciplina-cell {
-                min-width: 60px;
-                padding: 3px 4px;
+                min-width: 50px;
+                padding: 2px 3px;
             }
             .disciplina-cell .acertos-erros {
-                font-size: 11px;
-                gap: 4px;
+                font-size: 10px;
+                gap: 3px;
                 flex-wrap: wrap;
             }
-            .disciplina-cell .disciplina-nome {
-                font-size: 8px;
+            .col-disciplina {
+                min-width: 60px;
             }
-            .col-acerto {
-                min-width: 35px;
-                font-size: 10px;
-                padding: 3px 2px;
+            .col-escola, .col-turma {
+                min-width: 60px;
+                font-size: 9px;
             }
         }
         @media (max-width:480px) {
@@ -608,22 +604,24 @@
                 grid-template-columns: repeat(4, 1fr);
             }
             .disciplina-cell {
-                min-width: 50px;
-                padding: 2px 3px;
+                min-width: 40px;
+                padding: 2px 2px;
             }
             .disciplina-cell .acertos-erros {
-                font-size: 10px;
-                gap: 3px;
+                font-size: 9px;
+                gap: 2px;
                 flex-direction: column;
                 align-items: center;
             }
-            .disciplina-cell .disciplina-nome {
+            .disciplina-cell .conceito {
                 font-size: 7px;
             }
-            .col-acerto {
-                min-width: 28px;
-                font-size: 9px;
-                padding: 2px 1px;
+            .col-disciplina {
+                min-width: 50px;
+            }
+            .col-escola, .col-turma {
+                min-width: 50px;
+                font-size: 8px;
             }
         }
 
@@ -671,25 +669,25 @@
             }
             .page { display: none !important; }
             .page.active { display: block !important; animation: none !important; padding: 0 !important; margin: 0 !important; }
-            body { background: #ffffff !important; color: #000000 !important; margin: 0 !important; padding: 0 !important; font-size: 11pt !important; line-height: 1.5 !important; }
+            body { background: #ffffff !important; color: #000000 !important; margin: 0 !important; padding: 0 !important; font-size: 10pt !important; line-height: 1.4 !important; }
             #app { display: block !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }
-            .content { padding: 15px !important; margin: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; width: 100% !important; box-sizing: border-box !important; }
-            .card { background: #ffffff !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 12px 14px !important; margin-bottom: 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .card-header { border-bottom: 1px solid #dddddd !important; padding-bottom: 8px !important; margin-bottom: 10px !important; }
-            .card-title { color: #000000 !important; font-size: 13pt !important; }
-            .stats-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .stat-card { background: #f9f9f9 !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 10px 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .stat-val { font-size: 20pt !important; color: #000000 !important; }
-            .stat-label { color: #555555 !important; font-size: 9pt !important; }
+            .content { padding: 12px !important; margin: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; width: 100% !important; box-sizing: border-box !important; }
+            .card { background: #ffffff !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 10px 12px !important; margin-bottom: 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .card-header { border-bottom: 1px solid #dddddd !important; padding-bottom: 6px !important; margin-bottom: 8px !important; }
+            .card-title { color: #000000 !important; font-size: 12pt !important; }
+            .stats-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .stat-card { background: #f9f9f9 !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 8px 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .stat-val { font-size: 18pt !important; color: #000000 !important; }
+            .stat-label { color: #555555 !important; font-size: 8pt !important; }
             .stat-icon { display: none !important; }
-            .table-wrap { border: 1px solid #dddddd !important; border-radius: 4px !important; overflow: visible !important; margin-bottom: 10px !important; }
-            table { border-collapse: collapse !important; width: 100% !important; font-size: 9pt !important; color: #000000 !important; }
+            .table-wrap { border: 1px solid #dddddd !important; border-radius: 4px !important; overflow: visible !important; margin-bottom: 8px !important; }
+            table { border-collapse: collapse !important; width: 100% !important; font-size: 8pt !important; color: #000000 !important; }
             thead { background: #f5f5f5 !important; }
-            th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 4px 4px !important; text-align: center !important; font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; }
-            td { border: 1px solid #cccccc !important; padding: 4px 4px !important; color: #000000 !important; background: #ffffff !important; text-align: center !important; }
+            th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 3px 3px !important; text-align: center !important; font-size: 6pt !important; text-transform: uppercase !important; letter-spacing: 0.2px !important; }
+            td { border: 1px solid #cccccc !important; padding: 3px 3px !important; color: #000000 !important; background: #ffffff !important; text-align: center !important; font-size: 7pt !important; }
             tbody tr:hover td { background: #ffffff !important; }
             tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-            .badge { border: 1px solid #999999 !important; background: #f0f0f0 !important; color: #000000 !important; padding: 1px 8px !important; font-size: 7pt !important; border-radius: 12px !important; font-weight: 700 !important; text-transform: uppercase !important; }
+            .badge { border: 1px solid #999999 !important; background: #f0f0f0 !important; color: #000000 !important; padding: 1px 6px !important; font-size: 6pt !important; border-radius: 10px !important; font-weight: 700 !important; text-transform: uppercase !important; }
             .badge-green { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
             .badge-red { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
             .badge-orange { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
@@ -700,38 +698,42 @@
             .badge-conceito-basico { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
             .badge-conceito-proficiente { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
             .badge-conceito-avancado { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+            .badge-conceito-inicial-sm { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; font-size: 6pt !important; }
+            .badge-conceito-basico-sm { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; font-size: 6pt !important; }
+            .badge-conceito-proficiente-sm { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; font-size: 6pt !important; }
+            .badge-conceito-avancado-sm { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; font-size: 6pt !important; }
             .progress { background: #e9ecef !important; border: 1px solid #cccccc !important; border-radius: 4px !important; height: 10px !important; overflow: hidden !important; }
             .progress-fill { border-radius: 4px !important; background: #007bff !important; }
             .pf-green { background: #28a745 !important; }
             .pf-orange { background: #fd7e14 !important; }
             .pf-purple { background: #6f42c1 !important; }
             .pf-blue { background: #007bff !important; }
-            .chart-bars { height: 100px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .chart-bar-val { font-size: 8pt !important; color: #000000 !important; }
-            .chart-bar-lbl { font-size: 7pt !important; color: #555555 !important; }
-            .conceito-graficos { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-            #conceito-barras .progress { height: 14px !important; }
-            #conceito-barras .progress-fill { height: 14px !important; border-radius: 4px !important; }
-            #donut-container { transform: scale(0.9) !important; }
-            #donut-container canvas { max-width: 160px !important; max-height: 160px !important; }
-            .page-header { margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
-            .page-title { font-size: 16pt !important; color: #000000 !important; }
-            .page-sub { color: #555555 !important; font-size: 10pt !important; }
-            @page { size: A4 !important; margin: 15mm 12mm !important; margin-top: 10mm !important; margin-bottom: 10mm !important; }
+            .chart-bars { height: 80px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .chart-bar-val { font-size: 7pt !important; color: #000000 !important; }
+            .chart-bar-lbl { font-size: 6pt !important; color: #555555 !important; }
+            .conceito-graficos { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            #conceito-barras .progress { height: 12px !important; }
+            #conceito-barras .progress-fill { height: 12px !important; border-radius: 4px !important; }
+            #donut-container { transform: scale(0.8) !important; }
+            #donut-container canvas { max-width: 140px !important; max-height: 140px !important; }
+            .page-header { margin-bottom: 12px !important; padding-bottom: 8px !important; border-bottom: 2px solid #333333 !important; }
+            .page-title { font-size: 14pt !important; color: #000000 !important; }
+            .page-sub { color: #555555 !important; font-size: 9pt !important; }
+            @page { size: A4 landscape !important; margin: 10mm 8mm !important; }
             .card { page-break-inside: avoid !important; break-inside: avoid !important; }
             .card.allow-break { page-break-inside: auto !important; break-inside: auto !important; }
             .page-break { page-break-after: always !important; break-after: page !important; }
             img { page-break-inside: avoid !important; break-inside: avoid !important; }
             .toast-container { display: none !important; }
-            .print-header { display: block !important; text-align: center !important; margin-bottom: 20px !important; padding-bottom: 12px !important; border-bottom: 2px solid #333333 !important; }
-            .print-header h2 { font-size: 16pt !important; margin: 0 !important; color: #000000 !important; }
-            .print-header p { font-size: 10pt !important; color: #555555 !important; margin: 4px 0 0 0 !important; }
-            .disciplina-cell .disciplina-nome { color: #333 !important; }
+            .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
+            .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
+            .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
+            .disciplina-cell .disciplina-tag { color: #333 !important; }
             .disciplina-cell .acertos-erros .acertos { color: #28a745 !important; }
             .disciplina-cell .acertos-erros .erros { color: #dc3545 !important; }
             .disciplina-cell .acertos-erros .separador { color: #666 !important; }
-            .col-acerto .acerto-val { color: #28a745 !important; }
-            .col-acerto .erro-val { color: #dc3545 !important; }
+            .col-disciplina { min-width: 60px !important; }
+            .col-escola, .col-turma { min-width: 60px !important; font-size: 7pt !important; }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -1192,7 +1194,7 @@
                 <div class="page-header">
                     <div>
                         <div class="page-title">🏆 Resultados</div>
-                        <p class="page-sub">Acertos e erros por disciplina — Análise detalhada</p>
+                        <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
                     </div>
                     <div class="page-actions no-print">
                         <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
@@ -1293,22 +1295,26 @@
                                     <th rowspan="2">Nº</th>
                                     <th rowspan="2">Nome</th>
                                     <th rowspan="2">Série</th>
-                                    <th colspan="2" style="background:rgba(59,130,246,0.08);border-bottom:2px solid #3b82f6;">🇵🇹 Português</th>
-                                    <th colspan="2" style="background:rgba(16,185,129,0.08);border-bottom:2px solid #10b981;">📐 Matemática</th>
-                                    <th colspan="2" style="background:rgba(139,92,246,0.08);border-bottom:2px solid #8b5cf6;">✍️ Produção</th>
-                                    <th rowspan="2">Conceito</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;">🇵🇹 Português</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;">📐 Matemática</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;">✍️ Produção</th>
+                                    <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
+                                    <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
                                 </tr>
                                 <tr>
-                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Acertos</th>
-                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Erros</th>
-                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:3px 4px;text-align:center;">Acertos</th>
-                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:3px 4px;text-align:center;">Erros</th>
-                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Acertos</th>
-                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Erros</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
                                 </tr>
                             </thead>
                             <tbody id="tb-resultados-filtrado">
-                                <tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                                <tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3528,7 +3534,7 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM ACERTOS E ERROS POR DISCIPLINA (SEM COLUNA STATUS)
+        // CARREGAR RESULTADOS COM ACERTOS, ERROS E CONCEITOS POR DISCIPLINA
         // ============================================
         async function carregarResultados() {
             try {
@@ -3540,14 +3546,14 @@
                 if (!tbody) return;
 
                 if (!alunos || alunos.length === 0 || alunos.erro) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
                     return;
                 }
 
                 const dadosAlunos = Array.isArray(alunos) ? alunos : [];
                 
                 if (dadosAlunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                     return;
                 }
 
@@ -3572,10 +3578,10 @@
                 const totalAlunosTabela = document.getElementById('total-alunos-tabela');
                 if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
 
-                // Função para obter acertos e erros de uma disciplina
-                function getAcertosErros(disciplinaData, totalQuestoes) {
+                // Função para obter acertos, erros e conceito de uma disciplina
+                function getDadosDisciplina(disciplinaData, totalQuestoes) {
                     if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0 };
+                        return { acertos: 0, erros: 0, conceito: 'inicial' };
                     }
                     const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
                     let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
@@ -3583,37 +3589,41 @@
                     if (erros === 0 && totalDisc > 0 && acertos > 0) {
                         erros = totalDisc - acertos;
                     }
-                    return { acertos, erros };
+                    const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                    const conceito = calcularConceito(porcentagem);
+                    return { acertos, erros, conceito };
                 }
 
-                // Gerar tabela com acertos e erros por disciplina (sem coluna STATUS)
+                // Gerar tabela com acertos, erros e conceitos por disciplina
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
-                    const portugues = getAcertosErros(aluno.portugues, 20);
-                    const matematica = getAcertosErros(aluno.matematica, 20);
-                    const producao = getAcertosErros(aluno.producao, 20);
+                    const portugues = getDadosDisciplina(aluno.portugues, 20);
+                    const matematica = getDadosDisciplina(aluno.matematica, 20);
+                    const producao = getDadosDisciplina(aluno.producao, 20);
                     
-                    const media = aluno.media || 0;
-                    const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
-                    const conceito = calcularConceito(porcentagem);
-                    const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
+                    const badgeConceito = (c) => `badge-conceito-${c}-sm`;
 
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
                         '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        // PORTUGUÊS - Acertos e Erros
+                        // PORTUGUÊS
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                        // MATEMÁTICA - Acertos e Erros
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                        // MATEMÁTICA
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                        // PRODUÇÃO - Acertos e Erros
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                        // PRODUÇÃO
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                        // ESCOLA e TURMA
+                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.escola_nome || '—') + '</td>' +
+                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.turma_nome || '—') + '</td>' +
                         '</tr>';
                 }).join('');
 
@@ -3628,13 +3638,13 @@
                 console.error('Erro ao carregar resultados:', erro);
                 const tbody = document.getElementById('tb-resultados');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
                 }
             }
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM FILTROS (SEM COLUNA STATUS)
+        // CARREGAR RESULTADOS COM FILTROS (COM CONCEITOS POR DISCIPLINA)
         // ============================================
         async function carregarResultadosComFiltros() {
             try {
@@ -3660,7 +3670,7 @@
                 if (!tbody) return;
 
                 if (!alunos || alunos.length === 0 || alunos.erro) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                     document.getElementById('res-total-filtrado').textContent = '0';
                     document.getElementById('res-Habilidades-filtrado').textContent = '0';
                     document.getElementById('res-recuperacao-filtrado').textContent = '0';
@@ -3672,7 +3682,7 @@
                 const dadosAlunos = Array.isArray(alunos) ? alunos : [];
                 
                 if (dadosAlunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                     return;
                 }
 
@@ -3691,10 +3701,10 @@
                 document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                // Função para obter acertos e erros de uma disciplina
-                function getAcertosErros(disciplinaData, totalQuestoes) {
+                // Função para obter acertos, erros e conceito de uma disciplina
+                function getDadosDisciplina(disciplinaData, totalQuestoes) {
                     if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0 };
+                        return { acertos: 0, erros: 0, conceito: 'inicial' };
                     }
                     const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
                     let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
@@ -3702,37 +3712,41 @@
                     if (erros === 0 && totalDisc > 0 && acertos > 0) {
                         erros = totalDisc - acertos;
                     }
-                    return { acertos, erros };
+                    const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                    const conceito = calcularConceito(porcentagem);
+                    return { acertos, erros, conceito };
                 }
 
-                // Gerar tabela com apenas Acertos/Erros por disciplina (sem STATUS)
+                // Gerar tabela com acertos, erros e conceitos por disciplina
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
-                    const portugues = getAcertosErros(aluno.portugues, 20);
-                    const matematica = getAcertosErros(aluno.matematica, 20);
-                    const producao = getAcertosErros(aluno.producao, 20);
+                    const portugues = getDadosDisciplina(aluno.portugues, 20);
+                    const matematica = getDadosDisciplina(aluno.matematica, 20);
+                    const producao = getDadosDisciplina(aluno.producao, 20);
                     
-                    const media = aluno.media || 0;
-                    const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
-                    const conceito = calcularConceito(porcentagem);
-                    const badgeConceito = `badge-conceito-${conceito.toLowerCase()}`;
+                    const badgeConceito = (c) => `badge-conceito-${c}-sm`;
 
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
                         '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        // PORTUGUÊS - Acertos e Erros
+                        // PORTUGUÊS
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                        // MATEMÁTICA - Acertos e Erros
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                        // MATEMÁTICA
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                        // PRODUÇÃO - Acertos e Erros
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                        // PRODUÇÃO
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                        // ESCOLA e TURMA
+                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.escola_nome || '—') + '</td>' +
+                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.turma_nome || '—') + '</td>' +
                         '</tr>';
                 }).join('');
 
@@ -3747,7 +3761,7 @@
                 console.error('❌ Erro ao carregar resultados com filtros:', erro);
                 const tbody = document.getElementById('tb-resultados-filtrado');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
                 }
             }
         }
@@ -5082,10 +5096,10 @@
             showToast('📥 Exportando resultados filtrados...', 'info');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (!tbody) return;
-            let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Matemática_Acertos,Matemática_Erros,Produção_Acertos,Produção_Erros,Conceito\n';
+            let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,Escola,Turma\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 11) {
+                if (cells.length >= 14) {
                     csv += cells[0].textContent.trim() + ',' + 
                            cells[1].textContent.trim() + ',' + 
                            cells[2].textContent.trim() + ',' + 
@@ -5096,7 +5110,11 @@
                            cells[7].textContent.trim() + ',' + 
                            cells[8].textContent.trim() + ',' + 
                            cells[9].textContent.trim() + ',' + 
-                           cells[10].textContent.trim() + '\n';
+                           cells[10].textContent.trim() + ',' + 
+                           cells[11].textContent.trim() + ',' + 
+                           cells[12].textContent.trim() + ',' + 
+                           cells[13].textContent.trim() + ',' + 
+                           cells[14].textContent.trim() + '\n';
                 }
             });
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
