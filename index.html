@@ -250,33 +250,21 @@
         .multi-status.info { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2); color:var(--blue); }
 
         /* ============================================
-           CORREÇÃO MANUAL (DENTRO DA IA) - HORIZONTAL
+           CORREÇÃO MANUAL (DENTRO DA IA) - DUAS LINHAS
            ============================================ */
         .correcao-manual-grid {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
             gap: 6px;
             padding: 8px 4px 12px;
             margin: 8px 0;
             border-radius: 8px;
             background: rgba(0, 0, 0, 0.15);
-            scrollbar-width: thin;
-            scrollbar-color: var(--border2) transparent;
-        }
-        .correcao-manual-grid::-webkit-scrollbar {
-            height: 4px;
-        }
-        .correcao-manual-grid::-webkit-scrollbar-thumb {
-            background: var(--border2);
-            border-radius: 10px;
-        }
-        .correcao-manual-grid::-webkit-scrollbar-track {
-            background: transparent;
+            max-height: 280px;
+            overflow-y: auto;
         }
 
         .correcao-manual-item {
-            flex: 0 0 72px;
             background: var(--bg2);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -288,11 +276,13 @@
             align-items: center;
             gap: 2px;
         }
+
         .correcao-manual-item .q-num {
             font-size: 8px;
             color: var(--text3);
             font-weight: 700;
         }
+
         .correcao-manual-item .q-resposta {
             font-size: 12px;
             font-weight: 800;
@@ -303,6 +293,7 @@
             line-height: 22px;
             width: 100%;
         }
+
         .correcao-manual-item .q-select {
             width: 90%;
             padding: 2px;
@@ -317,59 +308,53 @@
             transition: all 0.2s;
             cursor: pointer;
         }
+
         .correcao-manual-item .q-select:focus {
             border-color: var(--blue);
         }
+
         .correcao-manual-item .q-select.correta {
             border-color: var(--green);
             background: rgba(16, 185, 129, 0.15);
             color: var(--green);
         }
+
         .correcao-manual-item .q-select.errada {
             border-color: var(--red);
             background: rgba(239, 68, 68, 0.15);
             color: var(--red);
         }
+
         .correcao-manual-item .q-status {
             font-size: 9px;
             font-weight: 700;
             min-height: 16px;
         }
+
         .correcao-manual-item .q-status.correta {
             color: var(--green);
         }
+
         .correcao-manual-item .q-status.errada {
             color: var(--red);
         }
 
         /* ============================================
-           CORREÇÃO MANUAL STANDALONE - HORIZONTAL
+           CORREÇÃO MANUAL STANDALONE - DUAS LINHAS
            ============================================ */
         .cm-grid-standalone {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
             gap: 6px;
             padding: 8px 4px 12px;
             margin: 12px 0;
             border-radius: 8px;
             background: rgba(0, 0, 0, 0.1);
-            scrollbar-width: thin;
-            scrollbar-color: var(--border2) transparent;
-        }
-        .cm-grid-standalone::-webkit-scrollbar {
-            height: 4px;
-        }
-        .cm-grid-standalone::-webkit-scrollbar-thumb {
-            background: var(--border2);
-            border-radius: 10px;
-        }
-        .cm-grid-standalone::-webkit-scrollbar-track {
-            background: transparent;
+            max-height: 280px;
+            overflow-y: auto;
         }
 
         .cm-item-standalone {
-            flex: 0 0 68px;
             background: var(--bg2);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -381,16 +366,19 @@
             align-items: center;
             gap: 2px;
         }
+
         .cm-item-standalone .q-num {
             font-size: 7px;
             color: var(--text3);
             font-weight: 700;
         }
+
         .cm-item-standalone .q-gabarito {
             font-size: 7px;
             color: var(--text3);
             margin-bottom: 1px;
         }
+
         .cm-item-standalone .q-select-manual {
             width: 92%;
             padding: 2px;
@@ -405,19 +393,23 @@
             transition: all 0.2s;
             cursor: pointer;
         }
+
         .cm-item-standalone .q-select-manual:focus {
             border-color: var(--blue);
         }
+
         .cm-item-standalone .q-select-manual.correta {
             border-color: var(--green);
             background: rgba(16, 185, 129, 0.15);
             color: var(--green);
         }
+
         .cm-item-standalone .q-select-manual.errada {
             border-color: var(--red);
             background: rgba(239, 68, 68, 0.15);
             color: var(--red);
         }
+
         .cm-item-standalone .q-status-icon {
             font-size: 11px;
             min-height: 16px;
@@ -516,8 +508,12 @@
             .search-wrap { flex:1; }
             .modal { padding:20px; }
             .resumo-correcao { grid-template-columns:1fr; }
-            .correcao-manual-item { flex: 0 0 60px; }
-            .cm-item-standalone { flex: 0 0 58px; }
+            .correcao-manual-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .cm-grid-standalone {
+                grid-template-columns: repeat(5, 1fr);
+            }
         }
         @media (max-width:480px) {
             .stats-grid { grid-template-columns:1fr; }
@@ -526,8 +522,12 @@
             .gab-grid { grid-template-columns:repeat(auto-fill,minmax(55px,1fr)); }
             .modal { padding:16px; }
             .correcao-aluno-info { grid-template-columns:1fr; }
-            .correcao-manual-item { flex: 0 0 54px; }
-            .cm-item-standalone { flex: 0 0 52px; }
+            .correcao-manual-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .cm-grid-standalone {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
 
         /* ============================================
@@ -3702,11 +3702,11 @@
                         const prova = provasMap.get(key);
                         const disciplina = item.disciplina || 'Geral';
                         let tipo = 'Geral';
-                        if (disciplina && (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues'))) {
+                        if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
                             tipo = 'Portugues';
-                        } else if (disciplina && (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica'))) {
+                        } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
                             tipo = 'Matematica';
-                        } else if (disciplina && (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação'))) {
+                        } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
                             tipo = 'Producao';
                         }
                         if (tipo === 'Geral' && item.prova_titulo) {
@@ -3723,10 +3723,6 @@
                                 tipo = 'Matematica';
                             }
                         }
-                        // Se ainda for Geral, usa o valor da nota como Português por padrão
-                        if (tipo === 'Geral') {
-                            tipo = 'Portugues';
-                        }
                         prova.avaliacoes[tipo] = item.nota || 0;
                     });
                     
@@ -3737,10 +3733,10 @@
                         const soma = notaPortugues + notaMatematica + notaProducao;
                         return {
                             ...prova,
-                            notaPortugues: Number(notaPortugues),
-                            notaMatematica: Number(notaMatematica),
-                            notaProducao: Number(notaProducao),
-                            soma: Number(soma)
+                            notaPortugues,
+                            notaMatematica,
+                            notaProducao,
+                            soma
                         };
                     });
                     
@@ -3794,8 +3790,8 @@
                     }
                 })
                 .catch(e => {
-                    console.error('Erro ao carregar histórico:', e);
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+                    console.error(e);
                 });
         }
 
