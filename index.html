@@ -171,8 +171,8 @@
 
         .table-wrap { overflow-x:auto; }
         table { width:100%; border-collapse:collapse; font-size:13px; }
-        th { text-align:left; padding:10px 12px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
-        td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+        th { text-align:center; padding:8px 6px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
+        td { padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; }
         tr:hover td { background:rgba(255,255,255,0.02); }
         .search-wrap { display:flex; align-items:center; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; padding:0 12px; transition:border .3s; }
         .search-wrap:focus-within { border-color:var(--blue); }
@@ -488,10 +488,10 @@
            ESTILOS PARA ACERTOS E ERROS NA TABELA DE RESULTADOS
            ============================================ */
         .disciplina-cell {
-            min-width: 100px;
-            padding: 6px 8px;
+            padding: 4px 6px;
             text-align: center;
             border-radius: 6px;
+            min-width: 70px;
         }
         .disciplina-cell .disciplina-nome {
             font-size: 10px;
@@ -499,7 +499,7 @@
             text-transform: uppercase;
             letter-spacing: 0.3px;
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             color: var(--text3);
         }
         .disciplina-cell .acertos-erros {
@@ -517,12 +517,7 @@
         }
         .disciplina-cell .acertos-erros .separador {
             color: var(--text3);
-        }
-        .disciplina-cell .total-questoes {
-            font-size: 9px;
-            color: var(--text3);
-            display: block;
-            margin-top: 2px;
+            font-weight: 300;
         }
         .disciplina-tag {
             display: inline-block;
@@ -537,7 +532,19 @@
         .tag-portugues { background: rgba(59,130,246,0.15); color: #3b82f6; }
         .tag-matematica { background: rgba(16,185,129,0.15); color: #10b981; }
         .tag-producao { background: rgba(139,92,246,0.15); color: #8b5cf6; }
-        .tag-soma { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+        .col-acerto {
+            min-width: 50px;
+            padding: 4px 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .col-acerto .acerto-val {
+            color: var(--green);
+        }
+        .col-acerto .erro-val {
+            color: var(--red);
+        }
 
         /* ============================================
            RESPONSIVIDADE
@@ -570,8 +577,8 @@
                 grid-template-columns: repeat(5, 1fr);
             }
             .disciplina-cell {
-                min-width: 70px;
-                padding: 4px 6px;
+                min-width: 60px;
+                padding: 3px 4px;
             }
             .disciplina-cell .acertos-erros {
                 font-size: 11px;
@@ -580,6 +587,11 @@
             }
             .disciplina-cell .disciplina-nome {
                 font-size: 8px;
+            }
+            .col-acerto {
+                min-width: 35px;
+                font-size: 10px;
+                padding: 3px 2px;
             }
         }
         @media (max-width:480px) {
@@ -596,8 +608,8 @@
                 grid-template-columns: repeat(4, 1fr);
             }
             .disciplina-cell {
-                min-width: 60px;
-                padding: 3px 4px;
+                min-width: 50px;
+                padding: 2px 3px;
             }
             .disciplina-cell .acertos-erros {
                 font-size: 10px;
@@ -607,6 +619,11 @@
             }
             .disciplina-cell .disciplina-nome {
                 font-size: 7px;
+            }
+            .col-acerto {
+                min-width: 28px;
+                font-size: 9px;
+                padding: 2px 1px;
             }
         }
 
@@ -668,8 +685,8 @@
             .table-wrap { border: 1px solid #dddddd !important; border-radius: 4px !important; overflow: visible !important; margin-bottom: 10px !important; }
             table { border-collapse: collapse !important; width: 100% !important; font-size: 9pt !important; color: #000000 !important; }
             thead { background: #f5f5f5 !important; }
-            th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 6px 8px !important; text-align: left !important; font-size: 8pt !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
-            td { border: 1px solid #cccccc !important; padding: 6px 8px !important; color: #000000 !important; background: #ffffff !important; }
+            th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 4px 4px !important; text-align: center !important; font-size: 7pt !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; }
+            td { border: 1px solid #cccccc !important; padding: 4px 4px !important; color: #000000 !important; background: #ffffff !important; text-align: center !important; }
             tbody tr:hover td { background: #ffffff !important; }
             tr { page-break-inside: avoid !important; break-inside: avoid !important; }
             .badge { border: 1px solid #999999 !important; background: #f0f0f0 !important; color: #000000 !important; padding: 1px 8px !important; font-size: 7pt !important; border-radius: 12px !important; font-weight: 700 !important; text-transform: uppercase !important; }
@@ -713,16 +730,11 @@
             .disciplina-cell .acertos-erros .acertos { color: #28a745 !important; }
             .disciplina-cell .acertos-erros .erros { color: #dc3545 !important; }
             .disciplina-cell .acertos-erros .separador { color: #666 !important; }
+            .col-acerto .acerto-val { color: #28a745 !important; }
+            .col-acerto .erro-val { color: #dc3545 !important; }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
-
-        .col-avaliacao {
-            min-width: 90px;
-        }
-        .col-avaliacao .disciplina-cell {
-            min-width: 80px;
-        }
     </style>
 </head>
 <body>
@@ -1277,36 +1289,27 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Pos.</th>
-                                    <th>Nº</th>
-                                    <th>Nome</th>
-                                    <th>Série</th>
-                                    <th colspan="3" class="col-avaliacao" style="text-align:center;">🇵🇹 PORTUGUÊS</th>
-                                    <th colspan="3" class="col-avaliacao" style="text-align:center;">📐 MATEMÁTICA</th>
-                                    <th colspan="3" class="col-avaliacao" style="text-align:center;">✍️ PRODUÇÃO</th>
-                                    <th>Conceito</th>
-                                    <th>Ações</th>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="2" style="background:rgba(59,130,246,0.08);border-bottom:2px solid #3b82f6;">🇵🇹 Português</th>
+                                    <th colspan="2" style="background:rgba(16,185,129,0.08);border-bottom:2px solid #10b981;">📐 Matemática</th>
+                                    <th colspan="2" style="background:rgba(139,92,246,0.08);border-bottom:2px solid #8b5cf6;">✍️ Produção</th>
+                                    <th rowspan="2">Conceito</th>
+                                    <th rowspan="2">Status</th>
                                 </tr>
                                 <tr>
-                                    <th></th>
-                                    <th></th>
-                                    <th></th>
-                                    <th></th>
-                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Acertos</th>
-                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Erros</th>
-                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Total</th>
-                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">Acertos</th>
-                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">Erros</th>
-                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">Total</th>
-                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Acertos</th>
-                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Erros</th>
-                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Total</th>
-                                    <th></th>
-                                    <th></th>
+                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Erros</th>
+                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:3px 4px;text-align:center;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:3px 4px;text-align:center;">Erros</th>
+                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:3px 4px;text-align:center;">Erros</th>
                                 </tr>
                             </thead>
                             <tbody id="tb-resultados-filtrado">
-                                <tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                                <tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3530,7 +3533,6 @@
         // ============================================
         async function carregarResultados() {
             try {
-                // Usar o endpoint agrupado
                 const response = await fetch(`${API_URL}/api/historico/agrupado`);
                 const alunos = await response.json();
                 console.log('📥 Resultados agrupados:', alunos);
@@ -3539,21 +3541,21 @@
                 if (!tbody) return;
 
                 if (!alunos || alunos.length === 0 || alunos.erro) {
-                    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
                     return;
                 }
 
                 const dadosAlunos = Array.isArray(alunos) ? alunos : [];
                 
                 if (dadosAlunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                     return;
                 }
 
                 // Ordenar por média (maior para menor)
                 dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
 
-                // Atualizar estatísticas da tabela principal
+                // Atualizar estatísticas
                 const total = dadosAlunos.length;
                 const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
                 const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
@@ -3571,22 +3573,26 @@
                 const totalAlunosTabela = document.getElementById('total-alunos-tabela');
                 if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
 
-                // Função para obter acertos/erros de uma disciplina com fallback
+                // Função para obter acertos e erros de uma disciplina
                 function getAcertosErros(disciplinaData, totalQuestoes) {
                     if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0, total: totalQuestoes || 0 };
+                        return { acertos: 0, erros: 0 };
                     }
                     const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-                    const erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-                    const totalDisc = disciplinaData.total || acertos + erros || totalQuestoes || 0;
-                    return { acertos, erros, total: totalDisc };
+                    // Se o backend não retornar erros, calcular a partir do total
+                    let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                    // Se erros for 0 mas o total for maior que acertos, calcular
+                    const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                    if (erros === 0 && totalDisc > 0 && acertos > 0) {
+                        erros = totalDisc - acertos;
+                    }
+                    return { acertos, erros };
                 }
 
-                // Gerar tabela com 3 avaliações separadas (acertos/erros)
+                // Gerar tabela com acertos e erros por disciplina (sem coluna Total)
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
-                    // Extrair dados de cada disciplina
                     const portugues = getAcertosErros(aluno.portugues, 20);
                     const matematica = getAcertosErros(aluno.matematica, 20);
                     const producao = getAcertosErros(aluno.producao, 20);
@@ -3601,26 +3607,20 @@
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
-                        '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                        '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        // PORTUGUÊS
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-portugues">🇵🇹</span><div class="acertos-erros"><span class="acertos">' + portugues.acertos + '</span><span class="separador">/</span><span class="erros">' + portugues.erros + '</span></div><span class="total-questoes">' + (portugues.total > 0 ? portugues.total + ' q' : '') + '</span></div></td>' +
-                                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
-                                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="chip">' + (portugues.total > 0 ? portugues.total : '-') + '</span></td>' +
-                                        // MATEMÁTICA
-                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-matematica">📐</span><div class="acertos-erros"><span class="acertos">' + matematica.acertos + '</span><span class="separador">/</span><span class="erros">' + matematica.erros + '</span></div><span class="total-questoes">' + (matematica.total > 0 ? matematica.total + ' q' : '') + '</span></div></td>' +
-                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
-                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="chip">' + (matematica.total > 0 ? matematica.total : '-') + '</span></td>' +
-                                        // PRODUÇÃO
-                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-producao">✍️</span><div class="acertos-erros"><span class="acertos">' + producao.acertos + '</span><span class="separador">/</span><span class="erros">' + producao.erros + '</span></div><span class="total-questoes">' + (producao.total > 0 ? producao.total + ' q' : '') + '</span></div></td>' +
-                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
-                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="chip">' + (producao.total > 0 ? producao.total : '-') + '</span></td>' +
-                                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
-                                        '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
-                                        '</tr>';
+                        // PORTUGUÊS - apenas Acertos e Erros
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                        // MATEMÁTICA - apenas Acertos e Erros
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                        // PRODUÇÃO - apenas Acertos e Erros
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                        '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
+                        '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
+                        '</tr>';
                 }).join('');
 
                 // Atualizar gráficos
@@ -3634,13 +3634,13 @@
                 console.error('Erro ao carregar resultados:', erro);
                 const tbody = document.getElementById('tb-resultados');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
                 }
             }
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM FILTROS (ACERTOS E ERROS POR DISCIPLINA)
+        // CARREGAR RESULTADOS COM FILTROS (ACERTOS E ERROS POR DISCIPLINA - SEM TOTAL)
         // ============================================
         async function carregarResultadosComFiltros() {
             try {
@@ -3666,7 +3666,7 @@
                 if (!tbody) return;
 
                 if (!alunos || alunos.length === 0 || alunos.erro) {
-                    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                     document.getElementById('res-total-filtrado').textContent = '0';
                     document.getElementById('res-Habilidades-filtrado').textContent = '0';
                     document.getElementById('res-recuperacao-filtrado').textContent = '0';
@@ -3678,7 +3678,7 @@
                 const dadosAlunos = Array.isArray(alunos) ? alunos : [];
                 
                 if (dadosAlunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                     return;
                 }
 
@@ -3697,18 +3697,21 @@
                 document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                // Função para obter acertos/erros de uma disciplina com fallback
+                // Função para obter acertos e erros de uma disciplina
                 function getAcertosErros(disciplinaData, totalQuestoes) {
                     if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0, total: totalQuestoes || 0 };
+                        return { acertos: 0, erros: 0 };
                     }
                     const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-                    const erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-                    const totalDisc = disciplinaData.total || acertos + erros || totalQuestoes || 0;
-                    return { acertos, erros, total: totalDisc };
+                    let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                    const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                    if (erros === 0 && totalDisc > 0 && acertos > 0) {
+                        erros = totalDisc - acertos;
+                    }
+                    return { acertos, erros };
                 }
 
-                // Gerar tabela
+                // Gerar tabela com apenas Acertos/Erros por disciplina (sem Total)
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
@@ -3726,29 +3729,23 @@
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
-                        '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                        '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        // PORTUGUÊS - Acertos/Erros/Total
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-portugues">🇵🇹</span><div class="acertos-erros"><span class="acertos">' + portugues.acertos + '</span><span class="separador">/</span><span class="erros">' + portugues.erros + '</span></div><span class="total-questoes">' + (portugues.total > 0 ? portugues.total + ' q' : '') + '</span></div></td>' +
+                        // PORTUGUÊS - Acertos e Erros
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="chip">' + (portugues.total > 0 ? portugues.total : '-') + '</span></td>' +
-                        // MATEMÁTICA - Acertos/Erros/Total
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-matematica">📐</span><div class="acertos-erros"><span class="acertos">' + matematica.acertos + '</span><span class="separador">/</span><span class="erros">' + matematica.erros + '</span></div><span class="total-questoes">' + (matematica.total > 0 ? matematica.total + ' q' : '') + '</span></div></td>' +
+                        // MATEMÁTICA - Acertos e Erros
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="chip">' + (matematica.total > 0 ? matematica.total : '-') + '</span></td>' +
-                        // PRODUÇÃO - Acertos/Erros/Total
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-producao">✍️</span><div class="acertos-erros"><span class="acertos">' + producao.acertos + '</span><span class="separador">/</span><span class="erros">' + producao.erros + '</span></div><span class="total-questoes">' + (producao.total > 0 ? producao.total + ' q' : '') + '</span></div></td>' +
+                        // PRODUÇÃO - Acertos e Erros
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="chip">' + (producao.total > 0 ? producao.total : '-') + '</span></td>' +
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
                         '<td><span class="badge ' + badge + '">' + status + '</span></td>' +
                         '</tr>';
                 }).join('');
 
-                // Atualizar gráficos com os dados
+                // Atualizar gráficos
                 const dadosParaGraficos = dadosAlunos.map(a => ({
                     acertos: Math.round((a.media || 0) * 2),
                     total_questoes: 20
@@ -3759,13 +3756,13 @@
                 console.error('❌ Erro ao carregar resultados com filtros:', erro);
                 const tbody = document.getElementById('tb-resultados-filtrado');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
                 }
             }
         }
 
         // ============================================
-        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO (COM ACERTOS E ERROS)
+        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO
         // ============================================
         function buscarRelatorioAluno() {
             const alunoId = document.getElementById('rel-aluno-select').value;
@@ -3795,7 +3792,7 @@
                         return;
                     }
                     
-                    // Agrupar por prova para mostrar as 3 avaliações
+                    // Agrupar por prova
                     const provasMap = new Map();
                     historico.forEach(item => {
                         const key = item.prova_id || item.prova_titulo;
@@ -3874,7 +3871,7 @@
                             '</tr>';
                     }).join('');
                     
-                    // Atualizar gráfico de evolução (usando a soma)
+                    // Atualizar gráfico de evolução
                     const evolucao = document.getElementById('rel-evolucao');
                     if (evolucao && provasArray.length > 0) {
                         const provasOrdenadas = [...provasArray].sort((a, b) => {
@@ -3922,7 +3919,6 @@
                 return;
             }
             
-            // Buscar as respostas do aluno para esta prova
             fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`)
                 .then(r => r.json())
                 .then(historico => {
@@ -3931,10 +3927,8 @@
                         return;
                     }
                     
-                    // Pegar a primeira correção
                     const correcao = historico[0];
                     
-                    // Buscar o gabarito da prova
                     fetch(`${API_URL}/api/provas/${provaId}`)
                         .then(r => r.json())
                         .then(prova => {
@@ -3943,7 +3937,6 @@
                                 return;
                             }
                             
-                            // Preparar dados para edição
                             correcaoManualData.alunoId = parseInt(alunoId);
                             correcaoManualData.alunoNome = alunoNome;
                             correcaoManualData.provaId = parseInt(provaId);
@@ -3957,7 +3950,6 @@
                             correcaoManualData.valorPorQuestao = correcaoManualData.notaMaxima / correcaoManualData.quantidade;
                             correcaoManualData.serie = prova.turma_serie || '1º Ano';
                             
-                            // Abrir modal de correção manual
                             document.getElementById('cm-aluno-nome').textContent = alunoNome;
                             document.getElementById('cm-prova-titulo').textContent = prova.titulo || 'Prova';
                             document.getElementById('cm-turma-info').textContent = (prova.turma_serie || '') + ' | Turma: ' + (prova.turma_nome || '');
@@ -3998,7 +3990,6 @@
                 .then(data => {
                     if (data.sucesso) {
                         showToast('🗑️ Aluno "' + alunoNome + '" excluído com sucesso!', 'error');
-                        // Limpar o select e recarregar
                         const selectAluno = document.getElementById('rel-aluno-select');
                         if (selectAluno) {
                             selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
@@ -4889,7 +4880,6 @@
                     if (current) selectTurma.value = current;
                 }
                 
-                // Carregar provas
                 const respProvas = await fetch(API_URL + '/api/provas');
                 const provas = await respProvas.json();
                 const selectProva = document.getElementById('filtro-prova');
@@ -4934,7 +4924,6 @@
                 carregarResultadosComFiltros();
             }).catch(e => console.error('Erro ao recarregar turmas:', e));
             
-            // Recarregar provas no select
             const selectProva = document.getElementById('filtro-prova');
             fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
                 if (provas && !provas.erro) {
@@ -5102,10 +5091,10 @@
             showToast('📥 Exportando resultados filtrados...', 'info');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (!tbody) return;
-            let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Total,Matemática_Acertos,Matemática_Erros,Matemática_Total,Produção_Acertos,Produção_Erros,Produção_Total,Conceito\n';
+            let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Matemática_Acertos,Matemática_Erros,Produção_Acertos,Produção_Erros,Conceito\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 15) {
+                if (cells.length >= 12) {
                     csv += cells[0].textContent.trim() + ',' + 
                            cells[1].textContent.trim() + ',' + 
                            cells[2].textContent.trim() + ',' + 
@@ -5116,10 +5105,7 @@
                            cells[7].textContent.trim() + ',' + 
                            cells[8].textContent.trim() + ',' + 
                            cells[9].textContent.trim() + ',' + 
-                           cells[10].textContent.trim() + ',' + 
-                           cells[11].textContent.trim() + ',' + 
-                           cells[12].textContent.trim() + ',' + 
-                           cells[13].textContent.trim() + '\n';
+                           cells[10].textContent.trim() + '\n';
                 }
             });
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
