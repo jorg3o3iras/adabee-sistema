@@ -3583,7 +3583,6 @@
 
                 // Gerar tabela com 3 avaliações separadas (acer/erros)
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
-                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
                     // Extrair dados de cada disciplina
                     const portugues = getacerErros(aluno.portugues, 20);
@@ -3709,7 +3708,6 @@
 
                 // Gerar tabela
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
-                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
                     const portugues = getacerErros(aluno.portugues, 20);
                     const matematica = getacerErros(aluno.matematica, 20);
