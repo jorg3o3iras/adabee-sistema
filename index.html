@@ -418,7 +418,7 @@
         .resumo-correcao { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:12px 0; }
         .resumo-correcao .item { text-align:center; background:var(--bg2); border-radius:8px; padding:8px; }
         .resumo-correcao .item .valor { font-size:24px; font-weight:800; }
-        .resumo-correcao .item .valor.aaaacertos { color:var(--green); }
+        .resumo-correcao .item .valor.acer { color:var(--green); }
         .resumo-correcao .item .valor.erros { color:var(--red); }
         .resumo-correcao .item .valor.nota { color:var(--blue); }
         .resumo-correcao .item .label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.3px; }
@@ -485,7 +485,7 @@
         @keyframes spin { to { transform:rotate(360deg); } }
 
         /* ============================================
-           ESTILOS PARA ACERTOS E ERROS NA TABELA DE RESULTADOS
+           ESTILOS PARA acer E ERROS NA TABELA DE RESULTADOS
            ============================================ */
         .disciplina-cell {
             min-width: 100px;
@@ -502,20 +502,20 @@
             margin-bottom: 4px;
             color: var(--text3);
         }
-        .disciplina-cell .acertos-erros {
+        .disciplina-cell .acer-erros {
             display: flex;
             justify-content: center;
             gap: 8px;
             font-size: 13px;
             font-weight: 700;
         }
-        .disciplina-cell .acertos-erros .acertos {
+        .disciplina-cell .acer-erros .acer {
             color: var(--green);
         }
-        .disciplina-cell .acertos-erros .erros {
+        .disciplina-cell .acer-erros .erros {
             color: var(--red);
         }
-        .disciplina-cell .acertos-erros .separador {
+        .disciplina-cell .acer-erros .separador {
             color: var(--text3);
         }
         .disciplina-cell .total-questoes {
@@ -573,7 +573,7 @@
                 min-width: 70px;
                 padding: 4px 6px;
             }
-            .disciplina-cell .acertos-erros {
+            .disciplina-cell .acer-erros {
                 font-size: 11px;
                 gap: 4px;
                 flex-wrap: wrap;
@@ -599,7 +599,7 @@
                 min-width: 60px;
                 padding: 3px 4px;
             }
-            .disciplina-cell .acertos-erros {
+            .disciplina-cell .acer-erros {
                 font-size: 10px;
                 gap: 3px;
                 flex-direction: column;
@@ -710,9 +710,9 @@
             .print-header h2 { font-size: 16pt !important; margin: 0 !important; color: #000000 !important; }
             .print-header p { font-size: 10pt !important; color: #555555 !important; margin: 4px 0 0 0 !important; }
             .disciplina-cell .disciplina-nome { color: #333 !important; }
-            .disciplina-cell .acertos-erros .acertos { color: #28a745 !important; }
-            .disciplina-cell .acertos-erros .erros { color: #dc3545 !important; }
-            .disciplina-cell .acertos-erros .separador { color: #666 !important; }
+            .disciplina-cell .acer-erros .acer { color: #28a745 !important; }
+            .disciplina-cell .acer-erros .erros { color: #dc3545 !important; }
+            .disciplina-cell .acer-erros .separador { color: #666 !important; }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -1180,7 +1180,7 @@
                 <div class="page-header">
                     <div>
                         <div class="page-title">🏆 Resultados</div>
-                        <p class="page-sub">Acertos e erros por disciplina — Análise detalhada</p>
+                        <p class="page-sub">acer e erros por disciplina — Análise detalhada</p>
                     </div>
                     <div class="page-actions no-print">
                         <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
@@ -1292,13 +1292,13 @@
                                     <th></th>
                                     <th></th>
                                     <th></th>
-                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">acer</th>
                                     <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Erros</th>
                                     <th style="background:rgba(59,130,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Total</th>
-                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">acer</th>
                                     <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">Erros</th>
                                     <th style="background:rgba(16,185,129,0.05);font-size:9px;padding:4px 6px;text-align:center;">Total</th>
-                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">acer</th>
                                     <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Erros</th>
                                     <th style="background:rgba(139,92,246,0.05);font-size:9px;padding:4px 6px;text-align:center;">Total</th>
                                     <th></th>
@@ -1498,7 +1498,7 @@
             </div>
             <div id="cm-grid" class="correcao-manual-grid"></div>
             <div class="resumo-correcao">
-                <div class="item"><div class="valor acertos" id="cm-acertos">0</div><div class="label">Acertos</div></div>
+                <div class="item"><div class="valor acer" id="cm-acer">0</div><div class="label">acer</div></div>
                 <div class="item"><div class="valor erros" id="cm-erros">0</div><div class="label">Erros</div></div>
                 <div class="item"><div class="valor nota" id="cm-nota">0,0</div><div class="label">Nota Final</div></div>
             </div>
@@ -1571,7 +1571,7 @@
                 <div id="cm-grid-standalone" class="cm-grid-standalone"></div>
                 
                 <div class="resumo-correcao">
-                    <div class="item"><div class="valor acertos" id="cm-sa-acertos">0</div><div class="label">Acertos</div></div>
+                    <div class="item"><div class="valor acer" id="cm-sa-acer">0</div><div class="label">acer</div></div>
                     <div class="item"><div class="valor erros" id="cm-sa-erros">0</div><div class="label">Erros</div></div>
                     <div class="item"><div class="valor nota" id="cm-sa-nota">0,0</div><div class="label">Nota Final</div></div>
                 </div>
@@ -2141,18 +2141,18 @@
             const qtd = correcaoManualData.quantidade || 20;
             const respostas = correcaoManualData.respostasAluno || [];
             const gabarito = correcaoManualData.gabarito || [];
-            let acertos = 0,
+            let acer = 0,
                 respondidas = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
                 const gab = i < gabarito.length ? gabarito[i] : '';
-                if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) { acertos++; } }
+                if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) { acer++; } }
             }
-            const erros = respondidas - acertos;
-            const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
+            const erros = respondidas - acer;
+            const nota = (acer * correcaoManualData.valorPorQuestao) || 0;
             const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
-            const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
-            document.getElementById('cm-acertos').textContent = acertos;
+            const porcentagem = qtd > 0 ? Math.round((acer / qtd) * 100) : 0;
+            document.getElementById('cm-acer').textContent = acer;
             document.getElementById('cm-erros').textContent = erros;
             document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
             const statusBadge = document.getElementById('cm-status-badge');
@@ -2182,15 +2182,15 @@
             const qtd = correcaoManualData.quantidade || 20;
             const respostas = correcaoManualData.respostasAluno || [];
             const gabarito = correcaoManualData.gabarito || [];
-            let acertos = 0;
+            let acer = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
                 const gab = i < gabarito.length ? gabarito[i] : '';
-                if (resp && resp.toUpperCase() === gab.toUpperCase()) { acertos++; }
+                if (resp && resp.toUpperCase() === gab.toUpperCase()) { acer++; }
             }
-            const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
+            const nota = Math.min((acer * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
             showToast('💾 Salvando correção manual...', 'info');
-            const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acertos: acertos, nota: nota, total: qtd };
+            const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acer: acer, nota: nota, total: qtd };
             fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
                 .then(response => response.json())
                 .then(data => {
@@ -2221,7 +2221,7 @@
             document.getElementById('cm-grid-standalone-container').style.display = 'none';
             document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
             document.getElementById('cm-grid-standalone').innerHTML = '';
-            document.getElementById('cm-sa-acertos').textContent = '0';
+            document.getElementById('cm-sa-acer').textContent = '0';
             document.getElementById('cm-sa-erros').textContent = '0';
             document.getElementById('cm-sa-nota').textContent = '0,0';
             document.getElementById('cm-sa-status-badge').textContent = 'AGUARDANDO';
@@ -2561,7 +2561,7 @@
             const respostas = cmStandaloneData.respostas || [];
             const gabarito = cmStandaloneData.gabarito || [];
             
-            let acertos = 0;
+            let acer = 0;
             let respondidas = 0;
             
             for (let i = 0; i < qtd; i++) {
@@ -2570,17 +2570,17 @@
                 if (resp) {
                     respondidas++;
                     if (resp.toUpperCase() === gab.toUpperCase()) {
-                        acertos++;
+                        acer++;
                     }
                 }
             }
             
-            const erros = respondidas - acertos;
-            const nota = (acertos * cmStandaloneData.valorPorQuestao) || 0;
+            const erros = respondidas - acer;
+            const nota = (acer * cmStandaloneData.valorPorQuestao) || 0;
             const notaFinal = Math.min(nota, cmStandaloneData.notaMaxima || 10);
-            const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+            const porcentagem = qtd > 0 ? Math.round((acer / qtd) * 100) : 0;
             
-            document.getElementById('cm-sa-acertos').textContent = acertos;
+            document.getElementById('cm-sa-acer').textContent = acer;
             document.getElementById('cm-sa-erros').textContent = erros;
             document.getElementById('cm-sa-nota').textContent = notaFinal.toFixed(1);
             
@@ -2648,16 +2648,16 @@
                 return;
             }
             
-            let acertos = 0;
+            let acer = 0;
             for (let i = 0; i < qtd; i++) {
                 const resp = i < respostas.length ? respostas[i] : '';
                 const gab = i < gabarito.length ? gabarito[i] : '';
                 if (resp && resp.toUpperCase() === gab.toUpperCase()) {
-                    acertos++;
+                    acer++;
                 }
             }
             
-            const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
+            const nota = Math.min((acer * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
             
             showToast('💾 Salvando correção manual...', 'info');
             
@@ -2665,7 +2665,7 @@
                 prova_id: cmStandaloneData.provaId,
                 aluno_id: cmStandaloneData.alunoId,
                 respostas: respostas,
-                acertos: acertos,
+                acer: acer,
                 nota: nota,
                 total: qtd
             };
@@ -3526,7 +3526,7 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM ACERTOS E ERROS POR DISCIPLINA
+        // CARREGAR RESULTADOS COM acer E ERROS POR DISCIPLINA
         // ============================================
         async function carregarResultados() {
             try {
@@ -3571,25 +3571,25 @@
                 const totalAlunosTabela = document.getElementById('total-alunos-tabela');
                 if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
 
-                // Função para obter acertos/erros de uma disciplina com fallback
-                function getAcertosErros(disciplinaData, totalQuestoes) {
+                // Função para obter acer/erros de uma disciplina com fallback
+                function getacerErros(disciplinaData, totalQuestoes) {
                     if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0, total: totalQuestoes || 0 };
+                        return { acer: 0, erros: 0, total: totalQuestoes || 0 };
                     }
-                    const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                    const acer = disciplinaData.acer !== undefined ? disciplinaData.acer : 0;
                     const erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-                    const totalDisc = disciplinaData.total || acertos + erros || totalQuestoes || 0;
-                    return { acertos, erros, total: totalDisc };
+                    const totalDisc = disciplinaData.total || acer + erros || totalQuestoes || 0;
+                    return { acer, erros, total: totalDisc };
                 }
 
-                // Gerar tabela com 3 avaliações separadas (acertos/erros)
+                // Gerar tabela com 3 avaliações separadas (acer/erros)
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
                     // Extrair dados de cada disciplina
-                    const portugues = getAcertosErros(aluno.portugues, 20);
-                    const matematica = getAcertosErros(aluno.matematica, 20);
-                    const producao = getAcertosErros(aluno.producao, 20);
+                    const portugues = getacerErros(aluno.portugues, 20);
+                    const matematica = getacerErros(aluno.matematica, 20);
+                    const producao = getacerErros(aluno.producao, 20);
                     
                     const media = aluno.media || 0;
                     const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
@@ -3604,18 +3604,18 @@
                         '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
                         // PORTUGUÊS
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-portugues">🇵🇹</span><div class="acertos-erros"><span class="acertos">' + portugues.acertos + '</span><span class="separador">/</span><span class="erros">' + portugues.erros + '</span></div><span class="total-questoes">' + (portugues.total > 0 ? portugues.total + ' q' : '') + '</span></div></td>' +
-                                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-portugues">🇵🇹</span><div class="acer-erros"><span class="acer">' + portugues.acer + '</span><span class="separador">/</span><span class="erros">' + portugues.erros + '</span></div><span class="total-questoes">' + (portugues.total > 0 ? portugues.total + ' q' : '') + '</span></div></td>' +
+                                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acer + '</span></td>' +
                                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
                                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="chip">' + (portugues.total > 0 ? portugues.total : '-') + '</span></td>' +
                                         // MATEMÁTICA
-                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-matematica">📐</span><div class="acertos-erros"><span class="acertos">' + matematica.acertos + '</span><span class="separador">/</span><span class="erros">' + matematica.erros + '</span></div><span class="total-questoes">' + (matematica.total > 0 ? matematica.total + ' q' : '') + '</span></div></td>' +
-                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-matematica">📐</span><div class="acer-erros"><span class="acer">' + matematica.acer + '</span><span class="separador">/</span><span class="erros">' + matematica.erros + '</span></div><span class="total-questoes">' + (matematica.total > 0 ? matematica.total + ' q' : '') + '</span></div></td>' +
+                                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acer + '</span></td>' +
                                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
                                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="chip">' + (matematica.total > 0 ? matematica.total : '-') + '</span></td>' +
                                         // PRODUÇÃO
-                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-producao">✍️</span><div class="acertos-erros"><span class="acertos">' + producao.acertos + '</span><span class="separador">/</span><span class="erros">' + producao.erros + '</span></div><span class="total-questoes">' + (producao.total > 0 ? producao.total + ' q' : '') + '</span></div></td>' +
-                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-producao">✍️</span><div class="acer-erros"><span class="acer">' + producao.acer + '</span><span class="separador">/</span><span class="erros">' + producao.erros + '</span></div><span class="total-questoes">' + (producao.total > 0 ? producao.total + ' q' : '') + '</span></div></td>' +
+                                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acer + '</span></td>' +
                                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
                                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="chip">' + (producao.total > 0 ? producao.total : '-') + '</span></td>' +
                                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
@@ -3625,7 +3625,7 @@
 
                 // Atualizar gráficos
                 const dadosParaGraficos = dadosAlunos.map(a => ({
-                    acertos: Math.round((a.media || 0) * 2),
+                    acer: Math.round((a.media || 0) * 2),
                     total_questoes: 20
                 }));
                 atualizarGraficosConceitos(dadosParaGraficos);
@@ -3640,7 +3640,7 @@
         }
 
         // ============================================
-        // CARREGAR RESULTADOS COM FILTROS (ACERTOS E ERROS POR DISCIPLINA)
+        // CARREGAR RESULTADOS COM FILTROS (acer E ERROS POR DISCIPLINA)
         // ============================================
         async function carregarResultadosComFiltros() {
             try {
@@ -3697,24 +3697,24 @@
                 document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                 document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                // Função para obter acertos/erros de uma disciplina com fallback
-                function getAcertosErros(disciplinaData, totalQuestoes) {
+                // Função para obter acer/erros de uma disciplina com fallback
+                function getacerErros(disciplinaData, totalQuestoes) {
                     if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0, total: totalQuestoes || 0 };
+                        return { acer: 0, erros: 0, total: totalQuestoes || 0 };
                     }
-                    const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                    const acer = disciplinaData.acer !== undefined ? disciplinaData.acer : 0;
                     const erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-                    const totalDisc = disciplinaData.total || acertos + erros || totalQuestoes || 0;
-                    return { acertos, erros, total: totalDisc };
+                    const totalDisc = disciplinaData.total || acer + erros || totalQuestoes || 0;
+                    return { acer, erros, total: totalDisc };
                 }
 
                 // Gerar tabela
                 tbody.innerHTML = dadosAlunos.map((aluno, index) => {
                     const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
                     
-                    const portugues = getAcertosErros(aluno.portugues, 20);
-                    const matematica = getAcertosErros(aluno.matematica, 20);
-                    const producao = getAcertosErros(aluno.producao, 20);
+                    const portugues = getacerErros(aluno.portugues, 20);
+                    const matematica = getacerErros(aluno.matematica, 20);
+                    const producao = getacerErros(aluno.producao, 20);
                     
                     const media = aluno.media || 0;
                     const porcentagem = media > 0 ? Math.round((media / 10) * 100) : 0;
@@ -3728,19 +3728,19 @@
                         '<td>' + (index + 1) + '</td>' +
                         '<td><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
                         '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        // PORTUGUÊS - Acertos/Erros/Total
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-portugues">🇵🇹</span><div class="acertos-erros"><span class="acertos">' + portugues.acertos + '</span><span class="separador">/</span><span class="erros">' + portugues.erros + '</span></div><span class="total-questoes">' + (portugues.total > 0 ? portugues.total + ' q' : '') + '</span></div></td>' +
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                        // PORTUGUÊS - acer/Erros/Total
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-portugues">🇵🇹</span><div class="acer-erros"><span class="acer">' + portugues.acer + '</span><span class="separador">/</span><span class="erros">' + portugues.erros + '</span></div><span class="total-questoes">' + (portugues.total > 0 ? portugues.total + ' q' : '') + '</span></div></td>' +
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acer + '</span></td>' +
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
                         '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="chip">' + (portugues.total > 0 ? portugues.total : '-') + '</span></td>' +
-                        // MATEMÁTICA - Acertos/Erros/Total
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-matematica">📐</span><div class="acertos-erros"><span class="acertos">' + matematica.acertos + '</span><span class="separador">/</span><span class="erros">' + matematica.erros + '</span></div><span class="total-questoes">' + (matematica.total > 0 ? matematica.total + ' q' : '') + '</span></div></td>' +
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                        // MATEMÁTICA - acer/Erros/Total
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-matematica">📐</span><div class="acer-erros"><span class="acer">' + matematica.acer + '</span><span class="separador">/</span><span class="erros">' + matematica.erros + '</span></div><span class="total-questoes">' + (matematica.total > 0 ? matematica.total + ' q' : '') + '</span></div></td>' +
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acer + '</span></td>' +
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
                         '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="chip">' + (matematica.total > 0 ? matematica.total : '-') + '</span></td>' +
-                        // PRODUÇÃO - Acertos/Erros/Total
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-producao">✍️</span><div class="acertos-erros"><span class="acertos">' + producao.acertos + '</span><span class="separador">/</span><span class="erros">' + producao.erros + '</span></div><span class="total-questoes">' + (producao.total > 0 ? producao.total + ' q' : '') + '</span></div></td>' +
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                        // PRODUÇÃO - acer/Erros/Total
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><div class="disciplina-cell"><span class="disciplina-tag tag-producao">✍️</span><div class="acer-erros"><span class="acer">' + producao.acer + '</span><span class="separador">/</span><span class="erros">' + producao.erros + '</span></div><span class="total-questoes">' + (producao.total > 0 ? producao.total + ' q' : '') + '</span></div></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acer + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="chip">' + (producao.total > 0 ? producao.total : '-') + '</span></td>' +
                         '<td><span class="badge ' + badgeConceito + '">' + conceito + '</span></td>' +
@@ -3750,7 +3750,7 @@
 
                 // Atualizar gráficos com os dados
                 const dadosParaGraficos = dadosAlunos.map(a => ({
-                    acertos: Math.round((a.media || 0) * 2),
+                    acer: Math.round((a.media || 0) * 2),
                     total_questoes: 20
                 }));
                 atualizarGraficosConceitos(dadosParaGraficos);
@@ -3765,7 +3765,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO (COM ACERTOS E ERROS)
+        // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO (COM acer E ERROS)
         // ============================================
         function buscarRelatorioAluno() {
             const alunoId = document.getElementById('rel-aluno-select').value;
@@ -4853,7 +4853,7 @@
                 correcaoManualData.serie = dados.serie || '1º Ano';
                 
                 if (box) box.style.display = 'block';
-                showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
+                showToast('✅ ' + (dados.acer || 0) + '/' + (dados.total || 0) + ' acer — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
                 carregarDashboard();
                 carregarResultados();
             } catch (erro) {
@@ -4998,9 +4998,9 @@
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length >= 5) {
-                    const acertos = parseInt(cells[4]?.textContent) || 0;
+                    const acer = parseInt(cells[4]?.textContent) || 0;
                     const totalQuestoes = 20;
-                    dadosAtuais.push({ acertos: acertos, total_questoes: totalQuestoes });
+                    dadosAtuais.push({ acer: acer, total_questoes: totalQuestoes });
                 }
             });
             atualizarGraficosConceitos(dadosAtuais);
@@ -5023,7 +5023,7 @@
             const conceitos = { 'inicial': 0, 'basico': 0, 'proficiente': 0, 'avancado': 0 };
             dados.forEach(item => {
                 const totalQuestoes = item.total_questoes || 20;
-                const porcentagem = totalQuestoes > 0 ? Math.round((item.acertos / totalQuestoes) * 100) : 0;
+                const porcentagem = totalQuestoes > 0 ? Math.round((item.acer / totalQuestoes) * 100) : 0;
                 const conceito = calcularConceito(porcentagem);
                 conceitos[conceito] = (conceitos[conceito] || 0) + 1;
             });
@@ -5102,7 +5102,7 @@
             showToast('📥 Exportando resultados filtrados...', 'info');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (!tbody) return;
-            let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Total,Matemática_Acertos,Matemática_Erros,Matemática_Total,Produção_Acertos,Produção_Erros,Produção_Total,Conceito\n';
+            let csv = 'Posição,Número,Nome,Série,Português_acer,Português_Erros,Português_Total,Matemática_acer,Matemática_Erros,Matemática_Total,Produção_acer,Produção_Erros,Produção_Total,Conceito\n';
             tbody.querySelectorAll('tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length >= 15) {
