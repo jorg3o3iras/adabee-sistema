@@ -1435,7 +1435,7 @@
 
     <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) ========== -->
     <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
-        <div class="modal" style="max-width:400px;width:95vw;">
+        <div class="modal" style="max-width:800px;width:95vw;">
             <div class="modal-header">
                 <h3>✏️ Correção Manual</h3>
                 <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
@@ -3702,11 +3702,11 @@
                         const prova = provasMap.get(key);
                         const disciplina = item.disciplina || 'Geral';
                         let tipo = 'Geral';
-                        if (disciplina && (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues'))) {
+                        if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
                             tipo = 'Portugues';
-                        } else if (disciplina && (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica'))) {
+                        } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
                             tipo = 'Matematica';
-                        } else if (disciplina && (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação'))) {
+                        } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
                             tipo = 'Producao';
                         }
                         if (tipo === 'Geral' && item.prova_titulo) {
@@ -3723,10 +3723,6 @@
                                 tipo = 'Matematica';
                             }
                         }
-                        // Se ainda for Geral, usa o valor da nota como Português por padrão
-                        if (tipo === 'Geral') {
-                            tipo = 'Portugues';
-                        }
                         prova.avaliacoes[tipo] = item.nota || 0;
                     });
                     
@@ -3737,10 +3733,10 @@
                         const soma = notaPortugues + notaMatematica + notaProducao;
                         return {
                             ...prova,
-                            notaPortugues: Number(notaPortugues),
-                            notaMatematica: Number(notaMatematica),
-                            notaProducao: Number(notaProducao),
-                            soma: Number(soma)
+                            notaPortugues,
+                            notaMatematica,
+                            notaProducao,
+                            soma
                         };
                     });
                     
@@ -3794,8 +3790,8 @@
                     }
                 })
                 .catch(e => {
-                    console.error('Erro ao carregar histórico:', e);
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+                    console.error(e);
                 });
         }
 
