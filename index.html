@@ -4842,114 +4842,116 @@
         });
 
         // ============================================
-        // FUNÇÕES PARA RELATÓRIO POR TURMA FILTRADO
-        // ============================================
-        async function carregarFiltrosRelTurma() {
-            try {
-                const respEscolas = await fetch(API_URL + '/api/escolas');
-                const escolas = await respEscolas.json();
-                const selectEscola = document.getElementById('rel-turma-escola');
-                if (selectEscola && escolas && !escolas.erro) {
-                    const current = selectEscola.value;
-                    selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
-                    escolas.forEach(e => {
-                        const opt = document.createElement('option');
-                        opt.value = e.id;
-                        opt.textContent = e.nome;
-                        selectEscola.appendChild(opt);
-                    });
-                    if (current) selectEscola.value = current;
+// CARREGAR FILTROS DO RELATÓRIO POR TURMA (CORRIGIDO)
+// ============================================
+async function carregarFiltrosRelTurma() {
+    try {
+        // Carregar escolas
+        const respEscolas = await fetch(API_URL + '/api/escolas');
+        const escolas = await respEscolas.json();
+        const selectEscola = document.getElementById('rel-turma-escola');
+        if (selectEscola && escolas && !escolas.erro) {
+            const current = selectEscola.value;
+            selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                selectEscola.appendChild(opt);
+            });
+            if (current) {
+                selectEscola.value = current;
+                // 🔥 CORREÇÃO: Se já tem uma escola selecionada, carrega as turmas dela
+                if (current && current !== '') {
+                    carregarTurmasRelTurma(current);
                 }
-                
-                const respTurmas = await fetch(API_URL + '/api/turmas');
-                const turmas = await respTurmas.json();
-                const selectTurma = document.getElementById('rel-turma-turma');
-                if (selectTurma && turmas && !turmas.erro) {
-                    const current = selectTurma.value;
-                    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        opt.dataset.serie = t.serie || '';
-                        selectTurma.appendChild(opt);
-                    });
-                    if (current) selectTurma.value = current;
-                }
-                
-                const respProvas = await fetch(API_URL + '/api/provas');
-                const provas = await respProvas.json();
-                const selectProva = document.getElementById('rel-turma-prova');
-                if (selectProva && provas && !provas.erro) {
-                    const current = selectProva.value;
-                    selectProva.innerHTML = '<option value="">Todas as provas</option>';
-                    provas.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = p.id;
-                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
-                        selectProva.appendChild(opt);
-                    });
-                    if (current) selectProva.value = current;
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar filtros do relatório por turma:', erro);
             }
         }
-
-        async function carregarTurmasRelTurma(escolaId) {
-            const selectTurma = document.getElementById('rel-turma-turma');
-            if (!selectTurma) return;
-            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-            try {
-                const respTurmas = await fetch(API_URL + '/api/turmas');
-                const turmas = await respTurmas.json();
-                if (turmas && !turmas.erro) {
-                    const turmasFiltradas = escolaId && escolaId !== '' ? turmas.filter(t => t.escola_id == escolaId) : turmas;
-                    turmasFiltradas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        opt.dataset.serie = t.serie || '';
-                        selectTurma.appendChild(opt);
-                    });
-                }
-            } catch (erro) { console.error('Erro ao carregar turmas:', erro); }
-            carregarRelatorioTurmaFiltrado();
+        
+        // Carregar provas
+        const respProvas = await fetch(API_URL + '/api/provas');
+        const provas = await respProvas.json();
+        const selectProva = document.getElementById('rel-turma-prova');
+        if (selectProva && provas && !provas.erro) {
+            const current = selectProva.value;
+            selectProva.innerHTML = '<option value="">Todas as provas</option>';
+            provas.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                selectProva.appendChild(opt);
+            });
+            if (current) selectProva.value = current;
         }
+    } catch (erro) {
+        console.error('Erro ao carregar filtros do relatório por turma:', erro);
+    }
+}
 
-        function limparFiltrosRelTurma() {
-            document.getElementById('rel-turma-escola').value = '';
-            document.getElementById('rel-turma-serie').value = '';
-            document.getElementById('rel-turma-prova').value = '';
-            
-            const selectTurma = document.getElementById('rel-turma-turma');
-            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-            fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
-                if (turmas && !turmas.erro) {
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        opt.dataset.serie = t.serie || '';
-                        selectTurma.appendChild(opt);
-                    });
-                }
-                carregarRelatorioTurmaFiltrado();
-            }).catch(e => console.error('Erro ao recarregar turmas:', e));
-            
-            const selectProva = document.getElementById('rel-turma-prova');
-            fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
-                if (provas && !provas.erro) {
-                    selectProva.innerHTML = '<option value="">Todas as provas</option>';
-                    provas.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = p.id;
-                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
-                        selectProva.appendChild(opt);
-                    });
-                }
-            }).catch(e => console.error('Erro ao recarregar provas:', e));
+        // ============================================
+// CARREGAR TURMAS PARA RELATÓRIO POR TURMA (CORRIGIDO)
+// ============================================
+async function carregarTurmasRelTurma(escolaId) {
+    const selectTurma = document.getElementById('rel-turma-turma');
+    if (!selectTurma) return;
+    
+    // Limpa as opções atuais
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+    
+    // Se não tem escola selecionada, carrega todas as turmas
+    if (!escolaId || escolaId === '') {
+        try {
+            const respTurmas = await fetch(API_URL + '/api/turmas');
+            const turmas = await respTurmas.json();
+            if (turmas && !turmas.erro) {
+                turmas.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                    opt.dataset.serie = t.serie || '';
+                    selectTurma.appendChild(opt);
+                });
+            }
+        } catch (erro) {
+            console.error('Erro ao carregar turmas:', erro);
         }
+        carregarRelatorioTurmaFiltrado();
+        return;
+    }
+    
+    // 🔥 CORREÇÃO: Carrega apenas as turmas da escola selecionada
+    try {
+        const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+        const turmas = await response.json();
+        
+        if (turmas && !turmas.erro && turmas.length > 0) {
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                opt.dataset.serie = t.serie || '';
+                selectTurma.appendChild(opt);
+            });
+        } else {
+            // Se não houver turmas, mostra uma mensagem
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Nenhuma turma encontrada';
+            opt.disabled = true;
+            selectTurma.appendChild(opt);
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar turmas da escola:', erro);
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Erro ao carregar turmas';
+        opt.disabled = true;
+        selectTurma.appendChild(opt);
+    }
+    
+    // Recarrega o relatório com os novos filtros
+    carregarRelatorioTurmaFiltrado();
+}
 
         // ============================================
 // CARREGAR RELATÓRIO POR TURMA FILTRADO (CORRIGIDO)
