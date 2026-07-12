@@ -599,6 +599,8 @@
             border-radius: 10px;
             padding: 14px 16px;
             transition: all 0.3s;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .habilidade-card:hover {
             border-color: var(--border2);
@@ -633,9 +635,10 @@
         }
         .habilidade-card .questao-item .q-status {
             font-weight: 700;
-            font-size: 11px;
+            font-size: 10px;
             padding: 2px 10px;
             border-radius: 12px;
+            text-align: right;
         }
         .habilidade-card .questao-item .q-status.acertou {
             color: var(--green);
@@ -653,6 +656,8 @@
             justify-content: space-between;
             font-size: 11px;
             color: var(--text2);
+            flex-wrap: wrap;
+            gap: 4px;
         }
         .habilidade-card .resumo-habilidade .acertos {
             color: var(--green);
@@ -721,6 +726,9 @@
             .habilidades-grid {
                 grid-template-columns: 1fr;
             }
+            .habilidade-card {
+                max-height: 300px;
+            }
         }
         @media (max-width:480px) {
             .stats-grid { grid-template-columns:1fr; }
@@ -770,6 +778,9 @@
             }
             .habilidades-grid {
                 grid-template-columns: 1fr;
+            }
+            .habilidade-card {
+                max-height: 250px;
             }
         }
 
@@ -3059,68 +3070,115 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
+        // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES - CORRIGIDA
         // ============================================
         function atualizarHabilidades(historico, alunoNome) {
             // Estrutura para armazenar os dados por disciplina
             let disciplinas = {
-                'portugues': { nome: 'Português', icone: '🇵🇹', questoes: [], acertos: 0, erros: 0 },
-                'matematica': { nome: 'Matemática', icone: '📐', questoes: [], acertos: 0, erros: 0 },
-                'producao': { nome: 'Produção de Texto', icone: '✍️', questoes: [], acertos: 0, erros: 0 }
+                'portugues': { nome: 'Português', icone: '🇵🇹', questoes: [], acertos: 0, erros: 0, total: 0 },
+                'matematica': { nome: 'Matemática', icone: '📐', questoes: [], acertos: 0, erros: 0, total: 0 },
+                'producao': { nome: 'Produção de Texto', icone: '✍️', questoes: [], acertos: 0, erros: 0, total: 0 }
             };
             
-            // Processar o histórico
-            let totalQuestoes = 0;
+            // Usar o mapa de provas para extrair as respostas por disciplina
+            let provasMap = new Map();
+            
             historico.forEach(item => {
-                const disciplina = item.disciplina || '';
-                const acertos = item.acertos || 0;
-                const total = item.total || 20;
-                const respostas = item.respostas || [];
-                const gabarito = item.gabarito || [];
-                
+                const key = item.prova_id || item.prova_titulo;
+                if (!provasMap.has(key)) {
+                    provasMap.set(key, {
+                        prova_id: item.prova_id,
+                        prova_titulo: item.prova_titulo || 'Prova',
+                        disciplina: item.disciplina || '',
+                        respostas: item.respostas || [],
+                        gabarito: item.gabarito || [],
+                        total: item.total || 20,
+                        acertos: item.acertos || 0,
+                        serie: item.serie || ''
+                    });
+                }
+            });
+            
+            // Para cada prova, identificar a disciplina e adicionar as questões
+            provasMap.forEach((prova) => {
                 let tipo = 'geral';
-                if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                const disciplina = prova.disciplina || '';
+                const provaTitulo = prova.prova_titulo || '';
+                
+                if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues') ||
+                    provaTitulo.toLowerCase().includes('português') || provaTitulo.toLowerCase().includes('portugues')) {
                     tipo = 'portugues';
-                } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica') ||
+                           provaTitulo.toLowerCase().includes('matemática') || provaTitulo.toLowerCase().includes('matematica') ||
+                           provaTitulo.toLowerCase().includes('mat')) {
                     tipo = 'matematica';
                 } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || 
-                           disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                           disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação') ||
+                           provaTitulo.toLowerCase().includes('produção') || provaTitulo.toLowerCase().includes('producao') ||
+                           provaTitulo.toLowerCase().includes('texto') || provaTitulo.toLowerCase().includes('redação')) {
                     tipo = 'producao';
-                }
-                
-                // Se não identificou, usar a disciplina da prova
-                if (tipo === 'geral') {
-                    const provaTitulo = item.prova_titulo || '';
-                    if (provaTitulo.toLowerCase().includes('português') || provaTitulo.toLowerCase().includes('portugues')) {
+                } else {
+                    // Fallback: usar a série para determinar
+                    const serie = prova.serie || '';
+                    if (serie.includes('1') || serie.includes('2') || serie.includes('3') || 
+                        serie.includes('4') || serie.includes('5')) {
                         tipo = 'portugues';
-                    } else if (provaTitulo.toLowerCase().includes('matemática') || provaTitulo.toLowerCase().includes('matematica') || 
-                               provaTitulo.toLowerCase().includes('mat')) {
-                        tipo = 'matematica';
-                    } else if (provaTitulo.toLowerCase().includes('produção') || provaTitulo.toLowerCase().includes('producao') || 
-                               provaTitulo.toLowerCase().includes('texto') || provaTitulo.toLowerCase().includes('redação')) {
-                        tipo = 'producao';
                     } else {
-                        // Fallback: usar a série para determinar
-                        const serie = item.serie || '';
-                        if (serie.includes('1') || serie.includes('2') || serie.includes('3') || 
-                            serie.includes('4') || serie.includes('5')) {
-                            tipo = 'portugues';
-                        } else {
-                            tipo = 'matematica';
-                        }
+                        tipo = 'matematica';
                     }
                 }
                 
-                // Limitar ao número de questões da prova
-                const qtd = Math.min(respostas.length, total, 30);
+                // Se não identificou, usar o primeiro disponível
+                if (tipo === 'geral') {
+                    // Verificar qual disciplina tem mais dados
+                    const respostas = prova.respostas || [];
+                    if (respostas.length > 0) {
+                        // Tentar identificar pela matéria da prova
+                        if (provaTitulo.toLowerCase().includes('port')) tipo = 'portugues';
+                        else if (provaTitulo.toLowerCase().includes('mat')) tipo = 'matematica';
+                        else if (provaTitulo.toLowerCase().includes('produção') || provaTitulo.toLowerCase().includes('producao')) tipo = 'producao';
+                        else tipo = 'portugues'; // default
+                    } else {
+                        tipo = 'portugues'; // default
+                    }
+                }
                 
-                for (let i = 0; i < qtd; i++) {
+                const respostas = prova.respostas || [];
+                const gabarito = prova.gabarito || [];
+                const total = Math.min(respostas.length, gabarito.length, prova.total || 20);
+                
+                // Se não houver respostas, usar os acertos/erros do item
+                if (respostas.length === 0 || total === 0) {
+                    // Usar os dados de acertos já processados
+                    const acertos = prova.acertos || 0;
+                    const totalQuestoes = prova.total || 20;
+                    const erros = totalQuestoes - acertos;
+                    
+                    if (disciplinas[tipo]) {
+                        disciplinas[tipo].acertos += acertos;
+                        disciplinas[tipo].erros += erros;
+                        disciplinas[tipo].total += totalQuestoes;
+                        
+                        // Adicionar questões com base no total
+                        for (let i = 0; i < totalQuestoes; i++) {
+                            const isCorreto = i < acertos;
+                            disciplinas[tipo].questoes.push({
+                                numero: i + 1,
+                                acertou: isCorreto,
+                                resposta: isCorreto ? '✅' : '❌'
+                            });
+                        }
+                    }
+                    return;
+                }
+                
+                // Processar as questões uma a uma
+                for (let i = 0; i < total; i++) {
                     const resposta = respostas[i] || '';
                     const gab = (i < gabarito.length) ? gabarito[i] : '';
                     const isCorreto = resposta && gab && resposta.toUpperCase() === gab.toUpperCase();
                     
-                    // Evitar duplicatas
-                    if (disciplinas[tipo] && disciplinas[tipo].questoes.length < total) {
+                    if (disciplinas[tipo]) {
                         disciplinas[tipo].questoes.push({
                             numero: i + 1,
                             acertou: isCorreto,
@@ -3131,10 +3189,39 @@
                         } else if (resposta) {
                             disciplinas[tipo].erros++;
                         }
+                        disciplinas[tipo].total = Math.max(disciplinas[tipo].total, i + 1);
                     }
                 }
-                
-                totalQuestoes += qtd;
+            });
+            
+            // Se alguma disciplina ficou sem questões, usar os dados do conceito
+            ['portugues', 'matematica', 'producao'].forEach(key => {
+                const dados = disciplinas[key];
+                if (dados.questoes.length === 0) {
+                    // Buscar do elemento de conceito
+                    const acertosEl = document.getElementById(`conceito-${key === 'portugues' ? 'port' : key === 'matematica' ? 'mat' : 'prod'}-acertos`);
+                    const errosEl = document.getElementById(`conceito-${key === 'portugues' ? 'port' : key === 'matematica' ? 'mat' : 'prod'}-erros`);
+                    
+                    if (acertosEl && errosEl) {
+                        const acertos = parseInt(acertosEl.textContent) || 0;
+                        const erros = parseInt(errosEl.textContent) || 0;
+                        const total = acertos + erros || 20;
+                        
+                        dados.acertos = acertos;
+                        dados.erros = erros;
+                        dados.total = total;
+                        
+                        // Criar questões baseadas na proporção de acertos
+                        for (let i = 0; i < total; i++) {
+                            const isCorreto = i < acertos;
+                            dados.questoes.push({
+                                numero: i + 1,
+                                acertou: isCorreto,
+                                resposta: isCorreto ? '✅' : '❌'
+                            });
+                        }
+                    }
+                }
             });
             
             // Atualizar o HTML de cada disciplina
@@ -3248,6 +3335,7 @@
                         return;
                     }
                     
+                    // Mapear provas e adicionar respostas e gabarito
                     const provasMap = new Map();
                     historico.forEach(item => {
                         const key = item.prova_id || item.prova_titulo;
@@ -3263,8 +3351,22 @@
                                 respostas: item.respostas || [],
                                 gabarito: item.gabarito || [],
                                 total: item.total || 20,
-                                disciplina: item.disciplina || ''
+                                disciplina: item.disciplina || '',
+                                acertos: item.acertos || 0
                             });
+                        } else {
+                            const prova = provasMap.get(key);
+                            // Mesclar respostas e gabarito se disponíveis
+                            if (item.respostas && item.respostas.length > 0) {
+                                prova.respostas = item.respostas;
+                            }
+                            if (item.gabarito && item.gabarito.length > 0) {
+                                prova.gabarito = item.gabarito;
+                            }
+                            if (item.total) prova.total = item.total;
+                            if (item.acertos) prova.acertos = item.acertos;
+                            if (item.disciplina) prova.disciplina = item.disciplina;
+                            if (item.serie) prova.serie = item.serie;
                         }
                         const prova = provasMap.get(key);
                         const disciplina = item.disciplina || 'Geral';
@@ -3294,9 +3396,13 @@
                         const acertos = item.acertos || 0;
                         const total = item.total || 20;
                         prova.avaliacoes[tipo] = { nota, acertos, total };
-                        prova.disciplina = item.disciplina || '';
-                        prova.respostas = item.respostas || [];
-                        prova.gabarito = item.gabarito || [];
+                        // Atualizar respostas e gabarito
+                        if (item.respostas && item.respostas.length > 0) {
+                            prova.respostas = item.respostas;
+                        }
+                        if (item.gabarito && item.gabarito.length > 0) {
+                            prova.gabarito = item.gabarito;
+                        }
                     });
                     
                     const provasArray = Array.from(provasMap.values()).map(prova => {
@@ -3357,8 +3463,9 @@
                     // Atualizar conceitos das disciplinas
                     atualizarConceitosDisciplinas(historico);
                     
-                    // Atualizar o card DESEMPENHO POR HABILIDADES
+                    // Atualizar o card DESEMPENHO POR HABILIDADES com os dados completos
                     const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+                    // Passar o histórico completo com respostas e gabarito
                     atualizarHabilidades(historico, alunoNome);
                     
                     const evolucao = document.getElementById('rel-evolucao');
