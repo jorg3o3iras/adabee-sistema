@@ -1403,114 +1403,138 @@
             </div>
 
             <!-- ========== RELATÓRIO POR ALUNO ========== -->
-            <div class="page" id="page-rel-aluno">
-                <div class="page-header">
-                    <div><div class="page-title">👤 Relatório por Aluno</div></div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️</button>
-                        <button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button>
-                    </div>
-                </div>
+<div class="page" id="page-rel-aluno">
+    <div class="page-header">
+        <div><div class="page-title">👤 Relatório por Aluno</div></div>
+        <div class="page-actions no-print">
+            <button class="btn btn-outline" onclick="window.print()">🖨️</button>
+            <button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button>
+        </div>
+    </div>
 
-                <!-- Cabeçalho que aparece apenas na impressão -->
-                <div class="print-header print-only">
-                    <h2>👤 Relatório por Aluno</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-aluno"></span></p>
-                </div>
+    <!-- Cabeçalho que aparece apenas na impressão -->
+    <div class="print-header print-only">
+        <h2>👤 Relatório por Aluno</h2>
+        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+        <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-aluno"></span></p>
+    </div>
 
-                <div class="card no-print">
-                    <div class="form-row c3">
-                        <div class="form-group">
-                            <label class="form-label">Escola <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-escola" onchange="carregarTurmasRelAluno(this.value)">
-                                <option value="">Selecione a escola...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno(this.value)">
-                                <option value="">Selecione a turma...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prova <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-prova">
-                                <option value="">Selecione a prova...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Aluno <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-select">
-                                <option value="">Selecione o aluno...</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="justify-content:flex-end; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-                            <button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button>
-                            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                            <button class="btn btn-orange" onclick="editarGabaritoAluno()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
-                            <button class="btn btn-red" onclick="excluirAlunoRelatorio()" title="Excluir Aluno">🗑️ Excluir Aluno</button>
-                        </div>
-                    </div>
-                </div>
+    <div class="card no-print">
+        <div class="form-row c3">
+            <div class="form-group">
+                <label class="form-label">Escola <span class="req">*</span></label>
+                <select class="form-control" id="rel-aluno-escola" onchange="carregarTurmasRelAluno(this.value)">
+                    <option value="">Selecione a escola...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Turma <span class="req">*</span></label>
+                <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno(this.value)">
+                    <option value="">Selecione a turma...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prova <span class="req">*</span></label>
+                <select class="form-control" id="rel-aluno-prova">
+                    <option value="">Selecione a prova...</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Aluno <span class="req">*</span></label>
+                <select class="form-control" id="rel-aluno-select">
+                    <option value="">Selecione o aluno...</option>
+                </select>
+            </div>
+            <div class="form-group" style="justify-content:flex-end; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                <button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button>
+                <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                <button class="btn btn-orange" onclick="editarGabaritoAluno()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
+                <button class="btn btn-red" onclick="excluirAlunoRelatorio()" title="Excluir Aluno">🗑️ Excluir Aluno</button>
+            </div>
+        </div>
+    </div>
 
-                <div class="g2">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">📋 Histórico do Aluno</div>
-                            <span class="badge badge-gray" id="total-historico">0 registros</span>
-                        </div>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th rowspan="2">Prova</th>
-                                        <th rowspan="2">Data</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;">🇵🇹 Português</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;">📐 Matemática</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;">✍️ Produção</th>
-                                    </tr>
-                                    <tr>
-                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rel-aluno-historico">
-                                    <tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header"><div class="card-title">📊 Conceito</div></div>
-                        <div class="chart-bars" style="height:100px;" id="rel-evolucao">
-                            <div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Selecione um aluno</div>
-                        </div>
-                    </div>
+    <!-- ====== LAYOUT COM HISTÓRICO EM CIMA E CONCEITO EMBAIXO ====== -->
+    <div class="g2" style="display:flex; flex-direction:column; gap:16px;">
+        
+        <!-- 1️⃣ CARD: HISTÓRICO DO ALUNO (EM CIMA) -->
+        <div class="card" style="width:100%;">
+            <div class="card-header">
+                <div class="card-title">📋 Histórico do Aluno</div>
+                <span class="badge badge-gray" id="total-historico">0 registros</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Prova</th>
+                            <th rowspan="2">Data</th>
+                            <th colspan="3" class="historico-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;">🇵🇹 Português</th>
+                            <th colspan="3" class="historico-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;">📐 Matemática</th>
+                            <th colspan="3" class="historico-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;">✍️ Produção</th>
+                        </tr>
+                        <tr>
+                            <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                            <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                            <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                            <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                            <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                            <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                            <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                            <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                            <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rel-aluno-historico">
+                        <tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2️⃣ CARD: CONCEITO (EMBAIXO DO HISTÓRICO) -->
+        <div class="card" style="width:100%;">
+            <div class="card-header">
+                <div class="card-title">📊 Conceito</div>
+                <span class="badge badge-purple">Por disciplina</span>
+            </div>
+            <div id="rel-conceito-disciplinas" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; padding:8px 0;">
+                <!-- PORTUGUÊS -->
+                <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
+                    <div style="font-size:24px; margin-bottom:6px;">🇵🇹</div>
+                    <div style="font-size:13px; font-weight:700; color:#3b82f6;">Português</div>
+                    <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-port-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-port-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                    <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-port-conceito">—</div>
+                    <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                </div>
+                <!-- MATEMÁTICA -->
+                <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(16,185,129,0.2);">
+                    <div style="font-size:24px; margin-bottom:6px;">📐</div>
+                    <div style="font-size:13px; font-weight:700; color:#10b981;">Matemática</div>
+                    <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-mat-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-mat-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                    <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-mat-conceito">—</div>
+                    <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                </div>
+                <!-- PRODUÇÃO DE TEXTO -->
+                <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(139,92,246,0.2);">
+                    <div style="font-size:24px; margin-bottom:6px;">✍️</div>
+                    <div style="font-size:13px; font-weight:700; color:#8b5cf6;">Produção</div>
+                    <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-prod-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-prod-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                    <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-prod-conceito">—</div>
+                    <div style="font-size:10px; color:var(--text3);">Conceito</div>
                 </div>
             </div>
-
-            <div class="page" id="page-rel-escola">
-                <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
-
-                <!-- Cabeçalho que aparece apenas na impressão -->
-                <div class="print-header print-only">
-                    <h2>🏫 Relatório por Escola</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-escola"></span></p>
-                </div>
-
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Conceito</th></tr></thead><tbody id="tb-rel-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+                <span class="badge badge-conceito-inicial">🔴 Inicial</span>
+                <span class="badge badge-conceito-basico">🟠 Básico</span>
+                <span class="badge badge-conceito-proficiente">🔵 Proficiente</span>
+                <span class="badge badge-conceito-avancado">🟢 Avançado</span>
             </div>
+        </div>
+    </div>
+</div>
 
             <!-- ========== CONFIG ========== -->
             <div class="page" id="page-config">
