@@ -3604,6 +3604,10 @@
                     
                     const badgeConceito = (c) => `badge-conceito-${c}-sm`;
 
+                    // Usar os campos 'turma' e 'escola' que o backend retorna
+                    const nomeEscola = aluno.escola || '';
+                    const nomeTurma = aluno.turma || '';
+
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
@@ -3621,9 +3625,9 @@
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
-                        // ESCOLA e TURMA
-                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.escola_nome || '—') + '</td>' +
-                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.turma_nome || '—') + '</td>' +
+                        // ESCOLA e TURMA - usando os campos do backend
+                        '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                        '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
                         '</tr>';
                 }).join('');
 
@@ -3727,6 +3731,10 @@
                     
                     const badgeConceito = (c) => `badge-conceito-${c}-sm`;
 
+                    // Usar os campos 'turma' e 'escola' que o backend retorna
+                    const nomeEscola = aluno.escola || '';
+                    const nomeTurma = aluno.turma || '';
+
                     return '<tr>' +
                         '<td>' + medalha + '</td>' +
                         '<td>' + (index + 1) + '</td>' +
@@ -3744,9 +3752,9 @@
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
                         '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
-                        // ESCOLA e TURMA
-                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.escola_nome || '—') + '</td>' +
-                        '<td style="font-size:10px;color:var(--text2);">' + (aluno.turma_nome || '—') + '</td>' +
+                        // ESCOLA e TURMA - usando os campos do backend
+                        '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                        '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
                         '</tr>';
                 }).join('');
 
