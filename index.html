@@ -2187,6 +2187,67 @@
         }
 
         // ============================================
+        // CARREGAR ESCOLAS PARA FILTRO DE ALUNOS
+        // ============================================
+        async function carregarEscolasFiltroAlunos() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('filtro-escola-alunos');
+                if (select && escolas && !escolas.erro) {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">Todas as escolas</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) {
+                        select.value = current;
+                        carregarAlunos(current);
+                    }
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para filtro de alunos:', erro);
+            }
+        }
+
+        // ============================================
+        // FILTRAR ALUNOS POR ESCOLA
+        // ============================================
+        function filtrarAlunosPorEscola(escolaId) {
+            const selectTurma = document.getElementById('filtro-turma-alunos');
+            if (selectTurma) {
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                if (escolaId && escolaId !== '') {
+                    fetch(API_URL + '/api/turmas?escola_id=' + escolaId)
+                        .then(r => r.json())
+                        .then(turmas => {
+                            if (turmas && !turmas.erro) {
+                                turmas.forEach(t => {
+                                    const opt = document.createElement('option');
+                                    opt.value = t.id;
+                                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                                    selectTurma.appendChild(opt);
+                                });
+                            }
+                        })
+                        .catch(e => console.error('Erro ao carregar turmas:', e));
+                }
+            }
+            carregarAlunos(escolaId);
+        }
+
+        // ============================================
+        // FILTRAR ALUNOS POR SÉRIE
+        // ============================================
+        function filtrarAlunosPorSerie(serie) {
+            const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+            carregarAlunos(escolaId);
+        }
+
+        // ============================================
         // CARREGAR PROVAS
         // ============================================
         async function carregarProvas() {
@@ -2263,108 +2324,111 @@
             }
         }
 
-       async function carregarResultados() {
-    try {
-        const response = await fetch(`${API_URL}/api/historico/agrupado`);
-        const alunos = await response.json();
-        console.log('📥 Resultados agrupados:', alunos);
-        
-        const tbody = document.getElementById('tb-resultados');
-        if (!tbody) return;
+        // ============================================
+        // CARREGAR RESULTADOS
+        // ============================================
+        async function carregarResultados() {
+            try {
+                const response = await fetch(`${API_URL}/api/historico/agrupado`);
+                const alunos = await response.json();
+                console.log('📥 Resultados agrupados:', alunos);
+                
+                const tbody = document.getElementById('tb-resultados');
+                if (!tbody) return;
 
-        if (!alunos || alunos.length === 0 || alunos.erro) {
-            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
-            return;
-        }
+                if (!alunos || alunos.length === 0 || alunos.erro) {
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                    return;
+                }
 
-        const dadosAlunos = Array.isArray(alunos) ? alunos : [];
-        
-        if (dadosAlunos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
-            return;
-        }
+                const dadosAlunos = Array.isArray(alunos) ? alunos : [];
+                
+                if (dadosAlunos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                    return;
+                }
 
-        dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
+                dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
 
-        const total = dadosAlunos.length;
-        const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
-        const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
-        const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
+                const total = dadosAlunos.length;
+                const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
+                const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
+                const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
-        const totalEl = document.getElementById('res-total-filtrado');
-        const habEl = document.getElementById('res-Habilidades-filtrado');
-        const recEl = document.getElementById('res-recuperacao-filtrado');
-        const medEl = document.getElementById('res-media-filtrado');
-        if (totalEl) totalEl.textContent = total;
-        if (habEl) habEl.textContent = Habilidades;
-        if (recEl) recEl.textContent = recuperacao;
-        if (medEl) medEl.textContent = mediaGeral.toFixed(1);
-        
-        const totalAlunosTabela = document.getElementById('total-alunos-tabela');
-        if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
+                const totalEl = document.getElementById('res-total-filtrado');
+                const habEl = document.getElementById('res-Habilidades-filtrado');
+                const recEl = document.getElementById('res-recuperacao-filtrado');
+                const medEl = document.getElementById('res-media-filtrado');
+                if (totalEl) totalEl.textContent = total;
+                if (habEl) habEl.textContent = Habilidades;
+                if (recEl) recEl.textContent = recuperacao;
+                if (medEl) medEl.textContent = mediaGeral.toFixed(1);
+                
+                const totalAlunosTabela = document.getElementById('total-alunos-tabela');
+                if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
 
-        function getDadosDisciplina(disciplinaData, totalQuestoes) {
-            if (!disciplinaData || typeof disciplinaData !== 'object') {
-                return { acertos: 0, erros: 0, conceito: 'inicial' };
+                function getDadosDisciplina(disciplinaData, totalQuestoes) {
+                    if (!disciplinaData || typeof disciplinaData !== 'object') {
+                        return { acertos: 0, erros: 0, conceito: 'inicial' };
+                    }
+                    const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                    let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                    const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                    if (erros === 0 && totalDisc > 0 && acertos > 0) {
+                        erros = totalDisc - acertos;
+                    }
+                    const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                    const conceito = calcularConceito(porcentagem);
+                    return { acertos, erros, conceito };
+                }
+
+                function badgeConceito(c) {
+                    return `badge-conceito-${c}-sm`;
+                }
+
+                tbody.innerHTML = dadosAlunos.map((aluno, index) => {
+                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+                    
+                    const portugues = getDadosDisciplina(aluno.portugues, 20);
+                    const matematica = getDadosDisciplina(aluno.matematica, 20);
+                    const producao = getDadosDisciplina(aluno.producao, 20);
+                    
+                    const nomeEscola = aluno.escola || '';
+                    const nomeTurma = aluno.turma || '';
+
+                    return '<tr>' +
+                        '<td>' + medalha + '</td>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                        '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                        '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                        '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                        '</tr>';
+                }).join('');
+
+                const dadosParaGraficos = dadosAlunos.map(a => ({
+                    acertos: Math.round((a.media || 0) * 2),
+                    total_questoes: 20
+                }));
+                atualizarGraficosConceitos(dadosParaGraficos);
+
+            } catch (erro) {
+                console.error('Erro ao carregar resultados:', erro);
+                const tbody = document.getElementById('tb-resultados');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                }
             }
-            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-            const totalDisc = disciplinaData.total || totalQuestoes || 0;
-            if (erros === 0 && totalDisc > 0 && acertos > 0) {
-                erros = totalDisc - acertos;
-            }
-            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-            const conceito = calcularConceito(porcentagem);
-            return { acertos, erros, conceito };
         }
-
-        function badgeConceito(c) {
-            return `badge-conceito-${c}-sm`;
-        }
-
-        tbody.innerHTML = dadosAlunos.map((aluno, index) => {
-            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-            
-            const portugues = getDadosDisciplina(aluno.portugues, 20);
-            const matematica = getDadosDisciplina(aluno.matematica, 20);
-            const producao = getDadosDisciplina(aluno.producao, 20);
-            
-            const nomeEscola = aluno.escola || '';
-            const nomeTurma = aluno.turma || '';
-
-            return '<tr>' +
-                '<td>' + medalha + '</td>' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
-                '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
-                '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
-                '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
-                '</tr>';
-        }).join('');
-
-        const dadosParaGraficos = dadosAlunos.map(a => ({
-            acertos: Math.round((a.media || 0) * 2),
-            total_questoes: 20
-        }));
-        atualizarGraficosConceitos(dadosParaGraficos);
-
-    } catch (erro) {
-        console.error('Erro ao carregar resultados:', erro);
-        const tbody = document.getElementById('tb-resultados');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
-        }
-    }
-}
 
         // ============================================
         // CARREGAR RESULTADOS COM FILTROS
@@ -4535,6 +4599,331 @@
                 toggle.innerHTML = '☰';
             }
         });
+
+        // ============================================
+        // FUNÇÕES ADICIONAIS QUE PODEM FALTAR
+        // ============================================
+        async function carregarEscolasCorrigir() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('corrigir-escola');
+                if (select && escolas && !escolas.erro) {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para correção:', erro);
+            }
+        }
+
+        async function carregarEscolasTexto() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('txt-escola');
+                if (select && escolas && !escolas.erro) {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para texto:', erro);
+            }
+        }
+
+        async function carregarTurmasCorrigir(escolaId) {
+            const selectTurma = document.getElementById('corrigir-turma');
+            const selectAluno = document.getElementById('corrigir-aluno');
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        async function carregarAlunosPorTurma(turmaId) {
+            const selectAluno = document.getElementById('corrigir-aluno');
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!turmaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        async function carregarTurmasTexto(escolaId) {
+            const selectTurma = document.getElementById('txt-turma');
+            const selectAluno = document.getElementById('txt-aluno-select');
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        async function carregarAlunosPorTurmaTexto(turmaId) {
+            const selectAluno = document.getElementById('txt-aluno-select');
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!turmaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        // Funções de salvamento que podem estar faltando
+        function salvarEscola() {
+            const nome = document.getElementById('escola-nome').value.trim();
+            if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
+            showToast('✅ Escola "' + nome + '" salva com sucesso!', 'success');
+            closeM('m-escola');
+            carregarEscolas();
+        }
+
+        function salvarTurma() {
+            const nome = document.getElementById('turma-nome').value.trim();
+            if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
+            showToast('✅ Turma "' + nome + '" salva com sucesso!', 'success');
+            closeM('m-turma');
+            carregarTurmas();
+        }
+
+        function salvarAluno() {
+            const nome = document.getElementById('aluno-nome').value.trim();
+            if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
+            showToast('✅ Aluno "' + nome + '" salvo com sucesso!', 'success');
+            closeM('m-aluno');
+            carregarAlunos();
+        }
+
+        function salvarProva() {
+            const titulo = document.getElementById('prova-titulo').value.trim();
+            if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
+            showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
+            carregarProvas();
+        }
+
+        function salvarProvaModal() {
+            const titulo = document.getElementById('modal-prova-titulo').value.trim();
+            if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
+            showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
+            closeM('m-prova');
+            carregarProvas();
+        }
+
+        function editarEscola(id) {
+            showToast('✏️ Editando escola ID ' + id + '...', 'info');
+            openM('m-editar-escola');
+        }
+
+        function salvarEdicaoEscola() {
+            showToast('✅ Alterações salvas!', 'success');
+            closeM('m-editar-escola');
+            carregarEscolas();
+        }
+
+        function editarTurma(id) {
+            showToast('✏️ Editando turma ID ' + id + '...', 'info');
+            openM('m-editar-turma');
+        }
+
+        function salvarEdicaoTurma() {
+            showToast('✅ Alterações salvas!', 'success');
+            closeM('m-editar-turma');
+            carregarTurmas();
+        }
+
+        function editarAluno(id) {
+            showToast('✏️ Editando aluno ID ' + id + '...', 'info');
+            openM('m-editar-aluno');
+        }
+
+        function salvarEdicaoAluno() {
+            showToast('✅ Alterações salvas!', 'success');
+            closeM('m-editar-aluno');
+            carregarAlunos();
+        }
+
+        function editarProva(id) {
+            showToast('👁️ Visualizando prova ID ' + id + '...', 'info');
+        }
+
+        function excluirEscola(id, nome) {
+            if (!confirm('Excluir a escola "' + nome + '" e todos os seus dados?')) return;
+            showToast('🗑️ Escola "' + nome + '" excluída!', 'error');
+            carregarEscolas();
+        }
+
+        function excluirTurma(id, nome) {
+            if (!confirm('Excluir a turma "' + nome + '" e todos os seus dados?')) return;
+            showToast('🗑️ Turma "' + nome + '" excluída!', 'error');
+            carregarTurmas();
+        }
+
+        function excluirAluno(id, nome) {
+            if (!confirm('Excluir o aluno "' + nome + '" e todos os seus dados?')) return;
+            showToast('🗑️ Aluno "' + nome + '" excluído!', 'error');
+            carregarAlunos();
+        }
+
+        function excluirProva(id, nome) {
+            if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
+            showToast('🗑️ Prova "' + nome + '" excluída!', 'error');
+            carregarProvas();
+        }
+
+        function excluirGabarito(id, nome) {
+            if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
+            showToast('🗑️ Gabarito excluído!', 'error');
+            carregarGabaritos();
+        }
+
+        function editarGabarito(id) {
+            showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info');
+            go('gabarito');
+        }
+
+        function verAlunosDaTurma(id) {
+            showToast('📋 Visualizando alunos da turma ID ' + id + '...', 'info');
+            go('lista-turma');
+        }
+
+        function fecharAbaMulti() {
+            showToast('📋 Lista de alunos gerada!', 'success');
+        }
+
+        function processarListaAlunos() {
+            const textarea = document.getElementById('multi-alunos-input');
+            const linhas = textarea.value.split('\n').filter(l => l.trim() !== '');
+            if (linhas.length === 0) {
+                showToast('⚠️ Cole a lista de alunos primeiro!', 'warning');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('multi-status');
+            const statusText = document.getElementById('multi-status-text');
+            
+            let adicionados = 0;
+            let erros = 0;
+            
+            linhas.forEach(linha => {
+                let nome = linha.trim();
+                let matricula = '';
+                let numero = '';
+                
+                // Tenta extrair matrícula e número
+                const matchVirgula = linha.match(/^([^,]+),\s*([^,]+),\s*(\d+)?/);
+                const matchTraco = linha.match(/^([^-]+)\s*-\s*([^-]+)\s*-\s*(\d+)?/);
+                const matchParenteses = linha.match(/^([^(]+)\s*\(([^)]+)\)/);
+                
+                if (matchVirgula) {
+                    nome = matchVirgula[1].trim();
+                    matricula = matchVirgula[2].trim();
+                    numero = matchVirgula[3] ? matchVirgula[3].trim() : '';
+                } else if (matchTraco) {
+                    nome = matchTraco[1].trim();
+                    matricula = matchTraco[2].trim();
+                    numero = matchTraco[3] ? matchTraco[3].trim() : '';
+                } else if (matchParenteses) {
+                    nome = matchParenteses[1].trim();
+                    matricula = matchParenteses[2].trim();
+                }
+                
+                if (nome) {
+                    document.getElementById('aluno-nome').value = nome;
+                    if (matricula) document.getElementById('aluno-matricula').value = matricula;
+                    if (numero) document.getElementById('aluno-numero').value = numero;
+                    
+                    // Salva o aluno
+                    salvarAluno();
+                    adicionados++;
+                } else {
+                    erros++;
+                }
+            });
+            
+            if (adicionados > 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status success';
+                statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
+                textarea.value = '';
+            } else {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status error';
+                statusText.textContent = '❌ Nenhum aluno válido encontrado. Verifique o formato.';
+            }
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
     </script>
 </body>
 </html>
