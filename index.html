@@ -947,7 +947,7 @@
                 
                 <!-- Cabeçalho que aparece apenas na impressão -->
                 <div class="print-header print-only">
-                    <h2>📊 Relatório de Desempenho</h2>
+                    <h2>📊 Relatório de Conceito</h2>
                     <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-dash"></span></p>
                 </div>
@@ -975,13 +975,13 @@
                 <div class="g2">
                     <div class="card">
                         <div class="card-header">
-                            <div class="card-title">📊 Desempenho por Turma</div>
+                            <div class="card-title">📊 Conceito por Turma</div>
                             <span class="badge badge-green" id="total-turmas-badge">0 turmas</span>
                         </div>
-                        <div id="grafico-desempenho" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:20px;">
+                        <div id="grafico-Conceito" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:20px;">
                             <div style="text-align:center;color:var(--text3);">
                                 <div style="font-size:40px;margin-bottom:10px;">📊</div>
-                                <p>Carregando dados de desempenho...</p>
+                                <p>Carregando dados de Conceito...</p>
                             </div>
                         </div>
                     </div>
@@ -1491,7 +1491,7 @@
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-header"><div class="card-title">📊 Desempenho</div></div>
+                        <div class="card-header"><div class="card-title">📊 Conceito</div></div>
                         <div class="chart-bars" style="height:100px;" id="rel-evolucao">
                             <div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Selecione um aluno</div>
                         </div>
@@ -1509,7 +1509,7 @@
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-escola"></span></p>
                 </div>
 
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Desempenho</th></tr></thead><tbody id="tb-rel-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Conceito</th></tr></thead><tbody id="tb-rel-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== CONFIG ========== -->
@@ -1550,7 +1550,7 @@
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-u-rel"></span></p>
                 </div>
 
-                <div class="card"><div class="card-header"><div class="card-title">📊 Desempenho</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
+                <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
         </div>
     </div>
 
@@ -3207,13 +3207,13 @@
         }
 
         // ============================================
-        // CARREGAR DESEMPENHO REAL
+        // CARREGAR Conceito REAL
         // ============================================
-        async function carregarDesempenhoReal() {
+        async function carregarConceitoReal() {
             try {
-                const response = await fetch(`${API_URL}/api/dashboard/desempenho`);
+                const response = await fetch(`${API_URL}/api/dashboard/Conceito`);
                 const dados = await response.json();
-                const container = document.getElementById('grafico-desempenho');
+                const container = document.getElementById('grafico-Conceito');
                 const badge = document.getElementById('total-turmas-badge');
                 if (!container) return;
 
@@ -3221,7 +3221,7 @@
                     container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
                         <div style="font-size:30px;margin-bottom:10px;">📭</div>
                         <p>Nenhuma turma com correções ainda.</p>
-                        <p style="font-size:12px;">Cadastre turmas e faça correções para ver o desempenho.</p>
+                        <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
                     </div>`;
                     if (badge) badge.textContent = '0 turmas';
                     return;
@@ -3258,12 +3258,12 @@
                 container.innerHTML = html;
 
             } catch (erro) {
-                console.error('Erro ao carregar desempenho:', erro);
-                const container = document.getElementById('grafico-desempenho');
+                console.error('Erro ao carregar Conceito:', erro);
+                const container = document.getElementById('grafico-Conceito');
                 if (container) {
                     container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
                         <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
-                        <p>Erro ao carregar dados de desempenho.</p>
+                        <p>Erro ao carregar dados de Conceito.</p>
                     </div>`;
                 }
             }
@@ -4550,7 +4550,7 @@
                     carregarRelatorios(),
                     carregarUltimasCorrecoes(),
                     carregarUserData(),
-                    carregarDesempenhoReal(),
+                    carregarConceitoReal(),
                     carregarUsuarios(),
                     carregarEscolasFiltroAlunos(),
                     carregarEscolasCorrigir(),
@@ -4577,7 +4577,7 @@
             carregarDados();
             carregarFiltrosResultados();
             carregarResultadosComFiltros();
-            carregarDesempenhoReal();
+            carregarConceitoReal();
             carregarEscolasFiltroAlunos();
             const tipoProva = document.getElementById('modal-prova-tipo');
             if (tipoProva) gerarGabaritoModal(tipoProva.value);
