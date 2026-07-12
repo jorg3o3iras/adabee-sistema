@@ -2263,111 +2263,108 @@
             }
         }
 
-        // ============================================
-        // CARREGAR RESULTADOS
-        // ============================================
-        async function carregarResultados() {
-            try {
-                const response = await fetch(`${API_URL}/api/historico/agrupado`);
-                const alunos = await response.json();
-                
-                const tbody = document.getElementById('tb-resultados');
-                if (!tbody) return;
+       async function carregarResultados() {
+    try {
+        const response = await fetch(`${API_URL}/api/historico/agrupado`);
+        const alunos = await response.json();
+        console.log('📥 Resultados agrupados:', alunos);
+        
+        const tbody = document.getElementById('tb-resultados');
+        if (!tbody) return;
 
-                if (!alunos || alunos.length === 0 || alunos.erro) {
-                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
-                    return;
-                }
-
-                const dadosAlunos = Array.isArray(alunos) ? alunos : [];
-                
-                if (dadosAlunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
-                    return;
-                }
-
-                dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
-
-                const total = dadosAlunos.length;
-                const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
-                const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
-                const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
-
-                const totalEl = document.getElementById('res-total-filtrado');
-                const habEl = document.getElementById('res-Habilidades-filtrado');
-                const recEl = document.getElementById('res-recuperacao-filtrado');
-                const medEl = document.getElementById('res-media-filtrado');
-                if (totalEl) totalEl.textContent = total;
-                if (habEl) habEl.textContent = Habilidades;
-                if (recEl) recEl.textContent = recuperacao;
-                if (medEl) medEl.textContent = mediaGeral.toFixed(1);
-                
-                const totalAlunosTabela = document.getElementById('total-alunos-tabela');
-                if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
-
-                function getDadosDisciplina(disciplinaData, totalQuestoes) {
-                    if (!disciplinaData || typeof disciplinaData !== 'object') {
-                        return { acertos: 0, erros: 0, conceito: 'inicial' };
-                    }
-                    const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-                    let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-                    const totalDisc = disciplinaData.total || totalQuestoes || 0;
-                    if (erros === 0 && totalDisc > 0 && acertos > 0) {
-                        erros = totalDisc - acertos;
-                    }
-                    const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-                    const conceito = calcularConceito(porcentagem);
-                    return { acertos, erros, conceito };
-                }
-
-                function badgeConceito(c) {
-                    return `badge-conceito-${c}-sm`;
-                }
-
-                tbody.innerHTML = dadosAlunos.map((aluno, index) => {
-                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-                    
-                    const portugues = getDadosDisciplina(aluno.portugues, 20);
-                    const matematica = getDadosDisciplina(aluno.matematica, 20);
-                    const producao = getDadosDisciplina(aluno.producao, 20);
-                    
-                    // Usar os campos 'escola' e 'turma' que o backend retorna
-                    const nomeEscola = aluno.escola || '';
-                    const nomeTurma = aluno.turma || '';
-
-                    return '<tr>' +
-                        '<td>' + medalha + '</td>' +
-                        '<td>' + (index + 1) + '</td>' +
-                        '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
-                        '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                        '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
-                        '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
-                        '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
-                        '</tr>';
-                }).join('');
-
-                const dadosParaGraficos = dadosAlunos.map(a => ({
-                    acertos: Math.round((a.media || 0) * 2),
-                    total_questoes: 20
-                }));
-                atualizarGraficosConceitos(dadosParaGraficos);
-
-            } catch (erro) {
-                console.error('Erro ao carregar resultados:', erro);
-                const tbody = document.getElementById('tb-resultados');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
-                }
-            }
+        if (!alunos || alunos.length === 0 || alunos.erro) {
+            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+            return;
         }
+
+        const dadosAlunos = Array.isArray(alunos) ? alunos : [];
+        
+        if (dadosAlunos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+            return;
+        }
+
+        dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
+
+        const total = dadosAlunos.length;
+        const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
+        const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
+        const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
+
+        const totalEl = document.getElementById('res-total-filtrado');
+        const habEl = document.getElementById('res-Habilidades-filtrado');
+        const recEl = document.getElementById('res-recuperacao-filtrado');
+        const medEl = document.getElementById('res-media-filtrado');
+        if (totalEl) totalEl.textContent = total;
+        if (habEl) habEl.textContent = Habilidades;
+        if (recEl) recEl.textContent = recuperacao;
+        if (medEl) medEl.textContent = mediaGeral.toFixed(1);
+        
+        const totalAlunosTabela = document.getElementById('total-alunos-tabela');
+        if (totalAlunosTabela) totalAlunosTabela.textContent = total + ' alunos';
+
+        function getDadosDisciplina(disciplinaData, totalQuestoes) {
+            if (!disciplinaData || typeof disciplinaData !== 'object') {
+                return { acertos: 0, erros: 0, conceito: 'inicial' };
+            }
+            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+            const totalDisc = disciplinaData.total || totalQuestoes || 0;
+            if (erros === 0 && totalDisc > 0 && acertos > 0) {
+                erros = totalDisc - acertos;
+            }
+            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+            const conceito = calcularConceito(porcentagem);
+            return { acertos, erros, conceito };
+        }
+
+        function badgeConceito(c) {
+            return `badge-conceito-${c}-sm`;
+        }
+
+        tbody.innerHTML = dadosAlunos.map((aluno, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            
+            const portugues = getDadosDisciplina(aluno.portugues, 20);
+            const matematica = getDadosDisciplina(aluno.matematica, 20);
+            const producao = getDadosDisciplina(aluno.producao, 20);
+            
+            const nomeEscola = aluno.escola || '';
+            const nomeTurma = aluno.turma || '';
+
+            return '<tr>' +
+                '<td>' + medalha + '</td>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                '</tr>';
+        }).join('');
+
+        const dadosParaGraficos = dadosAlunos.map(a => ({
+            acertos: Math.round((a.media || 0) * 2),
+            total_questoes: 20
+        }));
+        atualizarGraficosConceitos(dadosParaGraficos);
+
+    } catch (erro) {
+        console.error('Erro ao carregar resultados:', erro);
+        const tbody = document.getElementById('tb-resultados');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+        }
+    }
+}
 
         // ============================================
         // CARREGAR RESULTADOS COM FILTROS
