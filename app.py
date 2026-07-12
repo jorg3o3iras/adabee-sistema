@@ -1560,7 +1560,7 @@ def excluir_escola(id):
     return jsonify({'erro': 'Erro ao excluir escola'}), 500
 
 # ============================================
-# ROTA DE TURMAS
+# ROTA DE TURMAS - CORRIGIDA
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -1573,6 +1573,7 @@ def listar_turmas():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
+        # Query principal com subconsulta para contar alunos
         query = """
             SELECT 
                 t.id,
@@ -1584,24 +1585,13 @@ def listar_turmas():
                 t.ano_letivo,
                 t.escola_id,
                 e.nome as escola_nome,
-                COALESCE(
-                    json_agg(
-                        json_build_object(
-                            'id', a.id,
-                            'nome', a.nome,
-                            'matricula', a.matricula,
-                            'numero_chamada', a.numero_chamada,
-                            'responsavel', a.responsavel,
-                            'telefone', a.telefone,
-                            'email', a.email
-                        )
-                    ) FILTER (WHERE a.id IS NOT NULL),
-                    '[]'
-                ) as alunos,
-                COUNT(a.id) as total_alunos
+                (
+                    SELECT COUNT(*) 
+                    FROM alunos a 
+                    WHERE a.turma_id = t.id
+                ) as total_alunos
             FROM turmas t 
             LEFT JOIN escolas e ON t.escola_id = e.id 
-            LEFT JOIN alunos a ON a.turma_id = t.id
         """
         params = []
         
@@ -1613,51 +1603,111 @@ def listar_turmas():
             except ValueError:
                 pass
         
-        query += " GROUP BY t.id, e.nome ORDER BY t.nome"
+        query += " ORDER BY t.nome"
         
         cur.execute(query, params)
         turmas = cur.fetchall()
         cur.close()
         conn.close()
         
-        for turma in turmas:
-            if turma['alunos']:
-                turma['alunos'] = turma['alunos']
-            else:
-                turma['alunos'] = []
-        
         return jsonify(turmas)
         
     except Exception as e:
         print(f"❌ Erro ao listar turmas: {e}")
         traceback.print_exc()
-        return jsonify([])
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
-    data = request.json
-    if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
-                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'), 
-                  data.get('turno', 'Manhã'), data.get('professor', ''), 
-                  data.get('capacidade', 35), data.get('ano_letivo', 2025)))
-            result = cur.fetchone()
-            conn.commit()
+    try:
+        data = request.json
+        
+        # Validação mais completa
+        if not data:
+            return jsonify({'erro': 'Dados não enviados'}), 400
+            
+        if not data.get('nome') or not data.get('nome').strip():
+            return jsonify({'erro': 'Nome da turma é obrigatório'}), 400
+            
+        if not data.get('escola_id'):
+            return jsonify({'erro': 'Escola é obrigatória'}), 400
+        
+        # Validar se a escola existe
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se a escola existe
+        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
+        escola = cur.fetchone()
+        if not escola:
             cur.close()
             conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
+            return jsonify({'erro': 'Escola não encontrada'}), 404
+        
+        # Verificar se já existe uma turma com o mesmo nome na mesma escola
+        cur.execute(
+            "SELECT id FROM turmas WHERE nome = %s AND escola_id = %s", 
+            (data['nome'].strip(), data['escola_id'])
+        )
+        if cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Já existe uma turma com este nome nesta escola'}), 400
+        
+        # Inserir a turma
+        cur.execute("""
+            INSERT INTO turmas (
+                escola_id, 
+                nome, 
+                serie, 
+                turno, 
+                professor, 
+                capacidade, 
+                ano_letivo
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s) 
+            RETURNING id, nome, serie, turno, professor, capacidade, ano_letivo, escola_id
+        """, (
+            data['escola_id'], 
+            data['nome'].strip(), 
+            data.get('serie', '1º Ano'), 
+            data.get('turno', 'Manhã'), 
+            data.get('professor', ''), 
+            data.get('capacidade', 35), 
+            data.get('ano_letivo', 2025)
+        ))
+        
+        result = cur.fetchone()
+        conn.commit()
+        
+        # Buscar o nome da escola
+        cur.execute("SELECT nome FROM escolas WHERE id = %s", (data['escola_id'],))
+        escola_nome = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        # Retornar a turma criada com todos os dados
+        return jsonify({
+            'id': result['id'],
+            'nome': result['nome'],
+            'serie': result['serie'],
+            'turno': result['turno'],
+            'professor': result['professor'],
+            'capacidade': result['capacidade'],
+            'ano_letivo': result['ano_letivo'],
+            'escola_id': result['escola_id'],
+            'escola_nome': escola_nome['nome'] if escola_nome else '',
+            'total_alunos': 0,
+            'mensagem': 'Turma criada com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao criar turma: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['GET'])
 def buscar_turma(id):
@@ -1667,6 +1717,8 @@ def buscar_turma(id):
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Buscar a turma com a escola
         cur.execute("""
             SELECT 
                 t.id,
@@ -1678,38 +1730,22 @@ def buscar_turma(id):
                 t.ano_letivo,
                 t.escola_id,
                 e.nome as escola_nome,
-                COALESCE(
-                    json_agg(
-                        json_build_object(
-                            'id', a.id,
-                            'nome', a.nome,
-                            'matricula', a.matricula,
-                            'numero_chamada', a.numero_chamada,
-                            'responsavel', a.responsavel,
-                            'telefone', a.telefone,
-                            'email', a.email
-                        )
-                    ) FILTER (WHERE a.id IS NOT NULL),
-                    '[]'
-                ) as alunos,
-                COUNT(a.id) as total_alunos
+                (
+                    SELECT COUNT(*) 
+                    FROM alunos a 
+                    WHERE a.turma_id = t.id
+                ) as total_alunos
             FROM turmas t 
             LEFT JOIN escolas e ON t.escola_id = e.id 
-            LEFT JOIN alunos a ON a.turma_id = t.id
             WHERE t.id = %s
-            GROUP BY t.id, e.nome
         """, (id,))
+        
         turma = cur.fetchone()
         cur.close()
         conn.close()
         
         if not turma:
             return jsonify({'erro': 'Turma não encontrada'}), 404
-        
-        if turma['alunos']:
-            turma['alunos'] = turma['alunos']
-        else:
-            turma['alunos'] = []
         
         return jsonify(turma)
         
@@ -1723,23 +1759,52 @@ def editar_turma(id):
     try:
         data = request.json
         
-        if not data.get('nome') or not data.get('escola_id'):
-            return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
+        # Validação
+        if not data:
+            return jsonify({'erro': 'Dados não enviados'}), 400
+            
+        if not data.get('nome') or not data.get('nome').strip():
+            return jsonify({'erro': 'Nome da turma é obrigatório'}), 400
+            
+        if not data.get('escola_id'):
+            return jsonify({'erro': 'Escola é obrigatória'}), 400
         
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (id,))
-        if not cur.fetchone():
+        
+        # Verificar se a turma existe
+        cur.execute("SELECT id, escola_id FROM turmas WHERE id = %s", (id,))
+        turma_existente = cur.fetchone()
+        if not turma_existente:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
+        # Verificar se a escola existe
+        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Escola não encontrada'}), 404
+        
+        # Verificar se já existe outra turma com o mesmo nome na mesma escola
+        cur.execute(
+            "SELECT id FROM turmas WHERE nome = %s AND escola_id = %s AND id != %s", 
+            (data['nome'].strip(), data['escola_id'], id)
+        )
+        if cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Já existe uma turma com este nome nesta escola'}), 400
+        
+        # Atualizar a turma
         cur.execute("""
             UPDATE turmas 
-            SET escola_id = %s,
+            SET 
+                escola_id = %s,
                 nome = %s,
                 serie = %s,
                 turno = %s,
@@ -1747,39 +1812,95 @@ def editar_turma(id):
                 capacidade = %s,
                 ano_letivo = %s
             WHERE id = %s
-            RETURNING id
-        """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-              data.get('turno', 'Manhã'), data.get('professor', ''),
-              data.get('capacidade', 35), data.get('ano_letivo', 2025), id))
+            RETURNING id, nome, serie, turno, professor, capacidade, ano_letivo, escola_id
+        """, (
+            data['escola_id'], 
+            data['nome'].strip(), 
+            data.get('serie', '1º Ano'),
+            data.get('turno', 'Manhã'), 
+            data.get('professor', ''),
+            data.get('capacidade', 35), 
+            data.get('ano_letivo', 2025), 
+            id
+        ))
         
         result = cur.fetchone()
         conn.commit()
+        
+        # Buscar o nome da escola
+        cur.execute("SELECT nome FROM escolas WHERE id = %s", (data['escola_id'],))
+        escola_nome = cur.fetchone()
+        
+        # Buscar total de alunos
+        cur.execute("SELECT COUNT(*) as total FROM alunos WHERE turma_id = %s", (id,))
+        total_alunos = cur.fetchone()
+        
         cur.close()
         conn.close()
         
+        # Retornar a turma atualizada
         return jsonify({
             'id': result['id'],
+            'nome': result['nome'],
+            'serie': result['serie'],
+            'turno': result['turno'],
+            'professor': result['professor'],
+            'capacidade': result['capacidade'],
+            'ano_letivo': result['ano_letivo'],
+            'escola_id': result['escola_id'],
+            'escola_nome': escola_nome['nome'] if escola_nome else '',
+            'total_alunos': total_alunos['total'] if total_alunos else 0,
             'mensagem': 'Turma atualizada com sucesso'
         })
         
     except Exception as e:
         print(f"❌ Erro ao editar turma: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
-            conn.commit()
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se a turma existe
+        cur.execute("SELECT id, nome FROM turmas WHERE id = %s", (id,))
+        turma = cur.fetchone()
+        if not turma:
             cur.close()
             conn.close()
-            return jsonify({'mensagem': 'Turma excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir turma: {e}")
-    return jsonify({'erro': 'Erro ao excluir turma'}), 500
+            return jsonify({'erro': 'Turma não encontrada'}), 404
+        
+        # Verificar se há alunos na turma
+        cur.execute("SELECT COUNT(*) as total FROM alunos WHERE turma_id = %s", (id,))
+        total_alunos = cur.fetchone()
+        
+        if total_alunos and total_alunos['total'] > 0:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'erro': f'Não é possível excluir a turma "{turma["nome"]}" pois ela possui {total_alunos["total"]} aluno(s) matriculado(s)'
+            }), 400
+        
+        # Excluir a turma
+        cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Turma "{turma["nome"]}" excluída com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir turma: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTA PARA LISTAR ALUNOS POR TURMA
@@ -1794,13 +1915,29 @@ def listar_alunos_por_turma(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
+        # Buscar dados da turma
+        cur.execute("""
+            SELECT 
+                t.id,
+                t.nome,
+                t.serie,
+                t.turno,
+                t.professor,
+                t.capacidade,
+                t.ano_letivo,
+                e.nome as escola_nome
+            FROM turmas t
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            WHERE t.id = %s
+        """, (id,))
         turma = cur.fetchone()
+        
         if not turma:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
+        # Buscar alunos da turma
         cur.execute("""
             SELECT 
                 id,
@@ -1812,7 +1949,8 @@ def listar_alunos_por_turma(id):
                 responsavel,
                 telefone,
                 email,
-                observacoes
+                observacoes,
+                created_at
             FROM alunos
             WHERE turma_id = %s
             ORDER BY numero_chamada NULLS LAST, nome
