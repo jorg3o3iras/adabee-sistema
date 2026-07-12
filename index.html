@@ -2246,7 +2246,7 @@
         }
 
         // ============================================
-        // CARREGAR TURMAS
+        // CARREGAR TURMAS - CORRIGIDO
         // ============================================
         async function carregarTurmas() {
             try {
@@ -4842,289 +4842,312 @@
         });
 
         // ============================================
-// CARREGAR FILTROS DO RELATÓRIO POR TURMA (CORRIGIDO)
-// ============================================
-async function carregarFiltrosRelTurma() {
-    try {
-        // Carregar escolas
-        const respEscolas = await fetch(API_URL + '/api/escolas');
-        const escolas = await respEscolas.json();
-        const selectEscola = document.getElementById('rel-turma-escola');
-        if (selectEscola && escolas && !escolas.erro) {
-            const current = selectEscola.value;
-            selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                selectEscola.appendChild(opt);
-            });
-            if (current) {
-                selectEscola.value = current;
-                // 🔥 CORREÇÃO: Se já tem uma escola selecionada, carrega as turmas dela
-                if (current && current !== '') {
-                    carregarTurmasRelTurma(current);
+        // CARREGAR FILTROS DO RELATÓRIO POR TURMA
+        // ============================================
+        async function carregarFiltrosRelTurma() {
+            try {
+                const respEscolas = await fetch(API_URL + '/api/escolas');
+                const escolas = await respEscolas.json();
+                const selectEscola = document.getElementById('rel-turma-escola');
+                if (selectEscola && escolas && !escolas.erro) {
+                    const current = selectEscola.value;
+                    selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        selectEscola.appendChild(opt);
+                    });
+                    if (current) {
+                        selectEscola.value = current;
+                        if (current && current !== '') {
+                            carregarTurmasRelTurma(current);
+                        }
+                    }
                 }
+                
+                const respProvas = await fetch(API_URL + '/api/provas');
+                const provas = await respProvas.json();
+                const selectProva = document.getElementById('rel-turma-prova');
+                if (selectProva && provas && !provas.erro) {
+                    const current = selectProva.value;
+                    selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                    provas.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                        selectProva.appendChild(opt);
+                    });
+                    if (current) selectProva.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar filtros do relatório por turma:', erro);
             }
         }
-        
-        // Carregar provas
-        const respProvas = await fetch(API_URL + '/api/provas');
-        const provas = await respProvas.json();
-        const selectProva = document.getElementById('rel-turma-prova');
-        if (selectProva && provas && !provas.erro) {
-            const current = selectProva.value;
-            selectProva.innerHTML = '<option value="">Todas as provas</option>';
-            provas.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
-                selectProva.appendChild(opt);
-            });
-            if (current) selectProva.value = current;
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar filtros do relatório por turma:', erro);
-    }
-}
 
         // ============================================
-// CARREGAR TURMAS PARA RELATÓRIO POR TURMA (CORRIGIDO)
-// ============================================
-async function carregarTurmasRelTurma(escolaId) {
-    const selectTurma = document.getElementById('rel-turma-turma');
-    if (!selectTurma) return;
-    
-    // Limpa as opções atuais
-    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-    
-    // Se não tem escola selecionada, carrega todas as turmas
-    if (!escolaId || escolaId === '') {
-        try {
-            const respTurmas = await fetch(API_URL + '/api/turmas');
-            const turmas = await respTurmas.json();
-            if (turmas && !turmas.erro) {
-                turmas.forEach(t => {
+        // CARREGAR TURMAS PARA RELATÓRIO POR TURMA
+        // ============================================
+        async function carregarTurmasRelTurma(escolaId) {
+            const selectTurma = document.getElementById('rel-turma-turma');
+            if (!selectTurma) return;
+            
+            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+            
+            if (!escolaId || escolaId === '') {
+                try {
+                    const respTurmas = await fetch(API_URL + '/api/turmas');
+                    const turmas = await respTurmas.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar turmas:', erro);
+                }
+                carregarRelatorioTurmaFiltrado();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                
+                if (turmas && !turmas.erro && turmas.length > 0) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                } else {
                     const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = t.nome + ' - ' + (t.serie || '');
-                    opt.dataset.serie = t.serie || '';
+                    opt.value = '';
+                    opt.textContent = 'Nenhuma turma encontrada';
+                    opt.disabled = true;
                     selectTurma.appendChild(opt);
-                });
-            }
-        } catch (erro) {
-            console.error('Erro ao carregar turmas:', erro);
-        }
-        carregarRelatorioTurmaFiltrado();
-        return;
-    }
-    
-    // 🔥 CORREÇÃO: Carrega apenas as turmas da escola selecionada
-    try {
-        const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-        const turmas = await response.json();
-        
-        if (turmas && !turmas.erro && turmas.length > 0) {
-            turmas.forEach(t => {
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar turmas da escola:', erro);
                 const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                opt.dataset.serie = t.serie || '';
+                opt.value = '';
+                opt.textContent = 'Erro ao carregar turmas';
+                opt.disabled = true;
                 selectTurma.appendChild(opt);
-            });
-        } else {
-            // Se não houver turmas, mostra uma mensagem
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = 'Nenhuma turma encontrada';
-            opt.disabled = true;
-            selectTurma.appendChild(opt);
+            }
+            
+            carregarRelatorioTurmaFiltrado();
         }
-    } catch (erro) {
-        console.error('Erro ao carregar turmas da escola:', erro);
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Erro ao carregar turmas';
-        opt.disabled = true;
-        selectTurma.appendChild(opt);
-    }
-    
-    // Recarrega o relatório com os novos filtros
-    carregarRelatorioTurmaFiltrado();
-}
 
         // ============================================
-// CARREGAR RELATÓRIO POR TURMA FILTRADO (CORRIGIDO)
-// ============================================
-async function carregarRelatorioTurmaFiltrado() {
-    try {
-        const escolaId = document.getElementById('rel-turma-escola').value;
-        const serie = document.getElementById('rel-turma-serie').value;
-        const turmaId = document.getElementById('rel-turma-turma').value;
-        const provaId = document.getElementById('rel-turma-prova').value;
-        
-        let url = API_URL + '/api/historico/agrupado';
-        const params = new URLSearchParams();
-        if (escolaId && escolaId !== '') params.append('escola', escolaId);
-        if (serie && serie !== '') params.append('serie', serie);
-        if (turmaId && turmaId !== '') params.append('turma', turmaId);
-        if (provaId && provaId !== '') params.append('prova', provaId);
-        if (params.toString()) url += '?' + params.toString();
-        
-        const response = await fetch(url);
-        const alunos = await response.json();
-        
-        if (!alunos || alunos.length === 0 || alunos.erro) {
-            document.getElementById('rel-total-alunos').textContent = '0';
-            document.getElementById('rel-Habilidades').textContent = '0';
-            document.getElementById('rel-recuperacao').textContent = '0';
-            document.getElementById('rel-media').textContent = '0';
-            document.getElementById('rel-total-correcoes').textContent = '0 correções';
-            document.getElementById('rel-pt-acertos').textContent = '0';
-            document.getElementById('rel-pt-erros').textContent = '0';
-            document.getElementById('rel-pt-media').textContent = '0.0';
-            document.getElementById('rel-mat-acertos').textContent = '0';
-            document.getElementById('rel-mat-erros').textContent = '0';
-            document.getElementById('rel-mat-media').textContent = '0.0';
-            document.getElementById('rel-prod-acertos').textContent = '0';
-            document.getElementById('rel-prod-erros').textContent = '0';
-            document.getElementById('rel-prod-media').textContent = '0.0';
-            
-            const faixas = ['0-2', '2-4', '4-6', '6-8', '8-10'];
-            faixas.forEach(id => {
-                const el = document.getElementById('d' + id.replace('-', ''));
-                if (el) el.textContent = '0';
-            });
-            document.querySelectorAll('#dist-notas .chart-bar').forEach((bar, i) => {
-                if (i < 5) bar.style.height = '10px';
-            });
-            return;
+        // CARREGAR RELATÓRIO POR TURMA FILTRADO
+        // ============================================
+        async function carregarRelatorioTurmaFiltrado() {
+            try {
+                const escolaId = document.getElementById('rel-turma-escola').value;
+                const serie = document.getElementById('rel-turma-serie').value;
+                const turmaId = document.getElementById('rel-turma-turma').value;
+                const provaId = document.getElementById('rel-turma-prova').value;
+                
+                let url = API_URL + '/api/historico/agrupado';
+                const params = new URLSearchParams();
+                if (escolaId && escolaId !== '') params.append('escola', escolaId);
+                if (serie && serie !== '') params.append('serie', serie);
+                if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                if (provaId && provaId !== '') params.append('prova', provaId);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
+                const alunos = await response.json();
+                
+                if (!alunos || alunos.length === 0 || alunos.erro) {
+                    document.getElementById('rel-total-alunos').textContent = '0';
+                    document.getElementById('rel-Habilidades').textContent = '0';
+                    document.getElementById('rel-recuperacao').textContent = '0';
+                    document.getElementById('rel-media').textContent = '0';
+                    document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                    document.getElementById('rel-pt-acertos').textContent = '0';
+                    document.getElementById('rel-pt-erros').textContent = '0';
+                    document.getElementById('rel-pt-media').textContent = '0.0';
+                    document.getElementById('rel-mat-acertos').textContent = '0';
+                    document.getElementById('rel-mat-erros').textContent = '0';
+                    document.getElementById('rel-mat-media').textContent = '0.0';
+                    document.getElementById('rel-prod-acertos').textContent = '0';
+                    document.getElementById('rel-prod-erros').textContent = '0';
+                    document.getElementById('rel-prod-media').textContent = '0.0';
+                    
+                    const faixas = ['0-2', '2-4', '4-6', '6-8', '8-10'];
+                    faixas.forEach(id => {
+                        const el = document.getElementById('d' + id.replace('-', ''));
+                        if (el) el.textContent = '0';
+                    });
+                    document.querySelectorAll('#dist-notas .chart-bar').forEach((bar, i) => {
+                        if (i < 5) bar.style.height = '10px';
+                    });
+                    return;
+                }
+                
+                const dadosAlunos = Array.isArray(alunos) ? alunos : [];
+                
+                if (dadosAlunos.length === 0) {
+                    document.getElementById('rel-total-alunos').textContent = '0';
+                    document.getElementById('rel-Habilidades').textContent = '0';
+                    document.getElementById('rel-recuperacao').textContent = '0';
+                    document.getElementById('rel-media').textContent = '0';
+                    document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                    return;
+                }
+                
+                const total = dadosAlunos.length;
+                const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
+                const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
+                const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
+                
+                document.getElementById('rel-total-alunos').textContent = total;
+                document.getElementById('rel-Habilidades').textContent = Habilidades;
+                document.getElementById('rel-recuperacao').textContent = recuperacao;
+                document.getElementById('rel-media').textContent = mediaGeral.toFixed(1);
+                document.getElementById('rel-total-correcoes').textContent = total + ' correções';
+                
+                let totalPtAcertos = 0, totalPtErros = 0, totalPtQuestoes = 0;
+                let totalMatAcertos = 0, totalMatErros = 0, totalMatQuestoes = 0;
+                let totalProdAcertos = 0, totalProdErros = 0, totalProdQuestoes = 0;
+                
+                dadosAlunos.forEach(aluno => {
+                    if (aluno.portugues && typeof aluno.portugues === 'object') {
+                        const acertos = parseInt(aluno.portugues.acertos) || 0;
+                        const totalDisc = parseInt(aluno.portugues.total) || 0;
+                        const erros = totalDisc - acertos;
+                        totalPtAcertos += acertos;
+                        totalPtErros += erros;
+                        totalPtQuestoes += totalDisc;
+                    } else {
+                        const acertos = parseInt(aluno.portugues) || 0;
+                        const totalDisc = 20;
+                        const erros = totalDisc - acertos;
+                        totalPtAcertos += acertos;
+                        totalPtErros += erros;
+                        totalPtQuestoes += totalDisc;
+                    }
+                    
+                    if (aluno.matematica && typeof aluno.matematica === 'object') {
+                        const acertos = parseInt(aluno.matematica.acertos) || 0;
+                        const totalDisc = parseInt(aluno.matematica.total) || 0;
+                        const erros = totalDisc - acertos;
+                        totalMatAcertos += acertos;
+                        totalMatErros += erros;
+                        totalMatQuestoes += totalDisc;
+                    } else {
+                        const acertos = parseInt(aluno.matematica) || 0;
+                        const totalDisc = 20;
+                        const erros = totalDisc - acertos;
+                        totalMatAcertos += acertos;
+                        totalMatErros += erros;
+                        totalMatQuestoes += totalDisc;
+                    }
+                    
+                    if (aluno.producao && typeof aluno.producao === 'object') {
+                        const acertos = parseInt(aluno.producao.acertos) || 0;
+                        const totalDisc = parseInt(aluno.producao.total) || 0;
+                        const erros = totalDisc - acertos;
+                        totalProdAcertos += acertos;
+                        totalProdErros += erros;
+                        totalProdQuestoes += totalDisc;
+                    } else {
+                        const acertos = parseInt(aluno.producao) || 0;
+                        const totalDisc = 20;
+                        const erros = totalDisc - acertos;
+                        totalProdAcertos += acertos;
+                        totalProdErros += erros;
+                        totalProdQuestoes += totalDisc;
+                    }
+                });
+                
+                const ptMedia = total > 0 ? (totalPtAcertos / total) : 0;
+                const matMedia = total > 0 ? (totalMatAcertos / total) : 0;
+                const prodMedia = total > 0 ? (totalProdAcertos / total) : 0;
+                
+                document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
+                document.getElementById('rel-pt-erros').textContent = totalPtErros;
+                document.getElementById('rel-pt-media').textContent = ptMedia.toFixed(1);
+                document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
+                document.getElementById('rel-mat-erros').textContent = totalMatErros;
+                document.getElementById('rel-mat-media').textContent = matMedia.toFixed(1);
+                document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
+                document.getElementById('rel-prod-erros').textContent = totalProdErros;
+                document.getElementById('rel-prod-media').textContent = prodMedia.toFixed(1);
+                
+                const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+                dadosAlunos.forEach(a => {
+                    const nota = (a.media || 0) * 2;
+                    if (nota < 2) faixas['0-2']++;
+                    else if (nota < 4) faixas['2-4']++;
+                    else if (nota < 6) faixas['4-6']++;
+                    else if (nota < 8) faixas['6-8']++;
+                    else faixas['8-10']++;
+                });
+                
+                const maxVal = Math.max(...Object.values(faixas), 1);
+                const keys = ['0-2', '2-4', '4-6', '6-8', '8-10'];
+                keys.forEach((key, index) => {
+                    const el = document.getElementById('d' + key.replace('-', ''));
+                    if (el) el.textContent = faixas[key];
+                    const bars = document.querySelectorAll('#dist-notas .chart-bar');
+                    if (bars[index]) {
+                        const altura = maxVal > 0 ? Math.max(10, (faixas[key] / maxVal) * 110) : 10;
+                        bars[index].style.height = altura + 'px';
+                    }
+                });
+                
+            } catch (erro) {
+                console.error('❌ Erro ao carregar relatório por turma:', erro);
+                showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
+            }
         }
-        
-        const dadosAlunos = Array.isArray(alunos) ? alunos : [];
-        
-        if (dadosAlunos.length === 0) {
-            document.getElementById('rel-total-alunos').textContent = '0';
-            document.getElementById('rel-Habilidades').textContent = '0';
-            document.getElementById('rel-recuperacao').textContent = '0';
-            document.getElementById('rel-media').textContent = '0';
-            document.getElementById('rel-total-correcoes').textContent = '0 correções';
-            return;
+
+        // ============================================
+        // LIMPAR FILTROS RELATÓRIO POR TURMA
+        // ============================================
+        function limparFiltrosRelTurma() {
+            document.getElementById('rel-turma-escola').value = '';
+            document.getElementById('rel-turma-serie').value = '';
+            document.getElementById('rel-turma-prova').value = '';
+            
+            const selectTurma = document.getElementById('rel-turma-turma');
+            selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+            fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                }
+                carregarRelatorioTurmaFiltrado();
+            }).catch(e => console.error('Erro ao recarregar turmas:', e));
+            
+            const selectProva = document.getElementById('rel-turma-prova');
+            fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
+                if (provas && !provas.erro) {
+                    selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                    provas.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                        selectProva.appendChild(opt);
+                    });
+                }
+                carregarRelatorioTurmaFiltrado();
+            }).catch(e => console.error('Erro ao recarregar provas:', e));
         }
-        
-        const total = dadosAlunos.length;
-        const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
-        const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
-        const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
-        
-        document.getElementById('rel-total-alunos').textContent = total;
-        document.getElementById('rel-Habilidades').textContent = Habilidades;
-        document.getElementById('rel-recuperacao').textContent = recuperacao;
-        document.getElementById('rel-media').textContent = mediaGeral.toFixed(1);
-        document.getElementById('rel-total-correcoes').textContent = total + ' correções';
-        
-        // 🔥 CORREÇÃO AQUI: Calcular acertos e erros por disciplina corretamente
-        let totalPtAcertos = 0, totalPtErros = 0, totalPtQuestoes = 0;
-        let totalMatAcertos = 0, totalMatErros = 0, totalMatQuestoes = 0;
-        let totalProdAcertos = 0, totalProdErros = 0, totalProdQuestoes = 0;
-        
-        dadosAlunos.forEach(aluno => {
-            // Português
-            if (aluno.portugues && typeof aluno.portugues === 'object') {
-                const acertos = parseInt(aluno.portugues.acertos) || 0;
-                const totalDisc = parseInt(aluno.portugues.total) || 0;
-                const erros = totalDisc - acertos;
-                totalPtAcertos += acertos;
-                totalPtErros += erros;
-                totalPtQuestoes += totalDisc;
-            } else {
-                // Se não veio estruturado, tenta extrair do formato antigo
-                const acertos = parseInt(aluno.portugues) || 0;
-                const totalDisc = 20; // valor padrão
-                const erros = totalDisc - acertos;
-                totalPtAcertos += acertos;
-                totalPtErros += erros;
-                totalPtQuestoes += totalDisc;
-            }
-            
-            // Matemática
-            if (aluno.matematica && typeof aluno.matematica === 'object') {
-                const acertos = parseInt(aluno.matematica.acertos) || 0;
-                const totalDisc = parseInt(aluno.matematica.total) || 0;
-                const erros = totalDisc - acertos;
-                totalMatAcertos += acertos;
-                totalMatErros += erros;
-                totalMatQuestoes += totalDisc;
-            } else {
-                const acertos = parseInt(aluno.matematica) || 0;
-                const totalDisc = 20;
-                const erros = totalDisc - acertos;
-                totalMatAcertos += acertos;
-                totalMatErros += erros;
-                totalMatQuestoes += totalDisc;
-            }
-            
-            // Produção
-            if (aluno.producao && typeof aluno.producao === 'object') {
-                const acertos = parseInt(aluno.producao.acertos) || 0;
-                const totalDisc = parseInt(aluno.producao.total) || 0;
-                const erros = totalDisc - acertos;
-                totalProdAcertos += acertos;
-                totalProdErros += erros;
-                totalProdQuestoes += totalDisc;
-            } else {
-                const acertos = parseInt(aluno.producao) || 0;
-                const totalDisc = 20;
-                const erros = totalDisc - acertos;
-                totalProdAcertos += acertos;
-                totalProdErros += erros;
-                totalProdQuestoes += totalDisc;
-            }
-        });
-        
-        // 🔥 CORREÇÃO: As médias devem ser calculadas sobre o total de alunos, não sobre o total de questões
-        const ptMedia = total > 0 ? (totalPtAcertos / total) : 0;
-        const matMedia = total > 0 ? (totalMatAcertos / total) : 0;
-        const prodMedia = total > 0 ? (totalProdAcertos / total) : 0;
-        
-        document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
-        document.getElementById('rel-pt-erros').textContent = totalPtErros;
-        document.getElementById('rel-pt-media').textContent = ptMedia.toFixed(1);
-        document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
-        document.getElementById('rel-mat-erros').textContent = totalMatErros;
-        document.getElementById('rel-mat-media').textContent = matMedia.toFixed(1);
-        document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
-        document.getElementById('rel-prod-erros').textContent = totalProdErros;
-        document.getElementById('rel-prod-media').textContent = prodMedia.toFixed(1);
-        
-        // Gráfico de distribuição de notas
-        const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-        dadosAlunos.forEach(a => {
-            const nota = (a.media || 0) * 2;
-            if (nota < 2) faixas['0-2']++;
-            else if (nota < 4) faixas['2-4']++;
-            else if (nota < 6) faixas['4-6']++;
-            else if (nota < 8) faixas['6-8']++;
-            else faixas['8-10']++;
-        });
-        
-        const maxVal = Math.max(...Object.values(faixas), 1);
-        const keys = ['0-2', '2-4', '4-6', '6-8', '8-10'];
-        keys.forEach((key, index) => {
-            const el = document.getElementById('d' + key.replace('-', ''));
-            if (el) el.textContent = faixas[key];
-            const bars = document.querySelectorAll('#dist-notas .chart-bar');
-            if (bars[index]) {
-                const altura = maxVal > 0 ? Math.max(10, (faixas[key] / maxVal) * 110) : 10;
-                bars[index].style.height = altura + 'px';
-            }
-        });
-        
-    } catch (erro) {
-        console.error('❌ Erro ao carregar relatório por turma:', erro);
-        showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
-    }
-}
 
         // ============================================
         // FUNÇÕES ADICIONAIS QUE PODEM FALTAR
@@ -5264,7 +5287,9 @@ async function carregarRelatorioTurmaFiltrado() {
             }
         }
 
-        // Funções de salvamento que podem estar faltando
+        // ============================================
+        // FUNÇÕES DE SALVAMENTO
+        // ============================================
         function salvarEscola() {
             const nome = document.getElementById('escola-nome').value.trim();
             if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
