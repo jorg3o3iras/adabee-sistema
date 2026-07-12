@@ -2266,6 +2266,67 @@ def dashboard_desempenho():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
+# NOVA ROTA: DASHBOARD CONCEITO (ADICIONADA)
+# ============================================
+
+@app.route('/api/dashboard/Conceito', methods=['GET'])
+def dashboard_conceito():
+    """Retorna dados de conceitos para o dashboard"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Buscar todos os alunos com suas notas e conceitos
+        cur.execute("""
+            SELECT 
+                a.id,
+                a.nome as aluno_nome,
+                t.nome as turma_nome,
+                t.serie,
+                COALESCE(AVG(h.nota), 0) as media_nota,
+                COALESCE(AVG(h.acertos), 0) as media_acertos,
+                COUNT(DISTINCT h.id) as total_correcoes
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN historico h ON h.aluno_id = a.id
+            GROUP BY a.id, a.nome, t.nome, t.serie
+            ORDER BY a.nome
+        """)
+        
+        alunos = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Calcular conceito para cada aluno
+        resultado = []
+        for aluno in alunos:
+            if aluno['total_correcoes'] > 0:
+                porcentagem = round((aluno['media_nota'] / 10) * 100) if aluno['media_nota'] > 0 else 0
+                conceito = calcular_conceito(porcentagem)
+            else:
+                conceito = calcular_conceito(0)
+            
+            resultado.append({
+                'aluno_id': aluno['id'],
+                'aluno_nome': aluno['aluno_nome'],
+                'turma': aluno['turma_nome'],
+                'serie': aluno['serie'],
+                'media_nota': round(aluno['media_nota'], 1),
+                'porcentagem': porcentagem,
+                'conceito': conceito,
+                'total_correcoes': aluno['total_correcoes']
+            })
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        print(f"❌ Erro em /api/dashboard/Conceito: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
 # ROTA DE DASHBOARD TURMAS E ALUNOS
 # ============================================
 
@@ -2716,6 +2777,7 @@ def index():
                 '/api/historico',
                 '/api/historico/agrupado',
                 '/api/dashboard',
+                '/api/dashboard/Conceito',
                 '/api/dashboard/turmas_alunos',
                 '/api/gerar_gabarito'
             ]
@@ -2915,6 +2977,7 @@ if __name__ == '__main__':
     print("   - /api/historico - Histórico de correções")
     print("   - /api/historico/agrupado - Histórico agrupado por aluno (3 avaliações)")
     print("   - /api/dashboard - Dados do dashboard")
+    print("   - /api/dashboard/Conceito - Dados de conceitos para dashboard")
     print("   - /api/dashboard/turmas_alunos - Turmas com alunos")
     print("   - /api/gerar_gabarito - Gerar cartão resposta")
     print("=" * 60)
