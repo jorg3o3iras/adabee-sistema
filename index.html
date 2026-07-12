@@ -599,7 +599,7 @@
             border-radius: 10px;
             padding: 14px 16px;
             transition: all 0.3s;
-            max-height: 400px;
+            max-height: 450px;
             overflow-y: auto;
         }
         .habilidade-card:hover {
@@ -618,12 +618,13 @@
             font-size: 20px;
         }
         .habilidade-card .questao-item {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 30px 28px 28px 1fr;
+            gap: 4px;
             align-items: center;
             padding: 4px 0;
             border-bottom: 1px solid rgba(255,255,255,0.04);
-            font-size: 12px;
+            font-size: 11px;
         }
         .habilidade-card .questao-item:last-child {
             border-bottom: none;
@@ -631,14 +632,28 @@
         .habilidade-card .questao-item .q-num {
             font-weight: 600;
             color: var(--text2);
-            min-width: 24px;
+            text-align: center;
+        }
+        .habilidade-card .questao-item .q-resposta {
+            font-weight: 700;
+            text-align: center;
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 12px;
+        }
+        .habilidade-card .questao-item .q-gabarito {
+            font-weight: 700;
+            text-align: center;
+            color: var(--text3);
+            font-size: 10px;
         }
         .habilidade-card .questao-item .q-status {
             font-weight: 700;
             font-size: 10px;
-            padding: 2px 10px;
+            padding: 2px 8px;
             border-radius: 12px;
-            text-align: right;
+            text-align: center;
         }
         .habilidade-card .questao-item .q-status.acertou {
             color: var(--green);
@@ -665,6 +680,10 @@
         }
         .habilidade-card .resumo-habilidade .erros {
             color: var(--red);
+            font-weight: 700;
+        }
+        .habilidade-card .resumo-habilidade .nota {
+            color: var(--blue);
             font-weight: 700;
         }
 
@@ -727,7 +746,7 @@
                 grid-template-columns: 1fr;
             }
             .habilidade-card {
-                max-height: 300px;
+                max-height: 350px;
             }
         }
         @media (max-width:480px) {
@@ -780,7 +799,11 @@
                 grid-template-columns: 1fr;
             }
             .habilidade-card {
-                max-height: 250px;
+                max-height: 300px;
+            }
+            .habilidade-card .questao-item {
+                grid-template-columns: 25px 22px 22px 1fr;
+                font-size: 10px;
             }
         }
 
@@ -896,6 +919,21 @@
             .historico-disciplina .acertos-erros-sm .acertos { color: #28a745 !important; }
             .historico-disciplina .acertos-erros-sm .erros { color: #dc3545 !important; }
             .historico-disciplina .acertos-erros-sm .separador { color: #666 !important; }
+            .habilidade-card .questao-item {
+                grid-template-columns: 20px 18px 18px 1fr;
+                font-size: 8pt !important;
+                padding: 2px 0 !important;
+            }
+            .habilidade-card .questao-item .q-status {
+                font-size: 7pt !important;
+                padding: 1px 4px !important;
+            }
+            .habilidade-card .questao-item .q-resposta {
+                font-size: 8pt !important;
+            }
+            .habilidade-card .questao-item .q-gabarito {
+                font-size: 7pt !important;
+            }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -3071,6 +3109,7 @@
 
         // ============================================
         // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES - CORRIGIDA
+        // Agora mostra: Número da Questão | Resposta do Aluno | Gabarito | Status
         // ============================================
         function atualizarHabilidades(historico, alunoNome) {
             // Estrutura para armazenar os dados por disciplina
@@ -3096,6 +3135,19 @@
                         acertos: item.acertos || 0,
                         serie: item.serie || ''
                     });
+                } else {
+                    const prova = provasMap.get(key);
+                    // Mesclar respostas e gabarito se disponíveis
+                    if (item.respostas && item.respostas.length > 0) {
+                        prova.respostas = item.respostas;
+                    }
+                    if (item.gabarito && item.gabarito.length > 0) {
+                        prova.gabarito = item.gabarito;
+                    }
+                    if (item.total) prova.total = item.total;
+                    if (item.acertos) prova.acertos = item.acertos;
+                    if (item.disciplina) prova.disciplina = item.disciplina;
+                    if (item.serie) prova.serie = item.serie;
                 }
             });
             
@@ -3164,8 +3216,9 @@
                             const isCorreto = i < acertos;
                             disciplinas[tipo].questoes.push({
                                 numero: i + 1,
-                                acertou: isCorreto,
-                                resposta: isCorreto ? '✅' : '❌'
+                                resposta: isCorreto ? gabarito[i] || '✅' : gabarito[i] || '❌',
+                                gabarito: gabarito[i] || '—',
+                                acertou: isCorreto
                             });
                         }
                     }
@@ -3181,8 +3234,9 @@
                     if (disciplinas[tipo]) {
                         disciplinas[tipo].questoes.push({
                             numero: i + 1,
-                            acertou: isCorreto,
-                            resposta: resposta || '—'
+                            resposta: resposta || '—',
+                            gabarito: gab || '—',
+                            acertou: isCorreto
                         });
                         if (isCorreto) {
                             disciplinas[tipo].acertos++;
@@ -3216,8 +3270,9 @@
                             const isCorreto = i < acertos;
                             dados.questoes.push({
                                 numero: i + 1,
-                                acertou: isCorreto,
-                                resposta: isCorreto ? '✅' : '❌'
+                                resposta: isCorreto ? '✅' : '❌',
+                                gabarito: '—',
+                                acertou: isCorreto
                             });
                         }
                     }
@@ -3250,6 +3305,8 @@
                     html += `
                         <div class="questao-item">
                             <span class="q-num">Q${q.numero}</span>
+                            <span class="q-resposta">${q.resposta}</span>
+                            <span class="q-gabarito">${q.gabarito}</span>
                             <span class="q-status ${statusClass}">${statusText}</span>
                         </div>
                     `;
@@ -3271,11 +3328,15 @@
                     'avancado': 'badge-conceito-avancado'
                 };
                 
+                // Calcular a nota da disciplina (0-10)
+                const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
+                
                 html += `
                     <div class="resumo-habilidade">
                         <span>Total: ${totalQuestoesDisciplina} questões</span>
                         <span><span class="acertos">✅ ${dados.acertos} acertos</span> | <span class="erros">❌ ${dados.erros} erros</span></span>
                         <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
+                        <span><span class="nota">⭐ ${notaDisciplina.toFixed(1)}</span></span>
                     </div>
                 `;
                 
