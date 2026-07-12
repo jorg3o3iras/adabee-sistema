@@ -1431,7 +1431,7 @@ def salvar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ESCOLAS
+# ROTA DE ESCOLAS (CRUD COMPLETO COM VERIFICAÇÃO DE DEPENDÊNCIAS)
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -1536,6 +1536,7 @@ def editar_escola(id):
         conn.close()
         
         return jsonify({
+            'sucesso': True,
             'id': result['id'],
             'mensagem': 'Escola atualizada com sucesso'
         })
@@ -1544,23 +1545,108 @@ def editar_escola(id):
         print(f"❌ Erro ao editar escola: {e}")
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/escolas/<int:id>/dependentes', methods=['GET'])
+def verificar_dependentes_escola(id):
+    """Verifica quantas turmas e alunos estão vinculados a uma escola"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Contar turmas
+        cur.execute("SELECT COUNT(*) as total FROM turmas WHERE escola_id = %s", (id,))
+        turmas = cur.fetchone()
+        
+        # Contar alunos (via turmas)
+        cur.execute("""
+            SELECT COUNT(DISTINCT a.id) as total 
+            FROM alunos a 
+            JOIN turmas t ON a.turma_id = t.id 
+            WHERE t.escola_id = %s
+        """, (id,))
+        alunos = cur.fetchone()
+        
+        # Contar provas (via turmas)
+        cur.execute("""
+            SELECT COUNT(DISTINCT p.id) as total 
+            FROM provas p 
+            JOIN turmas t ON p.turma_id = t.id 
+            WHERE t.escola_id = %s
+        """, (id,))
+        provas = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'turmas': turmas['total'] if turmas else 0,
+            'alunos': alunos['total'] if alunos else 0,
+            'provas': provas['total'] if provas else 0
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao verificar dependências: {e}")
+        return jsonify({'erro': str(e)}), 500
+
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
+    """Exclui uma escola, verificando se não há dependências"""
     conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM escolas WHERE id = %s", (id,))
-            conn.commit()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se há turmas vinculadas
+        cur.execute("SELECT COUNT(*) as total FROM turmas WHERE escola_id = %s", (id,))
+        turmas = cur.fetchone()
+        
+        if turmas and turmas['total'] > 0:
             cur.close()
             conn.close()
-            return jsonify({'mensagem': 'Escola excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir escola: {e}")
-    return jsonify({'erro': 'Erro ao excluir escola'}), 500
+            return jsonify({
+                'sucesso': False,
+                'erro': f'Não é possível excluir: a escola possui {turmas["total"]} turma(s) vinculada(s). Exclua as turmas primeiro.'
+            }), 400
+        
+        # Verificar se há alunos vinculados (via turmas)
+        cur.execute("""
+            SELECT COUNT(DISTINCT a.id) as total 
+            FROM alunos a 
+            JOIN turmas t ON a.turma_id = t.id 
+            WHERE t.escola_id = %s
+        """, (id,))
+        alunos = cur.fetchone()
+        
+        if alunos and alunos['total'] > 0:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'sucesso': False,
+                'erro': f'Não é possível excluir: a escola possui {alunos["total"]} aluno(s) vinculado(s). Exclua os alunos primeiro.'
+            }), 400
+        
+        # Se não houver dependências, excluir
+        cur.execute("DELETE FROM escolas WHERE id = %s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Escola excluída com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir escola: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS
+# ROTA DE TURMAS (CRUD COMPLETO COM VERIFICAÇÃO DE DEPENDÊNCIAS)
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -1758,6 +1844,7 @@ def editar_turma(id):
         conn.close()
         
         return jsonify({
+            'sucesso': True,
             'id': result['id'],
             'mensagem': 'Turma atualizada com sucesso'
         })
@@ -1766,27 +1853,9 @@ def editar_turma(id):
         print(f"❌ Erro ao editar turma: {e}")
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/api/turmas/<int:id>', methods=['DELETE'])
-def excluir_turma(id):
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'mensagem': 'Turma excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir turma: {e}")
-    return jsonify({'erro': 'Erro ao excluir turma'}), 500
-
-# ============================================
-# ROTA PARA LISTAR ALUNOS POR TURMA
-# ============================================
-
 @app.route('/api/turmas/<int:id>/alunos', methods=['GET'])
 def listar_alunos_por_turma(id):
+    """Lista todos os alunos de uma turma específica"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1794,6 +1863,7 @@ def listar_alunos_por_turma(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
+        # Verificar se a turma existe
         cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
         turma = cur.fetchone()
         if not turma:
@@ -1801,6 +1871,7 @@ def listar_alunos_por_turma(id):
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
+        # Buscar alunos
         cur.execute("""
             SELECT 
                 id,
@@ -1833,8 +1904,58 @@ def listar_alunos_por_turma(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/api/turmas/<int:id>', methods=['DELETE'])
+def excluir_turma(id):
+    """Exclui uma turma, verificando se não há alunos vinculados"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se há alunos vinculados
+        cur.execute("SELECT COUNT(*) as total FROM alunos WHERE turma_id = %s", (id,))
+        alunos = cur.fetchone()
+        
+        if alunos and alunos['total'] > 0:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'sucesso': False,
+                'erro': f'Não é possível excluir: a turma possui {alunos["total"]} aluno(s) vinculado(s). Exclua os alunos primeiro.'
+            }), 400
+        
+        # Verificar se há provas vinculadas
+        cur.execute("SELECT COUNT(*) as total FROM provas WHERE turma_id = %s", (id,))
+        provas = cur.fetchone()
+        
+        if provas and provas['total'] > 0:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'sucesso': False,
+                'erro': f'Não é possível excluir: a turma possui {provas["total"]} prova(s) vinculada(s). Exclua as provas primeiro.'
+            }), 400
+        
+        # Se não houver dependências, excluir
+        cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Turma excluída com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir turma: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
 # ============================================
-# ROTA DE ALUNOS
+# ROTA DE ALUNOS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -2008,6 +2129,7 @@ def editar_aluno(id):
         conn.close()
         
         return jsonify({
+            'sucesso': True,
             'id': result['id'],
             'mensagem': 'Aluno atualizado com sucesso'
         })
@@ -2018,21 +2140,46 @@ def editar_aluno(id):
 
 @app.route('/api/alunos/<int:id>', methods=['DELETE'])
 def excluir_aluno(id):
+    """Exclui um aluno e todo o seu histórico"""
     conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
-            conn.commit()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        # Verificar se o aluno existe
+        cur.execute("SELECT id FROM alunos WHERE id = %s", (id,))
+        if not cur.fetchone():
             cur.close()
             conn.close()
-            return jsonify({'mensagem': 'Aluno excluído com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir aluno: {e}")
-    return jsonify({'erro': 'Erro ao excluir aluno'}), 500
+            return jsonify({'erro': 'Aluno não encontrado'}), 404
+        
+        # Excluir histórico do aluno
+        cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
+        
+        # Excluir correções de texto do aluno
+        cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
+        
+        # Excluir o aluno
+        cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Aluno excluído com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir aluno: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE PROVAS
+# ROTA DE PROVAS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -2153,6 +2300,7 @@ def editar_prova(id):
         conn.close()
         
         return jsonify({
+            'sucesso': True,
             'id': result['id'],
             'mensagem': 'Prova atualizada com sucesso'
         })
@@ -2163,18 +2311,43 @@ def editar_prova(id):
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
+    """Exclui uma prova e todo o histórico associado"""
     conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM provas WHERE id = %s", (id,))
-            conn.commit()
+    if not conn:
+        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+    
+    try:
+        cur = conn.cursor()
+        
+        # Verificar se a prova existe
+        cur.execute("SELECT id FROM provas WHERE id = %s", (id,))
+        if not cur.fetchone():
             cur.close()
             conn.close()
-            return jsonify({'mensagem': 'Prova excluída com sucesso'})
-        except Exception as e:
-            print(f"Erro ao excluir prova: {e}")
-    return jsonify({'erro': 'Erro ao excluir prova'}), 500
+            return jsonify({'erro': 'Prova não encontrada'}), 404
+        
+        # Excluir histórico associado
+        cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
+        
+        # Excluir correções de texto associadas
+        cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
+        
+        # Excluir a prova
+        cur.execute("DELETE FROM provas WHERE id = %s", (id,))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Prova excluída com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir prova: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTA DE DASHBOARD
@@ -2265,10 +2438,6 @@ def dashboard_desempenho():
         print(f"❌ Erro ao buscar desempenho: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# NOVA ROTA: DASHBOARD CONCEITO (ADICIONADA)
-# ============================================
-
 @app.route('/api/dashboard/Conceito', methods=['GET'])
 def dashboard_conceito():
     """Retorna dados de conceitos para o dashboard"""
@@ -2279,7 +2448,6 @@ def dashboard_conceito():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Buscar todos os alunos com suas notas e conceitos
         cur.execute("""
             SELECT 
                 a.id,
@@ -2300,7 +2468,6 @@ def dashboard_conceito():
         cur.close()
         conn.close()
         
-        # Calcular conceito para cada aluno
         resultado = []
         for aluno in alunos:
             if aluno['total_correcoes'] > 0:
@@ -2325,10 +2492,6 @@ def dashboard_conceito():
     except Exception as e:
         print(f"❌ Erro em /api/dashboard/Conceito: {e}")
         return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE DASHBOARD TURMAS E ALUNOS
-# ============================================
 
 @app.route('/api/dashboard/turmas_alunos', methods=['GET'])
 def dashboard_turmas_alunos():
@@ -2512,7 +2675,10 @@ def excluir_usuario(id):
         cur.close()
         conn.close()
         
-        return jsonify({'mensagem': 'Usuário excluído com sucesso'})
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Usuário excluído com sucesso'
+        })
         
     except Exception as e:
         print(f"Erro ao excluir usuário: {e}")
