@@ -2227,6 +2227,39 @@
         };
 
         // ============================================
+        // FUNÇÃO PARA PROCESSAR RESPOSTAS DA API
+        // ============================================
+        async function processarRespostaAPI(response) {
+            let result;
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    result = { erro: 'Erro ao processar JSON' };
+                }
+            } else {
+                const text = await response.text();
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    if (response.ok) {
+                        result = { sucesso: true, mensagem: 'Operação realizada com sucesso' };
+                    } else {
+                        result = { sucesso: false, erro: 'Erro ' + response.status + ': ' + text.substring(0, 100) };
+                    }
+                }
+            }
+            
+            return {
+                ok: response.ok || result.sucesso === true,
+                data: result,
+                status: response.status
+            };
+        }
+
+        // ============================================
         // FUNÇÃO PARA ATUALIZAR DATAS NOS CABEÇALHOS DE IMPRESSÃO
         // ============================================
         function atualizarDatasImpressao() {
@@ -2429,7 +2462,7 @@
         }
 
         // ============================================
-        // CARREGAR TURMAS - CORRIGIDO
+        // CARREGAR TURMAS
         // ============================================
         async function carregarTurmas() {
             try {
@@ -3108,18 +3141,15 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES - CORRIGIDA
-        // Agora mantém a ordem original das questões
+        // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
         // ============================================
         function atualizarHabilidades(historico, alunoNome) {
-            // Estrutura para armazenar os dados por disciplina
             let disciplinas = {
                 'portugues': { nome: 'Português', icone: '🇵🇹', questoes: [], acertos: 0, erros: 0, total: 0 },
                 'matematica': { nome: 'Matemática', icone: '📐', questoes: [], acertos: 0, erros: 0, total: 0 },
                 'producao': { nome: 'Produção de Texto', icone: '✍️', questoes: [], acertos: 0, erros: 0, total: 0 }
             };
             
-            // Usar o mapa de provas para extrair as respostas por disciplina
             let provasMap = new Map();
             
             historico.forEach(item => {
@@ -3137,7 +3167,6 @@
                     });
                 } else {
                     const prova = provasMap.get(key);
-                    // Mesclar respostas e gabarito se disponíveis
                     if (item.respostas && item.respostas.length > 0) {
                         prova.respostas = item.respostas;
                     }
@@ -3151,7 +3180,6 @@
                 }
             });
             
-            // Para cada prova, identificar a disciplina e adicionar as questões
             provasMap.forEach((prova) => {
                 let tipo = 'geral';
                 const disciplina = prova.disciplina || '';
@@ -3170,7 +3198,6 @@
                            provaTitulo.toLowerCase().includes('texto') || provaTitulo.toLowerCase().includes('redação')) {
                     tipo = 'producao';
                 } else {
-                    // Fallback: usar a série para determinar
                     const serie = prova.serie || '';
                     if (serie.includes('1') || serie.includes('2') || serie.includes('3') || 
                         serie.includes('4') || serie.includes('5')) {
@@ -3184,7 +3211,6 @@
                 const gabarito = prova.gabarito || [];
                 const total = Math.min(respostas.length, gabarito.length, prova.total || 20);
                 
-                // Processar as questões UMA A UMA na ordem correta
                 for (let i = 0; i < total; i++) {
                     const resposta = i < respostas.length ? respostas[i] : '';
                     const gab = i < gabarito.length ? gabarito[i] : '';
@@ -3207,11 +3233,9 @@
                 }
             });
             
-            // Se alguma disciplina ficou sem questões, usar os dados do conceito
             ['portugues', 'matematica', 'producao'].forEach(key => {
                 const dados = disciplinas[key];
                 if (dados.questoes.length === 0) {
-                    // Buscar do elemento de conceito
                     const acertosEl = document.getElementById(`conceito-${key === 'portugues' ? 'port' : key === 'matematica' ? 'mat' : 'prod'}-acertos`);
                     const errosEl = document.getElementById(`conceito-${key === 'portugues' ? 'port' : key === 'matematica' ? 'mat' : 'prod'}-erros`);
                     
@@ -3224,8 +3248,6 @@
                         dados.erros = erros;
                         dados.total = total;
                         
-                        // Criar questões baseadas na ordem correta
-                        // As primeiras 'acertos' questões são corretas, as últimas 'erros' são erradas
                         for (let i = 0; i < total; i++) {
                             const isCorreto = i < acertos;
                             dados.questoes.push({
@@ -3239,7 +3261,6 @@
                 }
             });
             
-            // Atualizar o HTML de cada disciplina
             ['portugues', 'matematica', 'producao'].forEach(key => {
                 const container = document.getElementById(`habilidade-${key}`);
                 const dados = disciplinas[key];
@@ -3255,7 +3276,6 @@
                     return;
                 }
                 
-                // ORDENAR PELO NÚMERO DA QUESTÃO para manter a ordem correta
                 dados.questoes.sort((a, b) => a.numero - b.numero);
                 
                 let html = '';
@@ -3288,7 +3308,6 @@
                     'avancado': 'badge-conceito-avancado'
                 };
                 
-                // Calcular a nota da disciplina (0-10)
                 const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
                 
                 html += `
@@ -3342,7 +3361,6 @@
                             el.style.fontSize = '16px';
                             el.style.padding = '4px 14px';
                         });
-                        // Limpar habilidades
                         ['portugues', 'matematica', 'producao'].forEach(key => {
                             const container = document.getElementById(`habilidade-${key}`);
                             if (container) {
@@ -3356,7 +3374,6 @@
                         return;
                     }
                     
-                    // Mapear provas e adicionar respostas e gabarito
                     const provasMap = new Map();
                     historico.forEach(item => {
                         const key = item.prova_id || item.prova_titulo;
@@ -3377,7 +3394,6 @@
                             });
                         } else {
                             const prova = provasMap.get(key);
-                            // Mesclar respostas e gabarito se disponíveis
                             if (item.respostas && item.respostas.length > 0) {
                                 prova.respostas = item.respostas;
                             }
@@ -3417,7 +3433,6 @@
                         const acertos = item.acertos || 0;
                         const total = item.total || 20;
                         prova.avaliacoes[tipo] = { nota, acertos, total };
-                        // Atualizar respostas e gabarito
                         if (item.respostas && item.respostas.length > 0) {
                             prova.respostas = item.respostas;
                         }
@@ -3481,12 +3496,9 @@
                             '</tr>';
                     }).join('');
                     
-                    // Atualizar conceitos das disciplinas
                     atualizarConceitosDisciplinas(historico);
                     
-                    // Atualizar o card DESEMPENHO POR HABILIDADES com os dados completos
                     const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
-                    // Passar o histórico completo com respostas e gabarito
                     atualizarHabilidades(historico, alunoNome);
                     
                     const evolucao = document.getElementById('rel-evolucao');
@@ -3696,7 +3708,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA EXCLUIR ALUNO
+        // FUNÇÃO PARA EXCLUIR ALUNO DO RELATÓRIO
         // ============================================
         function excluirAlunoRelatorio() {
             const alunoId = document.getElementById('rel-aluno-select').value;
@@ -3711,53 +3723,7 @@
                 return;
             }
             
-            fetch(API_URL + '/api/alunos/' + alunoId, { method: 'DELETE' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.sucesso) {
-                        showToast('🗑️ Aluno "' + alunoNome + '" excluído com sucesso!', 'error');
-                        const selectAluno = document.getElementById('rel-aluno-select');
-                        if (selectAluno) {
-                            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-                        }
-                        const tbody = document.getElementById('rel-aluno-historico');
-                        if (tbody) {
-                            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>';
-                            document.getElementById('total-historico').textContent = '0 registros';
-                        }
-                        const evolucao = document.getElementById('rel-evolucao');
-                        if (evolucao) {
-                            evolucao.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Selecione um aluno</div>';
-                        }
-                        ['port', 'mat', 'prod'].forEach(prefixo => {
-                            document.getElementById(`conceito-${prefixo}-acertos`).textContent = '0';
-                            document.getElementById(`conceito-${prefixo}-erros`).textContent = '0';
-                            const el = document.getElementById(`conceito-${prefixo}-conceito`);
-                            el.textContent = '—';
-                            el.className = 'badge badge-gray';
-                            el.style.fontSize = '16px';
-                            el.style.padding = '4px 14px';
-                        });
-                        // Limpar habilidades
-                        ['portugues', 'matematica', 'producao'].forEach(key => {
-                            const container = document.getElementById(`habilidade-${key}`);
-                            if (container) {
-                                container.innerHTML = `
-                                    <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                        Selecione um aluno para ver o desempenho
-                                    </div>
-                                `;
-                            }
-                        });
-                        carregarAlunos();
-                    } else {
-                        showToast('❌ Erro ao excluir: ' + (data.erro || 'Erro desconhecido'), 'error');
-                    }
-                })
-                .catch(e => {
-                    console.error('Erro ao excluir aluno:', e);
-                    showToast('❌ Erro ao excluir aluno', 'error');
-                });
+            excluirAluno(parseInt(alunoId), alunoNome);
         }
 
         // ============================================
@@ -4965,7 +4931,8 @@
             if (!confirm('Excluir o usuário "' + username + '"? Esta ação não pode ser desfeita.')) return;
             try {
                 const response = await fetch(API_URL + '/api/usuarios/' + id, { method: 'DELETE' });
-                if (response.ok) { showToast('🗑️ Usuário "' + username + '" excluído!', 'error'); carregarUsuarios(); } else { const erro = await response.json(); showToast('Erro: ' + (erro.erro || 'Erro desconhecido'), 'error'); }
+                const result = await processarRespostaAPI(response);
+                if (result.ok) { showToast('🗑️ Usuário "' + username + '" excluído!', 'error'); carregarUsuarios(); } else { showToast('Erro: ' + (result.data.erro || 'Erro desconhecido'), 'error'); }
             } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
         }
 
@@ -5206,74 +5173,810 @@
         function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
         // ============================================
-        // CARREGAR DADOS - FUNÇÃO PRINCIPAL
+        // FUNÇÕES DE CRUD CORRIGIDAS
         // ============================================
-        async function carregarDados() {
-            console.log('🔄 Carregando dados do sistema...');
+        
+        // ===== ESCOLA =====
+        async function salvarEscola() {
+            const nome = document.getElementById('escola-nome').value.trim();
+            if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
+            
+            const dados = {
+                nome: nome,
+                inep: document.getElementById('escola-inep').value.trim() || null,
+                municipio: document.getElementById('escola-municipio').value.trim() || null,
+                estado: document.getElementById('escola-estado').value || 'PA',
+                telefone: document.getElementById('escola-telefone').value.trim() || null,
+                diretor: document.getElementById('escola-diretor').value.trim() || null
+            };
+            
             try {
-                await Promise.all([
-                    carregarEscolas(),
-                    carregarTurmas(),
-                    carregarAlunos(),
-                    carregarProvas(),
-                    carregarDashboard(),
-                    carregarResultados(),
-                    carregarGabaritos(),
-                    carregarCombos(),
-                    carregarRelatorios(),
-                    carregarUltimasCorrecoes(),
-                    carregarUserData(),
-                    carregarConceitoReal(),
-                    carregarUsuarios(),
-                    carregarEscolasFiltroAlunos(),
-                    carregarEscolasCorrigir(),
-                    carregarEscolasTexto(),
-                    carregarEscolasParaCorrecaoManual(),
-                    carregarEscolasRelAluno(),
-                    carregarFiltrosRelTurma()
-                ]);
-                console.log('✅ Todos os dados carregados com sucesso!');
-                atualizarDatasImpressao();
+                showToast('💾 Salvando escola...', 'info');
+                const response = await fetch(API_URL + '/api/escolas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok && result.data.id) {
+                    showToast('✅ Escola "' + nome + '" salva com sucesso!', 'success');
+                    closeM('m-escola');
+                    carregarEscolas();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao salvar escola: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
             } catch (erro) {
-                console.error('❌ Erro ao carregar dados:', erro);
-                showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+                showToast('❌ Erro ao salvar escola: ' + erro.message, 'error');
+                console.error('Erro ao salvar escola:', erro);
+            }
+        }
+
+        function editarEscola(id) {
+            showToast('✏️ Carregando dados da escola...', 'info');
+            fetch(API_URL + '/api/escolas/' + id)
+                .then(r => r.json())
+                .then(escola => {
+                    if (escola.erro) {
+                        showToast('❌ ' + escola.erro, 'error');
+                        return;
+                    }
+                    document.getElementById('editar-escola-id').value = escola.id;
+                    document.getElementById('editar-escola-nome').value = escola.nome || '';
+                    document.getElementById('editar-escola-inep').value = escola.inep || '';
+                    document.getElementById('editar-escola-municipio').value = escola.municipio || '';
+                    document.getElementById('editar-escola-estado').value = escola.estado || 'PA';
+                    document.getElementById('editar-escola-telefone').value = escola.telefone || '';
+                    document.getElementById('editar-escola-diretor').value = escola.diretor || '';
+                    openM('m-editar-escola');
+                })
+                .catch(e => {
+                    showToast('❌ Erro ao carregar escola: ' + e.message, 'error');
+                    console.error('Erro ao carregar escola:', e);
+                });
+        }
+
+        async function salvarEdicaoEscola() {
+            const id = document.getElementById('editar-escola-id').value;
+            const nome = document.getElementById('editar-escola-nome').value.trim();
+            if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
+            
+            const dados = {
+                nome: nome,
+                inep: document.getElementById('editar-escola-inep').value.trim() || null,
+                municipio: document.getElementById('editar-escola-municipio').value.trim() || null,
+                estado: document.getElementById('editar-escola-estado').value || 'PA',
+                telefone: document.getElementById('editar-escola-telefone').value.trim() || null,
+                diretor: document.getElementById('editar-escola-diretor').value.trim() || null
+            };
+            
+            try {
+                showToast('💾 Atualizando escola...', 'info');
+                const response = await fetch(API_URL + '/api/escolas/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('✅ Escola "' + nome + '" atualizada com sucesso!', 'success');
+                    closeM('m-editar-escola');
+                    carregarEscolas();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao atualizar escola: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                showToast('❌ Erro ao atualizar escola: ' + erro.message, 'error');
+                console.error('Erro ao atualizar escola:', erro);
+            }
+        }
+
+        async function excluirEscola(id, nome) {
+            if (!confirm('Excluir a escola "' + nome + '" e todos os seus dados?')) return;
+            try {
+                showToast('🗑️ Excluindo escola...', 'error');
+                const response = await fetch(API_URL + '/api/escolas/' + id, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('🗑️ Escola "' + nome + '" excluída com sucesso!', 'success');
+                    carregarEscolas();
+                    carregarDashboard();
+                    carregarCombos();
+                    carregarEscolasFiltroAlunos();
+                    carregarEscolasCorrigir();
+                    carregarEscolasTexto();
+                    carregarEscolasParaCorrecaoManual();
+                    carregarEscolasRelAluno();
+                    carregarFiltrosRelTurma();
+                } else {
+                    showToast('❌ Erro ao excluir escola: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                console.error('Erro ao excluir escola:', erro);
+                showToast('❌ Erro ao excluir escola: ' + erro.message, 'error');
+            }
+        }
+
+        // ===== TURMA =====
+        async function salvarTurma() {
+            const nome = document.getElementById('turma-nome').value.trim();
+            if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
+            
+            const escolaId = document.getElementById('turma-escola').value;
+            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+            
+            const dados = {
+                nome: nome,
+                escola_id: parseInt(escolaId),
+                serie: document.getElementById('turma-serie').value || '1º Ano',
+                turno: document.getElementById('turma-turno').value || 'Manhã',
+                ano_letivo: parseInt(document.getElementById('turma-ano').value) || 2025,
+                capacidade: parseInt(document.getElementById('turma-capacidade').value) || 35,
+                professor: document.getElementById('turma-professor').value.trim() || null
+            };
+            
+            try {
+                showToast('💾 Salvando turma...', 'info');
+                const response = await fetch(API_URL + '/api/turmas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok && result.data.id) {
+                    showToast('✅ Turma "' + nome + '" salva com sucesso!', 'success');
+                    closeM('m-turma');
+                    carregarTurmas();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao salvar turma: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                showToast('❌ Erro ao salvar turma: ' + erro.message, 'error');
+                console.error('Erro ao salvar turma:', erro);
+            }
+        }
+
+        function editarTurma(id) {
+            showToast('✏️ Carregando dados da turma...', 'info');
+            fetch(API_URL + '/api/turmas/' + id)
+                .then(r => r.json())
+                .then(turma => {
+                    if (turma.erro) {
+                        showToast('❌ ' + turma.erro, 'error');
+                        return;
+                    }
+                    document.getElementById('editar-turma-id').value = turma.id;
+                    document.getElementById('editar-turma-nome').value = turma.nome || '';
+                    document.getElementById('editar-turma-serie').value = turma.serie || '1º Ano';
+                    document.getElementById('editar-turma-turno').value = turma.turno || 'Manhã';
+                    document.getElementById('editar-turma-ano').value = turma.ano_letivo || 2025;
+                    document.getElementById('editar-turma-capacidade').value = turma.capacidade || 35;
+                    document.getElementById('editar-turma-professor').value = turma.professor || '';
+                    
+                    fetch(API_URL + '/api/escolas')
+                        .then(r => r.json())
+                        .then(escolas => {
+                            const select = document.getElementById('editar-turma-escola');
+                            select.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) {
+                                escolas.forEach(e => {
+                                    const opt = document.createElement('option');
+                                    opt.value = e.id;
+                                    opt.textContent = e.nome;
+                                    if (e.id == turma.escola_id) opt.selected = true;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            openM('m-editar-turma');
+                        })
+                        .catch(e => console.error('Erro ao carregar escolas:', e));
+                })
+                .catch(e => {
+                    showToast('❌ Erro ao carregar turma: ' + e.message, 'error');
+                    console.error('Erro ao carregar turma:', e);
+                });
+        }
+
+        async function salvarEdicaoTurma() {
+            const id = document.getElementById('editar-turma-id').value;
+            const nome = document.getElementById('editar-turma-nome').value.trim();
+            if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
+            
+            const escolaId = document.getElementById('editar-turma-escola').value;
+            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+            
+            const dados = {
+                nome: nome,
+                escola_id: parseInt(escolaId),
+                serie: document.getElementById('editar-turma-serie').value || '1º Ano',
+                turno: document.getElementById('editar-turma-turno').value || 'Manhã',
+                ano_letivo: parseInt(document.getElementById('editar-turma-ano').value) || 2025,
+                capacidade: parseInt(document.getElementById('editar-turma-capacidade').value) || 35,
+                professor: document.getElementById('editar-turma-professor').value.trim() || null
+            };
+            
+            try {
+                showToast('💾 Atualizando turma...', 'info');
+                const response = await fetch(API_URL + '/api/turmas/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('✅ Turma "' + nome + '" atualizada com sucesso!', 'success');
+                    closeM('m-editar-turma');
+                    carregarTurmas();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao atualizar turma: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                showToast('❌ Erro ao atualizar turma: ' + erro.message, 'error');
+                console.error('Erro ao atualizar turma:', erro);
+            }
+        }
+
+        async function excluirTurma(id, nome) {
+            if (!confirm('Excluir a turma "' + nome + '" e todos os seus dados?')) return;
+            try {
+                showToast('🗑️ Excluindo turma...', 'error');
+                const response = await fetch(API_URL + '/api/turmas/' + id, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('🗑️ Turma "' + nome + '" excluída com sucesso!', 'success');
+                    carregarTurmas();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao excluir turma: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                console.error('Erro ao excluir turma:', erro);
+                showToast('❌ Erro ao excluir turma: ' + erro.message, 'error');
+            }
+        }
+
+        // ===== ALUNO =====
+        async function salvarAluno() {
+            const nome = document.getElementById('aluno-nome').value.trim();
+            if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
+            
+            const turmaId = document.getElementById('aluno-turma').value;
+            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+            
+            const dados = {
+                nome: nome,
+                turma_id: parseInt(turmaId),
+                matricula: document.getElementById('aluno-matricula').value.trim() || null,
+                numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null,
+                data_nascimento: document.getElementById('aluno-nascimento').value || null,
+                genero: document.getElementById('aluno-genero').value || null,
+                responsavel: document.getElementById('aluno-responsavel').value.trim() || null,
+                telefone: document.getElementById('aluno-telefone').value.trim() || null,
+                email: document.getElementById('aluno-email').value.trim() || null,
+                observacoes: document.getElementById('aluno-observacoes').value.trim() || null
+            };
+            
+            try {
+                showToast('💾 Salvando aluno...', 'info');
+                const response = await fetch(API_URL + '/api/alunos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok && result.data.id) {
+                    showToast('✅ Aluno "' + nome + '" salvo com sucesso!', 'success');
+                    closeM('m-aluno');
+                    document.getElementById('aluno-nome').value = '';
+                    document.getElementById('aluno-matricula').value = '';
+                    document.getElementById('aluno-numero').value = '';
+                    document.getElementById('aluno-nascimento').value = '';
+                    document.getElementById('aluno-responsavel').value = '';
+                    document.getElementById('aluno-telefone').value = '';
+                    document.getElementById('aluno-email').value = '';
+                    document.getElementById('aluno-observacoes').value = '';
+                    document.getElementById('multi-alunos-input').value = '';
+                    document.getElementById('multi-status').style.display = 'none';
+                    carregarAlunos();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao salvar aluno: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                showToast('❌ Erro ao salvar aluno: ' + erro.message, 'error');
+                console.error('Erro ao salvar aluno:', erro);
+            }
+        }
+
+        function editarAluno(id) {
+            showToast('✏️ Carregando dados do aluno...', 'info');
+            fetch(API_URL + '/api/alunos/' + id)
+                .then(r => r.json())
+                .then(aluno => {
+                    if (aluno.erro) {
+                        showToast('❌ ' + aluno.erro, 'error');
+                        return;
+                    }
+                    document.getElementById('editar-aluno-id').value = aluno.id;
+                    document.getElementById('editar-aluno-nome').value = aluno.nome || '';
+                    document.getElementById('editar-aluno-matricula').value = aluno.matricula || '';
+                    document.getElementById('editar-aluno-numero').value = aluno.numero_chamada || '';
+                    document.getElementById('editar-aluno-nascimento').value = aluno.data_nascimento || '';
+                    document.getElementById('editar-aluno-genero').value = aluno.genero || 'Masculino';
+                    document.getElementById('editar-aluno-responsavel').value = aluno.responsavel || '';
+                    document.getElementById('editar-aluno-telefone').value = aluno.telefone || '';
+                    document.getElementById('editar-aluno-email').value = aluno.email || '';
+                    document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
+                    
+                    fetch(API_URL + '/api/turmas')
+                        .then(r => r.json())
+                        .then(turmas => {
+                            const select = document.getElementById('editar-aluno-turma');
+                            select.innerHTML = '<option value="">Selecione a turma</option>';
+                            if (turmas && !turmas.erro) {
+                                turmas.forEach(t => {
+                                    const opt = document.createElement('option');
+                                    opt.value = t.id;
+                                    opt.textContent = t.nome + ' - ' + (t.serie || '');
+                                    if (t.id == aluno.turma_id) opt.selected = true;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            openM('m-editar-aluno');
+                        })
+                        .catch(e => console.error('Erro ao carregar turmas:', e));
+                })
+                .catch(e => {
+                    showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
+                    console.error('Erro ao carregar aluno:', e);
+                });
+        }
+
+        async function salvarEdicaoAluno() {
+            const id = document.getElementById('editar-aluno-id').value;
+            const nome = document.getElementById('editar-aluno-nome').value.trim();
+            if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
+            
+            const turmaId = document.getElementById('editar-aluno-turma').value;
+            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+            
+            const dados = {
+                nome: nome,
+                turma_id: parseInt(turmaId),
+                matricula: document.getElementById('editar-aluno-matricula').value.trim() || null,
+                numero_chamada: parseInt(document.getElementById('editar-aluno-numero').value) || null,
+                data_nascimento: document.getElementById('editar-aluno-nascimento').value || null,
+                genero: document.getElementById('editar-aluno-genero').value || null,
+                responsavel: document.getElementById('editar-aluno-responsavel').value.trim() || null,
+                telefone: document.getElementById('editar-aluno-telefone').value.trim() || null,
+                email: document.getElementById('editar-aluno-email').value.trim() || null,
+                observacoes: document.getElementById('editar-aluno-observacoes').value.trim() || null
+            };
+            
+            try {
+                showToast('💾 Atualizando aluno...', 'info');
+                const response = await fetch(API_URL + '/api/alunos/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('✅ Aluno "' + nome + '" atualizado com sucesso!', 'success');
+                    closeM('m-editar-aluno');
+                    carregarAlunos();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao atualizar aluno: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                showToast('❌ Erro ao atualizar aluno: ' + erro.message, 'error');
+                console.error('Erro ao atualizar aluno:', erro);
+            }
+        }
+
+        async function excluirAluno(id, nome) {
+            if (!confirm('Excluir o aluno "' + nome + '" e todos os seus dados?')) return;
+            try {
+                showToast('🗑️ Excluindo aluno...', 'error');
+                const response = await fetch(API_URL + '/api/alunos/' + id, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('🗑️ Aluno "' + nome + '" excluído com sucesso!', 'success');
+                    carregarAlunos();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao excluir aluno: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                console.error('Erro ao excluir aluno:', erro);
+                showToast('❌ Erro ao excluir aluno: ' + erro.message, 'error');
+            }
+        }
+
+        // ===== PROVA =====
+        async function salvarProva() {
+            const titulo = document.getElementById('prova-titulo').value.trim();
+            if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
+            
+            const escolaId = document.getElementById('prova-escola').value;
+            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+            
+            const turmaId = document.getElementById('prova-turma').value;
+            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+            
+            const dados = {
+                titulo: titulo,
+                escola_id: parseInt(escolaId),
+                turma_id: parseInt(turmaId),
+                turma_serie: document.getElementById('prova-serie').value || '1º Ano',
+                disciplina: document.getElementById('prova-disciplina').value || 'Matemática',
+                bimestre: document.getElementById('prova-bimestre').value || '1º e 2º bimestre',
+                data_prova: document.getElementById('prova-data').value || null,
+                quantidade_questoes: parseInt(document.getElementById('prova-questoes').value) || 20,
+                nota_maxima: parseFloat(document.getElementById('prova-nota').value) || 10,
+                tipo_questoes: document.getElementById('prova-serie').value.startsWith('1') ? '3' : '4'
+            };
+            
+            try {
+                showToast('💾 Salvando prova...', 'info');
+                const response = await fetch(API_URL + '/api/provas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok && result.data.id) {
+                    showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
+                    document.getElementById('prova-titulo').value = '';
+                    document.getElementById('up-ok').style.display = 'block';
+                    setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
+                    carregarProvas();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao salvar prova: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                showToast('❌ Erro ao salvar prova: ' + erro.message, 'error');
+                console.error('Erro ao salvar prova:', erro);
+            }
+        }
+
+        function editarProva(id) {
+            showToast('👁️ Visualizando prova ID ' + id + '...', 'info');
+        }
+
+        async function excluirProva(id, nome) {
+            if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
+            try {
+                showToast('🗑️ Excluindo prova...', 'error');
+                const response = await fetch(API_URL + '/api/provas/' + id, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('🗑️ Prova "' + nome + '" excluída com sucesso!', 'success');
+                    carregarProvas();
+                    carregarDashboard();
+                    carregarCombos();
+                } else {
+                    showToast('❌ Erro ao excluir prova: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                console.error('Erro ao excluir prova:', erro);
+                showToast('❌ Erro ao excluir prova: ' + erro.message, 'error');
+            }
+        }
+
+        function salvarProvaModal() {
+            const titulo = document.getElementById('modal-prova-titulo').value.trim();
+            if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
+            showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
+            closeM('m-prova');
+            carregarProvas();
+        }
+
+        // ===== GABARITO =====
+        function editarGabarito(id) {
+            showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info');
+            fetch(API_URL + '/api/provas/' + id)
+                .then(r => r.json())
+                .then(prova => {
+                    if (prova.erro) {
+                        showToast('❌ ' + prova.erro, 'error');
+                        return;
+                    }
+                    if (prova.gabarito && prova.gabarito.length > 0) {
+                        const gabarito = prova.gabarito;
+                        const selects = document.querySelectorAll('.gab-select');
+                        selects.forEach((s, i) => {
+                            if (i < gabarito.length && gabarito[i]) {
+                                s.value = gabarito[i];
+                                s.classList.add('filled');
+                            }
+                        });
+                        const selectProva = document.getElementById('gab-prova');
+                        if (selectProva) {
+                            selectProva.value = id;
+                        }
+                        showToast('📋 Gabarito carregado para edição!', 'success');
+                        go('gabarito');
+                    } else {
+                        showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
+                        go('gabarito');
+                    }
+                })
+                .catch(e => {
+                    showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
+                    console.error('Erro ao carregar gabarito:', e);
+                });
+        }
+
+        async function excluirGabarito(id, nome) {
+            if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
+            try {
+                showToast('🗑️ Excluindo gabarito...', 'error');
+                const response = await fetch(API_URL + '/api/gabaritos/' + id, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await processarRespostaAPI(response);
+                if (result.ok) {
+                    showToast('🗑️ Gabarito excluído com sucesso!', 'success');
+                    carregarGabaritos();
+                    carregarProvas();
+                } else {
+                    showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                }
+            } catch (erro) {
+                console.error('Erro ao excluir gabarito:', erro);
+                showToast('❌ Erro ao excluir gabarito: ' + erro.message, 'error');
             }
         }
 
         // ============================================
-        // DOM READY
+        // FUNÇÕES ADICIONAIS
         // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            const tipoSelect = document.getElementById('modal-prova-tipo');
-            if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
-            buildGabGrid();
-            carregarCombos();
-            carregarDados();
-            carregarFiltrosResultados();
-            carregarResultadosComFiltros();
-            carregarConceitoReal();
-            carregarEscolasFiltroAlunos();
-            const tipoProva = document.getElementById('modal-prova-tipo');
-            if (tipoProva) gerarGabaritoModal(tipoProva.value);
-            atualizarDatasImpressao();
-            carregarEscolasParaCorrecaoManual();
-            carregarEscolasRelAluno();
-            carregarFiltrosRelTurma();
-        });
-
-        document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
-
-        window.addEventListener('resize', function() {
-            if (window.innerWidth > 900) {
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('menuOverlay');
-                const toggle = document.getElementById('menuToggle');
-                sidebar.classList.remove('open');
-                overlay.classList.remove('show');
-                toggle.classList.remove('active');
-                toggle.innerHTML = '☰';
+        function verAlunosDaTurma(id) {
+            showToast('📋 Visualizando alunos da turma ID ' + id + '...', 'info');
+            const selectTurma = document.getElementById('filtro-turma-alunos');
+            if (selectTurma) {
+                selectTurma.value = id;
+                const event = new Event('change');
+                selectTurma.dispatchEvent(event);
             }
-        });
+            go('alunos');
+        }
+
+        function processarListaAlunos() {
+            const textarea = document.getElementById('multi-alunos-input');
+            const linhas = textarea.value.split('\n').filter(l => l.trim() !== '');
+            if (linhas.length === 0) {
+                showToast('⚠️ Cole a lista de alunos primeiro!', 'warning');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('multi-status');
+            const statusText = document.getElementById('multi-status-text');
+            
+            let adicionados = 0;
+            let erros = 0;
+            
+            linhas.forEach(linha => {
+                let nome = linha.trim();
+                let matricula = '';
+                let numero = '';
+                
+                const matchVirgula = linha.match(/^([^,]+),\s*([^,]+),\s*(\d+)?/);
+                const matchTraco = linha.match(/^([^-]+)\s*-\s*([^-]+)\s*-\s*(\d+)?/);
+                const matchParenteses = linha.match(/^([^(]+)\s*\(([^)]+)\)/);
+                
+                if (matchVirgula) {
+                    nome = matchVirgula[1].trim();
+                    matricula = matchVirgula[2].trim();
+                    numero = matchVirgula[3] ? matchVirgula[3].trim() : '';
+                } else if (matchTraco) {
+                    nome = matchTraco[1].trim();
+                    matricula = matchTraco[2].trim();
+                    numero = matchTraco[3] ? matchTraco[3].trim() : '';
+                } else if (matchParenteses) {
+                    nome = matchParenteses[1].trim();
+                    matricula = matchParenteses[2].trim();
+                }
+                
+                if (nome) {
+                    document.getElementById('aluno-nome').value = nome;
+                    if (matricula) document.getElementById('aluno-matricula').value = matricula;
+                    if (numero) document.getElementById('aluno-numero').value = numero;
+                    
+                    salvarAluno();
+                    adicionados++;
+                } else {
+                    erros++;
+                }
+            });
+            
+            if (adicionados > 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status success';
+                statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
+                textarea.value = '';
+            } else {
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'multi-status error';
+                statusText.textContent = '❌ Nenhum aluno válido encontrado. Verifique o formato.';
+            }
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function fecharAbaMulti() {
+            showToast('📋 Lista de alunos gerada!', 'success');
+            const modal = document.getElementById('m-aluno');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+            go('lista-turma');
+        }
+
+        // ============================================
+        // FUNÇÕES PARA CORREÇÃO (IA)
+        // ============================================
+        async function carregarEscolasCorrigir() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('corrigir-escola');
+                if (select && escolas && !escolas.erro) {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para correção:', erro);
+            }
+        }
+
+        async function carregarEscolasTexto() {
+            try {
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                const select = document.getElementById('txt-escola');
+                if (select && escolas && !escolas.erro) {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">Selecione a escola...</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                }
+            } catch (erro) {
+                console.error('Erro ao carregar escolas para texto:', erro);
+            }
+        }
+
+        async function carregarTurmasCorrigir(escolaId) {
+            const selectTurma = document.getElementById('corrigir-turma');
+            const selectAluno = document.getElementById('corrigir-aluno');
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        async function carregarAlunosPorTurma(turmaId) {
+            const selectAluno = document.getElementById('corrigir-aluno');
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!turmaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        async function carregarTurmasTexto(escolaId) {
+            const selectTurma = document.getElementById('txt-turma');
+            const selectAluno = document.getElementById('txt-aluno-select');
+            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        async function carregarAlunosPorTurmaTexto(turmaId) {
+            const selectAluno = document.getElementById('txt-aluno-select');
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!turmaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                const alunos = await response.json();
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
 
         // ============================================
         // CARREGAR FILTROS DO RELATÓRIO POR TURMA
@@ -5319,9 +6022,6 @@
             }
         }
 
-        // ============================================
-        // CARREGAR TURMAS PARA RELATÓRIO POR TURMA
-        // ============================================
         async function carregarTurmasRelTurma(escolaId) {
             const selectTurma = document.getElementById('rel-turma-turma');
             if (!selectTurma) return;
@@ -5379,9 +6079,6 @@
             carregarRelatorioTurmaFiltrado();
         }
 
-        // ============================================
-        // CARREGAR RELATÓRIO POR TURMA FILTRADO
-        // ============================================
         async function carregarRelatorioTurmaFiltrado() {
             try {
                 const escolaId = document.getElementById('rel-turma-escola').value;
@@ -5545,9 +6242,6 @@
             }
         }
 
-        // ============================================
-        // LIMPAR FILTROS RELATÓRIO POR TURMA
-        // ============================================
         function limparFiltrosRelTurma() {
             document.getElementById('rel-turma-escola').value = '';
             document.getElementById('rel-turma-serie').value = '';
@@ -5584,862 +6278,74 @@
         }
 
         // ============================================
-        // FUNÇÕES ADICIONAIS QUE PODEM FALTAR
+        // CARREGAR DADOS - FUNÇÃO PRINCIPAL
         // ============================================
-        async function carregarEscolasCorrigir() {
+        async function carregarDados() {
+            console.log('🔄 Carregando dados do sistema...');
             try {
-                const response = await fetch(API_URL + '/api/escolas');
-                const escolas = await response.json();
-                const select = document.getElementById('corrigir-escola');
-                if (select && escolas && !escolas.erro) {
-                    const current = select.value;
-                    select.innerHTML = '<option value="">Selecione a escola...</option>';
-                    escolas.forEach(e => {
-                        const opt = document.createElement('option');
-                        opt.value = e.id;
-                        opt.textContent = e.nome;
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                }
+                await Promise.all([
+                    carregarEscolas(),
+                    carregarTurmas(),
+                    carregarAlunos(),
+                    carregarProvas(),
+                    carregarDashboard(),
+                    carregarResultados(),
+                    carregarGabaritos(),
+                    carregarCombos(),
+                    carregarRelatorios(),
+                    carregarUltimasCorrecoes(),
+                    carregarUserData(),
+                    carregarConceitoReal(),
+                    carregarUsuarios(),
+                    carregarEscolasFiltroAlunos(),
+                    carregarEscolasCorrigir(),
+                    carregarEscolasTexto(),
+                    carregarEscolasParaCorrecaoManual(),
+                    carregarEscolasRelAluno(),
+                    carregarFiltrosRelTurma()
+                ]);
+                console.log('✅ Todos os dados carregados com sucesso!');
+                atualizarDatasImpressao();
             } catch (erro) {
-                console.error('Erro ao carregar escolas para correção:', erro);
-            }
-        }
-
-        async function carregarEscolasTexto() {
-            try {
-                const response = await fetch(API_URL + '/api/escolas');
-                const escolas = await response.json();
-                const select = document.getElementById('txt-escola');
-                if (select && escolas && !escolas.erro) {
-                    const current = select.value;
-                    select.innerHTML = '<option value="">Selecione a escola...</option>';
-                    escolas.forEach(e => {
-                        const opt = document.createElement('option');
-                        opt.value = e.id;
-                        opt.textContent = e.nome;
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                }
-            } catch (erro) {
-                console.error('Erro ao carregar escolas para texto:', erro);
-            }
-        }
-
-        async function carregarTurmasCorrigir(escolaId) {
-            const selectTurma = document.getElementById('corrigir-turma');
-            const selectAluno = document.getElementById('corrigir-aluno');
-            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-            selectAluno.innerHTML = '<option value="">Selecione...</option>';
-            
-            if (!escolaId) return;
-            
-            try {
-                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                const turmas = await response.json();
-                if (turmas && !turmas.erro) {
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        opt.dataset.serie = t.serie || '';
-                        selectTurma.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.error('Erro ao carregar turmas:', e);
-            }
-        }
-
-        async function carregarAlunosPorTurma(turmaId) {
-            const selectAluno = document.getElementById('corrigir-aluno');
-            selectAluno.innerHTML = '<option value="">Selecione...</option>';
-            
-            if (!turmaId) return;
-            
-            try {
-                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                const alunos = await response.json();
-                if (alunos && !alunos.erro) {
-                    alunos.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = a.id;
-                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                        selectAluno.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.error('Erro ao carregar alunos:', e);
-            }
-        }
-
-        async function carregarTurmasTexto(escolaId) {
-            const selectTurma = document.getElementById('txt-turma');
-            const selectAluno = document.getElementById('txt-aluno-select');
-            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-            selectAluno.innerHTML = '<option value="">Selecione...</option>';
-            
-            if (!escolaId) return;
-            
-            try {
-                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                const turmas = await response.json();
-                if (turmas && !turmas.erro) {
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                        selectTurma.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.error('Erro ao carregar turmas:', e);
-            }
-        }
-
-        async function carregarAlunosPorTurmaTexto(turmaId) {
-            const selectAluno = document.getElementById('txt-aluno-select');
-            selectAluno.innerHTML = '<option value="">Selecione...</option>';
-            
-            if (!turmaId) return;
-            
-            try {
-                const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                const alunos = await response.json();
-                if (alunos && !alunos.erro) {
-                    alunos.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = a.id;
-                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                        selectAluno.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.error('Erro ao carregar alunos:', e);
+                console.error('❌ Erro ao carregar dados:', erro);
+                showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
             }
         }
 
         // ============================================
-        // FUNÇÕES DE CRUD CORRIGIDAS
+        // DOM READY
         // ============================================
-        
-        // ===== ESCOLA =====
-        async function salvarEscola() {
-            const nome = document.getElementById('escola-nome').value.trim();
-            if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
-            
-            const dados = {
-                nome: nome,
-                inep: document.getElementById('escola-inep').value.trim() || null,
-                municipio: document.getElementById('escola-municipio').value.trim() || null,
-                estado: document.getElementById('escola-estado').value || 'PA',
-                telefone: document.getElementById('escola-telefone').value.trim() || null,
-                diretor: document.getElementById('escola-diretor').value.trim() || null
-            };
-            
-            try {
-                showToast('💾 Salvando escola...', 'info');
-                const response = await fetch(API_URL + '/api/escolas', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.id) {
-                    showToast('✅ Escola "' + nome + '" salva com sucesso!', 'success');
-                    closeM('m-escola');
-                    carregarEscolas();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao salvar escola: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao salvar escola: ' + erro.message, 'error');
-                console.error('Erro ao salvar escola:', erro);
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoSelect = document.getElementById('modal-prova-tipo');
+            if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
+            buildGabGrid();
+            carregarCombos();
+            carregarDados();
+            carregarFiltrosResultados();
+            carregarResultadosComFiltros();
+            carregarConceitoReal();
+            carregarEscolasFiltroAlunos();
+            const tipoProva = document.getElementById('modal-prova-tipo');
+            if (tipoProva) gerarGabaritoModal(tipoProva.value);
+            atualizarDatasImpressao();
+            carregarEscolasParaCorrecaoManual();
+            carregarEscolasRelAluno();
+            carregarFiltrosRelTurma();
+        });
+
+        document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 900) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('menuOverlay');
+                const toggle = document.getElementById('menuToggle');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                toggle.classList.remove('active');
+                toggle.innerHTML = '☰';
             }
-        }
-
-        function editarEscola(id) {
-            showToast('✏️ Carregando dados da escola...', 'info');
-            fetch(API_URL + '/api/escolas/' + id)
-                .then(r => r.json())
-                .then(escola => {
-                    if (escola.erro) {
-                        showToast('❌ ' + escola.erro, 'error');
-                        return;
-                    }
-                    document.getElementById('editar-escola-id').value = escola.id;
-                    document.getElementById('editar-escola-nome').value = escola.nome || '';
-                    document.getElementById('editar-escola-inep').value = escola.inep || '';
-                    document.getElementById('editar-escola-municipio').value = escola.municipio || '';
-                    document.getElementById('editar-escola-estado').value = escola.estado || 'PA';
-                    document.getElementById('editar-escola-telefone').value = escola.telefone || '';
-                    document.getElementById('editar-escola-diretor').value = escola.diretor || '';
-                    openM('m-editar-escola');
-                })
-                .catch(e => {
-                    showToast('❌ Erro ao carregar escola: ' + e.message, 'error');
-                    console.error('Erro ao carregar escola:', e);
-                });
-        }
-
-        async function salvarEdicaoEscola() {
-            const id = document.getElementById('editar-escola-id').value;
-            const nome = document.getElementById('editar-escola-nome').value.trim();
-            if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
-            
-            const dados = {
-                nome: nome,
-                inep: document.getElementById('editar-escola-inep').value.trim() || null,
-                municipio: document.getElementById('editar-escola-municipio').value.trim() || null,
-                estado: document.getElementById('editar-escola-estado').value || 'PA',
-                telefone: document.getElementById('editar-escola-telefone').value.trim() || null,
-                diretor: document.getElementById('editar-escola-diretor').value.trim() || null
-            };
-            
-            try {
-                showToast('💾 Atualizando escola...', 'info');
-                const response = await fetch(API_URL + '/api/escolas/' + id, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('✅ Escola "' + nome + '" atualizada com sucesso!', 'success');
-                    closeM('m-editar-escola');
-                    carregarEscolas();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao atualizar escola: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao atualizar escola: ' + erro.message, 'error');
-                console.error('Erro ao atualizar escola:', erro);
-            }
-        }
-
-        async function excluirEscola(id, nome) {
-            if (!confirm('Excluir a escola "' + nome + '" e todos os seus dados?')) return;
-            try {
-                showToast('🗑️ Excluindo escola...', 'error');
-                const response = await fetch(API_URL + '/api/escolas/' + id, { method: 'DELETE' });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('🗑️ Escola "' + nome + '" excluída!', 'error');
-                    carregarEscolas();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao excluir escola: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao excluir escola: ' + erro.message, 'error');
-                console.error('Erro ao excluir escola:', erro);
-            }
-        }
-
-        // ===== TURMA =====
-        async function salvarTurma() {
-            const nome = document.getElementById('turma-nome').value.trim();
-            if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
-            
-            const escolaId = document.getElementById('turma-escola').value;
-            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
-            
-            const dados = {
-                nome: nome,
-                escola_id: parseInt(escolaId),
-                serie: document.getElementById('turma-serie').value || '1º Ano',
-                turno: document.getElementById('turma-turno').value || 'Manhã',
-                ano_letivo: parseInt(document.getElementById('turma-ano').value) || 2025,
-                capacidade: parseInt(document.getElementById('turma-capacidade').value) || 35,
-                professor: document.getElementById('turma-professor').value.trim() || null
-            };
-            
-            try {
-                showToast('💾 Salvando turma...', 'info');
-                const response = await fetch(API_URL + '/api/turmas', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.id) {
-                    showToast('✅ Turma "' + nome + '" salva com sucesso!', 'success');
-                    closeM('m-turma');
-                    carregarTurmas();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao salvar turma: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao salvar turma: ' + erro.message, 'error');
-                console.error('Erro ao salvar turma:', erro);
-            }
-        }
-
-        function editarTurma(id) {
-            showToast('✏️ Carregando dados da turma...', 'info');
-            fetch(API_URL + '/api/turmas/' + id)
-                .then(r => r.json())
-                .then(turma => {
-                    if (turma.erro) {
-                        showToast('❌ ' + turma.erro, 'error');
-                        return;
-                    }
-                    document.getElementById('editar-turma-id').value = turma.id;
-                    document.getElementById('editar-turma-nome').value = turma.nome || '';
-                    document.getElementById('editar-turma-serie').value = turma.serie || '1º Ano';
-                    document.getElementById('editar-turma-turno').value = turma.turno || 'Manhã';
-                    document.getElementById('editar-turma-ano').value = turma.ano_letivo || 2025;
-                    document.getElementById('editar-turma-capacidade').value = turma.capacidade || 35;
-                    document.getElementById('editar-turma-professor').value = turma.professor || '';
-                    
-                    // Carregar escolas no select
-                    fetch(API_URL + '/api/escolas')
-                        .then(r => r.json())
-                        .then(escolas => {
-                            const select = document.getElementById('editar-turma-escola');
-                            select.innerHTML = '<option value="">Selecione a escola</option>';
-                            if (escolas && !escolas.erro) {
-                                escolas.forEach(e => {
-                                    const opt = document.createElement('option');
-                                    opt.value = e.id;
-                                    opt.textContent = e.nome;
-                                    if (e.id == turma.escola_id) opt.selected = true;
-                                    select.appendChild(opt);
-                                });
-                            }
-                            openM('m-editar-turma');
-                        })
-                        .catch(e => console.error('Erro ao carregar escolas:', e));
-                })
-                .catch(e => {
-                    showToast('❌ Erro ao carregar turma: ' + e.message, 'error');
-                    console.error('Erro ao carregar turma:', e);
-                });
-        }
-
-        async function salvarEdicaoTurma() {
-            const id = document.getElementById('editar-turma-id').value;
-            const nome = document.getElementById('editar-turma-nome').value.trim();
-            if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
-            
-            const escolaId = document.getElementById('editar-turma-escola').value;
-            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
-            
-            const dados = {
-                nome: nome,
-                escola_id: parseInt(escolaId),
-                serie: document.getElementById('editar-turma-serie').value || '1º Ano',
-                turno: document.getElementById('editar-turma-turno').value || 'Manhã',
-                ano_letivo: parseInt(document.getElementById('editar-turma-ano').value) || 2025,
-                capacidade: parseInt(document.getElementById('editar-turma-capacidade').value) || 35,
-                professor: document.getElementById('editar-turma-professor').value.trim() || null
-            };
-            
-            try {
-                showToast('💾 Atualizando turma...', 'info');
-                const response = await fetch(API_URL + '/api/turmas/' + id, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('✅ Turma "' + nome + '" atualizada com sucesso!', 'success');
-                    closeM('m-editar-turma');
-                    carregarTurmas();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao atualizar turma: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao atualizar turma: ' + erro.message, 'error');
-                console.error('Erro ao atualizar turma:', erro);
-            }
-        }
-
-        async function excluirTurma(id, nome) {
-            if (!confirm('Excluir a turma "' + nome + '" e todos os seus dados?')) return;
-            try {
-                showToast('🗑️ Excluindo turma...', 'error');
-                const response = await fetch(API_URL + '/api/turmas/' + id, { method: 'DELETE' });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('🗑️ Turma "' + nome + '" excluída!', 'error');
-                    carregarTurmas();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao excluir turma: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao excluir turma: ' + erro.message, 'error');
-                console.error('Erro ao excluir turma:', erro);
-            }
-        }
-
-        // ===== ALUNO =====
-        async function salvarAluno() {
-            const nome = document.getElementById('aluno-nome').value.trim();
-            if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
-            
-            const turmaId = document.getElementById('aluno-turma').value;
-            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
-            
-            const dados = {
-                nome: nome,
-                turma_id: parseInt(turmaId),
-                matricula: document.getElementById('aluno-matricula').value.trim() || null,
-                numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null,
-                data_nascimento: document.getElementById('aluno-nascimento').value || null,
-                genero: document.getElementById('aluno-genero').value || null,
-                responsavel: document.getElementById('aluno-responsavel').value.trim() || null,
-                telefone: document.getElementById('aluno-telefone').value.trim() || null,
-                email: document.getElementById('aluno-email').value.trim() || null,
-                observacoes: document.getElementById('aluno-observacoes').value.trim() || null
-            };
-            
-            try {
-                showToast('💾 Salvando aluno...', 'info');
-                const response = await fetch(API_URL + '/api/alunos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.id) {
-                    showToast('✅ Aluno "' + nome + '" salvo com sucesso!', 'success');
-                    closeM('m-aluno');
-                    document.getElementById('aluno-nome').value = '';
-                    document.getElementById('aluno-matricula').value = '';
-                    document.getElementById('aluno-numero').value = '';
-                    document.getElementById('aluno-nascimento').value = '';
-                    document.getElementById('aluno-responsavel').value = '';
-                    document.getElementById('aluno-telefone').value = '';
-                    document.getElementById('aluno-email').value = '';
-                    document.getElementById('aluno-observacoes').value = '';
-                    document.getElementById('multi-alunos-input').value = '';
-                    document.getElementById('multi-status').style.display = 'none';
-                    carregarAlunos();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao salvar aluno: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao salvar aluno: ' + erro.message, 'error');
-                console.error('Erro ao salvar aluno:', erro);
-            }
-        }
-
-        function editarAluno(id) {
-            showToast('✏️ Carregando dados do aluno...', 'info');
-            fetch(API_URL + '/api/alunos/' + id)
-                .then(r => r.json())
-                .then(aluno => {
-                    if (aluno.erro) {
-                        showToast('❌ ' + aluno.erro, 'error');
-                        return;
-                    }
-                    document.getElementById('editar-aluno-id').value = aluno.id;
-                    document.getElementById('editar-aluno-nome').value = aluno.nome || '';
-                    document.getElementById('editar-aluno-matricula').value = aluno.matricula || '';
-                    document.getElementById('editar-aluno-numero').value = aluno.numero_chamada || '';
-                    document.getElementById('editar-aluno-nascimento').value = aluno.data_nascimento || '';
-                    document.getElementById('editar-aluno-genero').value = aluno.genero || 'Masculino';
-                    document.getElementById('editar-aluno-responsavel').value = aluno.responsavel || '';
-                    document.getElementById('editar-aluno-telefone').value = aluno.telefone || '';
-                    document.getElementById('editar-aluno-email').value = aluno.email || '';
-                    document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
-                    
-                    // Carregar turmas no select
-                    fetch(API_URL + '/api/turmas')
-                        .then(r => r.json())
-                        .then(turmas => {
-                            const select = document.getElementById('editar-aluno-turma');
-                            select.innerHTML = '<option value="">Selecione a turma</option>';
-                            if (turmas && !turmas.erro) {
-                                turmas.forEach(t => {
-                                    const opt = document.createElement('option');
-                                    opt.value = t.id;
-                                    opt.textContent = t.nome + ' - ' + (t.serie || '');
-                                    if (t.id == aluno.turma_id) opt.selected = true;
-                                    select.appendChild(opt);
-                                });
-                            }
-                            openM('m-editar-aluno');
-                        })
-                        .catch(e => console.error('Erro ao carregar turmas:', e));
-                })
-                .catch(e => {
-                    showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
-                    console.error('Erro ao carregar aluno:', e);
-                });
-        }
-
-        async function salvarEdicaoAluno() {
-            const id = document.getElementById('editar-aluno-id').value;
-            const nome = document.getElementById('editar-aluno-nome').value.trim();
-            if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
-            
-            const turmaId = document.getElementById('editar-aluno-turma').value;
-            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
-            
-            const dados = {
-                nome: nome,
-                turma_id: parseInt(turmaId),
-                matricula: document.getElementById('editar-aluno-matricula').value.trim() || null,
-                numero_chamada: parseInt(document.getElementById('editar-aluno-numero').value) || null,
-                data_nascimento: document.getElementById('editar-aluno-nascimento').value || null,
-                genero: document.getElementById('editar-aluno-genero').value || null,
-                responsavel: document.getElementById('editar-aluno-responsavel').value.trim() || null,
-                telefone: document.getElementById('editar-aluno-telefone').value.trim() || null,
-                email: document.getElementById('editar-aluno-email').value.trim() || null,
-                observacoes: document.getElementById('editar-aluno-observacoes').value.trim() || null
-            };
-            
-            try {
-                showToast('💾 Atualizando aluno...', 'info');
-                const response = await fetch(API_URL + '/api/alunos/' + id, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('✅ Aluno "' + nome + '" atualizado com sucesso!', 'success');
-                    closeM('m-editar-aluno');
-                    carregarAlunos();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao atualizar aluno: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao atualizar aluno: ' + erro.message, 'error');
-                console.error('Erro ao atualizar aluno:', erro);
-            }
-        }
-
-        async function excluirAluno(id, nome) {
-            if (!confirm('Excluir o aluno "' + nome + '" e todos os seus dados?')) return;
-            try {
-                showToast('🗑️ Excluindo aluno...', 'error');
-                const response = await fetch(API_URL + '/api/alunos/' + id, { method: 'DELETE' });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('🗑️ Aluno "' + nome + '" excluído!', 'error');
-                    carregarAlunos();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao excluir aluno: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao excluir aluno: ' + erro.message, 'error');
-                console.error('Erro ao excluir aluno:', erro);
-            }
-        }
-
-        // ===== PROVA =====
-        async function salvarProva() {
-            const titulo = document.getElementById('prova-titulo').value.trim();
-            if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
-            
-            const escolaId = document.getElementById('prova-escola').value;
-            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
-            
-            const turmaId = document.getElementById('prova-turma').value;
-            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
-            
-            const dados = {
-                titulo: titulo,
-                escola_id: parseInt(escolaId),
-                turma_id: parseInt(turmaId),
-                turma_serie: document.getElementById('prova-serie').value || '1º Ano',
-                disciplina: document.getElementById('prova-disciplina').value || 'Matemática',
-                bimestre: document.getElementById('prova-bimestre').value || '1º e 2º bimestre',
-                data_prova: document.getElementById('prova-data').value || null,
-                quantidade_questoes: parseInt(document.getElementById('prova-questoes').value) || 20,
-                nota_maxima: parseFloat(document.getElementById('prova-nota').value) || 10,
-                tipo_questoes: document.getElementById('prova-serie').value.startsWith('1') ? '3' : '4'
-            };
-            
-            try {
-                showToast('💾 Salvando prova...', 'info');
-                const response = await fetch(API_URL + '/api/provas', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                const result = await response.json();
-                if (result.id) {
-                    showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
-                    document.getElementById('prova-titulo').value = '';
-                    document.getElementById('up-ok').style.display = 'block';
-                    setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
-                    carregarProvas();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao salvar prova: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao salvar prova: ' + erro.message, 'error');
-                console.error('Erro ao salvar prova:', erro);
-            }
-        }
-
-        function editarProva(id) {
-            showToast('👁️ Visualizando prova ID ' + id + '...', 'info');
-            // Implementar visualização se necessário
-        }
-
-        async function excluirProva(id, nome) {
-            if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
-            try {
-                showToast('🗑️ Excluindo prova...', 'error');
-                const response = await fetch(API_URL + '/api/provas/' + id, { method: 'DELETE' });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('🗑️ Prova "' + nome + '" excluída!', 'error');
-                    carregarProvas();
-                    carregarDashboard();
-                    carregarCombos();
-                } else {
-                    showToast('❌ Erro ao excluir prova: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao excluir prova: ' + erro.message, 'error');
-                console.error('Erro ao excluir prova:', erro);
-            }
-        }
-
-        // ===== GABARITO =====
-        function editarGabarito(id) {
-            showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info');
-            // Carregar o gabarito da prova para edição
-            fetch(API_URL + '/api/provas/' + id)
-                .then(r => r.json())
-                .then(prova => {
-                    if (prova.erro) {
-                        showToast('❌ ' + prova.erro, 'error');
-                        return;
-                    }
-                    if (prova.gabarito && prova.gabarito.length > 0) {
-                        // Preencher o grid com o gabarito existente
-                        const gabarito = prova.gabarito;
-                        const selects = document.querySelectorAll('.gab-select');
-                        selects.forEach((s, i) => {
-                            if (i < gabarito.length && gabarito[i]) {
-                                s.value = gabarito[i];
-                                s.classList.add('filled');
-                            }
-                        });
-                        // Selecionar a prova no combo
-                        const selectProva = document.getElementById('gab-prova');
-                        if (selectProva) {
-                            selectProva.value = id;
-                        }
-                        showToast('📋 Gabarito carregado para edição!', 'success');
-                        go('gabarito');
-                    } else {
-                        showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
-                        go('gabarito');
-                    }
-                })
-                .catch(e => {
-                    showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
-                    console.error('Erro ao carregar gabarito:', e);
-                });
-        }
-
-        async function excluirGabarito(id, nome) {
-            if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
-            try {
-                showToast('🗑️ Excluindo gabarito...', 'error');
-                const response = await fetch(API_URL + '/api/gabaritos/' + id, { method: 'DELETE' });
-                const result = await response.json();
-                if (result.sucesso) {
-                    showToast('🗑️ Gabarito excluído!', 'error');
-                    carregarGabaritos();
-                    carregarProvas();
-                } else {
-                    showToast('❌ Erro ao excluir gabarito: ' + (result.erro || 'Erro desconhecido'), 'error');
-                }
-            } catch (erro) {
-                showToast('❌ Erro ao excluir gabarito: ' + erro.message, 'error');
-                console.error('Erro ao excluir gabarito:', erro);
-            }
-        }
-
-        // ===== CORREÇÃO (salvar) =====
-        function salvarCorrecao() {
-            const notaEl = document.getElementById('ia-nota');
-            const statusEl = document.getElementById('ia-status');
-            const aluno = document.getElementById('ia-aluno').textContent || 'Aluno';
-            const prova = document.getElementById('ia-turma').textContent || 'Prova';
-            
-            if (notaEl.textContent === '0') {
-                showToast('⚠️ Nenhuma correção para salvar. Faça uma correção primeiro!', 'warning');
-                return;
-            }
-            
-            // Simular salvamento no backend
-            const dadosCorrecao = {
-                aluno: aluno,
-                prova: prova,
-                nota: parseFloat(notaEl.textContent) || 0,
-                status: statusEl.textContent || 'AGUARDANDO',
-                respostas: correcaoManualData.respostasAluno || [],
-                gabarito: correcaoManualData.gabarito || [],
-                prova_id: correcaoManualData.provaId,
-                aluno_id: correcaoManualData.alunoId,
-                acertos: correcaoManualData.respostasAluno ? correcaoManualData.respostasAluno.filter((r, i) => 
-                    r && correcaoManualData.gabarito[i] && r.toUpperCase() === correcaoManualData.gabarito[i].toUpperCase()
-                ).length : 0,
-                total: correcaoManualData.quantidade || 20
-            };
-            
-            // Se temos dados reais de prova e aluno, salvar no backend
-            if (correcaoManualData.provaId && correcaoManualData.alunoId) {
-                showToast('💾 Salvando correção...', 'info');
-                fetch(API_URL + '/api/corrigir_manual', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prova_id: correcaoManualData.provaId,
-                        aluno_id: correcaoManualData.alunoId,
-                        respostas: correcaoManualData.respostasAluno || [],
-                        acertos: dadosCorrecao.acertos,
-                        nota: dadosCorrecao.nota,
-                        total: dadosCorrecao.total
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.sucesso) {
-                        showToast('✅ Correção salva com sucesso!', 'success');
-                        carregarDashboard();
-                        carregarResultados();
-                        carregarUltimasCorrecoes();
-                    } else {
-                        showToast('❌ Erro ao salvar correção: ' + (data.erro || 'Erro desconhecido'), 'error');
-                    }
-                })
-                .catch(erro => {
-                    showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
-                    console.error('Erro ao salvar correção:', erro);
-                });
-            } else {
-                showToast('✅ Correção salva localmente! (Para persistir, selecione prova e aluno)', 'success');
-            }
-        }
-
-        // ============================================
-        // FUNÇÃO PARA VER ALUNOS DA TURMA
-        // ============================================
-        function verAlunosDaTurma(id) {
-            showToast('📋 Visualizando alunos da turma ID ' + id + '...', 'info');
-            // Selecionar a turma no filtro de alunos
-            const selectTurma = document.getElementById('filtro-turma-alunos');
-            if (selectTurma) {
-                selectTurma.value = id;
-                // Disparar o evento change para carregar os alunos
-                const event = new Event('change');
-                selectTurma.dispatchEvent(event);
-            }
-            go('alunos');
-        }
-
-        // ============================================
-        // FUNÇÃO PARA PROCESSAR LISTA DE ALUNOS
-        // ============================================
-        function processarListaAlunos() {
-            const textarea = document.getElementById('multi-alunos-input');
-            const linhas = textarea.value.split('\n').filter(l => l.trim() !== '');
-            if (linhas.length === 0) {
-                showToast('⚠️ Cole a lista de alunos primeiro!', 'warning');
-                return;
-            }
-            
-            const statusDiv = document.getElementById('multi-status');
-            const statusText = document.getElementById('multi-status-text');
-            
-            let adicionados = 0;
-            let erros = 0;
-            
-            linhas.forEach(linha => {
-                let nome = linha.trim();
-                let matricula = '';
-                let numero = '';
-                
-                // Tentar diferentes formatos
-                const matchVirgula = linha.match(/^([^,]+),\s*([^,]+),\s*(\d+)?/);
-                const matchTraco = linha.match(/^([^-]+)\s*-\s*([^-]+)\s*-\s*(\d+)?/);
-                const matchParenteses = linha.match(/^([^(]+)\s*\(([^)]+)\)/);
-                
-                if (matchVirgula) {
-                    nome = matchVirgula[1].trim();
-                    matricula = matchVirgula[2].trim();
-                    numero = matchVirgula[3] ? matchVirgula[3].trim() : '';
-                } else if (matchTraco) {
-                    nome = matchTraco[1].trim();
-                    matricula = matchTraco[2].trim();
-                    numero = matchTraco[3] ? matchTraco[3].trim() : '';
-                } else if (matchParenteses) {
-                    nome = matchParenteses[1].trim();
-                    matricula = matchParenteses[2].trim();
-                }
-                
-                if (nome) {
-                    // Preencher campos e salvar
-                    document.getElementById('aluno-nome').value = nome;
-                    if (matricula) document.getElementById('aluno-matricula').value = matricula;
-                    if (numero) document.getElementById('aluno-numero').value = numero;
-                    
-                    // Salvar o aluno (chamar a função salvarAluno)
-                    salvarAluno();
-                    adicionados++;
-                } else {
-                    erros++;
-                }
-            });
-            
-            if (adicionados > 0) {
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'multi-status success';
-                statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
-                textarea.value = '';
-            } else {
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'multi-status error';
-                statusText.textContent = '❌ Nenhum aluno válido encontrado. Verifique o formato.';
-            }
-            
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        // ============================================
-        // FUNÇÃO FECHAR ABA MULTI
-        // ============================================
-        function fecharAbaMulti() {
-            showToast('📋 Lista de alunos gerada!', 'success');
-            const modal = document.getElementById('m-aluno');
-            if (modal) {
-                modal.classList.remove('show');
-            }
-            // Ir para lista por turma
-            go('lista-turma');
-        }
+        });
     </script>
 </body>
 </html>
