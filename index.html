@@ -1791,15 +1791,23 @@
                         </div>
                     </div>
 
-                    <!-- ========== DESEMPENHO POR HABILIDADES ========== -->
+                    <!-- ========== DESEMPENHO POR HABILIDADES (COM FILTRO POR DISCIPLINA) ========== -->
                     <div class="card" style="width:100%;">
                         <div class="card-header">
                             <div class="card-title">🎯 DESEMPENHO POR HABILIDADES</div>
-                            <span class="badge badge-purple">Por disciplina</span>
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <span class="badge badge-purple">Por disciplina</span>
+                                <select id="filtro-disciplina-habilidades" class="form-control" style="width:auto;padding:4px 10px;font-size:11px;border-radius:6px;" onchange="filtrarHabilidadesPorDisciplina()">
+                                    <option value="todas">📚 Todas as disciplinas</option>
+                                    <option value="Português"> Português</option>
+                                    <option value="Matemática"> Matemática</option>
+                                    <option value="Produção de Texto"> Produção de Texto</option>
+                                </select>
+                            </div>
                         </div>
                         <div id="habilidades-container">
                             <div class="habilidades-grid" id="habilidades-grid">
-                                <div class="habilidade-card">
+                                <div class="habilidade-card" data-disciplina="Português">
                                     <div class="disciplina-titulo">
                                         <span class="icone"></span>
                                         <span>Português</span>
@@ -1810,7 +1818,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="habilidade-card">
+                                <div class="habilidade-card" data-disciplina="Matemática">
                                     <div class="disciplina-titulo">
                                         <span class="icone"></span>
                                         <span>Matemática</span>
@@ -1821,7 +1829,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="habilidade-card">
+                                <div class="habilidade-card" data-disciplina="Produção de Texto">
                                     <div class="disciplina-titulo">
                                         <span class="icone"></span>
                                         <span>Produção de Texto</span>
@@ -2221,7 +2229,7 @@
             <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="modal-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Disciplina</label><select class="form-control" id="modal-prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select></div><div class="form-group"><label class="form-label">Bimestre</label><select class="form-control" id="modal-prova-bimestre"><option>1º Bimestre</option><option>2º Bimestre</option><option>3º Bimestre</option><option>4º Bimestre</option></select></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="modal-prova-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Data <span class="req">*</span></label><input class="form-control" id="modal-prova-data" type="date"></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Valor Nota</label><input class="form-control" id="modal-prova-valor" type="number" value="10"></div><div class="form-group"><label class="form-label">Tipo</label><select class="form-control" id="modal-prova-tipo"><option value="4">4 Opções (A,B,C,D)</option><option value="3">3 Opções (A,B,C)</option></select></div></div>
+            <div class="form-row"><div class="form-group"><label class="form-label">Valor Nota</label><input class="form-control" id="modal-prova-valor" type="number" value="10"></div><div class="form-group"><label class="form-label">Tipo</label><select class="form-control" id="modal-prova-tipo" onchange="gerarGabaritoModal(this.value)"><option value="4">4 Opções (A,B,C,D)</option><option value="3">3 Opções (A,B,C)</option></select></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Gabarito</label><div style="display:flex;flex-wrap:wrap;gap:6px;" id="modal-gabarito-grid"></div></div></div>
             <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-prova')">Cancelar</button><button class="btn btn-green" onclick="salvarProvaModal()">💾 Salvar</button></div>
         </div>
@@ -3564,6 +3572,58 @@
         }
 
         // ============================================
+        // FUNÇÃO PARA FILTRAR HABILIDADES POR DISCIPLINA
+        // ============================================
+        function filtrarHabilidadesPorDisciplina() {
+            const disciplinaSelecionada = document.getElementById('filtro-disciplina-habilidades').value;
+            const cards = document.querySelectorAll('.habilidade-card');
+            
+            cards.forEach(card => {
+                const disciplinaCard = card.dataset.disciplina;
+                
+                if (disciplinaSelecionada === 'todas') {
+                    card.style.display = 'block';
+                } else if (disciplinaCard === disciplinaSelecionada) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // ============================================
+        // FUNÇÃO PARA DEFINIR DISCIPLINA AUTOMATICAMENTE PELA PROVA SELECIONADA
+        // ============================================
+        function definirDisciplinaPorProva(provaId) {
+            if (!provaId) {
+                document.getElementById('filtro-disciplina-habilidades').value = 'todas';
+                filtrarHabilidadesPorDisciplina();
+                return;
+            }
+            
+            fetch(API_URL + '/api/provas/' + provaId)
+                .then(r => r.json())
+                .then(prova => {
+                    if (prova && !prova.erro && prova.disciplina) {
+                        const select = document.getElementById('filtro-disciplina-habilidades');
+                        const disciplinas = ['Português', 'Matemática', 'Produção de Texto'];
+                        const disciplinaEncontrada = disciplinas.find(d => 
+                            prova.disciplina.toLowerCase().includes(d.toLowerCase()) ||
+                            d.toLowerCase().includes(prova.disciplina.toLowerCase())
+                        );
+                        
+                        if (disciplinaEncontrada) {
+                            select.value = disciplinaEncontrada;
+                        } else {
+                            select.value = 'todas';
+                        }
+                        filtrarHabilidadesPorDisciplina();
+                    }
+                })
+                .catch(e => console.error('Erro ao carregar disciplina da prova:', e));
+        }
+
+        // ============================================
         // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO
         // ============================================
         function buscarRelatorioAluno() {
@@ -3741,6 +3801,10 @@
                     const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
                     atualizarHabilidades(historico, alunoNome);
                     
+                    // APLICAR FILTRO AUTOMÁTICO PELA DISCIPLINA DA PROVA
+                    const provaId = document.getElementById('rel-aluno-prova').value;
+                    definirDisciplinaPorProva(provaId);
+                    
                     const evolucao = document.getElementById('rel-evolucao');
                     if (evolucao && provasArray.length > 0) {
                         const provasOrdenadas = [...provasArray].sort((a, b) => {
@@ -3873,6 +3937,11 @@
                     }
                     selectProva.dataset.turmaId = turmaId;
                 }
+                
+                // ADICIONAR EVENTO PARA FILTRAR DISCIPLINA QUANDO A PROVA MUDAR
+                selectProva.onchange = function() {
+                    definirDisciplinaPorProva(this.value);
+                };
                 
             } catch (e) {
                 console.error('Erro ao carregar alunos:', e);
