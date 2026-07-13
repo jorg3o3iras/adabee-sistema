@@ -1621,16 +1621,20 @@ def excluir_escola(id):
             alunos_count = cur.fetchone()[0]
             total_alunos += alunos_count
             
-            cur.execute("SELECT COUNT(*) FROM provas WHERE turma_id = %s", (turma_id,))
-            provas_count = cur.fetchone()[0]
-            total_provas += provas_count
-            
-            cur.execute("SELECT id FROM provas WHERE turma_id = %s", (turma_id,))
-            provas = cur.fetchall()
-            for prova in provas:
-                cur.execute("SELECT COUNT(*) FROM historico WHERE prova_id = %s", (prova[0],))
-                historico_count = cur.fetchone()[0]
-                total_historicos += historico_count
+            # CORRIGIDO: usar serie em vez de turma_id
+            cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
+            turma_serie = cur.fetchone()
+            if turma_serie:
+                cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie[0],))
+                provas_count = cur.fetchone()[0]
+                total_provas += provas_count
+                
+                cur.execute("SELECT id FROM provas WHERE serie = %s", (turma_serie[0],))
+                provas = cur.fetchall()
+                for prova in provas:
+                    cur.execute("SELECT COUNT(*) FROM historico WHERE prova_id = %s", (prova[0],))
+                    historico_count = cur.fetchone()[0]
+                    total_historicos += historico_count
         
         cur.execute("DELETE FROM escolas WHERE id = %s", (id,))
         
@@ -1741,7 +1745,7 @@ def excluir_escola_completa(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO COM EXCLUSÃO EM CASCATA)
+# ROTA DE TURMAS (CRUD COMPLETO COM EXCLUSÃO EM CASCATA) - CORRIGIDA
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2005,29 +2009,51 @@ def excluir_turma(id):
     try:
         cur = conn.cursor()
         
-        cur.execute("SELECT id, nome FROM turmas WHERE id = %s", (id,))
+        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
         turma = cur.fetchone()
         if not turma:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
+        turma_id = turma[0]
         turma_nome = turma[1]
+        turma_serie = turma[2]
         
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (id,))
+        # Contar alunos da turma
+        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
         
-        cur.execute("SELECT COUNT(*) FROM provas WHERE turma_id = %s", (id,))
+        # CORRIGIDO: Contar provas pela série (não por turma_id)
+        cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie,))
         total_provas = cur.fetchone()[0]
         
+        # Contar históricos de alunos da turma
         cur.execute("""
             SELECT COUNT(*) FROM historico h
-            JOIN provas p ON h.prova_id = p.id
-            WHERE p.turma_id = %s
-        """, (id,))
+            JOIN alunos a ON h.aluno_id = a.id
+            WHERE a.turma_id = %s
+        """, (turma_id,))
         total_historicos = cur.fetchone()[0]
         
-        cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
+        # Pegar IDs dos alunos para excluir históricos
+        cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (turma_id,))
+        alunos_ids = [row[0] for row in cur.fetchall()]
+        
+        if alunos_ids:
+            # Excluir históricos dos alunos
+            cur.execute("DELETE FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
+            # Excluir correções de texto dos alunos
+            cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
+        
+        # Excluir alunos
+        cur.execute("DELETE FROM alunos WHERE turma_id = %s", (turma_id,))
+        
+        # CORRIGIDO: Excluir provas pela série
+        cur.execute("DELETE FROM provas WHERE serie = %s", (turma_serie,))
+        
+        # Excluir a turma
+        cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
         
         conn.commit()
         cur.close()
@@ -2049,7 +2075,7 @@ def excluir_turma(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE EXCLUSÃO DE TURMA COMPLETA
+# ROTA DE EXCLUSÃO DE TURMA COMPLETA - CORRIGIDA
 # ============================================
 
 @app.route('/api/turmas/<int:id>/completo', methods=['DELETE'])
@@ -2068,33 +2094,52 @@ def excluir_turma_completa(id):
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
+        turma_id = turma[0]
         turma_nome = turma[1]
         turma_serie = turma[2]
         
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (id,))
+        # Contar alunos da turma
+        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
         
-        cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie,))
-        total_provas = cur.fetchone()[0]
-        
-        cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (id,))
+        # Pegar IDs dos alunos
+        cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (turma_id,))
         alunos_ids = [row[0] for row in cur.fetchall()]
         
         total_historicos = 0
+        total_correcoes_texto = 0
         if alunos_ids:
             cur.execute("SELECT COUNT(*) FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
             total_historicos = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
+            total_correcoes_texto = cur.fetchone()[0]
         
+        # CORRIGIDO: Contar provas pela série
+        cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie,))
+        total_provas = cur.fetchone()[0]
+        
+        # Contar históricos de provas (se houver provas da série)
+        cur.execute("""
+            SELECT COUNT(*) FROM historico h
+            JOIN provas p ON h.prova_id = p.id
+            WHERE p.serie = %s
+        """, (turma_serie,))
+        total_historicos_provas = cur.fetchone()[0]
+        
+        # Excluir dados
         if alunos_ids:
             cur.execute("DELETE FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
+            cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
         
-        cur.execute("DELETE FROM alunos WHERE turma_id = %s", (id,))
+        cur.execute("DELETE FROM alunos WHERE turma_id = %s", (turma_id,))
         cur.execute("DELETE FROM provas WHERE serie = %s", (turma_serie,))
-        cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
+        cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
         
         conn.commit()
         cur.close()
         conn.close()
+        
+        total_historicos_total = total_historicos + total_historicos_provas
         
         return jsonify({
             'sucesso': True,
@@ -2102,7 +2147,8 @@ def excluir_turma_completa(id):
             'detalhes': {
                 'alunos_excluidos': total_alunos,
                 'provas_excluidas': total_provas,
-                'historicos_excluidos': total_historicos
+                'historicos_excluidos': total_historicos_total,
+                'correcoes_texto_excluidas': total_correcoes_texto
             }
         })
         
@@ -3149,9 +3195,8 @@ def gerar_gabarito():
         aluno = cur.fetchone()
         
         cur.execute("""
-            SELECT p.*, t.nome as turma_nome, t.serie 
+            SELECT p.*
             FROM provas p 
-            LEFT JOIN turmas t ON p.turma_id = t.id 
             WHERE p.id = %s
         """, (prova_id,))
         prova = cur.fetchone()
@@ -3164,7 +3209,7 @@ def gerar_gabarito():
         
         nome_aluno = aluno['nome']
         escola_nome = aluno['escola_nome'] or ''
-        turma_nome = prova.get('turma_nome', '')
+        turma_nome = aluno['turma_nome'] or ''
         serie = prova.get('serie', '')
         titulo_prova = prova.get('titulo', 'Prova')
         
