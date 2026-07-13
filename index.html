@@ -2084,8 +2084,21 @@
             <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="editar-aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60"></div><div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="editar-aluno-matricula" placeholder="Ex: 2025001"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="editar-aluno-nome" placeholder="Nome completo do aluno"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="editar-aluno-nascimento" type="date"></div><div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="editar-aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="editar-aluno-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="editar-aluno-responsavel" placeholder="Pai, mãe ou responsável"></div></div>
-            <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="editar-aluno-telefone" placeholder="(00) 99999-9999"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="editar-aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
+            <!-- CAMPO ESCOLA EDITAR -->
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
+                    <select class="form-control" id="editar-aluno-escola" onchange="carregarTurmasPorEscolaParaAluno(this.value, 'editar-aluno-turma')">
+                        <option value="">Selecione a escola</option>
+                    </select>
+                </div>
+                <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+                    <select class="form-control" id="editar-aluno-turma">
+                        <option value="">Selecione a turma</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row"><div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="editar-aluno-responsavel" placeholder="Pai, mãe ou responsável"></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="editar-aluno-telefone" placeholder="(00) 99999-9999"></div></div>
+            <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="editar-aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="editar-aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div></div>
             <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-aluno')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoAluno()">💾 Salvar Alterações</button></div>
         </div>
@@ -2119,7 +2132,7 @@
         </div>
     </div>
 
-    <!-- Modal Aluno -->
+    <!-- Modal Aluno (CADASTRO CORRIGIDO) -->
     <div class="modal-overlay no-print" id="m-aluno">
         <div class="modal">
             <div class="modal-header">
@@ -2150,12 +2163,26 @@
                 <div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div>
                 <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div>
             </div>
+            <!-- NOVO CAMPO ESCOLA E TURMA (LIGADOS) -->
             <div class="form-row">
-                <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="aluno-turma"><option value="">Selecione a turma</option></select></div>
-                <div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div>
+                <div class="form-group">
+                    <label class="form-label">Escola <span class="req">*</span></label>
+                    <select class="form-control" id="aluno-escola" onchange="carregarTurmasPorEscolaParaAluno(this.value, 'aluno-turma')">
+                        <option value="">Selecione a escola</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Turma <span class="req">*</span></label>
+                    <select class="form-control" id="aluno-turma">
+                        <option value="">Selecione a turma</option>
+                    </select>
+                </div>
             </div>
             <div class="form-row">
+                <div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div>
                 <div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="aluno-telefone" placeholder="(00) 99999-9999"></div>
+            </div>
+            <div class="form-row">
                 <div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="aluno-email" type="email" placeholder="email@exemplo.com"></div>
             </div>
             <div class="form-row c1">
@@ -4071,6 +4098,34 @@
         }
 
         // ============================================
+        // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
+        // ============================================
+        async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
+            const selectTurma = document.getElementById(selectTurmaId);
+            if (!selectTurma) return;
+            
+            selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+            
+            if (!escolaId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                const turmas = await response.json();
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar turmas:', e);
+            }
+        }
+
+        // ============================================
         // CARREGAR CONCEITO REAL
         // ============================================
         async function carregarConceitoReal() {
@@ -5514,62 +5569,59 @@
             }
         }
 
-       async function excluirEscola(id, nome) {
-    if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome + '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n• Provas\n• Gabaritos\n• Correções\n\nEsta ação NÃO pode ser desfeita!')) return;
-    
-    try {
-        showToast('⏳ Excluindo escola e todos os dados vinculados...', 'info');
-        
-        // Usar a nova rota de exclusão completa
-        const response = await fetch(`${API_URL}/api/escolas/${id}/completo`, { 
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.sucesso) {
-            showToast(`✅ ${result.mensagem}`, 'success');
+        async function excluirEscola(id, nome) {
+            if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome + '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n• Provas\n• Gabaritos\n• Correções\n\nEsta ação NÃO pode ser desfeita!')) return;
             
-            // Mostrar detalhes da exclusão
-            if (result.detalhes) {
-                console.log('📊 Detalhes da exclusão:', result.detalhes);
+            try {
+                showToast('⏳ Excluindo escola e todos os dados vinculados...', 'info');
+                
+                const response = await fetch(`${API_URL}/api/escolas/${id}/completo`, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.sucesso) {
+                    showToast(`✅ ${result.mensagem}`, 'success');
+                    
+                    if (result.detalhes) {
+                        console.log('📊 Detalhes da exclusão:', result.detalhes);
+                    }
+                } else if (response.status === 404) {
+                    showToast('⚠️ Escola já foi excluída anteriormente', 'warning');
+                } else {
+                    showToast(`❌ Erro ao excluir: ${result.erro || 'Erro desconhecido'}`, 'error');
+                    return;
+                }
+                
+                setTimeout(() => {
+                    carregarEscolas();
+                    carregarTurmas();
+                    carregarAlunos();
+                    carregarProvas();
+                    carregarDashboard();
+                    carregarResultados();
+                    carregarGabaritos();
+                    carregarCombos();
+                    carregarRelatorios();
+                    carregarUltimasCorrecoes();
+                    carregarConceitoReal();
+                    carregarUsuarios();
+                    carregarEscolasFiltroAlunos();
+                    carregarEscolasCorrigir();
+                    carregarEscolasTexto();
+                    carregarEscolasParaCorrecaoManual();
+                    carregarEscolasRelAluno();
+                    carregarFiltrosRelTurma();
+                    carregarFiltroEscolaTurmas();
+                }, 1000);
+                
+            } catch (erro) {
+                console.error('Erro ao excluir escola:', erro);
+                showToast('❌ Erro ao excluir escola: ' + erro.message, 'error');
             }
-        } else if (response.status === 404) {
-            showToast('⚠️ Escola já foi excluída anteriormente', 'warning');
-        } else {
-            showToast(`❌ Erro ao excluir: ${result.erro || 'Erro desconhecido'}`, 'error');
-            return;
         }
-        
-        // Recarregar todas as listas
-        setTimeout(() => {
-            carregarEscolas();
-            carregarTurmas();
-            carregarAlunos();
-            carregarProvas();
-            carregarDashboard();
-            carregarResultados();
-            carregarGabaritos();
-            carregarCombos();
-            carregarRelatorios();
-            carregarUltimasCorrecoes();
-            carregarConceitoReal();
-            carregarUsuarios();
-            carregarEscolasFiltroAlunos();
-            carregarEscolasCorrigir();
-            carregarEscolasTexto();
-            carregarEscolasParaCorrecaoManual();
-            carregarEscolasRelAluno();
-            carregarFiltrosRelTurma();
-            carregarFiltroEscolaTurmas();
-        }, 1000);
-        
-    } catch (erro) {
-        console.error('Erro ao excluir escola:', erro);
-        showToast('❌ Erro ao excluir escola: ' + erro.message, 'error');
-    }
-}
 
         // ===== TURMA =====
         async function salvarTurma() {
@@ -5716,16 +5768,20 @@
             }
         }
 
-        // ===== ALUNO =====
+        // ===== ALUNO (SALVAR E EDITAR CORRIGIDOS) =====
         async function salvarAluno() {
             const nome = document.getElementById('aluno-nome').value.trim();
             if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
+            
+            const escolaId = document.getElementById('aluno-escola').value;
+            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
             
             const turmaId = document.getElementById('aluno-turma').value;
             if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
             
             const dados = {
                 nome: nome,
+                escola_id: parseInt(escolaId),
                 turma_id: parseInt(turmaId),
                 matricula: document.getElementById('aluno-matricula').value.trim() || null,
                 numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null,
@@ -5790,23 +5846,34 @@
                     document.getElementById('editar-aluno-email').value = aluno.email || '';
                     document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
                     
-                    fetch(API_URL + '/api/turmas')
+                    // Carregar escolas para o select de edição
+                    fetch(API_URL + '/api/escolas')
                         .then(r => r.json())
-                        .then(turmas => {
-                            const select = document.getElementById('editar-aluno-turma');
-                            select.innerHTML = '<option value="">Selecione a turma</option>';
-                            if (turmas && !turmas.erro) {
-                                turmas.forEach(t => {
+                        .then(escolas => {
+                            const selectEscola = document.getElementById('editar-aluno-escola');
+                            selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) {
+                                escolas.forEach(e => {
                                     const opt = document.createElement('option');
-                                    opt.value = t.id;
-                                    opt.textContent = t.nome + ' - ' + (t.serie || '');
-                                    if (t.id == aluno.turma_id) opt.selected = true;
-                                    select.appendChild(opt);
+                                    opt.value = e.id;
+                                    opt.textContent = e.nome;
+                                    if (e.id == aluno.escola_id) opt.selected = true;
+                                    selectEscola.appendChild(opt);
                                 });
+                            }
+                            // Carregar turmas da escola selecionada
+                            if (aluno.escola_id) {
+                                carregarTurmasPorEscolaParaAluno(aluno.escola_id, 'editar-aluno-turma')
+                                    .then(() => {
+                                        const selectTurma = document.getElementById('editar-aluno-turma');
+                                        if (selectTurma) {
+                                            selectTurma.value = aluno.turma_id;
+                                        }
+                                    });
                             }
                             openM('m-editar-aluno');
                         })
-                        .catch(e => console.error('Erro ao carregar turmas:', e));
+                        .catch(e => console.error('Erro ao carregar escolas:', e));
                 })
                 .catch(e => {
                     showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
@@ -5819,11 +5886,15 @@
             const nome = document.getElementById('editar-aluno-nome').value.trim();
             if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
             
+            const escolaId = document.getElementById('editar-aluno-escola').value;
+            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+            
             const turmaId = document.getElementById('editar-aluno-turma').value;
             if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
             
             const dados = {
                 nome: nome,
+                escola_id: parseInt(escolaId),
                 turma_id: parseInt(turmaId),
                 matricula: document.getElementById('editar-aluno-matricula').value.trim() || null,
                 numero_chamada: parseInt(document.getElementById('editar-aluno-numero').value) || null,
