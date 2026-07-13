@@ -4031,21 +4031,33 @@
         }
 
         // ============================================
-        // CARREGAR COMBOS
+        // CARREGAR COMBOS (COM ESCOLAS PARA ALUNO)
         // ============================================
         async function carregarCombos() {
             try {
                 const respEscolas = await fetch(API_URL + '/api/escolas');
                 const escolas = await respEscolas.json();
+                
+                // Carregar escolas nos selects que precisam
                 ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione a escola</option>';
-                        if (escolas && !escolas.erro) { escolas.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.nome; select.appendChild(opt); }); }
+                        if (escolas && !escolas.erro) { 
+                            escolas.forEach(e => { 
+                                const opt = document.createElement('option'); 
+                                opt.value = e.id; 
+                                opt.textContent = e.nome; 
+                                select.appendChild(opt); 
+                            }); 
+                        }
                         if (current) select.value = current;
                     }
                 });
+                
+                // CARREGAR ESCOLAS PARA O SELECT DE ALUNO (CADASTRO E EDIÇÃO)
+                await carregarEscolasParaAluno();
                 
                 const respTurmas = await fetch(API_URL + '/api/turmas');
                 const turmas = await respTurmas.json();
@@ -4054,7 +4066,14 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione a turma</option>';
-                        if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || '—'); select.appendChild(opt); }); }
+                        if (turmas && !turmas.erro) { 
+                            turmas.forEach(t => { 
+                                const opt = document.createElement('option'); 
+                                opt.value = t.id; 
+                                opt.textContent = t.nome + ' - ' + (t.serie || '—'); 
+                                select.appendChild(opt); 
+                            }); 
+                        }
                         if (current) select.value = current;
                     }
                 });
@@ -4090,11 +4109,78 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione o aluno</option>';
-                        if (alunos && !alunos.erro) { alunos.forEach(a => { const opt = document.createElement('option'); opt.value = a.id; opt.textContent = a.nome; select.appendChild(opt); }); }
+                        if (alunos && !alunos.erro) { 
+                            alunos.forEach(a => { 
+                                const opt = document.createElement('option'); 
+                                opt.value = a.id; 
+                                opt.textContent = a.nome; 
+                                select.appendChild(opt); 
+                            }); 
+                        }
                         if (current) select.value = current;
                     }
                 });
-            } catch (erro) { console.error('Erro ao carregar combos:', erro); }
+            } catch (erro) { 
+                console.error('Erro ao carregar combos:', erro); 
+            }
+        }
+
+        // ============================================
+        // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
+        // ============================================
+        async function carregarEscolasParaAluno() {
+            try {
+                console.log('🔄 Carregando escolas para o select de aluno...');
+                
+                const response = await fetch(API_URL + '/api/escolas');
+                const escolas = await response.json();
+                
+                console.log('📥 Escolas recebidas:', escolas);
+                
+                if (!escolas || escolas.length === 0 || escolas.erro) {
+                    console.warn('⚠️ Nenhuma escola encontrada ou erro na API');
+                    return;
+                }
+                
+                // Select do cadastro de aluno (m-aluno)
+                const selectCadastro = document.getElementById('aluno-escola');
+                if (selectCadastro) {
+                    const current = selectCadastro.value;
+                    selectCadastro.innerHTML = '<option value="">Selecione a escola</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        selectCadastro.appendChild(opt);
+                    });
+                    if (current && escolas.some(e => e.id == current)) {
+                        selectCadastro.value = current;
+                    }
+                    console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
+                } else {
+                    console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
+                }
+                
+                // Select da edição de aluno (m-editar-aluno)
+                const selectEdicao = document.getElementById('editar-aluno-escola');
+                if (selectEdicao) {
+                    const current = selectEdicao.value;
+                    selectEdicao.innerHTML = '<option value="">Selecione a escola</option>';
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        selectEdicao.appendChild(opt);
+                    });
+                    if (current && escolas.some(e => e.id == current)) {
+                        selectEdicao.value = current;
+                    }
+                    console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
+                }
+                
+            } catch (erro) {
+                console.error('❌ Erro ao carregar escolas para o select de aluno:', erro);
+            }
         }
 
         // ============================================
@@ -4474,7 +4560,23 @@
             if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
         }
 
-        function openM(id) { document.getElementById(id).classList.add('show'); if (id === 'm-turma' || id === 'm-aluno') carregarCombos(); if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); } }
+        function openM(id) { 
+            document.getElementById(id).classList.add('show'); 
+            
+            if (id === 'm-turma' || id === 'm-aluno') {
+                carregarCombos();
+                if (id === 'm-aluno') {
+                    carregarEscolasParaAluno();
+                }
+            }
+            
+            if (id === 'm-prova') { 
+                carregarCombos(); 
+                const tipo = document.getElementById('modal-prova-tipo').value; 
+                gerarGabaritoModal(tipo); 
+            }
+        }
+        
         function closeM(id) { document.getElementById(id).classList.remove('show'); }
 
         document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
@@ -6676,6 +6778,7 @@
             carregarEscolasRelAluno();
             carregarFiltrosRelTurma();
             carregarFiltroEscolaTurmas();
+            carregarEscolasParaAluno();
         });
 
         document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
