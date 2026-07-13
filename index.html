@@ -1017,9 +1017,9 @@
                     </div>
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
-                    <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Relatório por Turma</div>
-                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Relatório por Aluno</div>
-                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Relatório por Escola CSV</div>
+                    <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
+                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
+                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
                     <div class="sb-section">Sistema</div>
                     <div class="sb-item" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
                 </div>
@@ -1051,9 +1051,9 @@
                     </div>
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
-                    <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Relatório por Turma</div>
-                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Relatório por Aluno</div>
-                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Relatóriopor Escola</div>
+                    <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
+                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
+                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
                 </div>
             </div>
             <div class="sb-footer">
@@ -1425,7 +1425,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Série</label>
-                            <select class="form-control" id="filtro-serie" onchange="carregarResultadosComFiltros()">
+                            <select class="form-control" id="filtro-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('filtro-turma')); carregarResultadosComFiltros();">
                                 <option value="">Todas as séries</option>
                                 <option value="1º Ano">1º Ano</option>
                                 <option value="2º Ano">2º Ano</option>
@@ -1558,7 +1558,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Série</label>
-                            <select class="form-control" id="rel-turma-serie" onchange="carregarRelatorioTurmaFiltrado()">
+                            <select class="form-control" id="rel-turma-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('rel-turma-turma')); carregarRelatorioTurmaFiltrado();">
                                 <option value="">Todas as séries</option>
                                 <option value="1º Ano">1º Ano</option>
                                 <option value="2º Ano">2º Ano</option>
@@ -2434,6 +2434,37 @@
         }
 
         // ============================================
+        // FUNÇÃO PARA FILTRAR TURMAS POR SÉRIE
+        // ============================================
+        function filtrarTurmasPorSerie(selectSerie, selectTurma) {
+            const serieSelecionada = selectSerie.value;
+            let firstVisible = false;
+            
+            for (let option of selectTurma.options) {
+                if (option.value === '') {
+                    option.style.display = '';
+                    continue;
+                }
+                const serieDaTurma = option.dataset.serie || '';
+                if (serieSelecionada === '' || serieDaTurma === serieSelecionada) {
+                    option.style.display = '';
+                    if (!firstVisible) {
+                        selectTurma.value = option.value;
+                        firstVisible = true;
+                    }
+                } else {
+                    option.style.display = 'none';
+                }
+            }
+            
+            if (!firstVisible) {
+                selectTurma.value = '';
+            }
+            
+            selectTurma.dispatchEvent(new Event('change'));
+        }
+
+        // ============================================
         // CARREGAR ESCOLAS
         // ============================================
         async function carregarEscolas() {
@@ -3019,7 +3050,13 @@
                 if (selectTurma && turmas && !turmas.erro) {
                     const current = selectTurma.value;
                     selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-                    turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || ''); selectTurma.appendChild(opt); });
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
                     if (current) selectTurma.value = current;
                 }
                 
@@ -3040,6 +3077,7 @@
         // ============================================
         async function carregarTurmasPorEscola(escolaId) {
             const selectTurma = document.getElementById('filtro-turma');
+            const selectSerie = document.getElementById('filtro-serie');
             if (!selectTurma) return;
             selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
             try {
@@ -3047,9 +3085,20 @@
                 const turmas = await respTurmas.json();
                 if (turmas && !turmas.erro) {
                     const turmasFiltradas = escolaId && escolaId !== '' ? turmas.filter(t => t.escola_id == escolaId) : turmas;
-                    turmasFiltradas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || ''); selectTurma.appendChild(opt); });
+                    turmasFiltradas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                    if (selectSerie) {
+                        filtrarTurmasPorSerie(selectSerie, selectTurma);
+                    }
                 }
-            } catch (erro) { console.error('Erro ao carregar turmas:', erro); }
+            } catch (erro) {
+                console.error('Erro ao carregar turmas:', erro);
+            }
             carregarResultadosComFiltros();
         }
 
@@ -3064,8 +3113,16 @@
             const selectTurma = document.getElementById('filtro-turma');
             selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
             fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
-                if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || ''); selectTurma.appendChild(opt); }); }
-                carregarResultadosComFiltros();
+                if (turmas && !turmas.erro) { 
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                        opt.dataset.serie = t.serie || '';
+                        selectTurma.appendChild(opt);
+                    });
+                    carregarResultadosComFiltros();
+                }
             }).catch(e => console.error('Erro ao recarregar turmas:', e));
             
             const selectProva = document.getElementById('filtro-prova');
@@ -6102,6 +6159,7 @@
 
         async function carregarTurmasRelTurma(escolaId) {
             const selectTurma = document.getElementById('rel-turma-turma');
+            const selectSerie = document.getElementById('rel-turma-serie');
             if (!selectTurma) return;
             
             selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
@@ -6118,6 +6176,9 @@
                             opt.dataset.serie = t.serie || '';
                             selectTurma.appendChild(opt);
                         });
+                        if (selectSerie) {
+                            filtrarTurmasPorSerie(selectSerie, selectTurma);
+                        }
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar turmas:', erro);
@@ -6144,6 +6205,10 @@
                     opt.textContent = 'Nenhuma turma encontrada';
                     opt.disabled = true;
                     selectTurma.appendChild(opt);
+                }
+                
+                if (selectSerie) {
+                    filtrarTurmasPorSerie(selectSerie, selectTurma);
                 }
             } catch (erro) {
                 console.error('Erro ao carregar turmas da escola:', erro);
