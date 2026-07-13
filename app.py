@@ -637,8 +637,9 @@ def corrigir_com_ia():
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             
+            # BUSCAR PROVA PELO ID - AGORA USANDO SERIE
             cur.execute("""
-                SELECT p.*, t.serie, t.nome as turma_nome
+                SELECT p.*, t.serie
                 FROM provas p 
                 LEFT JOIN turmas t ON p.turma_id = t.id
                 WHERE p.id = %s
@@ -656,6 +657,7 @@ def corrigir_com_ia():
                 conn.close()
                 return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
             
+            # BUSCAR ALUNO
             cur.execute("SELECT nome, turma_id FROM alunos WHERE id = %s", (aluno_id,))
             aluno = cur.fetchone()
             cur.close()
@@ -664,6 +666,7 @@ def corrigir_com_ia():
             nome_aluno = aluno['nome'] if aluno else 'Aluno'
             turma_id = aluno['turma_id'] if aluno else None
             
+            # BUSCAR SÉRIE DO ALUNO
             serie = '1º Ano'
             if turma_id:
                 try:
@@ -692,7 +695,6 @@ def corrigir_com_ia():
             if resultado.get('erro'):
                 return jsonify(resultado), 400
             
-            # Identificar o tipo de avaliação
             tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
             print(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
             
@@ -709,7 +711,6 @@ def corrigir_com_ia():
                     existe = cur.fetchone()
                     
                     if existe:
-                        # Atualizar registro existente
                         cur.execute("""
                             UPDATE historico 
                             SET respostas = %s::text[], 
@@ -734,7 +735,6 @@ def corrigir_com_ia():
                         ))
                         print("✅ Histórico atualizado com sucesso")
                     else:
-                        # Inserir novo registro
                         cur.execute("""
                             INSERT INTO historico 
                             (prova_id, aluno_id, respostas, acertos, nota, total, 
@@ -801,10 +801,11 @@ def corrigir_manual():
         cur = conn.cursor()
         
         # Buscar disciplina da prova
-        cur.execute("SELECT disciplina, titulo FROM provas WHERE id = %s", (prova_id,))
+        cur.execute("SELECT disciplina, titulo, serie FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
         disciplina = prova[0] if prova else ''
         prova_titulo = prova[1] if prova else ''
+        serie_prova = prova[2] if prova else ''
         
         # Buscar série do aluno
         cur.execute("""
@@ -813,7 +814,7 @@ def corrigir_manual():
             WHERE a.id = %s
         """, (aluno_id,))
         serie_result = cur.fetchone()
-        serie = serie_result[0] if serie_result else '1º Ano'
+        serie = serie_result[0] if serie_result else serie_prova or '1º Ano'
         
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
         
@@ -1124,6 +1125,7 @@ def listar_historico():
                 a.nome as aluno_nome, 
                 p.titulo as prova_titulo,
                 p.disciplina,
+                p.serie as prova_serie,
                 t.serie, 
                 t.nome as turma_nome, 
                 e.nome as escola_nome,
@@ -1134,7 +1136,7 @@ def listar_historico():
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
-            LEFT JOIN turmas t ON p.turma_id = t.id
+            LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
             WHERE 1=1
         """
@@ -1193,7 +1195,6 @@ def listar_historico():
             item['conceito_cor'] = conceito['cor']
             item['porcentagem'] = porcentagem
             
-            # Adicionar tipo de avaliação se não existir
             if 'tipo_avaliacao' not in item or not item['tipo_avaliacao']:
                 disciplina = item.get('disciplina', '')
                 prova_titulo = item.get('prova_titulo', '')
@@ -1224,6 +1225,8 @@ def historico_agrupado():
         escola_id = request.args.get('escola')
         turma_id = request.args.get('turma')
         aluno_id = request.args.get('aluno_id')
+        serie = request.args.get('serie')
+        prova_id = request.args.get('prova')
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -1233,13 +1236,14 @@ def historico_agrupado():
                 a.nome as aluno_nome, 
                 p.titulo as prova_titulo,
                 p.disciplina,
+                p.serie as prova_serie,
                 t.serie, 
                 t.nome as turma_nome, 
                 e.nome as escola_nome
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
-            LEFT JOIN turmas t ON p.turma_id = t.id
+            LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON t.escola_id = e.id
             WHERE 1=1
         """
@@ -1269,6 +1273,18 @@ def historico_agrupado():
             except ValueError:
                 pass
         
+        if serie and serie != '' and serie != 'null':
+            query += " AND t.serie = %s"
+            params.append(serie)
+        
+        if prova_id and prova_id != '' and prova_id != 'null':
+            try:
+                prova_id_int = int(prova_id)
+                query += " AND h.prova_id = %s"
+                params.append(prova_id_int)
+            except ValueError:
+                pass
+        
         query += " ORDER BY a.nome, h.data_correcao DESC"
         
         cur.execute(query, params)
@@ -1293,13 +1309,11 @@ def historico_agrupado():
                     'avaliacoes': {}
                 }
             
-            # Identificar o tipo de avaliação
             disciplina = item.get('disciplina', '')
             prova_titulo = item.get('prova_titulo', '')
-            serie = item.get('serie', '')
-            tipo = identificar_disciplina(prova_titulo, disciplina, serie)
+            serie_aluno = item.get('serie', '')
+            tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
             
-            # Armazenar a nota no tipo correspondente
             alunos_map[aluno_key]['avaliacoes'][tipo] = {
                 'nota': float(item.get('nota', 0)),
                 'acertos': int(item.get('acertos', 0)),
@@ -1309,12 +1323,10 @@ def historico_agrupado():
                 'disciplina': disciplina
             }
         
-        # Converter para lista
         resultado = []
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
             
-            # Calcular soma e média
             notas = []
             for tipo in ['Portugues', 'Matematica', 'Producao']:
                 if tipo in avaliacoes:
@@ -1547,7 +1559,6 @@ def editar_escola(id):
 
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
-    """Exclui uma escola e todos os dados vinculados (turmas, alunos, provas, histórico)"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -1555,7 +1566,6 @@ def excluir_escola(id):
     try:
         cur = conn.cursor()
         
-        # Verificar se a escola existe
         cur.execute("SELECT id, nome FROM escolas WHERE id = %s", (id,))
         escola = cur.fetchone()
         if not escola:
@@ -1565,7 +1575,6 @@ def excluir_escola(id):
         
         escola_nome = escola[1]
         
-        # Buscar todas as turmas da escola
         cur.execute("SELECT id FROM turmas WHERE escola_id = %s", (id,))
         turmas = cur.fetchall()
         
@@ -1574,21 +1583,17 @@ def excluir_escola(id):
         total_provas = 0
         total_historicos = 0
         
-        # Para cada turma, contar e excluir dependências
         for turma in turmas:
             turma_id = turma[0]
             
-            # Contar alunos
             cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
             alunos_count = cur.fetchone()[0]
             total_alunos += alunos_count
             
-            # Contar provas
             cur.execute("SELECT COUNT(*) FROM provas WHERE turma_id = %s", (turma_id,))
             provas_count = cur.fetchone()[0]
             total_provas += provas_count
             
-            # Buscar provas da turma para contar históricos
             cur.execute("SELECT id FROM provas WHERE turma_id = %s", (turma_id,))
             provas = cur.fetchall()
             for prova in provas:
@@ -1596,8 +1601,6 @@ def excluir_escola(id):
                 historico_count = cur.fetchone()[0]
                 total_historicos += historico_count
         
-        # Excluir em cascata usando ON DELETE CASCADE
-        # As tabelas já têm ON DELETE CASCADE configurado, então basta excluir a escola
         cur.execute("DELETE FROM escolas WHERE id = %s", (id,))
         
         conn.commit()
@@ -1830,7 +1833,6 @@ def editar_turma(id):
 
 @app.route('/api/turmas/<int:id>/alunos', methods=['GET'])
 def listar_alunos_por_turma(id):
-    """Lista todos os alunos de uma turma específica"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -1838,7 +1840,6 @@ def listar_alunos_por_turma(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Verificar se a turma existe
         cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
         turma = cur.fetchone()
         if not turma:
@@ -1846,7 +1847,6 @@ def listar_alunos_por_turma(id):
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
         
-        # Buscar alunos
         cur.execute("""
             SELECT 
                 id,
@@ -1881,7 +1881,6 @@ def listar_alunos_por_turma(id):
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
-    """Exclui uma turma e todos os dados vinculados (alunos, provas, histórico)"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -1889,7 +1888,6 @@ def excluir_turma(id):
     try:
         cur = conn.cursor()
         
-        # Verificar se a turma existe
         cur.execute("SELECT id, nome FROM turmas WHERE id = %s", (id,))
         turma = cur.fetchone()
         if not turma:
@@ -1899,15 +1897,12 @@ def excluir_turma(id):
         
         turma_nome = turma[1]
         
-        # Contar alunos
         cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (id,))
         total_alunos = cur.fetchone()[0]
         
-        # Contar provas
         cur.execute("SELECT COUNT(*) FROM provas WHERE turma_id = %s", (id,))
         total_provas = cur.fetchone()[0]
         
-        # Contar históricos
         cur.execute("""
             SELECT COUNT(*) FROM historico h
             JOIN provas p ON h.prova_id = p.id
@@ -1915,7 +1910,6 @@ def excluir_turma(id):
         """, (id,))
         total_historicos = cur.fetchone()[0]
         
-        # Excluir em cascata usando ON DELETE CASCADE
         cur.execute("DELETE FROM turmas WHERE id = %s", (id,))
         
         conn.commit()
@@ -2123,7 +2117,6 @@ def editar_aluno(id):
 
 @app.route('/api/alunos/<int:id>', methods=['DELETE'])
 def excluir_aluno(id):
-    """Exclui um aluno e todo o seu histórico"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -2131,7 +2124,6 @@ def excluir_aluno(id):
     try:
         cur = conn.cursor()
         
-        # Verificar se o aluno existe
         cur.execute("SELECT id, nome FROM alunos WHERE id = %s", (id,))
         aluno = cur.fetchone()
         if not aluno:
@@ -2141,13 +2133,8 @@ def excluir_aluno(id):
         
         aluno_nome = aluno[1]
         
-        # Excluir histórico do aluno (ON DELETE CASCADE já cuida)
         cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
-        
-        # Excluir correções de texto do aluno
         cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
-        
-        # Excluir o aluno
         cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
         
         conn.commit()
@@ -2170,51 +2157,94 @@ def excluir_aluno(id):
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
-                FROM provas p LEFT JOIN turmas t ON p.turma_id = t.id
-                ORDER BY p.id DESC
-            """)
-            provas = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(provas)
-        except Exception as e:
-            print(f"Erro ao listar provas: {e}")
-            traceback.print_exc()
-    return jsonify([])
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT 
+                p.id,
+                p.titulo,
+                p.serie,
+                p.disciplina,
+                p.bimestre,
+                p.data_prova,
+                p.valor_nota,
+                p.tipo_questoes,
+                p.quantidade_questoes,
+                p.gabarito,
+                p.created_at
+            FROM provas p
+            ORDER BY p.created_at DESC
+        """)
+        provas = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify(provas)
+        
+    except Exception as e:
+        print(f"❌ Erro ao listar provas: {e}")
+        traceback.print_exc()
+        return jsonify([])
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
-    data = request.json
-    if not data.get('titulo') or not data.get('turma_id'):
-        return jsonify({'erro': 'Título e turma são obrigatórios'}), 400
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO provas (turma_id, titulo, disciplina, bimestre, data_prova, 
-                                    valor_nota, tipo_questoes, quantidade_questoes, gabarito)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (data['turma_id'], data['titulo'], data.get('disciplina', ''),
-                  data.get('bimestre', ''), data.get('data_prova'), data.get('valor_nota', 10),
-                  data.get('tipo_questoes', '4'), data.get('quantidade_questoes', 20), 
-                  data.get('gabarito', [])))
-            result = cur.fetchone()
-            conn.commit()
+    try:
+        data = request.json
+        titulo = data.get('titulo')
+        serie = data.get('serie')
+        
+        if not titulo:
+            return jsonify({'erro': 'Título é obrigatório'}), 400
+        
+        if not serie:
+            return jsonify({'erro': 'Série é obrigatória'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Verificar se já existe uma prova com o mesmo título e série
+        cur.execute("""
+            SELECT id FROM provas 
+            WHERE titulo = %s AND serie = %s
+        """, (titulo, serie))
+        existe = cur.fetchone()
+        
+        if existe:
             cur.close()
             conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Prova criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar prova: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar prova'}), 500
+            return jsonify({'erro': 'Já existe uma prova com este título para esta série'}), 400
+        
+        cur.execute("""
+            INSERT INTO provas (titulo, serie, disciplina, bimestre, data_prova, 
+                                valor_nota, tipo_questoes, quantidade_questoes, gabarito)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (titulo, serie, data.get('disciplina', ''),
+              data.get('bimestre', ''), data.get('data_prova'),
+              data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
+              data.get('quantidade_questoes', 20), data.get('gabarito', [])))
+        
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'id': result['id'],
+            'mensagem': f'Prova "{titulo}" criada com sucesso para a série {serie}!',
+            'serie': serie
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao criar prova: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/provas/<int:id>', methods=['GET'])
 def buscar_prova(id):
@@ -2225,10 +2255,20 @@ def buscar_prova(id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT p.*, t.nome as turma_nome, t.serie as turma_serie
-            FROM provas p 
-            LEFT JOIN turmas t ON p.turma_id = t.id 
-            WHERE p.id = %s
+            SELECT 
+                id,
+                titulo,
+                serie,
+                disciplina,
+                bimestre,
+                data_prova,
+                valor_nota,
+                tipo_questoes,
+                quantidade_questoes,
+                gabarito,
+                created_at
+            FROM provas 
+            WHERE id = %s
         """, (id,))
         prova = cur.fetchone()
         cur.close()
@@ -2247,15 +2287,21 @@ def buscar_prova(id):
 def editar_prova(id):
     try:
         data = request.json
+        titulo = data.get('titulo')
+        serie = data.get('serie')
         
-        if not data.get('titulo') or not data.get('turma_id'):
-            return jsonify({'erro': 'Título e turma são obrigatórios'}), 400
+        if not titulo:
+            return jsonify({'erro': 'Título é obrigatório'}), 400
+        
+        if not serie:
+            return jsonify({'erro': 'Série é obrigatória'}), 400
         
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
         cur.execute("SELECT id FROM provas WHERE id = %s", (id,))
         if not cur.fetchone():
             cur.close()
@@ -2264,8 +2310,8 @@ def editar_prova(id):
         
         cur.execute("""
             UPDATE provas 
-            SET turma_id = %s,
-                titulo = %s,
+            SET titulo = %s,
+                serie = %s,
                 disciplina = %s,
                 bimestre = %s,
                 data_prova = %s,
@@ -2275,9 +2321,9 @@ def editar_prova(id):
                 gabarito = %s
             WHERE id = %s
             RETURNING id
-        """, (data['turma_id'], data['titulo'], data.get('disciplina', ''),
+        """, (titulo, serie, data.get('disciplina', ''),
               data.get('bimestre', ''), data.get('data_prova'),
-              data.get('valor_nota', 10), data.get('tipo_questoes', '4'),
+              data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
               data.get('quantidade_questoes', 20), data.get('gabarito', []), id))
         
         result = cur.fetchone()
@@ -2297,7 +2343,6 @@ def editar_prova(id):
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
-    """Exclui uma prova e todo o histórico associado"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -2305,7 +2350,6 @@ def excluir_prova(id):
     try:
         cur = conn.cursor()
         
-        # Verificar se a prova existe
         cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (id,))
         prova = cur.fetchone()
         if not prova:
@@ -2315,17 +2359,11 @@ def excluir_prova(id):
         
         prova_titulo = prova[1]
         
-        # Contar históricos
         cur.execute("SELECT COUNT(*) FROM historico WHERE prova_id = %s", (id,))
         total_historicos = cur.fetchone()[0]
         
-        # Excluir histórico associado (ON DELETE CASCADE já cuida)
         cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
-        
-        # Excluir correções de texto associadas
         cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
-        
-        # Excluir a prova
         cur.execute("DELETE FROM provas WHERE id = %s", (id,))
         
         conn.commit()
@@ -2394,8 +2432,8 @@ def dashboard_desempenho():
                 COALESCE(AVG(h.acertos), 0) as media_acertos,
                 COALESCE(AVG(h.total), 20) as media_total
             FROM turmas t
-            LEFT JOIN provas p ON p.turma_id = t.id
-            LEFT JOIN historico h ON h.prova_id = p.id
+            LEFT JOIN provas p ON p.serie = t.serie
+            LEFT JOIN historico h ON h.prova_id = p.id AND h.aluno_id IN (SELECT id FROM alunos WHERE turma_id = t.id)
             GROUP BY t.id, t.nome
             HAVING COUNT(DISTINCT h.id) > 0
             ORDER BY media DESC
@@ -2563,7 +2601,7 @@ def estatisticas_turmas():
             FROM turmas t
             LEFT JOIN escolas e ON t.escola_id = e.id
             LEFT JOIN alunos a ON a.turma_id = t.id
-            LEFT JOIN provas p ON p.turma_id = t.id
+            LEFT JOIN provas p ON p.serie = t.serie
             LEFT JOIN historico h ON h.prova_id = p.id AND h.aluno_id = a.id
             GROUP BY t.id, e.nome
             ORDER BY t.nome
@@ -3022,8 +3060,8 @@ def init_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS provas (
                 id SERIAL PRIMARY KEY,
-                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
                 titulo TEXT NOT NULL,
+                serie TEXT NOT NULL,
                 disciplina TEXT,
                 bimestre TEXT,
                 data_prova DATE,
