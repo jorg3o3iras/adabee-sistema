@@ -5513,77 +5513,36 @@
             }
         }
 
-        async function excluirEscola(id, nome) {
-    if (!confirm('Excluir a escola "' + nome + '" e TODOS os seus dados vinculados (turmas, alunos, provas, correções)? Esta ação NÃO pode ser desfeita!')) return;
+       async function excluirEscola(id, nome) {
+    if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome + '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n• Provas\n• Gabaritos\n• Correções\n\nEsta ação NÃO pode ser desfeita!')) return;
+    
     try {
-        showToast('🗑️ Excluindo escola e todos os dados vinculados...', 'error');
+        showToast('⏳ Excluindo escola e todos os dados vinculados...', 'info');
         
-        // Primeiro, buscar todas as turmas da escola
-        const turmasResponse = await fetch(`${API_URL}/api/turmas?escola_id=${id}`);
-        const turmas = await turmasResponse.json();
-        
-        if (turmas && turmas.length > 0) {
-            // Para cada turma, buscar e excluir seus alunos e provas
-            for (const turma of turmas) {
-                try {
-                    // Buscar alunos da turma
-                    const alunosResponse = await fetch(`${API_URL}/api/alunos?turma_id=${turma.id}`);
-                    const alunos = await alunosResponse.json();
-                    
-                    if (alunos && alunos.length > 0) {
-                        // Excluir cada aluno (isso vai excluir as correções vinculadas)
-                        for (const aluno of alunos) {
-                            try {
-                                await fetch(`${API_URL}/api/alunos/${aluno.id}`, { 
-                                    method: 'DELETE',
-                                    headers: { 'Content-Type': 'application/json' }
-                                });
-                            } catch (e) {
-                                console.warn(`Erro ao excluir aluno ${aluno.id}:`, e);
-                            }
-                        }
-                    }
-                    
-                    // Buscar provas da turma
-                    const provasResponse = await fetch(`${API_URL}/api/provas?turma_id=${turma.id}`);
-                    const provas = await provasResponse.json();
-                    
-                    if (provas && provas.length > 0) {
-                        // Excluir cada prova
-                        for (const prova of provas) {
-                            try {
-                                await fetch(`${API_URL}/api/provas/${prova.id}`, { 
-                                    method: 'DELETE',
-                                    headers: { 'Content-Type': 'application/json' }
-                                });
-                            } catch (e) {
-                                console.warn(`Erro ao excluir prova ${prova.id}:`, e);
-                            }
-                        }
-                    }
-                    
-                    // Excluir a turma
-                    await fetch(`${API_URL}/api/turmas/${turma.id}`, { 
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    
-                } catch (e) {
-                    console.warn(`Erro ao processar turma ${turma.id}:`, e);
-                }
-            }
-        }
-        
-        // Por fim, excluir a escola
-        const response = await fetch(API_URL + '/api/escolas/' + id, { 
+        // Usar a nova rota de exclusão completa
+        const response = await fetch(`${API_URL}/api/escolas/${id}/completo`, { 
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' }
         });
-        const result = await processarRespostaAPI(response);
         
-        if (result.ok) {
-            showToast('🗑️ Escola "' + nome + '" e todos os seus dados foram excluídos com sucesso!', 'success');
-            // Recarregar todas as listas
+        const result = await response.json();
+        
+        if (response.ok && result.sucesso) {
+            showToast(`✅ ${result.mensagem}`, 'success');
+            
+            // Mostrar detalhes da exclusão
+            if (result.detalhes) {
+                console.log('📊 Detalhes da exclusão:', result.detalhes);
+            }
+        } else if (response.status === 404) {
+            showToast('⚠️ Escola já foi excluída anteriormente', 'warning');
+        } else {
+            showToast(`❌ Erro ao excluir: ${result.erro || 'Erro desconhecido'}`, 'error');
+            return;
+        }
+        
+        // Recarregar todas as listas
+        setTimeout(() => {
             carregarEscolas();
             carregarTurmas();
             carregarAlunos();
@@ -5603,9 +5562,8 @@
             carregarEscolasRelAluno();
             carregarFiltrosRelTurma();
             carregarFiltroEscolaTurmas();
-        } else {
-            showToast('❌ Erro ao excluir escola: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
-        }
+        }, 1000);
+        
     } catch (erro) {
         console.error('Erro ao excluir escola:', erro);
         showToast('❌ Erro ao excluir escola: ' + erro.message, 'error');
