@@ -1244,9 +1244,34 @@
                                 <option value="3º e 4º bimestre">3º e 4º bimestre</option>
                             </select>
                         </div></div>
-                        <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="prova-escola" onchange="carregarTurmasProva()"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="prova-serie" onchange="atualizarInfoAlts()"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
-                        <div class="form-row"><div class="form-group"><label class="form-label">Turma</label><select class="form-control" id="prova-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Data</label><input class="form-control" id="prova-data" type="date"></div></div>
-                        <div class="form-row"><div class="form-group"><label class="form-label">Nº de Questões</label><select class="form-control" id="prova-questoes"><option>10</option><option>15</option><option selected>20</option><option>25</option><option>30</option></select></div><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="prova-nota" type="number" value="10"></div></div>
+                        <div class="form-row">
+                            <div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
+                                <select class="form-control" id="prova-serie" onchange="atualizarInfoAlts()">
+                                    <option value="1º Ano">1º Ano</option>
+                                    <option value="2º Ano">2º Ano</option>
+                                    <option value="3º Ano">3º Ano</option>
+                                    <option value="4º Ano">4º Ano</option>
+                                    <option value="5º Ano">5º Ano</option>
+                                    <option value="6º Ano">6º Ano</option>
+                                    <option value="7º Ano">7º Ano</option>
+                                    <option value="8º Ano">8º Ano</option>
+                                    <option value="9º Ano">9º Ano</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label class="form-label">Data</label><input class="form-control" id="prova-data" type="date"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label class="form-label">Nº de Questões</label>
+                                <select class="form-control" id="prova-questoes">
+                                    <option>10</option>
+                                    <option>15</option>
+                                    <option selected>20</option>
+                                    <option>25</option>
+                                    <option>30</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="prova-nota" type="number" value="10"></div>
+                        </div>
                         <div id="info-alts" style="padding:10px 14px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:8px;font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:6px;">ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C</div>
                     </div>
                     <div class="card">
@@ -1299,24 +1324,30 @@
                 </div>
                 <div class="card no-print">
                     <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
-                    <div class="form-row c3">
-                        <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="corrigir-prova"><option value="">Selecione...</option></select></div>
-                        <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="corrigir-escola" onchange="carregarTurmasCorrigir(this.value)"><option value="">Selecione a escola...</option></select></div>
-                        <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="corrigir-turma" onchange="carregarAlunosPorTurma(this.value)"><option value="">Selecione a turma...</option></select></div>
+                    <div class="form-row c2">
+                        <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-prova" onchange="carregarAlunosPorProva(this.value)">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label">Aluno <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-aluno">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-row c3" style="margin-top:8px;">
-                        <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="corrigir-aluno"><option value="">Selecione...</option></select></div>
-                        <div></div>
-                        <div></div>
+                    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;">
+                        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label>
+                        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label>
+                        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label>
                     </div>
-                    <div style="display:flex;gap:14px;flex-wrap:wrap;"><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label></div>
                 </div>
                 <div id="ia-result" style="display:none;">
                     <div class="card card-glow-green">
                         <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div><div class="btn-group"><span class="badge badge-green">✅ Processado</span><span class="badge badge-gray" id="confianca-badge">0% conf.</span></div></div>
                         <div class="g2" style="margin-bottom:14px;">
                             <div>
-                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;"><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">ALUNO</div><div style="font-weight:700;" id="ia-aluno">—</div></div><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">TURMA</div><div style="font-weight:700;" id="ia-turma">—</div></div></div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;"><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">ALUNO</div><div style="font-weight:700;" id="ia-aluno">—</div></div><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">PROVA</div><div style="font-weight:700;" id="ia-turma">—</div></div></div>
                                 <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px;">Respostas detectadas:</div>
                                 <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ia-resp"></div>
                             </div>
@@ -1392,7 +1423,7 @@
             <!-- ========== PROVAS ========== -->
             <div class="page" id="page-provas">
                 <div class="page-header"><div><div class="page-title">📑 Provas</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('prova-upload')">+ Nova Prova</button></div></div>
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Turma</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== RESULTADOS ========== -->
@@ -1457,10 +1488,11 @@
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
                     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Total de Alunos</div></div>
                     <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Adquiriu as Habilidades</div></div>
                     <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Recomposição da Aprendizagem</div></div>
+                    <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Média Geral</div></div>
                 </div>
 
                 <div class="conceito-graficos" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
@@ -2464,6 +2496,43 @@
         }
 
         // ============================================
+        // CARREGAR ALUNOS POR PROVA
+        // ============================================
+        async function carregarAlunosPorProva(provaId) {
+            const selectAluno = document.getElementById('corrigir-aluno');
+            selectAluno.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (!provaId) return;
+            
+            try {
+                const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                const prova = await provaResp.json();
+                
+                if (!prova || prova.erro) {
+                    showToast('❌ Erro ao carregar dados da prova', 'error');
+                    return;
+                }
+                
+                const serie = prova.serie || '';
+                
+                const alunosResp = await fetch(API_URL + '/api/alunos?serie=' + encodeURIComponent(serie));
+                const alunos = await alunosResp.json();
+                
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        const turmaInfo = a.turma_nome ? ' - ' + a.turma_nome : '';
+                        opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')' + turmaInfo;
+                        selectAluno.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Erro ao carregar alunos:', e);
+            }
+        }
+
+        // ============================================
         // CARREGAR ESCOLAS
         // ============================================
         async function carregarEscolas() {
@@ -2745,8 +2814,8 @@
                         return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                             '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                             '<td><strong>' + p.titulo + '</strong></td>' +
-                            '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
-                            '<td>' + (p.turma_nome || '—') + '</td>' +
+                            '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                            '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
                             '<td>' + (p.data_prova || '—') + '</td>' +
                             '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
                             '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
@@ -2793,7 +2862,7 @@
                         return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                             '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                             '<td>' + p.titulo + '</td>' +
-                            '<td><span class="badge badge-purple">' + (p.turma_serie || '—') + '</span></td>' +
+                            '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                             '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
                             '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
                             '<td>' + (p.data_prova || '—') + '</td>' +
@@ -3065,7 +3134,12 @@
                 if (selectProva && provas && !provas.erro) {
                     const current = selectProva.value;
                     selectProva.innerHTML = '<option value="">Todas as provas</option>';
-                    provas.forEach(p => { const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.titulo + ' - ' + (p.turma_serie || ''); selectProva.appendChild(opt); });
+                    provas.forEach(p => { 
+                        const opt = document.createElement('option'); 
+                        opt.value = p.id; 
+                        opt.textContent = p.titulo + ' - ' + (p.serie || ''); 
+                        selectProva.appendChild(opt); 
+                    });
                     if (current) selectProva.value = current;
                 }
             } catch (erro) { console.error('Erro ao carregar filtros:', erro); }
@@ -3128,7 +3202,12 @@
             fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
                 if (provas && !provas.erro) {
                     selectProva.innerHTML = '<option value="">Todas as provas</option>';
-                    provas.forEach(p => { const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.titulo + ' - ' + (p.turma_serie || ''); selectProva.appendChild(opt); });
+                    provas.forEach(p => { 
+                        const opt = document.createElement('option'); 
+                        opt.value = p.id; 
+                        opt.textContent = p.titulo + ' - ' + (p.serie || ''); 
+                        selectProva.appendChild(opt); 
+                    });
                 }
             }).catch(e => console.error('Erro ao recarregar provas:', e));
         }
@@ -3758,7 +3837,7 @@
                         provas.forEach(p => {
                             const opt = document.createElement('option');
                             opt.value = p.id;
-                            opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '');
                             selectProva.appendChild(opt);
                         });
                     }
@@ -3820,11 +3899,11 @@
                             correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                             correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
                             correcaoManualData.valorPorQuestao = correcaoManualData.notaMaxima / correcaoManualData.quantidade;
-                            correcaoManualData.serie = prova.turma_serie || '1º Ano';
+                            correcaoManualData.serie = prova.serie || '1º Ano';
                             
                             document.getElementById('cm-aluno-nome').textContent = alunoNome;
                             document.getElementById('cm-prova-titulo').textContent = prova.titulo || 'Prova';
-                            document.getElementById('cm-turma-info').textContent = (prova.turma_serie || '') + ' | Turma: ' + (prova.turma_nome || '');
+                            document.getElementById('cm-turma-info').textContent = (prova.serie || '') + ' | Turma: ' + (prova.turma_nome || '');
                             document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
                             gerarGridCorrecaoManual();
                             atualizarResumoCorrecaoManual();
@@ -3960,7 +4039,19 @@
                     if (select) {
                         const current = select.value;
                         select.innerHTML = '<option value="">Selecione a prova</option>';
-                        if (provas && !provas.erro) { provas.forEach(p => { const opt = document.createElement('option'); opt.value = p.id; const serie = p.turma_serie || 'Série não definida'; opt.textContent = p.titulo + ' - ' + serie; opt.dataset.serie = serie; select.appendChild(opt); }); }
+                        if (provas && !provas.erro) { 
+                            provas.forEach(p => { 
+                                const opt = document.createElement('option'); 
+                                opt.value = p.id; 
+                                const serie = p.serie || 'Série não definida'; 
+                                opt.textContent = p.titulo + ' - ' + serie; 
+                                opt.dataset.serie = serie; 
+                                opt.dataset.quantidade = p.quantidade_questoes || 20;
+                                opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                                opt.dataset.tipo = p.tipo_questoes || '4';
+                                select.appendChild(opt); 
+                            }); 
+                        }
                         if (current) select.value = current;
                     }
                 });
@@ -4713,7 +4804,7 @@
                     provas.forEach(p => {
                         const opt = document.createElement('option');
                         opt.value = p.id;
-                        const serie = p.turma_serie || '';
+                        const serie = p.serie || '';
                         opt.textContent = p.titulo + ' - ' + serie;
                         opt.dataset.serie = serie;
                         opt.dataset.turma = p.turma_nome || '';
@@ -5233,6 +5324,22 @@
                     }
                 }
                 
+                const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                const prova = await provaResp.json();
+                
+                if (!prova || prova.erro) {
+                    showToast('❌ Erro ao carregar dados da prova', 'error');
+                    return;
+                }
+                
+                const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
+                const aluno = await alunoResp.json();
+                
+                if (!aluno || aluno.erro) {
+                    showToast('❌ Erro ao carregar dados do aluno', 'error');
+                    return;
+                }
+                
                 const response = await fetch(`${API_URL}/api/corrigir`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' },
@@ -5275,24 +5382,24 @@
                 }
                 
                 document.getElementById('ia-nota').textContent = dados.nota || 0;
-                document.getElementById('ia-aluno').textContent = dados.aluno || 'Aluno';
-                document.getElementById('ia-turma').textContent = dados.prova || 'Prova';
+                document.getElementById('ia-aluno').textContent = dados.aluno || aluno.nome || 'Aluno';
+                document.getElementById('ia-turma').textContent = dados.prova || prova.titulo || 'Prova';
                 document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
                 document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
                 document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
                 
                 correcaoManualData.alunoId = parseInt(alunoId);
-                correcaoManualData.alunoNome = dados.aluno || 'Aluno';
+                correcaoManualData.alunoNome = dados.aluno || aluno.nome || 'Aluno';
                 correcaoManualData.provaId = parseInt(provaId);
-                correcaoManualData.provaTitulo = dados.prova || 'Prova';
-                correcaoManualData.gabarito = dados.gabarito || [];
+                correcaoManualData.provaTitulo = dados.prova || prova.titulo || 'Prova';
+                correcaoManualData.gabarito = dados.gabarito || prova.gabarito || [];
                 correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
-                correcaoManualData.quantidade = dados.total || 20;
-                correcaoManualData.alternativas = dados.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                correcaoManualData.quantidade = dados.total || prova.quantidade_questoes || 20;
+                correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                 correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                 correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
                 correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
-                correcaoManualData.serie = dados.serie || '1º Ano';
+                correcaoManualData.serie = prova.serie || '1º Ano';
                 
                 if (box) box.style.display = 'block';
                 showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
@@ -5750,23 +5857,18 @@
             const titulo = document.getElementById('prova-titulo').value.trim();
             if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
             
-            const escolaId = document.getElementById('prova-escola').value;
-            if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
-            
-            const turmaId = document.getElementById('prova-turma').value;
-            if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+            const serie = document.getElementById('prova-serie').value;
+            if (!serie) { showToast('❌ Selecione a série!', 'error'); return; }
             
             const dados = {
                 titulo: titulo,
-                escola_id: parseInt(escolaId),
-                turma_id: parseInt(turmaId),
-                turma_serie: document.getElementById('prova-serie').value || '1º Ano',
+                serie: serie,
                 disciplina: document.getElementById('prova-disciplina').value || 'Matemática',
                 bimestre: document.getElementById('prova-bimestre').value || '1º e 2º bimestre',
                 data_prova: document.getElementById('prova-data').value || null,
                 quantidade_questoes: parseInt(document.getElementById('prova-questoes').value) || 20,
                 nota_maxima: parseFloat(document.getElementById('prova-nota').value) || 10,
-                tipo_questoes: document.getElementById('prova-serie').value.startsWith('1') ? '3' : '4'
+                tipo_questoes: serie.startsWith('1º') ? '3' : '4'
             };
             
             try {
@@ -5778,7 +5880,7 @@
                 });
                 const result = await processarRespostaAPI(response);
                 if (result.ok && result.data.id) {
-                    showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
+                    showToast('✅ Prova "' + titulo + '" salva com sucesso para a série ' + serie + '!', 'success');
                     document.getElementById('prova-titulo').value = '';
                     document.getElementById('up-ok').style.display = 'block';
                     setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
@@ -6146,7 +6248,7 @@
                     provas.forEach(p => {
                         const opt = document.createElement('option');
                         opt.value = p.id;
-                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                        opt.textContent = p.titulo + ' - ' + (p.serie || '');
                         selectProva.appendChild(opt);
                     });
                     if (current) selectProva.value = current;
@@ -6411,7 +6513,7 @@
                     provas.forEach(p => {
                         const opt = document.createElement('option');
                         opt.value = p.id;
-                        opt.textContent = p.titulo + ' - ' + (p.turma_serie || '');
+                        opt.textContent = p.titulo + ' - ' + (p.serie || '');
                         selectProva.appendChild(opt);
                     });
                 }
