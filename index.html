@@ -3390,7 +3390,7 @@
 
 // ============================================
 // FUNÇÃO CORRIGIDA - DESEMPENHO POR HABILIDADES
-// MOSTRA AS RESPOSTAS REAIS DO ALUNO NA ORDEM CORRETA
+// BASEADA EXATAMENTE NO RESULTADO DA CORREÇÃO (IA OU MANUAL)
 // ============================================
 function atualizarHabilidades(historico, alunoNome) {
     // Estrutura para armazenar os dados por disciplina
@@ -3403,7 +3403,8 @@ function atualizarHabilidades(historico, alunoNome) {
             erros: 0, 
             total: 0,
             respostasAluno: [],
-            gabarito: []
+            gabarito: [],
+            nota: 0
         },
         'matematica': { 
             nome: 'Matemática', 
@@ -3413,7 +3414,8 @@ function atualizarHabilidades(historico, alunoNome) {
             erros: 0, 
             total: 0,
             respostasAluno: [],
-            gabarito: []
+            gabarito: [],
+            nota: 0
         },
         'producao': { 
             nome: 'Produção de Texto', 
@@ -3423,7 +3425,8 @@ function atualizarHabilidades(historico, alunoNome) {
             erros: 0, 
             total: 0,
             respostasAluno: [],
-            gabarito: []
+            gabarito: [],
+            nota: 0
         }
     };
     
@@ -3442,64 +3445,23 @@ function atualizarHabilidades(historico, alunoNome) {
         return;
     }
     
-    // Agrupa os históricos por prova
-    let provasMap = new Map();
-    
+    // Itera sobre cada item do histórico (cada correção)
     historico.forEach(item => {
-        // Usa o ID da prova como chave, ou cria uma chave única
-        const key = item.prova_id || item.prova_titulo || 'prova_' + (item.id || Date.now());
-        
-        if (!provasMap.has(key)) {
-            provasMap.set(key, {
-                prova_id: item.prova_id,
-                prova_titulo: item.prova_titulo || 'Prova',
-                disciplina: item.disciplina || '',
-                respostas: item.respostas ? [...item.respostas] : [],
-                gabarito: item.gabarito ? [...item.gabarito] : [],
-                total: item.total || 20,
-                acertos: item.acertos || 0,
-                serie: item.serie || '',
-                aluno_nome: item.aluno_nome || alunoNome || 'Aluno',
-                nota: item.nota || 0
-            });
-        } else {
-            const prova = provasMap.get(key);
-            // Atualiza com os dados mais recentes, preservando a ordem
-            if (item.respostas && item.respostas.length > 0) {
-                prova.respostas = [...item.respostas];
-            }
-            if (item.gabarito && item.gabarito.length > 0) {
-                prova.gabarito = [...item.gabarito];
-            }
-            if (item.total) prova.total = item.total;
-            if (item.acertos) prova.acertos = item.acertos;
-            if (item.disciplina) prova.disciplina = item.disciplina;
-            if (item.serie) prova.serie = item.serie;
-            if (item.nota) prova.nota = item.nota;
-        }
-    });
-    
-    // Processa cada prova
-    provasMap.forEach((prova, key) => {
-        // Pula se não tiver respostas ou gabarito
-        if (!prova.respostas || prova.respostas.length === 0) {
+        // Verifica se tem respostas
+        if (!item.respostas || item.respostas.length === 0) {
             return;
         }
         
         // Determina a disciplina
-        let tipo = 'geral';
-        const disciplina = prova.disciplina || '';
-        const provaTitulo = prova.prova_titulo || '';
+        let tipo = 'portugues'; // padrão
+        const disciplina = item.disciplina || '';
+        const provaTitulo = item.prova_titulo || '';
         const textoCompleto = (disciplina + ' ' + provaTitulo).toLowerCase();
         
         // Mapeia para as disciplinas disponíveis
-        if (textoCompleto.includes('português') || textoCompleto.includes('portugues') || 
-            textoCompleto.includes('língua') || textoCompleto.includes('lingua') ||
-            textoCompleto.includes('port')) {
-            tipo = 'portugues';
-        } else if (textoCompleto.includes('matemática') || textoCompleto.includes('matematica') || 
-                   textoCompleto.includes('mat') || textoCompleto.includes('aritmética') || 
-                   textoCompleto.includes('aritmetica') || textoCompleto.includes('geo')) {
+        if (textoCompleto.includes('matemática') || textoCompleto.includes('matematica') || 
+            textoCompleto.includes('mat') || textoCompleto.includes('aritmética') || 
+            textoCompleto.includes('aritmetica') || textoCompleto.includes('geo')) {
             tipo = 'matematica';
         } else if (textoCompleto.includes('produção') || textoCompleto.includes('producao') || 
                    textoCompleto.includes('texto') || textoCompleto.includes('redação') || 
@@ -3507,33 +3469,26 @@ function atualizarHabilidades(historico, alunoNome) {
                    textoCompleto.includes('produção de texto')) {
             tipo = 'producao';
         } else {
-            // Fallback baseado na série
-            const serie = prova.serie || '';
-            if (serie.includes('1') || serie.includes('2') || serie.includes('3') || 
-                serie.includes('4') || serie.includes('5')) {
-                tipo = 'portugues';
-            } else {
-                tipo = 'matematica';
-            }
+            // Fallback: se for português ou não identificado, usa português
+            tipo = 'portugues';
         }
         
-        // Se não for uma das disciplinas específicas, tenta encaixar
-        if (tipo === 'geral') {
-            tipo = 'portugues'; // fallback
-        }
+        // --- PEGA OS DADOS EXATOS DA CORREÇÃO ---
+        const respostas = item.respostas || [];
+        const gabarito = item.gabarito || [];
+        const total = item.total || respostas.length || 20;
+        const nota = item.nota || 0;
+        const acertos = item.acertos || 0;
         
-        // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
-        // Mantém a ordem original das questões, sem reordenar
-        const respostas = prova.respostas || [];
-        const gabarito = prova.gabarito || [];
-        const total = Math.max(respostas.length, gabarito.length, prova.total || 20);
+        // Calcula os erros
+        const erros = total - acertos;
         
-        // Array para armazenar as questões na ordem CORRETA
+        // --- CONSTRÓI AS QUESTÕES NA ORDEM CORRETA ---
         const questoesProcessadas = [];
         let acertosCont = 0;
         let errosCont = 0;
         
-        // PERCORRE NA ORDEM ORIGINAL (índice 0, 1, 2, ...)
+        // PERCORRE NA ORDEM ORIGINAL (índice 0 = questão 1)
         for (let i = 0; i < total; i++) {
             const respostaAluno = i < respostas.length ? respostas[i] : '';
             const respostaGabarito = i < gabarito.length ? gabarito[i] : '';
@@ -3542,16 +3497,13 @@ function atualizarHabilidades(historico, alunoNome) {
             const isCorreto = respostaAluno && respostaGabarito && 
                             respostaAluno.toString().toUpperCase() === respostaGabarito.toString().toUpperCase();
             
-            // Cria o objeto da questão com a posição ORIGINAL
+            // Cria o objeto da questão
             const questao = {
                 numero: i + 1,        // Número da questão (1-based)
                 posicao: i,           // Posição original no array (0-based)
                 resposta: respostaAluno || '—',
                 gabarito: respostaGabarito || '—',
-                acertou: isCorreto,
-                // Campos adicionais para debug
-                temResposta: !!respostaAluno,
-                temGabarito: !!respostaGabarito
+                acertou: isCorreto
             };
             
             questoesProcessadas.push(questao);
@@ -3563,37 +3515,36 @@ function atualizarHabilidades(historico, alunoNome) {
             }
         }
         
-        // Atualiza os dados da disciplina, preservando a ordem
+        // --- ATUALIZA OS DADOS DA DISCIPLINA ---
         if (disciplinas[tipo]) {
-            // Usa um Map para mesclar questões já existentes com as novas
-            const questaoMap = new Map();
+            // Se já tem questões, mescla preservando a ordem
+            if (disciplinas[tipo].questoes.length > 0) {
+                // Usa um Map para mesclar mantendo a ordem
+                const questaoMap = new Map();
+                disciplinas[tipo].questoes.forEach(q => {
+                    questaoMap.set(q.posicao, q);
+                });
+                questoesProcessadas.forEach(q => {
+                    questaoMap.set(q.posicao, q);
+                });
+                disciplinas[tipo].questoes = Array.from(questaoMap.values())
+                    .sort((a, b) => a.posicao - b.posicao);
+            } else {
+                // Se não tem, usa as questões processadas
+                disciplinas[tipo].questoes = questoesProcessadas;
+            }
             
-            // Adiciona questões existentes (se houver)
-            disciplinas[tipo].questoes.forEach(q => {
-                questaoMap.set(q.posicao, q);
-            });
-            
-            // Adiciona/atualiza com as novas questões (preservando a ordem)
-            questoesProcessadas.forEach(q => {
-                questaoMap.set(q.posicao, q);
-            });
-            
-            // Converte para array e ordena pela posição original (mantém a ordem)
-            disciplinas[tipo].questoes = Array.from(questaoMap.values())
-                .sort((a, b) => a.posicao - b.posicao);
-            
-            // Recalcula acertos e erros
-            disciplinas[tipo].acertos = disciplinas[tipo].questoes.filter(q => q.acertou).length;
-            disciplinas[tipo].erros = disciplinas[tipo].questoes.filter(q => q.resposta !== '—' && !q.acertou).length;
-            disciplinas[tipo].total = disciplinas[tipo].questoes.length;
-            
-            // Armazena também as respostas e gabarito para referência
-            disciplinas[tipo].respostasAluno = disciplinas[tipo].questoes.map(q => q.resposta);
-            disciplinas[tipo].gabarito = disciplinas[tipo].questoes.map(q => q.gabarito);
+            // Atualiza os contadores
+            disciplinas[tipo].acertos = acertosCont;
+            disciplinas[tipo].erros = errosCont;
+            disciplinas[tipo].total = total;
+            disciplinas[tipo].nota = nota;
+            disciplinas[tipo].respostasAluno = respostas;
+            disciplinas[tipo].gabarito = gabarito;
         }
     });
     
-    // Renderiza cada disciplina
+    // --- RENDERIZA CADA DISCIPLINA ---
     ['portugues', 'matematica', 'producao'].forEach(key => {
         const container = document.getElementById(`habilidade-${key}`);
         const dados = disciplinas[key];
@@ -3610,39 +3561,43 @@ function atualizarHabilidades(historico, alunoNome) {
             return;
         }
         
-        // Ordena as questões pela posição original (garantia de ordem)
+        // Ordena as questões pela posição original (questão 1, 2, 3...)
         dados.questoes.sort((a, b) => a.posicao - b.posicao);
         
-        // Gera o HTML para cada questão, na ordem correta
+        // --- GERA O HTML PARA CADA QUESTÃO ---
         let html = '';
         let acertosExibidos = 0;
         let errosExibidos = 0;
         
         dados.questoes.forEach(q => {
-            const statusClass = q.acertou ? 'acertou' : (q.resposta !== '—' ? 'errou' : '');
+            // Determina o status
             let statusText = '';
+            let statusClass = '';
+            let corResposta = 'var(--text3)';
             
             if (q.acertou) {
-                statusText = '✅ ACERTOU: ADQUIRIU HABILIDADE';
+                statusText = '✅ ACERTOU';
+                statusClass = 'acertou';
+                corResposta = 'var(--green)';
                 acertosExibidos++;
-            } else if (q.resposta !== '—') {
-                statusText = '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM';
+            } else if (q.resposta !== '—' && q.resposta !== '') {
+                statusText = '❌ ERROU';
+                statusClass = 'errou';
+                corResposta = 'var(--red)';
                 errosExibidos++;
             } else {
                 statusText = '⬜ NÃO RESPONDEU';
+                statusClass = 'nao_respondeu';
+                corResposta = 'var(--text3)';
             }
             
-            // COR DA RESPOSTA baseada no status
-            let corResposta = 'var(--text3)';
-            if (q.acertou) corResposta = 'var(--green)';
-            else if (q.resposta !== '—') corResposta = 'var(--red)';
-            
+            // Mostra a resposta e o gabarito
             html += `
-                <div class="questao-item" style="grid-template-columns: 30px 32px 32px 1fr;">
-                    <span class="q-num" style="font-weight:600;color:var(--text2);text-align:center;">Q${q.numero}</span>
-                    <span class="q-resposta" style="font-weight:700;text-align:center;background:var(--bg);border-radius:4px;padding:2px 4px;font-size:12px;color:${corResposta};">${q.resposta}</span>
-                    <span class="q-gabarito" style="font-weight:700;text-align:center;color:var(--text3);font-size:10px;">${q.gabarito}</span>
-                    <span class="q-status ${statusClass}" style="font-weight:700;font-size:10px;padding:2px 8px;border-radius:12px;text-align:center;${q.acertou ? 'color:var(--green);background:rgba(16,185,129,0.15);' : (q.resposta !== '—' ? 'color:var(--red);background:rgba(239,68,68,0.15);' : 'color:var(--text3);background:rgba(148,163,184,0.1);')}">${statusText}</span>
+                <div class="questao-item" style="display:grid;grid-template-columns:30px 32px 32px 1fr;gap:4px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;">
+                    <span style="font-weight:600;color:var(--text2);text-align:center;">Q${q.numero}</span>
+                    <span style="font-weight:700;text-align:center;background:var(--bg);border-radius:4px;padding:2px 4px;font-size:12px;color:${corResposta};">${q.resposta}</span>
+                    <span style="font-weight:700;text-align:center;color:var(--text3);font-size:10px;">${q.gabarito}</span>
+                    <span style="font-weight:700;font-size:10px;padding:2px 8px;border-radius:12px;text-align:center;${q.acertou ? 'color:var(--green);background:rgba(16,185,129,0.15);' : (q.resposta !== '—' ? 'color:var(--red);background:rgba(239,68,68,0.15);' : 'color:var(--text3);background:rgba(148,163,184,0.1);')}">${statusText}</span>
                 </div>
             `;
         });
@@ -3652,9 +3607,9 @@ function atualizarHabilidades(historico, alunoNome) {
         dados.erros = errosExibidos;
         dados.total = dados.questoes.length;
         
-        // Calcula porcentagem e conceito
-        const totalQuestoesDisciplina = dados.questoes.length;
-        const pct = totalQuestoesDisciplina > 0 ? Math.round((acertosExibidos / totalQuestoesDisciplina) * 100) : 0;
+        // --- CALCULA CONCEITO ---
+        const totalQuestoes = dados.questoes.length;
+        const pct = totalQuestoes > 0 ? Math.round((acertosExibidos / totalQuestoes) * 100) : 0;
         const conceito = calcularConceito(pct);
         const nomeConceito = {
             'inicial': '🔴 Inicial',
@@ -3669,15 +3624,18 @@ function atualizarHabilidades(historico, alunoNome) {
             'avancado': 'badge-conceito-avancado'
         };
         
-        const notaDisciplina = totalQuestoesDisciplina > 0 ? (acertosExibidos / totalQuestoesDisciplina) * 10 : 0;
+        const notaDisciplina = totalQuestoes > 0 ? (acertosExibidos / totalQuestoes) * 10 : 0;
         
-        // Adiciona o resumo no final
+        // --- ADICIONA O RESUMO ---
         html += `
-            <div class="resumo-habilidade" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px;color:var(--text2);flex-wrap:wrap;gap:4px;">
-                <span>Total: ${totalQuestoesDisciplina} questões</span>
-                <span><span class="acertos" style="color:var(--green);font-weight:700;">✅ ${acertosExibidos} acertos</span> | <span class="erros" style="color:var(--red);font-weight:700;">❌ ${errosExibidos} erros</span></span>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px;color:var(--text2);flex-wrap:wrap;gap:4px;">
+                <span>Total: ${totalQuestoes} questões</span>
+                <span>
+                    <span style="color:var(--green);font-weight:700;">✅ ${acertosExibidos} acertos</span> | 
+                    <span style="color:var(--red);font-weight:700;">❌ ${errosExibidos} erros</span>
+                </span>
                 <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
-                <span><span class="nota" style="color:var(--blue);font-weight:700;">⭐ ${notaDisciplina.toFixed(1)}</span></span>
+                <span><span style="color:var(--blue);font-weight:700;">⭐ ${notaDisciplina.toFixed(1)}</span></span>
             </div>
         `;
         
