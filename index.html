@@ -3381,231 +3381,213 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
-        // ============================================
-        function atualizarHabilidades(historico, alunoNome) {
-            console.log('🔄 Iniciando atualização do card DESEMPENHO POR HABILIDADES para:', alunoNome);
-            console.log('📊 Dados do histórico recebidos:', historico);
+// FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
+// ============================================
+function atualizarHabilidades(historico, alunoNome) {
+    console.log('🔄 Iniciando atualização do card DESEMPENHO POR HABILIDADES para:', alunoNome);
+    console.log('📊 Dados do histórico recebidos:', historico);
 
-            // Estrutura para armazenar as questões por disciplina
-            let disciplinas = {
-                'portugues': { 
-                    nome: 'Português', 
-                    icone: '📖', 
-                    questoes: [], 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0 
-                },
-                'matematica': { 
-                    nome: 'Matemática', 
-                    icone: '🔢', 
-                    questoes: [], 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0 
-                },
-                'producao': { 
-                    nome: 'Produção de Texto', 
-                    icone: '✍️', 
-                    questoes: [], 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0 
-                }
-            };
+    // Estrutura para armazenar as questões por disciplina
+    let disciplinas = {
+        'portugues': { 
+            nome: 'Português', 
+            icone: '📖', 
+            questoes: [], 
+            acertos: 0, 
+            erros: 0, 
+            total: 0,
+            gabarito: [],
+            respostas: []
+        },
+        'matematica': { 
+            nome: 'Matemática', 
+            icone: '🔢', 
+            questoes: [], 
+            acertos: 0, 
+            erros: 0, 
+            total: 0,
+            gabarito: [],
+            respostas: []
+        },
+        'producao': { 
+            nome: 'Produção de Texto', 
+            icone: '✍️', 
+            questoes: [], 
+            acertos: 0, 
+            erros: 0, 
+            total: 0,
+            gabarito: [],
+            respostas: []
+        }
+    };
 
-            // Se não houver histórico, exibe mensagem
-            if (!historico || historico.length === 0) {
-                ['portugues', 'matematica', 'producao'].forEach(key => {
-                    const container = document.getElementById(`habilidade-${key}`);
-                    if (container) {
-                        container.innerHTML = `
-                            <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                Nenhuma questão encontrada para esta disciplina
-                            </div>
-                        `;
-                    }
-                });
-                return;
-            }
-
-            // Primeiro, vamos agrupar as respostas por disciplina
-            // Para isso, precisamos identificar a disciplina de cada item do histórico
-            let disciplinaMap = new Map();
-            
-            // Lista de palavras-chave para identificar cada disciplina
-            const keywords = {
-                'portugues': ['português', 'portugues', 'língua portuguesa', 'lingua portuguesa'],
-                'matematica': ['matemática', 'matematica', 'mat'],
-                'producao': ['produção', 'producao', 'texto', 'redação', 'escrita']
-            };
-
-            // Função para identificar a disciplina baseada no título e disciplina
-            function identificarDisciplina(provaTitulo, disciplina) {
-                const texto = (provaTitulo + ' ' + disciplina).toLowerCase();
-                
-                // Verifica se alguma palavra-chave está presente no texto
-                for (const [key, words] of Object.entries(keywords)) {
-                    for (const word of words) {
-                        if (texto.includes(word)) {
-                            return key;
-                        }
-                    }
-                }
-                
-                // Se não conseguir identificar, tenta inferir pela série (apenas fallback)
-                // Se for 1º ao 5º ano, assume Português; 6º ao 9º, Matemática
-                // Mas isso é apenas um fallback, a prioridade é o título/disciplina
-                return 'portugues'; // fallback
-            }
-
-            // Processa cada item do histórico para extrair as respostas por disciplina
-            historico.forEach(item => {
-                // Pula itens sem respostas ou sem gabarito
-                if (!item.respostas || !item.gabarito || item.respostas.length === 0) {
-                    return;
-                }
-
-                const disciplinaKey = identificarDisciplina(item.prova_titulo || '', item.disciplina || '');
-                const respostas = item.respostas || [];
-                const gabarito = item.gabarito || [];
-                const total = Math.min(respostas.length, gabarito.length, item.total || 20);
-                
-                // Se não houver dados suficientes, pula
-                if (total === 0) return;
-
-                // Cria uma chave única para esta prova (evita duplicação)
-                const provaKey = `${item.prova_id || item.prova_titulo || 'prova'}_${item.data_correcao || item.data_prova || ''}`;
-                
-                // Se já processamos esta prova para esta disciplina, pula
-                if (disciplinaMap.has(`${disciplinaKey}_${provaKey}`)) {
-                    return;
-                }
-                disciplinaMap.set(`${disciplinaKey}_${provaKey}`, true);
-
-                // Adiciona as questões à disciplina correspondente
-                const disciplina = disciplinas[disciplinaKey];
-                if (!disciplina) return;
-
-                for (let i = 0; i < total; i++) {
-                    const resposta = i < respostas.length ? respostas[i] : '';
-                    const gab = i < gabarito.length ? gabarito[i] : '';
-                    const isCorreto = resposta && gab && resposta.toUpperCase() === gab.toUpperCase();
-                    
-                    disciplina.questoes.push({
-                        numero: i + 1,
-                        resposta: resposta || '—',
-                        gabarito: gab || '—',
-                        acertou: isCorreto
-                    });
-                    
-                    if (isCorreto) {
-                        disciplina.acertos++;
-                    } else if (resposta) {
-                        disciplina.erros++;
-                    }
-                    disciplina.total = Math.max(disciplina.total, i + 1);
-                }
-            });
-
-            // Atualiza o card de cada disciplina
-            ['portugues', 'matematica', 'producao'].forEach(key => {
-                const container = document.getElementById(`habilidade-${key}`);
-                const dados = disciplinas[key];
-                
-                if (!container) return;
-
-                // Se não houver questões para esta disciplina, tenta usar os dados do conceito
-                if (dados.questoes.length === 0) {
-                    // Tenta obter dados do conceito para esta disciplina
-                    const acertosEl = document.getElementById(`conceito-${key === 'portugues' ? 'port' : key === 'matematica' ? 'mat' : 'prod'}-acertos`);
-                    const errosEl = document.getElementById(`conceito-${key === 'portugues' ? 'port' : key === 'matematica' ? 'mat' : 'prod'}-erros`);
-                    
-                    if (acertosEl && errosEl) {
-                        const acertos = parseInt(acertosEl.textContent) || 0;
-                        const erros = parseInt(errosEl.textContent) || 0;
-                        const total = acertos + erros || 20;
-                        
-                        dados.acertos = acertos;
-                        dados.erros = erros;
-                        dados.total = total;
-                        
-                        // Cria questões simuladas baseadas nos acertos/erros
-                        for (let i = 0; i < total; i++) {
-                            const isCorreto = i < acertos;
-                            dados.questoes.push({
-                                numero: i + 1,
-                                resposta: isCorreto ? '✅' : '❌',
-                                gabarito: isCorreto ? 'A' : 'B',
-                                acertou: isCorreto
-                            });
-                        }
-                    }
-                }
-
-                // Se ainda não tiver questões, mostra mensagem
-                if (dados.questoes.length === 0) {
-                    container.innerHTML = `
-                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                            Nenhuma questão encontrada para esta disciplina
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Ordena as questões por número
-                dados.questoes.sort((a, b) => a.numero - b.numero);
-
-                // Gera o HTML para as questões
-                let html = '';
-                dados.questoes.forEach(q => {
-                    const statusClass = q.acertou ? 'acertou' : 'errou';
-                    const statusText = q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM';
-                    html += `
-                        <div class="questao-item">
-                            <span class="q-num">Q${q.numero}</span>
-                            <span class="q-resposta">${q.resposta}</span>
-                            <span class="q-gabarito">${q.gabarito}</span>
-                            <span class="q-status ${statusClass}">${statusText}</span>
-                        </div>
-                    `;
-                });
-
-                // Calcula os totais
-                const totalQuestoesDisciplina = dados.questoes.length;
-                const pct = totalQuestoesDisciplina > 0 ? Math.round((dados.acertos / totalQuestoesDisciplina) * 100) : 0;
-                const conceito = calcularConceito(pct);
-                const nomeConceito = {
-                    'inicial': '🔴 Inicial',
-                    'basico': '🟠 Básico',
-                    'proficiente': '🔵 Proficiente',
-                    'avancado': '🟢 Avançado'
-                };
-                const badgeMap = {
-                    'inicial': 'badge-conceito-inicial',
-                    'basico': 'badge-conceito-basico',
-                    'proficiente': 'badge-conceito-proficiente',
-                    'avancado': 'badge-conceito-avancado'
-                };
-                
-                const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
-
-                // Adiciona o resumo
-                html += `
-                    <div class="resumo-habilidade">
-                        <span>Total: ${totalQuestoesDisciplina} questões</span>
-                        <span><span class="acertos">✅ ${dados.acertos} acertos</span> | <span class="erros">❌ ${dados.erros} erros</span></span>
-                        <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
-                        <span><span class="nota">⭐ ${notaDisciplina.toFixed(1)}</span></span>
+    // Se não houver histórico, exibe mensagem
+    if (!historico || historico.length === 0) {
+        ['portugues', 'matematica', 'producao'].forEach(key => {
+            const container = document.getElementById(`habilidade-${key}`);
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                        Nenhuma questão encontrada para esta disciplina
                     </div>
                 `;
+            }
+        });
+        return;
+    }
 
-                container.innerHTML = html;
-            });
+    // Lista de palavras-chave para identificar cada disciplina
+    const keywords = {
+        'portugues': ['português', 'portugues', 'língua portuguesa', 'lingua portuguesa'],
+        'matematica': ['matemática', 'matematica', 'mat'],
+        'producao': ['produção', 'producao', 'texto', 'redação', 'escrita']
+    };
 
-            console.log('✅ Card DESEMPENHO POR HABILIDADES atualizado com sucesso!');
+    // Função para identificar a disciplina baseada no título e disciplina
+    function identificarDisciplina(provaTitulo, disciplina) {
+        const texto = (provaTitulo + ' ' + disciplina).toLowerCase();
+        
+        for (const [key, words] of Object.entries(keywords)) {
+            for (const word of words) {
+                if (texto.includes(word)) {
+                    return key;
+                }
+            }
         }
+        
+        return 'portugues';
+    }
+
+    // Processa cada item do histórico para extrair as respostas por disciplina
+    historico.forEach(item => {
+        // Pula itens sem respostas ou sem gabarito
+        if (!item.respostas || !item.gabarito || item.respostas.length === 0) {
+            return;
+        }
+
+        const disciplinaKey = identificarDisciplina(item.prova_titulo || '', item.disciplina || '');
+        const respostas = item.respostas || [];
+        const gabarito = item.gabarito || [];
+        const total = Math.min(respostas.length, gabarito.length, item.total || 20);
+        
+        if (total === 0) return;
+
+        const disciplina = disciplinas[disciplinaKey];
+        if (!disciplina) return;
+
+        // Se já tem questões para esta disciplina, verifica se é a mesma prova
+        // Se for a mesma prova, não duplica
+        if (disciplina.questoes.length > 0) {
+            // Verifica se o gabarito é o mesmo
+            const gabStr = gabarito.slice(0, total).join('');
+            const discGabStr = disciplina.gabarito.slice(0, total).join('');
+            if (gabStr === discGabStr) {
+                // Mesma prova, não duplica
+                return;
+            }
+        }
+
+        // Armazena o gabarito e respostas
+        disciplina.gabarito = gabarito.slice(0, total);
+        disciplina.respostas = respostas.slice(0, total);
+        disciplina.total = Math.max(disciplina.total, total);
+
+        // Limpa as questões anteriores para esta disciplina
+        disciplina.questoes = [];
+
+        // Processa cada questão
+        for (let i = 0; i < total; i++) {
+            const resposta = i < respostas.length ? respostas[i] : '';
+            const gab = i < gabarito.length ? gabarito[i] : '';
+            const isCorreto = resposta && gab && resposta.toUpperCase() === gab.toUpperCase();
+            
+            disciplina.questoes.push({
+                numero: i + 1,
+                resposta: resposta || '—',
+                gabarito: gab || '—',
+                acertou: isCorreto
+            });
+            
+            if (isCorreto) {
+                disciplina.acertos++;
+            } else if (resposta) {
+                disciplina.erros++;
+            }
+        }
+    });
+
+    // Atualiza o card de cada disciplina
+    ['portugues', 'matematica', 'producao'].forEach(key => {
+        const container = document.getElementById(`habilidade-${key}`);
+        const dados = disciplinas[key];
+        
+        if (!container) return;
+
+        // Se não houver questões, mostra mensagem
+        if (dados.questoes.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                    Nenhuma questão encontrada para esta disciplina
+                </div>
+            `;
+            return;
+        }
+
+        // Ordena as questões por número
+        dados.questoes.sort((a, b) => a.numero - b.numero);
+
+        // Gera o HTML para as questões
+        let html = '';
+        dados.questoes.forEach(q => {
+            const statusClass = q.acertou ? 'acertou' : 'errou';
+            const statusText = q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM';
+            html += `
+                <div class="questao-item">
+                    <span class="q-num">Q${q.numero}</span>
+                    <span class="q-resposta">${q.resposta}</span>
+                    <span class="q-gabarito">${q.gabarito}</span>
+                    <span class="q-status ${statusClass}">${statusText}</span>
+                </div>
+            `;
+        });
+
+        // Calcula os totais
+        const totalQuestoesDisciplina = dados.questoes.length;
+        const pct = totalQuestoesDisciplina > 0 ? Math.round((dados.acertos / totalQuestoesDisciplina) * 100) : 0;
+        const conceito = calcularConceito(pct);
+        const nomeConceito = {
+            'inicial': '🔴 Inicial',
+            'basico': '🟠 Básico',
+            'proficiente': '🔵 Proficiente',
+            'avancado': '🟢 Avançado'
+        };
+        const badgeMap = {
+            'inicial': 'badge-conceito-inicial',
+            'basico': 'badge-conceito-basico',
+            'proficiente': 'badge-conceito-proficiente',
+            'avancado': 'badge-conceito-avancado'
+        };
+        
+        const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
+
+        // Adiciona o resumo
+        html += `
+            <div class="resumo-habilidade">
+                <span>Total: ${totalQuestoesDisciplina} questões</span>
+                <span><span class="acertos">✅ ${dados.acertos} acertos</span> | <span class="erros">❌ ${dados.erros} erros</span></span>
+                <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
+                <span><span class="nota">⭐ ${notaDisciplina.toFixed(1)}</span></span>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        
+        console.log(`✅ Disciplina ${key}: ${dados.acertos} acertos, ${dados.erros} erros, ${dados.questoes.length} questões`);
+        console.log(`   Questões:`, dados.questoes.map(q => `Q${q.numero}: ${q.acertou ? '✅' : '❌'}`).join(', '));
+    });
+
+    console.log('✅ Card DESEMPENHO POR HABILIDADES atualizado com sucesso!');
+}
 
         // ============================================
         // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO
