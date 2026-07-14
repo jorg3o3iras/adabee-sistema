@@ -688,123 +688,6 @@
         }
 
         /* ============================================
-           ESTILOS PARA O DESEMPENHO DO ALUNO (NOVA ABA)
-           ============================================ */
-        .desempenho-resumo {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-            margin-bottom: 16px;
-        }
-        .desempenho-resumo .item {
-            background: var(--bg2);
-            border-radius: 10px;
-            padding: 14px 16px;
-            text-align: center;
-            border: 1px solid var(--border);
-        }
-        .desempenho-resumo .item .valor {
-            font-size: 28px;
-            font-weight: 800;
-        }
-        .desempenho-resumo .item .label {
-            font-size: 11px;
-            color: var(--text3);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .desempenho-resumo .item .valor.green { color: var(--green); }
-        .desempenho-resumo .item .valor.red { color: var(--red); }
-        .desempenho-resumo .item .valor.blue { color: var(--blue); }
-        .desempenho-resumo .item .valor.purple { color: var(--purple); }
-
-        .desempenho-disciplinas {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
-            margin-top: 16px;
-        }
-        .desempenho-disciplina {
-            background: var(--bg2);
-            border-radius: 10px;
-            padding: 14px 16px;
-            border: 1px solid var(--border);
-        }
-        .desempenho-disciplina .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .desempenho-disciplina .header h4 {
-            font-size: 15px;
-            font-weight: 700;
-        }
-        .desempenho-disciplina .questoes-grid {
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            gap: 4px;
-        }
-        .desempenho-disciplina .questao-item {
-            background: var(--bg);
-            border-radius: 6px;
-            padding: 4px 2px;
-            text-align: center;
-            font-size: 11px;
-            border: 1px solid var(--border);
-        }
-        .desempenho-disciplina .questao-item .q-num {
-            font-size: 7px;
-            color: var(--text3);
-        }
-        .desempenho-disciplina .questao-item .q-resp {
-            font-weight: 700;
-            font-size: 12px;
-        }
-        .desempenho-disciplina .questao-item .q-gab {
-            font-size: 7px;
-            color: var(--text3);
-        }
-        .desempenho-disciplina .questao-item.acertou {
-            border-color: var(--green);
-            background: rgba(16, 185, 129, 0.08);
-        }
-        .desempenho-disciplina .questao-item.acertou .q-resp {
-            color: var(--green);
-        }
-        .desempenho-disciplina .questao-item.errou {
-            border-color: var(--red);
-            background: rgba(239, 68, 68, 0.08);
-        }
-        .desempenho-disciplina .questao-item.errou .q-resp {
-            color: var(--red);
-        }
-        .desempenho-disciplina .stats {
-            display: flex;
-            gap: 16px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
-        }
-        .desempenho-disciplina .stats .acertos { color: var(--green); font-weight: 700; }
-        .desempenho-disciplina .stats .erros { color: var(--red); font-weight: 700; }
-        .desempenho-disciplina .stats .nota { color: var(--blue); font-weight: 700; }
-
-        .desempenho-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-            gap: 10px;
-            background: var(--bg2);
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-top: 16px;
-            border: 1px solid var(--border);
-            font-size: 12px;
-        }
-        .desempenho-info strong { color: var(--text); }
-
-        /* ============================================
            RESPONSIVIDADE
            ============================================ */
         @media (max-width:900px) {
@@ -865,18 +748,6 @@
             .habilidade-card {
                 max-height: 350px;
             }
-            .desempenho-resumo {
-                grid-template-columns: 1fr 1fr;
-            }
-            .desempenho-disciplinas {
-                grid-template-columns: 1fr;
-            }
-            .desempenho-disciplina .questoes-grid {
-                grid-template-columns: repeat(5, 1fr);
-            }
-            .desempenho-info {
-                grid-template-columns: 1fr 1fr;
-            }
         }
         @media (max-width:480px) {
             .stats-grid { grid-template-columns:1fr; }
@@ -933,15 +804,6 @@
             .habilidade-card .questao-item {
                 grid-template-columns: 25px 22px 22px 1fr;
                 font-size: 10px;
-            }
-            .desempenho-resumo {
-                grid-template-columns: 1fr;
-            }
-            .desempenho-disciplina .questoes-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-            .desempenho-info {
-                grid-template-columns: 1fr;
             }
         }
 
@@ -1048,21 +910,30 @@
             .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
             .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
             .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
-            .desempenho-disciplina { background: #f8fafc !important; border-color: #ddd !important; }
-            .desempenho-disciplina .questao-item { background: #f1f5f9 !important; border-color: #ccc !important; }
-            .desempenho-disciplina .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
-            .desempenho-disciplina .questao-item.acertou .q-resp { color: #155724 !important; }
-            .desempenho-disciplina .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
-            .desempenho-disciplina .questao-item.errou .q-resp { color: #721c24 !important; }
-            .desempenho-disciplina .stats .acertos { color: #155724 !important; }
-            .desempenho-disciplina .stats .erros { color: #721c24 !important; }
-            .desempenho-disciplina .stats .nota { color: #004085 !important; }
-            .desempenho-resumo .item { background: #f1f5f9 !important; border-color: #ccc !important; }
-            .desempenho-resumo .item .valor.green { color: #155724 !important; }
-            .desempenho-resumo .item .valor.red { color: #721c24 !important; }
-            .desempenho-resumo .item .valor.blue { color: #004085 !important; }
-            .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
-            .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .disciplina-cell .disciplina-tag { color: #333 !important; }
+            .disciplina-cell .acertos-erros .acertos { color: #28a745 !important; }
+            .disciplina-cell .acertos-erros .erros { color: #dc3545 !important; }
+            .disciplina-cell .acertos-erros .separador { color: #666 !important; }
+            .col-disciplina { min-width: 60px !important; }
+            .col-escola, .col-turma { min-width: 60px !important; font-size: 7pt !important; }
+            .historico-disciplina .acertos-erros-sm .acertos { color: #28a745 !important; }
+            .historico-disciplina .acertos-erros-sm .erros { color: #dc3545 !important; }
+            .historico-disciplina .acertos-erros-sm .separador { color: #666 !important; }
+            .habilidade-card .questao-item {
+                grid-template-columns: 20px 18px 18px 1fr;
+                font-size: 8pt !important;
+                padding: 2px 0 !important;
+            }
+            .habilidade-card .questao-item .q-status {
+                font-size: 7pt !important;
+                padding: 1px 4px !important;
+            }
+            .habilidade-card .questao-item .q-resposta {
+                font-size: 8pt !important;
+            }
+            .habilidade-card .questao-item .q-gabarito {
+                font-size: 7pt !important;
+            }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -1278,6 +1149,7 @@
                     <div><div class="page-title">👥 Turmas</div><p class="page-sub">1º Ano ao 9º Ano do Ensino Fundamental</p></div>
                     <div class="page-actions no-print">
                         <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar turma..." oninput="filtrarTabela(this,'tb-turmas')"></div>
+                        <!-- NOVO CAMPO DE FILTRO: ESCOLA -->
                         <select class="form-control" id="filtro-escola-turmas" style="width:160px;padding:8px 11px;font-size:12px;" onchange="aplicarFiltrosTurmas()">
                             <option value="">Todas as escolas</option>
                         </select>
@@ -2056,140 +1928,6 @@
 
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
         </div>
-
-        <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
-        <div class="page" id="page-desempenho">
-            <div class="page-header">
-                <div>
-                    <div class="page-title">📊 Desempenho do Aluno</div>
-                    <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
-                </div>
-                <div class="page-actions no-print">
-                    <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                </div>
-            </div>
-
-            <!-- Cabeçalho para impressão -->
-            <div class="print-header print-only">
-                <h2>📊 Relatório de Desempenho do Aluno</h2>
-                <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
-            </div>
-
-            <!-- ===== FILTROS ===== -->
-            <div class="card no-print">
-                <div class="form-row c4">
-                    <div class="form-group">
-                        <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
-                        <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
-                            <option value="">Selecione a escola...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">👥 TURMA <span class="req">*</span></label>
-                        <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
-                            <option value="">Selecione a turma...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
-                        <select class="form-control" id="filtro-aluno-desempenho">
-                            <option value="">Selecione o aluno...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">📄 PROVA <span class="req">*</span></label>
-                        <select class="form-control" id="filtro-prova-desempenho">
-                            <option value="">Selecione a prova...</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
-                    <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
-                    <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
-                    <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
-                </div>
-            </div>
-
-            <!-- ===== RESULTADOS ===== -->
-            <div id="resultado-desempenho" style="display:none;">
-
-                <!-- Resumo Geral -->
-                <div class="desempenho-resumo">
-                    <div class="item"><div class="valor blue" id="resumo-nota">0.0</div><div class="label">Nota Final</div></div>
-                    <div class="item"><div class="valor green" id="resumo-acertos">0</div><div class="label">Acertos</div></div>
-                    <div class="item"><div class="valor red" id="resumo-erros">0</div><div class="label">Erros</div></div>
-                    <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
-                </div>
-
-                <!-- Disciplinas -->
-                <div class="desempenho-disciplinas" id="disciplinas-container">
-                    <!-- Português -->
-                    <div class="desempenho-disciplina" id="disc-portugues">
-                        <div class="header">
-                            <h4>📖 Português</h4>
-                            <span class="badge badge-blue" id="status-portugues">—</span>
-                        </div>
-                        <div class="questoes-grid" id="questoes-portugues"></div>
-                        <div class="stats">
-                            <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
-                            <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
-                            <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Matemática -->
-                    <div class="desempenho-disciplina" id="disc-matematica">
-                        <div class="header">
-                            <h4>🔢 Matemática</h4>
-                            <span class="badge badge-green" id="status-matematica">—</span>
-                        </div>
-                        <div class="questoes-grid" id="questoes-matematica"></div>
-                        <div class="stats">
-                            <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
-                            <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
-                            <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Produção de Texto -->
-                    <div class="desempenho-disciplina" id="disc-producao">
-                        <div class="header">
-                            <h4>✍️ Produção de Texto</h4>
-                            <span class="badge badge-purple" id="status-producao">—</span>
-                        </div>
-                        <div class="questoes-grid" id="questoes-producao"></div>
-                        <div class="stats">
-                            <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
-                            <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
-                            <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Informações do Aluno -->
-                <div class="desempenho-info no-print">
-                    <div><strong>🏫 Escola</strong><br><span id="info-escola">—</span></div>
-                    <div><strong>👥 Turma</strong><br><span id="info-turma">—</span></div>
-                    <div><strong>🎒 Aluno</strong><br><span id="info-aluno">—</span></div>
-                    <div><strong>📄 Prova</strong><br><span id="info-prova">—</span></div>
-                    <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
-                </div>
-
-                <!-- Legenda -->
-                <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
-                    <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
-                    <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
-                    <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
-                    <span style="color:var(--text3);">|</span>
-                    <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
-                    <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
-                    <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
-                    <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <!-- ========== CÂMERA MODAL ========== -->
@@ -2346,6 +2084,7 @@
             <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="editar-aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60"></div><div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="editar-aluno-matricula" placeholder="Ex: 2025001"></div></div>
             <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="editar-aluno-nome" placeholder="Nome completo do aluno"></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="editar-aluno-nascimento" type="date"></div><div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="editar-aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div></div>
+            <!-- CAMPO ESCOLA EDITAR -->
             <div class="form-row">
                 <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
                     <select class="form-control" id="editar-aluno-escola" onchange="carregarTurmasPorEscolaParaAluno(this.value, 'editar-aluno-turma')">
@@ -2393,7 +2132,7 @@
         </div>
     </div>
 
-    <!-- Modal Aluno -->
+    <!-- Modal Aluno (CADASTRO CORRIGIDO) -->
     <div class="modal-overlay no-print" id="m-aluno">
         <div class="modal">
             <div class="modal-header">
@@ -2424,6 +2163,7 @@
                 <div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div>
                 <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div>
             </div>
+            <!-- NOVO CAMPO ESCOLA E TURMA (LIGADOS) -->
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Escola <span class="req">*</span></label>
@@ -2603,8 +2343,7 @@
                 'print-data-rel-aluno',
                 'print-data-rel-escola',
                 'print-data-u-dash',
-                'print-data-u-rel',
-                'print-data-desempenho'
+                'print-data-u-rel'
             ];
             
             elementosData.forEach(id => {
@@ -2689,7 +2428,6 @@
             carregarEscolasParaCorrecaoManual();
             carregarEscolasRelAluno();
             carregarFiltrosRelTurma();
-            carregarEscolasDesempenho();
         }
 
         function doLogout() {
@@ -2727,9 +2465,6 @@
                 carregarEscolasRelAluno();
             }
             if (page === 'rel-escola') carregarRelatorios();
-            if (page === 'desempenho') {
-                carregarEscolasDesempenho();
-            }
             
             atualizarDatasImpressao();
 
@@ -3646,193 +3381,213 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
-        // ============================================
-        function atualizarHabilidades(historico, alunoNome) {
-            console.log('🔄 Iniciando atualização do card DESEMPENHO POR HABILIDADES para:', alunoNome);
-            console.log('📊 Dados do histórico recebidos:', historico);
+// FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
+// ============================================
+function atualizarHabilidades(historico, alunoNome) {
+    console.log('🔄 Iniciando atualização do card DESEMPENHO POR HABILIDADES para:', alunoNome);
+    console.log('📊 Dados do histórico recebidos:', historico);
 
-            let disciplinas = {
-                'portugues': { 
-                    nome: 'Português', 
-                    icone: '📖', 
-                    questoes: [], 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0,
-                    gabarito: [],
-                    respostas: []
-                },
-                'matematica': { 
-                    nome: 'Matemática', 
-                    icone: '🔢', 
-                    questoes: [], 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0,
-                    gabarito: [],
-                    respostas: []
-                },
-                'producao': { 
-                    nome: 'Produção de Texto', 
-                    icone: '✍️', 
-                    questoes: [], 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0,
-                    gabarito: [],
-                    respostas: []
-                }
-            };
+    // Estrutura para armazenar as questões por disciplina
+    let disciplinas = {
+        'portugues': { 
+            nome: 'Português', 
+            icone: '📖', 
+            questoes: [], 
+            acertos: 0, 
+            erros: 0, 
+            total: 0,
+            gabarito: [],
+            respostas: []
+        },
+        'matematica': { 
+            nome: 'Matemática', 
+            icone: '🔢', 
+            questoes: [], 
+            acertos: 0, 
+            erros: 0, 
+            total: 0,
+            gabarito: [],
+            respostas: []
+        },
+        'producao': { 
+            nome: 'Produção de Texto', 
+            icone: '✍️', 
+            questoes: [], 
+            acertos: 0, 
+            erros: 0, 
+            total: 0,
+            gabarito: [],
+            respostas: []
+        }
+    };
 
-            if (!historico || historico.length === 0) {
-                ['portugues', 'matematica', 'producao'].forEach(key => {
-                    const container = document.getElementById(`habilidade-${key}`);
-                    if (container) {
-                        container.innerHTML = `
-                            <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                Nenhuma questão encontrada para esta disciplina
-                            </div>
-                        `;
-                    }
-                });
-                return;
-            }
-
-            const keywords = {
-                'portugues': ['português', 'portugues', 'língua portuguesa', 'lingua portuguesa'],
-                'matematica': ['matemática', 'matematica', 'mat'],
-                'producao': ['produção', 'producao', 'texto', 'redação', 'escrita']
-            };
-
-            function identificarDisciplina(provaTitulo, disciplina) {
-                const texto = (provaTitulo + ' ' + disciplina).toLowerCase();
-                
-                for (const [key, words] of Object.entries(keywords)) {
-                    for (const word of words) {
-                        if (texto.includes(word)) {
-                            return key;
-                        }
-                    }
-                }
-                
-                return 'portugues';
-            }
-
-            historico.forEach(item => {
-                if (!item.respostas || !item.gabarito || item.respostas.length === 0) {
-                    return;
-                }
-
-                const disciplinaKey = identificarDisciplina(item.prova_titulo || '', item.disciplina || '');
-                const respostas = item.respostas || [];
-                const gabarito = item.gabarito || [];
-                const total = Math.min(respostas.length, gabarito.length, item.total || 20);
-                
-                if (total === 0) return;
-
-                const disciplina = disciplinas[disciplinaKey];
-                if (!disciplina) return;
-
-                if (disciplina.questoes.length > 0) {
-                    const gabStr = gabarito.slice(0, total).join('');
-                    const discGabStr = disciplina.gabarito.slice(0, total).join('');
-                    if (gabStr === discGabStr) {
-                        return;
-                    }
-                }
-
-                disciplina.gabarito = gabarito.slice(0, total);
-                disciplina.respostas = respostas.slice(0, total);
-                disciplina.total = Math.max(disciplina.total, total);
-                disciplina.questoes = [];
-
-                for (let i = 0; i < total; i++) {
-                    const resposta = i < respostas.length ? respostas[i] : '';
-                    const gab = i < gabarito.length ? gabarito[i] : '';
-                    const isCorreto = resposta && gab && resposta.toUpperCase() === gab.toUpperCase();
-                    
-                    disciplina.questoes.push({
-                        numero: i + 1,
-                        resposta: resposta || '—',
-                        gabarito: gab || '—',
-                        acertou: isCorreto
-                    });
-                    
-                    if (isCorreto) {
-                        disciplina.acertos++;
-                    } else if (resposta) {
-                        disciplina.erros++;
-                    }
-                }
-            });
-
-            ['portugues', 'matematica', 'producao'].forEach(key => {
-                const container = document.getElementById(`habilidade-${key}`);
-                const dados = disciplinas[key];
-                
-                if (!container) return;
-
-                if (dados.questoes.length === 0) {
-                    container.innerHTML = `
-                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                            Nenhuma questão encontrada para esta disciplina
-                        </div>
-                    `;
-                    return;
-                }
-
-                dados.questoes.sort((a, b) => a.numero - b.numero);
-
-                let html = '';
-                dados.questoes.forEach(q => {
-                    const statusClass = q.acertou ? 'acertou' : 'errou';
-                    const statusText = q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM';
-                    html += `
-                        <div class="questao-item">
-                            <span class="q-num">Q${q.numero}</span>
-                            <span class="q-resposta">${q.resposta}</span>
-                            <span class="q-gabarito">${q.gabarito}</span>
-                            <span class="q-status ${statusClass}">${statusText}</span>
-                        </div>
-                    `;
-                });
-
-                const totalQuestoesDisciplina = dados.questoes.length;
-                const pct = totalQuestoesDisciplina > 0 ? Math.round((dados.acertos / totalQuestoesDisciplina) * 100) : 0;
-                const conceito = calcularConceito(pct);
-                const nomeConceito = {
-                    'inicial': '🔴 Inicial',
-                    'basico': '🟠 Básico',
-                    'proficiente': '🔵 Proficiente',
-                    'avancado': '🟢 Avançado'
-                };
-                const badgeMap = {
-                    'inicial': 'badge-conceito-inicial',
-                    'basico': 'badge-conceito-basico',
-                    'proficiente': 'badge-conceito-proficiente',
-                    'avancado': 'badge-conceito-avancado'
-                };
-                
-                const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
-
-                html += `
-                    <div class="resumo-habilidade">
-                        <span>Total: ${totalQuestoesDisciplina} questões</span>
-                        <span><span class="acertos">✅ ${dados.acertos} acertos</span> | <span class="erros">❌ ${dados.erros} erros</span></span>
-                        <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
-                        <span><span class="nota">⭐ ${notaDisciplina.toFixed(1)}</span></span>
+    // Se não houver histórico, exibe mensagem
+    if (!historico || historico.length === 0) {
+        ['portugues', 'matematica', 'producao'].forEach(key => {
+            const container = document.getElementById(`habilidade-${key}`);
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                        Nenhuma questão encontrada para esta disciplina
                     </div>
                 `;
+            }
+        });
+        return;
+    }
 
-                container.innerHTML = html;
-                
-                console.log(`✅ Disciplina ${key}: ${dados.acertos} acertos, ${dados.erros} erros, ${dados.questoes.length} questões`);
-                console.log(`   Questões:`, dados.questoes.map(q => `Q${q.numero}: ${q.acertou ? '✅' : '❌'}`).join(', '));
-            });
+    // Lista de palavras-chave para identificar cada disciplina
+    const keywords = {
+        'portugues': ['português', 'portugues', 'língua portuguesa', 'lingua portuguesa'],
+        'matematica': ['matemática', 'matematica', 'mat'],
+        'producao': ['produção', 'producao', 'texto', 'redação', 'escrita']
+    };
 
-            console.log('✅ Card DESEMPENHO POR HABILIDADES atualizado com sucesso!');
+    // Função para identificar a disciplina baseada no título e disciplina
+    function identificarDisciplina(provaTitulo, disciplina) {
+        const texto = (provaTitulo + ' ' + disciplina).toLowerCase();
+        
+        for (const [key, words] of Object.entries(keywords)) {
+            for (const word of words) {
+                if (texto.includes(word)) {
+                    return key;
+                }
+            }
         }
+        
+        return 'portugues';
+    }
+
+    // Processa cada item do histórico para extrair as respostas por disciplina
+    historico.forEach(item => {
+        // Pula itens sem respostas ou sem gabarito
+        if (!item.respostas || !item.gabarito || item.respostas.length === 0) {
+            return;
+        }
+
+        const disciplinaKey = identificarDisciplina(item.prova_titulo || '', item.disciplina || '');
+        const respostas = item.respostas || [];
+        const gabarito = item.gabarito || [];
+        const total = Math.min(respostas.length, gabarito.length, item.total || 20);
+        
+        if (total === 0) return;
+
+        const disciplina = disciplinas[disciplinaKey];
+        if (!disciplina) return;
+
+        // Se já tem questões para esta disciplina, verifica se é a mesma prova
+        // Se for a mesma prova, não duplica
+        if (disciplina.questoes.length > 0) {
+            // Verifica se o gabarito é o mesmo
+            const gabStr = gabarito.slice(0, total).join('');
+            const discGabStr = disciplina.gabarito.slice(0, total).join('');
+            if (gabStr === discGabStr) {
+                // Mesma prova, não duplica
+                return;
+            }
+        }
+
+        // Armazena o gabarito e respostas
+        disciplina.gabarito = gabarito.slice(0, total);
+        disciplina.respostas = respostas.slice(0, total);
+        disciplina.total = Math.max(disciplina.total, total);
+
+        // Limpa as questões anteriores para esta disciplina
+        disciplina.questoes = [];
+
+        // Processa cada questão
+        for (let i = 0; i < total; i++) {
+            const resposta = i < respostas.length ? respostas[i] : '';
+            const gab = i < gabarito.length ? gabarito[i] : '';
+            const isCorreto = resposta && gab && resposta.toUpperCase() === gab.toUpperCase();
+            
+            disciplina.questoes.push({
+                numero: i + 1,
+                resposta: resposta || '—',
+                gabarito: gab || '—',
+                acertou: isCorreto
+            });
+            
+            if (isCorreto) {
+                disciplina.acertos++;
+            } else if (resposta) {
+                disciplina.erros++;
+            }
+        }
+    });
+
+    // Atualiza o card de cada disciplina
+    ['portugues', 'matematica', 'producao'].forEach(key => {
+        const container = document.getElementById(`habilidade-${key}`);
+        const dados = disciplinas[key];
+        
+        if (!container) return;
+
+        // Se não houver questões, mostra mensagem
+        if (dados.questoes.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                    Nenhuma questão encontrada para esta disciplina
+                </div>
+            `;
+            return;
+        }
+
+        // Ordena as questões por número
+        dados.questoes.sort((a, b) => a.numero - b.numero);
+
+        // Gera o HTML para as questões
+        let html = '';
+        dados.questoes.forEach(q => {
+            const statusClass = q.acertou ? 'acertou' : 'errou';
+            const statusText = q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM';
+            html += `
+                <div class="questao-item">
+                    <span class="q-num">Q${q.numero}</span>
+                    <span class="q-resposta">${q.resposta}</span>
+                    <span class="q-gabarito">${q.gabarito}</span>
+                    <span class="q-status ${statusClass}">${statusText}</span>
+                </div>
+            `;
+        });
+
+        // Calcula os totais
+        const totalQuestoesDisciplina = dados.questoes.length;
+        const pct = totalQuestoesDisciplina > 0 ? Math.round((dados.acertos / totalQuestoesDisciplina) * 100) : 0;
+        const conceito = calcularConceito(pct);
+        const nomeConceito = {
+            'inicial': '🔴 Inicial',
+            'basico': '🟠 Básico',
+            'proficiente': '🔵 Proficiente',
+            'avancado': '🟢 Avançado'
+        };
+        const badgeMap = {
+            'inicial': 'badge-conceito-inicial',
+            'basico': 'badge-conceito-basico',
+            'proficiente': 'badge-conceito-proficiente',
+            'avancado': 'badge-conceito-avancado'
+        };
+        
+        const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
+
+        // Adiciona o resumo
+        html += `
+            <div class="resumo-habilidade">
+                <span>Total: ${totalQuestoesDisciplina} questões</span>
+                <span><span class="acertos">✅ ${dados.acertos} acertos</span> | <span class="erros">❌ ${dados.erros} erros</span></span>
+                <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
+                <span><span class="nota">⭐ ${notaDisciplina.toFixed(1)}</span></span>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        
+        console.log(`✅ Disciplina ${key}: ${dados.acertos} acertos, ${dados.erros} erros, ${dados.questoes.length} questões`);
+        console.log(`   Questões:`, dados.questoes.map(q => `Q${q.numero}: ${q.acertou ? '✅' : '❌'}`).join(', '));
+    });
+
+    console.log('✅ Card DESEMPENHO POR HABILIDADES atualizado com sucesso!');
+}
 
         // ============================================
         // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO
@@ -4010,6 +3765,7 @@
                     atualizarConceitosDisciplinas(historico);
                     
                     const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+                    // Chama a função para atualizar o card DESEMPENHO POR HABILIDADES
                     atualizarHabilidades(historico, alunoNome);
                     
                     const evolucao = document.getElementById('rel-evolucao');
@@ -4309,6 +4065,7 @@
                 const respEscolas = await fetch(API_URL + '/api/escolas');
                 const escolas = await respEscolas.json();
                 
+                // Carregar escolas nos selects que precisam
                 ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
@@ -4326,6 +4083,7 @@
                     }
                 });
                 
+                // CARREGAR ESCOLAS PARA O SELECT DE ALUNO (CADASTRO E EDIÇÃO)
                 await carregarEscolasParaAluno();
                 
                 const respTurmas = await fetch(API_URL + '/api/turmas');
@@ -4349,7 +4107,7 @@
                 
                 const respProvas = await fetch(API_URL + '/api/provas');
                 const provas = await respProvas.json();
-                ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+                ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
                         const current = select.value;
@@ -4373,7 +4131,7 @@
                 
                 const respAlunos = await fetch(API_URL + '/api/alunos');
                 const alunos = await respAlunos.json();
-                ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
+                ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select'].forEach(id => {
                     const select = document.getElementById(id);
                     if (select) {
                         const current = select.value;
@@ -4411,6 +4169,7 @@
                     return;
                 }
                 
+                // Select do cadastro de aluno (m-aluno)
                 const selectCadastro = document.getElementById('aluno-escola');
                 if (selectCadastro) {
                     const current = selectCadastro.value;
@@ -4429,6 +4188,7 @@
                     console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
                 }
                 
+                // Select da edição de aluno (m-editar-aluno)
                 const selectEdicao = document.getElementById('editar-aluno-escola');
                 if (selectEdicao) {
                     const current = selectEdicao.value;
@@ -6990,492 +6750,6 @@
         }
 
         // ============================================
-        // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
-        // ============================================
-        
-        // Dados mock para a aba de desempenho
-        const desempenhoMock = {
-            escolas: [
-                { id: 1, nome: 'E.E. Professora Maria Silva' },
-                { id: 2, nome: 'E.M. São Sebastião' },
-                { id: 3, nome: 'E.E. Dr. João Ribeiro' }
-            ],
-            turmas: [
-                { id: 1, nome: '3º A', serie: '3º Ano', escola_id: 1 },
-                { id: 2, nome: '3º B', serie: '3º Ano', escola_id: 1 },
-                { id: 3, nome: '4º A', serie: '4º Ano', escola_id: 2 },
-                { id: 4, nome: '4º B', serie: '4º Ano', escola_id: 2 },
-                { id: 5, nome: '5º A', serie: '5º Ano', escola_id: 3 }
-            ],
-            alunos: [
-                { id: 1, nome: 'Ana Carolina Silva', turma_id: 1 },
-                { id: 2, nome: 'Bruno Henrique Santos', turma_id: 1 },
-                { id: 3, nome: 'Carla Fernanda Oliveira', turma_id: 1 },
-                { id: 4, nome: 'Daniel Augusto Lima', turma_id: 2 },
-                { id: 5, nome: 'Eduarda Maria Costa', turma_id: 2 },
-                { id: 6, nome: 'Felipe Gabriel Souza', turma_id: 3 },
-                { id: 7, nome: 'Gabriela Aparecida Rocha', turma_id: 3 },
-                { id: 8, nome: 'Heitor Luiz Pereira', turma_id: 4 },
-                { id: 9, nome: 'Isabela Cristina Alves', turma_id: 4 },
-                { id: 10, nome: 'João Pedro Mendes', turma_id: 5 }
-            ],
-            provas: [
-                { id: 1, titulo: '1º Bimestre - Português', disciplina: 'Português', questoes: 10 },
-                { id: 2, titulo: '1º Bimestre - Matemática', disciplina: 'Matemática', questoes: 10 },
-                { id: 3, titulo: '1º Bimestre - Produção de Texto', disciplina: 'Produção de Texto', questoes: 5 },
-                { id: 4, titulo: '2º Bimestre - Português', disciplina: 'Português', questoes: 10 },
-                { id: 5, titulo: '2º Bimestre - Matemática', disciplina: 'Matemática', questoes: 10 },
-                { id: 6, titulo: '2º Bimestre - Produção de Texto', disciplina: 'Produção de Texto', questoes: 5 }
-            ],
-            respostas: {
-                1: {
-                    1: ['A','B','C','A','B','C','A','B','C','A'],
-                    2: ['A','B','C','D','A','B','C','D','A','B'],
-                    3: ['Sim','Não','Sim','Sim','Não'],
-                    4: ['A','B','C','A','B','C','A','B','C','A'],
-                    5: ['A','B','C','D','A','B','C','D','A','B'],
-                    6: ['Sim','Não','Sim','Sim','Não']
-                },
-                2: {
-                    1: ['A','B','C','A','B','C','A','B','C','A'],
-                    2: ['A','B','C','D','A','B','C','D','A','B'],
-                    3: ['Sim','Sim','Não','Sim','Sim'],
-                    4: ['A','B','C','A','B','C','A','B','C','A'],
-                    5: ['A','B','C','D','A','B','C','D','A','B'],
-                    6: ['Sim','Sim','Não','Sim','Sim']
-                },
-                3: {
-                    1: ['A','B','C','A','B','C','A','B','C','A'],
-                    2: ['A','B','C','D','A','B','C','D','A','B'],
-                    3: ['Não','Sim','Sim','Não','Sim'],
-                    4: ['A','B','C','A','B','C','A','B','C','A'],
-                    5: ['A','B','C','D','A','B','C','D','A','B'],
-                    6: ['Não','Sim','Sim','Não','Sim']
-                }
-            },
-            gabaritos: {
-                1: ['A','B','C','A','B','C','A','B','C','A'],
-                2: ['A','B','C','D','A','B','C','D','A','B'],
-                3: ['Sim','Não','Sim','Sim','Não'],
-                4: ['A','B','C','A','B','C','A','B','C','A'],
-                5: ['A','B','C','D','A','B','C','D','A','B'],
-                6: ['Sim','Não','Sim','Sim','Não']
-            },
-            alunoSelecionado: null
-        };
-
-        function carregarEscolasDesempenho() {
-            const select = document.getElementById('filtro-escola-desempenho');
-            if (!select) return;
-            
-            // Limpar e adicionar opções
-            select.innerHTML = '<option value="">Selecione a escola...</option>';
-            desempenhoMock.escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                select.appendChild(opt);
-            });
-            
-            // Limpar os outros selects
-            document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
-            document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
-            
-            // Carregar provas
-            const selectProva = document.getElementById('filtro-prova-desempenho');
-            selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
-            desempenhoMock.provas.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.titulo + ' - ' + p.disciplina;
-                selectProva.appendChild(opt);
-            });
-        }
-
-        function carregarTurmasDesempenho(escolaId) {
-            const selectTurma = document.getElementById('filtro-turma-desempenho');
-            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-            
-            if (!escolaId) return;
-            
-            const turmasFiltradas = desempenhoMock.turmas.filter(t => t.escola_id == escolaId);
-            turmasFiltradas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + t.serie;
-                selectTurma.appendChild(opt);
-            });
-            
-            document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
-        }
-
-        function carregarAlunosDesempenho(turmaId) {
-            const selectAluno = document.getElementById('filtro-aluno-desempenho');
-            selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-            
-            if (!turmaId) return;
-            
-            const alunosFiltrados = desempenhoMock.alunos.filter(a => a.turma_id == turmaId);
-            alunosFiltrados.forEach(a => {
-                const opt = document.createElement('option');
-                opt.value = a.id;
-                opt.textContent = a.nome;
-                selectAluno.appendChild(opt);
-            });
-        }
-
-        function gerarDesempenho() {
-            const escolaId = document.getElementById('filtro-escola-desempenho').value;
-            const turmaId = document.getElementById('filtro-turma-desempenho').value;
-            const alunoId = document.getElementById('filtro-aluno-desempenho').value;
-            const provaId = document.getElementById('filtro-prova-desempenho').value;
-
-            if (!escolaId || !turmaId || !alunoId || !provaId) {
-                showToast('⚠️ Preencha todos os campos: ESCOLA, TURMA, ALUNO e PROVA!', 'error');
-                return;
-            }
-
-            // Buscar dados
-            const escola = desempenhoMock.escolas.find(e => e.id == escolaId);
-            const turma = desempenhoMock.turmas.find(t => t.id == turmaId);
-            const aluno = desempenhoMock.alunos.find(a => a.id == alunoId);
-            const prova = desempenhoMock.provas.find(p => p.id == provaId);
-
-            if (!escola || !turma || !aluno || !prova) {
-                showToast('❌ Dados não encontrados!', 'error');
-                return;
-            }
-
-            // Armazenar aluno selecionado para o documento
-            desempenhoMock.alunoSelecionado = { escola, turma, aluno, prova };
-
-            // Obter respostas do aluno
-            const respostasAluno = desempenhoMock.respostas[alunoId]?.[provaId] || [];
-            const gabarito = desempenhoMock.gabaritos[provaId] || [];
-            const totalQuestoes = prova.questoes || 10;
-
-            // Preencher respostas faltantes
-            while (respostasAluno.length < totalQuestoes) {
-                respostasAluno.push('');
-            }
-
-            // Calcular acertos e erros
-            let acertos = 0;
-            let erros = 0;
-            const resultadoQuestoes = [];
-
-            for (let i = 0; i < totalQuestoes; i++) {
-                const resp = respostasAluno[i] || '';
-                const gab = gabarito[i] || '';
-                const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
-                
-                if (resp) {
-                    if (isCorreto) acertos++;
-                    else erros++;
-                }
-                
-                resultadoQuestoes.push({
-                    numero: i + 1,
-                    resposta: resp || '—',
-                    gabarito: gab || '—',
-                    acertou: isCorreto,
-                    respondida: !!resp
-                });
-            }
-
-            // Calcular nota (base 10)
-            const nota = totalQuestoes > 0 ? (acertos / totalQuestoes) * 10 : 0;
-            const notaFinal = Math.round(nota * 10) / 10;
-
-            // Calcular conceito
-            const pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-            let conceito = 'Inicial';
-            let conceitoCor = 'badge-red';
-            if (pct > 80) { conceito = 'Avançado'; conceitoCor = 'badge-green'; }
-            else if (pct > 60) { conceito = 'Proficiente'; conceitoCor = 'badge-blue'; }
-            else if (pct > 40) { conceito = 'Básico'; conceitoCor = 'badge-orange'; }
-
-            // ===== EXIBIR RESULTADOS =====
-            document.getElementById('resultado-desempenho').style.display = 'block';
-
-            // Resumo geral
-            document.getElementById('resumo-nota').textContent = notaFinal.toFixed(1);
-            document.getElementById('resumo-acertos').textContent = acertos;
-            document.getElementById('resumo-erros').textContent = erros;
-            document.getElementById('resumo-conceito').textContent = conceito;
-
-            // Informações do aluno
-            document.getElementById('info-escola').textContent = escola.nome;
-            document.getElementById('info-turma').textContent = turma.nome + ' - ' + turma.serie;
-            document.getElementById('info-aluno').textContent = aluno.nome;
-            document.getElementById('info-prova').textContent = prova.titulo;
-            document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
-
-            // ===== DISCIPLINAS =====
-            const disciplina = prova.disciplina;
-            
-            const disciplinaMap = {
-                'Português': 'portugues',
-                'Matemática': 'matematica',
-                'Produção de Texto': 'producao'
-            };
-            
-            const discKey = disciplinaMap[disciplina] || 'portugues';
-            
-            const disciplinas = ['portugues', 'matematica', 'producao'];
-            const nomesDisciplinas = {
-                'portugues': 'Português',
-                'matematica': 'Matemática',
-                'producao': 'Produção de Texto'
-            };
-            const iconesDisciplinas = {
-                'portugues': '📖',
-                'matematica': '🔢',
-                'producao': '✍️'
-            };
-
-            disciplinas.forEach(key => {
-                const container = document.getElementById(`questoes-${key}`);
-                const statusEl = document.getElementById(`status-${key}`);
-                const acertosEl = document.getElementById(`acertos-${key}`);
-                const errosEl = document.getElementById(`erros-${key}`);
-                const notaEl = document.getElementById(`nota-${key}`);
-                
-                if (key === discKey) {
-                    // Disciplina selecionada - exibir dados reais
-                    let html = '';
-                    resultadoQuestoes.forEach(q => {
-                        const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                        html += `
-                            <div class="questao-item ${classe}">
-                                <div class="q-num">Q${q.numero}</div>
-                                <div class="q-resp">${q.resposta}</div>
-                                <div class="q-gab">${q.gabarito}</div>
-                            </div>
-                        `;
-                    });
-                    container.innerHTML = html;
-                    
-                    const pctDisc = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-                    let statusText = 'Inicial';
-                    let statusBadge = 'badge-red';
-                    if (pctDisc > 80) { statusText = 'Avançado'; statusBadge = 'badge-green'; }
-                    else if (pctDisc > 60) { statusText = 'Proficiente'; statusBadge = 'badge-blue'; }
-                    else if (pctDisc > 40) { statusText = 'Básico'; statusBadge = 'badge-orange'; }
-                    
-                    statusEl.textContent = statusText;
-                    statusEl.className = `badge ${statusBadge}`;
-                    acertosEl.textContent = acertos;
-                    errosEl.textContent = erros;
-                    notaEl.textContent = notaFinal.toFixed(1);
-                    
-                    const header = container.closest('.desempenho-disciplina').querySelector('h4');
-                    header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
-                } else {
-                    // Outras disciplinas - sem dados
-                    container.innerHTML = `
-                        <div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b; font-size:12px;">
-                            ⚠️ Nenhuma resposta disponível para esta disciplina
-                        </div>
-                    `;
-                    statusEl.textContent = 'Sem dados';
-                    statusEl.className = 'badge badge-gray';
-                    acertosEl.textContent = '—';
-                    errosEl.textContent = '—';
-                    notaEl.textContent = '—';
-                    
-                    const header = container.closest('.desempenho-disciplina').querySelector('h4');
-                    header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
-                }
-            });
-
-            showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos`, 'success');
-        }
-
-        function gerarDocumentoDesempenho() {
-            const aluno = desempenhoMock.alunoSelecionado;
-            if (!aluno) {
-                showToast('⚠️ Gere o desempenho primeiro!', 'error');
-                return;
-            }
-
-            const win = window.open('', '_blank');
-            if (!win) {
-                showToast('⚠️ Permita pop-ups para gerar o documento!', 'error');
-                return;
-            }
-
-            const escola = document.getElementById('info-escola').textContent;
-            const turma = document.getElementById('info-turma').textContent;
-            const nomeAluno = document.getElementById('info-aluno').textContent;
-            const prova = document.getElementById('info-prova').textContent;
-            const data = document.getElementById('info-data').textContent;
-            const nota = document.getElementById('resumo-nota').textContent;
-            const acertos = document.getElementById('resumo-acertos').textContent;
-            const erros = document.getElementById('resumo-erros').textContent;
-            const conceito = document.getElementById('resumo-conceito').textContent;
-
-            const disciplinasHTML = document.querySelectorAll('.desempenho-disciplina');
-            let disciplinasContent = '';
-            
-            disciplinasHTML.forEach(card => {
-                const header = card.querySelector('h4')?.textContent || 'Disciplina';
-                const status = card.querySelector('.badge')?.textContent || '—';
-                const stats = card.querySelector('.stats')?.textContent || '';
-                const questoes = card.querySelector('.questoes-grid')?.innerHTML || '';
-                
-                const acertosMatch = stats.match(/Acertos:\s*(\d+)/);
-                const errosMatch = stats.match(/Erros:\s*(\d+)/);
-                const notaMatch = stats.match(/Nota:\s*([\d.]+)/);
-                
-                const acertosDisc = acertosMatch ? acertosMatch[1] : '0';
-                const errosDisc = errosMatch ? errosMatch[1] : '0';
-                const notaDisc = notaMatch ? notaMatch[1] : '0.0';
-                
-                const statusColor = status === 'Avançado' ? '#16a34a' : status === 'Proficiente' ? '#2563eb' : status === 'Básico' ? '#d97706' : '#dc2626';
-                const statusBg = status === 'Avançado' ? '#dcfce7' : status === 'Proficiente' ? '#dbeafe' : status === 'Básico' ? '#fef3c7' : '#fee2e2';
-                
-                disciplinasContent += `
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px; page-break-inside:avoid;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px;">
-                            <strong style="font-size:15px; color:#0f172a;">${header}</strong>
-                            <span style="background:${statusBg}; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:${statusColor};">
-                                ${status}
-                            </span>
-                        </div>
-                        <div style="display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px;">
-                            ${questoes}
-                        </div>
-                        <div style="display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px;">
-                            <span>✅ Acertos: <strong style="color:#16a34a;">${acertosDisc}</strong></span>
-                            <span>❌ Erros: <strong style="color:#dc2626;">${errosDisc}</strong></span>
-                            <span>⭐ Nota: <strong style="color:#2563eb;">${notaDisc}</strong></span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Desempenho do Aluno - ${nomeAluno}</title>
-                <style>
-                    * { margin:0; padding:0; box-sizing:border-box; }
-                    body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#0f172a; padding:30px; }
-                    .header { text-align:center; margin-bottom:25px; padding-bottom:15px; border-bottom:2px solid #1e293b; }
-                    .header h1 { font-size:22px; color:#1e293b; }
-                    .header p { color:#475569; font-size:13px; margin-top:4px; }
-                    .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; background:#f1f5f9; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:13px; }
-                    .info-grid strong { color:#0f172a; }
-                    .resumo { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
-                    .resumo-item { background:#f1f5f9; border-radius:8px; padding:12px; text-align:center; }
-                    .resumo-item .valor { font-size:24px; font-weight:800; }
-                    .resumo-item .label { font-size:11px; color:#475569; text-transform:uppercase; }
-                    .resumo-item .valor.green { color:#16a34a; }
-                    .resumo-item .valor.red { color:#dc2626; }
-                    .resumo-item .valor.blue { color:#2563eb; }
-                    .resumo-item .valor.purple { color:#7c3aed; }
-                    .footer { margin-top:25px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:12px; color:#64748b; }
-                    .questao-item { background:#f8fafc; border-radius:4px; padding:4px 2px; text-align:center; font-size:10px; border:1px solid #e2e8f0; }
-                    .questao-item .q-num { font-size:7px; color:#94a3b8; }
-                    .questao-item .q-resp { font-weight:700; font-size:12px; }
-                    .questao-item .q-gab { font-size:7px; color:#94a3b8; }
-                    .questao-item.acertou { border-color:#16a34a; background:#dcfce7; }
-                    .questao-item.acertou .q-resp { color:#16a34a; }
-                    .questao-item.errou { border-color:#dc2626; background:#fee2e2; }
-                    .questao-item.errou .q-resp { color:#dc2626; }
-                    @media print {
-                        .no-print { display:none !important; }
-                        body { padding:20px; }
-                        .info-grid { background:#f1f5f9 !important; }
-                        .resumo-item { background:#f1f5f9 !important; }
-                    }
-                    @media (max-width:768px) {
-                        .info-grid { grid-template-columns:1fr 1fr; }
-                        .resumo { grid-template-columns:1fr 1fr; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>📊 Relatório de Desempenho do Aluno</h1>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista — SISAM 2026</p>
-                </div>
-
-                <div class="info-grid">
-                    <div><strong>🏫 Escola</strong><br>${escola}</div>
-                    <div><strong>👥 Turma</strong><br>${turma}</div>
-                    <div><strong>🎒 Aluno</strong><br>${nomeAluno}</div>
-                    <div><strong>📄 Prova</strong><br>${prova}</div>
-                    <div><strong>📅 Data</strong><br>${data}</div>
-                </div>
-
-                <div class="resumo">
-                    <div class="resumo-item"><div class="valor blue">${nota}</div><div class="label">Nota Final</div></div>
-                    <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
-                    <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
-                    <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
-                </div>
-
-                <div style="margin-bottom:20px;">
-                    <h3 style="font-size:16px; margin-bottom:12px; color:#1e293b;">📋 Desempenho por Disciplina</h3>
-                    ${disciplinasContent}
-                </div>
-
-                <div class="footer">
-                    <span>Documento gerado em ${new Date().toLocaleString('pt-BR')}</span>
-                    <span>© ${new Date().getFullYear()} CorrigePro — Secretaria Municipal de Educação</span>
-                </div>
-
-                <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0;">
-                    <p style="font-size:11px; color:#94a3b8;">
-                        <strong>Legenda:</strong> 
-                        <span style="color:#16a34a;">✅ Acertou</span> | 
-                        <span style="color:#dc2626;">❌ Errou</span> | 
-                        <span style="color:#94a3b8;">— Não respondeu</span>
-                    </p>
-                    <div style="display:flex; justify-content:center; gap:20px; font-size:10px; color:#94a3b8; margin-top:6px;">
-                        <span>🔴 Inicial (até 40%)</span>
-                        <span>🟠 Básico (41% a 60%)</span>
-                        <span>🔵 Proficiente (61% a 80%)</span>
-                        <span>🟢 Avançado (acima de 80%)</span>
-                    </div>
-                </div>
-
-                <div style="text-align:center; margin-top:15px; font-size:11px; color:#94a3b8;">
-                    <p>Imprima ou salve este documento como PDF para registro oficial.</p>
-                </div>
-
-                <script>
-                    window.onload = function() {
-                        setTimeout(() => {
-                            window.print();
-                        }, 500);
-                    };
-                <\/script>
-            </body>
-            </html>
-            `;
-
-            win.document.write(html);
-            win.document.close();
-            
-            showToast('📄 Documento gerado! Uma nova janela foi aberta para impressão.', 'success');
-        }
-
-        function limparFiltrosDesempenho() {
-            document.getElementById('filtro-escola-desempenho').value = '';
-            document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
-            document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
-            document.getElementById('filtro-prova-desempenho').value = '';
-            document.getElementById('resultado-desempenho').style.display = 'none';
-            desempenhoMock.alunoSelecionado = null;
-            showToast('✕ Filtros limpos!', 'info');
-        }
-
-        // ============================================
         // CARREGAR DADOS - FUNÇÃO PRINCIPAL
         // ============================================
         async function carregarDados() {
@@ -7532,7 +6806,6 @@
             carregarFiltrosRelTurma();
             carregarFiltroEscolaTurmas();
             carregarEscolasParaAluno();
-            carregarEscolasDesempenho();
         });
 
         document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
