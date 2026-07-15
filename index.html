@@ -688,7 +688,7 @@
         }
 
         /* ============================================
-           ESTILOS PARA O DESEMPENHO DO ALUNO (NOVA ABA)
+           ESTILOS PARA O DESEMPENHO DO ALUNO (NOVA ABA) - ATUALIZADO
            ============================================ */
         .desempenho-resumo {
             display: grid;
@@ -742,7 +742,7 @@
         }
         .desempenho-disciplina .questoes-grid {
             display: grid;
-            grid-template-columns: repeat(10, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 4px;
         }
         .desempenho-disciplina .questao-item {
@@ -764,6 +764,23 @@
         .desempenho-disciplina .questao-item .q-gab {
             font-size: 7px;
             color: var(--text3);
+        }
+        .desempenho-disciplina .questao-item .q-status-text {
+            font-size: 7px;
+            font-weight: 700;
+            display: block;
+            line-height: 1.2;
+            margin-top: 2px;
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+        .desempenho-disciplina .questao-item .q-status-text.acertou {
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .desempenho-disciplina .questao-item .q-status-text.errou {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.12);
         }
         .desempenho-disciplina .questao-item.acertou {
             border-color: var(--green);
@@ -1063,6 +1080,9 @@
             .desempenho-resumo .item .valor.blue { color: #004085 !important; }
             .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
             .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .desempenho-disciplina .questao-item .q-status-text {
+                font-size: 6px !important;
+            }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -7294,11 +7314,15 @@
                             let html = '';
                             resultadoQuestoes.forEach(q => {
                                 const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                                const statusText = q.acertou 
+                                    ? '✅ ACERTOU: ADQUIRIU HABILIDADE' 
+                                    : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
                                 html += `
                                     <div class="questao-item ${classe}">
                                         <div class="q-num">Q${q.numero}</div>
                                         <div class="q-resp">${q.resposta}</div>
                                         <div class="q-gab">${q.gabarito}</div>
+                                        <span class="q-status-text ${classe}">${statusText}</span>
                                     </div>
                                 `;
                             });
@@ -7382,11 +7406,15 @@
                 let questoesHTML = '';
                 data.resultadoQuestoes.forEach(q => {
                     const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                    const statusText = q.acertou 
+                        ? '✅ ADQUIRIU HABILIDADE' 
+                        : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
                     questoesHTML += `
                         <div class="questao-item ${classe}">
                             <div class="q-num">Q${q.numero}</div>
                             <div class="q-resp">${q.resposta}</div>
                             <div class="q-gab">${q.gabarito}</div>
+                            <span class="q-status-text ${classe}">${statusText}</span>
                         </div>
                     `;
                 });
@@ -7418,10 +7446,13 @@
                         .questao-item .q-num { font-size:7px; color:#94a3b8; }
                         .questao-item .q-resp { font-weight:700; font-size:12px; }
                         .questao-item .q-gab { font-size:7px; color:#94a3b8; }
+                        .questao-item .q-status-text { font-size:7px; font-weight:700; display:block; margin-top:2px; }
                         .questao-item.acertou { border-color:#16a34a; background:#dcfce7; }
                         .questao-item.acertou .q-resp { color:#16a34a; }
+                        .questao-item.acertou .q-status-text { color:#16a34a; }
                         .questao-item.errou { border-color:#dc2626; background:#fee2e2; }
                         .questao-item.errou .q-resp { color:#dc2626; }
+                        .questao-item.errou .q-status-text { color:#dc2626; }
                         .disciplina-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px; page-break-inside:avoid; }
                         .disciplina-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
                         .disciplina-card .header strong { font-size:15px; color:#0f172a; }
@@ -7479,6 +7510,10 @@
                                 <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
                                 <span>⭐ Nota: <strong style="color:#2563eb;">${nota}</strong></span>
                                 <span>📊 Total: <strong>${totalQuestoes}</strong></span>
+                            </div>
+                            <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
+                                <span style="color:#16a34a;">✅ ACERTOU: ADQUIRIU HABILIDADE</span> | 
+                                <span style="color:#dc2626;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
                             </div>
                         </div>
                     </div>
