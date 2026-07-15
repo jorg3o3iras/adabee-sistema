@@ -2960,6 +2960,10 @@ def dashboard():
             traceback.print_exc()
     return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
 
+# ============================================
+# ROTA DE DASHBOARD - DESEMPENHO (CORRIGIDA)
+# ============================================
+
 @app.route('/api/dashboard/desempenho', methods=['GET'])
 def dashboard_desempenho():
     conn = get_db_connection()
@@ -3018,6 +3022,10 @@ def dashboard_desempenho():
         print(f"❌ Erro ao buscar desempenho: {e}")
         return jsonify({'erro': str(e)}), 500
 
+# ============================================
+# ROTA DE DASHBOARD - CONCEITO (CORRIGIDA)
+# ============================================
+
 @app.route('/api/dashboard/Conceito', methods=['GET'])
 def dashboard_conceito():
     try:
@@ -3027,6 +3035,7 @@ def dashboard_conceito():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
+        # CORREÇÃO: Consulta mais robusta com tratamento de NULL
         cur.execute("""
             SELECT 
                 a.id,
@@ -3049,10 +3058,15 @@ def dashboard_conceito():
         
         resultado = []
         for aluno in alunos:
-            if aluno['total_correcoes'] > 0:
-                porcentagem = round((aluno['media_nota'] / 10) * 100) if aluno['media_nota'] > 0 else 0
+            # Garantir que os valores sejam números
+            media_nota = float(aluno['media_nota'] or 0)
+            total_correcoes = int(aluno['total_correcoes'] or 0)
+            
+            if total_correcoes > 0:
+                porcentagem = round((media_nota / 10) * 100) if media_nota > 0 else 0
                 conceito = calcular_conceito(porcentagem)
             else:
+                porcentagem = 0
                 conceito = calcular_conceito(0)
             
             resultado.append({
@@ -3060,17 +3074,22 @@ def dashboard_conceito():
                 'aluno_nome': aluno['aluno_nome'],
                 'turma': aluno['turma_nome'],
                 'serie': aluno['serie'],
-                'media_nota': round(aluno['media_nota'], 1),
+                'media_nota': round(media_nota, 1),
                 'porcentagem': porcentagem,
                 'conceito': conceito,
-                'total_correcoes': aluno['total_correcoes']
+                'total_correcoes': total_correcoes
             })
         
         return jsonify(resultado)
         
     except Exception as e:
         print(f"❌ Erro em /api/dashboard/Conceito: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA DE DASHBOARD - TURMAS COM ALUNOS
+# ============================================
 
 @app.route('/api/dashboard/turmas_alunos', methods=['GET'])
 def dashboard_turmas_alunos():
@@ -3443,6 +3462,17 @@ def serve_static(path):
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
 
 # ============================================
+# ROTA DE FAVICON - CORRIGIDA
+# ============================================
+
+@app.route('/favicon.ico')
+def favicon():
+    try:
+        return send_from_directory('.', 'favicon.ico')
+    except:
+        return '', 204  # No Content
+
+# ============================================
 # ROTA DE SAÚDE
 # ============================================
 
@@ -3469,138 +3499,151 @@ def init_db():
     try:
         cur = conn.cursor()
         
-        # Tabela escolas
+        # Verificar se as tabelas existem
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS escolas (
-                id SERIAL PRIMARY KEY,
-                nome TEXT NOT NULL,
-                inep TEXT,
-                municipio TEXT,
-                estado TEXT DEFAULT 'PA',
-                telefone TEXT,
-                diretor TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'escolas'
             )
         """)
+        tabela_existe = cur.fetchone()[0]
         
-        # Tabela turmas
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS turmas (
-                id SERIAL PRIMARY KEY,
-                escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-                nome TEXT NOT NULL,
-                serie TEXT,
-                turno TEXT DEFAULT 'Manhã',
-                professor TEXT,
-                capacidade INTEGER DEFAULT 35,
-                ano_letivo INTEGER DEFAULT 2025,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Tabela alunos (COM escola_id)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS alunos (
-                id SERIAL PRIMARY KEY,
-                escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-                turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-                nome TEXT NOT NULL,
-                matricula TEXT,
-                numero_chamada INTEGER,
-                data_nascimento DATE,
-                genero TEXT,
-                responsavel TEXT,
-                telefone TEXT,
-                email TEXT,
-                observacoes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Verificar se a coluna escola_id existe e adicionar se não existir
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'alunos' AND column_name = 'escola_id'
-        """)
-        if not cur.fetchone():
-            print("🔧 Adicionando coluna escola_id à tabela alunos...")
+        if not tabela_existe:
+            print("🔧 Criando tabelas do banco de dados...")
+            
+            # Tabela escolas
             cur.execute("""
-                ALTER TABLE alunos ADD COLUMN escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE
+                CREATE TABLE escolas (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    inep TEXT,
+                    municipio TEXT,
+                    estado TEXT DEFAULT 'PA',
+                    telefone TEXT,
+                    diretor TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-        
-        # Tabela provas
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS provas (
-                id SERIAL PRIMARY KEY,
-                titulo TEXT NOT NULL,
-                serie TEXT NOT NULL,
-                disciplina TEXT,
-                bimestre TEXT,
-                data_prova DATE,
-                valor_nota DECIMAL(5,2) DEFAULT 10,
-                tipo_questoes TEXT DEFAULT '4',
-                quantidade_questoes INTEGER DEFAULT 20,
-                gabarito TEXT[],
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Tabela historico
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS historico (
-                id SERIAL PRIMARY KEY,
-                prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-                respostas TEXT[],
-                acertos INTEGER,
-                nota DECIMAL(5,2),
-                total INTEGER,
-                tipo_correcao TEXT DEFAULT 'ia',
-                disciplina TEXT,
-                tipo_avaliacao TEXT,
-                data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Tabela usuarios
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                nome TEXT,
-                username TEXT UNIQUE NOT NULL,
-                senha_hash TEXT NOT NULL,
-                email TEXT,
-                perfil TEXT DEFAULT 'usuario',
-                ativo BOOLEAN DEFAULT TRUE,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Tabela correcoes_texto
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS correcoes_texto (
-                id SERIAL PRIMARY KEY,
-                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-                prova_id INTEGER REFERENCES provas(id) ON DELETE SET NULL,
-                texto TEXT NOT NULL,
-                nota DECIMAL(5,2),
-                metrica_coerencia DECIMAL(5,2),
-                metrica_estrutura DECIMAL(5,2),
-                metrica_gramatica DECIMAL(5,2),
-                metrica_vocabulario DECIMAL(5,2),
-                feedback TEXT,
-                tipo_correcao TEXT DEFAULT 'ia',
-                data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Adicionar colunas faltantes se necessário
-        try:
-            cur.execute("ALTER TABLE historico ADD COLUMN IF NOT EXISTS disciplina TEXT")
-            cur.execute("ALTER TABLE historico ADD COLUMN IF NOT EXISTS tipo_avaliacao TEXT")
-        except Exception as e:
-            print(f"⚠️ Colunas já existem: {e}")
+            
+            # Tabela turmas
+            cur.execute("""
+                CREATE TABLE turmas (
+                    id SERIAL PRIMARY KEY,
+                    escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+                    nome TEXT NOT NULL,
+                    serie TEXT,
+                    turno TEXT DEFAULT 'Manhã',
+                    professor TEXT,
+                    capacidade INTEGER DEFAULT 35,
+                    ano_letivo INTEGER DEFAULT 2025,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela alunos (COM escola_id)
+            cur.execute("""
+                CREATE TABLE alunos (
+                    id SERIAL PRIMARY KEY,
+                    escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+                    turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+                    nome TEXT NOT NULL,
+                    matricula TEXT,
+                    numero_chamada INTEGER,
+                    data_nascimento DATE,
+                    genero TEXT,
+                    responsavel TEXT,
+                    telefone TEXT,
+                    email TEXT,
+                    observacoes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela provas
+            cur.execute("""
+                CREATE TABLE provas (
+                    id SERIAL PRIMARY KEY,
+                    titulo TEXT NOT NULL,
+                    serie TEXT NOT NULL,
+                    disciplina TEXT,
+                    bimestre TEXT,
+                    data_prova DATE,
+                    valor_nota DECIMAL(5,2) DEFAULT 10,
+                    tipo_questoes TEXT DEFAULT '4',
+                    quantidade_questoes INTEGER DEFAULT 20,
+                    gabarito TEXT[],
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela historico
+            cur.execute("""
+                CREATE TABLE historico (
+                    id SERIAL PRIMARY KEY,
+                    prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                    aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                    respostas TEXT[],
+                    acertos INTEGER,
+                    nota DECIMAL(5,2),
+                    total INTEGER,
+                    tipo_correcao TEXT DEFAULT 'ia',
+                    disciplina TEXT,
+                    tipo_avaliacao TEXT,
+                    data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela usuarios
+            cur.execute("""
+                CREATE TABLE usuarios (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT,
+                    username TEXT UNIQUE NOT NULL,
+                    senha_hash TEXT NOT NULL,
+                    email TEXT,
+                    perfil TEXT DEFAULT 'usuario',
+                    ativo BOOLEAN DEFAULT TRUE,
+                    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela correcoes_texto
+            cur.execute("""
+                CREATE TABLE correcoes_texto (
+                    id SERIAL PRIMARY KEY,
+                    aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                    prova_id INTEGER REFERENCES provas(id) ON DELETE SET NULL,
+                    texto TEXT NOT NULL,
+                    nota DECIMAL(5,2),
+                    metrica_coerencia DECIMAL(5,2),
+                    metrica_estrutura DECIMAL(5,2),
+                    metrica_gramatica DECIMAL(5,2),
+                    metrica_vocabulario DECIMAL(5,2),
+                    feedback TEXT,
+                    tipo_correcao TEXT DEFAULT 'ia',
+                    data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            print("✅ Tabelas criadas com sucesso!")
+        else:
+            print("📌 Tabelas já existem, verificando colunas...")
+            
+            # Verificar se a coluna escola_id existe na tabela alunos
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'alunos' AND column_name = 'escola_id'
+            """)
+            if not cur.fetchone():
+                print("🔧 Adicionando coluna escola_id à tabela alunos...")
+                try:
+                    cur.execute("""
+                        ALTER TABLE alunos ADD COLUMN escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE
+                    """)
+                    print("✅ Coluna escola_id adicionada com sucesso!")
+                except Exception as e:
+                    print(f"⚠️ Erro ao adicionar coluna escola_id: {e}")
         
         # Inserir usuários fixos
         for username, dados in USUARIOS_FIXOS.items():
@@ -3610,6 +3653,7 @@ def init_db():
                     INSERT INTO usuarios (nome, username, senha_hash, perfil, ativo)
                     VALUES (%s, %s, %s, %s, TRUE)
                 """, (dados['nome'], username, dados['senha'], dados['perfil']))
+                print(f"✅ Usuário {username} criado com sucesso!")
         
         conn.commit()
         cur.close()
@@ -3618,8 +3662,6 @@ def init_db():
     except Exception as e:
         print(f"❌ Erro ao inicializar banco: {e}")
         traceback.print_exc()
-
-init_db()
 
 # ============================================
 # INICIALIZAÇÃO DO SERVIDOR
