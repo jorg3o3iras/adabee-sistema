@@ -202,6 +202,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             'respostas_detectadas': [],
             'gabarito': gabarito,
             'correcoes': [],
+            'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
             'modo': 'erro',
@@ -276,16 +277,35 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 
                 acertos = 0
                 correcoes = []
+                questoes_status = []
+                
                 for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
                     gab_normalizado = str(gab).strip().upper() if gab else ''
                     is_correto = resp == gab_normalizado if resp and gab_normalizado else False
+                    
                     if is_correto:
                         acertos += 1
+                        status_msg = 'ADQUIRIU HABILIDADE'
+                    elif resp:
+                        status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+                    else:
+                        status_msg = 'NÃO RESPONDEU'
+                    
                     correcoes.append({
                         'questao': i+1, 
                         'resposta': resp, 
                         'gabarito': gab_normalizado, 
-                        'correto': is_correto
+                        'correto': is_correto,
+                        'status': status_msg
+                    })
+                    
+                    questoes_status.append({
+                        'numero': i+1,
+                        'resposta': resp or '—',
+                        'gabarito': gab_normalizado or '—',
+                        'acertou': is_correto,
+                        'status': status_msg,
+                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
                     })
                 
                 valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
@@ -305,6 +325,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                     'respostas_detectadas': respostas_detectadas,
                     'gabarito': gabarito,
                     'correcoes': correcoes,
+                    'questoes_status': questoes_status,
                     'tipo_questoes': str(tipo_questoes),
                     'confianca': confianca,
                     'modo': 'gemini',
@@ -341,6 +362,7 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             'respostas_detectadas': [],
             'gabarito': gabarito,
             'correcoes': [],
+            'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
             'modo': 'erro',
@@ -420,16 +442,35 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 
                 acertos = 0
                 correcoes = []
+                questoes_status = []
+                
                 for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
                     gab_normalizado = str(gab).strip().upper() if gab else ''
                     is_correto = resp == gab_normalizado if resp and gab_normalizado else False
+                    
                     if is_correto:
                         acertos += 1
+                        status_msg = 'ADQUIRIU HABILIDADE'
+                    elif resp:
+                        status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+                    else:
+                        status_msg = 'NÃO RESPONDEU'
+                    
                     correcoes.append({
                         'questao': i+1, 
                         'resposta': resp, 
                         'gabarito': gab_normalizado, 
-                        'correto': is_correto
+                        'correto': is_correto,
+                        'status': status_msg
+                    })
+                    
+                    questoes_status.append({
+                        'numero': i+1,
+                        'resposta': resp or '—',
+                        'gabarito': gab_normalizado or '—',
+                        'acertou': is_correto,
+                        'status': status_msg,
+                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
                     })
                 
                 valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
@@ -449,6 +490,7 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                     'respostas_detectadas': respostas_detectadas,
                     'gabarito': gabarito,
                     'correcoes': correcoes,
+                    'questoes_status': questoes_status,
                     'tipo_questoes': str(tipo_questoes),
                     'confianca': confianca,
                     'modo': 'relay',
@@ -489,11 +531,35 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         
         acertos = 0
         correcoes = []
+        questoes_status = []
+        
         for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
             is_correto = resp == gab if resp else False
+            
             if is_correto:
                 acertos += 1
-            correcoes.append({'questao': i+1, 'resposta': resp, 'gabarito': gab, 'correto': is_correto})
+                status_msg = 'ADQUIRIU HABILIDADE'
+            elif resp:
+                status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+            else:
+                status_msg = 'NÃO RESPONDEU'
+            
+            correcoes.append({
+                'questao': i+1, 
+                'resposta': resp, 
+                'gabarito': gab, 
+                'correto': is_correto,
+                'status': status_msg
+            })
+            
+            questoes_status.append({
+                'numero': i+1,
+                'resposta': resp or '—',
+                'gabarito': gab or '—',
+                'acertou': is_correto,
+                'status': status_msg,
+                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
+            })
         
         valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
         nota = acertos * valor_por_questao
@@ -512,6 +578,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'respostas_detectadas': respostas_detectadas,
             'gabarito': gabarito,
             'correcoes': correcoes,
+            'questoes_status': questoes_status,
             'tipo_questoes': str(tipo_questoes),
             'confianca': 70,
             'modo': 'simulado',
@@ -532,6 +599,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'respostas_detectadas': [],
             'gabarito': gabarito,
             'correcoes': [],
+            'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
             'modo': 'erro',
@@ -547,10 +615,8 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
 def after_request(response):
     """Garante que todas as respostas da API sejam JSON"""
     if request.path.startswith('/api/') and response.status_code != 200:
-        # Se não for JSON, converte para JSON
         if not response.headers.get('Content-Type', '').startswith('application/json'):
             try:
-                # Se for HTML, converte para JSON de erro
                 if 'text/html' in response.headers.get('Content-Type', ''):
                     response = jsonify({
                         'erro': 'Erro interno do servidor',
@@ -731,6 +797,8 @@ def corrigir_com_ia():
                 if conn:
                     cur = conn.cursor()
                     
+                    questoes_status_json = json.dumps(resultado.get('questoes_status', []))
+                    
                     cur.execute("""
                         SELECT id FROM historico 
                         WHERE prova_id = %s AND aluno_id = %s
@@ -747,6 +815,7 @@ def corrigir_com_ia():
                                 tipo_correcao = %s,
                                 disciplina = %s,
                                 tipo_avaliacao = %s,
+                                questoes_status = %s::jsonb,
                                 data_correcao = CURRENT_TIMESTAMP
                             WHERE prova_id = %s AND aluno_id = %s
                         """, (
@@ -757,6 +826,7 @@ def corrigir_com_ia():
                             resultado.get('modo', 'ia'),
                             disciplina,
                             tipo_avaliacao,
+                            questoes_status_json,
                             prova_id, 
                             aluno_id
                         ))
@@ -765,8 +835,8 @@ def corrigir_com_ia():
                         cur.execute("""
                             INSERT INTO historico 
                             (prova_id, aluno_id, respostas, acertos, nota, total, 
-                             tipo_correcao, disciplina, tipo_avaliacao)
-                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s)
+                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
+                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb)
                         """, (
                             prova_id, 
                             aluno_id, 
@@ -776,7 +846,8 @@ def corrigir_com_ia():
                             resultado.get('total', 0), 
                             resultado.get('modo', 'ia'),
                             disciplina,
-                            tipo_avaliacao
+                            tipo_avaliacao,
+                            questoes_status_json
                         ))
                         print("✅ Histórico salvo com sucesso")
                     
@@ -827,11 +898,12 @@ def corrigir_manual():
         
         cur = conn.cursor()
         
-        cur.execute("SELECT disciplina, titulo, serie FROM provas WHERE id = %s", (prova_id,))
+        cur.execute("SELECT disciplina, titulo, serie, gabarito FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
         disciplina = prova[0] if prova else ''
         prova_titulo = prova[1] if prova else ''
         serie_prova = prova[2] if prova else ''
+        gabarito = prova[3] if prova else []
         
         cur.execute("""
             SELECT t.serie FROM alunos a
@@ -842,6 +914,30 @@ def corrigir_manual():
         serie = serie_result[0] if serie_result else serie_prova or '1º Ano'
         
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
+        
+        questoes_status = []
+        for i in range(total):
+            resp = respostas[i] if i < len(respostas) else ''
+            gab = gabarito[i] if i < len(gabarito) else ''
+            is_correto = resp and gab and resp.upper() == gab.upper()
+            
+            if is_correto:
+                status_msg = 'ADQUIRIU HABILIDADE'
+            elif resp:
+                status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+            else:
+                status_msg = 'NÃO RESPONDEU'
+            
+            questoes_status.append({
+                'numero': i+1,
+                'resposta': resp or '—',
+                'gabarito': gab or '—',
+                'acertou': is_correto,
+                'status': status_msg,
+                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
+            })
+        
+        questoes_status_json = json.dumps(questoes_status)
         
         cur.execute("""
             SELECT id FROM historico 
@@ -859,18 +955,19 @@ def corrigir_manual():
                     tipo_correcao = 'manual',
                     disciplina = %s,
                     tipo_avaliacao = %s,
+                    questoes_status = %s::jsonb,
                     data_correcao = CURRENT_TIMESTAMP
                 WHERE prova_id = %s AND aluno_id = %s
-            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, prova_id, aluno_id))
+            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, prova_id, aluno_id))
             result_id = existe[0]
         else:
             cur.execute("""
                 INSERT INTO historico 
                 (prova_id, aluno_id, respostas, acertos, nota, total, 
-                 tipo_correcao, disciplina, tipo_avaliacao)
-                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s) 
+                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
+                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s, %s::jsonb) 
                 RETURNING id
-            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao))
+            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json))
             result = cur.fetchone()
             result_id = result[0]
         
@@ -887,7 +984,8 @@ def corrigir_manual():
             'mensagem': 'Correção manual salva com sucesso',
             'conceito': conceito,
             'porcentagem': porcentagem,
-            'tipo_avaliacao': tipo_avaliacao
+            'tipo_avaliacao': tipo_avaliacao,
+            'questoes_status': questoes_status
         })
     except Exception as e:
         print(f"❌ Erro na correção manual: {e}")
@@ -1326,7 +1424,8 @@ def historico_agrupado():
                     'serie': item.get('serie', ''),
                     'turma': item.get('turma_nome', ''),
                     'escola': item.get('escola_nome', ''),
-                    'avaliacoes': {}
+                    'avaliacoes': {},
+                    'questoes_por_disciplina': {}
                 }
             
             disciplina = item.get('disciplina', '')
@@ -1334,13 +1433,21 @@ def historico_agrupado():
             serie_aluno = item.get('serie', '')
             tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
             
+            questoes_status = item.get('questoes_status', [])
+            if isinstance(questoes_status, str):
+                try:
+                    questoes_status = json.loads(questoes_status)
+                except:
+                    questoes_status = []
+            
             alunos_map[aluno_key]['avaliacoes'][tipo] = {
                 'nota': float(item.get('nota', 0)),
                 'acertos': int(item.get('acertos', 0)),
                 'total': int(item.get('total_questoes', 20)),
                 'prova': prova_titulo,
                 'data': item.get('data_correcao', ''),
-                'disciplina': disciplina
+                'disciplina': disciplina,
+                'questoes_status': questoes_status
             }
         
         resultado = []
@@ -1363,9 +1470,9 @@ def historico_agrupado():
                 'serie': dados['serie'],
                 'turma': dados['turma'],
                 'escola': dados['escola'],
-                'portugues': avaliacoes.get('Portugues', {'nota': 0, 'acertos': 0, 'total': 20}),
-                'matematica': avaliacoes.get('Matematica', {'nota': 0, 'acertos': 0, 'total': 20}),
-                'producao': avaliacoes.get('Producao', {'nota': 0, 'acertos': 0, 'total': 20}),
+                'portugues': avaliacoes.get('Portugues', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
+                'matematica': avaliacoes.get('Matematica', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
+                'producao': avaliacoes.get('Producao', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
                 'soma': round(soma, 1),
                 'media': round(media, 1)
             })
@@ -2773,7 +2880,9 @@ def excluir_usuario(id):
         
     except Exception as e:
         print(f"Erro ao excluir usuário: {e}")
-        return jsonify({'erro': 'Erro ao excluir usuário'}), 500# ============================================
+        return jsonify({'erro': 'Erro ao excluir usuário'}), 500
+
+# ============================================
 # ROTA DE CORREÇÃO DE TEXTO - DELETE
 # ============================================
 
@@ -3454,6 +3563,7 @@ def init_db():
                     tipo_correcao TEXT DEFAULT 'ia',
                     disciplina TEXT,
                     tipo_avaliacao TEXT,
+                    questoes_status JSONB DEFAULT '[]',
                     data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -3495,6 +3605,21 @@ def init_db():
             cur.execute("""
                 SELECT column_name 
                 FROM information_schema.columns 
+                WHERE table_name = 'historico' AND column_name = 'questoes_status'
+            """)
+            if not cur.fetchone():
+                print("🔧 Adicionando coluna questoes_status à tabela historico...")
+                try:
+                    cur.execute("""
+                        ALTER TABLE historico ADD COLUMN questoes_status JSONB DEFAULT '[]'
+                    """)
+                    print("✅ Coluna questoes_status adicionada com sucesso!")
+                except Exception as e:
+                    print(f"⚠️ Erro ao adicionar coluna questoes_status: {e}")
+            
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
                 WHERE table_name = 'alunos' AND column_name = 'escola_id'
             """)
             if not cur.fetchone():
@@ -3507,7 +3632,6 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna escola_id: {e}")
         
-        # Inserir usuários fixos
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
