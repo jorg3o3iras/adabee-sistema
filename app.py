@@ -21,7 +21,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+# Configurar CORS para aceitar requisições de qualquer origem
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ============================================
 # CONFIGURAÇÃO GEMINI
@@ -539,67 +540,94 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         }
 
 # ============================================
+# MIDDLEWARE PARA GARANTIR RESPOSTAS JSON
+# ============================================
+
+@app.after_request
+def after_request(response):
+    """Garante que todas as respostas da API sejam JSON"""
+    if request.path.startswith('/api/') and response.status_code != 200:
+        # Se não for JSON, converte para JSON
+        if not response.headers.get('Content-Type', '').startswith('application/json'):
+            try:
+                # Se for HTML, converte para JSON de erro
+                if 'text/html' in response.headers.get('Content-Type', ''):
+                    response = jsonify({
+                        'erro': 'Erro interno do servidor',
+                        'status': response.status_code,
+                        'detalhes': 'A requisição retornou HTML em vez de JSON'
+                    })
+                    response.status_code = 500
+            except:
+                pass
+    return response
+
+# ============================================
 # ROTA DE LOGIN
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    username = data.get('username')
-    senha = data.get('senha')
-    
-    if not username or not senha:
-        return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
-    
-    print(f"🔑 Tentativa de login: {username}")
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT id, nome, username, senha_hash, perfil, ativo 
-                FROM usuarios 
-                WHERE username = %s
-            """, (username,))
-            usuario = cur.fetchone()
-            cur.close()
-            conn.close()
-            
-            if usuario:
-                print(f"📌 Usuário encontrado no banco: {usuario['username']}")
-                print(f"📌 Ativo: {usuario['ativo']}")
+    try:
+        data = request.json
+        username = data.get('username')
+        senha = data.get('senha')
+        
+        if not username or not senha:
+            return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
+        
+        print(f"🔑 Tentativa de login: {username}")
+        
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                cur.execute("""
+                    SELECT id, nome, username, senha_hash, perfil, ativo 
+                    FROM usuarios 
+                    WHERE username = %s
+                """, (username,))
+                usuario = cur.fetchone()
+                cur.close()
+                conn.close()
                 
-                if usuario['senha_hash'] == senha and usuario['ativo'] == True:
-                    print(f"✅ Login via banco: {username}")
-                    return jsonify({
-                        'sucesso': True,
-                        'perfil': usuario['perfil'],
-                        'usuario': usuario['username'],
-                        'nome': usuario['nome']
-                    })
+                if usuario:
+                    print(f"📌 Usuário encontrado no banco: {usuario['username']}")
+                    print(f"📌 Ativo: {usuario['ativo']}")
+                    
+                    if usuario['senha_hash'] == senha and usuario['ativo'] == True:
+                        print(f"✅ Login via banco: {username}")
+                        return jsonify({
+                            'sucesso': True,
+                            'perfil': usuario['perfil'],
+                            'usuario': usuario['username'],
+                            'nome': usuario['nome']
+                        })
+                    else:
+                        print(f"❌ Senha incorreta ou usuário inativo")
                 else:
-                    print(f"❌ Senha incorreta ou usuário inativo")
-            else:
-                print(f"❌ Usuário não encontrado no banco: {username}")
-                
-        except Exception as e:
-            print(f"❌ Erro no banco: {e}")
-            traceback.print_exc()
-    
-    if username in USUARIOS_FIXOS:
-        dados = USUARIOS_FIXOS[username]
-        if dados['senha'] == senha:
-            print(f"✅ Login via usuário fixo: {username}")
-            return jsonify({
-                'sucesso': True,
-                'perfil': dados['perfil'],
-                'usuario': username,
-                'nome': dados['nome']
-            })
-    
-    print(f"❌ Login falhou para: {username}")
-    return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
+                    print(f"❌ Usuário não encontrado no banco: {username}")
+                    
+            except Exception as e:
+                print(f"❌ Erro no banco: {e}")
+                traceback.print_exc()
+        
+        if username in USUARIOS_FIXOS:
+            dados = USUARIOS_FIXOS[username]
+            if dados['senha'] == senha:
+                print(f"✅ Login via usuário fixo: {username}")
+                return jsonify({
+                    'sucesso': True,
+                    'perfil': dados['perfil'],
+                    'usuario': username,
+                    'nome': dados['nome']
+                })
+        
+        print(f"❌ Login falhou para: {username}")
+        return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
+    except Exception as e:
+        print(f"❌ Erro no login: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTA DE CORREÇÃO COM IA
@@ -1621,7 +1649,6 @@ def excluir_escola(id):
             alunos_count = cur.fetchone()[0]
             total_alunos += alunos_count
             
-            # CORRIGIDO: usar serie em vez de turma_id
             cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
             turma_serie = cur.fetchone()
             if turma_serie:
@@ -1745,7 +1772,7 @@ def excluir_escola_completa(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO COM EXCLUSÃO EM CASCATA) - CORRIGIDA
+# ROTA DE TURMAS (CRUD COMPLETO COM EXCLUSÃO EM CASCATA)
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2020,15 +2047,12 @@ def excluir_turma(id):
         turma_nome = turma[1]
         turma_serie = turma[2]
         
-        # Contar alunos da turma
         cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
         
-        # CORRIGIDO: Contar provas pela série (não por turma_id)
         cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie,))
         total_provas = cur.fetchone()[0]
         
-        # Contar históricos de alunos da turma
         cur.execute("""
             SELECT COUNT(*) FROM historico h
             JOIN alunos a ON h.aluno_id = a.id
@@ -2036,23 +2060,15 @@ def excluir_turma(id):
         """, (turma_id,))
         total_historicos = cur.fetchone()[0]
         
-        # Pegar IDs dos alunos para excluir históricos
         cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (turma_id,))
         alunos_ids = [row[0] for row in cur.fetchall()]
         
         if alunos_ids:
-            # Excluir históricos dos alunos
             cur.execute("DELETE FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
-            # Excluir correções de texto dos alunos
             cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
         
-        # Excluir alunos
         cur.execute("DELETE FROM alunos WHERE turma_id = %s", (turma_id,))
-        
-        # CORRIGIDO: Excluir provas pela série
         cur.execute("DELETE FROM provas WHERE serie = %s", (turma_serie,))
-        
-        # Excluir a turma
         cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
         
         conn.commit()
@@ -2071,89 +2087,6 @@ def excluir_turma(id):
         
     except Exception as e:
         print(f"❌ Erro ao excluir turma: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE EXCLUSÃO DE TURMA COMPLETA - CORRIGIDA
-# ============================================
-
-@app.route('/api/turmas/<int:id>/completo', methods=['DELETE'])
-def excluir_turma_completa(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-    
-    try:
-        cur = conn.cursor()
-        
-        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
-        turma = cur.fetchone()
-        if not turma:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-        
-        turma_id = turma[0]
-        turma_nome = turma[1]
-        turma_serie = turma[2]
-        
-        # Contar alunos da turma
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
-        total_alunos = cur.fetchone()[0]
-        
-        # Pegar IDs dos alunos
-        cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (turma_id,))
-        alunos_ids = [row[0] for row in cur.fetchall()]
-        
-        total_historicos = 0
-        total_correcoes_texto = 0
-        if alunos_ids:
-            cur.execute("SELECT COUNT(*) FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
-            total_historicos = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
-            total_correcoes_texto = cur.fetchone()[0]
-        
-        # CORRIGIDO: Contar provas pela série
-        cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie,))
-        total_provas = cur.fetchone()[0]
-        
-        # Contar históricos de provas (se houver provas da série)
-        cur.execute("""
-            SELECT COUNT(*) FROM historico h
-            JOIN provas p ON h.prova_id = p.id
-            WHERE p.serie = %s
-        """, (turma_serie,))
-        total_historicos_provas = cur.fetchone()[0]
-        
-        # Excluir dados
-        if alunos_ids:
-            cur.execute("DELETE FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
-            cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
-        
-        cur.execute("DELETE FROM alunos WHERE turma_id = %s", (turma_id,))
-        cur.execute("DELETE FROM provas WHERE serie = %s", (turma_serie,))
-        cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        total_historicos_total = total_historicos + total_historicos_provas
-        
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Turma "{turma_nome}" e todos os dados vinculados excluídos com sucesso!',
-            'detalhes': {
-                'alunos_excluidos': total_alunos,
-                'provas_excluidas': total_provas,
-                'historicos_excluidos': total_historicos_total,
-                'correcoes_texto_excluidas': total_correcoes_texto
-            }
-        })
-        
-    except Exception as e:
-        print(f"❌ Erro ao excluir turma completa: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
@@ -2253,14 +2186,12 @@ def criar_aluno():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Verificar se a escola existe
         cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
         if not cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Escola não encontrada'}), 404
         
-        # Verificar se a turma existe
         cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
         if not cur.fetchone():
             cur.close()
@@ -2361,14 +2292,12 @@ def editar_aluno(id):
             conn.close()
             return jsonify({'erro': 'Aluno não encontrado'}), 404
         
-        # Verificar se a escola existe
         cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
         if not cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Escola não encontrada'}), 404
         
-        # Verificar se a turma existe
         cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
         if not cur.fetchone():
             cur.close()
@@ -2453,56 +2382,6 @@ def excluir_aluno(id):
         
     except Exception as e:
         print(f"❌ Erro ao excluir aluno: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE EXCLUSÃO DE ALUNO COM TODOS OS DADOS VINCULADOS
-# ============================================
-
-@app.route('/api/alunos/<int:id>/completo', methods=['DELETE'])
-def excluir_aluno_completo(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-    
-    try:
-        cur = conn.cursor()
-        
-        cur.execute("SELECT id, nome FROM alunos WHERE id = %s", (id,))
-        aluno = cur.fetchone()
-        if not aluno:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-        
-        aluno_nome = aluno[1]
-        
-        cur.execute("SELECT COUNT(*) FROM historico WHERE aluno_id = %s", (id,))
-        total_historicos = cur.fetchone()[0]
-        
-        cur.execute("SELECT COUNT(*) FROM correcoes_texto WHERE aluno_id = %s", (id,))
-        total_textos = cur.fetchone()[0]
-        
-        cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Aluno "{aluno_nome}" excluído com sucesso!',
-            'detalhes': {
-                'historicos_excluidos': total_historicos,
-                'correcoes_texto_excluidas': total_textos
-            }
-        })
-        
-    except Exception as e:
-        print(f"❌ Erro ao excluir aluno completo: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
@@ -2894,9 +2773,7 @@ def excluir_usuario(id):
         
     except Exception as e:
         print(f"Erro ao excluir usuário: {e}")
-        return jsonify({'erro': 'Erro ao excluir usuário'}), 500
-
-# ============================================
+        return jsonify({'erro': 'Erro ao excluir usuário'}), 500# ============================================
 # ROTA DE CORREÇÃO DE TEXTO - DELETE
 # ============================================
 
@@ -2959,10 +2836,6 @@ def dashboard():
             print(f"Erro no dashboard: {e}")
             traceback.print_exc()
     return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
-
-# ============================================
-# ROTA DE DASHBOARD - DESEMPENHO (CORRIGIDA)
-# ============================================
 
 @app.route('/api/dashboard/desempenho', methods=['GET'])
 def dashboard_desempenho():
@@ -3035,7 +2908,6 @@ def dashboard_conceito():
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # CORREÇÃO: Consulta mais robusta com tratamento de NULL
         cur.execute("""
             SELECT 
                 a.id,
@@ -3058,7 +2930,6 @@ def dashboard_conceito():
         
         resultado = []
         for aluno in alunos:
-            # Garantir que os valores sejam números
             media_nota = float(aluno['media_nota'] or 0)
             total_correcoes = int(aluno['total_correcoes'] or 0)
             
@@ -3462,7 +3333,7 @@ def serve_static(path):
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
 
 # ============================================
-# ROTA DE FAVICON - CORRIGIDA
+# ROTA DE FAVICON
 # ============================================
 
 @app.route('/favicon.ico')
@@ -3470,7 +3341,7 @@ def favicon():
     try:
         return send_from_directory('.', 'favicon.ico')
     except:
-        return '', 204  # No Content
+        return '', 204
 
 # ============================================
 # ROTA DE SAÚDE
@@ -3499,7 +3370,6 @@ def init_db():
     try:
         cur = conn.cursor()
         
-        # Verificar se as tabelas existem
         cur.execute("""
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
@@ -3511,7 +3381,6 @@ def init_db():
         if not tabela_existe:
             print("🔧 Criando tabelas do banco de dados...")
             
-            # Tabela escolas
             cur.execute("""
                 CREATE TABLE escolas (
                     id SERIAL PRIMARY KEY,
@@ -3525,7 +3394,6 @@ def init_db():
                 )
             """)
             
-            # Tabela turmas
             cur.execute("""
                 CREATE TABLE turmas (
                     id SERIAL PRIMARY KEY,
@@ -3540,7 +3408,6 @@ def init_db():
                 )
             """)
             
-            # Tabela alunos (COM escola_id)
             cur.execute("""
                 CREATE TABLE alunos (
                     id SERIAL PRIMARY KEY,
@@ -3559,7 +3426,6 @@ def init_db():
                 )
             """)
             
-            # Tabela provas
             cur.execute("""
                 CREATE TABLE provas (
                     id SERIAL PRIMARY KEY,
@@ -3576,7 +3442,6 @@ def init_db():
                 )
             """)
             
-            # Tabela historico
             cur.execute("""
                 CREATE TABLE historico (
                     id SERIAL PRIMARY KEY,
@@ -3593,7 +3458,6 @@ def init_db():
                 )
             """)
             
-            # Tabela usuarios
             cur.execute("""
                 CREATE TABLE usuarios (
                     id SERIAL PRIMARY KEY,
@@ -3607,7 +3471,6 @@ def init_db():
                 )
             """)
             
-            # Tabela correcoes_texto
             cur.execute("""
                 CREATE TABLE correcoes_texto (
                     id SERIAL PRIMARY KEY,
@@ -3629,7 +3492,6 @@ def init_db():
         else:
             print("📌 Tabelas já existem, verificando colunas...")
             
-            # Verificar se a coluna escola_id existe na tabela alunos
             cur.execute("""
                 SELECT column_name 
                 FROM information_schema.columns 
