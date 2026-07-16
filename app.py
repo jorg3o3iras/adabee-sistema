@@ -152,13 +152,13 @@ def calcular_conceito(porcentagem):
         }
 
 # ============================================
-# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA)
+# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA COM CH E CN)
 # ============================================
 
 def identificar_disciplina(prova_titulo, disciplina, serie):
     """
     Identifica o tipo de avaliação com base no título, disciplina e série
-    Retorna: 'Portugues', 'Matematica', 'Producao' ou 'Geral'
+    Retorna: 'Portugues', 'Matematica', 'Producao', 'CH', 'CN' ou 'Geral'
     """
     # PRIMEIRO: verificar a disciplina informada (mais confiável)
     disciplina_lower = (disciplina or '').lower().strip()
@@ -169,6 +169,10 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
         return 'Matematica'
     if 'produção' in disciplina_lower or 'producao' in disciplina_lower or 'texto' in disciplina_lower or 'redação' in disciplina_lower or 'redacao' in disciplina_lower:
         return 'Producao'
+    if 'ciências humanas' in disciplina_lower or 'ch' in disciplina_lower or 'ciencias humanas' in disciplina_lower:
+        return 'CH'
+    if 'ciências naturais' in disciplina_lower or 'cn' in disciplina_lower or 'ciencias naturais' in disciplina_lower:
+        return 'CN'
     
     # SEGUNDO: verificar o título da prova
     texto = f"{prova_titulo or ''}".lower()
@@ -179,6 +183,10 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
         return 'Matematica'
     if 'produção' in texto or 'producao' in texto or 'texto' in texto or 'redação' in texto or 'redacao' in texto:
         return 'Producao'
+    if 'ciências humanas' in texto or 'ch' in texto or 'ciencias humanas' in texto:
+        return 'CH'
+    if 'ciências naturais' in texto or 'cn' in texto or 'ciencias naturais' in texto:
+        return 'CN'
     
     # TERCEIRO: fallback baseado na série
     if serie:
@@ -1274,7 +1282,7 @@ def listar_correcoes_texto():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO - VERSÃO COM 3 AVALIAÇÕES SEPARADAS
+# ROTA DE HISTÓRICO - VERSÃO COM 5 AVALIAÇÕES (INCLUINDO CH E CN)
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -1381,7 +1389,7 @@ def listar_historico():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (3 AVALIAÇÕES)
+# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (5 AVALIAÇÕES - COM CH E CN)
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
@@ -1504,15 +1512,16 @@ def historico_agrupado():
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
             
+            # Agora com 5 disciplinas: Portugues, Matematica, Producao, CH, CN
             notas = []
-            for tipo in ['Portugues', 'Matematica', 'Producao']:
+            for tipo in ['Portugues', 'Matematica', 'Producao', 'CH', 'CN']:
                 if tipo in avaliacoes:
                     notas.append(avaliacoes[tipo]['nota'])
                 else:
                     notas.append(0)
             
             soma = sum(notas)
-            media = soma / 3 if notas else 0
+            media = soma / 5 if notas else 0
             
             resultado.append({
                 'aluno_id': dados['aluno_id'],
@@ -1523,6 +1532,8 @@ def historico_agrupado():
                 'portugues': avaliacoes.get('Portugues', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
                 'matematica': avaliacoes.get('Matematica', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
                 'producao': avaliacoes.get('Producao', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
+                'ch': avaliacoes.get('CH', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
+                'cn': avaliacoes.get('CN', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
                 'soma': round(soma, 1),
                 'media': round(media, 1)
             })
@@ -3247,6 +3258,13 @@ if __name__ == '__main__':
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
+    print("📋 Disciplinas suportadas:")
+    print("   - Português")
+    print("   - Matemática")
+    print("   - Produção de Texto")
+    print("   - Ciências Humanas (CH) - NOVA")
+    print("   - Ciências Naturais (CN) - NOVA")
+    print("=" * 60)
     print("📋 Endpoints disponíveis:")
     print("   - /health - Verificar status")
     print("   - /api/login - Login")
@@ -3263,7 +3281,7 @@ if __name__ == '__main__':
     print("   - /api/provas - Gerenciar provas")
     print("   - /api/gabaritos - Gerenciar gabaritos")
     print("   - /api/historico - Histórico de correções")
-    print("   - /api/historico/agrupado - Histórico agrupado por aluno (3 avaliações)")
+    print("   - /api/historico/agrupado - Histórico agrupado por aluno (5 avaliações)")
     print("   - /api/dashboard - Dados do dashboard")
     print("   - /api/dashboard/Conceito - Dados de conceitos para dashboard")
     print("   - /api/dashboard/turmas_alunos - Turmas com alunos")
