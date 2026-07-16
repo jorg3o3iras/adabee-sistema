@@ -25,6 +25,10 @@
             --orange: #f59e0b;
             --red: #ef4444;
             --purple: #8b5cf6;
+            --pink: #ec4899;
+            --teal: #14b8a6;
+            --amber: #f59e0b;
+            --lime: #84cc16;
             --grad-blue: linear-gradient(135deg, #3b82f6, #2563eb);
             --shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
@@ -143,6 +147,10 @@
         .btn-red:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(239,68,68,.35); }
         .btn-orange { background:var(--orange); color:#fff; }
         .btn-orange:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(245,158,11,.35); }
+        .btn-pink { background:var(--pink); color:#fff; }
+        .btn-pink:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(236,72,153,.35); }
+        .btn-teal { background:var(--teal); color:#fff; }
+        .btn-teal:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(20,184,166,.35); }
         .btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--text2); }
         .btn-outline:hover { border-color:var(--text); color:var(--text); background:rgba(255,255,255,0.04); }
         .btn-ghost { background:transparent; color:var(--text2); }
@@ -162,6 +170,8 @@
         .badge-purple { background:rgba(139,92,246,0.15); color:var(--purple); }
         .badge-cyan { background:rgba(6,182,212,0.15); color:var(--cyan); }
         .badge-gray { background:rgba(148,163,184,0.12); color:var(--text3); }
+        .badge-pink { background:rgba(236,72,153,0.15); color:var(--pink); }
+        .badge-teal { background:rgba(20,184,166,0.15); color:var(--teal); }
         .badge-conceito-inicial { background:rgba(239,68,68,0.2); color:#ef4444; }
         .badge-conceito-basico { background:rgba(245,158,11,0.2); color:#f59e0b; }
         .badge-conceito-proficiente { background:rgba(59,130,246,0.2); color:#3b82f6; }
@@ -467,6 +477,8 @@
         .pf-orange { background:linear-gradient(90deg,var(--orange),#d97706); }
         .pf-purple { background:linear-gradient(90deg,var(--purple),#7c3aed); }
         .pf-blue { background:linear-gradient(90deg,var(--blue),#2563eb); }
+        .pf-pink { background:linear-gradient(90deg,var(--pink),#be185d); }
+        .pf-teal { background:linear-gradient(90deg,var(--teal),#0d9488); }
 
         .del-modal { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; }
         .del-modal.show { display:flex; }
@@ -532,6 +544,8 @@
         .tag-portugues { color: #3b82f6; }
         .tag-matematica { color: #10b981; }
         .tag-producao { color: #8b5cf6; }
+        .tag-ch { color: #f59e0b; }
+        .tag-cn { color: #14b8a6; }
 
         .col-disciplina {
             min-width: 75px;
@@ -583,13 +597,15 @@
         .tag-portugues-sm { color: #3b82f6; }
         .tag-matematica-sm { color: #10b981; }
         .tag-producao-sm { color: #8b5cf6; }
+        .tag-ch-sm { color: #f59e0b; }
+        .tag-cn-sm { color: #14b8a6; }
 
         /* ============================================
            ESTILOS PARA O CARD DESEMPENHO POR HABILIDADES
            ============================================ */
         .habilidades-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 16px;
             margin-top: 12px;
         }
@@ -720,7 +736,7 @@
 
         .desempenho-disciplinas {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
             gap: 16px;
             margin-top: 16px;
         }
@@ -877,7 +893,7 @@
                 flex-wrap: wrap;
             }
             .habilidades-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
             }
             .habilidade-card {
                 max-height: 350px;
@@ -886,7 +902,7 @@
                 grid-template-columns: 1fr 1fr;
             }
             .desempenho-disciplinas {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
             }
             .desempenho-disciplina .questoes-grid {
                 grid-template-columns: repeat(5, 1fr);
@@ -952,6 +968,9 @@
                 font-size: 10px;
             }
             .desempenho-resumo {
+                grid-template-columns: 1fr;
+            }
+            .desempenho-disciplinas {
                 grid-template-columns: 1fr;
             }
             .desempenho-disciplina .questoes-grid {
@@ -1031,6 +1050,8 @@
             .badge-purple { border-color: #6f42c1 !important; background: #e8d4ff !important; color: #4a148c !important; }
             .badge-blue { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
             .badge-gray { border-color: #6c757d !important; background: #e9ecef !important; color: #495057 !important; }
+            .badge-pink { border-color: #ec4899 !important; background: #fce4ec !important; color: #880e4f !important; }
+            .badge-teal { border-color: #14b8a6 !important; background: #d4f4f0 !important; color: #0d6e5a !important; }
             .badge-conceito-inicial { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
             .badge-conceito-basico { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
             .badge-conceito-proficiente { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
@@ -1045,6 +1066,8 @@
             .pf-orange { background: #fd7e14 !important; }
             .pf-purple { background: #6f42c1 !important; }
             .pf-blue { background: #007bff !important; }
+            .pf-pink { background: #ec4899 !important; }
+            .pf-teal { background: #14b8a6 !important; }
             .chart-bars { height: 80px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
             .chart-bar-val { font-size: 7pt !important; color: #000000 !important; }
             .chart-bar-lbl { font-size: 6pt !important; color: #555555 !important; }
@@ -1153,7 +1176,7 @@
                         <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
                     </div>
                     <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
-                        <span class="sb-ico"></span> Texto com IA <span class="sb-badge">IA</span>
+                        <span class="sb-ico">📝</span> Texto com IA <span class="sb-badge">IA</span>
                     </div>
                     <div class="sb-item" onclick="abrirCamera()">
                         <span class="sb-ico">📱</span> Câmera do Celular
@@ -1191,7 +1214,7 @@
                         <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
                     </div>
                     <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
-                        <span class="sb-ico"></span> Texto com IA <span class="sb-badge">IA</span>
+                        <span class="sb-ico">📝</span> Texto com IA <span class="sb-badge">IA</span>
                     </div>
                     <div class="sb-item" onclick="abrirCamera()">
                         <span class="sb-ico">📱</span> Câmera do Celular
@@ -1254,14 +1277,14 @@
                     <div class="ai-hero-text"><h3>Ferramentas de Inteligência Artificial</h3><p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p></div>
                     <div class="ai-hero-actions">
                         <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-                        <button class="btn btn-outline" onclick="go('correcao-texto')"> Correção de Texto</button>
+                        <button class="btn btn-outline" onclick="go('correcao-texto')">📝 Correção de Texto</button>
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;" class="no-print">
                     <div class="ai-feature-btn afb-purple" onclick="go('corrigir-ia')"><div class="af-ico">🤖</div><div class="af-title">Corrigir com IA</div><div class="af-sub">Detecção automática</div></div>
                     <div class="ai-feature-btn afb-blue" onclick="abrirCamera()"><div class="af-ico">📱</div><div class="af-title">Câmera do Celular</div><div class="af-sub">Scan em tempo real</div></div>
                     <div class="ai-feature-btn afb-green" onclick="abrirArquivo()"><div class="af-ico">📂</div><div class="af-title">Escolher Arquivo</div><div class="af-sub">Imagem do cartão</div></div>
-                    <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico"></div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
+                    <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">📝</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
                 </div>
                 <div class="g2">
                     <div class="card">
@@ -1388,7 +1411,8 @@
                                 <option value="Matemática">Matemática</option>
                                 <option value="Português">Português</option>
                                 <option value="Produção de Texto">Produção de Texto</option>
-                                <option value="Ciências">Ciências</option>
+                                <option value="Ciências Humanas">Ciências Humanas</option>
+                                <option value="Ciências Naturais">Ciências Naturais</option>
                                 <option value="História">História</option>
                                 <option value="Geografia">Geografia</option>
                                 <option value="Inglês">Inglês</option>
@@ -1529,7 +1553,7 @@
 
             <!-- ========== CORREÇÃO DE TEXTO IA ========== -->
             <div class="page" id="page-correcao-texto">
-                <div class="page-header"><div><div class="page-title"> Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
+                <div class="page-header"><div><div class="page-title">📝 Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
                 <div class="g2 no-print">
                     <div>
                         <div class="card">
@@ -1691,6 +1715,8 @@
                                     <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
                                     <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
                                     <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
                                     <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
                                     <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
                                 </tr>
@@ -1704,10 +1730,16 @@
                                     <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
                                     <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
                                     <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
                                 </tr>
                             </thead>
                             <tbody id="tb-resultados-filtrado">
-                                <tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                                <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1792,7 +1824,7 @@
                     </div>
                     
                     <!-- Acertos e Erros por Disciplina -->
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:16px;">
+                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; margin-bottom:16px;">
                         <!-- Português -->
                         <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
                             <div style="font-size:18px; font-weight:700; color:#3b82f6; margin-bottom:4px;"> Português</div>
@@ -1824,6 +1856,28 @@
                             </div>
                             <div style="font-size:12px; color:var(--text3); margin-top:4px;">
                                 Média: <span id="rel-prod-media" style="font-weight:700; color:#8b5cf6;">0.0</span>
+                            </div>
+                        </div>
+                        <!-- Ciências Humanas (CH) -->
+                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(245,158,11,0.2);">
+                            <div style="font-size:18px; font-weight:700; color:#f59e0b; margin-bottom:4px;"> CH</div>
+                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
+                                <span style="color:var(--green);">✅ Acertos: <span id="rel-ch-acertos">0</span></span>
+                                <span style="color:var(--red);">❌ Erros: <span id="rel-ch-erros">0</span></span>
+                            </div>
+                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
+                                Média: <span id="rel-ch-media" style="font-weight:700; color:#f59e0b;">0.0</span>
+                            </div>
+                        </div>
+                        <!-- Ciências Naturais (CN) -->
+                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(20,184,166,0.2);">
+                            <div style="font-size:18px; font-weight:700; color:#14b8a6; margin-bottom:4px;"> CN</div>
+                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
+                                <span style="color:var(--green);">✅ Acertos: <span id="rel-cn-acertos">0</span></span>
+                                <span style="color:var(--red);">❌ Erros: <span id="rel-cn-erros">0</span></span>
+                            </div>
+                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
+                                Média: <span id="rel-cn-media" style="font-weight:700; color:#14b8a6;">0.0</span>
                             </div>
                         </div>
                     </div>
@@ -1927,6 +1981,8 @@
                                         <th colspan="3" class="historico-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
                                         <th colspan="3" class="historico-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
                                         <th colspan="3" class="historico-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
                                     </tr>
                                     <tr>
                                         <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
@@ -1938,10 +1994,16 @@
                                         <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
                                         <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
                                         <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rel-aluno-historico">
-                                    <tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
+                                    <tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1957,7 +2019,7 @@
                             <div class="habilidades-grid" id="habilidades-grid">
                                 <div class="habilidade-card">
                                     <div class="disciplina-titulo">
-                                        <span class="icone"></span>
+                                        <span class="icone">📖</span>
                                         <span>Português</span>
                                     </div>
                                     <div id="habilidade-portugues">
@@ -1968,7 +2030,7 @@
                                 </div>
                                 <div class="habilidade-card">
                                     <div class="disciplina-titulo">
-                                        <span class="icone"></span>
+                                        <span class="icone">🔢</span>
                                         <span>Matemática</span>
                                     </div>
                                     <div id="habilidade-matematica">
@@ -1979,10 +2041,32 @@
                                 </div>
                                 <div class="habilidade-card">
                                     <div class="disciplina-titulo">
-                                        <span class="icone"></span>
+                                        <span class="icone">✍️</span>
                                         <span>Produção de Texto</span>
                                     </div>
                                     <div id="habilidade-producao">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">🌍</span>
+                                        <span>Ciências Humanas</span>
+                                    </div>
+                                    <div id="habilidade-ch">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">🔬</span>
+                                        <span>Ciências Naturais</span>
+                                    </div>
+                                    <div id="habilidade-cn">
                                         <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
                                             Selecione um aluno para ver o desempenho
                                         </div>
@@ -2001,26 +2085,40 @@
                             <div class="card-title">📊 Conceito</div>
                             <span class="badge badge-purple">Por disciplina</span>
                         </div>
-                        <div id="rel-conceito-disciplinas" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; padding:8px 0;">
+                        <div id="rel-conceito-disciplinas" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; padding:8px 0;">
                             <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;"></div>
+                                <div style="font-size:24px; margin-bottom:6px;">📖</div>
                                 <div style="font-size:13px; font-weight:700; color:#3b82f6;">Português</div>
                                 <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-port-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-port-erros" style="color:var(--red); font-weight:700;">0</span></div>
                                 <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-port-conceito">—</div>
                                 <div style="font-size:10px; color:var(--text3);">Conceito</div>
                             </div>
                             <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(16,185,129,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;"></div>
+                                <div style="font-size:24px; margin-bottom:6px;">🔢</div>
                                 <div style="font-size:13px; font-weight:700; color:#10b981;">Matemática</div>
                                 <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-mat-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-mat-erros" style="color:var(--red); font-weight:700;">0</span></div>
                                 <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-mat-conceito">—</div>
                                 <div style="font-size:10px; color:var(--text3);">Conceito</div>
                             </div>
                             <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(139,92,246,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;"></div>
+                                <div style="font-size:24px; margin-bottom:6px;">✍️</div>
                                 <div style="font-size:13px; font-weight:700; color:#8b5cf6;">Produção</div>
                                 <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-prod-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-prod-erros" style="color:var(--red); font-weight:700;">0</span></div>
                                 <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-prod-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(245,158,11,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">🌍</div>
+                                <div style="font-size:13px; font-weight:700; color:#f59e0b;">CH</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-ch-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-ch-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-ch-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(20,184,166,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">🔬</div>
+                                <div style="font-size:13px; font-weight:700; color:#14b8a6;">CN</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-cn-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-cn-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-cn-conceito">—</div>
                                 <div style="font-size:10px; color:var(--text3);">Conceito</div>
                             </div>
                         </div>
@@ -2191,6 +2289,34 @@
                                 <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
                                 <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
                                 <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Ciências Humanas (CH) -->
+                        <div class="desempenho-disciplina" id="disc-ch">
+                            <div class="header">
+                                <h4>🌍 Ciências Humanas</h4>
+                                <span class="badge badge-orange" id="status-ch">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-ch"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Ciências Naturais (CN) -->
+                        <div class="desempenho-disciplina" id="disc-cn">
+                            <div class="header">
+                                <h4>🔬 Ciências Naturais</h4>
+                                <span class="badge badge-teal" id="status-cn">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-cn"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
                             </div>
                         </div>
                     </div>
@@ -3216,14 +3342,14 @@
                     if (!tbody) return;
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
                         return;
                     }
 
                     const dadosAlunos = Array.isArray(alunos) ? alunos : [];
                     
                     if (dadosAlunos.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                         return;
                     }
 
@@ -3271,6 +3397,8 @@
                         const portugues = getDadosDisciplina(aluno.portugues, 20);
                         const matematica = getDadosDisciplina(aluno.matematica, 20);
                         const producao = getDadosDisciplina(aluno.producao, 20);
+                        const ch = getDadosDisciplina(aluno.ch, 20);
+                        const cn = getDadosDisciplina(aluno.cn, 20);
                         
                         const nomeEscola = aluno.escola || '';
                         const nomeTurma = aluno.turma || '';
@@ -3289,6 +3417,12 @@
                             '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                             '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
                             '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
                             '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
                             '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
                             '</tr>';
@@ -3304,7 +3438,7 @@
                     console.error('Erro ao carregar resultados:', erro);
                     const tbody = document.getElementById('tb-resultados');
                     if (tbody) {
-                        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados</td></tr>';
                     }
                 }
             }
@@ -3334,7 +3468,7 @@
                     if (!tbody) return;
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                         document.getElementById('res-total-filtrado').textContent = '0';
                         document.getElementById('res-Habilidades-filtrado').textContent = '0';
                         document.getElementById('res-recuperacao-filtrado').textContent = '0';
@@ -3346,7 +3480,7 @@
                     const dadosAlunos = Array.isArray(alunos) ? alunos : [];
                     
                     if (dadosAlunos.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                         return;
                     }
 
@@ -3388,6 +3522,8 @@
                         const portugues = getDadosDisciplina(aluno.portugues, 20);
                         const matematica = getDadosDisciplina(aluno.matematica, 20);
                         const producao = getDadosDisciplina(aluno.producao, 20);
+                        const ch = getDadosDisciplina(aluno.ch, 20);
+                        const cn = getDadosDisciplina(aluno.cn, 20);
                         
                         const nomeEscola = aluno.escola || '';
                         const nomeTurma = aluno.turma || '';
@@ -3406,6 +3542,12 @@
                             '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
                             '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
                             '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
                             '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
                             '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
                             '</tr>';
@@ -3421,7 +3563,7 @@
                     console.error('❌ Erro ao carregar resultados com filtros:', erro);
                     const tbody = document.getElementById('tb-resultados-filtrado');
                     if (tbody) {
-                        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
                     }
                 }
             }
@@ -3627,7 +3769,9 @@
                 let totais = {
                     portugues: { acertos: 0, erros: 0, total: 0 },
                     matematica: { acertos: 0, erros: 0, total: 0 },
-                    producao: { acertos: 0, erros: 0, total: 0 }
+                    producao: { acertos: 0, erros: 0, total: 0 },
+                    ch: { acertos: 0, erros: 0, total: 0 },
+                    cn: { acertos: 0, erros: 0, total: 0 }
                 };
                 
                 historico.forEach(item => {
@@ -3636,23 +3780,31 @@
                     const total = item.total || 20;
                     const erros = total - acertos;
                     
-                    if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                    const discLower = disciplina.toLowerCase();
+                    if (discLower.includes('português') || discLower.includes('portugues')) {
                         totais.portugues.acertos += acertos;
                         totais.portugues.erros += erros;
                         totais.portugues.total += total;
-                    } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                    } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
                         totais.matematica.acertos += acertos;
                         totais.matematica.erros += erros;
                         totais.matematica.total += total;
-                    } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || 
-                               disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                    } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
                         totais.producao.acertos += acertos;
                         totais.producao.erros += erros;
                         totais.producao.total += total;
+                    } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                        totais.ch.acertos += acertos;
+                        totais.ch.erros += erros;
+                        totais.ch.total += total;
+                    } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                        totais.cn.acertos += acertos;
+                        totais.cn.erros += erros;
+                        totais.cn.total += total;
                     }
                 });
                 
-                function atualizarDisciplina(prefixo, dados) {
+                function atualizarDisciplina(prefixo, dados, cor) {
                     const pct = dados.total > 0 ? Math.round((dados.acertos / dados.total) * 100) : 0;
                     const conceito = calcularConceito(pct);
                     const badgeMap = {
@@ -3677,9 +3829,11 @@
                     el.style.padding = '4px 14px';
                 }
                 
-                atualizarDisciplina('port', totais.portugues);
-                atualizarDisciplina('mat', totais.matematica);
-                atualizarDisciplina('prod', totais.producao);
+                atualizarDisciplina('port', totais.portugues, '#3b82f6');
+                atualizarDisciplina('mat', totais.matematica, '#10b981');
+                atualizarDisciplina('prod', totais.producao, '#8b5cf6');
+                atualizarDisciplina('ch', totais.ch, '#f59e0b');
+                atualizarDisciplina('cn', totais.cn, '#14b8a6');
             }
 
             // ============================================
@@ -3719,11 +3873,31 @@
                         total: 0,
                         gabarito: [],
                         respostas: []
+                    },
+                    'ch': { 
+                        nome: 'Ciências Humanas', 
+                        icone: '🌍', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
+                    },
+                    'cn': { 
+                        nome: 'Ciências Naturais', 
+                        icone: '🔬', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
                     }
                 };
 
                 if (!historico || historico.length === 0) {
-                    ['portugues', 'matematica', 'producao'].forEach(key => {
+                    ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
                         const container = document.getElementById(`habilidade-${key}`);
                         if (container) {
                             container.innerHTML = `
@@ -3739,7 +3913,9 @@
                 const keywords = {
                     'portugues': ['português', 'portugues', 'língua portuguesa', 'lingua portuguesa'],
                     'matematica': ['matemática', 'matematica', 'mat'],
-                    'producao': ['produção', 'producao', 'texto', 'redação', 'escrita']
+                    'producao': ['produção', 'producao', 'texto', 'redação', 'escrita'],
+                    'ch': ['ciências humanas', 'ch', 'história', 'geografia', 'sociologia', 'filosofia'],
+                    'cn': ['ciências naturais', 'cn', 'biologia', 'física', 'química']
                 };
 
                 function identificarDisciplina(provaTitulo, disciplina) {
@@ -3804,7 +3980,7 @@
                     }
                 });
 
-                ['portugues', 'matematica', 'producao'].forEach(key => {
+                ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
                     const container = document.getElementById(`habilidade-${key}`);
                     const dados = disciplinas[key];
                     
@@ -3865,7 +4041,6 @@
                     container.innerHTML = html;
                     
                     console.log(`✅ Disciplina ${key}: ${dados.acertos} acertos, ${dados.erros} erros, ${dados.questoes.length} questões`);
-                    console.log(`   Questões:`, dados.questoes.map(q => `Q${q.numero}: ${q.acertou ? '✅' : '❌'}`).join(', '));
                 });
 
                 console.log('✅ Card DESEMPENHO POR HABILIDADES atualizado com sucesso!');
@@ -3886,7 +4061,7 @@
                 showToast('🔍 Buscando histórico do aluno...', 'info');
                 const tbody = document.getElementById('rel-aluno-historico');
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
                 }
                 
                 let url = API_URL + '/api/historico?aluno_id=' + alunoId;
@@ -3898,9 +4073,9 @@
                     .then(r => r.json())
                     .then(historico => {
                         if (!historico || historico.length === 0 || historico.erro) {
-                            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
                             document.getElementById('total-historico').textContent = '0 registros';
-                            ['port', 'mat', 'prod'].forEach(prefixo => {
+                            ['port', 'mat', 'prod', 'ch', 'cn'].forEach(prefixo => {
                                 document.getElementById(`conceito-${prefixo}-acertos`).textContent = '0';
                                 document.getElementById(`conceito-${prefixo}-erros`).textContent = '0';
                                 const el = document.getElementById(`conceito-${prefixo}-conceito`);
@@ -3909,7 +4084,7 @@
                                 el.style.fontSize = '16px';
                                 el.style.padding = '4px 14px';
                             });
-                            ['portugues', 'matematica', 'producao'].forEach(key => {
+                            ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
                                 const container = document.getElementById(`habilidade-${key}`);
                                 if (container) {
                                     container.innerHTML = `
@@ -3956,18 +4131,25 @@
                             const prova = provasMap.get(key);
                             const disciplina = item.disciplina || 'Geral';
                             let tipo = 'Geral';
-                            if (disciplina.toLowerCase().includes('português') || disciplina.toLowerCase().includes('portugues')) {
+                            const discLower = disciplina.toLowerCase();
+                            if (discLower.includes('português') || discLower.includes('portugues')) {
                                 tipo = 'Portugues';
-                            } else if (disciplina.toLowerCase().includes('matemática') || disciplina.toLowerCase().includes('matematica')) {
+                            } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
                                 tipo = 'Matematica';
-                            } else if (disciplina.toLowerCase().includes('produção') || disciplina.toLowerCase().includes('producao') || disciplina.toLowerCase().includes('texto') || disciplina.toLowerCase().includes('redação')) {
+                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
                                 tipo = 'Producao';
+                            } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                                tipo = 'CH';
+                            } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                                tipo = 'CN';
                             }
                             if (tipo === 'Geral' && item.prova_titulo) {
                                 const titulo = item.prova_titulo.toLowerCase();
                                 if (titulo.includes('português') || titulo.includes('portugues')) tipo = 'Portugues';
-                                else if (titulo.includes('matemática') || titulo.includes('matematica') || titulo.includes('mat')) tipo = 'Matematica';
-                                else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto') || titulo.includes('redação')) tipo = 'Producao';
+                                else if (titulo.includes('matemática') || titulo.includes('matematica')) tipo = 'Matematica';
+                                else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto')) tipo = 'Producao';
+                                else if (titulo.includes('ciências humanas') || titulo.includes('ch')) tipo = 'CH';
+                                else if (titulo.includes('ciências naturais') || titulo.includes('cn')) tipo = 'CN';
                             }
                             if (tipo === 'Geral') {
                                 const serie = item.serie || '';
@@ -3993,29 +4175,39 @@
                             const portugues = prova.avaliacoes.Portugues || { nota: 0, acertos: 0, total: 20 };
                             const matematica = prova.avaliacoes.Matematica || { nota: 0, acertos: 0, total: 20 };
                             const producao = prova.avaliacoes.Producao || { nota: 0, acertos: 0, total: 20 };
+                            const ch = prova.avaliacoes.CH || { nota: 0, acertos: 0, total: 20 };
+                            const cn = prova.avaliacoes.CN || { nota: 0, acertos: 0, total: 20 };
                             
                             const erroPortugues = portugues.total - portugues.acertos;
                             const erroMatematica = matematica.total - matematica.acertos;
                             const erroProducao = producao.total - producao.acertos;
+                            const erroCH = ch.total - ch.acertos;
+                            const erroCN = cn.total - cn.acertos;
                             
                             const pctPortugues = portugues.total > 0 ? Math.round((portugues.acertos / portugues.total) * 100) : 0;
                             const pctMatematica = matematica.total > 0 ? Math.round((matematica.acertos / matematica.total) * 100) : 0;
                             const pctProducao = producao.total > 0 ? Math.round((producao.acertos / producao.total) * 100) : 0;
+                            const pctCH = ch.total > 0 ? Math.round((ch.acertos / ch.total) * 100) : 0;
+                            const pctCN = cn.total > 0 ? Math.round((cn.acertos / cn.total) * 100) : 0;
                             
                             const conceitoPortugues = calcularConceito(pctPortugues);
                             const conceitoMatematica = calcularConceito(pctMatematica);
                             const conceitoProducao = calcularConceito(pctProducao);
+                            const conceitoCH = calcularConceito(pctCH);
+                            const conceitoCN = calcularConceito(pctCN);
                             
                             return {
                                 ...prova,
                                 portugues: { ...portugues, erros: erroPortugues, conceito: conceitoPortugues },
                                 matematica: { ...matematica, erros: erroMatematica, conceito: conceitoMatematica },
-                                producao: { ...producao, erros: erroProducao, conceito: conceitoProducao }
+                                producao: { ...producao, erros: erroProducao, conceito: conceitoProducao },
+                                ch: { ...ch, erros: erroCH, conceito: conceitoCH },
+                                cn: { ...cn, erros: erroCN, conceito: conceitoCN }
                             };
                         });
                         
                         if (provasArray.length === 0) {
-                            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível</td></tr>';
                             document.getElementById('total-historico').textContent = '0 registros';
                             return;
                         }
@@ -4041,6 +4233,12 @@
                                 '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + p.producao.acertos + '</span></td>' +
                                 '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + p.producao.erros + '</span></td>' +
                                 '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(p.producao.conceito) + '">' + p.producao.conceito + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + p.ch.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + p.ch.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(p.ch.conceito) + '">' + p.ch.conceito + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + p.cn.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + p.cn.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(p.cn.conceito) + '">' + p.cn.conceito + '</span></td>' +
                                 '</tr>';
                         }).join('');
                         
@@ -4056,12 +4254,12 @@
                                 const dataB = b.data ? new Date(b.data) : 0;
                                 return dataA - dataB;
                             });
-                            const maxNota = Math.max(...provasOrdenadas.map(p => p.portugues.nota + p.matematica.nota + p.producao.nota), 1);
+                            const maxNota = Math.max(...provasOrdenadas.map(p => p.portugues.nota + p.matematica.nota + p.producao.nota + p.ch.nota + p.cn.nota), 1);
                             let html = '<div class="chart-bars" style="height:100px;">';
                             provasOrdenadas.forEach((p, index) => {
-                                const soma = p.portugues.nota + p.matematica.nota + p.producao.nota;
-                                const altura = Math.max(10, (soma / 30) * 80);
-                                const cor = soma >= 15 ? '#10b981' : (soma >= 9 ? '#f59e0b' : '#ef4444');
+                                const soma = p.portugues.nota + p.matematica.nota + p.producao.nota + p.ch.nota + p.cn.nota;
+                                const altura = Math.max(10, (soma / 50) * 80);
+                                const cor = soma >= 25 ? '#10b981' : (soma >= 15 ? '#f59e0b' : '#ef4444');
                                 const label = p.prova_titulo.substring(0, 10);
                                 html += `<div class="chart-bar-item" title="${p.prova_titulo} - Soma: ${soma.toFixed(1)}">
                                     <div class="chart-bar-val">${soma.toFixed(1)}</div>
@@ -4075,7 +4273,7 @@
                     })
                     .catch(e => {
                         console.error('Erro ao carregar histórico:', e);
-                        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
                     });
             }
 
@@ -4172,7 +4370,7 @@
                             provas.forEach(p => {
                                 const opt = document.createElement('option');
                                 opt.value = p.id;
-                                opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                                opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
                                 selectProva.appendChild(opt);
                             });
                         }
@@ -4305,6 +4503,56 @@
                     const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
                     vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
                     
+                    // Calcular médias por disciplina para o relatório
+                    let totalPtAcertos = 0, totalPtErros = 0, totalPtQuestoes = 0;
+                    let totalMatAcertos = 0, totalMatErros = 0, totalMatQuestoes = 0;
+                    let totalProdAcertos = 0, totalProdErros = 0, totalProdQuestoes = 0;
+                    let totalCHAcertos = 0, totalCHErros = 0, totalCHQuestoes = 0;
+                    let totalCNAcertos = 0, totalCNErros = 0, totalCNQuestoes = 0;
+                    
+                    if (correcoes && correcoes.length > 0) {
+                        correcoes.forEach(c => {
+                            const disciplina = c.disciplina || '';
+                            const acertos = c.acertos || 0;
+                            const total = c.total || 20;
+                            const erros = total - acertos;
+                            
+                            const discLower = disciplina.toLowerCase();
+                            if (discLower.includes('português') || discLower.includes('portugues')) {
+                                totalPtAcertos += acertos; totalPtErros += erros; totalPtQuestoes += total;
+                            } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
+                                totalMatAcertos += acertos; totalMatErros += erros; totalMatQuestoes += total;
+                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                                totalProdAcertos += acertos; totalProdErros += erros; totalProdQuestoes += total;
+                            } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                                totalCHAcertos += acertos; totalCHErros += erros; totalCHQuestoes += total;
+                            } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                                totalCNAcertos += acertos; totalCNErros += erros; totalCNQuestoes += total;
+                            }
+                        });
+                    }
+                    
+                    const totalCorrecoes = correcoes.length || 1;
+                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
+                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
+                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
+                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
+                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
+                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
+                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
+                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
+                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
+                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
+                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
                     await carregarRelatorioEscola();
                     atualizarDatasImpressao();
                 } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
@@ -4401,6 +4649,7 @@
                                     opt.dataset.quantidade = p.quantidade_questoes || 20;
                                     opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
                                     opt.dataset.tipo = p.tipo_questoes || '4';
+                                    opt.dataset.disciplina = p.disciplina || '';
                                     select.appendChild(opt); 
                                 }); 
                             }
@@ -4639,10 +4888,10 @@
                 showToast('📥 Exportando resultados filtrados...', 'info');
                 const tbody = document.getElementById('tb-resultados-filtrado');
                 if (!tbody) return;
-                let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,Escola,Turma\n';
+                let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,CH_Acertos,CH_Erros,CH_Conceito,CN_Acertos,CN_Erros,CN_Conceito,Escola,Turma\n';
                 tbody.querySelectorAll('tr').forEach(row => {
                     const cells = row.querySelectorAll('td');
-                    if (cells.length >= 14) {
+                    if (cells.length >= 20) {
                         csv += cells[0].textContent.trim() + ',' + 
                                cells[1].textContent.trim() + ',' + 
                                cells[2].textContent.trim() + ',' + 
@@ -4657,7 +4906,12 @@
                                cells[11].textContent.trim() + ',' + 
                                cells[12].textContent.trim() + ',' + 
                                cells[13].textContent.trim() + ',' + 
-                               cells[14].textContent.trim() + '\n';
+                               cells[14].textContent.trim() + ',' + 
+                               cells[15].textContent.trim() + ',' + 
+                               cells[16].textContent.trim() + ',' + 
+                               cells[17].textContent.trim() + ',' + 
+                               cells[18].textContent.trim() + ',' + 
+                               cells[19].textContent.trim() + '\n';
                     }
                 });
                 const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -5266,13 +5520,14 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             const serie = p.serie || '';
-                            opt.textContent = p.titulo + ' - ' + serie;
+                            opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
                             opt.dataset.serie = serie;
                             opt.dataset.turma = p.turma_nome || '';
                             opt.dataset.quantidade = p.quantidade_questoes || 20;
                             opt.dataset.tipo = p.tipo_questoes || '4';
                             opt.dataset.data = p.data_prova || '';
                             opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                     }
@@ -6753,7 +7008,7 @@
                         provas.forEach(p => {
                             const opt = document.createElement('option');
                             opt.value = p.id;
-                            opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
                             selectProva.appendChild(opt);
                         });
                         if (current) selectProva.value = current;
@@ -6861,6 +7116,12 @@
                         document.getElementById('rel-prod-acertos').textContent = '0';
                         document.getElementById('rel-prod-erros').textContent = '0';
                         document.getElementById('rel-prod-media').textContent = '0.0';
+                        document.getElementById('rel-ch-acertos').textContent = '0';
+                        document.getElementById('rel-ch-erros').textContent = '0';
+                        document.getElementById('rel-ch-media').textContent = '0.0';
+                        document.getElementById('rel-cn-acertos').textContent = '0';
+                        document.getElementById('rel-cn-erros').textContent = '0';
+                        document.getElementById('rel-cn-media').textContent = '0.0';
                         
                         const faixas = ['0-2', '2-4', '4-6', '6-8', '8-10'];
                         faixas.forEach(id => {
@@ -6898,6 +7159,8 @@
                     let totalPtAcertos = 0, totalPtErros = 0, totalPtQuestoes = 0;
                     let totalMatAcertos = 0, totalMatErros = 0, totalMatQuestoes = 0;
                     let totalProdAcertos = 0, totalProdErros = 0, totalProdQuestoes = 0;
+                    let totalCHAcertos = 0, totalCHErros = 0, totalCHQuestoes = 0;
+                    let totalCNAcertos = 0, totalCNErros = 0, totalCNQuestoes = 0;
                     
                     dadosAlunos.forEach(aluno => {
                         if (aluno.portugues && typeof aluno.portugues === 'object') {
@@ -6947,11 +7210,45 @@
                             totalProdErros += erros;
                             totalProdQuestoes += totalDisc;
                         }
+                        
+                        if (aluno.ch && typeof aluno.ch === 'object') {
+                            const acertos = parseInt(aluno.ch.acertos) || 0;
+                            const totalDisc = parseInt(aluno.ch.total) || 0;
+                            const erros = totalDisc - acertos;
+                            totalCHAcertos += acertos;
+                            totalCHErros += erros;
+                            totalCHQuestoes += totalDisc;
+                        } else {
+                            const acertos = parseInt(aluno.ch) || 0;
+                            const totalDisc = 20;
+                            const erros = totalDisc - acertos;
+                            totalCHAcertos += acertos;
+                            totalCHErros += erros;
+                            totalCHQuestoes += totalDisc;
+                        }
+                        
+                        if (aluno.cn && typeof aluno.cn === 'object') {
+                            const acertos = parseInt(aluno.cn.acertos) || 0;
+                            const totalDisc = parseInt(aluno.cn.total) || 0;
+                            const erros = totalDisc - acertos;
+                            totalCNAcertos += acertos;
+                            totalCNErros += erros;
+                            totalCNQuestoes += totalDisc;
+                        } else {
+                            const acertos = parseInt(aluno.cn) || 0;
+                            const totalDisc = 20;
+                            const erros = totalDisc - acertos;
+                            totalCNAcertos += acertos;
+                            totalCNErros += erros;
+                            totalCNQuestoes += totalDisc;
+                        }
                     });
                     
                     const ptMedia = total > 0 ? (totalPtAcertos / total) : 0;
                     const matMedia = total > 0 ? (totalMatAcertos / total) : 0;
                     const prodMedia = total > 0 ? (totalProdAcertos / total) : 0;
+                    const chMedia = total > 0 ? (totalCHAcertos / total) : 0;
+                    const cnMedia = total > 0 ? (totalCNAcertos / total) : 0;
                     
                     document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
                     document.getElementById('rel-pt-erros').textContent = totalPtErros;
@@ -6962,6 +7259,12 @@
                     document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
                     document.getElementById('rel-prod-erros').textContent = totalProdErros;
                     document.getElementById('rel-prod-media').textContent = prodMedia.toFixed(1);
+                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
+                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
+                    document.getElementById('rel-ch-media').textContent = chMedia.toFixed(1);
+                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
+                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
+                    document.getElementById('rel-cn-media').textContent = cnMedia.toFixed(1);
                     
                     const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
                     dadosAlunos.forEach(a => {
@@ -7018,7 +7321,7 @@
                         provas.forEach(p => {
                             const opt = document.createElement('option');
                             opt.value = p.id;
-                            opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
                             selectProva.appendChild(opt);
                         });
                     }
@@ -7280,26 +7583,45 @@
                         'produção de texto': 'producao',
                         'portugues': 'portugues',
                         'matematica': 'matematica',
-                        'producao': 'producao'
+                        'producao': 'producao',
+                        'Ciências Humanas': 'ch',
+                        'ciências humanas': 'ch',
+                        'ch': 'ch',
+                        'Ciências Naturais': 'cn',
+                        'ciências naturais': 'cn',
+                        'cn': 'cn'
                     };
                     
                     const discKey = disciplinaMap[disciplina.toLowerCase()] || 'portugues';
                     
-                    const disciplinas = ['portugues', 'matematica', 'producao'];
+                    const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
                     const nomesDisciplinas = {
                         'portugues': 'Português',
                         'matematica': 'Matemática',
-                        'producao': 'Produção de Texto'
+                        'producao': 'Produção de Texto',
+                        'ch': 'Ciências Humanas',
+                        'cn': 'Ciências Naturais'
                     };
                     const iconesDisciplinas = {
                         'portugues': '📖',
                         'matematica': '🔢',
-                        'producao': '✍️'
+                        'producao': '✍️',
+                        'ch': '🌍',
+                        'cn': '🔬'
                     };
                     const coresDisciplinas = {
                         'portugues': 'blue',
                         'matematica': 'green',
-                        'producao': 'purple'
+                        'producao': 'purple',
+                        'ch': 'orange',
+                        'cn': 'teal'
+                    };
+                    const badgesDisciplinas = {
+                        'portugues': 'badge-blue',
+                        'matematica': 'badge-green',
+                        'producao': 'badge-purple',
+                        'ch': 'badge-orange',
+                        'cn': 'badge-teal'
                     };
 
                     disciplinas.forEach(key => {
@@ -7347,7 +7669,14 @@
                             // Aplicar cor da disciplina
                             const card = container.closest('.desempenho-disciplina');
                             const cor = coresDisciplinas[key];
-                            card.style.borderColor = `rgba(${cor === 'blue' ? '59,130,246' : cor === 'green' ? '16,185,129' : '139,92,246'}, 0.3)`;
+                            const colorMap = {
+                                'blue': '59,130,246',
+                                'green': '16,185,129',
+                                'purple': '139,92,246',
+                                'orange': '245,158,11',
+                                'teal': '20,184,166'
+                            };
+                            card.style.borderColor = `rgba(${colorMap[cor] || '59,130,246'}, 0.3)`;
                         } else {
                             // Outras disciplinas - sem dados
                             container.innerHTML = `
