@@ -897,12 +897,24 @@ def corrigir_com_ia():
 def corrigir_manual():
     try:
         data = request.json
+        print("=" * 60)
+        print("📥 DADOS RECEBIDOS NA CORREÇÃO MANUAL:")
+        print(json.dumps(data, indent=2, default=str))
+        print("=" * 60)
+        
         prova_id = data.get('prova_id')
         aluno_id = data.get('aluno_id')
         respostas = data.get('respostas', [])
         acertos = data.get('acertos', 0)
         nota = data.get('nota', 0)
         total = data.get('total', 0)
+        
+        print(f"📌 prova_id: {prova_id} (tipo: {type(prova_id)})")
+        print(f"📌 aluno_id: {aluno_id} (tipo: {type(aluno_id)})")
+        print(f"📌 respostas: {respostas} (tipo: {type(respostas)})")
+        print(f"📌 acertos: {acertos} (tipo: {type(acertos)})")
+        print(f"📌 nota: {nota} (tipo: {type(nota)})")
+        print(f"📌 total: {total} (tipo: {type(total)})")
         
         if not prova_id or not aluno_id:
             return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
@@ -915,10 +927,13 @@ def corrigir_manual():
         
         cur.execute("SELECT disciplina, titulo, serie, gabarito FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
+        print(f"📌 Prova encontrada: {prova}")
+        
         disciplina = prova[0] if prova else ''
         prova_titulo = prova[1] if prova else ''
         serie_prova = prova[2] if prova else ''
         gabarito = prova[3] if prova else []
+        print(f"📌 Gabarito: {gabarito} (tipo: {type(gabarito)})")
         
         cur.execute("""
             SELECT t.serie FROM alunos a
@@ -929,6 +944,7 @@ def corrigir_manual():
         serie = serie_result[0] if serie_result else serie_prova or '1º Ano'
         
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
+        print(f"📌 Tipo avaliação: {tipo_avaliacao}")
         
         # Gerar questoes_status
         questoes_status = []
@@ -953,15 +969,24 @@ def corrigir_manual():
                 'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
             })
         
-        questoes_status_json = json.dumps(questoes_status)
+        print(f"📌 questoes_status gerado: {questoes_status}")
+        
+        try:
+            questoes_status_json = json.dumps(questoes_status)
+            print(f"📌 JSON gerado: {questoes_status_json[:100]}...")
+        except Exception as e:
+            print(f"❌ ERRO AO GERAR JSON: {e}")
+            return jsonify({'erro': f'Erro ao converter para JSON: {str(e)}'}), 500
         
         cur.execute("""
             SELECT id FROM historico 
             WHERE prova_id = %s AND aluno_id = %s
         """, (prova_id, aluno_id))
         existe = cur.fetchone()
+        print(f"📌 Registro existe? {existe}")
         
         if existe:
+            print("📌 Atualizando registro existente...")
             cur.execute("""
                 UPDATE historico 
                 SET respostas = %s::text[], 
@@ -975,8 +1000,10 @@ def corrigir_manual():
                     data_correcao = CURRENT_TIMESTAMP
                 WHERE prova_id = %s AND aluno_id = %s
             """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, prova_id, aluno_id))
-            result_id = existe[0]
+            result_id = existe[0] if isinstance(existe, tuple) else existe
+            print(f"✅ Atualizado! ID: {result_id}")
         else:
+            print("📌 Criando novo registro...")
             cur.execute("""
                 INSERT INTO historico 
                 (prova_id, aluno_id, respostas, acertos, nota, total, 
@@ -985,7 +1012,8 @@ def corrigir_manual():
                 RETURNING id
             """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json))
             result = cur.fetchone()
-            result_id = result[0]
+            result_id = result[0] if result else None
+            print(f"✅ Criado! ID: {result_id}")
         
         conn.commit()
         cur.close()
@@ -1004,7 +1032,13 @@ def corrigir_manual():
             'questoes_status': questoes_status
         })
     except Exception as e:
-        print(f"❌ Erro na correção manual: {e}")
+        print("=" * 60)
+        print("❌ ERRO NA CORREÇÃO MANUAL:")
+        print(f"❌ Tipo: {type(e)}")
+        print(f"❌ Mensagem: {str(e)}")
+        print("❌ Traceback completo:")
+        traceback.print_exc()
+        print("=" * 60)
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
