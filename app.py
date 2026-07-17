@@ -93,7 +93,6 @@ except Exception as e:
 # CONFIGURAÇÃO DO BANCO DE DADOS
 # ============================================
 
-# REMOVIDO: Credenciais hardcoded - agora exige variável de ambiente
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 if not SUPABASE_URL:
     print("❌ ERRO: SUPABASE_URL não definida no .env")
@@ -1393,7 +1392,7 @@ def listar_historico():
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
             LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id  -- PADRONIZADO: usa alunos.escola_id
+            LEFT JOIN escolas e ON a.escola_id = e.id
             WHERE 1=1
         """
         params = []
@@ -1466,7 +1465,6 @@ def listar_historico():
 
 # ============================================
 # ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (5 AVALIAÇÕES - COM CH E CN)
-# PADRONIZADO: usa alunos.escola_id
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
@@ -1498,7 +1496,7 @@ def historico_agrupado():
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
             LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id  -- PADRONIZADO: usa alunos.escola_id
+            LEFT JOIN escolas e ON a.escola_id = e.id
             WHERE 1=1
         """
         params = []
@@ -1931,7 +1929,7 @@ def excluir_escola(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO) - CORRIGIDA: NÃO APAGA PROVAS DE OUTRAS ESCOLAS
+# ROTA DE TURMAS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
