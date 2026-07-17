@@ -4713,6 +4713,12 @@
                             selectCadastro.value = current;
                             // Carrega turmas automaticamente
                             carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
+                        } else {
+                            // Se não tinha escola selecionada, limpa as turmas
+                            const selectTurma = document.getElementById('aluno-turma');
+                            if (selectTurma) {
+                                selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+                            }
                         }
                         console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
                     } else {
