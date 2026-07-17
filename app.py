@@ -16,6 +16,7 @@ import pytesseract
 import random
 import traceback
 from dotenv import load_dotenv
+import hmac
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -72,7 +73,7 @@ except Exception as e:
 # ============================================
 
 RELAY_AVAILABLE = False
-RELAY_API_URL = os.getenv('RELAY_API_URL', 'http://localhost:8080')
+RELAY_API_URL = os.getenv('RELAY_API_URL', '')
 RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')
 RELAY_MODEL = os.getenv('RELAY_MODEL', 'gemini-1.5-flash')
 
@@ -92,9 +93,17 @@ except Exception as e:
 # CONFIGURAÇÃO DO BANCO DE DADOS
 # ============================================
 
-SUPABASE_URL = os.getenv('SUPABASE_URL', 'postgresql://postgres.hcflxpvwidmbnmtusyol:hdUiT-HuQG%3FpF3%25@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require')
+# REMOVIDO: Credenciais hardcoded - agora exige variável de ambiente
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+if not SUPABASE_URL:
+    print("❌ ERRO: SUPABASE_URL não definida no .env")
+    print("⚠️ O servidor não conseguirá conectar ao banco de dados!")
+    print("⚠️ Configure a variável SUPABASE_URL no arquivo .env")
 
 def get_db_connection():
+    if not SUPABASE_URL:
+        print("❌ SUPABASE_URL não configurada")
+        return None
     try:
         conn = psycopg2.connect(SUPABASE_URL)
         return conn
@@ -152,40 +161,42 @@ def calcular_conceito(porcentagem):
         }
 
 # ============================================
-# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA COM CH E CN)
+# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA COM \b)
 # ============================================
 
 def identificar_disciplina(prova_titulo, disciplina, serie):
     """
     Identifica o tipo de avaliação com base no título, disciplina e série
     Retorna: 'Portugues', 'Matematica', 'Producao', 'CH', 'CN' ou 'Geral'
+    Usa \b (word boundary) para evitar falsos positivos
     """
     # PRIMEIRO: verificar a disciplina informada (mais confiável)
     disciplina_lower = (disciplina or '').lower().strip()
     
-    if 'português' in disciplina_lower or 'portugues' in disciplina_lower or 'língua' in disciplina_lower:
+    # Usa word boundaries para evitar falsos positivos
+    if re.search(r'\bportugu[êe]s\b', disciplina_lower) or 'língua' in disciplina_lower:
         return 'Portugues'
-    if 'matemática' in disciplina_lower or 'matematica' in disciplina_lower:
+    if re.search(r'\bmatem[áa]tica\b', disciplina_lower):
         return 'Matematica'
-    if 'produção' in disciplina_lower or 'producao' in disciplina_lower or 'texto' in disciplina_lower or 'redação' in disciplina_lower or 'redacao' in disciplina_lower:
+    if re.search(r'\bprodu[cç][ãa]o\b', disciplina_lower) or 'texto' in disciplina_lower or 'redação' in disciplina_lower or 'redacao' in disciplina_lower:
         return 'Producao'
-    if 'ciências humanas' in disciplina_lower or 'ch' in disciplina_lower or 'ciencias humanas' in disciplina_lower:
+    if re.search(r'\bch\b', disciplina_lower) or 'ciencias humanas' in disciplina_lower:
         return 'CH'
-    if 'ciências naturais' in disciplina_lower or 'cn' in disciplina_lower or 'ciencias naturais' in disciplina_lower:
+    if re.search(r'\bcn\b', disciplina_lower) or 'ciencias naturais' in disciplina_lower:
         return 'CN'
     
     # SEGUNDO: verificar o título da prova
     texto = f"{prova_titulo or ''}".lower()
     
-    if 'português' in texto or 'portugues' in texto or 'língua' in texto:
+    if re.search(r'\bportugu[êe]s\b', texto) or 'língua' in texto:
         return 'Portugues'
-    if 'matemática' in texto or 'matematica' in texto or 'mat' in texto:
+    if re.search(r'\bmatem[áa]tica\b', texto) or re.search(r'\bmat\b', texto):
         return 'Matematica'
-    if 'produção' in texto or 'producao' in texto or 'texto' in texto or 'redação' in texto or 'redacao' in texto:
+    if re.search(r'\bprodu[cç][ãa]o\b', texto) or 'texto' in texto or 'redação' in texto or 'redacao' in texto:
         return 'Producao'
-    if 'ciências humanas' in texto or 'ch' in texto or 'ciencias humanas' in texto:
+    if re.search(r'\bch\b', texto) or 'ciencias humanas' in texto:
         return 'CH'
-    if 'ciências naturais' in texto or 'cn' in texto or 'ciencias naturais' in texto:
+    if re.search(r'\bcn\b', texto) or 'ciencias naturais' in texto:
         return 'CN'
     
     # TERCEIRO: fallback baseado na série
@@ -199,6 +210,22 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
                 return 'Matematica'
     
     return 'Geral'
+
+# ============================================
+# FUNÇÃO PARA EXTRAIR MIMETYPE DA IMAGEM
+# ============================================
+
+def extrair_mimetype(imagem_base64):
+    """Extrai o mimetype real do prefixo data:image/...;base64"""
+    if not imagem_base64:
+        return 'image/jpeg'
+    
+    match = re.match(r'data:image/(\w+);base64,', imagem_base64)
+    if match:
+        tipo = match.group(1)
+        return f'image/{tipo}'
+    
+    return 'image/jpeg'
 
 # ============================================
 # FUNÇÃO DE CORREÇÃO COM GEMINI (COM QUESTÕES_STATUS)
@@ -394,12 +421,16 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             try:
                 import openai
                 
+                # Extrair o mimetype real da imagem
+                mimetype = extrair_mimetype(imagem_base64)
+                
                 imagem_limpa = imagem_base64
                 if ',' in imagem_base64:
                     imagem_limpa = imagem_base64.split(',')[1]
                 
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
                 
+                # Montar mensagem com imagem no formato multimodal
                 prompt = f"""
                 Você é um assistente especializado em correção de provas escolares.
                 
@@ -422,17 +453,53 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 }}
                 """
                 
-                response = openai.ChatCompletion.create(
-                    model=RELAY_MODEL,
-                    messages=[
-                        {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=500,
-                    temperature=0.3
-                )
+                # Usar a API OpenAI com suporte a multimodal
+                try:
+                    # Tentar usar a API com suporte a imagens
+                    if hasattr(openai, 'ChatCompletion') and hasattr(openai.ChatCompletion, 'create'):
+                        response = openai.ChatCompletion.create(
+                            model=RELAY_MODEL,
+                            messages=[
+                                {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
+                                {
+                                    "role": "user", 
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {"type": "image_url", "image_url": {"url": f"data:{mimetype};base64,{imagem_limpa}"}}
+                                    ]
+                                }
+                            ],
+                            max_tokens=500,
+                            temperature=0.3
+                        )
+                        resposta_texto = response.choices[0].message.content
+                    else:
+                        # Fallback: enviar apenas texto
+                        print("⚠️ API não suporta multimodal, enviando apenas texto")
+                        response = openai.ChatCompletion.create(
+                            model=RELAY_MODEL,
+                            messages=[
+                                {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            max_tokens=500,
+                            temperature=0.3
+                        )
+                        resposta_texto = response.choices[0].message.content
+                except Exception as e:
+                    print(f"⚠️ Erro na API multimodal: {e}")
+                    # Tentar fallback sem imagem
+                    response = openai.ChatCompletion.create(
+                        model=RELAY_MODEL,
+                        messages=[
+                            {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=500,
+                        temperature=0.3
+                    )
+                    resposta_texto = response.choices[0].message.content
                 
-                resposta_texto = response.choices[0].message.content
                 print(f"📝 Resposta Relay: {resposta_texto[:200]}...")
                 
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
@@ -651,7 +718,7 @@ def after_request(response):
     return response
 
 # ============================================
-# ROTA DE LOGIN
+# ROTA DE LOGIN (COM hmac.compare_digest)
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -683,7 +750,8 @@ def login():
                     print(f"📌 Usuário encontrado no banco: {usuario['username']}")
                     print(f"📌 Ativo: {usuario['ativo']}")
                     
-                    if usuario['senha_hash'] == senha and usuario['ativo'] == True:
+                    # Usar hmac.compare_digest para comparação segura
+                    if hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)) and usuario['ativo'] == True:
                         print(f"✅ Login via banco: {username}")
                         return jsonify({
                             'sucesso': True,
@@ -700,9 +768,10 @@ def login():
                 print(f"❌ Erro no banco: {e}")
                 traceback.print_exc()
         
+        # Verificar usuários fixos com comparação segura
         if username in USUARIOS_FIXOS:
             dados = USUARIOS_FIXOS[username]
-            if dados['senha'] == senha:
+            if hmac.compare_digest(str(dados['senha']), str(senha)):
                 print(f"✅ Login via usuário fixo: {username}")
                 return jsonify({
                     'sucesso': True,
@@ -798,7 +867,14 @@ def corrigir_com_ia():
                 except Exception as e:
                     print(f"⚠️ Erro ao buscar série: {e}")
             
-            tipo_questoes = int(prova.get('tipo_questoes', 4))
+            # CORREÇÃO: usar or 4 para tratar None
+            tipo_questoes = prova.get('tipo_questoes') or 4
+            if isinstance(tipo_questoes, str):
+                try:
+                    tipo_questoes = int(tipo_questoes)
+                except:
+                    tipo_questoes = 4
+            
             disciplina = prova.get('disciplina', '')
             prova_titulo = prova.get('titulo', '')
             
@@ -898,7 +974,7 @@ def corrigir_com_ia():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO MANUAL
+# ROTA DE CORREÇÃO MANUAL (COM str() antes de .upper())
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
@@ -954,11 +1030,11 @@ def corrigir_manual():
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
         print(f"📌 Tipo avaliação: {tipo_avaliacao}")
         
-        # Gerar questoes_status
+        # Gerar questoes_status - NORMALIZAÇÃO COM str() ANTES DE .upper()
         questoes_status = []
         for i in range(total):
-            resp = respostas[i] if i < len(respostas) else ''
-            gab = gabarito[i] if i < len(gabarito) else ''
+            resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
+            gab = str(gabarito[i]) if i < len(gabarito) and gabarito[i] is not None else ''
             is_correto = resp and gab and resp.upper() == gab.upper()
             
             if is_correto:
@@ -1317,7 +1393,7 @@ def listar_historico():
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
             LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON t.escola_id = e.id
+            LEFT JOIN escolas e ON a.escola_id = e.id  -- PADRONIZADO: usa alunos.escola_id
             WHERE 1=1
         """
         params = []
@@ -1390,6 +1466,7 @@ def listar_historico():
 
 # ============================================
 # ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (5 AVALIAÇÕES - COM CH E CN)
+# PADRONIZADO: usa alunos.escola_id
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
@@ -1421,7 +1498,7 @@ def historico_agrupado():
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
             LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
+            LEFT JOIN escolas e ON a.escola_id = e.id  -- PADRONIZADO: usa alunos.escola_id
             WHERE 1=1
         """
         params = []
@@ -1854,7 +1931,7 @@ def excluir_escola(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO)
+# ROTA DE TURMAS (CRUD COMPLETO) - CORRIGIDA: NÃO APAGA PROVAS DE OUTRAS ESCOLAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2039,11 +2116,11 @@ def excluir_turma(id):
         turma_nome = turma[1]
         turma_serie = turma[2]
         
+        # CORREÇÃO: NÃO APAGA PROVAS DE OUTRAS ESCOLAS
+        # Apenas conta e exclui dados relacionados à turma
+        
         cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
-        
-        cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie,))
-        total_provas = cur.fetchone()[0]
         
         cur.execute("""
             SELECT COUNT(*) FROM historico h
@@ -2052,6 +2129,7 @@ def excluir_turma(id):
         """, (turma_id,))
         total_historicos = cur.fetchone()[0]
         
+        # Buscar IDs dos alunos para excluir registros relacionados
         cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (turma_id,))
         alunos_ids = [row[0] for row in cur.fetchall()]
         
@@ -2059,9 +2137,11 @@ def excluir_turma(id):
             cur.execute("DELETE FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
             cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
         
+        # Excluir alunos e turma
         cur.execute("DELETE FROM alunos WHERE turma_id = %s", (turma_id,))
-        cur.execute("DELETE FROM provas WHERE serie = %s", (turma_serie,))
         cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
+        
+        # NOTA: Não exclui provas - elas podem ser usadas por outras turmas/escolas
         
         conn.commit()
         cur.close()
@@ -2072,7 +2152,6 @@ def excluir_turma(id):
             'mensagem': f'Turma "{turma_nome}" excluída com sucesso!',
             'detalhes': {
                 'alunos_excluidos': total_alunos,
-                'provas_excluidas': total_provas,
                 'historicos_excluidos': total_historicos
             }
         })
