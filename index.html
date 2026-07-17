@@ -2547,7 +2547,7 @@
             </div>
         </div>
 
-        <!-- Modal Aluno -->
+        <!-- Modal Aluno - CORRIGIDO COM onchange -->
         <div class="modal-overlay no-print" id="m-aluno">
             <div class="modal">
                 <div class="modal-header">
@@ -4681,7 +4681,7 @@
             }
 
             // ============================================
-            // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
+            // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO - CORRIGIDA
             // ============================================
             async function carregarEscolasParaAluno() {
                 try {
@@ -4750,7 +4750,7 @@
             }
 
             // ============================================
-            // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
+            // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO - CORRIGIDA
             // ============================================
             async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
                 console.log('🔄 Carregando turmas para escola:', escolaId);
@@ -4763,7 +4763,7 @@
                 // LIMPA o select de turma ANTES de adicionar novas opções
                 selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
                 
-                if (!escolaId) {
+                if (!escolaId || escolaId === '') {
                     console.log('ℹ️ Nenhuma escola selecionada');
                     return;
                 }
@@ -8014,4 +8014,4 @@
             });
         </script>
     </body>
-    </html>
+</html>
