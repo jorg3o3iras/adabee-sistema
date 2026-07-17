@@ -4697,6 +4697,7 @@
                         return;
                     }
                     
+                    // Preenche o select de escola no modal de cadastro
                     const selectCadastro = document.getElementById('aluno-escola');
                     if (selectCadastro) {
                         const current = selectCadastro.value;
@@ -4707,14 +4708,18 @@
                             opt.textContent = e.nome;
                             selectCadastro.appendChild(opt);
                         });
+                        // Se já tinha uma escola selecionada, restaura e carrega as turmas
                         if (current && escolas.some(e => e.id == current)) {
                             selectCadastro.value = current;
+                            // Carrega turmas automaticamente
+                            carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
                         }
                         console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
                     } else {
                         console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
                     }
                     
+                    // Preenche o select de escola no modal de edição
                     const selectEdicao = document.getElementById('editar-aluno-escola');
                     if (selectEdicao) {
                         const current = selectEdicao.value;
@@ -4727,6 +4732,8 @@
                         });
                         if (current && escolas.some(e => e.id == current)) {
                             selectEdicao.value = current;
+                            // Carrega turmas automaticamente
+                            carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
                         }
                         console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
                     }
@@ -4740,17 +4747,28 @@
             // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
             // ============================================
             async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
+                console.log('🔄 Carregando turmas para escola:', escolaId);
                 const selectTurma = document.getElementById(selectTurmaId);
-                if (!selectTurma) return;
+                if (!selectTurma) {
+                    console.warn('⚠️ Select de turma não encontrado:', selectTurmaId);
+                    return;
+                }
                 
+                // LIMPA o select de turma ANTES de adicionar novas opções
                 selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
                 
-                if (!escolaId) return;
+                if (!escolaId) {
+                    console.log('ℹ️ Nenhuma escola selecionada');
+                    return;
+                }
                 
                 try {
+                    showToast('🔄 Carregando turmas...', 'info');
                     const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                     const turmas = await response.json();
-                    if (turmas && !turmas.erro) {
+                    console.log('📥 Turmas recebidas:', turmas);
+                    
+                    if (turmas && !turmas.erro && turmas.length > 0) {
                         turmas.forEach(t => {
                             const opt = document.createElement('option');
                             opt.value = t.id;
@@ -4758,9 +4776,25 @@
                             opt.dataset.serie = t.serie || '';
                             selectTurma.appendChild(opt);
                         });
+                        console.log(`✅ ${turmas.length} turmas carregadas para a escola`);
+                        showToast(`✅ ${turmas.length} turmas encontradas`, 'success');
+                    } else {
+                        console.log('ℹ️ Nenhuma turma encontrada para esta escola');
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Nenhuma turma cadastrada';
+                        opt.disabled = true;
+                        selectTurma.appendChild(opt);
+                        showToast('ℹ️ Esta escola não possui turmas cadastradas', 'info');
                     }
                 } catch (e) {
-                    console.error('Erro ao carregar turmas:', e);
+                    console.error('❌ Erro ao carregar turmas:', e);
+                    showToast('❌ Erro ao carregar turmas: ' + e.message, 'error');
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Erro ao carregar turmas';
+                    opt.disabled = true;
+                    selectTurma.appendChild(opt);
                 }
             }
 
