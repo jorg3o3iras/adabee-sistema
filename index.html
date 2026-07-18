@@ -199,12 +199,14 @@
         .upload-zone .uz-ico { font-size:40px; margin-bottom:8px; }
         .upload-zone .uz-hint { font-size:12px; color:var(--text3); margin-top:4px; }
 
-        .gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:6px; margin:10px 0; }
-        .gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; }
-        .gab-num { font-size:9px; color:var(--text3); font-weight:700; margin-bottom:4px; }
+        .gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; margin:10px 0; }
+        .gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; display:flex; flex-direction:column; gap:2px; }
+        .gab-num { font-size:9px; color:var(--text3); font-weight:700; }
         .gab-select { width:100%; padding:4px 2px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-weight:700; font-size:13px; text-align:center; outline:none; transition:all .2s; }
         .gab-select:focus { border-color:var(--blue); }
         .gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
+        .gab-bncc { width:100%; padding:2px 2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center; outline:none; transition:border .2s; margin-top:2px; }
+        .gab-bncc:focus { border-color:var(--purple); }
 
         .ai-hero { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.06)); border:1px solid rgba(139,92,246,0.15); border-radius:var(--r); padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
         .ai-hero-icon { font-size:44px; }
@@ -734,95 +736,73 @@
         .desempenho-resumo .item .valor.blue { color: var(--blue); }
         .desempenho-resumo .item .valor.purple { color: var(--purple); }
 
-        .desempenho-disciplinas {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-            gap: 16px;
-            margin-top: 16px;
-        }
-        .desempenho-disciplina {
+        /* Estilos para o card único de disciplina */
+        .questao-item {
             background: var(--bg2);
-            border-radius: 10px;
-            padding: 14px 16px;
             border: 1px solid var(--border);
-        }
-        .desempenho-disciplina .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .desempenho-disciplina .header h4 {
-            font-size: 15px;
-            font-weight: 700;
-        }
-        .desempenho-disciplina .questoes-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 4px;
-        }
-        .desempenho-disciplina .questao-item {
-            background: var(--bg);
             border-radius: 6px;
             padding: 4px 2px;
             text-align: center;
-            font-size: 11px;
-            border: 1px solid var(--border);
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            transition: border-color 0.2s;
         }
-        .desempenho-disciplina .questao-item .q-num {
+        .questao-item .q-num {
             font-size: 7px;
             color: var(--text3);
+            font-weight: 700;
         }
-        .desempenho-disciplina .questao-item .q-resp {
+        .questao-item .q-resp {
             font-weight: 700;
             font-size: 12px;
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 0 4px;
+            line-height: 20px;
+            width: 100%;
         }
-        .desempenho-disciplina .questao-item .q-gab {
+        .questao-item .q-gab {
             font-size: 7px;
             color: var(--text3);
         }
-        .desempenho-disciplina .questao-item .q-status-text {
+        .questao-item .q-status-text {
             font-size: 7px;
             font-weight: 700;
             display: block;
             line-height: 1.2;
-            margin-top: 2px;
+            margin-top: 1px;
             padding: 1px 4px;
             border-radius: 4px;
+            width: 100%;
         }
-        .desempenho-disciplina .questao-item .q-status-text.acertou {
-            color: var(--green);
-            background: rgba(16, 185, 129, 0.12);
-        }
-        .desempenho-disciplina .questao-item .q-status-text.errou {
-            color: var(--red);
-            background: rgba(239, 68, 68, 0.12);
-        }
-        .desempenho-disciplina .questao-item.acertou {
+        .questao-item.acertou {
             border-color: var(--green);
             background: rgba(16, 185, 129, 0.08);
         }
-        .desempenho-disciplina .questao-item.acertou .q-resp {
+        .questao-item.acertou .q-resp {
             color: var(--green);
         }
-        .desempenho-disciplina .questao-item.errou {
+        .questao-item.acertou .q-status-text {
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .questao-item.errou {
             border-color: var(--red);
             background: rgba(239, 68, 68, 0.08);
         }
-        .desempenho-disciplina .questao-item.errou .q-resp {
+        .questao-item.errou .q-resp {
             color: var(--red);
         }
-        .desempenho-disciplina .stats {
-            display: flex;
-            gap: 16px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
+        .questao-item.errou .q-status-text {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.12);
         }
-        .desempenho-disciplina .stats .acertos { color: var(--green); font-weight: 700; }
-        .desempenho-disciplina .stats .erros { color: var(--red); font-weight: 700; }
-        .desempenho-disciplina .stats .nota { color: var(--blue); font-weight: 700; }
+        .questao-item .q-status-text:empty {
+            display: none;
+        }
 
         .desempenho-info {
             display: grid;
@@ -901,12 +881,6 @@
             .desempenho-resumo {
                 grid-template-columns: 1fr 1fr;
             }
-            .desempenho-disciplinas {
-                grid-template-columns: 1fr 1fr;
-            }
-            .desempenho-disciplina .questoes-grid {
-                grid-template-columns: repeat(5, 1fr);
-            }
             .desempenho-info {
                 grid-template-columns: 1fr 1fr;
             }
@@ -915,7 +889,7 @@
             .stats-grid { grid-template-columns:1fr; }
             .login-card { padding:24px 18px; margin:10px; }
             .cam-container { padding:14px; }
-            .gab-grid { grid-template-columns:repeat(auto-fill,minmax(55px,1fr)); }
+            .gab-grid { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); }
             .modal { padding:16px; }
             .correcao-aluno-info { grid-template-columns:1fr; }
             .correcao-manual-grid {
@@ -970,14 +944,14 @@
             .desempenho-resumo {
                 grid-template-columns: 1fr;
             }
-            .desempenho-disciplinas {
-                grid-template-columns: 1fr;
-            }
-            .desempenho-disciplina .questoes-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
             .desempenho-info {
                 grid-template-columns: 1fr;
+            }
+            .questao-item .q-resp {
+                font-size: 10px;
+            }
+            .questao-item .q-status-text {
+                font-size: 6px;
             }
         }
 
@@ -1088,24 +1062,19 @@
             .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
             .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
             .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
-            .desempenho-disciplina { background: #f8fafc !important; border-color: #ddd !important; }
-            .desempenho-disciplina .questao-item { background: #f1f5f9 !important; border-color: #ccc !important; }
-            .desempenho-disciplina .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
-            .desempenho-disciplina .questao-item.acertou .q-resp { color: #155724 !important; }
-            .desempenho-disciplina .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
-            .desempenho-disciplina .questao-item.errou .q-resp { color: #721c24 !important; }
-            .desempenho-disciplina .stats .acertos { color: #155724 !important; }
-            .desempenho-disciplina .stats .erros { color: #721c24 !important; }
-            .desempenho-disciplina .stats .nota { color: #004085 !important; }
+            .questao-item { background: #f8fafc !important; border-color: #ccc !important; }
+            .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
+            .questao-item.acertou .q-resp { color: #155724 !important; }
+            .questao-item.acertou .q-status-text { color: #155724 !important; background: #d4edda !important; }
+            .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
+            .questao-item.errou .q-resp { color: #721c24 !important; }
+            .questao-item.errou .q-status-text { color: #721c24 !important; background: #f8d7da !important; }
             .desempenho-resumo .item { background: #f1f5f9 !important; border-color: #ccc !important; }
             .desempenho-resumo .item .valor.green { color: #155724 !important; }
             .desempenho-resumo .item .valor.red { color: #721c24 !important; }
             .desempenho-resumo .item .valor.blue { color: #004085 !important; }
             .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
             .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
-            .desempenho-disciplina .questao-item .q-status-text {
-                font-size: 6px !important;
-            }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -1190,7 +1159,6 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <!-- ===== ABA RELATÓRIO POR ALUNO REMOVIDA ===== -->
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -1228,7 +1196,6 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <!-- ===== ABA RELATÓRIO POR ALUNO REMOVIDA ===== -->
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -1463,9 +1430,9 @@
                 </div>
             </div>
 
-            <!-- ========== GABARITO ========== -->
+            <!-- ========== GABARITO (COM CAMPOS BNCC) ========== -->
             <div class="page" id="page-gabarito">
-                <div class="page-header"><div><div class="page-title">✅ Cadastrar Gabarito</div><p class="page-sub">1º Ano: A,B,C &nbsp;|&nbsp; 2º ao 9º Ano: A,B,C,D</p></div></div>
+                <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas e os códigos BNCC (opcional)</p></div></div>
                 <div class="card no-print">
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
@@ -1475,7 +1442,13 @@
                     <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div><div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div></div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><div class="card-title">📝 Gabarito das Questões</div><div class="btn-group no-print"><button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button><button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button></div></div>
+                    <div class="card-header">
+                        <div class="card-title">📝 Gabarito das Questões</div>
+                        <div class="btn-group no-print">
+                            <button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
+                        </div>
+                    </div>
                     <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
                     <div class="gab-grid" id="gab-grid"></div>
                     <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
@@ -1597,7 +1570,7 @@
             <!-- ========== GABARITOS LIST ========== -->
             <div class="page" id="page-gabaritos">
                 <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>BNCC</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== PROVAS ========== -->
@@ -1964,7 +1937,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2030,75 +2003,33 @@
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
                     </div>
 
-                    <!-- Disciplinas -->
-                    <div class="desempenho-disciplinas" id="disciplinas-container">
-                        <!-- Português -->
-                        <div class="desempenho-disciplina" id="disc-portugues">
-                            <div class="header">
-                                <h4>📖 Português</h4>
-                                <span class="badge badge-blue" id="status-portugues">—</span>
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
+                    <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title" id="disciplina-unica-titulo">📖 Disciplina</div>
+                                <span class="badge" id="disciplina-unica-status">—</span>
                             </div>
-                            <div class="questoes-grid" id="questoes-portugues"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Matemática -->
-                        <div class="desempenho-disciplina" id="disc-matematica">
-                            <div class="header">
-                                <h4>🔢 Matemática</h4>
-                                <span class="badge badge-green" id="status-matematica">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-matematica"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
+                            <div class="questoes-grid" id="disciplina-unica-questoes" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div class="stats" style="display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13px;">
+                                <span>✅ Acertos: <span class="acertos" id="disciplina-unica-acertos">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="disciplina-unica-nota">0.0</span></span>
+                                <span>📊 Conceito: <span id="disciplina-unica-conceito">—</span></span>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Produção de Texto -->
-                        <div class="desempenho-disciplina" id="disc-producao">
-                            <div class="header">
-                                <h4>✍️ Produção de Texto</h4>
-                                <span class="badge badge-purple" id="status-producao">—</span>
+                    <!-- ===== NOVO CARD: GABARITO OFICIAL DA PROVA ===== -->
+                    <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">📋 Gabarito Oficial da Prova</div>
+                                <span class="badge badge-blue">Oficial</span>
                             </div>
-                            <div class="questoes-grid" id="questoes-producao"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Ciências Humanas (CH) -->
-                        <div class="desempenho-disciplina" id="disc-ch">
-                            <div class="header">
-                                <h4>🌍 Ciências Humanas</h4>
-                                <span class="badge badge-orange" id="status-ch">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-ch"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Ciências Naturais (CN) -->
-                        <div class="desempenho-disciplina" id="disc-cn">
-                            <div class="header">
-                                <h4>🔬 Ciências Naturais</h4>
-                                <span class="badge badge-teal" id="status-cn">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-cn"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
+                            <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); text-align:center;">
+                                Respostas corretas da prova
                             </div>
                         </div>
                     </div>
@@ -2125,6 +2056,7 @@
                     </div>
                 </div>
             </div>
+            <!-- ===== FIM DA ABA DESEMPENHO ===== -->
 
         </div>
 
@@ -3078,7 +3010,7 @@
             }
 
             // ============================================
-            // CARREGAR GABARITOS
+            // CARREGAR GABARITOS (COM INDICADOR BNCC)
             // ============================================
             async function carregarGabaritos() {
                 try {
@@ -3088,15 +3020,17 @@
                     if (!tbody) return;
                     const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
                     if (!comGabarito || comGabarito.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
                     } else {
                         tbody.innerHTML = comGabarito.map((p, i) => {
+                            const temBNCC = p.bncc && p.bncc.some(c => c && c.trim() !== '');
                             return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                                 '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                                 '<td>' + p.titulo + '</td>' +
                                 '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                                 '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
                                 '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
+                                '<td>' + (temBNCC ? '✅' : '') + '</td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
                                 '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
                         }).join('');
@@ -4076,6 +4010,7 @@
                                     opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
                                     opt.dataset.tipo = p.tipo_questoes || '4';
                                     opt.dataset.disciplina = p.disciplina || '';
+                                    opt.dataset.bncc = JSON.stringify(p.bncc || []);
                                     select.appendChild(opt); 
                                 }); 
                             }
@@ -4424,7 +4359,7 @@
             }
 
             // ============================================
-            // GABARITO - BUILD GRID
+            // GABARITO - BUILD GRID (COM BNCC)
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
@@ -4443,7 +4378,12 @@
                     div.className = 'gab-item';
                     let opts = '<option value="">—</option>';
                     alts.forEach(a => { opts += '<option>' + a + '</option>'; });
-                    div.innerHTML = '<div class="gab-num">Q' + i + '</div><select class="gab-select" onchange="this.classList.toggle(\'filled\', this.value!=\'\')">' + opts + '</select>';
+                    // CAMPO BNCC
+                    div.innerHTML = `
+                        <div class="gab-num">Q${i}</div>
+                        <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
+                        <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                    `;
                     grid.appendChild(div);
                 }
             }
@@ -4455,22 +4395,36 @@
                 showToast('🎲 Gabarito de teste preenchido!');
             }
 
-            function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); }); }
+            function clearGab() { 
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
+                document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
+            }
 
             // ============================================
-            // SALVAR GABARITO
+            // SALVAR GABARITO (COM BNCC)
             // ============================================
             async function saveGab() {
                 try {
                     const selects = document.querySelectorAll('.gab-select');
+                    const bnccInputs = document.querySelectorAll('.gab-bncc');
                     const respostas = [];
-                    selects.forEach(s => { if (s.value) { respostas.push(s.value); } else { respostas.push(''); } });
+                    const bncc = [];
+                    
+                    selects.forEach(s => { respostas.push(s.value || ''); });
+                    bnccInputs.forEach(inp => { bncc.push(inp.value.trim() || ''); });
+                    
                     const respostasValidas = respostas.filter(r => r !== '');
                     if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
+                    
                     const provaId = document.getElementById('gab-prova').value;
                     if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
+                    
                     showToast('💾 Salvando gabarito...', 'info');
-                    const payload = { prova_id: parseInt(provaId), respostas: respostas };
+                    const payload = { 
+                        prova_id: parseInt(provaId), 
+                        respostas: respostas,
+                        bncc: bncc
+                    };
                     const response = await fetch(`${API_URL}/api/gabaritos`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4488,6 +4442,96 @@
                     }
                 } catch (erro) {
                     showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // EDITAR GABARITO (COM BNCC) - CORRIGIDA
+            // ============================================
+            function editarGabarito(id) {
+                showToast('✏️ Carregando gabarito...', 'info');
+                fetch(API_URL + '/api/provas/' + id)
+                    .then(r => r.json())
+                    .then(prova => {
+                        if (prova.erro) {
+                            showToast('❌ ' + prova.erro, 'error');
+                            return;
+                        }
+                        if (prova.gabarito && prova.gabarito.length > 0) {
+                            const gabarito = prova.gabarito;
+                            const bncc = prova.bncc || [];
+                            
+                            // Primeiro, vai para a página de gabarito
+                            go('gabarito');
+                            
+                            // Aguarda a página carregar e preenche os campos
+                            setTimeout(() => {
+                                // Ajusta série e total
+                                const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
+                                const serieVal = serieMap[prova.serie] || '2';
+                                document.getElementById('gab-serie').value = serieVal;
+                                document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
+                                
+                                // Seleciona a prova no combo
+                                const selectProva = document.getElementById('gab-prova');
+                                if (selectProva) {
+                                    selectProva.value = id;
+                                }
+                                
+                                // Recria o grid com as novas configurações
+                                buildGabGrid();
+                                
+                                // Após construir, preenche com os valores
+                                setTimeout(() => {
+                                    const newSelects = document.querySelectorAll('.gab-select');
+                                    const newBncc = document.querySelectorAll('.gab-bncc');
+                                    newSelects.forEach((s, i) => {
+                                        if (i < gabarito.length && gabarito[i]) {
+                                            s.value = gabarito[i];
+                                            s.classList.add('filled');
+                                        }
+                                    });
+                                    newBncc.forEach((inp, i) => {
+                                        if (i < bncc.length && bncc[i]) {
+                                            inp.value = bncc[i];
+                                        }
+                                    });
+                                    showToast('📋 Gabarito carregado para edição!', 'success');
+                                }, 100);
+                            }, 150);
+                        } else {
+                            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
+                            go('gabarito');
+                        }
+                    })
+                    .catch(e => {
+                        showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
+                        console.error('Erro ao carregar gabarito:', e);
+                    });
+            }
+
+            // ============================================
+            // EXCLUIR GABARITO
+            // ============================================
+            async function excluirGabarito(id, nome) {
+                if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
+                try {
+                    showToast('🗑️ Excluindo gabarito...', 'error');
+                    const response = await fetch(API_URL + '/api/gabaritos/' + id, { 
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('🗑️ Gabarito excluído com sucesso!', 'success');
+                        carregarGabaritos();
+                        carregarProvas();
+                    } else {
+                        showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao excluir gabarito:', erro);
+                    showToast('❌ Erro ao excluir gabarito: ' + erro.message, 'error');
                 }
             }
 
@@ -4988,6 +5032,7 @@
                             opt.dataset.tipo = p.tipo_questoes || '4';
                             opt.dataset.data = p.data_prova || '';
                             opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                            opt.dataset.bncc = JSON.stringify(p.bncc || []);
                             opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
@@ -6149,64 +6194,6 @@
                 carregarProvas();
             }
 
-            // ===== GABARITO =====
-            function editarGabarito(id) {
-                showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info');
-                fetch(API_URL + '/api/provas/' + id)
-                    .then(r => r.json())
-                    .then(prova => {
-                        if (prova.erro) {
-                            showToast('❌ ' + prova.erro, 'error');
-                            return;
-                        }
-                        if (prova.gabarito && prova.gabarito.length > 0) {
-                            const gabarito = prova.gabarito;
-                            const selects = document.querySelectorAll('.gab-select');
-                            selects.forEach((s, i) => {
-                                if (i < gabarito.length && gabarito[i]) {
-                                    s.value = gabarito[i];
-                                    s.classList.add('filled');
-                                }
-                            });
-                            const selectProva = document.getElementById('gab-prova');
-                            if (selectProva) {
-                                selectProva.value = id;
-                            }
-                            showToast('📋 Gabarito carregado para edição!', 'success');
-                            go('gabarito');
-                        } else {
-                            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
-                            go('gabarito');
-                        }
-                    })
-                    .catch(e => {
-                        showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
-                        console.error('Erro ao carregar gabarito:', e);
-                    });
-            }
-
-            async function excluirGabarito(id, nome) {
-                if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
-                try {
-                    showToast('🗑️ Excluindo gabarito...', 'error');
-                    const response = await fetch(API_URL + '/api/gabaritos/' + id, { 
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    const result = await processarRespostaAPI(response);
-                    if (result.ok) {
-                        showToast('🗑️ Gabarito excluído com sucesso!', 'success');
-                        carregarGabaritos();
-                        carregarProvas();
-                    } else {
-                        showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
-                    }
-                } catch (erro) {
-                    console.error('Erro ao excluir gabarito:', erro);
-                    showToast('❌ Erro ao excluir gabarito: ' + erro.message, 'error');
-                }
-            }
-
             // ============================================
             // FUNÇÕES ADICIONAIS
             // ============================================
@@ -6788,7 +6775,7 @@
             }
 
             // ============================================
-            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL)
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL)
             // ============================================
             
             async function carregarEscolasDesempenho() {
@@ -7014,123 +7001,53 @@
                     document.getElementById('info-prova').textContent = prova.titulo || '—';
                     document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
 
-                    const disciplinaMap = {
-                        'Português': 'portugues',
-                        'Matemática': 'matematica',
-                        'Produção de Texto': 'producao',
-                        'produção de texto': 'producao',
-                        'portugues': 'portugues',
-                        'matematica': 'matematica',
-                        'producao': 'producao',
-                        'Ciências Humanas': 'ch',
-                        'ciências humanas': 'ch',
-                        'ch': 'ch',
-                        'Ciências Naturais': 'cn',
-                        'ciências naturais': 'cn',
-                        'cn': 'cn'
-                    };
-                    
-                    const discKey = disciplinaMap[disciplina.toLowerCase()] || 'portugues';
-                    
-                    const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
-                    const nomesDisciplinas = {
-                        'portugues': 'Português',
-                        'matematica': 'Matemática',
-                        'producao': 'Produção de Texto',
-                        'ch': 'Ciências Humanas',
-                        'cn': 'Ciências Naturais'
-                    };
-                    const iconesDisciplinas = {
-                        'portugues': '📖',
-                        'matematica': '🔢',
-                        'producao': '✍️',
-                        'ch': '🌍',
-                        'cn': '🔬'
-                    };
-                    const coresDisciplinas = {
-                        'portugues': 'blue',
-                        'matematica': 'green',
-                        'producao': 'purple',
-                        'ch': 'orange',
-                        'cn': 'teal'
-                    };
-                    const badgesDisciplinas = {
-                        'portugues': 'badge-blue',
-                        'matematica': 'badge-green',
-                        'producao': 'badge-purple',
-                        'ch': 'badge-orange',
-                        'cn': 'badge-teal'
-                    };
+                    // ---- CARD ÚNICO DA DISCIPLINA ----
+                    const card = document.getElementById('desempenho-disciplina-unica');
+                    card.style.display = 'block';
 
-                    disciplinas.forEach(key => {
-                        const container = document.getElementById(`questoes-${key}`);
-                        const statusEl = document.getElementById(`status-${key}`);
-                        const acertosEl = document.getElementById(`acertos-${key}`);
-                        const errosEl = document.getElementById(`erros-${key}`);
-                        const notaEl = document.getElementById(`nota-${key}`);
-                        
-                        if (key === discKey) {
-                            let html = '';
-                            resultadoQuestoes.forEach(q => {
-                                const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                                const statusText = q.acertou 
-                                    ? '✅ ACERTOU: ADQUIRIU HABILIDADE' 
-                                    : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
-                                html += `
-                                    <div class="questao-item ${classe}">
-                                        <div class="q-num">Q${q.numero}</div>
-                                        <div class="q-resp">${q.resposta}</div>
-                                        <div class="q-gab">${q.gabarito}</div>
-                                        <span class="q-status-text ${classe}">${statusText}</span>
-                                    </div>
-                                `;
-                            });
-                            container.innerHTML = html;
-                            
-                            const pctDisc = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-                            let statusText = 'Inicial';
-                            let statusBadge = 'badge-red';
-                            if (pctDisc > 80) { statusText = 'Avançado'; statusBadge = 'badge-green'; }
-                            else if (pctDisc > 60) { statusText = 'Proficiente'; statusBadge = 'badge-blue'; }
-                            else if (pctDisc > 40) { statusText = 'Básico'; statusBadge = 'badge-orange'; }
-                            
-                            statusEl.textContent = statusText;
-                            statusEl.className = `badge ${statusBadge}`;
-                            acertosEl.textContent = acertos;
-                            errosEl.textContent = erros;
-                            notaEl.textContent = notaFinal.toFixed(1);
-                            
-                            const header = container.closest('.desempenho-disciplina').querySelector('h4');
-                            header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
-                            
-                            const card = container.closest('.desempenho-disciplina');
-                            const cor = coresDisciplinas[key];
-                            const colorMap = {
-                                'blue': '59,130,246',
-                                'green': '16,185,129',
-                                'purple': '139,92,246',
-                                'orange': '245,158,11',
-                                'teal': '20,184,166'
-                            };
-                            card.style.borderColor = `rgba(${colorMap[cor] || '59,130,246'}, 0.3)`;
-                        } else {
-                            container.innerHTML = `
-                                <div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b; font-size:12px;">
-                                    ⚠️ Nenhuma resposta disponível para esta disciplina
-                                </div>
-                            `;
-                            statusEl.textContent = 'Sem dados';
-                            statusEl.className = 'badge badge-gray';
-                            acertosEl.textContent = '—';
-                            errosEl.textContent = '—';
-                            notaEl.textContent = '—';
-                            
-                            const header = container.closest('.desempenho-disciplina').querySelector('h4');
-                            header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
-                            
-                            const card = container.closest('.desempenho-disciplina');
-                            card.style.borderColor = 'var(--border)';
-                        }
+                    document.getElementById('disciplina-unica-titulo').textContent = `📖 ${disciplina}`;
+
+                    const grid = document.getElementById('disciplina-unica-questoes');
+                    grid.innerHTML = '';
+                    resultadoQuestoes.forEach(q => {
+                        const div = document.createElement('div');
+                        div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
+                        div.innerHTML = `
+                            <div class="q-num">Q${q.numero}</div>
+                            <div class="q-resp">${q.resposta}</div>
+                            <div class="q-gab">${q.gabarito}</div>
+                            <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
+                                ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}
+                            </span>
+                        `;
+                        grid.appendChild(div);
+                    });
+
+                    document.getElementById('disciplina-unica-acertos').textContent = acertos;
+                    document.getElementById('disciplina-unica-erros').textContent = erros;
+                    document.getElementById('disciplina-unica-nota').textContent = notaFinal.toFixed(1);
+
+                    const statusBadge = document.getElementById('disciplina-unica-status');
+                    statusBadge.textContent = conceito;
+                    statusBadge.className = `badge ${conceitoCor}`;
+
+                    document.getElementById('disciplina-unica-conceito').textContent = conceito;
+
+                    // ---- NOVO CARD: GABARITO OFICIAL DA PROVA ----
+                    const gabCard = document.getElementById('gabarito-oficial-card');
+                    gabCard.style.display = 'block';
+                    
+                    const gabGrid = document.getElementById('gabarito-oficial-grid');
+                    gabGrid.innerHTML = '';
+                    gabarito.forEach((gab, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'questao-item';
+                        div.innerHTML = `
+                            <div class="q-num">Q${idx+1}</div>
+                            <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
+                            <div class="q-gab">Oficial</div>
+                        `;
+                        gabGrid.appendChild(div);
                     });
 
                     showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos`, 'success');
@@ -7154,24 +7071,12 @@
                     return;
                 }
 
-                const escola = data.escola.nome || '—';
-                const turma = (data.turma.nome || '') + ' - ' + (data.turma.serie || '');
-                const nomeAluno = data.aluno.nome || '—';
-                const prova = data.prova.titulo || '—';
-                const dataAtual = new Date().toLocaleDateString('pt-BR');
-                const nota = data.nota.toFixed(1);
-                const acertos = data.acertos;
-                const erros = data.erros;
-                const conceito = data.conceito;
-                const disciplina = data.disciplina || 'Português';
-                const totalQuestoes = data.totalQuestoes || 20;
+                const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes, gabarito } = data;
 
                 let questoesHTML = '';
-                data.resultadoQuestoes.forEach(q => {
+                resultadoQuestoes.forEach(q => {
                     const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                    const statusText = q.acertou 
-                        ? '✅ ADQUIRIU HABILIDADE' 
-                        : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                    const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
                     questoesHTML += `
                         <div class="questao-item ${classe}">
                             <div class="q-num">Q${q.numero}</div>
@@ -7182,12 +7087,24 @@
                     `;
                 });
 
+                // Gabarito oficial
+                let gabOficialHTML = '';
+                gabarito.forEach((gab, idx) => {
+                    gabOficialHTML += `
+                        <div class="questao-item">
+                            <div class="q-num">Q${idx+1}</div>
+                            <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
+                            <div class="q-gab">Oficial</div>
+                        </div>
+                    `;
+                });
+
                 const html = `
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>Desempenho do Aluno - ${nomeAluno}</title>
+                    <title>Desempenho do Aluno - ${aluno.nome}</title>
                     <style>
                         * { margin:0; padding:0; box-sizing:border-box; }
                         body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#0f172a; padding:30px; }
@@ -7222,6 +7139,10 @@
                         .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
                         .disciplina-card .stats { display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px; }
                         .disciplina-card .stats strong { color:#0f172a; }
+                        .gabarito-oficial-card { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:16px; page-break-inside:avoid; }
+                        .gabarito-oficial-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+                        .gabarito-oficial-card .header strong { font-size:15px; color:#0f172a; }
+                        .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
                         @media print {
                             .no-print { display:none !important; }
                             body { padding:20px; }
@@ -7231,7 +7152,7 @@
                         @media (max-width:768px) {
                             .info-grid { grid-template-columns:1fr 1fr; }
                             .resumo { grid-template-columns:1fr 1fr; }
-                            .disciplina-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
+                            .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
                         }
                     </style>
                 </head>
@@ -7242,15 +7163,15 @@
                     </div>
 
                     <div class="info-grid">
-                        <div><strong>🏫 Escola</strong><br>${escola}</div>
-                        <div><strong>👥 Turma</strong><br>${turma}</div>
-                        <div><strong>🎒 Aluno</strong><br>${nomeAluno}</div>
-                        <div><strong>📄 Prova</strong><br>${prova}</div>
-                        <div><strong>📅 Data</strong><br>${dataAtual}</div>
+                        <div><strong>🏫 Escola</strong><br>${escola.nome || '—'}</div>
+                        <div><strong>👥 Turma</strong><br>${turma.nome || ''} - ${turma.serie || ''}</div>
+                        <div><strong>🎒 Aluno</strong><br>${aluno.nome || '—'}</div>
+                        <div><strong>📄 Prova</strong><br>${prova.titulo || '—'}</div>
+                        <div><strong>📅 Data</strong><br>${new Date().toLocaleDateString('pt-BR')}</div>
                     </div>
 
                     <div class="resumo">
-                        <div class="resumo-item"><div class="valor blue">${nota}</div><div class="label">Nota Final</div></div>
+                        <div class="resumo-item"><div class="valor blue">${nota.toFixed(1)}</div><div class="label">Nota Final</div></div>
                         <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
                         <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
                         <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
@@ -7271,13 +7192,27 @@
                             <div class="stats">
                                 <span>✅ Acertos: <strong style="color:#16a34a;">${acertos}</strong></span>
                                 <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
-                                <span>⭐ Nota: <strong style="color:#2563eb;">${nota}</strong></span>
+                                <span>⭐ Nota: <strong style="color:#2563eb;">${nota.toFixed(1)}</strong></span>
                                 <span>📊 Total: <strong>${totalQuestoes}</strong></span>
                             </div>
                             <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
                                 <span style="color:#16a34a;">✅ ACERTOU: ADQUIRIU HABILIDADE</span> | 
                                 <span style="color:#dc2626;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- NOVO CARD: GABARITO OFICIAL -->
+                    <div class="gabarito-oficial-card">
+                        <div class="header">
+                            <strong>📋 Gabarito Oficial da Prova</strong>
+                            <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
+                        </div>
+                        <div class="questoes-grid">
+                            ${gabOficialHTML}
+                        </div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #86efac; font-size:11px; color:#475569; text-align:center;">
+                            Respostas corretas da prova
                         </div>
                     </div>
 
@@ -7318,8 +7253,8 @@
 
                 win.document.write(html);
                 win.document.close();
-                
-                showToast('📄 Documento gerado! Uma nova janela foi aberta para impressão.', 'success');
+                setTimeout(() => win.print(), 500);
+                showToast('📄 Documento gerado!', 'success');
             }
 
             function limparFiltrosDesempenho() {
@@ -7328,6 +7263,8 @@
                 document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
                 document.getElementById('filtro-prova-desempenho').value = '';
                 document.getElementById('resultado-desempenho').style.display = 'none';
+                document.getElementById('desempenho-disciplina-unica').style.display = 'none';
+                document.getElementById('gabarito-oficial-card').style.display = 'none';
                 desempenhoData.alunoSelecionado = null;
                 showToast('✕ Filtros limpos!', 'info');
             }
