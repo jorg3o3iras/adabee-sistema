@@ -1,22 +1,12 @@
-/* ═══════════════════════════════════════════════════════════
-   🔷 1. DESIGN SYSTEM (RAIZ / VARIÁVEIS GLOBAIS)
-   ═══════════════════════════════════════════════════════════
-   Define cores, sombras, bordas e gradientes usados em todo
-   o sistema. Centraliza a identidade visual.
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════ DESIGN SYSTEM ═══════════════ */
 :root {
-    /* Cores de fundo (escuro) */
-    --bg: #0f1117;            /* Fundo principal da página */
-    --bg2: #161b2e;           /* Fundo secundário (sidebar, inputs) */
-    --bg3: #1e2540;           /* Fundo terciário (scrollbar) */
-    --surface: #1a2035;       /* Superfícies de cards */
-    --surface2: #222b44;      /* Superfície mais clara para hover */
-
-    /* Bordas com transparência */
+    --bg: #0f1117;
+    --bg2: #161b2e;
+    --bg3: #1e2540;
+    --surface: #1a2035;
+    --surface2: #222b44;
     --border: rgba(255, 255, 255, 0.07);
     --border2: rgba(255, 255, 255, 0.13);
-
-    /* Cores principais (azul, roxo, verde, vermelho, laranja, ciano) */
     --blue: #3b82f6;
     --blue-glow: rgba(59, 130, 246, 0.3);
     --purple: #8b5cf6;
@@ -27,76 +17,58 @@
     --red-glow: rgba(239, 68, 68, 0.25);
     --orange: #f59e0b;
     --cyan: #06b6d4;
-
-    /* Cores de texto */
-    --text: #f1f5f9;          /* Texto principal (branco acinzentado) */
-    --text2: #94a3b8;         /* Texto secundário (cinza claro) */
-    --text3: #64748b;         /* Texto terciário (cinza médio) */
-
-    /* Raios de borda (arredondamento) */
-    --r: 12px;                /* Padrão para cards */
-    --r2: 8px;                /* Menor para inputs/botões */
-
-    /* Sombras */
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --r: 12px;
+    --r2: 8px;
     --sh: 0 4px 24px rgba(0, 0, 0, 0.4);
     --sh2: 0 2px 12px rgba(0, 0, 0, 0.3);
-
-    /* Gradientes usados em botões e destaques */
     --grad-blue: linear-gradient(135deg, #3b82f6, #6366f1);
     --grad-purple: linear-gradient(135deg, #8b5cf6, #ec4899);
     --grad-green: linear-gradient(135deg, #10b981, #06b6d4);
     --grad-orange: linear-gradient(135deg, #f59e0b, #ef4444);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 2. RESET GLOBAL E ESTILOS BASE
-   ═══════════════════════════════════════════════════════════
-   Remove margens/padding padrão, define fonte base e
-   comportamentos de rolagem.
-   ═══════════════════════════════════════════════════════════ */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Segoe UI', system-ui, sans-serif
 }
 
 html {
-    scroll-behavior: smooth;   /* Rolagem suave para âncoras */
+    scroll-behavior: smooth
 }
 
 body {
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    overflow-x: hidden;        /* Evita rolagem horizontal indesejada */
-    font-size: 13px;           /* 🔽 REDUZIDO: fonte base menor */
+    overflow-x: hidden
 }
 
-/* Personalização da barra de rolagem (WebKit) */
 ::-webkit-scrollbar {
     width: 5px;
-    height: 5px;
-}
-::-webkit-scrollbar-track {
-    background: var(--bg2);
-}
-::-webkit-scrollbar-thumb {
-    background: var(--bg3);
-    border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: var(--blue);
+    height: 5px
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 3. BOTÃO DO MENU HAMBÚRGUER (MOBILE)
-   ═══════════════════════════════════════════════════════════
-   Visível apenas em telas pequenas. Controla a abertura
-   da sidebar e o overlay escuro atrás.
-   ═══════════════════════════════════════════════════════════ */
+::-webkit-scrollbar-track {
+    background: var(--bg2)
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg3);
+    border-radius: 99px
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--blue)
+}
+
+/* ═══════════════ BOTÃO MENU HAMBÚRGUER ═══════════════ */
 .menu-toggle {
-    display: none;               /* Escondido em desktop */
+    display: none;
     position: fixed;
     top: 12px;
     left: 12px;
@@ -109,36 +81,33 @@ body {
     color: var(--text);
     font-size: 22px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all .3s;
     align-items: center;
-    justify-content: center;
-}
-.menu-toggle:hover {
-    background: var(--surface);
-    border-color: var(--blue);
-}
-/* Quando ativo, desloca o botão para não ficar sobre a sidebar */
-.menu-toggle.active {
-    left: 240px;
+    justify-content: center
 }
 
-/* Overlay escuro que cobre o conteúdo quando o menu está aberto */
+.menu-toggle:hover {
+    background: var(--surface);
+    border-color: var(--blue)
+}
+
+.menu-toggle.active {
+    left: 240px
+}
+
 .menu-overlay {
     display: none;
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 9997;
-}
-.menu-overlay.show {
-    display: block;
+    z-index: 9997
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 4. TELA DE LOGIN
-   ═══════════════════════════════════════════════════════════
-   Fundo com blobs animados e cartão central com efeito glass.
-   ═══════════════════════════════════════════════════════════ */
+.menu-overlay.show {
+    display: block
+}
+
+/* ═══════════════ LOGIN ═══════════════ */
 #login-screen {
     min-height: 100vh;
     display: flex;
@@ -146,73 +115,80 @@ body {
     justify-content: center;
     background: var(--bg);
     position: relative;
-    overflow: hidden;
+    overflow: hidden
 }
 
-/* Container dos blobs decorativos */
 .login-bg {
     position: absolute;
     inset: 0;
-    pointer-events: none;      /* Não atrapalha cliques */
+    pointer-events: none
 }
 
-/* Cada blob é uma bolha colorida com desfoque e animação flutuante */
 .login-blob {
     position: absolute;
     border-radius: 50%;
     filter: blur(80px);
-    opacity: 0.22;
-    animation: blobFloat 8s ease-in-out infinite;
+    opacity: .22;
+    animation: blobFloat 8s ease-in-out infinite
 }
+
 .lb1 {
     width: 500px;
     height: 500px;
     background: var(--blue);
     top: -150px;
-    left: -150px;
+    left: -150px
 }
+
 .lb2 {
     width: 400px;
     height: 400px;
     background: var(--purple);
     bottom: -100px;
     right: -100px;
-    animation-delay: 3s;
+    animation-delay: 3s
 }
+
 .lb3 {
     width: 300px;
     height: 300px;
     background: var(--cyan);
     top: 40%;
     left: 30%;
-    animation-delay: 6s;
+    animation-delay: 6s
 }
 
-/* Animação que faz os blobs flutuarem suavemente */
 @keyframes blobFloat {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33%      { transform: translate(20px, -20px) scale(1.05); }
-    66%      { transform: translate(-10px, 15px) scale(0.97); }
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1)
+    }
+    33% {
+        transform: translate(20px, -20px) scale(1.05)
+    }
+    66% {
+        transform: translate(-10px, 15px) scale(.97)
+    }
 }
 
-/* Cartão do login com efeito vidro (backdrop blur) */
 .login-card {
-    background: rgba(26, 32, 53, 0.88);
+    background: rgba(26, 32, 53, .88);
     backdrop-filter: blur(24px);
     border: 1px solid var(--border2);
     border-radius: 24px;
     padding: 44px 40px;
     width: 440px;
     max-width: 95vw;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 32px 80px rgba(0, 0, 0, .5);
     position: relative;
-    z-index: 1;
+    z-index: 1
 }
 
 .login-logo {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 32px
 }
+
 .l-icon {
     width: 72px;
     height: 72px;
@@ -223,20 +199,21 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 36px;
-    box-shadow: 0 8px 32px var(--blue-glow);
+    box-shadow: 0 8px 32px var(--blue-glow)
 }
+
 .login-logo h1 {
     font-size: 24px;
     font-weight: 800;
-    letter-spacing: -0.5px;
+    letter-spacing: -.5px
 }
+
 .login-logo p {
     color: var(--text2);
     font-size: 13px;
-    margin-top: 6px;
+    margin-top: 6px
 }
 
-/* Abas para alternar entre login e cadastro (se houver) */
 .login-tabs {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -245,8 +222,9 @@ body {
     background: var(--bg);
     border-radius: 10px;
     padding: 4px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border)
 }
+
 .login-tab {
     padding: 10px;
     border: none;
@@ -254,29 +232,31 @@ body {
     cursor: pointer;
     font-weight: 600;
     font-size: 13px;
-    transition: all 0.25s;
+    transition: all .25s;
     background: transparent;
-    color: var(--text2);
+    color: var(--text2)
 }
+
 .login-tab.active {
     background: var(--grad-blue);
     color: #fff;
-    box-shadow: 0 4px 16px var(--blue-glow);
+    box-shadow: 0 4px 16px var(--blue-glow)
 }
 
-/* Campos do formulário de login */
 .lf-group {
-    margin-bottom: 16px;
+    margin-bottom: 16px
 }
+
 .lf-group label {
     display: block;
     font-size: 11px;
     font-weight: 700;
     color: var(--text2);
     margin-bottom: 8px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    letter-spacing: .5px;
+    text-transform: uppercase
 }
+
 .lf-input {
     width: 100%;
     padding: 13px 16px;
@@ -286,17 +266,18 @@ body {
     color: var(--text);
     font-size: 14px;
     outline: none;
-    transition: all 0.2s;
-}
-.lf-input:focus {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 4px var(--blue-glow);
-}
-.lf-input::placeholder {
-    color: var(--text3);
+    transition: all .2s
 }
 
-/* Botão principal de login */
+.lf-input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 4px var(--blue-glow)
+}
+
+.lf-input::placeholder {
+    color: var(--text3)
+}
+
 .btn-login {
     width: 100%;
     padding: 14px;
@@ -309,67 +290,69 @@ body {
     cursor: pointer;
     margin-top: 8px;
     box-shadow: 0 4px 20px var(--blue-glow);
-    transition: all 0.25s;
+    transition: all .25s
 }
+
 .btn-login:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px var(--blue-glow);
+    box-shadow: 0 8px 32px var(--blue-glow)
 }
 
 .login-hint {
     text-align: center;
     margin-top: 16px;
     font-size: 12px;
-    color: var(--text3);
+    color: var(--text3)
 }
 
-/* Animação de tremor para erro (exemplo) */
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%      { transform: translateX(-8px); }
-    40%      { transform: translateX(8px); }
-    60%      { transform: translateX(-6px); }
-    80%      { transform: translateX(6px); }
+    0%,
+    100% {
+        transform: translateX(0)
+    }
+    20% {
+        transform: translateX(-8px)
+    }
+    40% {
+        transform: translateX(8px)
+    }
+    60% {
+        transform: translateX(-6px)
+    }
+    80% {
+        transform: translateX(6px)
+    }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 5. LAYOUT PRINCIPAL (APP)
-   ═══════════════════════════════════════════════════════════
-   Container que abriga sidebar + conteúdo. Inicialmente oculto.
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════ APP LAYOUT ═══════════════ */
 #app {
     display: none;
     height: 100vh;
     flex-direction: row;
-    overflow: hidden;
+    overflow: hidden
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 6. SIDEBAR (BARRA LATERAL)
-   ═══════════════════════════════════════════════════════════
-   Navegação fixa à esquerda com logo, itens de menu e área
-   do usuário (avatar, nome, logout).
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════ SIDEBAR ═══════════════ */
 .sidebar {
     width: 230px;
-    flex-shrink: 0;            /* Não encolhe */
+    flex-shrink: 0;
     background: var(--bg2);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden
 }
 
-/* Marca / Logo no topo da sidebar */
 .sb-brand {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 18px 16px 16px;
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    flex-shrink: 0
 }
+
 .sb-logo {
     width: 36px;
     height: 36px;
@@ -380,25 +363,25 @@ body {
     justify-content: center;
     font-size: 18px;
     box-shadow: 0 2px 10px var(--blue-glow);
-    flex-shrink: 0;
-}
-.sb-brand-name {
-    font-size: 14px;           /* 🔽 REDUZIDO */
-    font-weight: 800;
-    letter-spacing: -0.3px;
-}
-.sb-brand-name span {
-    color: var(--blue);
+    flex-shrink: 0
 }
 
-/* Navegação (rolável se muitos itens) */
+.sb-brand-name {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.3px
+}
+
+.sb-brand-name span {
+    color: var(--blue)
+}
+
 .sb-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 8px;
+    padding: 10px 8px
 }
 
-/* Título de seção (ex: "GERAL", "RELATÓRIOS") */
 .sb-section {
     font-size: 9px;
     font-weight: 800;
@@ -406,10 +389,9 @@ body {
     text-transform: uppercase;
     letter-spacing: 1.5px;
     padding: 14px 10px 5px;
-    margin-top: 2px;
+    margin-top: 2px
 }
 
-/* Cada item do menu */
 .sb-item {
     display: flex;
     align-items: center;
@@ -418,48 +400,48 @@ body {
     border-radius: 8px;
     cursor: pointer;
     color: var(--text2);
-    font-size: 12px;           /* 🔽 REDUZIDO */
+    font-size: 13px;
     font-weight: 500;
-    transition: all 0.18s;
+    transition: all .18s;
     border: 1px solid transparent;
-    white-space: nowrap;
-}
-.sb-item:hover {
-    background: var(--surface);
-    color: var(--text);
-}
-.sb-item.active {
-    background: rgba(59, 130, 246, 0.12);
-    color: var(--blue);
-    border-color: rgba(59, 130, 246, 0.2);
+    white-space: nowrap
 }
 
-/* Ícone do item */
+.sb-item:hover {
+    background: var(--surface);
+    color: var(--text)
+}
+
+.sb-item.active {
+    background: rgba(59, 130, 246, .12);
+    color: var(--blue);
+    border-color: rgba(59, 130, 246, .2)
+}
+
 .sb-ico {
     font-size: 15px;
     flex-shrink: 0;
     width: 18px;
-    text-align: center;
+    text-align: center
 }
 
-/* Badge de notificação/contagem */
 .sb-badge {
     margin-left: auto;
     font-size: 10px;
     padding: 2px 7px;
     border-radius: 20px;
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, .2);
     color: #a78bfa;
     font-weight: 700;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(139, 92, 246, .3)
 }
 
-/* Rodapé da sidebar (usuário e logout) */
 .sb-footer {
     border-top: 1px solid var(--border);
     padding: 12px 12px;
-    flex-shrink: 0;
+    flex-shrink: 0
 }
+
 .sb-user {
     display: flex;
     align-items: center;
@@ -468,8 +450,9 @@ body {
     background: var(--surface);
     border: 1px solid var(--border2);
     border-radius: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 8px
 }
+
 .sb-avatar {
     width: 32px;
     height: 32px;
@@ -481,8 +464,9 @@ body {
     font-size: 13px;
     font-weight: 700;
     color: #fff;
-    flex-shrink: 0;
+    flex-shrink: 0
 }
+
 .sb-uname {
     font-size: 13px;
     font-weight: 700;
@@ -490,97 +474,96 @@ body {
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: ellipsis
 }
+
 .sb-urole {
     font-size: 9px;
     color: var(--text3);
-    margin-top: 1px;
+    margin-top: 1px
 }
 
-/* Botão de sair (logout) */
 .sb-logout {
     width: 100%;
     padding: 9px;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    border: 1px solid rgba(239, 68, 68, .3);
     border-radius: 8px;
-    background: rgba(239, 68, 68, 0.08);
+    background: rgba(239, 68, 68, .08);
     color: #fc8181;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all .2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-}
-.sb-logout:hover {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.5);
+    gap: 6px
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 7. ÁREA DE CONTEÚDO (CONTENT)
-   ═══════════════════════════════════════════════════════════
-   Onde as páginas são renderizadas. Possui padding e fundo.
-   ═══════════════════════════════════════════════════════════ */
+.sb-logout:hover {
+    background: rgba(239, 68, 68, .2);
+    border-color: rgba(239, 68, 68, .5)
+}
+
+/* ═══════════════ CONTENT ═══════════════ */
 .content {
     flex: 1;
     overflow-y: auto;
     padding: 24px;
-    background: var(--bg);
+    background: var(--bg)
 }
 
-/* Cada página (ex: Escolas, Alunos, etc.) é uma .page */
 .page {
     display: none;
-    animation: fadeIn 0.25s ease;   /* Animação de entrada */
+    animation: fadeIn .25s ease
 }
+
 .page.active {
-    display: block;
+    display: block
 }
 
-/* Animação de fade + deslocamento suave */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px)
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0)
+    }
 }
 
-/* Cabeçalho da página: título + ações (botões, busca) */
 .page-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 22px;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 12px
 }
+
 .page-title {
-    font-size: 18px;           /* 🔽 REDUZIDO (era 21px) */
+    font-size: 21px;
     font-weight: 800;
-    letter-spacing: -0.5px;
+    letter-spacing: -.5px;
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 9px
 }
+
 .page-sub {
     color: var(--text2);
     font-size: 13px;
-    margin-top: 4px;
+    margin-top: 4px
 }
+
 .page-actions {
     display: flex;
     gap: 8px;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: wrap
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 8. CARDS E SUPERFÍCIES
-   ═══════════════════════════════════════════════════════════
-   Containers padrão com borda, sombra e padding.
-   ═══════════════════════════════════════════════════════════ */
 .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -588,10 +571,11 @@ body {
     padding: 20px;
     margin-bottom: 18px;
     box-shadow: var(--sh2);
-    transition: border-color 0.2s;
+    transition: border-color .2s
 }
+
 .card:hover {
-    border-color: var(--border2);
+    border-color: var(--border2)
 }
 
 .card-header {
@@ -602,26 +586,22 @@ body {
     padding-bottom: 14px;
     border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 8px
 }
+
 .card-title {
-    font-size: 13px;           /* 🔽 REDUZIDO (era 14px) */
+    font-size: 14px;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 8px
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 9. ESTATÍSTICAS (GRID DE CARDS)
-   ═══════════════════════════════════════════════════════════
-   Exibe 4 cards lado a lado com números grandes.
-   ═══════════════════════════════════════════════════════════ */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
-    margin-bottom: 18px;
+    margin-bottom: 18px
 }
 
 .stat-card {
@@ -632,34 +612,48 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    transition: all 0.25s;
+    transition: all .25s;
     position: relative;
-    overflow: hidden;
+    overflow: hidden
 }
-/* Linha colorida no topo do card */
+
 .stat-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
+    height: 2px
 }
-.stat-card.blue::before   { background: var(--grad-blue); }
-.stat-card.green::before  { background: var(--grad-green); }
-.stat-card.orange::before { background: var(--grad-orange); }
-.stat-card.purple::before { background: var(--grad-purple); }
+
+.stat-card.blue::before {
+    background: var(--grad-blue)
+}
+
+.stat-card.green::before {
+    background: var(--grad-green)
+}
+
+.stat-card.orange::before {
+    background: var(--grad-orange)
+}
+
+.stat-card.purple::before {
+    background: var(--grad-purple)
+}
+
 .stat-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--sh);
-    border-color: var(--border2);
+    border-color: var(--border2)
 }
 
 .stat-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: space-between
 }
+
 .stat-icon {
     width: 44px;
     height: 44px;
@@ -667,110 +661,141 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 20px
 }
-.stat-icon.blue   { background: rgba(59, 130, 246, 0.15); }
-.stat-icon.green  { background: rgba(16, 185, 129, 0.15); }
-.stat-icon.orange { background: rgba(245, 158, 11, 0.15); }
-.stat-icon.purple { background: rgba(139, 92, 246, 0.15); }
+
+.stat-icon.blue {
+    background: rgba(59, 130, 246, .15)
+}
+
+.stat-icon.green {
+    background: rgba(16, 185, 129, .15)
+}
+
+.stat-icon.orange {
+    background: rgba(245, 158, 11, .15)
+}
+
+.stat-icon.purple {
+    background: rgba(139, 92, 246, .15)
+}
 
 .stat-trend {
     font-size: 11px;
     padding: 3px 8px;
     border-radius: 20px;
     font-weight: 700;
-    background: rgba(16, 185, 129, 0.15);
-    color: var(--green);
+    background: rgba(16, 185, 129, .15);
+    color: var(--green)
 }
+
 .stat-val {
-    font-size: 24px;           /* 🔽 REDUZIDO (era 30px) */
+    font-size: 30px;
     font-weight: 900;
     letter-spacing: -1px;
-    line-height: 1;
+    line-height: 1
 }
+
 .stat-label {
     font-size: 12px;
-    color: var(--text2);
+    color: var(--text2)
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 10. GRIDS AUXILIARES
-   ═══════════════════════════════════════════════════════════
-   .g2 → 2 colunas, .g3 → 3 colunas.
-   ═══════════════════════════════════════════════════════════ */
-.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.g2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px
+}
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 11. BOTÕES (VARIANTES)
-   ═══════════════════════════════════════════════════════════
-   .btn → base; .btn-primary, .btn-green, .btn-red etc.
-   ═══════════════════════════════════════════════════════════ */
+.g3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 7px 14px;         /* 🔽 REDUZIDO (era 9px 18px) */
+    padding: 9px 18px;
     border: none;
     border-radius: 8px;
-    font-size: 12px;           /* 🔽 REDUZIDO (era 13px) */
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+    transition: all .2s;
+    white-space: nowrap
 }
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
+
+.btn:hover {
+    transform: translateY(-1px)
+}
+
+.btn:active {
+    transform: translateY(0)
+}
 
 .btn-primary {
     background: var(--grad-blue);
     color: #fff;
-    box-shadow: 0 4px 14px var(--blue-glow);
+    box-shadow: 0 4px 14px var(--blue-glow)
 }
-.btn-primary:hover { box-shadow: 0 6px 22px var(--blue-glow); }
+
+.btn-primary:hover {
+    box-shadow: 0 6px 22px var(--blue-glow)
+}
 
 .btn-purple {
     background: var(--grad-purple);
     color: #fff;
-    box-shadow: 0 4px 14px var(--purple-glow);
+    box-shadow: 0 4px 14px var(--purple-glow)
 }
+
 .btn-green {
     background: var(--grad-green);
     color: #fff;
-    box-shadow: 0 4px 14px var(--green-glow);
+    box-shadow: 0 4px 14px var(--green-glow)
 }
+
 .btn-red {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: #fff;
-    box-shadow: 0 4px 14px var(--red-glow);
+    box-shadow: 0 4px 14px var(--red-glow)
 }
-.btn-red:hover { box-shadow: 0 6px 22px var(--red-glow); }
+
+.btn-red:hover {
+    box-shadow: 0 6px 22px var(--red-glow)
+}
 
 .btn-orange {
     background: var(--grad-orange);
-    color: #fff;
+    color: #fff
 }
+
 .btn-outline {
     background: transparent;
     color: var(--text2);
-    border: 1px solid var(--border2);
+    border: 1px solid var(--border2)
 }
+
 .btn-outline:hover {
     background: var(--surface2);
     color: var(--text);
-    box-shadow: none;
+    box-shadow: none
 }
+
 .btn-ghost {
     background: transparent;
     color: var(--text2);
-    padding: 6px 9px;
+    padding: 6px 9px
 }
+
 .btn-ghost:hover {
     background: var(--surface2);
     color: var(--text);
+    box-shadow: none
 }
 
-/* Botão de deletar (ícone lixeira) */
 .btn-del {
     background: transparent;
     color: var(--text3);
@@ -779,33 +804,41 @@ body {
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.18s;
+    transition: all .18s;
     display: inline-flex;
-    align-items: center;
-}
-.btn-del:hover {
-    background: rgba(239, 68, 68, 0.15);
-    color: var(--red);
-    transform: scale(1.1);
+    align-items: center
 }
 
-/* Tamanhos alternativos */
-.btn-sm { padding: 5px 11px; font-size: 11px; border-radius: 6px; }
-.btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 10px; }
-.btn-full { width: 100%; justify-content: center; }
+.btn-del:hover {
+    background: rgba(239, 68, 68, .15);
+    color: var(--red);
+    transform: scale(1.1)
+}
+
+.btn-sm {
+    padding: 5px 11px;
+    font-size: 11px;
+    border-radius: 6px
+}
+
+.btn-lg {
+    padding: 13px 28px;
+    font-size: 15px;
+    border-radius: 10px
+}
+
+.btn-full {
+    width: 100%;
+    justify-content: center
+}
 
 .btn-group {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: center
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 12. RECURSOS DE IA (CARDS DE AÇÃO)
-   ═══════════════════════════════════════════════════════════
-   Botões grandes para funcionalidades de IA.
-   ═══════════════════════════════════════════════════════════ */
 .ai-feature-btn {
     display: flex;
     flex-direction: column;
@@ -815,49 +848,84 @@ body {
     border-radius: var(--r);
     border: 1px solid var(--border2);
     cursor: pointer;
-    transition: all 0.25s;
+    transition: all .25s;
     background: var(--surface2);
-    text-align: center;
+    text-align: center
 }
+
 .ai-feature-btn:hover {
     transform: translateY(-3px);
-    box-shadow: var(--sh);
+    box-shadow: var(--sh)
 }
-.af-ico { font-size: 30px; }
-.af-title { font-size: 12px; font-weight: 700; }
-.af-sub { font-size: 10px; color: var(--text2); line-height: 1.4; }
 
-/* Cores de borda para cada tipo de funcionalidade */
-.afb-blue:hover   { border-color: var(--blue);   box-shadow: 0 8px 24px var(--blue-glow); }
-.afb-green:hover  { border-color: var(--green);  box-shadow: 0 8px 24px var(--green-glow); }
-.afb-purple:hover { border-color: var(--purple); box-shadow: 0 8px 24px var(--purple-glow); }
-.afb-red:hover    { border-color: var(--red);    box-shadow: 0 8px 24px var(--red-glow); }
+.af-ico {
+    font-size: 30px
+}
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 13. FORMULÁRIOS (INPUTS, ROWS, LABELS)
-   ═══════════════════════════════════════════════════════════ */
+.af-title {
+    font-size: 12px;
+    font-weight: 700
+}
+
+.af-sub {
+    font-size: 10px;
+    color: var(--text2);
+    line-height: 1.4
+}
+
+.afb-blue:hover {
+    border-color: var(--blue);
+    box-shadow: 0 8px 24px var(--blue-glow)
+}
+
+.afb-green:hover {
+    border-color: var(--green);
+    box-shadow: 0 8px 24px var(--green-glow)
+}
+
+.afb-purple:hover {
+    border-color: var(--purple);
+    box-shadow: 0 8px 24px var(--purple-glow)
+}
+
+.afb-red:hover {
+    border-color: var(--red);
+    box-shadow: 0 8px 24px var(--red-glow)
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 14px
 }
-.form-row.c1 { grid-template-columns: 1fr; }
-.form-row.c3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.form-row.c1 {
+    grid-template-columns: 1fr
+}
+
+.form-row.c3 {
+    grid-template-columns: 1fr 1fr 1fr
+}
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 6px
 }
+
 .form-label {
     font-size: 11px;
     font-weight: 700;
     color: var(--text2);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: .5px
 }
-.req { color: var(--red); margin-left: 3px; }  /* asterisco de campo obrigatório */
+
+.req {
+    color: var(--red);
+    margin-left: 3px
+}
 
 .form-control {
     padding: 10px 14px;
@@ -867,72 +935,76 @@ body {
     color: var(--text);
     font-size: 13px;
     outline: none;
-    transition: all 0.2s;
-    width: 100%;
+    transition: all .2s;
+    width: 100%
 }
+
 .form-control:focus {
     border-color: var(--blue);
-    box-shadow: 0 0 0 4px var(--blue-glow);
+    box-shadow: 0 0 0 4px var(--blue-glow)
 }
-.form-control::placeholder { color: var(--text3); }
-select.form-control { cursor: pointer; }
-textarea.form-control { resize: vertical; line-height: 1.6; }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 14. TABELAS
-   ═══════════════════════════════════════════════════════════
-   Envoltas em .table-wrap para scroll horizontal.
-   ═══════════════════════════════════════════════════════════ */
+.form-control::placeholder {
+    color: var(--text3)
+}
+
+select.form-control {
+    cursor: pointer
+}
+
+textarea.form-control {
+    resize: vertical;
+    line-height: 1.6
+}
+
 .table-wrap {
     overflow-x: auto;
     border-radius: 8px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border)
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 13px
 }
 
-/* Cabeçalho da tabela */
 thead {
-    background: var(--bg2);
+    background: var(--bg2)
 }
+
 th {
-    padding: 8px 12px;         /* 🔽 REDUZIDO (era 11px 16px) */
+    padding: 11px 16px;
     text-align: left;
-    font-size: 9px;            /* 🔽 REDUZIDO (era 10px) */
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     color: var(--text3);
-    letter-spacing: 0.8px;
+    letter-spacing: .8px;
     border-bottom: 1px solid var(--border);
-    white-space: nowrap;
+    white-space: nowrap
 }
 
 td {
-    padding: 8px 12px;         /* 🔽 REDUZIDO (era 11px 16px) */
+    padding: 11px 16px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
-    color: var(--text2);
-    font-size: 12px;           /* 🔽 REDUZIDO (era 13px) */
+    color: var(--text2)
 }
-tr:last-child td { border-bottom: none; }
+
+tr:last-child td {
+    border-bottom: none
+}
 
 tbody tr {
-    transition: all 0.2s;
-}
-tbody tr:hover td {
-    background: var(--surface2);
-    color: var(--text);
+    transition: all .2s
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 15. BADGES (ETIQUETAS DE STATUS)
-   ═══════════════════════════════════════════════════════════
-   Usadas para status, conceitos, tipos.
-   ═══════════════════════════════════════════════════════════ */
+tbody tr:hover td {
+    background: var(--surface2);
+    color: var(--text)
+}
+
 .badge {
     display: inline-flex;
     align-items: center;
@@ -941,24 +1013,75 @@ tbody tr:hover td {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: .3px
 }
-/* Variações de cor */
-.badge-green   { background: rgba(16, 185, 129, 0.15); color: var(--green);   border: 1px solid rgba(16, 185, 129, 0.3); }
-.badge-red     { background: rgba(239, 68, 68, 0.15);   color: #fc8181;        border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge-orange  { background: rgba(245, 158, 11, 0.15);  color: var(--orange);  border: 1px solid rgba(245, 158, 11, 0.3); }
-.badge-blue    { background: rgba(59, 130, 246, 0.15);  color: var(--blue);    border: 1px solid rgba(59, 130, 246, 0.3); }
-.badge-purple  { background: rgba(139, 92, 246, 0.15);  color: #a78bfa;        border: 1px solid rgba(139, 92, 246, 0.3); }
-.badge-gray    { background: rgba(148, 163, 184, 0.1);  color: var(--text3);   border: 1px solid var(--border); }
-.badge-cyan    { background: rgba(6, 182, 212, 0.15);   color: var(--cyan);    border: 1px solid rgba(6, 182, 212, 0.3); }
 
-/* Badges específicos para conceitos (ex: IDEB) */
-.badge-conceito-baixo       { background: rgba(239, 68, 68, 0.15); color: #fc8181;        border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge-conceito-medio-baixo { background: rgba(245, 158, 11, 0.15); color: var(--orange);  border: 1px solid rgba(245, 158, 11, 0.3); }
-.badge-conceito-medio-alto  { background: rgba(59, 130, 246, 0.15); color: var(--blue);    border: 1px solid rgba(59, 130, 246, 0.3); }
-.badge-conceito-alto        { background: rgba(16, 185, 129, 0.15); color: var(--green);   border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-green {
+    background: rgba(16, 185, 129, .15);
+    color: var(--green);
+    border: 1px solid rgba(16, 185, 129, .3)
+}
 
-/* Chip (etiqueta menor, sem cor específica) */
+.badge-red {
+    background: rgba(239, 68, 68, .15);
+    color: #fc8181;
+    border: 1px solid rgba(239, 68, 68, .3)
+}
+
+.badge-orange {
+    background: rgba(245, 158, 11, .15);
+    color: var(--orange);
+    border: 1px solid rgba(245, 158, 11, .3)
+}
+
+.badge-blue {
+    background: rgba(59, 130, 246, .15);
+    color: var(--blue);
+    border: 1px solid rgba(59, 130, 246, .3)
+}
+
+.badge-purple {
+    background: rgba(139, 92, 246, .15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, .3)
+}
+
+.badge-gray {
+    background: rgba(148, 163, 184, .1);
+    color: var(--text3);
+    border: 1px solid var(--border)
+}
+
+.badge-cyan {
+    background: rgba(6, 182, 212, .15);
+    color: var(--cyan);
+    border: 1px solid rgba(6, 182, 212, .3)
+}
+
+.badge-conceito-baixo {
+    background: rgba(239, 68, 68, .15);
+    color: #fc8181;
+    border: 1px solid rgba(239, 68, 68, .3)
+}
+
+.badge-conceito-medio-baixo {
+    background: rgba(245, 158, 11, .15);
+    color: var(--orange);
+    border: 1px solid rgba(245, 158, 11, .3)
+}
+
+.badge-conceito-medio-alto {
+    background: rgba(59, 130, 246, .15);
+    color: var(--blue);
+    border: 1px solid rgba(59, 130, 246, .3)
+}
+
+.badge-conceito-alto {
+    background: rgba(16, 185, 129, .15);
+    color: var(--green);
+    border: 1px solid rgba(16, 185, 129, .3)
+}
+
 .chip {
     display: inline-flex;
     align-items: center;
@@ -968,124 +1091,149 @@ tbody tr:hover td {
     font-weight: 600;
     background: var(--surface2);
     border: 1px solid var(--border2);
-    color: var(--text2);
+    color: var(--text2)
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 16. BARRAS DE PROGRESSO
-   ═══════════════════════════════════════════════════════════ */
 .progress {
     background: var(--bg2);
     border-radius: 99px;
     height: 6px;
-    overflow: hidden;
+    overflow: hidden
 }
+
 .progress-fill {
     height: 100%;
     border-radius: 99px;
-    transition: width 0.6s ease;
+    transition: width .6s ease
 }
-.pf-blue   { background: var(--grad-blue); }
-.pf-green  { background: var(--grad-green); }
-.pf-purple { background: var(--grad-purple); }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 17. CAMPO DE BUSCA (COM ÍCONE)
-   ═══════════════════════════════════════════════════════════ */
+.pf-blue {
+    background: var(--grad-blue)
+}
+
+.pf-green {
+    background: var(--grad-green)
+}
+
+.pf-purple {
+    background: var(--grad-purple)
+}
+
 .search-wrap {
     position: relative;
     display: inline-flex;
-    align-items: center;
+    align-items: center
 }
+
 .search-wrap input {
-    padding: 6px 12px 6px 32px;  /* 🔽 REDUZIDO (era 8px 14px 8px 36px) */
+    padding: 8px 14px 8px 36px;
     background: var(--bg2);
     border: 1.5px solid var(--border2);
     border-radius: 8px;
     color: var(--text);
-    font-size: 12px;             /* 🔽 REDUZIDO (era 13px) */
+    font-size: 13px;
     outline: none;
     width: 220px;
-    transition: all 0.2s;
+    transition: all .2s
 }
+
 .search-wrap input:focus {
     border-color: var(--blue);
-    box-shadow: 0 0 0 4px var(--blue-glow);
+    box-shadow: 0 0 0 4px var(--blue-glow)
 }
-.search-wrap input::placeholder { color: var(--text3); }
+
+.search-wrap input::placeholder {
+    color: var(--text3)
+}
+
 .search-ico {
     position: absolute;
     left: 11px;
     color: var(--text3);
     font-size: 13px;
-    pointer-events: none;
+    pointer-events: none
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 18. ZONA DE UPLOAD (ARRASTE E SOLTE)
-   ═══════════════════════════════════════════════════════════ */
 .upload-zone {
     border: 2px dashed var(--border2);
     border-radius: var(--r);
     padding: 32px 20px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.25s;
-    background: var(--surface2);
+    transition: all .25s;
+    background: var(--surface2)
 }
+
 .upload-zone:hover {
     border-color: var(--blue);
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(59, 130, 246, .05)
 }
-.uz-ico { font-size: 40px; margin-bottom: 10px; }
-.uz-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 19. GRÁFICO DE BARRAS (CHART)
-   ═══════════════════════════════════════════════════════════
-   Usado para visualizar dados comparativos.
-   ═══════════════════════════════════════════════════════════ */
+.uz-ico {
+    font-size: 40px;
+    margin-bottom: 10px
+}
+
+.uz-hint {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px
+}
+
 .chart-bars {
     display: flex;
     align-items: flex-end;
     gap: 8px;
     height: 130px;
-    padding-bottom: 4px;
+    padding-bottom: 4px
 }
+
 .chart-bar-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
     flex: 1;
-    min-width: 28px;
+    min-width: 28px
 }
+
 .chart-bar {
     width: 100%;
     border-radius: 6px 6px 0 0;
-    transition: height 0.6s ease;
-    min-height: 4px;
+    transition: height .6s ease;
+    min-height: 4px
 }
-.chart-bar-val { font-size: 10px; font-weight: 700; color: var(--text2); }
-.chart-bar-lbl { font-size: 10px; color: var(--text3); }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 20. GABARITO (GRID DE ALTERNATIVAS)
-   ═══════════════════════════════════════════════════════════
-   Usado na correção manual para exibir as questões.
-   ═══════════════════════════════════════════════════════════ */
+.chart-bar-val {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text2)
+}
+
+.chart-bar-lbl {
+    font-size: 10px;
+    color: var(--text3)
+}
+
 .gab-grid {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
-    gap: 6px;
+    gap: 6px
 }
+
 .gab-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 4px
 }
-.gab-num { font-size: 10px; font-weight: 700; color: var(--text3); }
+
+.gab-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3)
+}
+
 .gab-select {
     width: 100%;
     padding: 5px 2px;
@@ -1098,106 +1246,130 @@ tbody tr:hover td {
     text-align: center;
     cursor: pointer;
     outline: none;
-    transition: all 0.15s;
-}
-.gab-select:focus {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px var(--blue-glow);
-}
-.gab-select.filled {
-    border-color: var(--green) !important;
-    background: rgba(16, 185, 129, 0.07) !important;
+    transition: all .15s
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 21. HERO DE IA (DESTAQUE)
-   ═══════════════════════════════════════════════════════════
-   Banner com gradiente para chamar atenção para IA.
-   ═══════════════════════════════════════════════════════════ */
+.gab-select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-glow)
+}
+
+.gab-select.filled {
+    border-color: var(--green) !important;
+    background: rgba(16, 185, 129, .07) !important
+}
+
 .ai-hero {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: linear-gradient(135deg, rgba(59, 130, 246, .1), rgba(139, 92, 246, .1));
+    border: 1px solid rgba(139, 92, 246, .2);
     border-radius: var(--r);
     padding: 20px;
     margin-bottom: 18px;
     display: flex;
     align-items: center;
     gap: 18px;
-    flex-wrap: wrap;
+    flex-wrap: wrap
 }
-.ai-hero-icon { font-size: 42px; flex-shrink: 0; }
-.ai-hero-text h3 { font-size: 16px; font-weight: 800; }
-.ai-hero-text p { font-size: 13px; color: var(--text2); margin-top: 3px; }
+
+.ai-hero-icon {
+    font-size: 42px;
+    flex-shrink: 0
+}
+
+.ai-hero-text h3 {
+    font-size: 16px;
+    font-weight: 800
+}
+
+.ai-hero-text p {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 3px
+}
+
 .ai-hero-actions {
     margin-left: auto;
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: wrap
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 22. MODAL DA CÂMERA (PARA LEITURA DE QRCODE/OCR)
-   ═══════════════════════════════════════════════════════════ */
 .cam-modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.88);
+    background: rgba(0, 0, 0, .88);
     backdrop-filter: blur(12px);
     z-index: 2000;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: center
 }
-.cam-modal.show { display: flex; }
 
-.cam-container { width: min(90vw, 640px); }
+.cam-modal.show {
+    display: flex
+}
+
+.cam-container {
+    width: min(90vw, 640px)
+}
+
 .cam-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
-    color: var(--text);
+    color: var(--text)
 }
+
 .cam-video-wrap {
     background: #000;
     border-radius: var(--r);
     overflow: hidden;
     position: relative;
-    border: 2px solid var(--border2);
+    border: 2px solid var(--border2)
 }
+
 #cam-video {
     width: 100%;
     display: block;
     max-height: 380px;
-    object-fit: cover;
+    object-fit: cover
 }
+
 .cam-controls {
     display: flex;
     gap: 10px;
     justify-content: center;
     margin-top: 14px;
-    flex-wrap: wrap;
+    flex-wrap: wrap
 }
-.cam-hint { color: var(--text3); font-size: 12px; text-align: center; margin-top: 10px; }
-#cam-canvas { display: none; }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 23. MODAIS GERAIS (SOBREPOSIÇÃO)
-   ═══════════════════════════════════════════════════════════
-   Utilizados para formulários, detalhes, confirmações.
-   ═══════════════════════════════════════════════════════════ */
+.cam-hint {
+    color: var(--text3);
+    font-size: 12px;
+    text-align: center;
+    margin-top: 10px
+}
+
+#cam-canvas {
+    display: none
+}
+
 .modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, .65);
     backdrop-filter: blur(8px);
     align-items: center;
-    justify-content: center;
+    justify-content: center
 }
-.modal-overlay.show { display: flex; }
+
+.modal-overlay.show {
+    display: flex
+}
 
 .modal {
     background: var(--surface);
@@ -1208,13 +1380,19 @@ tbody tr:hover td {
     max-width: 95vw;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
-    animation: modalIn 0.25s ease;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, .5);
+    animation: modalIn .25s ease
 }
 
 @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.95) translateY(20px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(.95) translateY(20px)
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0)
+    }
 }
 
 .modal-header {
@@ -1223,9 +1401,13 @@ tbody tr:hover td {
     align-items: center;
     margin-bottom: 22px;
     padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border)
 }
-.modal-header h3 { font-size: 16px; font-weight: 800; } /* 🔽 REDUZIDO (era 18px) */
+
+.modal-header h3 {
+    font-size: 18px;
+    font-weight: 800
+}
 
 .modal-close {
     width: 32px;
@@ -1239,11 +1421,12 @@ tbody tr:hover td {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all .2s
 }
+
 .modal-close:hover {
-    background: rgba(239, 68, 68, 0.2);
-    color: var(--red);
+    background: rgba(239, 68, 68, .2);
+    color: var(--red)
 }
 
 .modal-footer {
@@ -1252,46 +1435,65 @@ tbody tr:hover td {
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 8px
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 24. MODAL DE CONFIRMAÇÃO DE EXCLUSÃO (DESTAQUE)
-   ═══════════════════════════════════════════════════════════ */
 .del-modal {
     display: none;
     position: fixed;
     inset: 0;
     z-index: 3000;
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, .75);
     backdrop-filter: blur(10px);
     align-items: center;
-    justify-content: center;
+    justify-content: center
 }
-.del-modal.show { display: flex; }
+
+.del-modal.show {
+    display: flex
+}
 
 .del-box {
     background: var(--surface);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    border: 1px solid rgba(239, 68, 68, .3);
     border-radius: 16px;
     padding: 32px;
     width: 400px;
     max-width: 92vw;
     text-align: center;
-    animation: modalIn 0.2s ease;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    animation: modalIn .2s ease;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5)
 }
-.del-icon { font-size: 52px; margin-bottom: 14px; }
-.del-box h3 { font-size: 19px; font-weight: 800; margin-bottom: 8px; }
-.del-box p { font-size: 13px; color: var(--text2); margin-bottom: 24px; line-height: 1.6; }
-.del-name { color: var(--red); font-weight: 700; }
-.del-actions { display: flex; gap: 10px; justify-content: center; }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 25. TOASTS (NOTIFICAÇÕES FLUTUANTES)
-   ═══════════════════════════════════════════════════════════
-   Aparecem no canto inferior direito.
-   ═══════════════════════════════════════════════════════════ */
+.del-icon {
+    font-size: 52px;
+    margin-bottom: 14px
+}
+
+.del-box h3 {
+    font-size: 19px;
+    font-weight: 800;
+    margin-bottom: 8px
+}
+
+.del-box p {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 24px;
+    line-height: 1.6
+}
+
+.del-name {
+    color: var(--red);
+    font-weight: 700
+}
+
+.del-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center
+}
+
 .toast-container {
     position: fixed;
     bottom: 24px;
@@ -1300,8 +1502,9 @@ tbody tr:hover td {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    pointer-events: none;  /* Permite clicar através da container */
+    pointer-events: none
 }
+
 .toast {
     display: flex;
     align-items: center;
@@ -1310,32 +1513,56 @@ tbody tr:hover td {
     border-radius: 10px;
     font-size: 13px;
     font-weight: 500;
-    animation: toastIn 0.3s ease;
+    animation: toastIn .3s ease;
     max-width: 320px;
     box-shadow: var(--sh);
-    pointer-events: auto;   /* O toast em si é clicável */
+    pointer-events: auto
 }
-.toast-info    { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: var(--text); }
-.toast-success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--text); }
-.toast-error   { background: rgba(239, 68, 68, 0.15);   border: 1px solid rgba(239, 68, 68, 0.3);   color: var(--text); }
-.toast-ai      { background: rgba(139, 92, 246, 0.15);  border: 1px solid rgba(139, 92, 246, 0.3);  color: var(--text); }
+
+.toast-info {
+    background: rgba(59, 130, 246, .15);
+    border: 1px solid rgba(59, 130, 246, .3);
+    color: var(--text)
+}
+
+.toast-success {
+    background: rgba(16, 185, 129, .15);
+    border: 1px solid rgba(16, 185, 129, .3);
+    color: var(--text)
+}
+
+.toast-error {
+    background: rgba(239, 68, 68, .15);
+    border: 1px solid rgba(239, 68, 68, .3);
+    color: var(--text)
+}
+
+.toast-ai {
+    background: rgba(139, 92, 246, .15);
+    border: 1px solid rgba(139, 92, 246, .3);
+    color: var(--text)
+}
 
 @keyframes toastIn {
-    from { opacity: 0; transform: translateX(40px); }
-    to   { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(40px)
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0)
+    }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 26. NAVEGAÇÃO POR ABAS (TABS)
-   ═══════════════════════════════════════════════════════════ */
 .tab-nav {
     display: flex;
     margin-bottom: 16px;
     background: var(--bg2);
     border-radius: 8px;
     padding: 4px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border)
 }
+
 .tab-btn {
     flex: 1;
     padding: 8px 12px;
@@ -1344,55 +1571,66 @@ tbody tr:hover td {
     cursor: pointer;
     font-size: 12px;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: all .2s;
     background: transparent;
-    color: var(--text2);
+    color: var(--text2)
 }
+
 .tab-btn.active {
     background: var(--surface);
     color: var(--text);
-    box-shadow: var(--sh2);
+    box-shadow: var(--sh2)
 }
-.tab-c { display: block; }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 27. SPINNER (CARREGAMENTO)
-   ═══════════════════════════════════════════════════════════ */
+.tab-c {
+    display: block
+}
+
 .spinner {
     width: 38px;
     height: 38px;
     border-radius: 50%;
     border: 3px solid var(--border2);
     border-top-color: var(--purple);
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto;
+    animation: spin .8s linear infinite;
+    margin: 0 auto
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 28. CRITÉRIOS E FEEDBACK DA IA
-   ═══════════════════════════════════════════════════════════ */
+@keyframes spin {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
 .ai-criteria-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin: 14px 0;
+    margin: 14px 0
 }
+
 .ai-crit {
     background: var(--surface2);
     border-radius: 8px;
     padding: 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border)
 }
+
 .ai-crit-name {
     font-size: 10px;
     color: var(--text3);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
+    letter-spacing: .5px;
+    margin-bottom: 6px
 }
-.ai-crit-val { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+
+.ai-crit-val {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 6px
+}
+
 .ai-feedback-box {
     background: var(--bg2);
     border: 1px solid var(--border);
@@ -1401,14 +1639,10 @@ tbody tr:hover td {
     font-size: 13px;
     line-height: 1.7;
     color: var(--text2);
-    margin-top: 14px;
+    margin-top: 14px
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 29. CORREÇÃO MANUAL (ESTILOS ESPECÍFICOS)
-   ═══════════════════════════════════════════════════════════
-   Usado para exibir questões e permitir alteração manual.
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════ CORREÇÃO MANUAL - ESTILOS ESPECÍFICOS ═══════════════ */
 .correcao-manual-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
@@ -1418,6 +1652,7 @@ tbody tr:hover td {
     overflow-y: auto;
     padding: 4px;
 }
+
 .correcao-manual-item {
     background: var(--bg2);
     border: 1px solid var(--border2);
@@ -1426,7 +1661,11 @@ tbody tr:hover td {
     text-align: center;
     transition: all 0.2s;
 }
-.correcao-manual-item:hover { border-color: var(--blue); }
+
+.correcao-manual-item:hover {
+    border-color: var(--blue);
+}
+
 .correcao-manual-item .q-num {
     font-size: 9px;
     color: var(--text3);
@@ -1435,14 +1674,24 @@ tbody tr:hover td {
     letter-spacing: 0.3px;
     margin-bottom: 4px;
 }
+
 .correcao-manual-item .q-resposta {
-    font-size: 16px;          /* 🔽 REDUZIDO (era 18px) */
+    font-size: 18px;
     font-weight: 800;
     margin-bottom: 4px;
 }
-.correcao-manual-item .q-status { font-size: 10px; }
-.correcao-manual-item .q-status.correta { color: var(--green); }
-.correcao-manual-item .q-status.errada  { color: var(--red); }
+
+.correcao-manual-item .q-status {
+    font-size: 10px;
+}
+
+.correcao-manual-item .q-status.correta {
+    color: var(--green);
+}
+
+.correcao-manual-item .q-status.errada {
+    color: var(--red);
+}
 
 .correcao-manual-item select {
     width: 100%;
@@ -1458,20 +1707,22 @@ tbody tr:hover td {
     outline: none;
     transition: all 0.15s;
 }
+
 .correcao-manual-item select:focus {
     border-color: var(--blue);
     box-shadow: 0 0 0 3px var(--blue-glow);
 }
+
 .correcao-manual-item select.correta {
     border-color: var(--green);
     background: rgba(16, 185, 129, 0.08);
 }
+
 .correcao-manual-item select.errada {
     border-color: var(--red);
     background: rgba(239, 68, 68, 0.08);
 }
 
-/* Resumo de acertos/erros/nota na correção manual */
 .resumo-correcao {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1482,22 +1733,35 @@ tbody tr:hover td {
     border-radius: 10px;
     border: 1px solid var(--border);
 }
-.resumo-correcao .item { text-align: center; }
+
+.resumo-correcao .item {
+    text-align: center;
+}
+
 .resumo-correcao .valor {
-    font-size: 20px;          /* 🔽 REDUZIDO (era 24px) */
+    font-size: 24px;
     font-weight: 800;
 }
+
 .resumo-correcao .label {
     font-size: 10px;
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-.resumo-correcao .valor.acertos { color: var(--green); }
-.resumo-correcao .valor.erros   { color: var(--red); }
-.resumo-correcao .valor.nota    { color: var(--blue); }
 
-/* Informações do aluno na correção */
+.resumo-correcao .valor.acertos {
+    color: var(--green);
+}
+
+.resumo-correcao .valor.erros {
+    color: var(--red);
+}
+
+.resumo-correcao .valor.nota {
+    color: var(--blue);
+}
+
 .correcao-aluno-info {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1508,8 +1772,15 @@ tbody tr:hover td {
     border: 1px solid var(--border);
     margin-bottom: 14px;
 }
-.correcao-aluno-info .info-item { font-size: 13px; }
-.correcao-aluno-info .info-item strong { color: var(--text); }
+
+.correcao-aluno-info .info-item {
+    font-size: 13px;
+}
+
+.correcao-aluno-info .info-item strong {
+    color: var(--text);
+}
+
 .correcao-aluno-info .info-item .label {
     color: var(--text3);
     font-size: 10px;
@@ -1519,20 +1790,10 @@ tbody tr:hover td {
     margin-bottom: 2px;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 30. RESPONSIVIDADE (TABLET E MOBILE)
-   ═══════════════════════════════════════════════════════════
-   Ajusta layout para telas menores:
-   - Sidebar vira menu hambúrguer.
-   - Grids viram 1 ou 2 colunas.
-   - Tabelas ganham scroll horizontal.
-   - Fontes e paddings reduzem.
-   ═══════════════════════════════════════════════════════════ */
-
-/* Telas até 900px (tablet / desktop pequeno) */
+/* ═══════════════ RESPONSIVO ═══════════════ */
 @media (max-width: 900px) {
     .menu-toggle {
-        display: flex;   /* Mostra o botão hambúrguer */
+        display: flex;
     }
     .sidebar {
         position: fixed;
@@ -1545,11 +1806,11 @@ tbody tr:hover td {
         box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
     }
     .sidebar.open {
-        left: 0;        /* Abre a sidebar */
+        left: 0;
     }
     .content {
         padding: 16px;
-        padding-top: 70px;  /* Espaço para o botão hambúrguer */
+        padding-top: 70px;
         width: 100%;
     }
     .stats-grid {
@@ -1625,7 +1886,6 @@ tbody tr:hover td {
     }
 }
 
-/* Telas até 640px (celular) */
 @media (max-width: 640px) {
     .stats-grid {
         grid-template-columns: 1fr 1fr !important;
@@ -1707,17 +1967,10 @@ tbody tr:hover td {
     }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 31. ESTILOS PARA IMPRESSÃO (PRINT)
-   ═══════════════════════════════════════════════════════════
-   Quando o usuário imprime a página (Ctrl+P):
-   - Oculta menus, botões, modais, toasts.
-   - Mantém apenas a página ativa e os cards.
-   - Torna fundo branco e fontes pretas para legibilidade.
-   - Adiciona quebras de página para evitar cortes.
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════ ESTILOS PARA IMPRESSÃO - CORRIGIDOS ═══════════════ */
+/* ══ NOVO: Regras completas de impressão para ocultar menus e garantir paginação ══ */
 @media print {
-    /* Oculta tudo que não deve aparecer na impressão */
+    /* Ocultar elementos que não devem ser impressos */
     .no-print,
     .menu-toggle,
     .menu-overlay,
@@ -1757,7 +2010,7 @@ tbody tr:hover td {
         display: none !important;
     }
 
-    /* Mostra apenas a página que está ativa */
+    /* Mostrar apenas a página ativa */
     .page {
         display: none !important;
     }
@@ -1768,7 +2021,7 @@ tbody tr:hover td {
         margin: 0 !important;
     }
 
-    /* Ajustes de fundo e cor para impressão */
+    /* Ajustes de layout para impressão */
     body {
         background: #ffffff !important;
         color: #000000 !important;
@@ -1777,12 +2030,14 @@ tbody tr:hover td {
         font-size: 11pt !important;
         line-height: 1.5 !important;
     }
+
     #app {
         display: block !important;
         height: auto !important;
         overflow: visible !important;
         background: #ffffff !important;
     }
+
     .content {
         padding: 15px !important;
         margin: 0 !important;
@@ -1793,7 +2048,7 @@ tbody tr:hover td {
         box-sizing: border-box !important;
     }
 
-    /* Cards viram caixas com borda cinza, sem sombra */
+    /* Cards e containers */
     .card {
         background: #ffffff !important;
         border: 1px solid #dddddd !important;
@@ -1804,17 +2059,18 @@ tbody tr:hover td {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
+
     .card-header {
         border-bottom: 1px solid #dddddd !important;
         padding-bottom: 8px !important;
         margin-bottom: 10px !important;
     }
+
     .card-title {
         color: #000000 !important;
         font-size: 13pt !important;
     }
 
-    /* Grid de estatísticas com 4 colunas na impressão */
     .stats-grid {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
@@ -1822,6 +2078,7 @@ tbody tr:hover td {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
+
     .stat-card {
         background: #f9f9f9 !important;
         border: 1px solid #dddddd !important;
@@ -1831,34 +2088,40 @@ tbody tr:hover td {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
+
     .stat-val {
         font-size: 20pt !important;
         color: #000000 !important;
     }
+
     .stat-label {
         color: #555555 !important;
         font-size: 9pt !important;
     }
+
     .stat-icon {
         display: none !important;
     }
 
-    /* Tabelas com bordas visíveis */
+    /* Tabelas */
     .table-wrap {
         border: 1px solid #dddddd !important;
         border-radius: 4px !important;
         overflow: visible !important;
         margin-bottom: 10px !important;
     }
+
     table {
         border-collapse: collapse !important;
         width: 100% !important;
         font-size: 9pt !important;
         color: #000000 !important;
     }
+
     thead {
         background: #f5f5f5 !important;
     }
+
     th {
         background: #f0f0f0 !important;
         color: #000000 !important;
@@ -1870,21 +2133,24 @@ tbody tr:hover td {
         text-transform: uppercase !important;
         letter-spacing: 0.5px !important;
     }
+
     td {
         border: 1px solid #cccccc !important;
         padding: 6px 8px !important;
         color: #000000 !important;
         background: #ffffff !important;
     }
+
     tbody tr:hover td {
         background: #ffffff !important;
     }
+
     tr {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
 
-    /* Badges com cores mais sóbrias para impressão */
+    /* Badges */
     .badge {
         border: 1px solid #999999 !important;
         background: #f0f0f0 !important;
@@ -1895,18 +2161,60 @@ tbody tr:hover td {
         font-weight: 700 !important;
         text-transform: uppercase !important;
     }
-    .badge-green   { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
-    .badge-red     { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
-    .badge-orange  { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
-    .badge-purple  { border-color: #6f42c1 !important; background: #e8d4ff !important; color: #4a148c !important; }
-    .badge-blue    { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
-    .badge-gray    { border-color: #6c757d !important; background: #e9ecef !important; color: #495057 !important; }
-    .badge-conceito-baixo       { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
-    .badge-conceito-medio-baixo { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
-    .badge-conceito-medio-alto  { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
-    .badge-conceito-alto        { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
 
-    /* Barras de progresso com cores sólidas */
+    .badge-green {
+        border-color: #28a745 !important;
+        background: #d4edda !important;
+        color: #155724 !important;
+    }
+    .badge-red {
+        border-color: #dc3545 !important;
+        background: #f8d7da !important;
+        color: #721c24 !important;
+    }
+    .badge-orange {
+        border-color: #fd7e14 !important;
+        background: #fff3cd !important;
+        color: #856404 !important;
+    }
+    .badge-purple {
+        border-color: #6f42c1 !important;
+        background: #e8d4ff !important;
+        color: #4a148c !important;
+    }
+    .badge-blue {
+        border-color: #007bff !important;
+        background: #cce5ff !important;
+        color: #004085 !important;
+    }
+    .badge-gray {
+        border-color: #6c757d !important;
+        background: #e9ecef !important;
+        color: #495057 !important;
+    }
+
+    .badge-conceito-baixo {
+        border-color: #dc3545 !important;
+        background: #f8d7da !important;
+        color: #721c24 !important;
+    }
+    .badge-conceito-medio-baixo {
+        border-color: #fd7e14 !important;
+        background: #fff3cd !important;
+        color: #856404 !important;
+    }
+    .badge-conceito-medio-alto {
+        border-color: #007bff !important;
+        background: #cce5ff !important;
+        color: #004085 !important;
+    }
+    .badge-conceito-alto {
+        border-color: #28a745 !important;
+        background: #d4edda !important;
+        color: #155724 !important;
+    }
+
+    /* Progress bars */
     .progress {
         background: #e9ecef !important;
         border: 1px solid #cccccc !important;
@@ -1914,23 +2222,41 @@ tbody tr:hover td {
         height: 10px !important;
         overflow: hidden !important;
     }
+
     .progress-fill {
         border-radius: 4px !important;
         background: #007bff !important;
     }
-    .pf-green  { background: #28a745 !important; }
-    .pf-orange { background: #fd7e14 !important; }
-    .pf-purple { background: #6f42c1 !important; }
-    .pf-blue   { background: #007bff !important; }
 
-    /* Gráficos de barras */
+    .pf-green {
+        background: #28a745 !important;
+    }
+    .pf-orange {
+        background: #fd7e14 !important;
+    }
+    .pf-purple {
+        background: #6f42c1 !important;
+    }
+    .pf-blue {
+        background: #007bff !important;
+    }
+
+    /* Gráficos */
     .chart-bars {
         height: 100px !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
-    .chart-bar-val { font-size: 8pt !important; color: #000000 !important; }
-    .chart-bar-lbl { font-size: 7pt !important; color: #555555 !important; }
+
+    .chart-bar-val {
+        font-size: 8pt !important;
+        color: #000000 !important;
+    }
+
+    .chart-bar-lbl {
+        font-size: 7pt !important;
+        color: #555555 !important;
+    }
 
     .conceito-graficos {
         display: grid !important;
@@ -1939,39 +2265,44 @@ tbody tr:hover td {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
+
     #conceito-barras .progress {
         height: 14px !important;
     }
+
     #conceito-barras .progress-fill {
         height: 14px !important;
         border-radius: 4px !important;
     }
 
-    /* Donut chart (gráfico circular) */
+    /* Donut chart */
     #donut-container {
         transform: scale(0.9) !important;
     }
+
     #donut-container canvas {
         max-width: 160px !important;
         max-height: 160px !important;
     }
 
-    /* Cabeçalho da página na impressão */
+    /* Cabeçalho da página */
     .page-header {
         margin-bottom: 15px !important;
         padding-bottom: 10px !important;
         border-bottom: 2px solid #333333 !important;
     }
+
     .page-title {
         font-size: 16pt !important;
         color: #000000 !important;
     }
+
     .page-sub {
         color: #555555 !important;
         font-size: 10pt !important;
     }
 
-    /* Configurações de margem da página A4 */
+    /* Configurações de página */
     @page {
         size: A4 !important;
         margin: 15mm 12mm !important;
@@ -1979,55 +2310,58 @@ tbody tr:hover td {
         margin-bottom: 10mm !important;
     }
 
-    /* Evita quebras dentro de cards, mas permite em cards grandes */
+    /* Quebra de páginas para tabelas grandes */
     .card {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
+
+    /* Permitir quebra de página dentro de cards grandes */
     .card.allow-break {
         page-break-inside: auto !important;
         break-inside: auto !important;
     }
 
-    /* Força quebra de página após um elemento */
+    /* Forçar quebra de página após um elemento */
     .page-break {
         page-break-after: always !important;
         break-after: page !important;
     }
 
+    /* Imagens não devem quebrar */
     img {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
+
+    /* Ocultar o toast */
     .toast-container {
         display: none !important;
     }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   🔷 32. CLASSES AUXILIARES PARA IMPRESSÃO
-   ═══════════════════════════════════════════════════════════
-   .print-only → visível apenas na impressão.
-   .page-break → força quebra de página.
-   .print-header → cabeçalho customizado para relatórios.
-   ═══════════════════════════════════════════════════════════ */
+/* ══ NOVO: Classe auxiliar para mostrar apenas na impressão ══ */
 .print-only {
     display: none !important;
 }
+
 @media print {
     .print-only {
         display: block !important;
     }
 }
 
+/* ══ NOVO: Classe para forçar quebra de página ══ */
 .page-break {
     page-break-after: always !important;
     break-after: page !important;
 }
 
+/* ══ NOVO: Estilo para cabeçalho do relatório na impressão ══ */
 .print-header {
     display: none;
 }
+
 @media print {
     .print-header {
         display: block !important;
@@ -2036,11 +2370,13 @@ tbody tr:hover td {
         padding-bottom: 12px !important;
         border-bottom: 2px solid #333333 !important;
     }
+
     .print-header h2 {
         font-size: 16pt !important;
         margin: 0 !important;
         color: #000000 !important;
     }
+
     .print-header p {
         font-size: 10pt !important;
         color: #555555 !important;
