@@ -4844,16 +4844,20 @@
                         showToast('❌ Erro ao carregar dados. Verifique os filtros selecionados.', 'error');
                         return;
                     }
+
+                    // --- CORREÇÃO AQUI: pegar disciplina diretamente do select ---
+                    const selectProva = document.getElementById('filtro-prova-desempenho');
+                    const selectedOption = selectProva.options[selectProva.selectedIndex];
+                    const disciplina = selectedOption ? (selectedOption.dataset.disciplina || 'Português') : 'Português';
+
                     const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
                     const historico = await historicoResp.json();
                     const gabarito = prova.gabarito || [];
                     const totalQuestoes = prova.quantidade_questoes || 20;
                     let respostasAluno = [];
-                    let disciplina = prova.disciplina || 'Português';
                     if (historico && historico.length > 0 && !historico.erro) {
                         const correcao = historico[0];
                         respostasAluno = correcao.respostas || [];
-                        if (correcao.disciplina) disciplina = correcao.disciplina;
                     } else {
                         try {
                             const respostasResp = await fetch(`${API_URL}/api/respostas?aluno_id=${alunoId}&prova_id=${provaId}`);
@@ -4908,7 +4912,7 @@
                     document.getElementById('card-conceito-badge').textContent = conceito;
                     document.getElementById('card-conceito-badge').className = 'badge ' + conceitoCor;
 
-                    // Preenche os cards de disciplina (apenas a disciplina da prova)
+                    // Mapeamento de disciplina para chave
                     const disciplinaMap = {
                         'Português': 'portugues',
                         'Matemática': 'matematica',
@@ -4925,6 +4929,7 @@
                         'cn': 'cn'
                     };
                     const discKey = disciplinaMap[disciplina.toLowerCase()] || 'portugues';
+
                     const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
                     const nomesDisciplinas = {
                         'portugues': 'Português',
@@ -4947,12 +4952,12 @@
                         'ch': 'orange',
                         'cn': 'teal'
                     };
-                    const badgesDisciplinas = {
-                        'portugues': 'badge-blue',
-                        'matematica': 'badge-green',
-                        'producao': 'badge-purple',
-                        'ch': 'badge-orange',
-                        'cn': 'badge-teal'
+                    const colorMap = {
+                        'blue': '59,130,246',
+                        'green': '16,185,129',
+                        'purple': '139,92,246',
+                        'orange': '245,158,11',
+                        'teal': '20,184,166'
                     };
 
                     disciplinas.forEach(key => {
@@ -4993,7 +4998,6 @@
                             header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
                             const card = container.closest('.desempenho-disciplina');
                             const cor = coresDisciplinas[key];
-                            const colorMap = { 'blue': '59,130,246', 'green': '16,185,129', 'purple': '139,92,246', 'orange': '245,158,11', 'teal': '20,184,166' };
                             card.style.borderColor = `rgba(${colorMap[cor] || '59,130,246'}, 0.3)`;
                         } else {
                             container.innerHTML = `
