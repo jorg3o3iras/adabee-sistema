@@ -4,9 +4,1112 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CorrigePro — Sistema de Correção de Provas</title>
-    <!-- REFERÊNCIA AO CSS EXTERNO -->
-    <link rel="stylesheet" href="style.css">
-    <!-- Se preferir manter CSS interno, cole aqui dentro de <style> -->
+    <style>
+        /* ============================================
+           CSS COMPLETO OTIMIZADO
+           ============================================ */
+        :root {
+            --bg: #0f172a;
+            --bg2: #1e293b;
+            --surface: #1e293b;
+            --surface2: #334155;
+            --border: #334155;
+            --border2: #475569;
+            --text: #f1f5f9;
+            --text2: #94a3b8;
+            --text3: #64748b;
+            --r: 12px;
+            --blue: #3b82f6;
+            --cyan: #06b6d4;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --teal: #14b8a6;
+            --amber: #f59e0b;
+            --lime: #84cc16;
+            --grad-blue: linear-gradient(135deg, #3b82f6, #2563eb);
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+        ::-webkit-scrollbar { width:6px; height:6px; }
+        ::-webkit-scrollbar-track { background:var(--bg2); }
+        ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:10px; }
+
+        /* LOGIN */
+        #login-screen { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:var(--bg); }
+        .login-bg { position:absolute; inset:0; overflow:hidden; }
+        .login-blob { position:absolute; border-radius:50%; filter:blur(80px); opacity:.15; }
+        .lb1 { width:500px; height:500px; background:var(--blue); top:-150px; right:-100px; animation:float 12s ease-in-out infinite; }
+        .lb2 { width:400px; height:400px; background:var(--purple); bottom:-100px; left:-100px; animation:float 15s ease-in-out infinite reverse; }
+        .lb3 { width:300px; height:300px; background:var(--cyan); top:50%; left:50%; transform:translate(-50%,-50%); animation:float 10s ease-in-out infinite 2s; }
+        @keyframes float { 0%,100% { transform:translate(0,0) scale(1); } 33% { transform:translate(30px,-30px) scale(1.05); } 66% { transform:translate(-20px,20px) scale(0.95); } }
+
+        .login-card { position:relative; z-index:1; background:rgba(30,41,59,0.85); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.06); border-radius:24px; padding:40px 36px; width:100%; max-width:420px; box-shadow:0 32px 80px rgba(0,0,0,0.5); }
+        .login-logo { text-align:center; margin-bottom:28px; }
+        .login-logo .l-icon { font-size:48px; margin-bottom:6px; }
+        .login-logo h1 { font-size:28px; font-weight:800; background:var(--grad-blue); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .login-logo p { font-size:13px; color:var(--text2); margin-top:4px; }
+
+        .login-tabs { display:flex; gap:6px; margin-bottom:20px; background:var(--bg2); padding:4px; border-radius:12px; }
+        .login-tab { flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; }
+        .login-tab.active { background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(59,130,246,.3); }
+
+        .lf-group { margin-bottom:16px; }
+        .lf-group label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px; }
+        .lf-input { width:100%; padding:12px 14px; background:var(--bg2); border:1.5px solid var(--border); border-radius:10px; color:var(--text); font-size:14px; transition:border .3s; outline:none; }
+        .lf-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,.2); }
+        .btn-login { width:100%; padding:14px; border:none; border-radius:12px; background:var(--grad-blue); color:#fff; font-size:16px; font-weight:700; cursor:pointer; transition:all .3s; box-shadow:0 4px 20px rgba(59,130,246,.3); margin-top:4px; }
+        .btn-login:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(59,130,246,.4); }
+
+        /* APP */
+        #app { display:none; height:100vh; overflow:hidden; }
+        .sidebar { width:260px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; padding:16px 0; position:fixed; top:0; left:0; bottom:0; z-index:1000; transition:transform .3s ease; }
+        .sidebar.open { transform:translateX(0) !important; }
+        .sb-brand { display:flex; align-items:center; gap:12px; padding:0 18px 18px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+        .sb-logo { font-size:28px; }
+        .sb-brand-name { font-size:20px; font-weight:800; background:var(--grad-blue); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .sb-brand-name span { font-weight:300; -webkit-text-fill-color:var(--text2); }
+        .sb-nav { flex:1; overflow-y:auto; padding:0 10px; }
+        .sb-section { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; padding:12px 12px 6px; }
+        .sb-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; color:var(--text2); font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; margin-bottom:2px; position:relative; }
+        .sb-item:hover { background:rgba(255,255,255,0.04); color:var(--text); }
+        .sb-item.active { background:rgba(59,130,246,0.12); color:var(--blue); }
+        .sb-item .sb-ico { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
+        .sb-badge { font-size:8px; font-weight:700; background:var(--purple); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; }
+        .sb-badge-new { font-size:8px; font-weight:700; background:var(--orange); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+        .sb-footer { padding:14px 16px 0; border-top:1px solid var(--border); margin-top:8px; }
+        .sb-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+        .sb-avatar { width:36px; height:36px; border-radius:50%; background:var(--grad-blue); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0; }
+        .sb-uname { font-size:14px; font-weight:600; }
+        .sb-urole { font-size:10px; color:var(--text3); }
+        .sb-logout { width:100%; padding:10px; border:1px solid rgba(239,68,68,0.3); border-radius:10px; background:transparent; color:var(--red); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+        .sb-logout:hover { background:rgba(239,68,68,0.1); }
+
+        .content { flex:1; margin-left:260px; padding:20px 28px; overflow-y:auto; height:100vh; }
+        .page { display:none; animation:fadeUp .3s ease; }
+        .page.active { display:block; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        .menu-toggle { display:none; position:fixed; top:14px; left:14px; z-index:1100; background:var(--surface); border:1px solid var(--border); color:var(--text); width:42px; height:42px; border-radius:12px; font-size:20px; cursor:pointer; transition:all .3s; box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+        .menu-toggle:hover { background:var(--bg2); }
+        .menu-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:999; backdrop-filter:blur(4px); }
+        .menu-overlay.show { display:block; }
+
+        .page-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+        .page-title { font-size:22px; font-weight:700; }
+        .page-sub { font-size:14px; color:var(--text2); margin-top:2px; }
+        .page-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+        .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px 20px; display:flex; align-items:center; gap:14px; transition:all .3s; }
+        .stat-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+        .stat-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+        .stat-icon.blue { background:rgba(59,130,246,0.15); }
+        .stat-icon.green { background:rgba(16,185,129,0.15); }
+        .stat-icon.orange { background:rgba(245,158,11,0.15); }
+        .stat-icon.purple { background:rgba(139,92,246,0.15); }
+        .stat-val { font-size:28px; font-weight:800; line-height:1.2; }
+        .stat-label { font-size:12px; color:var(--text2); font-weight:500; }
+
+        .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px 20px; margin-bottom:16px; }
+        .card-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+        .card-title { font-size:15px; font-weight:700; }
+        .card-glow-blue { border-color:rgba(59,130,246,.3); box-shadow:0 0 30px rgba(59,130,246,.05); }
+        .card-glow-green { border-color:rgba(16,185,129,.3); box-shadow:0 0 30px rgba(16,185,129,.05); }
+        .card-glow-purple { border-color:rgba(139,92,246,.3); box-shadow:0 0 30px rgba(139,92,246,.05); }
+
+        .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+        .form-row.c1 { grid-template-columns:1fr; }
+        .form-row.c3 { grid-template-columns:1fr 1fr 1fr; }
+        .form-row.c4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+        .form-row.c5 { grid-template-columns:1fr 1fr 1fr 1fr 1fr; }
+        .form-group { display:flex; flex-direction:column; gap:4px; }
+        .form-label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.4px; }
+        .form-control { padding:9px 12px; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; outline:none; transition:border .3s; width:100%; }
+        .form-control:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+        .form-control option { background:var(--bg2); color:var(--text); }
+        .req { color:var(--red); }
+        .form-hint { font-size:10px; color:var(--text3); margin-top:2px; }
+
+        .btn { padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .25s; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+        .btn-primary { background:var(--blue); color:#fff; box-shadow:0 4px 12px rgba(59,130,246,.25); }
+        .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(59,130,246,.35); }
+        .btn-green { background:var(--green); color:#fff; }
+        .btn-green:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(16,185,129,.35); }
+        .btn-purple { background:var(--purple); color:#fff; }
+        .btn-purple:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(139,92,246,.35); }
+        .btn-red { background:var(--red); color:#fff; }
+        .btn-red:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(239,68,68,.35); }
+        .btn-orange { background:var(--orange); color:#fff; }
+        .btn-orange:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(245,158,11,.35); }
+        .btn-pink { background:var(--pink); color:#fff; }
+        .btn-pink:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(236,72,153,.35); }
+        .btn-teal { background:var(--teal); color:#fff; }
+        .btn-teal:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(20,184,166,.35); }
+        .btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--text2); }
+        .btn-outline:hover { border-color:var(--text); color:var(--text); background:rgba(255,255,255,0.04); }
+        .btn-ghost { background:transparent; color:var(--text2); }
+        .btn-ghost:hover { background:rgba(255,255,255,0.04); color:var(--text); }
+        .btn-sm { padding:4px 12px; font-size:11px; }
+        .btn-lg { padding:12px 24px; font-size:15px; }
+        .btn-full { width:100%; justify-content:center; }
+        .btn-group { display:flex; gap:6px; flex-wrap:wrap; }
+        .btn-del { background:transparent; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; transition:all .2s; }
+        .btn-del:hover { background:rgba(239,68,68,0.15); }
+
+        .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+        .badge-blue { background:rgba(59,130,246,0.15); color:var(--blue); }
+        .badge-green { background:rgba(16,185,129,0.15); color:var(--green); }
+        .badge-red { background:rgba(239,68,68,0.15); color:var(--red); }
+        .badge-orange { background:rgba(245,158,11,0.15); color:var(--orange); }
+        .badge-purple { background:rgba(139,92,246,0.15); color:var(--purple); }
+        .badge-cyan { background:rgba(6,182,212,0.15); color:var(--cyan); }
+        .badge-gray { background:rgba(148,163,184,0.12); color:var(--text3); }
+        .badge-pink { background:rgba(236,72,153,0.15); color:var(--pink); }
+        .badge-teal { background:rgba(20,184,166,0.15); color:var(--teal); }
+        .badge-conceito-inicial { background:rgba(239,68,68,0.2); color:#ef4444; }
+        .badge-conceito-basico { background:rgba(245,158,11,0.2); color:#f59e0b; }
+        .badge-conceito-proficiente { background:rgba(59,130,246,0.2); color:#3b82f6; }
+        .badge-conceito-avancado { background:rgba(16,185,129,0.2); color:#10b981; }
+        .badge-conceito-inicial-sm { background:rgba(239,68,68,0.2); color:#ef4444; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+        .badge-conceito-basico-sm { background:rgba(245,158,11,0.2); color:#f59e0b; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+        .badge-conceito-proficiente-sm { background:rgba(59,130,246,0.2); color:#3b82f6; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+        .badge-conceito-avancado-sm { background:rgba(16,185,129,0.2); color:#10b981; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+
+        .chip { display:inline-block; padding:2px 10px; background:var(--bg2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--text2); }
+
+        .table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:12px; }
+        th { text-align:center; padding:5px 3px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:8px; text-transform:uppercase; letter-spacing:.2px; }
+        td { padding:5px 3px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; vertical-align:middle; font-size:11px; }
+        tr:hover td { background:rgba(255,255,255,0.02); }
+
+        .search-wrap { display:flex; align-items:center; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; padding:0 12px; transition:border .3s; }
+        .search-wrap:focus-within { border-color:var(--blue); }
+        .search-ico { font-size:14px; color:var(--text3); margin-right:8px; }
+        .search-wrap input { background:transparent; border:none; padding:8px 0; color:var(--text); font-size:13px; outline:none; width:140px; }
+
+        .upload-zone { border:2px dashed var(--border); border-radius:12px; padding:30px 20px; text-align:center; cursor:pointer; transition:all .3s; }
+        .upload-zone:hover { border-color:var(--blue); background:rgba(59,130,246,0.04); }
+        .upload-zone .uz-ico { font-size:40px; margin-bottom:8px; }
+        .upload-zone .uz-hint { font-size:12px; color:var(--text3); margin-top:4px; }
+
+        .gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:6px; margin:10px 0; }
+        .gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; }
+        .gab-num { font-size:9px; color:var(--text3); font-weight:700; margin-bottom:4px; }
+        .gab-select { width:100%; padding:4px 2px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-weight:700; font-size:13px; text-align:center; outline:none; transition:all .2s; }
+        .gab-select:focus { border-color:var(--blue); }
+        .gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
+
+        .ai-hero { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.06)); border:1px solid rgba(139,92,246,0.15); border-radius:var(--r); padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
+        .ai-hero-icon { font-size:44px; }
+        .ai-hero-text { flex:1; min-width:180px; }
+        .ai-hero-text h3 { font-size:16px; font-weight:700; margin-bottom:2px; }
+        .ai-hero-text p { font-size:13px; color:var(--text2); }
+        .ai-hero-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+        .ai-feature-btn { flex:1; min-width:120px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; text-align:center; cursor:pointer; transition:all .3s; }
+        .ai-feature-btn:hover { transform:translateY(-3px); border-color:var(--border2); }
+        .af-ico { font-size:28px; margin-bottom:4px; }
+        .af-title { font-size:13px; font-weight:700; }
+        .af-sub { font-size:10px; color:var(--text3); }
+
+        .chart-bars { display:flex; align-items:flex-end; justify-content:space-around; gap:6px; padding:10px 0; min-height:140px; }
+        .chart-bar-item { display:flex; flex-direction:column; align-items:center; flex:1; }
+        .chart-bar { width:100%; max-width:50px; border-radius:4px 4px 0 0; min-height:10px; transition:height .6s ease; }
+        .chart-bar-val { font-size:11px; font-weight:700; margin-bottom:4px; }
+        .chart-bar-lbl { font-size:10px; color:var(--text3); margin-top:4px; text-align:center; max-width:60px; word-break:break-word; }
+
+        .conceito-graficos { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+
+        .cam-modal { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px; }
+        .cam-modal.show { display:flex; }
+        .cam-container { background:var(--surface); border-radius:20px; padding:24px; max-width:600px; width:100%; max-height:90vh; overflow-y:auto; }
+        .cam-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .cam-header h3 { font-size:18px; }
+        .cam-video-wrap { position:relative; border-radius:12px; overflow:hidden; background:var(--bg2); }
+        .cam-video-wrap video { width:100%; display:block; border-radius:12px; }
+        .cam-frame { position:absolute; inset:30px; border:3px solid rgba(16,185,129,0.6); border-radius:16px; pointer-events:none; }
+        .cam-corner { position:absolute; width:20px; height:20px; border-color:var(--green); border-style:solid; border-width:0; }
+        .cc-tl { top:-3px; left:-3px; border-top-width:4px; border-left-width:4px; border-radius:4px 0 0 0; }
+        .cc-tr { top:-3px; right:-3px; border-top-width:4px; border-right-width:4px; border-radius:0 4px 0 0; }
+        .cc-bl { bottom:-3px; left:-3px; border-bottom-width:4px; border-left-width:4px; border-radius:0 0 0 4px; }
+        .cc-br { bottom:-3px; right:-3px; border-bottom-width:4px; border-right-width:4px; border-radius:0 0 4px 0; }
+        .cam-scan-line { position:absolute; top:0; left:30px; right:30px; height:3px; background:linear-gradient(90deg,transparent,var(--green),transparent); animation:scan 2s ease-in-out infinite; box-shadow:0 0 20px rgba(16,185,129,0.3); }
+        @keyframes scan { 0%,100% { top:30px; } 50% { top:calc(100% - 33px); } }
+        .cam-controls { display:flex; gap:12px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
+        .cam-hint { text-align:center; font-size:12px; color:var(--text3); margin-top:12px; }
+
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:9998; align-items:center; justify-content:center; padding:20px; }
+        .modal-overlay.show { display:flex; }
+        .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px 30px; max-width:750px; width:100%; max-height:90vh; overflow-y:auto; }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .modal-header h3 { font-size:18px; font-weight:700; }
+        .modal-close { background:transparent; border:none; color:var(--text2); font-size:28px; cursor:pointer; transition:all .2s; padding:0 4px; line-height:1; }
+        .modal-close:hover { color:var(--text); }
+        .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+
+        .multi-import-area { background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; margin:8px 0; }
+        .multi-import-area textarea { width:100%; background:transparent; border:none; color:var(--text); font-size:13px; outline:none; resize:vertical; min-height:80px; font-family:inherit; padding:4px 0; }
+        .multi-import-area textarea::placeholder { color:var(--text3); }
+        .multi-import-hint { font-size:10px; color:var(--text3); margin-top:4px; line-height:1.5; }
+        .multi-import-hint strong { color:var(--text2); }
+        .multi-status { padding:8px 12px; border-radius:6px; margin:6px 0; font-size:12px; }
+        .multi-status.success { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.2); color:var(--green); }
+        .multi-status.error { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); color:var(--red); }
+        .multi-status.info { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2); color:var(--blue); }
+
+        /* ============================================
+           CORREÇÃO MANUAL (DENTRO DA IA) - DUAS LINHAS
+           ============================================ */
+        .correcao-manual-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 6px;
+            padding: 8px 4px 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.15);
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .correcao-manual-item {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 4px;
+            text-align: center;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .correcao-manual-item .q-num {
+            font-size: 8px;
+            color: var(--text3);
+            font-weight: 700;
+        }
+
+        .correcao-manual-item .q-resposta {
+            font-size: 12px;
+            font-weight: 800;
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 0 4px;
+            min-height: 22px;
+            line-height: 22px;
+            width: 100%;
+        }
+
+        .correcao-manual-item .q-select {
+            width: 90%;
+            padding: 2px;
+            background: var(--bg);
+            border: 1.5px solid var(--border2);
+            border-radius: 4px;
+            color: var(--text);
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .correcao-manual-item .q-select:focus {
+            border-color: var(--blue);
+        }
+
+        .correcao-manual-item .q-select.correta {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+        }
+
+        .correcao-manual-item .q-select.errada {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
+
+        .correcao-manual-item .q-status {
+            font-size: 9px;
+            font-weight: 700;
+            min-height: 16px;
+        }
+
+        .correcao-manual-item .q-status.correta {
+            color: var(--green);
+        }
+
+        .correcao-manual-item .q-status.errada {
+            color: var(--red);
+        }
+
+        /* ============================================
+           CORREÇÃO MANUAL STANDALONE - DUAS LINHAS
+           ============================================ */
+        .cm-grid-standalone {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 6px;
+            padding: 8px 4px 12px;
+            margin: 12px 0;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .cm-item-standalone {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 3px;
+            text-align: center;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .cm-item-standalone .q-num {
+            font-size: 7px;
+            color: var(--text3);
+            font-weight: 700;
+        }
+
+        .cm-item-standalone .q-gabarito {
+            font-size: 7px;
+            color: var(--text3);
+            margin-bottom: 1px;
+        }
+
+        .cm-item-standalone .q-select-manual {
+            width: 92%;
+            padding: 2px;
+            background: var(--bg);
+            border: 1.5px solid var(--border2);
+            border-radius: 4px;
+            color: var(--text);
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .cm-item-standalone .q-select-manual:focus {
+            border-color: var(--blue);
+        }
+
+        .cm-item-standalone .q-select-manual.correta {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+        }
+
+        .cm-item-standalone .q-select-manual.errada {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
+
+        .cm-item-standalone .q-status-icon {
+            font-size: 11px;
+            min-height: 16px;
+        }
+
+        .resumo-correcao { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:12px 0; }
+        .resumo-correcao .item { text-align:center; background:var(--bg2); border-radius:8px; padding:8px; }
+        .resumo-correcao .item .valor { font-size:24px; font-weight:800; }
+        .resumo-correcao .item .valor.acertos { color:var(--green); }
+        .resumo-correcao .item .valor.erros { color:var(--red); }
+        .resumo-correcao .item .valor.nota { color:var(--blue); }
+        .resumo-correcao .item .label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.3px; }
+
+        .correcao-aluno-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 12px;
+            background: var(--bg2);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+        .correcao-aluno-info .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .correcao-aluno-info .info-item .label {
+            font-size: 9px;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+        .correcao-aluno-info .info-item strong {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .ai-criteria-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
+        .ai-crit { background:var(--bg2); border-radius:8px; padding:10px 14px; }
+        .ai-crit-name { font-size:11px; color:var(--text2); font-weight:600; }
+        .ai-crit-val { font-size:20px; font-weight:800; color:var(--purple); }
+        .ai-feedback-box { background:var(--bg2); border-radius:10px; padding:14px 18px; font-size:13px; line-height:1.6; border-left:3px solid var(--purple); }
+
+        .progress { width:100%; height:6px; background:var(--bg2); border-radius:10px; overflow:hidden; margin-top:4px; }
+        .progress-fill { height:100%; border-radius:10px; transition:width .8s ease; }
+        .pf-green { background:linear-gradient(90deg,var(--green),#059669); }
+        .pf-orange { background:linear-gradient(90deg,var(--orange),#d97706); }
+        .pf-purple { background:linear-gradient(90deg,var(--purple),#7c3aed); }
+        .pf-blue { background:linear-gradient(90deg,var(--blue),#2563eb); }
+        .pf-pink { background:linear-gradient(90deg,var(--pink),#be185d); }
+        .pf-teal { background:linear-gradient(90deg,var(--teal),#0d9488); }
+
+        .del-modal { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; }
+        .del-modal.show { display:flex; }
+        .del-box { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px 36px; max-width:400px; width:100%; text-align:center; }
+        .del-icon { font-size:52px; margin-bottom:10px; }
+        .del-box h3 { font-size:20px; margin-bottom:8px; }
+        .del-box p { color:var(--text2); font-size:14px; line-height:1.7; }
+        .del-name { color:var(--red); font-weight:700; }
+        .del-actions { display:flex; gap:12px; justify-content:center; margin-top:20px; }
+
+        .toast-container { position:fixed; bottom:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:8px; max-width:360px; width:100%; }
+        .toast { padding:12px 18px; border-radius:12px; font-size:14px; font-weight:500; animation:slideIn .4s ease; display:flex; align-items:center; gap:10px; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+        .toast-info { background:var(--blue); color:#fff; }
+        .toast-success { background:var(--green); color:#fff; }
+        .toast-error { background:var(--red); color:#fff; }
+        .toast-ai { background:var(--purple); color:#fff; }
+        .toast-warning { background:var(--orange); color:#fff; }
+        @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+
+        .spinner { width:40px; height:40px; border:4px solid var(--border); border-top:4px solid var(--purple); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ============================================
+           ESTILOS PARA A TABELA DE RESULTADOS
+           ============================================ */
+        .disciplina-cell {
+            padding: 3px 4px;
+            text-align: center;
+            border-radius: 4px;
+            min-width: 60px;
+        }
+        .disciplina-cell .disciplina-tag {
+            font-size: 7px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .disciplina-cell .acertos-erros {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .disciplina-cell .acertos-erros .acertos {
+            color: var(--green);
+        }
+        .disciplina-cell .acertos-erros .erros {
+            color: var(--red);
+        }
+        .disciplina-cell .acertos-erros .separador {
+            color: var(--text3);
+            font-weight: 300;
+        }
+        .disciplina-cell .conceito {
+            display: block;
+            margin-top: 2px;
+            font-size: 8px;
+            font-weight: 700;
+        }
+        .tag-portugues { color: #3b82f6; }
+        .tag-matematica { color: #10b981; }
+        .tag-producao { color: #8b5cf6; }
+        .tag-ch { color: #f59e0b; }
+        .tag-cn { color: #14b8a6; }
+
+        .col-disciplina {
+            min-width: 75px;
+            padding: 4px 2px;
+        }
+        .col-escola, .col-turma {
+            min-width: 80px;
+            font-size: 10px;
+        }
+
+        /* ============================================
+           ESTILOS PARA O HISTÓRICO DO ALUNO
+           ============================================ */
+        .historico-disciplina {
+            min-width: 70px;
+            padding: 3px 4px;
+        }
+        .historico-disciplina .disciplina-tag-sm {
+            font-size: 7px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .historico-disciplina .acertos-erros-sm {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .historico-disciplina .acertos-erros-sm .acertos {
+            color: var(--green);
+        }
+        .historico-disciplina .acertos-erros-sm .erros {
+            color: var(--red);
+        }
+        .historico-disciplina .acertos-erros-sm .separador {
+            color: var(--text3);
+            font-weight: 300;
+        }
+        .historico-disciplina .conceito-sm {
+            display: block;
+            margin-top: 2px;
+            font-size: 7px;
+            font-weight: 700;
+        }
+        .tag-portugues-sm { color: #3b82f6; }
+        .tag-matematica-sm { color: #10b981; }
+        .tag-producao-sm { color: #8b5cf6; }
+        .tag-ch-sm { color: #f59e0b; }
+        .tag-cn-sm { color: #14b8a6; }
+
+        /* ============================================
+           ESTILOS PARA O CARD DESEMPENHO POR HABILIDADES
+           ============================================ */
+        .habilidades-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .habilidade-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            transition: all 0.3s;
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        .habilidade-card:hover {
+            border-color: var(--border2);
+            transform: translateY(-2px);
+        }
+        .habilidade-card .disciplina-titulo {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .habilidade-card .disciplina-titulo .icone {
+            font-size: 20px;
+        }
+        .habilidade-card .questao-item {
+            display: grid;
+            grid-template-columns: 30px 28px 28px 1fr;
+            gap: 4px;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 11px;
+        }
+        .habilidade-card .questao-item:last-child {
+            border-bottom: none;
+        }
+        .habilidade-card .questao-item .q-num {
+            font-weight: 600;
+            color: var(--text2);
+            text-align: center;
+        }
+        .habilidade-card .questao-item .q-resposta {
+            font-weight: 700;
+            text-align: center;
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 12px;
+        }
+        .habilidade-card .questao-item .q-gabarito {
+            font-weight: 700;
+            text-align: center;
+            color: var(--text3);
+            font-size: 10px;
+        }
+        .habilidade-card .questao-item .q-status {
+            font-weight: 700;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .habilidade-card .questao-item .q-status.acertou {
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.15);
+        }
+        .habilidade-card .questao-item .q-status.errou {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.15);
+        }
+        .habilidade-card .resumo-habilidade {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text2);
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .habilidade-card .resumo-habilidade .acertos {
+            color: var(--green);
+            font-weight: 700;
+        }
+        .habilidade-card .resumo-habilidade .erros {
+            color: var(--red);
+            font-weight: 700;
+        }
+        .habilidade-card .resumo-habilidade .nota {
+            color: var(--blue);
+            font-weight: 700;
+        }
+
+        /* ============================================
+           ESTILOS PARA O DESEMPENHO DO ALUNO (NOVA ABA) - ATUALIZADO
+           ============================================ */
+        .desempenho-resumo {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .desempenho-resumo .item {
+            background: var(--bg2);
+            border-radius: 10px;
+            padding: 14px 16px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .desempenho-resumo .item .valor {
+            font-size: 28px;
+            font-weight: 800;
+        }
+        .desempenho-resumo .item .label {
+            font-size: 11px;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .desempenho-resumo .item .valor.green { color: var(--green); }
+        .desempenho-resumo .item .valor.red { color: var(--red); }
+        .desempenho-resumo .item .valor.blue { color: var(--blue); }
+        .desempenho-resumo .item .valor.purple { color: var(--purple); }
+
+        .desempenho-disciplinas {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .desempenho-disciplina {
+            background: var(--bg2);
+            border-radius: 10px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+        }
+        .desempenho-disciplina .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .desempenho-disciplina .header h4 {
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .desempenho-disciplina .questoes-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+        }
+        .desempenho-disciplina .questao-item {
+            background: var(--bg);
+            border-radius: 6px;
+            padding: 4px 2px;
+            text-align: center;
+            font-size: 11px;
+            border: 1px solid var(--border);
+        }
+        .desempenho-disciplina .questao-item .q-num {
+            font-size: 7px;
+            color: var(--text3);
+        }
+        .desempenho-disciplina .questao-item .q-resp {
+            font-weight: 700;
+            font-size: 12px;
+        }
+        .desempenho-disciplina .questao-item .q-gab {
+            font-size: 7px;
+            color: var(--text3);
+        }
+        .desempenho-disciplina .questao-item .q-status-text {
+            font-size: 7px;
+            font-weight: 700;
+            display: block;
+            line-height: 1.2;
+            margin-top: 2px;
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+        .desempenho-disciplina .questao-item .q-status-text.acertou {
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .desempenho-disciplina .questao-item .q-status-text.errou {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.12);
+        }
+        .desempenho-disciplina .questao-item.acertou {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .desempenho-disciplina .questao-item.acertou .q-resp {
+            color: var(--green);
+        }
+        .desempenho-disciplina .questao-item.errou {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.08);
+        }
+        .desempenho-disciplina .questao-item.errou .q-resp {
+            color: var(--red);
+        }
+        .desempenho-disciplina .stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .desempenho-disciplina .stats .acertos { color: var(--green); font-weight: 700; }
+        .desempenho-disciplina .stats .erros { color: var(--red); font-weight: 700; }
+        .desempenho-disciplina .stats .nota { color: var(--blue); font-weight: 700; }
+
+        .desempenho-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            background: var(--bg2);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .desempenho-info strong { color: var(--text); }
+
+        /* ============================================
+           RESPONSIVIDADE
+           ============================================ */
+        @media (max-width:900px) {
+            .menu-toggle { display:flex; align-items:center; justify-content:center; }
+            .sidebar { transform:translateX(-100%); width:280px; }
+            .content { margin-left:0; padding:16px; padding-top:70px; }
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .g2 { grid-template-columns:1fr; }
+            .form-row { grid-template-columns:1fr; }
+            .form-row.c3 { grid-template-columns:1fr; }
+            .form-row.c4 { grid-template-columns:1fr; }
+            .form-row.c5 { grid-template-columns:1fr; }
+            .conceito-graficos { grid-template-columns:1fr; }
+            .ai-hero { flex-direction:column; text-align:center; }
+            .ai-hero-actions { justify-content:center; }
+            .correcao-aluno-info { grid-template-columns:1fr 1fr; }
+            .ai-criteria-grid { grid-template-columns:1fr; }
+            .page-header { flex-direction:column; align-items:stretch; }
+            .page-actions { flex-wrap:wrap; }
+            .search-wrap input { width:100%; }
+            .search-wrap { flex:1; }
+            .modal { padding:20px; }
+            .resumo-correcao { grid-template-columns:1fr; }
+            .correcao-manual-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .cm-grid-standalone {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .disciplina-cell {
+                min-width: 50px;
+                padding: 2px 3px;
+            }
+            .disciplina-cell .acertos-erros {
+                font-size: 10px;
+                gap: 3px;
+                flex-wrap: wrap;
+            }
+            .col-disciplina {
+                min-width: 60px;
+            }
+            .col-escola, .col-turma {
+                min-width: 60px;
+                font-size: 9px;
+            }
+            .historico-disciplina {
+                min-width: 55px;
+                padding: 2px 3px;
+            }
+            .historico-disciplina .acertos-erros-sm {
+                font-size: 9px;
+                gap: 2px;
+                flex-wrap: wrap;
+            }
+            .habilidades-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .habilidade-card {
+                max-height: 350px;
+            }
+            .desempenho-resumo {
+                grid-template-columns: 1fr 1fr;
+            }
+            .desempenho-disciplinas {
+                grid-template-columns: 1fr 1fr;
+            }
+            .desempenho-disciplina .questoes-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .desempenho-info {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width:480px) {
+            .stats-grid { grid-template-columns:1fr; }
+            .login-card { padding:24px 18px; margin:10px; }
+            .cam-container { padding:14px; }
+            .gab-grid { grid-template-columns:repeat(auto-fill,minmax(55px,1fr)); }
+            .modal { padding:16px; }
+            .correcao-aluno-info { grid-template-columns:1fr; }
+            .correcao-manual-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .cm-grid-standalone {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .disciplina-cell {
+                min-width: 40px;
+                padding: 2px 2px;
+            }
+            .disciplina-cell .acertos-erros {
+                font-size: 9px;
+                gap: 2px;
+                flex-direction: column;
+                align-items: center;
+            }
+            .disciplina-cell .conceito {
+                font-size: 7px;
+            }
+            .col-disciplina {
+                min-width: 50px;
+            }
+            .col-escola, .col-turma {
+                min-width: 50px;
+                font-size: 8px;
+            }
+            .historico-disciplina {
+                min-width: 45px;
+                padding: 2px 2px;
+            }
+            .historico-disciplina .acertos-erros-sm {
+                font-size: 8px;
+                gap: 2px;
+                flex-direction: column;
+                align-items: center;
+            }
+            .historico-disciplina .conceito-sm {
+                font-size: 6px;
+            }
+            .habilidades-grid {
+                grid-template-columns: 1fr;
+            }
+            .habilidade-card {
+                max-height: 300px;
+            }
+            .habilidade-card .questao-item {
+                grid-template-columns: 25px 22px 22px 1fr;
+                font-size: 10px;
+            }
+            .desempenho-resumo {
+                grid-template-columns: 1fr;
+            }
+            .desempenho-disciplinas {
+                grid-template-columns: 1fr;
+            }
+            .desempenho-disciplina .questoes-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .desempenho-info {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ============================================
+           ══ REGRAS PARA IMPRESSÃO ══
+           ============================================ */
+        @media print {
+            .no-print,
+            .menu-toggle,
+            .menu-overlay,
+            .sidebar,
+            .sb-nav,
+            .sb-footer,
+            .sb-brand,
+            .sb-user,
+            .sb-logout,
+            .page-actions .btn,
+            .page-actions .btn-outline,
+            .page-actions .btn-green,
+            .search-wrap,
+            .form-row:not(.print-row),
+            .form-row .btn,
+            .btn-group .btn:not(.no-print),
+            .card-header .btn-group,
+            .card-header .btn,
+            .modal-overlay,
+            .del-modal,
+            .toast-container,
+            .cam-modal,
+            .upload-zone,
+            .tab-nav,
+            .tab-c .btn,
+            .btn-full,
+            .btn-lg,
+            .ai-feature-btn,
+            .ai-hero-actions,
+            .afb-blue,
+            .afb-green,
+            .afb-purple,
+            .afb-red,
+            #menuToggle,
+            #menuOverlay,
+            .login-screen {
+                display: none !important;
+            }
+            .page { display: none !important; }
+            .page.active { display: block !important; animation: none !important; padding: 0 !important; margin: 0 !important; }
+            body { background: #ffffff !important; color: #000000 !important; margin: 0 !important; padding: 0 !important; font-size: 10pt !important; line-height: 1.4 !important; }
+            #app { display: block !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }
+            .content { padding: 12px !important; margin: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; width: 100% !important; box-sizing: border-box !important; }
+            .card { background: #ffffff !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 10px 12px !important; margin-bottom: 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .card-header { border-bottom: 1px solid #dddddd !important; padding-bottom: 6px !important; margin-bottom: 8px !important; }
+            .card-title { color: #000000 !important; font-size: 12pt !important; }
+            .stats-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .stat-card { background: #f9f9f9 !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 8px 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .stat-val { font-size: 18pt !important; color: #000000 !important; }
+            .stat-label { color: #555555 !important; font-size: 8pt !important; }
+            .stat-icon { display: none !important; }
+            .table-wrap { border: 1px solid #dddddd !important; border-radius: 4px !important; overflow: visible !important; margin-bottom: 8px !important; }
+            table { border-collapse: collapse !important; width: 100% !important; font-size: 8pt !important; color: #000000 !important; }
+            thead { background: #f5f5f5 !important; }
+            th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 3px 3px !important; text-align: center !important; font-size: 6pt !important; text-transform: uppercase !important; letter-spacing: 0.2px !important; }
+            td { border: 1px solid #cccccc !important; padding: 3px 3px !important; color: #000000 !important; background: #ffffff !important; text-align: center !important; font-size: 7pt !important; }
+            tbody tr:hover td { background: #ffffff !important; }
+            tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .badge { border: 1px solid #999999 !important; background: #f0f0f0 !important; color: #000000 !important; padding: 1px 6px !important; font-size: 6pt !important; border-radius: 10px !important; font-weight: 700 !important; text-transform: uppercase !important; }
+            .badge-green { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+            .badge-red { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+            .badge-orange { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+            .badge-purple { border-color: #6f42c1 !important; background: #e8d4ff !important; color: #4a148c !important; }
+            .badge-blue { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+            .badge-gray { border-color: #6c757d !important; background: #e9ecef !important; color: #495057 !important; }
+            .badge-pink { border-color: #ec4899 !important; background: #fce4ec !important; color: #880e4f !important; }
+            .badge-teal { border-color: #14b8a6 !important; background: #d4f4f0 !important; color: #0d6e5a !important; }
+            .badge-conceito-inicial { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+            .badge-conceito-basico { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+            .badge-conceito-proficiente { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+            .badge-conceito-avancado { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+            .badge-conceito-inicial-sm { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; font-size: 6pt !important; }
+            .badge-conceito-basico-sm { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; font-size: 6pt !important; }
+            .badge-conceito-proficiente-sm { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; font-size: 6pt !important; }
+            .badge-conceito-avancado-sm { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; font-size: 6pt !important; }
+            .progress { background: #e9ecef !important; border: 1px solid #cccccc !important; border-radius: 4px !important; height: 10px !important; overflow: hidden !important; }
+            .progress-fill { border-radius: 4px !important; background: #007bff !important; }
+            .pf-green { background: #28a745 !important; }
+            .pf-orange { background: #fd7e14 !important; }
+            .pf-purple { background: #6f42c1 !important; }
+            .pf-blue { background: #007bff !important; }
+            .pf-pink { background: #ec4899 !important; }
+            .pf-teal { background: #14b8a6 !important; }
+            .chart-bars { height: 80px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .chart-bar-val { font-size: 7pt !important; color: #000000 !important; }
+            .chart-bar-lbl { font-size: 6pt !important; color: #555555 !important; }
+            .conceito-graficos { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+            #conceito-barras .progress { height: 12px !important; }
+            #conceito-barras .progress-fill { height: 12px !important; border-radius: 4px !important; }
+            #donut-container { transform: scale(0.8) !important; }
+            #donut-container canvas { max-width: 140px !important; max-height: 140px !important; }
+            .page-header { margin-bottom: 12px !important; padding-bottom: 8px !important; border-bottom: 2px solid #333333 !important; }
+            .page-title { font-size: 14pt !important; color: #000000 !important; }
+            .page-sub { color: #555555 !important; font-size: 9pt !important; }
+            @page { size: A4 landscape !important; margin: 10mm 8mm !important; }
+            .card { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .card.allow-break { page-break-inside: auto !important; break-inside: auto !important; }
+            .page-break { page-break-after: always !important; break-after: page !important; }
+            img { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .toast-container { display: none !important; }
+            .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
+            .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
+            .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
+            .desempenho-disciplina { background: #f8fafc !important; border-color: #ddd !important; }
+            .desempenho-disciplina .questao-item { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .desempenho-disciplina .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
+            .desempenho-disciplina .questao-item.acertou .q-resp { color: #155724 !important; }
+            .desempenho-disciplina .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
+            .desempenho-disciplina .questao-item.errou .q-resp { color: #721c24 !important; }
+            .desempenho-disciplina .stats .acertos { color: #155724 !important; }
+            .desempenho-disciplina .stats .erros { color: #721c24 !important; }
+            .desempenho-disciplina .stats .nota { color: #004085 !important; }
+            .desempenho-resumo .item { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .desempenho-resumo .item .valor.green { color: #155724 !important; }
+            .desempenho-resumo .item .valor.red { color: #721c24 !important; }
+            .desempenho-resumo .item .valor.blue { color: #004085 !important; }
+            .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
+            .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .desempenho-disciplina .questao-item .q-status-text {
+                font-size: 6px !important;
+            }
+        }
+        .print-only { display: none !important; }
+        @media print { .print-only { display: block !important; } }
+    </style>
 </head>
 <body>
 
@@ -87,7 +1190,7 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <!-- RELATÓRIO POR ALUNO REMOVIDO -->
+                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -125,7 +1228,7 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <!-- RELATÓRIO POR ALUNO REMOVIDO -->
+                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -810,7 +1913,224 @@
                 </div>
             </div>
 
-            <!-- RELATÓRIO POR ALUNO REMOVIDO -->
+            <!-- ========== RELATÓRIO POR ALUNO ========== -->
+            <div class="page" id="page-rel-aluno">
+                <div class="page-header">
+                    <div><div class="page-title">👤 Relatório por Aluno</div></div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️</button>
+                        <button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button>
+                    </div>
+                </div>
+
+                <div class="print-header print-only">
+                    <h2>👤 Relatório por Aluno</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-aluno"></span></p>
+                </div>
+
+                <div class="card no-print">
+                    <div class="form-row c3">
+                        <div class="form-group">
+                            <label class="form-label">Escola <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-escola" onchange="carregarTurmasRelAluno(this.value)">
+                                <option value="">Selecione a escola...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-prova">
+                                <option value="">Selecione a prova...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Aluno <span class="req">*</span></label>
+                            <select class="form-control" id="rel-aluno-select">
+                                <option value="">Selecione o aluno...</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="justify-content:flex-end; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                            <button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button>
+                            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                            <button class="btn btn-orange" onclick="editarGabaritoAluno()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
+                            <button class="btn btn-red" onclick="excluirAlunoRelatorio()" title="Excluir Aluno">🗑️ Excluir Aluno</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="card" style="width:100%;">
+                        <div class="card-header">
+                            <div class="card-title">📋 Histórico do Aluno</div>
+                            <span class="badge badge-gray" id="total-historico">0 registros</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2">Prova</th>
+                                        <th rowspan="2">Data</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                        <th colspan="3" class="historico-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rel-aluno-historico">
+                                    <tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ========== DESEMPENHO POR HABILIDADES ========== -->
+                    <div class="card" style="width:100%;">
+                        <div class="card-header">
+                            <div class="card-title">🎯 DESEMPENHO POR HABILIDADES</div>
+                            <span class="badge badge-purple">Por disciplina</span>
+                        </div>
+                        <div id="habilidades-container">
+                            <div class="habilidades-grid" id="habilidades-grid">
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">📖</span>
+                                        <span>Português</span>
+                                    </div>
+                                    <div id="habilidade-portugues">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">🔢</span>
+                                        <span>Matemática</span>
+                                    </div>
+                                    <div id="habilidade-matematica">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">✍️</span>
+                                        <span>Produção de Texto</span>
+                                    </div>
+                                    <div id="habilidade-producao">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">🌍</span>
+                                        <span>Ciências Humanas</span>
+                                    </div>
+                                    <div id="habilidade-ch">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="habilidade-card">
+                                    <div class="disciplina-titulo">
+                                        <span class="icone">🔬</span>
+                                        <span>Ciências Naturais</span>
+                                    </div>
+                                    <div id="habilidade-cn">
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Selecione um aluno para ver o desempenho
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+                                <span class="badge badge-green" style="background:rgba(16,185,129,0.15);color:#10b981;">✅ ACERTOU: ADQUIRIU HABILIDADE</span>
+                                <span class="badge badge-red" style="background:rgba(239,68,68,0.15);color:#ef4444;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="width:100%;">
+                        <div class="card-header">
+                            <div class="card-title">📊 Conceito</div>
+                            <span class="badge badge-purple">Por disciplina</span>
+                        </div>
+                        <div id="rel-conceito-disciplinas" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; padding:8px 0;">
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">📖</div>
+                                <div style="font-size:13px; font-weight:700; color:#3b82f6;">Português</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-port-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-port-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-port-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(16,185,129,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">🔢</div>
+                                <div style="font-size:13px; font-weight:700; color:#10b981;">Matemática</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-mat-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-mat-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-mat-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(139,92,246,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">✍️</div>
+                                <div style="font-size:13px; font-weight:700; color:#8b5cf6;">Produção</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-prod-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-prod-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-prod-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(245,158,11,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">🌍</div>
+                                <div style="font-size:13px; font-weight:700; color:#f59e0b;">CH</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-ch-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-ch-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-ch-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(20,184,166,0.2);">
+                                <div style="font-size:24px; margin-bottom:6px;">🔬</div>
+                                <div style="font-size:13px; font-weight:700; color:#14b8a6;">CN</div>
+                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-cn-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-cn-erros" style="color:var(--red); font-weight:700;">0</span></div>
+                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-cn-conceito">—</div>
+                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+                            <span class="badge badge-conceito-inicial">🔴 Inicial</span>
+                            <span class="badge badge-conceito-basico">🟠 Básico</span>
+                            <span class="badge badge-conceito-proficiente">🔵 Proficiente</span>
+                            <span class="badge badge-conceito-avancado">🟢 Avançado</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="page" id="page-rel-escola">
                 <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
@@ -864,189 +2184,167 @@
             </div>
 
             <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
-<div class="page" id="page-desempenho">
-    <div class="page-header">
-        <div>
-            <div class="page-title">📊 Desempenho do Aluno</div>
-            <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
+            <div class="page" id="page-desempenho">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Desempenho do Aluno</div>
+                        <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <!-- Cabeçalho para impressão -->
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Desempenho do Aluno</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
+                </div>
+
+                <!-- ===== FILTROS ===== -->
+                <div class="card no-print">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
+                                <option value="">Carregando escolas...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">👥 TURMA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-aluno-desempenho">
+                                <option value="">Selecione o aluno...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📄 PROVA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-prova-desempenho">
+                                <option value="">Carregando provas...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
+                        <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
+                        <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
+                        <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
+                    </div>
+                </div>
+
+                <!-- ===== RESULTADOS ===== -->
+                <div id="resultado-desempenho" style="display:none;">
+
+                    <!-- Resumo Geral -->
+                    <div class="desempenho-resumo">
+                        <div class="item"><div class="valor blue" id="resumo-nota">0.0</div><div class="label">Nota Final</div></div>
+                        <div class="item"><div class="valor green" id="resumo-acertos">0</div><div class="label">Acertos</div></div>
+                        <div class="item"><div class="valor red" id="resumo-erros">0</div><div class="label">Erros</div></div>
+                        <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
+                    </div>
+
+                    <!-- Disciplinas -->
+                    <div class="desempenho-disciplinas" id="disciplinas-container">
+                        <!-- Português -->
+                        <div class="desempenho-disciplina" id="disc-portugues">
+                            <div class="header">
+                                <h4>📖 Português</h4>
+                                <span class="badge badge-blue" id="status-portugues">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-portugues"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Matemática -->
+                        <div class="desempenho-disciplina" id="disc-matematica">
+                            <div class="header">
+                                <h4>🔢 Matemática</h4>
+                                <span class="badge badge-green" id="status-matematica">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-matematica"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Produção de Texto -->
+                        <div class="desempenho-disciplina" id="disc-producao">
+                            <div class="header">
+                                <h4>✍️ Produção de Texto</h4>
+                                <span class="badge badge-purple" id="status-producao">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-producao"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Ciências Humanas (CH) -->
+                        <div class="desempenho-disciplina" id="disc-ch">
+                            <div class="header">
+                                <h4>🌍 Ciências Humanas</h4>
+                                <span class="badge badge-orange" id="status-ch">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-ch"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Ciências Naturais (CN) -->
+                        <div class="desempenho-disciplina" id="disc-cn">
+                            <div class="header">
+                                <h4>🔬 Ciências Naturais</h4>
+                                <span class="badge badge-teal" id="status-cn">—</span>
+                            </div>
+                            <div class="questoes-grid" id="questoes-cn"></div>
+                            <div class="stats">
+                                <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informações do Aluno -->
+                    <div class="desempenho-info no-print">
+                        <div><strong>🏫 Escola</strong><br><span id="info-escola">—</span></div>
+                        <div><strong>👥 Turma</strong><br><span id="info-turma">—</span></div>
+                        <div><strong>🎒 Aluno</strong><br><span id="info-aluno">—</span></div>
+                        <div><strong>📄 Prova</strong><br><span id="info-prova">—</span></div>
+                        <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
+                    </div>
+
+                    <!-- Legenda -->
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
+                        <span style="color:var(--text3);">|</span>
+                        <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
+                        <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
+                        <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
+                        <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
+                    </div>
+                </div>
+            </div>
+
         </div>
-        <div class="page-actions no-print">
-            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-        </div>
-    </div>
-
-    <!-- Cabeçalho para impressão -->
-    <div class="print-header print-only">
-        <h2>📊 Relatório de Desempenho do Aluno</h2>
-        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-        <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
-    </div>
-
-    <!-- ===== FILTROS ===== -->
-    <div class="card no-print">
-        <div class="form-row c4">
-            <div class="form-group">
-                <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
-                <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
-                    <option value="">Carregando escolas...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">👥 TURMA <span class="req">*</span></label>
-                <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
-                    <option value="">Selecione a turma...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
-                <select class="form-control" id="filtro-aluno-desempenho">
-                    <option value="">Selecione o aluno...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">📄 PROVA <span class="req">*</span></label>
-                <select class="form-control" id="filtro-prova-desempenho">
-                    <option value="">Carregando provas...</option>
-                </select>
-            </div>
-        </div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
-            <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
-            <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
-            <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
-        </div>
-    </div>
-
-    <!-- ===== RESULTADOS ===== -->
-    <div id="resultado-desempenho" style="display:none;">
-
-        <!-- NOVO CARD ÚNICO DE RESUMO -->
-        <div class="desempenho-card-unico">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:14px;">
-                <div>
-                    <span style="font-size:13px; color:var(--text2); font-weight:600;">📄 PROVA</span>
-                    <h3 style="font-size:18px; margin:2px 0 0;" id="card-prova-titulo">—</h3>
-                </div>
-                <span class="badge badge-blue" id="card-conceito-badge">—</span>
-            </div>
-            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px;">
-                <div class="resumo-item">
-                    <div class="resumo-icon">⭐</div>
-                    <div class="resumo-valor" id="card-nota" style="color:var(--blue);">0.0</div>
-                    <div class="resumo-label">Nota Final</div>
-                </div>
-                <div class="resumo-item">
-                    <div class="resumo-icon">✅</div>
-                    <div class="resumo-valor" id="card-acertos" style="color:var(--green);">0</div>
-                    <div class="resumo-label">Acertos</div>
-                </div>
-                <div class="resumo-item">
-                    <div class="resumo-icon">❌</div>
-                    <div class="resumo-valor" id="card-erros" style="color:var(--red);">0</div>
-                    <div class="resumo-label">Erros</div>
-                </div>
-                <div class="resumo-item">
-                    <div class="resumo-icon">📊</div>
-                    <div class="resumo-valor" id="card-conceito" style="color:var(--purple);">—</div>
-                    <div class="resumo-label">Conceito</div>
-                </div>
-            </div>
-            <div style="display:flex; gap:8px; margin-top:14px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); flex-wrap:wrap;">
-                <span><strong>Aluno:</strong> <span id="card-aluno-nome">—</span></span>
-                <span><strong>Turma:</strong> <span id="card-turma-nome">—</span></span>
-                <span><strong>Data:</strong> <span id="card-data">—</span></span>
-            </div>
-        </div>
-
-        <!-- Disciplinas -->
-        <div class="desempenho-disciplinas" id="disciplinas-container">
-            <!-- Português -->
-            <div class="desempenho-disciplina" id="disc-portugues">
-                <div class="header">
-                    <h4>📖 Português</h4>
-                    <span class="badge badge-blue" id="status-portugues">—</span>
-                </div>
-                <div class="questoes-grid" id="questoes-portugues"></div>
-                <div class="stats">
-                    <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
-                    <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
-                    <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
-                </div>
-            </div>
-
-            <!-- Matemática -->
-            <div class="desempenho-disciplina" id="disc-matematica">
-                <div class="header">
-                    <h4>🔢 Matemática</h4>
-                    <span class="badge badge-green" id="status-matematica">—</span>
-                </div>
-                <div class="questoes-grid" id="questoes-matematica"></div>
-                <div class="stats">
-                    <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
-                    <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
-                    <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
-                </div>
-            </div>
-
-            <!-- Produção de Texto -->
-            <div class="desempenho-disciplina" id="disc-producao">
-                <div class="header">
-                    <h4>✍️ Produção de Texto</h4>
-                    <span class="badge badge-purple" id="status-producao">—</span>
-                </div>
-                <div class="questoes-grid" id="questoes-producao"></div>
-                <div class="stats">
-                    <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
-                    <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
-                    <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
-                </div>
-            </div>
-
-            <!-- Ciências Humanas (CH) -->
-            <div class="desempenho-disciplina" id="disc-ch">
-                <div class="header">
-                    <h4>🌍 Ciências Humanas</h4>
-                    <span class="badge badge-orange" id="status-ch">—</span>
-                </div>
-                <div class="questoes-grid" id="questoes-ch"></div>
-                <div class="stats">
-                    <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
-                    <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
-                    <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
-                </div>
-            </div>
-
-            <!-- Ciências Naturais (CN) -->
-            <div class="desempenho-disciplina" id="disc-cn">
-                <div class="header">
-                    <h4>🔬 Ciências Naturais</h4>
-                    <span class="badge badge-teal" id="status-cn">—</span>
-                </div>
-                <div class="questoes-grid" id="questoes-cn"></div>
-                <div class="stats">
-                    <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
-                    <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
-                    <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Informações do Aluno (opcional, já incluídas no card) -->
-        <!-- removido para evitar duplicidade -->
-
-        <!-- Legenda -->
-        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
-            <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
-            <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
-            <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
-            <span style="color:var(--text3);">|</span>
-            <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
-            <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
-            <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
-            <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
-        </div>
-    </div>
-</div>
 
         <!-- ========== CÂMERA MODAL ========== -->
         <div class="cam-modal no-print" id="cam-modal">
@@ -1465,6 +2763,7 @@
                     'print-data-dash',
                     'print-data-resultados',
                     'print-data-rel-turma',
+                    'print-data-rel-aluno',
                     'print-data-rel-escola',
                     'print-data-u-dash',
                     'print-data-u-rel',
@@ -1551,6 +2850,7 @@
                 carregarDados();
                 atualizarDatasImpressao();
                 carregarEscolasParaCorrecaoManual();
+                carregarEscolasRelAluno();
                 carregarFiltrosRelTurma();
                 carregarEscolasDesempenho();
             }
@@ -1586,6 +2886,9 @@
                 if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
                 if (page === 'gabaritos') carregarGabaritos();
                 if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
+                if (page === 'rel-aluno') {
+                    carregarEscolasRelAluno();
+                }
                 if (page === 'rel-escola') carregarRelatorios();
                 if (page === 'desempenho') {
                     carregarEscolasDesempenho();
@@ -2457,6 +3760,1392 @@
                 ctx.strokeStyle = 'var(--border2)';
                 ctx.lineWidth = 2;
                 ctx.stroke();
+            }
+
+            // ============================================
+            // FUNÇÃO PARA ATUALIZAR CONCEITOS DAS DISCIPLINAS
+            // ============================================
+            function atualizarConceitosDisciplinas(historico) {
+                let totais = {
+                    portugues: { acertos: 0, erros: 0, total: 0 },
+                    matematica: { acertos: 0, erros: 0, total: 0 },
+                    producao: { acertos: 0, erros: 0, total: 0 },
+                    ch: { acertos: 0, erros: 0, total: 0 },
+                    cn: { acertos: 0, erros: 0, total: 0 }
+                };
+                
+                historico.forEach(item => {
+                    const disciplina = item.disciplina || '';
+                    const acertos = item.acertos || 0;
+                    const total = item.total || 20;
+                    const erros = total - acertos;
+                    
+                    const discLower = disciplina.toLowerCase();
+                    if (discLower.includes('português') || discLower.includes('portugues')) {
+                        totais.portugues.acertos += acertos;
+                        totais.portugues.erros += erros;
+                        totais.portugues.total += total;
+                    } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
+                        totais.matematica.acertos += acertos;
+                        totais.matematica.erros += erros;
+                        totais.matematica.total += total;
+                    } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                        totais.producao.acertos += acertos;
+                        totais.producao.erros += erros;
+                        totais.producao.total += total;
+                    } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                        totais.ch.acertos += acertos;
+                        totais.ch.erros += erros;
+                        totais.ch.total += total;
+                    } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                        totais.cn.acertos += acertos;
+                        totais.cn.erros += erros;
+                        totais.cn.total += total;
+                    }
+                });
+                
+                function atualizarDisciplina(prefixo, dados, cor) {
+                    const pct = dados.total > 0 ? Math.round((dados.acertos / dados.total) * 100) : 0;
+                    const conceito = calcularConceito(pct);
+                    const badgeMap = {
+                        'inicial': 'badge-conceito-inicial',
+                        'basico': 'badge-conceito-basico',
+                        'proficiente': 'badge-conceito-proficiente',
+                        'avancado': 'badge-conceito-avancado'
+                    };
+                    const nomeMap = {
+                        'inicial': '🔴 Inicial',
+                        'basico': '🟠 Básico',
+                        'proficiente': '🔵 Proficiente',
+                        'avancado': '🟢 Avançado'
+                    };
+                    
+                    document.getElementById(`conceito-${prefixo}-acertos`).textContent = dados.acertos;
+                    document.getElementById(`conceito-${prefixo}-erros`).textContent = dados.erros;
+                    const el = document.getElementById(`conceito-${prefixo}-conceito`);
+                    el.textContent = nomeMap[conceito] || '—';
+                    el.className = `badge ${badgeMap[conceito] || 'badge-gray'}`;
+                    el.style.fontSize = '16px';
+                    el.style.padding = '4px 14px';
+                }
+                
+                atualizarDisciplina('port', totais.portugues, '#3b82f6');
+                atualizarDisciplina('mat', totais.matematica, '#10b981');
+                atualizarDisciplina('prod', totais.producao, '#8b5cf6');
+                atualizarDisciplina('ch', totais.ch, '#f59e0b');
+                atualizarDisciplina('cn', totais.cn, '#14b8a6');
+            }
+
+            // ============================================
+            // FUNÇÃO PARA ATUALIZAR O CARD DESEMPENHO POR HABILIDADES
+            // ============================================
+            function atualizarHabilidades(historico, alunoNome) {
+                console.log('🔄 Iniciando atualização do card DESEMPENHO POR HABILIDADES para:', alunoNome);
+                console.log('📊 Dados do histórico recebidos:', historico);
+
+                let disciplinas = {
+                    'portugues': { 
+                        nome: 'Português', 
+                        icone: '📖', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
+                    },
+                    'matematica': { 
+                        nome: 'Matemática', 
+                        icone: '🔢', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
+                    },
+                    'producao': { 
+                        nome: 'Produção de Texto', 
+                        icone: '✍️', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
+                    },
+                    'ch': { 
+                        nome: 'Ciências Humanas', 
+                        icone: '🌍', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
+                    },
+                    'cn': { 
+                        nome: 'Ciências Naturais', 
+                        icone: '🔬', 
+                        questoes: [], 
+                        acertos: 0, 
+                        erros: 0, 
+                        total: 0,
+                        gabarito: [],
+                        respostas: []
+                    }
+                };
+
+                if (!historico || historico.length === 0) {
+                    ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
+                        const container = document.getElementById(`habilidade-${key}`);
+                        if (container) {
+                            container.innerHTML = `
+                                <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                    Nenhuma questão encontrada para esta disciplina
+                                </div>
+                            `;
+                        }
+                    });
+                    return;
+                }
+
+                const keywords = {
+                    'portugues': ['português', 'portugues', 'língua portuguesa', 'lingua portuguesa'],
+                    'matematica': ['matemática', 'matematica', 'mat'],
+                    'producao': ['produção', 'producao', 'texto', 'redação', 'escrita'],
+                    'ch': ['ciências humanas', 'ch', 'história', 'geografia', 'sociologia', 'filosofia'],
+                    'cn': ['ciências naturais', 'cn', 'biologia', 'física', 'química']
+                };
+
+                function identificarDisciplina(provaTitulo, disciplina) {
+                    const texto = (provaTitulo + ' ' + disciplina).toLowerCase();
+                    
+                    for (const [key, words] of Object.entries(keywords)) {
+                        for (const word of words) {
+                            if (texto.includes(word)) {
+                                return key;
+                            }
+                        }
+                    }
+                    
+                    return 'portugues';
+                }
+
+                historico.forEach(item => {
+                    if (!item.respostas || !item.gabarito || item.respostas.length === 0) {
+                        return;
+                    }
+
+                    const disciplinaKey = identificarDisciplina(item.prova_titulo || '', item.disciplina || '');
+                    const respostas = item.respostas || [];
+                    const gabarito = item.gabarito || [];
+                    const total = Math.min(respostas.length, gabarito.length, item.total || 20);
+                    
+                    if (total === 0) return;
+
+                    const disciplina = disciplinas[disciplinaKey];
+                    if (!disciplina) return;
+
+                    if (disciplina.questoes.length > 0) {
+                        const gabStr = gabarito.slice(0, total).join('');
+                        const discGabStr = disciplina.gabarito.slice(0, total).join('');
+                        if (gabStr === discGabStr) {
+                            return;
+                        }
+                    }
+
+                    disciplina.gabarito = gabarito.slice(0, total);
+                    disciplina.respostas = respostas.slice(0, total);
+                    disciplina.total = Math.max(disciplina.total, total);
+                    disciplina.questoes = [];
+
+                    for (let i = 0; i < total; i++) {
+                        const resposta = i < respostas.length ? respostas[i] : '';
+                        const gab = i < gabarito.length ? gabarito[i] : '';
+                        const isCorreto = resposta && gab && resposta.toUpperCase() === gab.toUpperCase();
+                        
+                        disciplina.questoes.push({
+                            numero: i + 1,
+                            resposta: resposta || '—',
+                            gabarito: gab || '—',
+                            acertou: isCorreto
+                        });
+                        
+                        if (isCorreto) {
+                            disciplina.acertos++;
+                        } else if (resposta) {
+                            disciplina.erros++;
+                        }
+                    }
+                });
+
+                ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
+                    const container = document.getElementById(`habilidade-${key}`);
+                    const dados = disciplinas[key];
+                    
+                    if (!container) return;
+
+                    if (dados.questoes.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                Nenhuma questão encontrada para esta disciplina
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    dados.questoes.sort((a, b) => a.numero - b.numero);
+
+                    let html = '';
+                    dados.questoes.forEach(q => {
+                        const statusClass = q.acertou ? 'acertou' : 'errou';
+                        const statusText = q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM';
+                        html += `
+                            <div class="questao-item">
+                                <span class="q-num">Q${q.numero}</span>
+                                <span class="q-resposta">${q.resposta}</span>
+                                <span class="q-gabarito">${q.gabarito}</span>
+                                <span class="q-status ${statusClass}">${statusText}</span>
+                            </div>
+                        `;
+                    });
+
+                    const totalQuestoesDisciplina = dados.questoes.length;
+                    const pct = totalQuestoesDisciplina > 0 ? Math.round((dados.acertos / totalQuestoesDisciplina) * 100) : 0;
+                    const conceito = calcularConceito(pct);
+                    const nomeConceito = {
+                        'inicial': '🔴 Inicial',
+                        'basico': '🟠 Básico',
+                        'proficiente': '🔵 Proficiente',
+                        'avancado': '🟢 Avançado'
+                    };
+                    const badgeMap = {
+                        'inicial': 'badge-conceito-inicial',
+                        'basico': 'badge-conceito-basico',
+                        'proficiente': 'badge-conceito-proficiente',
+                        'avancado': 'badge-conceito-avancado'
+                    };
+                    
+                    const notaDisciplina = totalQuestoesDisciplina > 0 ? (dados.acertos / totalQuestoesDisciplina) * 10 : 0;
+
+                    html += `
+                        <div class="resumo-habilidade">
+                            <span>Total: ${totalQuestoesDisciplina} questões</span>
+                            <span><span class="acertos">✅ ${dados.acertos} acertos</span> | <span class="erros">❌ ${dados.erros} erros</span></span>
+                            <span class="badge ${badgeMap[conceito]}">${nomeConceito[conceito]}</span>
+                            <span><span class="nota">⭐ ${notaDisciplina.toFixed(1)}</span></span>
+                        </div>
+                    `;
+
+                    container.innerHTML = html;
+                    
+                    console.log(`✅ Disciplina ${key}: ${dados.acertos} acertos, ${dados.erros} erros, ${dados.questoes.length} questões`);
+                });
+
+                console.log('✅ Card DESEMPENHO POR HABILIDADES atualizado com sucesso!');
+            }
+
+            // ============================================
+            // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO
+            // ============================================
+            function buscarRelatorioAluno() {
+                const alunoId = document.getElementById('rel-aluno-select').value;
+                const provaId = document.getElementById('rel-aluno-prova').value;
+                
+                if (!alunoId) {
+                    showToast('❌ Selecione um aluno!', 'error');
+                    return;
+                }
+                
+                showToast('🔍 Buscando histórico do aluno...', 'info');
+                const tbody = document.getElementById('rel-aluno-historico');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
+                }
+                
+                let url = API_URL + '/api/historico?aluno_id=' + alunoId;
+                if (provaId && provaId !== '') {
+                    url += '&prova_id=' + provaId;
+                }
+                
+                fetch(url)
+                    .then(r => r.json())
+                    .then(historico => {
+                        if (!historico || historico.length === 0 || historico.erro) {
+                            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
+                            document.getElementById('total-historico').textContent = '0 registros';
+                            ['port', 'mat', 'prod', 'ch', 'cn'].forEach(prefixo => {
+                                document.getElementById(`conceito-${prefixo}-acertos`).textContent = '0';
+                                document.getElementById(`conceito-${prefixo}-erros`).textContent = '0';
+                                const el = document.getElementById(`conceito-${prefixo}-conceito`);
+                                el.textContent = '—';
+                                el.className = 'badge badge-gray';
+                                el.style.fontSize = '16px';
+                                el.style.padding = '4px 14px';
+                            });
+                            ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
+                                const container = document.getElementById(`habilidade-${key}`);
+                                if (container) {
+                                    container.innerHTML = `
+                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
+                                            Nenhum dado disponível
+                                        </div>
+                                    `;
+                                }
+                            });
+                            return;
+                        }
+                        
+                        const provasMap = new Map();
+                        historico.forEach(item => {
+                            const key = item.prova_id || item.prova_titulo;
+                            if (!provasMap.has(key)) {
+                                provasMap.set(key, {
+                                    prova_id: item.prova_id,
+                                    prova_titulo: item.prova_titulo || 'Prova',
+                                    data: item.data_correcao || item.data_prova || '',
+                                    avaliacoes: {},
+                                    escola: item.escola_nome || '',
+                                    turma: item.turma_nome || '',
+                                    serie: item.serie || '',
+                                    respostas: item.respostas || [],
+                                    gabarito: item.gabarito || [],
+                                    total: item.total || 20,
+                                    disciplina: item.disciplina || '',
+                                    acertos: item.acertos || 0
+                                });
+                            } else {
+                                const prova = provasMap.get(key);
+                                if (item.respostas && item.respostas.length > 0) {
+                                    prova.respostas = item.respostas;
+                                }
+                                if (item.gabarito && item.gabarito.length > 0) {
+                                    prova.gabarito = item.gabarito;
+                                }
+                                if (item.total) prova.total = item.total;
+                                if (item.acertos) prova.acertos = item.acertos;
+                                if (item.disciplina) prova.disciplina = item.disciplina;
+                                if (item.serie) prova.serie = item.serie;
+                            }
+                            const prova = provasMap.get(key);
+                            const disciplina = item.disciplina || 'Geral';
+                            let tipo = 'Geral';
+                            const discLower = disciplina.toLowerCase();
+                            if (discLower.includes('português') || discLower.includes('portugues')) {
+                                tipo = 'Portugues';
+                            } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
+                                tipo = 'Matematica';
+                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                                tipo = 'Producao';
+                            } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                                tipo = 'CH';
+                            } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                                tipo = 'CN';
+                            }
+                            if (tipo === 'Geral' && item.prova_titulo) {
+                                const titulo = item.prova_titulo.toLowerCase();
+                                if (titulo.includes('português') || titulo.includes('portugues')) tipo = 'Portugues';
+                                else if (titulo.includes('matemática') || titulo.includes('matematica')) tipo = 'Matematica';
+                                else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto')) tipo = 'Producao';
+                                else if (titulo.includes('ciências humanas') || titulo.includes('ch')) tipo = 'CH';
+                                else if (titulo.includes('ciências naturais') || titulo.includes('cn')) tipo = 'CN';
+                            }
+                            if (tipo === 'Geral') {
+                                const serie = item.serie || '';
+                                if (serie.includes('1') || serie.includes('2') || serie.includes('3') || serie.includes('4') || serie.includes('5')) {
+                                    tipo = 'Portugues';
+                                } else {
+                                    tipo = 'Matematica';
+                                }
+                            }
+                            const nota = parseFloat(item.nota) || 0;
+                            const acertos = item.acertos || 0;
+                            const total = item.total || 20;
+                            prova.avaliacoes[tipo] = { nota, acertos, total };
+                            if (item.respostas && item.respostas.length > 0) {
+                                prova.respostas = item.respostas;
+                            }
+                            if (item.gabarito && item.gabarito.length > 0) {
+                                prova.gabarito = item.gabarito;
+                            }
+                        });
+                        
+                        const provasArray = Array.from(provasMap.values()).map(prova => {
+                            const portugues = prova.avaliacoes.Portugues || { nota: 0, acertos: 0, total: 20 };
+                            const matematica = prova.avaliacoes.Matematica || { nota: 0, acertos: 0, total: 20 };
+                            const producao = prova.avaliacoes.Producao || { nota: 0, acertos: 0, total: 20 };
+                            const ch = prova.avaliacoes.CH || { nota: 0, acertos: 0, total: 20 };
+                            const cn = prova.avaliacoes.CN || { nota: 0, acertos: 0, total: 20 };
+                            
+                            const erroPortugues = portugues.total - portugues.acertos;
+                            const erroMatematica = matematica.total - matematica.acertos;
+                            const erroProducao = producao.total - producao.acertos;
+                            const erroCH = ch.total - ch.acertos;
+                            const erroCN = cn.total - cn.acertos;
+                            
+                            const pctPortugues = portugues.total > 0 ? Math.round((portugues.acertos / portugues.total) * 100) : 0;
+                            const pctMatematica = matematica.total > 0 ? Math.round((matematica.acertos / matematica.total) * 100) : 0;
+                            const pctProducao = producao.total > 0 ? Math.round((producao.acertos / producao.total) * 100) : 0;
+                            const pctCH = ch.total > 0 ? Math.round((ch.acertos / ch.total) * 100) : 0;
+                            const pctCN = cn.total > 0 ? Math.round((cn.acertos / cn.total) * 100) : 0;
+                            
+                            const conceitoPortugues = calcularConceito(pctPortugues);
+                            const conceitoMatematica = calcularConceito(pctMatematica);
+                            const conceitoProducao = calcularConceito(pctProducao);
+                            const conceitoCH = calcularConceito(pctCH);
+                            const conceitoCN = calcularConceito(pctCN);
+                            
+                            return {
+                                ...prova,
+                                portugues: { ...portugues, erros: erroPortugues, conceito: conceitoPortugues },
+                                matematica: { ...matematica, erros: erroMatematica, conceito: conceitoMatematica },
+                                producao: { ...producao, erros: erroProducao, conceito: conceitoProducao },
+                                ch: { ...ch, erros: erroCH, conceito: conceitoCH },
+                                cn: { ...cn, erros: erroCN, conceito: conceitoCN }
+                            };
+                        });
+                        
+                        if (provasArray.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                            document.getElementById('total-historico').textContent = '0 registros';
+                            return;
+                        }
+                        
+                        document.getElementById('total-historico').textContent = provasArray.length + ' registros';
+                        
+                        function badgeConceito(c) {
+                            return `badge-conceito-${c}-sm`;
+                        }
+                        
+                        tbody.innerHTML = provasArray.map(p => {
+                            const data = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '—';
+                            
+                            return '<tr>' +
+                                '<td style="text-align:left;font-size:10px;">' + p.prova_titulo + '</td>' +
+                                '<td style="font-size:10px;">' + data + '</td>' +
+                                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + p.portugues.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + p.portugues.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(p.portugues.conceito) + '">' + p.portugues.conceito + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + p.matematica.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + p.matematica.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(p.matematica.conceito) + '">' + p.matematica.conceito + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + p.producao.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + p.producao.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(p.producao.conceito) + '">' + p.producao.conceito + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + p.ch.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + p.ch.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(p.ch.conceito) + '">' + p.ch.conceito + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + p.cn.acertos + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + p.cn.erros + '</span></td>' +
+                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(p.cn.conceito) + '">' + p.cn.conceito + '</span></td>' +
+                                '</tr>';
+                        }).join('');
+                        
+                        atualizarConceitosDisciplinas(historico);
+                        
+                        const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+                        atualizarHabilidades(historico, alunoNome);
+                        
+                        const evolucao = document.getElementById('rel-evolucao');
+                        if (evolucao && provasArray.length > 0) {
+                            const provasOrdenadas = [...provasArray].sort((a, b) => {
+                                const dataA = a.data ? new Date(a.data) : 0;
+                                const dataB = b.data ? new Date(b.data) : 0;
+                                return dataA - dataB;
+                            });
+                            const maxNota = Math.max(...provasOrdenadas.map(p => p.portugues.nota + p.matematica.nota + p.producao.nota + p.ch.nota + p.cn.nota), 1);
+                            let html = '<div class="chart-bars" style="height:100px;">';
+                            provasOrdenadas.forEach((p, index) => {
+                                const soma = p.portugues.nota + p.matematica.nota + p.producao.nota + p.ch.nota + p.cn.nota;
+                                const altura = Math.max(10, (soma / 50) * 80);
+                                const cor = soma >= 25 ? '#10b981' : (soma >= 15 ? '#f59e0b' : '#ef4444');
+                                const label = p.prova_titulo.substring(0, 10);
+                                html += `<div class="chart-bar-item" title="${p.prova_titulo} - Soma: ${soma.toFixed(1)}">
+                                    <div class="chart-bar-val">${soma.toFixed(1)}</div>
+                                    <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                                    <div class="chart-bar-lbl">${label}</div>
+                                </div>`;
+                            });
+                            html += '</div>';
+                            evolucao.innerHTML = html;
+                        }
+                    })
+                    .catch(e => {
+                        console.error('Erro ao carregar histórico:', e);
+                        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
+                    });
+            }
+
+            // ============================================
+            // FUNÇÕES PARA RELATÓRIO POR ALUNO
+            // ============================================
+            async function carregarEscolasRelAluno() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('rel-aluno-escola');
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Selecione a escola...</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) {
+                            select.value = current;
+                            carregarTurmasRelAluno(current);
+                        }
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas:', erro);
+                }
+            }
+
+            async function carregarTurmasRelAluno(escolaId) {
+                const selectTurma = document.getElementById('rel-aluno-turma');
+                const selectProva = document.getElementById('rel-aluno-prova');
+                const selectAluno = document.getElementById('rel-aluno-select');
+                
+                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+                selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                
+                if (!escolaId) return;
+                
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas:', e);
+                }
+            }
+
+            async function carregarAlunosRelAluno(turmaId) {
+                const escolaId = document.getElementById('rel-aluno-escola').value;
+                const selectAluno = document.getElementById('rel-aluno-select');
+                const selectProva = document.getElementById('rel-aluno-prova');
+                
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                
+                if (!turmaId) return;
+                
+                try {
+                    let url = API_URL + '/api/alunos?';
+                    const params = [];
+                    if (escolaId) params.push(`escola_id=${escolaId}`);
+                    if (turmaId) params.push(`turma_id=${turmaId}`);
+                    url += params.join('&');
+                    
+                    const response = await fetch(url);
+                    const alunos = await response.json();
+                    
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                    
+                    const turmaAnterior = selectProva.dataset.turmaId || '';
+                    if (turmaId !== turmaAnterior) {
+                        const provasResp = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
+                        const provas = await provasResp.json();
+                        const currentProva = selectProva.value;
+                        selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                        if (provas && !provas.erro) {
+                            provas.forEach(p => {
+                                const opt = document.createElement('option');
+                                opt.value = p.id;
+                                opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                                selectProva.appendChild(opt);
+                            });
+                        }
+                        if (currentProva) {
+                            selectProva.value = currentProva;
+                        }
+                        selectProva.dataset.turmaId = turmaId;
+                    }
+                    
+                } catch (e) {
+                    console.error('Erro ao carregar alunos:', e);
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO PARA EDITAR GABARITO DO ALUNO
+            // ============================================
+            function editarGabaritoAluno() {
+                const alunoId = document.getElementById('rel-aluno-select').value;
+                const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+                const provaId = document.getElementById('rel-aluno-prova').value;
+                
+                if (!alunoId) {
+                    showToast('❌ Selecione um aluno!', 'error');
+                    return;
+                }
+                
+                if (!provaId) {
+                    showToast('❌ Selecione uma prova!', 'error');
+                    return;
+                }
+                
+                fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`)
+                    .then(r => r.json())
+                    .then(historico => {
+                        if (!historico || historico.length === 0 || historico.erro) {
+                            showToast('❌ Nenhuma correção encontrada para este aluno e prova!', 'error');
+                            return;
+                        }
+                        
+                        const correcao = historico[0];
+                        
+                        fetch(`${API_URL}/api/provas/${provaId}`)
+                            .then(r => r.json())
+                            .then(prova => {
+                                if (!prova || prova.erro) {
+                                    showToast('❌ Erro ao carregar dados da prova!', 'error');
+                                    return;
+                                }
+                                
+                                correcaoManualData.alunoId = parseInt(alunoId);
+                                correcaoManualData.alunoNome = alunoNome;
+                                correcaoManualData.provaId = parseInt(provaId);
+                                correcaoManualData.provaTitulo = prova.titulo || 'Prova';
+                                correcaoManualData.gabarito = prova.gabarito || [];
+                                correcaoManualData.respostasAluno = correcao.respostas || [];
+                                correcaoManualData.quantidade = prova.quantidade_questoes || 20;
+                                correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                                correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+                                correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+                                correcaoManualData.valorPorQuestao = correcaoManualData.notaMaxima / correcaoManualData.quantidade;
+                                correcaoManualData.serie = prova.serie || '1º Ano';
+                                
+                                document.getElementById('cm-aluno-nome').textContent = alunoNome;
+                                document.getElementById('cm-prova-titulo').textContent = prova.titulo || 'Prova';
+                                document.getElementById('cm-turma-info').textContent = (prova.serie || '') + ' | Turma: ' + (prova.turma_nome || '');
+                                document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
+                                gerarGridCorrecaoManual();
+                                atualizarResumoCorrecaoManual();
+                                openM('m-correcao-manual');
+                            })
+                            .catch(e => {
+                                console.error('Erro ao carregar prova:', e);
+                                showToast('❌ Erro ao carregar dados da prova', 'error');
+                            });
+                    })
+                    .catch(e => {
+                        console.error('Erro ao carregar histórico:', e);
+                        showToast('❌ Erro ao carregar histórico do aluno', 'error');
+                    });
+            }
+
+            // ============================================
+            // FUNÇÃO PARA EXCLUIR ALUNO DO RELATÓRIO
+            // ============================================
+            function excluirAlunoRelatorio() {
+                const alunoId = document.getElementById('rel-aluno-select').value;
+                const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
+                
+                if (!alunoId) {
+                    showToast('❌ Selecione um aluno!', 'error');
+                    return;
+                }
+                
+                if (!confirm('Tem certeza que deseja excluir o aluno "' + alunoNome + '" e todas as suas correções?')) {
+                    return;
+                }
+                
+                excluirAluno(parseInt(alunoId), alunoNome);
+            }
+
+            // ============================================
+            // CARREGAR RELATÓRIOS
+            // ============================================
+            async function carregarRelatorios() {
+                try {
+                    const alunosResp = await fetch(API_URL + '/api/alunos');
+                    const alunos = await alunosResp.json();
+                    const correcoesResp = await fetch(API_URL + '/api/historico');
+                    const correcoes = await correcoesResp.json();
+                    const totalAlunos = alunos.length || 0,
+                        Habilidades = correcoes.filter(c => c.nota >= 6).length || 0,
+                        recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0,
+                        media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+                    document.getElementById('rel-total-alunos').textContent = totalAlunos;
+                    document.getElementById('rel-Habilidades').textContent = Habilidades;
+                    document.getElementById('rel-recuperacao').textContent = recuperacao;
+                    document.getElementById('rel-media').textContent = media.toFixed(1);
+                    
+                    const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+                    correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++; else if (c.nota < 4) faixas['2-4']++; else if (c.nota < 6) faixas['4-6']++; else if (c.nota < 8) faixas['6-8']++; else faixas['8-10']++; });
+                    const maxVal = Math.max(...Object.values(faixas), 1);
+                    document.getElementById('d0-2').textContent = faixas['0-2'];
+                    document.getElementById('d2-4').textContent = faixas['2-4'];
+                    document.getElementById('d4-6').textContent = faixas['4-6'];
+                    document.getElementById('d6-8').textContent = faixas['6-8'];
+                    document.getElementById('d8-10').textContent = faixas['8-10'];
+                    
+                    const bars = document.querySelectorAll('#dist-notas .chart-bar');
+                    const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
+                    vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
+                    
+                    // Calcular médias por disciplina para o relatório
+                    let totalPtAcertos = 0, totalPtErros = 0, totalPtQuestoes = 0;
+                    let totalMatAcertos = 0, totalMatErros = 0, totalMatQuestoes = 0;
+                    let totalProdAcertos = 0, totalProdErros = 0, totalProdQuestoes = 0;
+                    let totalCHAcertos = 0, totalCHErros = 0, totalCHQuestoes = 0;
+                    let totalCNAcertos = 0, totalCNErros = 0, totalCNQuestoes = 0;
+                    
+                    if (correcoes && correcoes.length > 0) {
+                        correcoes.forEach(c => {
+                            const disciplina = c.disciplina || '';
+                            const acertos = c.acertos || 0;
+                            const total = c.total || 20;
+                            const erros = total - acertos;
+                            
+                            const discLower = disciplina.toLowerCase();
+                            if (discLower.includes('português') || discLower.includes('portugues')) {
+                                totalPtAcertos += acertos; totalPtErros += erros; totalPtQuestoes += total;
+                            } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
+                                totalMatAcertos += acertos; totalMatErros += erros; totalMatQuestoes += total;
+                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                                totalProdAcertos += acertos; totalProdErros += erros; totalProdQuestoes += total;
+                            } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                                totalCHAcertos += acertos; totalCHErros += erros; totalCHQuestoes += total;
+                            } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                                totalCNAcertos += acertos; totalCNErros += erros; totalCNQuestoes += total;
+                            }
+                        });
+                    }
+                    
+                    const totalCorrecoes = correcoes.length || 1;
+                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
+                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
+                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
+                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
+                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
+                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
+                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
+                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
+                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
+                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
+                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    
+                    await carregarRelatorioEscola();
+                    atualizarDatasImpressao();
+                } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
+            }
+
+            async function carregarRelatorioEscola() {
+                try {
+                    const escolasResp = await fetch(API_URL + '/api/escolas');
+                    const escolas = await escolasResp.json();
+                    const turmasResp = await fetch(API_URL + '/api/turmas');
+                    const turmas = await turmasResp.json();
+                    const alunosResp = await fetch(API_URL + '/api/alunos');
+                    const alunos = await alunosResp.json();
+                    const correcoesResp = await fetch(API_URL + '/api/historico');
+                    const correcoes = await correcoesResp.json();
+                    const tbody = document.getElementById('tb-rel-escola');
+                    if (!tbody) return;
+                    if (!escolas || escolas.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+                    } else {
+                        tbody.innerHTML = escolas.map(e => {
+                            const turmasEscola = turmas.filter(t => t.escola_id === e.id);
+                            const alunosEscola = alunos.filter(a => a.escola_id === e.id);
+                            const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
+                            const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
+                            const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
+                            const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
+                            return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
+            }
+
+            // ============================================
+            // CARREGAR COMBOS (COM ESCOLAS PARA ALUNO)
+            // ============================================
+            async function carregarCombos() {
+                try {
+                    const respEscolas = await fetch(API_URL + '/api/escolas');
+                    const escolas = await respEscolas.json();
+                    
+                    ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) { 
+                                escolas.forEach(e => { 
+                                    const opt = document.createElement('option'); 
+                                    opt.value = e.id; 
+                                    opt.textContent = e.nome; 
+                                    select.appendChild(opt); 
+                                }); 
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+                    
+                    await carregarEscolasParaAluno();
+                    
+                    const respTurmas = await fetch(API_URL + '/api/turmas');
+                    const turmas = await respTurmas.json();
+                    ['aluno-turma', 'modal-prova-turma', 'lista-turma', 'editar-aluno-turma'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a turma</option>';
+                            if (turmas && !turmas.erro) { 
+                                turmas.forEach(t => { 
+                                    const opt = document.createElement('option'); 
+                                    opt.value = t.id; 
+                                    opt.textContent = t.nome + ' - ' + (t.serie || '—'); 
+                                    select.appendChild(opt); 
+                                }); 
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+                    
+                    const respProvas = await fetch(API_URL + '/api/provas');
+                    const provas = await respProvas.json();
+                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a prova</option>';
+                            if (provas && !provas.erro) { 
+                                provas.forEach(p => { 
+                                    const opt = document.createElement('option'); 
+                                    opt.value = p.id; 
+                                    const serie = p.serie || 'Série não definida'; 
+                                    opt.textContent = p.titulo + ' - ' + serie; 
+                                    opt.dataset.serie = serie; 
+                                    opt.dataset.quantidade = p.quantidade_questoes || 20;
+                                    opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                                    opt.dataset.tipo = p.tipo_questoes || '4';
+                                    opt.dataset.disciplina = p.disciplina || '';
+                                    select.appendChild(opt); 
+                                }); 
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+                    
+                    const respAlunos = await fetch(API_URL + '/api/alunos');
+                    const alunos = await respAlunos.json();
+                    ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione o aluno</option>';
+                            if (alunos && !alunos.erro) { 
+                                alunos.forEach(a => { 
+                                    const opt = document.createElement('option'); 
+                                    opt.value = a.id; 
+                                    opt.textContent = a.nome; 
+                                    select.appendChild(opt); 
+                                }); 
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+                } catch (erro) { 
+                    console.error('Erro ao carregar combos:', erro); 
+                }
+            }
+
+            // ============================================
+            // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO - CORRIGIDA
+            // ============================================
+            async function carregarEscolasParaAluno() {
+                try {
+                    console.log('🔄 Carregando escolas para o select de aluno...');
+                    
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    
+                    console.log('📥 Escolas recebidas:', escolas);
+                    
+                    if (!escolas || escolas.length === 0 || escolas.erro) {
+                        console.warn('⚠️ Nenhuma escola encontrada ou erro na API');
+                        return;
+                    }
+                    
+                    // Preenche o select de escola no modal de cadastro
+                    const selectCadastro = document.getElementById('aluno-escola');
+                    if (selectCadastro) {
+                        const current = selectCadastro.value;
+                        selectCadastro.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectCadastro.appendChild(opt);
+                        });
+                        // Se já tinha uma escola selecionada, restaura e carrega as turmas
+                        if (current && escolas.some(e => e.id == current)) {
+                            selectCadastro.value = current;
+                            // Carrega turmas automaticamente
+                            carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
+                        } else {
+                            // Se não tinha escola selecionada, limpa as turmas
+                            const selectTurma = document.getElementById('aluno-turma');
+                            if (selectTurma) {
+                                selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+                            }
+                        }
+                        console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
+                    } else {
+                        console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
+                    }
+                    
+                    // Preenche o select de escola no modal de edição
+                    const selectEdicao = document.getElementById('editar-aluno-escola');
+                    if (selectEdicao) {
+                        const current = selectEdicao.value;
+                        selectEdicao.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectEdicao.appendChild(opt);
+                        });
+                        if (current && escolas.some(e => e.id == current)) {
+                            selectEdicao.value = current;
+                            // Carrega turmas automaticamente
+                            carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
+                        }
+                        console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
+                    }
+                    
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar escolas para o select de aluno:', erro);
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO - CORRIGIDA
+            // ============================================
+            async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
+                console.log('🔄 Carregando turmas para escola:', escolaId);
+                const selectTurma = document.getElementById(selectTurmaId);
+                if (!selectTurma) {
+                    console.warn('⚠️ Select de turma não encontrado:', selectTurmaId);
+                    return;
+                }
+                
+                // LIMPA o select de turma ANTES de adicionar novas opções
+                selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+                
+                if (!escolaId || escolaId === '') {
+                    console.log('ℹ️ Nenhuma escola selecionada');
+                    return;
+                }
+                
+                try {
+                    showToast('🔄 Carregando turmas...', 'info');
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    console.log('📥 Turmas recebidas:', turmas);
+                    
+                    if (turmas && !turmas.erro && turmas.length > 0) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                        console.log(`✅ ${turmas.length} turmas carregadas para a escola`);
+                        showToast(`✅ ${turmas.length} turmas encontradas`, 'success');
+                    } else {
+                        console.log('ℹ️ Nenhuma turma encontrada para esta escola');
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Nenhuma turma cadastrada';
+                        opt.disabled = true;
+                        selectTurma.appendChild(opt);
+                        showToast('ℹ️ Esta escola não possui turmas cadastradas', 'info');
+                    }
+                } catch (e) {
+                    console.error('❌ Erro ao carregar turmas:', e);
+                    showToast('❌ Erro ao carregar turmas: ' + e.message, 'error');
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Erro ao carregar turmas';
+                    opt.disabled = true;
+                    selectTurma.appendChild(opt);
+                }
+            }
+
+            // ============================================
+            // CARREGAR CONCEITO REAL
+            // ============================================
+            async function carregarConceitoReal() {
+                try {
+                    const response = await fetch(`${API_URL}/api/dashboard/Conceito`);
+                    const dados = await response.json();
+                    const container = document.getElementById('grafico-Conceito');
+                    const badge = document.getElementById('total-turmas-badge');
+                    if (!container) return;
+
+                    if (dados.erro || !dados || dados.length === 0) {
+                        container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">📭</div>
+                            <p>Nenhuma turma com correções ainda.</p>
+                            <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
+                        </div>`;
+                        if (badge) badge.textContent = '0 turmas';
+                        return;
+                    }
+
+                    if (badge) badge.textContent = dados.length + ' turmas';
+
+                    const maxBarras = 5;
+                    let dadosFiltrados = dados;
+                    if (dados.length > maxBarras) {
+                        dadosFiltrados = [...dados].sort((a, b) => b.porcentagem - a.porcentagem).slice(0, maxBarras);
+                    }
+
+                    let html = '<div class="chart-bars">';
+                    const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
+
+                    dadosFiltrados.forEach((turma, index) => {
+                        const altura = Math.max(20, (turma.porcentagem / 100) * 130);
+                        const cor = cores[index % cores.length];
+                        html += `<div class="chart-bar-item" title="${turma.nome} - Média: ${turma.media}">
+                            <div class="chart-bar-val">${turma.porcentagem}%</div>
+                            <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                            <div class="chart-bar-lbl">${turma.nome}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+
+                    html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
+                    dadosFiltrados.forEach(turma => {
+                        html += `<span>${turma.nome}: ${turma.total_correcoes} corr.</span>`;
+                    });
+                    html += `</div>`;
+
+                    container.innerHTML = html;
+
+                } catch (erro) {
+                    console.error('Erro ao carregar Conceito:', erro);
+                    const container = document.getElementById('grafico-Conceito');
+                    if (container) {
+                        container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
+                            <p>Erro ao carregar dados de Conceito.</p>
+                        </div>`;
+                    }
+                }
+            }
+
+            // ============================================
+            // CARREGAR ÚLTIMAS CORREÇÕES
+            // ============================================
+            async function carregarUltimasCorrecoes() {
+                try {
+                    const response = await fetch(API_URL + '/api/historico');
+                    const historico = await response.json();
+                    const tbody = document.getElementById('ultimas-correcoes');
+                    if (!tbody) return;
+                    if (!historico || historico.length === 0 || historico.erro) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+                    } else {
+                        const recentes = historico.slice(0, 4);
+                        tbody.innerHTML = recentes.map(item => {
+                            const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
+                            const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
+                            const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
+                            return '<tr><td><strong>' + item.aluno_nome + '</strong></td><td>' + item.prova_titulo + '</td><td><strong style="color:' + cor + ';">' + item.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
+            }
+
+            // ============================================
+            // CARREGAR USUÁRIOS
+            // ============================================
+            async function carregarUsuarios() {
+                try {
+                    const response = await fetch(API_URL + '/api/usuarios');
+                    const usuarios = await response.json();
+                    const tbody = document.getElementById('tb-usuarios');
+                    if (!tbody) return;
+                    if (!usuarios || usuarios.length === 0 || usuarios.erro) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário cadastrado</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = usuarios.map(u => {
+                        const perfilBadge = u.perfil === 'admin' ? 'badge-orange' : 'badge-blue';
+                        const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
+                        const statusText = u.ativo ? 'Ativo' : 'Inativo';
+                        const isAdmin = u.username === 'admin';
+                        return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
+                            '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
+                            '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
+                            '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
+                            '<td>' +
+                            '<div class="btn-group">' +
+                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
+                            '</div>' +
+                            '</td></tr>';
+                    }).join('');
+                } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
+            }
+
+            // ============================================
+            // EXPORTAR FUNCTIONS
+            // ============================================
+            function exportarResultadosFiltrados() {
+                showToast('📥 Exportando resultados filtrados...', 'info');
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (!tbody) return;
+                let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,CH_Acertos,CH_Erros,CH_Conceito,CN_Acertos,CN_Erros,CN_Conceito,Escola,Turma\n';
+                tbody.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 20) {
+                        csv += cells[0].textContent.trim() + ',' + 
+                               cells[1].textContent.trim() + ',' + 
+                               cells[2].textContent.trim() + ',' + 
+                               cells[3].textContent.trim() + ',' + 
+                               cells[4].textContent.trim() + ',' + 
+                               cells[5].textContent.trim() + ',' + 
+                               cells[6].textContent.trim() + ',' + 
+                               cells[7].textContent.trim() + ',' + 
+                               cells[8].textContent.trim() + ',' + 
+                               cells[9].textContent.trim() + ',' + 
+                               cells[10].textContent.trim() + ',' + 
+                               cells[11].textContent.trim() + ',' + 
+                               cells[12].textContent.trim() + ',' + 
+                               cells[13].textContent.trim() + ',' + 
+                               cells[14].textContent.trim() + ',' + 
+                               cells[15].textContent.trim() + ',' + 
+                               cells[16].textContent.trim() + ',' + 
+                               cells[17].textContent.trim() + ',' + 
+                               cells[18].textContent.trim() + ',' + 
+                               cells[19].textContent.trim() + '\n';
+                    }
+                });
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'resultados_filtrados.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Resultados exportados!', 'success');
+            }
+
+            function exportarAlunosCSV() {
+                showToast('📤 Exportando alunos...', 'info');
+                fetch(API_URL + '/api/alunos').then(r => r.json()).then(alunos => {
+                    if (!alunos || alunos.length === 0) { showToast('⚠️ Nenhum aluno para exportar', 'error'); return; }
+                    let csv = 'Nº,Matrícula,Nome,Série,Turma, Escola,Data Nasc.\n';
+                    alunos.forEach(a => { csv += (a.numero_chamada || '') + ',' + (a.matricula || '') + ',' + a.nome + ',' + (a.turma_serie || '') + ',' + (a.turma_nome || '') + ',' + (a.escola_nome || '') + ',' + (a.data_nascimento || '') + '\n'; });
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'alunos.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('✅ Alunos exportados!', 'success');
+                }).catch(e => { showToast('❌ Erro ao exportar', 'error'); console.error(e); });
+            }
+
+            function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info'); window.print(); }
+            function exportarRelatorioAluno() { showToast('📥 Exportando relatório do aluno...', 'info'); window.print(); }
+            function exportarRelatorioEscola() {
+                showToast('📥 Exportando relatório por escola...', 'info');
+                const tbody = document.getElementById('tb-rel-escola');
+                if (!tbody) return;
+                let csv = 'Escola,Turmas,Alunos,Média,Aprovação\n';
+                tbody.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + '\n'; }
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'relatorio_escolas.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Relatório exportado!', 'success');
+            }
+
+            // ============================================
+            // GABARITO - BUILD GRID
+            // ============================================
+            function buildGabGrid() {
+                const grid = document.getElementById('gab-grid');
+                if (!grid) return;
+                const serieEl = document.getElementById('gab-serie');
+                const totalEl = document.getElementById('gab-total');
+                if (!serieEl || !totalEl) return;
+                const is1 = (parseInt(serieEl.value) || 1) === 1;
+                const total = parseInt(totalEl.value) || 20;
+                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                const lbl = document.getElementById('gab-label');
+                if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
+                grid.innerHTML = '';
+                for (let i = 1; i <= total; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'gab-item';
+                    let opts = '<option value="">—</option>';
+                    alts.forEach(a => { opts += '<option>' + a + '</option>'; });
+                    div.innerHTML = '<div class="gab-num">Q' + i + '</div><select class="gab-select" onchange="this.classList.toggle(\'filled\', this.value!=\'\')">' + opts + '</select>';
+                    grid.appendChild(div);
+                }
+            }
+
+            function fillGabRand() {
+                const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
+                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)]; s.classList.add('filled'); });
+                showToast('🎲 Gabarito de teste preenchido!');
+            }
+
+            function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); }); }
+
+            // ============================================
+            // SALVAR GABARITO
+            // ============================================
+            async function saveGab() {
+                try {
+                    const selects = document.querySelectorAll('.gab-select');
+                    const respostas = [];
+                    selects.forEach(s => { if (s.value) { respostas.push(s.value); } else { respostas.push(''); } });
+                    const respostasValidas = respostas.filter(r => r !== '');
+                    if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
+                    const provaId = document.getElementById('gab-prova').value;
+                    if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
+                    showToast('💾 Salvando gabarito...', 'info');
+                    const payload = { prova_id: parseInt(provaId), respostas: respostas };
+                    const response = await fetch(`${API_URL}/api/gabaritos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (response.ok && result.id) {
+                        showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
+                        selects.forEach(s => { if (s.value) s.classList.add('filled'); });
+                        carregarGabaritos();
+                        carregarCombos();
+                        carregarProvas();
+                    } else {
+                        showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // LISTA POR TURMA
+            // ============================================
+            async function carregarTurmasLista(escolaId) {
+                const select = document.getElementById('lista-turma');
+                select.innerHTML = '<option value="">Selecione a turma</option>';
+                if (!escolaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            select.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas:', e);
+                }
+            }
+
+            async function gerarListaTurma() {
+                const escolaId = document.getElementById('lista-escola').value;
+                const turmaId = document.getElementById('lista-turma').value;
+                if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+                try {
+                    const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
+                    const alunos = await alunosResp.json();
+                    const turmaResp = await fetch(API_URL + '/api/turmas');
+                    const turmas = await turmaResp.json();
+                    const turma = turmas.find(t => t.id == turmaId);
+                    const container = document.getElementById('lista-resultado');
+                    if (!container) return;
+                    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>'; showToast('❌ Nenhum aluno na turma!', 'error'); return; }
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const prova = provas.find(p => p.turma_id == turmaId);
+                    if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>'; showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
+                    const escolaResp = await fetch(API_URL + '/api/escolas');
+                    const escolas = await escolaResp.json();
+                    const escola = escolas.find(e => e.id == turma?.escola_id);
+                    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
+                    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+                    alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
+                    html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
+                    container.innerHTML = html;
+                    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
+                } catch (erro) { console.error('Erro ao gerar lista:', erro); showToast('❌ Erro: ' + erro.message, 'error'); }
+            }
+
+            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+                try {
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const prova = provas.find(p => p.id == provaId);
+                    const qtdQuestoes = prova?.quantidade_questoes || 20;
+                    const response = await fetch(API_URL + '/api/gerar_gabarito', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
+                    });
+                    if (response.ok) {
+                        const html = await response.text();
+                        const novaAba = window.open('', '_blank');
+                        novaAba.document.write(html);
+                        novaAba.document.close();
+                        document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
+                        showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
+                    } else {
+                        const erro = await response.json();
+                        showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) { console.error('Erro ao gerar cartão:', erro); showToast('❌ Erro: ' + erro.message, 'error'); }
             }
 
             // ============================================
@@ -3624,6 +6313,7 @@
                         carregarEscolasCorrigir();
                         carregarEscolasTexto();
                         carregarEscolasParaCorrecaoManual();
+                        carregarEscolasRelAluno();
                         carregarFiltrosRelTurma();
                         carregarFiltroEscolaTurmas();
                     }, 1000);
@@ -5272,6 +7962,7 @@
                         carregarEscolasCorrigir(),
                         carregarEscolasTexto(),
                         carregarEscolasParaCorrecaoManual(),
+                        carregarEscolasRelAluno(),
                         carregarFiltrosRelTurma(),
                         carregarFiltroEscolaTurmas(),
                         carregarEscolasDesempenho()
@@ -5301,6 +7992,7 @@
                 if (tipoProva) gerarGabaritoModal(tipoProva.value);
                 atualizarDatasImpressao();
                 carregarEscolasParaCorrecaoManual();
+                carregarEscolasRelAluno();
                 carregarFiltrosRelTurma();
                 carregarFiltroEscolaTurmas();
                 carregarEscolasParaAluno();
