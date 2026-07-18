@@ -864,167 +864,189 @@
             </div>
 
             <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
-            <div class="page" id="page-desempenho">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📊 Desempenho do Aluno</div>
-                        <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
-                    </div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                    </div>
+<div class="page" id="page-desempenho">
+    <div class="page-header">
+        <div>
+            <div class="page-title">📊 Desempenho do Aluno</div>
+            <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
+        </div>
+        <div class="page-actions no-print">
+            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+        </div>
+    </div>
+
+    <!-- Cabeçalho para impressão -->
+    <div class="print-header print-only">
+        <h2>📊 Relatório de Desempenho do Aluno</h2>
+        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+        <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
+    </div>
+
+    <!-- ===== FILTROS ===== -->
+    <div class="card no-print">
+        <div class="form-row c4">
+            <div class="form-group">
+                <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
+                <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
+                    <option value="">Carregando escolas...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">👥 TURMA <span class="req">*</span></label>
+                <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
+                    <option value="">Selecione a turma...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
+                <select class="form-control" id="filtro-aluno-desempenho">
+                    <option value="">Selecione o aluno...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">📄 PROVA <span class="req">*</span></label>
+                <select class="form-control" id="filtro-prova-desempenho">
+                    <option value="">Carregando provas...</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
+            <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
+            <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
+            <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
+        </div>
+    </div>
+
+    <!-- ===== RESULTADOS ===== -->
+    <div id="resultado-desempenho" style="display:none;">
+
+        <!-- NOVO CARD ÚNICO DE RESUMO -->
+        <div class="desempenho-card-unico">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:14px;">
+                <div>
+                    <span style="font-size:13px; color:var(--text2); font-weight:600;">📄 PROVA</span>
+                    <h3 style="font-size:18px; margin:2px 0 0;" id="card-prova-titulo">—</h3>
                 </div>
-
-                <!-- Cabeçalho para impressão -->
-                <div class="print-header print-only">
-                    <h2>📊 Relatório de Desempenho do Aluno</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
+                <span class="badge badge-blue" id="card-conceito-badge">—</span>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px;">
+                <div class="resumo-item">
+                    <div class="resumo-icon">⭐</div>
+                    <div class="resumo-valor" id="card-nota" style="color:var(--blue);">0.0</div>
+                    <div class="resumo-label">Nota Final</div>
                 </div>
-
-                <!-- ===== FILTROS ===== -->
-                <div class="card no-print">
-                    <div class="form-row c4">
-                        <div class="form-group">
-                            <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
-                            <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
-                                <option value="">Carregando escolas...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">👥 TURMA <span class="req">*</span></label>
-                            <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
-                                <option value="">Selecione a turma...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
-                            <select class="form-control" id="filtro-aluno-desempenho">
-                                <option value="">Selecione o aluno...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">📄 PROVA <span class="req">*</span></label>
-                            <select class="form-control" id="filtro-prova-desempenho">
-                                <option value="">Carregando provas...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
-                        <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
-                        <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
-                        <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
-                    </div>
+                <div class="resumo-item">
+                    <div class="resumo-icon">✅</div>
+                    <div class="resumo-valor" id="card-acertos" style="color:var(--green);">0</div>
+                    <div class="resumo-label">Acertos</div>
                 </div>
+                <div class="resumo-item">
+                    <div class="resumo-icon">❌</div>
+                    <div class="resumo-valor" id="card-erros" style="color:var(--red);">0</div>
+                    <div class="resumo-label">Erros</div>
+                </div>
+                <div class="resumo-item">
+                    <div class="resumo-icon">📊</div>
+                    <div class="resumo-valor" id="card-conceito" style="color:var(--purple);">—</div>
+                    <div class="resumo-label">Conceito</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:14px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); flex-wrap:wrap;">
+                <span><strong>Aluno:</strong> <span id="card-aluno-nome">—</span></span>
+                <span><strong>Turma:</strong> <span id="card-turma-nome">—</span></span>
+                <span><strong>Data:</strong> <span id="card-data">—</span></span>
+            </div>
+        </div>
 
-                <!-- ===== RESULTADOS ===== -->
-                <div id="resultado-desempenho" style="display:none;">
-
-                    <!-- Resumo Geral -->
-                    <div class="desempenho-resumo">
-                        <div class="item"><div class="valor blue" id="resumo-nota">0.0</div><div class="label">Nota Final</div></div>
-                        <div class="item"><div class="valor green" id="resumo-acertos">0</div><div class="label">Acertos</div></div>
-                        <div class="item"><div class="valor red" id="resumo-erros">0</div><div class="label">Erros</div></div>
-                        <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
-                    </div>
-
-                    <!-- Disciplinas -->
-                    <div class="desempenho-disciplinas" id="disciplinas-container">
-                        <!-- Português -->
-                        <div class="desempenho-disciplina" id="disc-portugues">
-                            <div class="header">
-                                <h4>📖 Português</h4>
-                                <span class="badge badge-blue" id="status-portugues">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-portugues"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Matemática -->
-                        <div class="desempenho-disciplina" id="disc-matematica">
-                            <div class="header">
-                                <h4>🔢 Matemática</h4>
-                                <span class="badge badge-green" id="status-matematica">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-matematica"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Produção de Texto -->
-                        <div class="desempenho-disciplina" id="disc-producao">
-                            <div class="header">
-                                <h4>✍️ Produção de Texto</h4>
-                                <span class="badge badge-purple" id="status-producao">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-producao"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Ciências Humanas (CH) -->
-                        <div class="desempenho-disciplina" id="disc-ch">
-                            <div class="header">
-                                <h4>🌍 Ciências Humanas</h4>
-                                <span class="badge badge-orange" id="status-ch">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-ch"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Ciências Naturais (CN) -->
-                        <div class="desempenho-disciplina" id="disc-cn">
-                            <div class="header">
-                                <h4>🔬 Ciências Naturais</h4>
-                                <span class="badge badge-teal" id="status-cn">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-cn"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Informações do Aluno -->
-                    <div class="desempenho-info no-print">
-                        <div><strong>🏫 Escola</strong><br><span id="info-escola">—</span></div>
-                        <div><strong>👥 Turma</strong><br><span id="info-turma">—</span></div>
-                        <div><strong>🎒 Aluno</strong><br><span id="info-aluno">—</span></div>
-                        <div><strong>📄 Prova</strong><br><span id="info-prova">—</span></div>
-                        <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
-                    </div>
-
-                    <!-- Legenda -->
-                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
-                        <span style="color:var(--text3);">|</span>
-                        <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
-                        <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
-                        <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
-                        <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
-                    </div>
+        <!-- Disciplinas -->
+        <div class="desempenho-disciplinas" id="disciplinas-container">
+            <!-- Português -->
+            <div class="desempenho-disciplina" id="disc-portugues">
+                <div class="header">
+                    <h4>📖 Português</h4>
+                    <span class="badge badge-blue" id="status-portugues">—</span>
+                </div>
+                <div class="questoes-grid" id="questoes-portugues"></div>
+                <div class="stats">
+                    <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
+                    <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
+                    <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
                 </div>
             </div>
 
+            <!-- Matemática -->
+            <div class="desempenho-disciplina" id="disc-matematica">
+                <div class="header">
+                    <h4>🔢 Matemática</h4>
+                    <span class="badge badge-green" id="status-matematica">—</span>
+                </div>
+                <div class="questoes-grid" id="questoes-matematica"></div>
+                <div class="stats">
+                    <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
+                    <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
+                    <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
+                </div>
+            </div>
+
+            <!-- Produção de Texto -->
+            <div class="desempenho-disciplina" id="disc-producao">
+                <div class="header">
+                    <h4>✍️ Produção de Texto</h4>
+                    <span class="badge badge-purple" id="status-producao">—</span>
+                </div>
+                <div class="questoes-grid" id="questoes-producao"></div>
+                <div class="stats">
+                    <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
+                    <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
+                    <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
+                </div>
+            </div>
+
+            <!-- Ciências Humanas (CH) -->
+            <div class="desempenho-disciplina" id="disc-ch">
+                <div class="header">
+                    <h4>🌍 Ciências Humanas</h4>
+                    <span class="badge badge-orange" id="status-ch">—</span>
+                </div>
+                <div class="questoes-grid" id="questoes-ch"></div>
+                <div class="stats">
+                    <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
+                    <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
+                    <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
+                </div>
+            </div>
+
+            <!-- Ciências Naturais (CN) -->
+            <div class="desempenho-disciplina" id="disc-cn">
+                <div class="header">
+                    <h4>🔬 Ciências Naturais</h4>
+                    <span class="badge badge-teal" id="status-cn">—</span>
+                </div>
+                <div class="questoes-grid" id="questoes-cn"></div>
+                <div class="stats">
+                    <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
+                    <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
+                    <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
+                </div>
+            </div>
         </div>
+
+        <!-- Informações do Aluno (opcional, já incluídas no card) -->
+        <!-- removido para evitar duplicidade -->
+
+        <!-- Legenda -->
+        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
+            <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
+            <span style="color:var(--text3);">|</span>
+            <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
+            <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
+            <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
+            <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
+        </div>
+    </div>
+</div>
 
         <!-- ========== CÂMERA MODAL ========== -->
         <div class="cam-modal no-print" id="cam-modal">
