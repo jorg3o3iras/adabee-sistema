@@ -199,12 +199,14 @@
         .upload-zone .uz-ico { font-size:40px; margin-bottom:8px; }
         .upload-zone .uz-hint { font-size:12px; color:var(--text3); margin-top:4px; }
 
-        .gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:6px; margin:10px 0; }
-        .gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; }
-        .gab-num { font-size:9px; color:var(--text3); font-weight:700; margin-bottom:4px; }
+        .gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; margin:10px 0; }
+        .gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; display:flex; flex-direction:column; gap:2px; }
+        .gab-num { font-size:9px; color:var(--text3); font-weight:700; }
         .gab-select { width:100%; padding:4px 2px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-weight:700; font-size:13px; text-align:center; outline:none; transition:all .2s; }
         .gab-select:focus { border-color:var(--blue); }
         .gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
+        .gab-bncc { width:100%; padding:2px 2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center; outline:none; transition:border .2s; margin-top:2px; }
+        .gab-bncc:focus { border-color:var(--purple); }
 
         .ai-hero { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.06)); border:1px solid rgba(139,92,246,0.15); border-radius:var(--r); padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
         .ai-hero-icon { font-size:44px; }
@@ -887,7 +889,7 @@
             .stats-grid { grid-template-columns:1fr; }
             .login-card { padding:24px 18px; margin:10px; }
             .cam-container { padding:14px; }
-            .gab-grid { grid-template-columns:repeat(auto-fill,minmax(55px,1fr)); }
+            .gab-grid { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); }
             .modal { padding:16px; }
             .correcao-aluno-info { grid-template-columns:1fr; }
             .correcao-manual-grid {
@@ -1428,9 +1430,9 @@
                 </div>
             </div>
 
-            <!-- ========== GABARITO ========== -->
+            <!-- ========== GABARITO (COM CAMPOS BNCC) ========== -->
             <div class="page" id="page-gabarito">
-                <div class="page-header"><div><div class="page-title">✅ Cadastrar Gabarito</div><p class="page-sub">1º Ano: A,B,C &nbsp;|&nbsp; 2º ao 9º Ano: A,B,C,D</p></div></div>
+                <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas e os códigos BNCC (opcional)</p></div></div>
                 <div class="card no-print">
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
@@ -1440,7 +1442,13 @@
                     <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div><div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div></div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><div class="card-title">📝 Gabarito das Questões</div><div class="btn-group no-print"><button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button><button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button></div></div>
+                    <div class="card-header">
+                        <div class="card-title">📝 Gabarito das Questões</div>
+                        <div class="btn-group no-print">
+                            <button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
+                        </div>
+                    </div>
                     <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
                     <div class="gab-grid" id="gab-grid"></div>
                     <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
@@ -1562,7 +1570,7 @@
             <!-- ========== GABARITOS LIST ========== -->
             <div class="page" id="page-gabaritos">
                 <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>BNCC</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== PROVAS ========== -->
@@ -3012,15 +3020,17 @@
                     if (!tbody) return;
                     const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
                     if (!comGabarito || comGabarito.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
                     } else {
                         tbody.innerHTML = comGabarito.map((p, i) => {
+                            const temBNCC = p.bncc && p.bncc.some(c => c && c.trim() !== '');
                             return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                                 '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                                 '<td>' + p.titulo + '</td>' +
                                 '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                                 '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
                                 '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
+                                '<td>' + (temBNCC ? '✅' : '') + '</td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
                                 '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
                         }).join('');
@@ -4000,6 +4010,7 @@
                                     opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
                                     opt.dataset.tipo = p.tipo_questoes || '4';
                                     opt.dataset.disciplina = p.disciplina || '';
+                                    opt.dataset.bncc = JSON.stringify(p.bncc || []);
                                     select.appendChild(opt); 
                                 }); 
                             }
@@ -4348,7 +4359,7 @@
             }
 
             // ============================================
-            // GABARITO - BUILD GRID
+            // GABARITO - BUILD GRID (COM BNCC)
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
@@ -4367,7 +4378,12 @@
                     div.className = 'gab-item';
                     let opts = '<option value="">—</option>';
                     alts.forEach(a => { opts += '<option>' + a + '</option>'; });
-                    div.innerHTML = '<div class="gab-num">Q' + i + '</div><select class="gab-select" onchange="this.classList.toggle(\'filled\', this.value!=\'\')">' + opts + '</select>';
+                    // Adiciona campo BNCC
+                    div.innerHTML = `
+                        <div class="gab-num">Q${i}</div>
+                        <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
+                        <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                    `;
                     grid.appendChild(div);
                 }
             }
@@ -4379,22 +4395,36 @@
                 showToast('🎲 Gabarito de teste preenchido!');
             }
 
-            function clearGab() { document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); }); }
+            function clearGab() { 
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
+                document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
+            }
 
             // ============================================
-            // SALVAR GABARITO
+            // SALVAR GABARITO (COM BNCC)
             // ============================================
             async function saveGab() {
                 try {
                     const selects = document.querySelectorAll('.gab-select');
+                    const bnccInputs = document.querySelectorAll('.gab-bncc');
                     const respostas = [];
-                    selects.forEach(s => { if (s.value) { respostas.push(s.value); } else { respostas.push(''); } });
+                    const bncc = [];
+                    
+                    selects.forEach(s => { respostas.push(s.value || ''); });
+                    bnccInputs.forEach(inp => { bncc.push(inp.value.trim() || ''); });
+                    
                     const respostasValidas = respostas.filter(r => r !== '');
                     if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
+                    
                     const provaId = document.getElementById('gab-prova').value;
                     if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
+                    
                     showToast('💾 Salvando gabarito...', 'info');
-                    const payload = { prova_id: parseInt(provaId), respostas: respostas };
+                    const payload = { 
+                        prova_id: parseInt(provaId), 
+                        respostas: respostas,
+                        bncc: bncc
+                    };
                     const response = await fetch(`${API_URL}/api/gabaritos`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4413,6 +4443,84 @@
                 } catch (erro) {
                     showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
                 }
+            }
+
+            // ============================================
+            // EDITAR GABARITO (COM BNCC)
+            // ============================================
+            function editarGabarito(id) {
+                showToast('✏️ Carregando gabarito...', 'info');
+                fetch(API_URL + '/api/provas/' + id)
+                    .then(r => r.json())
+                    .then(prova => {
+                        if (prova.erro) {
+                            showToast('❌ ' + prova.erro, 'error');
+                            return;
+                        }
+                        if (prova.gabarito && prova.gabarito.length > 0) {
+                            const gabarito = prova.gabarito;
+                            const bncc = prova.bncc || [];
+                            
+                            // Preenche selects
+                            const selects = document.querySelectorAll('.gab-select');
+                            selects.forEach((s, i) => {
+                                if (i < gabarito.length && gabarito[i]) {
+                                    s.value = gabarito[i];
+                                    s.classList.add('filled');
+                                } else {
+                                    s.value = '';
+                                    s.classList.remove('filled');
+                                }
+                            });
+                            
+                            // Preenche campos BNCC
+                            const bnccInputs = document.querySelectorAll('.gab-bncc');
+                            bnccInputs.forEach((inp, i) => {
+                                if (i < bncc.length && bncc[i]) {
+                                    inp.value = bncc[i];
+                                } else {
+                                    inp.value = '';
+                                }
+                            });
+                            
+                            const selectProva = document.getElementById('gab-prova');
+                            if (selectProva) {
+                                selectProva.value = id;
+                            }
+                            // Ajusta série e total conforme a prova
+                            const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
+                            const serieVal = serieMap[prova.serie] || '2';
+                            document.getElementById('gab-serie').value = serieVal;
+                            document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
+                            buildGabGrid();
+                            // Recarrega os valores após rebuild
+                            setTimeout(() => {
+                                const newSelects = document.querySelectorAll('.gab-select');
+                                const newBncc = document.querySelectorAll('.gab-bncc');
+                                newSelects.forEach((s, i) => {
+                                    if (i < gabarito.length && gabarito[i]) {
+                                        s.value = gabarito[i];
+                                        s.classList.add('filled');
+                                    }
+                                });
+                                newBncc.forEach((inp, i) => {
+                                    if (i < bncc.length && bncc[i]) {
+                                        inp.value = bncc[i];
+                                    }
+                                });
+                            }, 50);
+                            
+                            showToast('📋 Gabarito carregado para edição!', 'success');
+                            go('gabarito');
+                        } else {
+                            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
+                            go('gabarito');
+                        }
+                    })
+                    .catch(e => {
+                        showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
+                        console.error('Erro ao carregar gabarito:', e);
+                    });
             }
 
             // ============================================
@@ -4912,6 +5020,7 @@
                             opt.dataset.tipo = p.tipo_questoes || '4';
                             opt.dataset.data = p.data_prova || '';
                             opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                            opt.dataset.bncc = JSON.stringify(p.bncc || []);
                             opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
@@ -6075,38 +6184,7 @@
 
             // ===== GABARITO =====
             function editarGabarito(id) {
-                showToast('✏️ Editando gabarito da prova ID ' + id + '...', 'info');
-                fetch(API_URL + '/api/provas/' + id)
-                    .then(r => r.json())
-                    .then(prova => {
-                        if (prova.erro) {
-                            showToast('❌ ' + prova.erro, 'error');
-                            return;
-                        }
-                        if (prova.gabarito && prova.gabarito.length > 0) {
-                            const gabarito = prova.gabarito;
-                            const selects = document.querySelectorAll('.gab-select');
-                            selects.forEach((s, i) => {
-                                if (i < gabarito.length && gabarito[i]) {
-                                    s.value = gabarito[i];
-                                    s.classList.add('filled');
-                                }
-                            });
-                            const selectProva = document.getElementById('gab-prova');
-                            if (selectProva) {
-                                selectProva.value = id;
-                            }
-                            showToast('📋 Gabarito carregado para edição!', 'success');
-                            go('gabarito');
-                        } else {
-                            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
-                            go('gabarito');
-                        }
-                    })
-                    .catch(e => {
-                        showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
-                        console.error('Erro ao carregar gabarito:', e);
-                    });
+                // já implementado acima
             }
 
             async function excluirGabarito(id, nome) {
