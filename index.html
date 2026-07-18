@@ -734,95 +734,73 @@
         .desempenho-resumo .item .valor.blue { color: var(--blue); }
         .desempenho-resumo .item .valor.purple { color: var(--purple); }
 
-        .desempenho-disciplinas {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-            gap: 16px;
-            margin-top: 16px;
-        }
-        .desempenho-disciplina {
+        /* Estilos para o card único de disciplina */
+        .questao-item {
             background: var(--bg2);
-            border-radius: 10px;
-            padding: 14px 16px;
             border: 1px solid var(--border);
-        }
-        .desempenho-disciplina .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .desempenho-disciplina .header h4 {
-            font-size: 15px;
-            font-weight: 700;
-        }
-        .desempenho-disciplina .questoes-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 4px;
-        }
-        .desempenho-disciplina .questao-item {
-            background: var(--bg);
             border-radius: 6px;
             padding: 4px 2px;
             text-align: center;
-            font-size: 11px;
-            border: 1px solid var(--border);
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            transition: border-color 0.2s;
         }
-        .desempenho-disciplina .questao-item .q-num {
+        .questao-item .q-num {
             font-size: 7px;
             color: var(--text3);
+            font-weight: 700;
         }
-        .desempenho-disciplina .questao-item .q-resp {
+        .questao-item .q-resp {
             font-weight: 700;
             font-size: 12px;
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 0 4px;
+            line-height: 20px;
+            width: 100%;
         }
-        .desempenho-disciplina .questao-item .q-gab {
+        .questao-item .q-gab {
             font-size: 7px;
             color: var(--text3);
         }
-        .desempenho-disciplina .questao-item .q-status-text {
+        .questao-item .q-status-text {
             font-size: 7px;
             font-weight: 700;
             display: block;
             line-height: 1.2;
-            margin-top: 2px;
+            margin-top: 1px;
             padding: 1px 4px;
             border-radius: 4px;
+            width: 100%;
         }
-        .desempenho-disciplina .questao-item .q-status-text.acertou {
-            color: var(--green);
-            background: rgba(16, 185, 129, 0.12);
-        }
-        .desempenho-disciplina .questao-item .q-status-text.errou {
-            color: var(--red);
-            background: rgba(239, 68, 68, 0.12);
-        }
-        .desempenho-disciplina .questao-item.acertou {
+        .questao-item.acertou {
             border-color: var(--green);
             background: rgba(16, 185, 129, 0.08);
         }
-        .desempenho-disciplina .questao-item.acertou .q-resp {
+        .questao-item.acertou .q-resp {
             color: var(--green);
         }
-        .desempenho-disciplina .questao-item.errou {
+        .questao-item.acertou .q-status-text {
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .questao-item.errou {
             border-color: var(--red);
             background: rgba(239, 68, 68, 0.08);
         }
-        .desempenho-disciplina .questao-item.errou .q-resp {
+        .questao-item.errou .q-resp {
             color: var(--red);
         }
-        .desempenho-disciplina .stats {
-            display: flex;
-            gap: 16px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
+        .questao-item.errou .q-status-text {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.12);
         }
-        .desempenho-disciplina .stats .acertos { color: var(--green); font-weight: 700; }
-        .desempenho-disciplina .stats .erros { color: var(--red); font-weight: 700; }
-        .desempenho-disciplina .stats .nota { color: var(--blue); font-weight: 700; }
+        .questao-item .q-status-text:empty {
+            display: none;
+        }
 
         .desempenho-info {
             display: grid;
@@ -901,12 +879,6 @@
             .desempenho-resumo {
                 grid-template-columns: 1fr 1fr;
             }
-            .desempenho-disciplinas {
-                grid-template-columns: 1fr 1fr;
-            }
-            .desempenho-disciplina .questoes-grid {
-                grid-template-columns: repeat(5, 1fr);
-            }
             .desempenho-info {
                 grid-template-columns: 1fr 1fr;
             }
@@ -970,14 +942,14 @@
             .desempenho-resumo {
                 grid-template-columns: 1fr;
             }
-            .desempenho-disciplinas {
-                grid-template-columns: 1fr;
-            }
-            .desempenho-disciplina .questoes-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
             .desempenho-info {
                 grid-template-columns: 1fr;
+            }
+            .questao-item .q-resp {
+                font-size: 10px;
+            }
+            .questao-item .q-status-text {
+                font-size: 6px;
             }
         }
 
@@ -1088,24 +1060,19 @@
             .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
             .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
             .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
-            .desempenho-disciplina { background: #f8fafc !important; border-color: #ddd !important; }
-            .desempenho-disciplina .questao-item { background: #f1f5f9 !important; border-color: #ccc !important; }
-            .desempenho-disciplina .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
-            .desempenho-disciplina .questao-item.acertou .q-resp { color: #155724 !important; }
-            .desempenho-disciplina .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
-            .desempenho-disciplina .questao-item.errou .q-resp { color: #721c24 !important; }
-            .desempenho-disciplina .stats .acertos { color: #155724 !important; }
-            .desempenho-disciplina .stats .erros { color: #721c24 !important; }
-            .desempenho-disciplina .stats .nota { color: #004085 !important; }
+            .questao-item { background: #f8fafc !important; border-color: #ccc !important; }
+            .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
+            .questao-item.acertou .q-resp { color: #155724 !important; }
+            .questao-item.acertou .q-status-text { color: #155724 !important; background: #d4edda !important; }
+            .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
+            .questao-item.errou .q-resp { color: #721c24 !important; }
+            .questao-item.errou .q-status-text { color: #721c24 !important; background: #f8d7da !important; }
             .desempenho-resumo .item { background: #f1f5f9 !important; border-color: #ccc !important; }
             .desempenho-resumo .item .valor.green { color: #155724 !important; }
             .desempenho-resumo .item .valor.red { color: #721c24 !important; }
             .desempenho-resumo .item .valor.blue { color: #004085 !important; }
             .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
             .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
-            .desempenho-disciplina .questao-item .q-status-text {
-                font-size: 6px !important;
-            }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -1190,7 +1157,6 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <!-- ===== ABA RELATÓRIO POR ALUNO REMOVIDA ===== -->
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -1228,7 +1194,6 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <!-- ===== ABA RELATÓRIO POR ALUNO REMOVIDA ===== -->
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -1964,7 +1929,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2030,75 +1995,19 @@
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
                     </div>
 
-                    <!-- Disciplinas -->
-                    <div class="desempenho-disciplinas" id="disciplinas-container">
-                        <!-- Português -->
-                        <div class="desempenho-disciplina" id="disc-portugues">
-                            <div class="header">
-                                <h4>📖 Português</h4>
-                                <span class="badge badge-blue" id="status-portugues">—</span>
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
+                    <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title" id="disciplina-unica-titulo">📖 Disciplina</div>
+                                <span class="badge" id="disciplina-unica-status">—</span>
                             </div>
-                            <div class="questoes-grid" id="questoes-portugues"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-portugues">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-portugues">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-portugues">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Matemática -->
-                        <div class="desempenho-disciplina" id="disc-matematica">
-                            <div class="header">
-                                <h4>🔢 Matemática</h4>
-                                <span class="badge badge-green" id="status-matematica">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-matematica"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-matematica">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-matematica">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-matematica">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Produção de Texto -->
-                        <div class="desempenho-disciplina" id="disc-producao">
-                            <div class="header">
-                                <h4>✍️ Produção de Texto</h4>
-                                <span class="badge badge-purple" id="status-producao">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-producao"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-producao">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-producao">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-producao">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Ciências Humanas (CH) -->
-                        <div class="desempenho-disciplina" id="disc-ch">
-                            <div class="header">
-                                <h4>🌍 Ciências Humanas</h4>
-                                <span class="badge badge-orange" id="status-ch">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-ch"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-ch">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-ch">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-ch">0.0</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Ciências Naturais (CN) -->
-                        <div class="desempenho-disciplina" id="disc-cn">
-                            <div class="header">
-                                <h4>🔬 Ciências Naturais</h4>
-                                <span class="badge badge-teal" id="status-cn">—</span>
-                            </div>
-                            <div class="questoes-grid" id="questoes-cn"></div>
-                            <div class="stats">
-                                <span>✅ Acertos: <span class="acertos" id="acertos-cn">0</span></span>
-                                <span>❌ Erros: <span class="erros" id="erros-cn">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="nota-cn">0.0</span></span>
+                            <div class="questoes-grid" id="disciplina-unica-questoes" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div class="stats" style="display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13px;">
+                                <span>✅ Acertos: <span class="acertos" id="disciplina-unica-acertos">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
+                                <span>⭐ Nota: <span class="nota" id="disciplina-unica-nota">0.0</span></span>
+                                <span>📊 Conceito: <span id="disciplina-unica-conceito">—</span></span>
                             </div>
                         </div>
                     </div>
@@ -2125,6 +2034,7 @@
                     </div>
                 </div>
             </div>
+            <!-- ===== FIM DA ABA DESEMPENHO ===== -->
 
         </div>
 
@@ -7014,124 +6924,37 @@
                     document.getElementById('info-prova').textContent = prova.titulo || '—';
                     document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
 
-                    const disciplinaMap = {
-                        'Português': 'portugues',
-                        'Matemática': 'matematica',
-                        'Produção de Texto': 'producao',
-                        'produção de texto': 'producao',
-                        'portugues': 'portugues',
-                        'matematica': 'matematica',
-                        'producao': 'producao',
-                        'Ciências Humanas': 'ch',
-                        'ciências humanas': 'ch',
-                        'ch': 'ch',
-                        'Ciências Naturais': 'cn',
-                        'ciências naturais': 'cn',
-                        'cn': 'cn'
-                    };
-                    
-                    const discKey = disciplinaMap[disciplina.toLowerCase()] || 'portugues';
-                    
-                    const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
-                    const nomesDisciplinas = {
-                        'portugues': 'Português',
-                        'matematica': 'Matemática',
-                        'producao': 'Produção de Texto',
-                        'ch': 'Ciências Humanas',
-                        'cn': 'Ciências Naturais'
-                    };
-                    const iconesDisciplinas = {
-                        'portugues': '📖',
-                        'matematica': '🔢',
-                        'producao': '✍️',
-                        'ch': '🌍',
-                        'cn': '🔬'
-                    };
-                    const coresDisciplinas = {
-                        'portugues': 'blue',
-                        'matematica': 'green',
-                        'producao': 'purple',
-                        'ch': 'orange',
-                        'cn': 'teal'
-                    };
-                    const badgesDisciplinas = {
-                        'portugues': 'badge-blue',
-                        'matematica': 'badge-green',
-                        'producao': 'badge-purple',
-                        'ch': 'badge-orange',
-                        'cn': 'badge-teal'
-                    };
+                    // ---- CARD ÚNICO DA DISCIPLINA ----
+                    const card = document.getElementById('desempenho-disciplina-unica');
+                    card.style.display = 'block';
 
-                    disciplinas.forEach(key => {
-                        const container = document.getElementById(`questoes-${key}`);
-                        const statusEl = document.getElementById(`status-${key}`);
-                        const acertosEl = document.getElementById(`acertos-${key}`);
-                        const errosEl = document.getElementById(`erros-${key}`);
-                        const notaEl = document.getElementById(`nota-${key}`);
-                        
-                        if (key === discKey) {
-                            let html = '';
-                            resultadoQuestoes.forEach(q => {
-                                const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                                const statusText = q.acertou 
-                                    ? '✅ ACERTOU: ADQUIRIU HABILIDADE' 
-                                    : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
-                                html += `
-                                    <div class="questao-item ${classe}">
-                                        <div class="q-num">Q${q.numero}</div>
-                                        <div class="q-resp">${q.resposta}</div>
-                                        <div class="q-gab">${q.gabarito}</div>
-                                        <span class="q-status-text ${classe}">${statusText}</span>
-                                    </div>
-                                `;
-                            });
-                            container.innerHTML = html;
-                            
-                            const pctDisc = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-                            let statusText = 'Inicial';
-                            let statusBadge = 'badge-red';
-                            if (pctDisc > 80) { statusText = 'Avançado'; statusBadge = 'badge-green'; }
-                            else if (pctDisc > 60) { statusText = 'Proficiente'; statusBadge = 'badge-blue'; }
-                            else if (pctDisc > 40) { statusText = 'Básico'; statusBadge = 'badge-orange'; }
-                            
-                            statusEl.textContent = statusText;
-                            statusEl.className = `badge ${statusBadge}`;
-                            acertosEl.textContent = acertos;
-                            errosEl.textContent = erros;
-                            notaEl.textContent = notaFinal.toFixed(1);
-                            
-                            const header = container.closest('.desempenho-disciplina').querySelector('h4');
-                            header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
-                            
-                            const card = container.closest('.desempenho-disciplina');
-                            const cor = coresDisciplinas[key];
-                            const colorMap = {
-                                'blue': '59,130,246',
-                                'green': '16,185,129',
-                                'purple': '139,92,246',
-                                'orange': '245,158,11',
-                                'teal': '20,184,166'
-                            };
-                            card.style.borderColor = `rgba(${colorMap[cor] || '59,130,246'}, 0.3)`;
-                        } else {
-                            container.innerHTML = `
-                                <div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b; font-size:12px;">
-                                    ⚠️ Nenhuma resposta disponível para esta disciplina
-                                </div>
-                            `;
-                            statusEl.textContent = 'Sem dados';
-                            statusEl.className = 'badge badge-gray';
-                            acertosEl.textContent = '—';
-                            errosEl.textContent = '—';
-                            notaEl.textContent = '—';
-                            
-                            const header = container.closest('.desempenho-disciplina').querySelector('h4');
-                            header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
-                            
-                            const card = container.closest('.desempenho-disciplina');
-                            card.style.borderColor = 'var(--border)';
-                        }
+                    document.getElementById('disciplina-unica-titulo').textContent = `📖 ${disciplina}`;
+
+                    const grid = document.getElementById('disciplina-unica-questoes');
+                    grid.innerHTML = '';
+                    resultadoQuestoes.forEach(q => {
+                        const div = document.createElement('div');
+                        div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
+                        div.innerHTML = `
+                            <div class="q-num">Q${q.numero}</div>
+                            <div class="q-resp">${q.resposta}</div>
+                            <div class="q-gab">${q.gabarito}</div>
+                            <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
+                                ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}
+                            </span>
+                        `;
+                        grid.appendChild(div);
                     });
+
+                    document.getElementById('disciplina-unica-acertos').textContent = acertos;
+                    document.getElementById('disciplina-unica-erros').textContent = erros;
+                    document.getElementById('disciplina-unica-nota').textContent = notaFinal.toFixed(1);
+
+                    const statusBadge = document.getElementById('disciplina-unica-status');
+                    statusBadge.textContent = conceito;
+                    statusBadge.className = `badge ${conceitoCor}`;
+
+                    document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
                     showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos`, 'success');
 
@@ -7154,24 +6977,12 @@
                     return;
                 }
 
-                const escola = data.escola.nome || '—';
-                const turma = (data.turma.nome || '') + ' - ' + (data.turma.serie || '');
-                const nomeAluno = data.aluno.nome || '—';
-                const prova = data.prova.titulo || '—';
-                const dataAtual = new Date().toLocaleDateString('pt-BR');
-                const nota = data.nota.toFixed(1);
-                const acertos = data.acertos;
-                const erros = data.erros;
-                const conceito = data.conceito;
-                const disciplina = data.disciplina || 'Português';
-                const totalQuestoes = data.totalQuestoes || 20;
+                const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes } = data;
 
                 let questoesHTML = '';
-                data.resultadoQuestoes.forEach(q => {
+                resultadoQuestoes.forEach(q => {
                     const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                    const statusText = q.acertou 
-                        ? '✅ ADQUIRIU HABILIDADE' 
-                        : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                    const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
                     questoesHTML += `
                         <div class="questao-item ${classe}">
                             <div class="q-num">Q${q.numero}</div>
@@ -7187,7 +6998,7 @@
                 <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>Desempenho do Aluno - ${nomeAluno}</title>
+                    <title>Desempenho do Aluno - ${aluno.nome}</title>
                     <style>
                         * { margin:0; padding:0; box-sizing:border-box; }
                         body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#0f172a; padding:30px; }
@@ -7242,15 +7053,15 @@
                     </div>
 
                     <div class="info-grid">
-                        <div><strong>🏫 Escola</strong><br>${escola}</div>
-                        <div><strong>👥 Turma</strong><br>${turma}</div>
-                        <div><strong>🎒 Aluno</strong><br>${nomeAluno}</div>
-                        <div><strong>📄 Prova</strong><br>${prova}</div>
-                        <div><strong>📅 Data</strong><br>${dataAtual}</div>
+                        <div><strong>🏫 Escola</strong><br>${escola.nome || '—'}</div>
+                        <div><strong>👥 Turma</strong><br>${turma.nome || ''} - ${turma.serie || ''}</div>
+                        <div><strong>🎒 Aluno</strong><br>${aluno.nome || '—'}</div>
+                        <div><strong>📄 Prova</strong><br>${prova.titulo || '—'}</div>
+                        <div><strong>📅 Data</strong><br>${new Date().toLocaleDateString('pt-BR')}</div>
                     </div>
 
                     <div class="resumo">
-                        <div class="resumo-item"><div class="valor blue">${nota}</div><div class="label">Nota Final</div></div>
+                        <div class="resumo-item"><div class="valor blue">${nota.toFixed(1)}</div><div class="label">Nota Final</div></div>
                         <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
                         <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
                         <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
@@ -7271,7 +7082,7 @@
                             <div class="stats">
                                 <span>✅ Acertos: <strong style="color:#16a34a;">${acertos}</strong></span>
                                 <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
-                                <span>⭐ Nota: <strong style="color:#2563eb;">${nota}</strong></span>
+                                <span>⭐ Nota: <strong style="color:#2563eb;">${nota.toFixed(1)}</strong></span>
                                 <span>📊 Total: <strong>${totalQuestoes}</strong></span>
                             </div>
                             <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
@@ -7318,8 +7129,8 @@
 
                 win.document.write(html);
                 win.document.close();
-                
-                showToast('📄 Documento gerado! Uma nova janela foi aberta para impressão.', 'success');
+                setTimeout(() => win.print(), 500);
+                showToast('📄 Documento gerado!', 'success');
             }
 
             function limparFiltrosDesempenho() {
@@ -7328,6 +7139,7 @@
                 document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
                 document.getElementById('filtro-prova-desempenho').value = '';
                 document.getElementById('resultado-desempenho').style.display = 'none';
+                document.getElementById('desempenho-disciplina-unica').style.display = 'none';
                 desempenhoData.alunoSelecionado = null;
                 showToast('✕ Filtros limpos!', 'info');
             }
