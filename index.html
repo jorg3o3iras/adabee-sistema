@@ -1929,7 +1929,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO) ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2008,6 +2008,20 @@
                                 <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
                                 <span>⭐ Nota: <span class="nota" id="disciplina-unica-nota">0.0</span></span>
                                 <span>📊 Conceito: <span id="disciplina-unica-conceito">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== NOVO CARD: GABARITO OFICIAL DA PROVA ===== -->
+                    <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">📋 Gabarito Oficial da Prova</div>
+                                <span class="badge badge-blue">Oficial</span>
+                            </div>
+                            <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); text-align:center;">
+                                Respostas corretas da prova
                             </div>
                         </div>
                     </div>
@@ -6698,7 +6712,7 @@
             }
 
             // ============================================
-            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL)
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL)
             // ============================================
             
             async function carregarEscolasDesempenho() {
@@ -6956,6 +6970,23 @@
 
                     document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
+                    // ---- NOVO CARD: GABARITO OFICIAL DA PROVA ----
+                    const gabCard = document.getElementById('gabarito-oficial-card');
+                    gabCard.style.display = 'block';
+                    
+                    const gabGrid = document.getElementById('gabarito-oficial-grid');
+                    gabGrid.innerHTML = '';
+                    gabarito.forEach((gab, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'questao-item';
+                        div.innerHTML = `
+                            <div class="q-num">Q${idx+1}</div>
+                            <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
+                            <div class="q-gab">Oficial</div>
+                        `;
+                        gabGrid.appendChild(div);
+                    });
+
                     showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos`, 'success');
 
                 } catch (erro) {
@@ -6977,7 +7008,7 @@
                     return;
                 }
 
-                const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes } = data;
+                const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes, gabarito } = data;
 
                 let questoesHTML = '';
                 resultadoQuestoes.forEach(q => {
@@ -6989,6 +7020,18 @@
                             <div class="q-resp">${q.resposta}</div>
                             <div class="q-gab">${q.gabarito}</div>
                             <span class="q-status-text ${classe}">${statusText}</span>
+                        </div>
+                    `;
+                });
+
+                // Gabarito oficial
+                let gabOficialHTML = '';
+                gabarito.forEach((gab, idx) => {
+                    gabOficialHTML += `
+                        <div class="questao-item">
+                            <div class="q-num">Q${idx+1}</div>
+                            <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
+                            <div class="q-gab">Oficial</div>
                         </div>
                     `;
                 });
@@ -7033,6 +7076,10 @@
                         .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
                         .disciplina-card .stats { display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px; }
                         .disciplina-card .stats strong { color:#0f172a; }
+                        .gabarito-oficial-card { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:16px; page-break-inside:avoid; }
+                        .gabarito-oficial-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+                        .gabarito-oficial-card .header strong { font-size:15px; color:#0f172a; }
+                        .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
                         @media print {
                             .no-print { display:none !important; }
                             body { padding:20px; }
@@ -7042,7 +7089,7 @@
                         @media (max-width:768px) {
                             .info-grid { grid-template-columns:1fr 1fr; }
                             .resumo { grid-template-columns:1fr 1fr; }
-                            .disciplina-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
+                            .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
                         }
                     </style>
                 </head>
@@ -7089,6 +7136,20 @@
                                 <span style="color:#16a34a;">✅ ACERTOU: ADQUIRIU HABILIDADE</span> | 
                                 <span style="color:#dc2626;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- NOVO CARD: GABARITO OFICIAL -->
+                    <div class="gabarito-oficial-card">
+                        <div class="header">
+                            <strong>📋 Gabarito Oficial da Prova</strong>
+                            <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
+                        </div>
+                        <div class="questoes-grid">
+                            ${gabOficialHTML}
+                        </div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #86efac; font-size:11px; color:#475569; text-align:center;">
+                            Respostas corretas da prova
                         </div>
                     </div>
 
@@ -7140,6 +7201,7 @@
                 document.getElementById('filtro-prova-desempenho').value = '';
                 document.getElementById('resultado-desempenho').style.display = 'none';
                 document.getElementById('desempenho-disciplina-unica').style.display = 'none';
+                document.getElementById('gabarito-oficial-card').style.display = 'none';
                 desempenhoData.alunoSelecionado = null;
                 showToast('✕ Filtros limpos!', 'info');
             }
