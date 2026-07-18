@@ -1997,7 +1997,10 @@
 
                     <!-- Resumo Geral -->
                     <div class="desempenho-resumo">
-                        <div class="item"><div class="valor blue" id="resumo-nota">0.0</div><div class="label">Nota Final</div></div>
+                        <div class="item">
+                            <div class="valor blue" id="resumo-nota">0%</div>
+                            <div class="label">Porcentagem de Acertos</div>
+                        </div>
                         <div class="item"><div class="valor green" id="resumo-acertos">0</div><div class="label">Acertos</div></div>
                         <div class="item"><div class="valor red" id="resumo-erros">0</div><div class="label">Erros</div></div>
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
@@ -2014,7 +2017,7 @@
                             <div class="stats" style="display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13px;">
                                 <span>✅ Acertos: <span class="acertos" id="disciplina-unica-acertos">0</span></span>
                                 <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
-                                <span>⭐ Nota: <span class="nota" id="disciplina-unica-nota">0.0</span></span>
+                                <span>⭐ Aproveitamento: <span class="nota" id="disciplina-unica-nota">0%</span></span>
                                 <span>📊 Conceito: <span id="disciplina-unica-conceito">—</span></span>
                             </div>
                         </div>
@@ -7014,10 +7017,10 @@
                         });
                     }
 
-                    const nota = totalQuestoes > 0 ? (acertos / totalQuestoes) * 10 : 0;
-                    const notaFinal = Math.round(nota * 10) / 10;
-
+                    // CALCULA PORCENTAGEM DE ACERTOS
                     const pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+
+                    // CONCEITO BASEADO NA PORCENTAGEM
                     let conceito = 'Inicial';
                     let conceitoCor = 'badge-red';
                     if (pct > 80) { conceito = 'Avançado'; conceitoCor = 'badge-green'; }
@@ -7035,16 +7038,16 @@
                         resultadoQuestoes: resultadoQuestoes,
                         acertos: acertos,
                         erros: erros,
-                        nota: notaFinal,
+                        porcentagem: pct,       // <-- NOVO: porcentagem de acertos
                         conceito: conceito,
                         disciplina: disciplina,
-                        totalQuestoes: totalQuestoes,
-                        pct: pct
+                        totalQuestoes: totalQuestoes
                     };
 
                     document.getElementById('resultado-desempenho').style.display = 'block';
 
-                    document.getElementById('resumo-nota').textContent = notaFinal.toFixed(1);
+                    // Exibe porcentagem no lugar da nota
+                    document.getElementById('resumo-nota').textContent = pct + '%';
                     document.getElementById('resumo-acertos').textContent = acertos;
                     document.getElementById('resumo-erros').textContent = erros;
                     document.getElementById('resumo-conceito').textContent = conceito;
@@ -7079,7 +7082,8 @@
 
                     document.getElementById('disciplina-unica-acertos').textContent = acertos;
                     document.getElementById('disciplina-unica-erros').textContent = erros;
-                    document.getElementById('disciplina-unica-nota').textContent = notaFinal.toFixed(1);
+                    // Exibe porcentagem no card único
+                    document.getElementById('disciplina-unica-nota').textContent = pct + '%';
 
                     const statusBadge = document.getElementById('disciplina-unica-status');
                     statusBadge.textContent = conceito;
@@ -7106,7 +7110,7 @@
                         gabGrid.appendChild(div);
                     });
 
-                    showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos`, 'success');
+                    showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
 
                 } catch (erro) {
                     console.error('❌ Erro ao gerar desempenho:', erro);
@@ -7144,7 +7148,7 @@
                         return;
                     }
 
-                    const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
+                    const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
 
                     let questoesHTML = '';
                     resultadoQuestoes.forEach(q => {
@@ -7246,7 +7250,7 @@
                         </div>
 
                         <div class="resumo">
-                            <div class="resumo-item"><div class="valor blue">${nota.toFixed(1)}</div><div class="label">Nota Final</div></div>
+                            <div class="resumo-item"><div class="valor blue">${porcentagem}%</div><div class="label">Porcentagem de Acertos</div></div>
                             <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
                             <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
                             <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
@@ -7267,7 +7271,7 @@
                                 <div class="stats">
                                     <span>✅ Acertos: <strong style="color:#16a34a;">${acertos}</strong></span>
                                     <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
-                                    <span>⭐ Nota: <strong style="color:#2563eb;">${nota.toFixed(1)}</strong></span>
+                                    <span>⭐ Aproveitamento: <strong style="color:#2563eb;">${porcentagem}%</strong></span>
                                     <span>📊 Total: <strong>${totalQuestoes}</strong></span>
                                 </div>
                                 <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
@@ -7319,7 +7323,6 @@
                             window.onload = function() {
                                 setTimeout(() => {
                                     window.print();
-                                    // Após a impressão, a janela pode ser fechada pelo usuário
                                 }, 500);
                             };
                         <\/script>
