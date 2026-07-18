@@ -1937,7 +1937,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL) ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -1986,7 +1986,7 @@
                     </div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
                         <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
-                        <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
+                        <button class="btn btn-green no-print" id="btnGerarDocumento" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
                         <button class="btn btn-orange no-print" onclick="editarGabaritoDesempenho()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
                         <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
                     </div>
@@ -2020,7 +2020,7 @@
                         </div>
                     </div>
 
-                    <!-- ===== NOVO CARD: GABARITO OFICIAL DA PROVA ===== -->
+                    <!-- ===== NOVO CARD: GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -2380,6 +2380,7 @@
             let camFacing = 'environment';
             let delTarget = null;
             let ultimaImagem = null;
+            let gerandoDocumento = false; // CONTROLE PARA EVITAR DUPLO CLIQUE
             
             // Dados para correção manual (dentro da IA)
             let correcaoManualData = {
@@ -3024,13 +3025,19 @@
                     } else {
                         tbody.innerHTML = comGabarito.map((p, i) => {
                             const temBNCC = p.bncc && p.bncc.some(c => c && c.trim() !== '');
+                            // Exibe os códigos BNCC separados por vírgula
+                            let bnccText = '—';
+                            if (p.bncc && p.bncc.length > 0) {
+                                const codigos = p.bncc.filter(c => c && c.trim() !== '');
+                                if (codigos.length > 0) bnccText = codigos.join(', ');
+                            }
                             return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                                 '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                                 '<td>' + p.titulo + '</td>' +
                                 '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                                 '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
                                 '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
-                                '<td>' + (temBNCC ? '✅' : '') + '</td>' +
+                                '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
                                 '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
                         }).join('');
@@ -5736,32 +5743,73 @@
                 }
             }
 
+            // ===== NOVA FUNÇÃO EXCLUIR ESCOLA (MANUAL EM CASCATA) =====
             async function excluirEscola(id, nome) {
                 if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome + '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n• Provas\n• Gabaritos\n• Correções\n\nEsta ação NÃO pode ser desfeita!')) return;
                 
                 try {
                     showToast('⏳ Excluindo escola e todos os dados vinculados...', 'info');
                     
-                    const response = await fetch(`${API_URL}/api/escolas/${id}/completo`, { 
+                    // 1. Buscar todas as turmas da escola
+                    const turmasResp = await fetch(`${API_URL}/api/turmas?escola_id=${id}`);
+                    const turmas = await turmasResp.json();
+                    console.log(`📊 ${turmas.length} turmas encontradas para exclusão.`);
+                    
+                    // 2. Para cada turma, excluir seus alunos e depois a turma
+                    for (const turma of turmas) {
+                        try {
+                            // Buscar alunos da turma
+                            const alunosResp = await fetch(`${API_URL}/api/alunos?turma_id=${turma.id}`);
+                            const alunos = await alunosResp.json();
+                            console.log(`  📚 Turma ${turma.nome}: ${alunos.length} alunos.`);
+                            
+                            // Excluir cada aluno
+                            for (const aluno of alunos) {
+                                try {
+                                    await fetch(`${API_URL}/api/alunos/${aluno.id}`, { method: 'DELETE' });
+                                } catch (e) {
+                                    console.warn(`  ⚠️ Erro ao excluir aluno ${aluno.id}:`, e);
+                                }
+                            }
+                            
+                            // Excluir a turma
+                            await fetch(`${API_URL}/api/turmas/${turma.id}`, { method: 'DELETE' });
+                        } catch (e) {
+                            console.warn(`  ⚠️ Erro ao excluir turma ${turma.id}:`, e);
+                        }
+                    }
+                    
+                    // 3. Buscar e excluir provas associadas à escola (se houver)
+                    try {
+                        const provasResp = await fetch(`${API_URL}/api/provas?escola_id=${id}`);
+                        const provas = await provasResp.json();
+                        for (const prova of provas) {
+                            try {
+                                await fetch(`${API_URL}/api/provas/${prova.id}`, { method: 'DELETE' });
+                            } catch (e) {
+                                console.warn(`  ⚠️ Erro ao excluir prova ${prova.id}:`, e);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('  ⚠️ Erro ao buscar/excluir provas:', e);
+                    }
+                    
+                    // 4. Finalmente, excluir a escola
+                    const response = await fetch(`${API_URL}/api/escolas/${id}`, { 
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' }
                     });
                     
-                    const result = await response.json();
+                    const result = await processarRespostaAPI(response);
                     
-                    if (response.ok && result.sucesso) {
-                        showToast(`✅ ${result.mensagem}`, 'success');
-                        
-                        if (result.detalhes) {
-                            console.log('📊 Detalhes da exclusão:', result.detalhes);
-                        }
-                    } else if (response.status === 404) {
-                        showToast('⚠️ Escola já foi excluída anteriormente', 'warning');
+                    if (result.ok) {
+                        showToast(`✅ Escola "${nome}" e todos os dados vinculados foram excluídos com sucesso!`, 'success');
                     } else {
-                        showToast(`❌ Erro ao excluir: ${result.erro || 'Erro desconhecido'}`, 'error');
+                        showToast(`❌ Erro ao excluir escola: ${result.data.erro || 'Erro desconhecido'}`, 'error');
                         return;
                     }
                     
+                    // Recarregar todas as listas
                     setTimeout(() => {
                         carregarEscolas();
                         carregarTurmas();
@@ -5781,6 +5829,7 @@
                         carregarEscolasParaCorrecaoManual();
                         carregarFiltrosRelTurma();
                         carregarFiltroEscolaTurmas();
+                        carregarEscolasDesempenho();
                     }, 1000);
                     
                 } catch (erro) {
@@ -6775,7 +6824,7 @@
             }
 
             // ============================================
-            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL)
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL + BNCC)
             // ============================================
             
             async function carregarEscolasDesempenho() {
@@ -6811,6 +6860,7 @@
                             opt.dataset.serie = serie;
                             opt.dataset.quantidade = p.quantidade_questoes || 20;
                             opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                            opt.dataset.bncc = JSON.stringify(p.bncc || []);
                             opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
@@ -6913,6 +6963,7 @@
                     const historico = await historicoResp.json();
                     
                     const gabarito = prova.gabarito || [];
+                    const bncc = prova.bncc || [];
                     const totalQuestoes = prova.quantidade_questoes || 20;
                     
                     let respostasAluno = [];
@@ -6945,6 +6996,7 @@
                     for (let i = 0; i < totalQuestoes; i++) {
                         const resp = (i < respostasAluno.length) ? (respostasAluno[i] || '') : '';
                         const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
+                        const codigoBncc = (i < bncc.length) ? (bncc[i] || '') : '';
                         const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
                         
                         if (resp) {
@@ -6956,6 +7008,7 @@
                             numero: i + 1,
                             resposta: resp || '—',
                             gabarito: gab || '—',
+                            bncc: codigoBncc,
                             acertou: isCorreto,
                             respondida: !!resp
                         });
@@ -6978,6 +7031,7 @@
                         prova,
                         respostas: respostasAluno,
                         gabarito: gabarito,
+                        bncc: bncc,
                         resultadoQuestoes: resultadoQuestoes,
                         acertos: acertos,
                         erros: erros,
@@ -7033,19 +7087,21 @@
 
                     document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
-                    // ---- NOVO CARD: GABARITO OFICIAL DA PROVA ----
+                    // ---- CARD GABARITO OFICIAL DA PROVA (COM BNCC) ----
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
                     
                     const gabGrid = document.getElementById('gabarito-oficial-grid');
                     gabGrid.innerHTML = '';
                     gabarito.forEach((gab, idx) => {
+                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
                         const div = document.createElement('div');
                         div.className = 'questao-item';
                         div.innerHTML = `
                             <div class="q-num">Q${idx+1}</div>
                             <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
                             <div class="q-gab">Oficial</div>
+                            ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${codigoBncc}</div>` : ''}
                         `;
                         gabGrid.appendChild(div);
                     });
@@ -7058,203 +7114,235 @@
                 }
             }
 
+            // ===== FUNÇÃO GERAR DOCUMENTO COM CONTROLE DE DUPLO CLIQUE =====
             function gerarDocumentoDesempenho() {
+                // Evita múltiplas chamadas simultâneas
+                if (gerandoDocumento) {
+                    showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
+                    return;
+                }
+
                 const data = desempenhoData.alunoSelecionado;
                 if (!data) {
                     showToast('⚠️ Gere o desempenho primeiro!', 'error');
                     return;
                 }
 
-                const win = window.open('', '_blank');
-                if (!win) {
-                    showToast('⚠️ Permita pop-ups para gerar o documento!', 'error');
-                    return;
-                }
+                // Desabilita o botão e marca como gerando
+                const btn = document.getElementById('btnGerarDocumento');
+                gerandoDocumento = true;
+                btn.disabled = true;
+                btn.textContent = '⏳ Gerando...';
 
-                const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes, gabarito } = data;
+                try {
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        showToast('⚠️ Permita pop-ups para gerar o documento!', 'error');
+                        gerandoDocumento = false;
+                        btn.disabled = false;
+                        btn.textContent = '📄 GERAR DOCUMENTO';
+                        return;
+                    }
 
-                let questoesHTML = '';
-                resultadoQuestoes.forEach(q => {
-                    const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                    const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
-                    questoesHTML += `
-                        <div class="questao-item ${classe}">
-                            <div class="q-num">Q${q.numero}</div>
-                            <div class="q-resp">${q.resposta}</div>
-                            <div class="q-gab">${q.gabarito}</div>
-                            <span class="q-status-text ${classe}">${statusText}</span>
+                    const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, nota, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
+
+                    let questoesHTML = '';
+                    resultadoQuestoes.forEach(q => {
+                        const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                        const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                        questoesHTML += `
+                            <div class="questao-item ${classe}">
+                                <div class="q-num">Q${q.numero}</div>
+                                <div class="q-resp">${q.resposta}</div>
+                                <div class="q-gab">${q.gabarito}</div>
+                                <span class="q-status-text ${classe}">${statusText}</span>
+                            </div>
+                        `;
+                    });
+
+                    // Gabarito oficial com BNCC
+                    let gabOficialHTML = '';
+                    gabarito.forEach((gab, idx) => {
+                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                        gabOficialHTML += `
+                            <div class="questao-item" style="border-color: #86efac;">
+                                <div class="q-num">Q${idx+1}</div>
+                                <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
+                                <div class="q-gab">Oficial</div>
+                                ${codigoBncc ? `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${codigoBncc}</div>` : ''}
+                            </div>
+                        `;
+                    });
+
+                    const html = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Desempenho do Aluno - ${aluno.nome}</title>
+                        <style>
+                            * { margin:0; padding:0; box-sizing:border-box; }
+                            body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#0f172a; padding:30px; }
+                            .header { text-align:center; margin-bottom:25px; padding-bottom:15px; border-bottom:2px solid #1e293b; }
+                            .header h1 { font-size:22px; color:#1e293b; }
+                            .header p { color:#475569; font-size:13px; margin-top:4px; }
+                            .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; background:#f1f5f9; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:13px; }
+                            .info-grid strong { color:#0f172a; }
+                            .resumo { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+                            .resumo-item { background:#f1f5f9; border-radius:8px; padding:12px; text-align:center; }
+                            .resumo-item .valor { font-size:24px; font-weight:800; }
+                            .resumo-item .label { font-size:11px; color:#475569; text-transform:uppercase; }
+                            .resumo-item .valor.green { color:#16a34a; }
+                            .resumo-item .valor.red { color:#dc2626; }
+                            .resumo-item .valor.blue { color:#2563eb; }
+                            .resumo-item .valor.purple { color:#7c3aed; }
+                            .footer { margin-top:25px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:12px; color:#64748b; }
+                            .questao-item { background:#f8fafc; border-radius:4px; padding:4px 2px; text-align:center; font-size:10px; border:1px solid #e2e8f0; }
+                            .questao-item .q-num { font-size:7px; color:#94a3b8; }
+                            .questao-item .q-resp { font-weight:700; font-size:12px; }
+                            .questao-item .q-gab { font-size:7px; color:#94a3b8; }
+                            .questao-item .q-status-text { font-size:7px; font-weight:700; display:block; margin-top:2px; }
+                            .questao-item.acertou { border-color:#16a34a; background:#dcfce7; }
+                            .questao-item.acertou .q-resp { color:#16a34a; }
+                            .questao-item.acertou .q-status-text { color:#16a34a; }
+                            .questao-item.errou { border-color:#dc2626; background:#fee2e2; }
+                            .questao-item.errou .q-resp { color:#dc2626; }
+                            .questao-item.errou .q-status-text { color:#dc2626; }
+                            .disciplina-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px; page-break-inside:avoid; }
+                            .disciplina-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+                            .disciplina-card .header strong { font-size:15px; color:#0f172a; }
+                            .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
+                            .disciplina-card .stats { display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px; }
+                            .disciplina-card .stats strong { color:#0f172a; }
+                            .gabarito-oficial-card { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:16px; page-break-inside:avoid; }
+                            .gabarito-oficial-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+                            .gabarito-oficial-card .header strong { font-size:15px; color:#0f172a; }
+                            .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
+                            @media print {
+                                .no-print { display:none !important; }
+                                body { padding:20px; }
+                                .info-grid { background:#f1f5f9 !important; }
+                                .resumo-item { background:#f1f5f9 !important; }
+                            }
+                            @media (max-width:768px) {
+                                .info-grid { grid-template-columns:1fr 1fr; }
+                                .resumo { grid-template-columns:1fr 1fr; }
+                                .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>📊 Relatório de Desempenho do Aluno</h1>
+                            <p>Sistema de Correção de Provas — São Sebastião da Boa Vista — SISAM 2026</p>
                         </div>
-                    `;
-                });
 
-                // Gabarito oficial
-                let gabOficialHTML = '';
-                gabarito.forEach((gab, idx) => {
-                    gabOficialHTML += `
-                        <div class="questao-item">
-                            <div class="q-num">Q${idx+1}</div>
-                            <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
-                            <div class="q-gab">Oficial</div>
+                        <div class="info-grid">
+                            <div><strong>🏫 Escola</strong><br>${escola.nome || '—'}</div>
+                            <div><strong>👥 Turma</strong><br>${turma.nome || ''} - ${turma.serie || ''}</div>
+                            <div><strong>🎒 Aluno</strong><br>${aluno.nome || '—'}</div>
+                            <div><strong>📄 Prova</strong><br>${prova.titulo || '—'}</div>
+                            <div><strong>📅 Data</strong><br>${new Date().toLocaleDateString('pt-BR')}</div>
                         </div>
-                    `;
-                });
 
-                const html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Desempenho do Aluno - ${aluno.nome}</title>
-                    <style>
-                        * { margin:0; padding:0; box-sizing:border-box; }
-                        body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#0f172a; padding:30px; }
-                        .header { text-align:center; margin-bottom:25px; padding-bottom:15px; border-bottom:2px solid #1e293b; }
-                        .header h1 { font-size:22px; color:#1e293b; }
-                        .header p { color:#475569; font-size:13px; margin-top:4px; }
-                        .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; background:#f1f5f9; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:13px; }
-                        .info-grid strong { color:#0f172a; }
-                        .resumo { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
-                        .resumo-item { background:#f1f5f9; border-radius:8px; padding:12px; text-align:center; }
-                        .resumo-item .valor { font-size:24px; font-weight:800; }
-                        .resumo-item .label { font-size:11px; color:#475569; text-transform:uppercase; }
-                        .resumo-item .valor.green { color:#16a34a; }
-                        .resumo-item .valor.red { color:#dc2626; }
-                        .resumo-item .valor.blue { color:#2563eb; }
-                        .resumo-item .valor.purple { color:#7c3aed; }
-                        .footer { margin-top:25px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:12px; color:#64748b; }
-                        .questao-item { background:#f8fafc; border-radius:4px; padding:4px 2px; text-align:center; font-size:10px; border:1px solid #e2e8f0; }
-                        .questao-item .q-num { font-size:7px; color:#94a3b8; }
-                        .questao-item .q-resp { font-weight:700; font-size:12px; }
-                        .questao-item .q-gab { font-size:7px; color:#94a3b8; }
-                        .questao-item .q-status-text { font-size:7px; font-weight:700; display:block; margin-top:2px; }
-                        .questao-item.acertou { border-color:#16a34a; background:#dcfce7; }
-                        .questao-item.acertou .q-resp { color:#16a34a; }
-                        .questao-item.acertou .q-status-text { color:#16a34a; }
-                        .questao-item.errou { border-color:#dc2626; background:#fee2e2; }
-                        .questao-item.errou .q-resp { color:#dc2626; }
-                        .questao-item.errou .q-status-text { color:#dc2626; }
-                        .disciplina-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px; page-break-inside:avoid; }
-                        .disciplina-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
-                        .disciplina-card .header strong { font-size:15px; color:#0f172a; }
-                        .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
-                        .disciplina-card .stats { display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px; }
-                        .disciplina-card .stats strong { color:#0f172a; }
-                        .gabarito-oficial-card { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:16px; page-break-inside:avoid; }
-                        .gabarito-oficial-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
-                        .gabarito-oficial-card .header strong { font-size:15px; color:#0f172a; }
-                        .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
-                        @media print {
-                            .no-print { display:none !important; }
-                            body { padding:20px; }
-                            .info-grid { background:#f1f5f9 !important; }
-                            .resumo-item { background:#f1f5f9 !important; }
-                        }
-                        @media (max-width:768px) {
-                            .info-grid { grid-template-columns:1fr 1fr; }
-                            .resumo { grid-template-columns:1fr 1fr; }
-                            .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>📊 Relatório de Desempenho do Aluno</h1>
-                        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista — SISAM 2026</p>
-                    </div>
+                        <div class="resumo">
+                            <div class="resumo-item"><div class="valor blue">${nota.toFixed(1)}</div><div class="label">Nota Final</div></div>
+                            <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
+                            <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
+                            <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
+                        </div>
 
-                    <div class="info-grid">
-                        <div><strong>🏫 Escola</strong><br>${escola.nome || '—'}</div>
-                        <div><strong>👥 Turma</strong><br>${turma.nome || ''} - ${turma.serie || ''}</div>
-                        <div><strong>🎒 Aluno</strong><br>${aluno.nome || '—'}</div>
-                        <div><strong>📄 Prova</strong><br>${prova.titulo || '—'}</div>
-                        <div><strong>📅 Data</strong><br>${new Date().toLocaleDateString('pt-BR')}</div>
-                    </div>
+                        <div style="margin-bottom:20px;">
+                            <h3 style="font-size:16px; margin-bottom:12px; color:#1e293b;">📋 Desempenho por Disciplina</h3>
+                            <div class="disciplina-card">
+                                <div class="header">
+                                    <strong>${disciplina}</strong>
+                                    <span style="background:${conceito === 'Avançado' ? '#d4edda' : conceito === 'Proficiente' ? '#cce5ff' : conceito === 'Básico' ? '#fff3cd' : '#f8d7da'}; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:${conceito === 'Avançado' ? '#155724' : conceito === 'Proficiente' ? '#004085' : conceito === 'Básico' ? '#856404' : '#721c24'};">
+                                        ${conceito}
+                                    </span>
+                                </div>
+                                <div class="questoes-grid">
+                                    ${questoesHTML}
+                                </div>
+                                <div class="stats">
+                                    <span>✅ Acertos: <strong style="color:#16a34a;">${acertos}</strong></span>
+                                    <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
+                                    <span>⭐ Nota: <strong style="color:#2563eb;">${nota.toFixed(1)}</strong></span>
+                                    <span>📊 Total: <strong>${totalQuestoes}</strong></span>
+                                </div>
+                                <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
+                                    <span style="color:#16a34a;">✅ ACERTOU: ADQUIRIU HABILIDADE</span> | 
+                                    <span style="color:#dc2626;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="resumo">
-                        <div class="resumo-item"><div class="valor blue">${nota.toFixed(1)}</div><div class="label">Nota Final</div></div>
-                        <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
-                        <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
-                        <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
-                    </div>
-
-                    <div style="margin-bottom:20px;">
-                        <h3 style="font-size:16px; margin-bottom:12px; color:#1e293b;">📋 Desempenho por Disciplina</h3>
-                        <div class="disciplina-card">
+                        <!-- CARD GABARITO OFICIAL COM BNCC -->
+                        <div class="gabarito-oficial-card">
                             <div class="header">
-                                <strong>${disciplina}</strong>
-                                <span style="background:${conceito === 'Avançado' ? '#d4edda' : conceito === 'Proficiente' ? '#cce5ff' : conceito === 'Básico' ? '#fff3cd' : '#f8d7da'}; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:${conceito === 'Avançado' ? '#155724' : conceito === 'Proficiente' ? '#004085' : conceito === 'Básico' ? '#856404' : '#721c24'};">
-                                    ${conceito}
-                                </span>
+                                <strong>📋 Gabarito Oficial da Prova</strong>
+                                <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
                             </div>
                             <div class="questoes-grid">
-                                ${questoesHTML}
+                                ${gabOficialHTML}
                             </div>
-                            <div class="stats">
-                                <span>✅ Acertos: <strong style="color:#16a34a;">${acertos}</strong></span>
-                                <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
-                                <span>⭐ Nota: <strong style="color:#2563eb;">${nota.toFixed(1)}</strong></span>
-                                <span>📊 Total: <strong>${totalQuestoes}</strong></span>
-                            </div>
-                            <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
-                                <span style="color:#16a34a;">✅ ACERTOU: ADQUIRIU HABILIDADE</span> | 
-                                <span style="color:#dc2626;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
+                            <div style="margin-top:8px; padding-top:8px; border-top:1px solid #86efac; font-size:11px; color:#475569; text-align:center;">
+                                Respostas corretas da prova
                             </div>
                         </div>
-                    </div>
 
-                    <!-- NOVO CARD: GABARITO OFICIAL -->
-                    <div class="gabarito-oficial-card">
-                        <div class="header">
-                            <strong>📋 Gabarito Oficial da Prova</strong>
-                            <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
+                        <div class="footer">
+                            <span>Documento gerado em ${new Date().toLocaleString('pt-BR')}</span>
+                            <span>© ${new Date().getFullYear()} CorrigePro — Secretaria Municipal de Educação</span>
                         </div>
-                        <div class="questoes-grid">
-                            ${gabOficialHTML}
+
+                        <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0;">
+                            <p style="font-size:11px; color:#94a3b8;">
+                                <strong>Legenda:</strong> 
+                                <span style="color:#16a34a;">✅ Acertou</span> | 
+                                <span style="color:#dc2626;">❌ Errou</span> | 
+                                <span style="color:#94a3b8;">— Não respondeu</span>
+                            </p>
+                            <div style="display:flex; justify-content:center; gap:20px; font-size:10px; color:#94a3b8; margin-top:6px;">
+                                <span>🔴 Inicial (até 40%)</span>
+                                <span>🟠 Básico (41% a 60%)</span>
+                                <span>🔵 Proficiente (61% a 80%)</span>
+                                <span>🟢 Avançado (acima de 80%)</span>
+                            </div>
                         </div>
-                        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #86efac; font-size:11px; color:#475569; text-align:center;">
-                            Respostas corretas da prova
+
+                        <div style="text-align:center; margin-top:15px; font-size:11px; color:#94a3b8;">
+                            <p>Imprima ou salve este documento como PDF para registro oficial.</p>
                         </div>
-                    </div>
 
-                    <div class="footer">
-                        <span>Documento gerado em ${new Date().toLocaleString('pt-BR')}</span>
-                        <span>© ${new Date().getFullYear()} CorrigePro — Secretaria Municipal de Educação</span>
-                    </div>
+                        <script>
+                            window.onload = function() {
+                                setTimeout(() => {
+                                    window.print();
+                                    // Após a impressão, a janela pode ser fechada pelo usuário
+                                }, 500);
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                    `;
 
-                    <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0;">
-                        <p style="font-size:11px; color:#94a3b8;">
-                            <strong>Legenda:</strong> 
-                            <span style="color:#16a34a;">✅ Acertou</span> | 
-                            <span style="color:#dc2626;">❌ Errou</span> | 
-                            <span style="color:#94a3b8;">— Não respondeu</span>
-                        </p>
-                        <div style="display:flex; justify-content:center; gap:20px; font-size:10px; color:#94a3b8; margin-top:6px;">
-                            <span>🔴 Inicial (até 40%)</span>
-                            <span>🟠 Básico (41% a 60%)</span>
-                            <span>🔵 Proficiente (61% a 80%)</span>
-                            <span>🟢 Avançado (acima de 80%)</span>
-                        </div>
-                    </div>
+                    win.document.write(html);
+                    win.document.close();
+                    setTimeout(() => win.print(), 600);
 
-                    <div style="text-align:center; margin-top:15px; font-size:11px; color:#94a3b8;">
-                        <p>Imprima ou salve este documento como PDF para registro oficial.</p>
-                    </div>
-
-                    <script>
-                        window.onload = function() {
-                            setTimeout(() => {
-                                window.print();
-                            }, 500);
-                        };
-                    <\/script>
-                </body>
-                </html>
-                `;
-
-                win.document.write(html);
-                win.document.close();
-                setTimeout(() => win.print(), 500);
-                showToast('📄 Documento gerado!', 'success');
+                    showToast('📄 Documento gerado!', 'success');
+                } catch (erro) {
+                    console.error('Erro ao gerar documento:', erro);
+                    showToast('❌ Erro ao gerar documento: ' + erro.message, 'error');
+                } finally {
+                    // Reabilita o botão após a conclusão (com um pequeno atraso para garantir)
+                    setTimeout(() => {
+                        gerandoDocumento = false;
+                        btn.disabled = false;
+                        btn.textContent = '📄 GERAR DOCUMENTO';
+                    }, 1000);
+                }
             }
 
             function limparFiltrosDesempenho() {
