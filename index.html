@@ -1190,7 +1190,7 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
+                    <!-- ===== ABA RELATÓRIO POR ALUNO REMOVIDA ===== -->
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -1228,7 +1228,7 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <div class="sb-item" onclick="go('rel-aluno')" data-p="rel-aluno"><span class="sb-ico">👤</span> Rel. por Aluno</div>
+                    <!-- ===== ABA RELATÓRIO POR ALUNO REMOVIDA ===== -->
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
                     <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
@@ -1913,225 +1913,6 @@
                 </div>
             </div>
 
-            <!-- ========== RELATÓRIO POR ALUNO ========== -->
-            <div class="page" id="page-rel-aluno">
-                <div class="page-header">
-                    <div><div class="page-title">👤 Relatório por Aluno</div></div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️</button>
-                        <button class="btn btn-green" onclick="exportarRelatorioAluno()">📥 PDF</button>
-                    </div>
-                </div>
-
-                <div class="print-header print-only">
-                    <h2>👤 Relatório por Aluno</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-aluno"></span></p>
-                </div>
-
-                <div class="card no-print">
-                    <div class="form-row c3">
-                        <div class="form-group">
-                            <label class="form-label">Escola <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-escola" onchange="carregarTurmasRelAluno(this.value)">
-                                <option value="">Selecione a escola...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-turma" onchange="carregarAlunosRelAluno(this.value)">
-                                <option value="">Selecione a turma...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prova <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-prova">
-                                <option value="">Selecione a prova...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Aluno <span class="req">*</span></label>
-                            <select class="form-control" id="rel-aluno-select">
-                                <option value="">Selecione o aluno...</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="justify-content:flex-end; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-                            <button class="btn btn-primary" style="margin-top:auto;" onclick="buscarRelatorioAluno()">🔍 Buscar</button>
-                            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                            <button class="btn btn-orange" onclick="editarGabaritoAluno()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
-                            <button class="btn btn-red" onclick="excluirAlunoRelatorio()" title="Excluir Aluno">🗑️ Excluir Aluno</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:flex; flex-direction:column; gap:16px;">
-                    <div class="card" style="width:100%;">
-                        <div class="card-header">
-                            <div class="card-title">📋 Histórico do Aluno</div>
-                            <span class="badge badge-gray" id="total-historico">0 registros</span>
-                        </div>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th rowspan="2">Prova</th>
-                                        <th rowspan="2">Data</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
-                                        <th colspan="3" class="historico-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
-                                    </tr>
-                                    <tr>
-                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rel-aluno-historico">
-                                    <tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Selecione um aluno</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- ========== DESEMPENHO POR HABILIDADES ========== -->
-                    <div class="card" style="width:100%;">
-                        <div class="card-header">
-                            <div class="card-title">🎯 DESEMPENHO POR HABILIDADES</div>
-                            <span class="badge badge-purple">Por disciplina</span>
-                        </div>
-                        <div id="habilidades-container">
-                            <div class="habilidades-grid" id="habilidades-grid">
-                                <div class="habilidade-card">
-                                    <div class="disciplina-titulo">
-                                        <span class="icone">📖</span>
-                                        <span>Português</span>
-                                    </div>
-                                    <div id="habilidade-portugues">
-                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                            Selecione um aluno para ver o desempenho
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="habilidade-card">
-                                    <div class="disciplina-titulo">
-                                        <span class="icone">🔢</span>
-                                        <span>Matemática</span>
-                                    </div>
-                                    <div id="habilidade-matematica">
-                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                            Selecione um aluno para ver o desempenho
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="habilidade-card">
-                                    <div class="disciplina-titulo">
-                                        <span class="icone">✍️</span>
-                                        <span>Produção de Texto</span>
-                                    </div>
-                                    <div id="habilidade-producao">
-                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                            Selecione um aluno para ver o desempenho
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="habilidade-card">
-                                    <div class="disciplina-titulo">
-                                        <span class="icone">🌍</span>
-                                        <span>Ciências Humanas</span>
-                                    </div>
-                                    <div id="habilidade-ch">
-                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                            Selecione um aluno para ver o desempenho
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="habilidade-card">
-                                    <div class="disciplina-titulo">
-                                        <span class="icone">🔬</span>
-                                        <span>Ciências Naturais</span>
-                                    </div>
-                                    <div id="habilidade-cn">
-                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                            Selecione um aluno para ver o desempenho
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
-                                <span class="badge badge-green" style="background:rgba(16,185,129,0.15);color:#10b981;">✅ ACERTOU: ADQUIRIU HABILIDADE</span>
-                                <span class="badge badge-red" style="background:rgba(239,68,68,0.15);color:#ef4444;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card" style="width:100%;">
-                        <div class="card-header">
-                            <div class="card-title">📊 Conceito</div>
-                            <span class="badge badge-purple">Por disciplina</span>
-                        </div>
-                        <div id="rel-conceito-disciplinas" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; padding:8px 0;">
-                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;">📖</div>
-                                <div style="font-size:13px; font-weight:700; color:#3b82f6;">Português</div>
-                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-port-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-port-erros" style="color:var(--red); font-weight:700;">0</span></div>
-                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-port-conceito">—</div>
-                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
-                            </div>
-                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(16,185,129,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;">🔢</div>
-                                <div style="font-size:13px; font-weight:700; color:#10b981;">Matemática</div>
-                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-mat-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-mat-erros" style="color:var(--red); font-weight:700;">0</span></div>
-                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-mat-conceito">—</div>
-                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
-                            </div>
-                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(139,92,246,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;">✍️</div>
-                                <div style="font-size:13px; font-weight:700; color:#8b5cf6;">Produção</div>
-                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-prod-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-prod-erros" style="color:var(--red); font-weight:700;">0</span></div>
-                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-prod-conceito">—</div>
-                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
-                            </div>
-                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(245,158,11,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;">🌍</div>
-                                <div style="font-size:13px; font-weight:700; color:#f59e0b;">CH</div>
-                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-ch-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-ch-erros" style="color:var(--red); font-weight:700;">0</span></div>
-                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-ch-conceito">—</div>
-                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
-                            </div>
-                            <div style="background:var(--bg2); border-radius:12px; padding:16px 14px; text-align:center; border:1px solid rgba(20,184,166,0.2);">
-                                <div style="font-size:24px; margin-bottom:6px;">🔬</div>
-                                <div style="font-size:13px; font-weight:700; color:#14b8a6;">CN</div>
-                                <div style="font-size:11px; color:var(--text3); margin:6px 0 4px;">Acertos: <span id="conceito-cn-acertos" style="color:var(--green); font-weight:700;">0</span> | Erros: <span id="conceito-cn-erros" style="color:var(--red); font-weight:700;">0</span></div>
-                                <div style="font-size:28px; font-weight:800; margin-top:4px;" id="conceito-cn-conceito">—</div>
-                                <div style="font-size:10px; color:var(--text3);">Conceito</div>
-                            </div>
-                        </div>
-                        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
-                            <span class="badge badge-conceito-inicial">🔴 Inicial</span>
-                            <span class="badge badge-conceito-basico">🟠 Básico</span>
-                            <span class="badge badge-conceito-proficiente">🔵 Proficiente</span>
-                            <span class="badge badge-conceito-avancado">🟢 Avançado</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="page" id="page-rel-escola">
                 <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
 
@@ -2233,6 +2014,7 @@
                     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
                         <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
                         <button class="btn btn-green no-print" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
+                        <button class="btn btn-orange no-print" onclick="editarGabaritoDesempenho()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
                         <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
                     </div>
                 </div>
@@ -2763,7 +2545,6 @@
                     'print-data-dash',
                     'print-data-resultados',
                     'print-data-rel-turma',
-                    'print-data-rel-aluno',
                     'print-data-rel-escola',
                     'print-data-u-dash',
                     'print-data-u-rel',
@@ -2850,7 +2631,6 @@
                 carregarDados();
                 atualizarDatasImpressao();
                 carregarEscolasParaCorrecaoManual();
-                carregarEscolasRelAluno();
                 carregarFiltrosRelTurma();
                 carregarEscolasDesempenho();
             }
@@ -2886,9 +2666,6 @@
                 if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
                 if (page === 'gabaritos') carregarGabaritos();
                 if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
-                if (page === 'rel-aluno') {
-                    carregarEscolasRelAluno();
-                }
                 if (page === 'rel-escola') carregarRelatorios();
                 if (page === 'desempenho') {
                     carregarEscolasDesempenho();
@@ -4047,362 +3824,28 @@
             }
 
             // ============================================
-            // FUNÇÃO PARA BUSCAR RELATÓRIO DO ALUNO
+            // FUNÇÕES PARA RELATÓRIO POR ALUNO (REMOVIDAS - NÃO USAR MAIS)
             // ============================================
-            function buscarRelatorioAluno() {
-                const alunoId = document.getElementById('rel-aluno-select').value;
-                const provaId = document.getElementById('rel-aluno-prova').value;
-                
+            // As funções editarGabaritoAluno() e excluirAlunoRelatorio() foram removidas
+            // pois a aba Relatório por Aluno foi excluída.
+
+            // ============================================
+            // FUNÇÃO EDITAR GABARITO NA ABA DESEMPENHO
+            // ============================================
+            function editarGabaritoDesempenho() {
+                const alunoId = document.getElementById('filtro-aluno-desempenho').value;
+                const provaId = document.getElementById('filtro-prova-desempenho').value;
+                const alunoNome = document.getElementById('filtro-aluno-desempenho')?.options[document.getElementById('filtro-aluno-desempenho')?.selectedIndex]?.text || 'Aluno';
+
                 if (!alunoId) {
                     showToast('❌ Selecione um aluno!', 'error');
                     return;
                 }
-                
-                showToast('🔍 Buscando histórico do aluno...', 'info');
-                const tbody = document.getElementById('rel-aluno-historico');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Carregando histórico...</td></tr>';
-                }
-                
-                let url = API_URL + '/api/historico?aluno_id=' + alunoId;
-                if (provaId && provaId !== '') {
-                    url += '&prova_id=' + provaId;
-                }
-                
-                fetch(url)
-                    .then(r => r.json())
-                    .then(historico => {
-                        if (!historico || historico.length === 0 || historico.erro) {
-                            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
-                            document.getElementById('total-historico').textContent = '0 registros';
-                            ['port', 'mat', 'prod', 'ch', 'cn'].forEach(prefixo => {
-                                document.getElementById(`conceito-${prefixo}-acertos`).textContent = '0';
-                                document.getElementById(`conceito-${prefixo}-erros`).textContent = '0';
-                                const el = document.getElementById(`conceito-${prefixo}-conceito`);
-                                el.textContent = '—';
-                                el.className = 'badge badge-gray';
-                                el.style.fontSize = '16px';
-                                el.style.padding = '4px 14px';
-                            });
-                            ['portugues', 'matematica', 'producao', 'ch', 'cn'].forEach(key => {
-                                const container = document.getElementById(`habilidade-${key}`);
-                                if (container) {
-                                    container.innerHTML = `
-                                        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">
-                                            Nenhum dado disponível
-                                        </div>
-                                    `;
-                                }
-                            });
-                            return;
-                        }
-                        
-                        const provasMap = new Map();
-                        historico.forEach(item => {
-                            const key = item.prova_id || item.prova_titulo;
-                            if (!provasMap.has(key)) {
-                                provasMap.set(key, {
-                                    prova_id: item.prova_id,
-                                    prova_titulo: item.prova_titulo || 'Prova',
-                                    data: item.data_correcao || item.data_prova || '',
-                                    avaliacoes: {},
-                                    escola: item.escola_nome || '',
-                                    turma: item.turma_nome || '',
-                                    serie: item.serie || '',
-                                    respostas: item.respostas || [],
-                                    gabarito: item.gabarito || [],
-                                    total: item.total || 20,
-                                    disciplina: item.disciplina || '',
-                                    acertos: item.acertos || 0
-                                });
-                            } else {
-                                const prova = provasMap.get(key);
-                                if (item.respostas && item.respostas.length > 0) {
-                                    prova.respostas = item.respostas;
-                                }
-                                if (item.gabarito && item.gabarito.length > 0) {
-                                    prova.gabarito = item.gabarito;
-                                }
-                                if (item.total) prova.total = item.total;
-                                if (item.acertos) prova.acertos = item.acertos;
-                                if (item.disciplina) prova.disciplina = item.disciplina;
-                                if (item.serie) prova.serie = item.serie;
-                            }
-                            const prova = provasMap.get(key);
-                            const disciplina = item.disciplina || 'Geral';
-                            let tipo = 'Geral';
-                            const discLower = disciplina.toLowerCase();
-                            if (discLower.includes('português') || discLower.includes('portugues')) {
-                                tipo = 'Portugues';
-                            } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
-                                tipo = 'Matematica';
-                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
-                                tipo = 'Producao';
-                            } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
-                                tipo = 'CH';
-                            } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
-                                tipo = 'CN';
-                            }
-                            if (tipo === 'Geral' && item.prova_titulo) {
-                                const titulo = item.prova_titulo.toLowerCase();
-                                if (titulo.includes('português') || titulo.includes('portugues')) tipo = 'Portugues';
-                                else if (titulo.includes('matemática') || titulo.includes('matematica')) tipo = 'Matematica';
-                                else if (titulo.includes('produção') || titulo.includes('producao') || titulo.includes('texto')) tipo = 'Producao';
-                                else if (titulo.includes('ciências humanas') || titulo.includes('ch')) tipo = 'CH';
-                                else if (titulo.includes('ciências naturais') || titulo.includes('cn')) tipo = 'CN';
-                            }
-                            if (tipo === 'Geral') {
-                                const serie = item.serie || '';
-                                if (serie.includes('1') || serie.includes('2') || serie.includes('3') || serie.includes('4') || serie.includes('5')) {
-                                    tipo = 'Portugues';
-                                } else {
-                                    tipo = 'Matematica';
-                                }
-                            }
-                            const nota = parseFloat(item.nota) || 0;
-                            const acertos = item.acertos || 0;
-                            const total = item.total || 20;
-                            prova.avaliacoes[tipo] = { nota, acertos, total };
-                            if (item.respostas && item.respostas.length > 0) {
-                                prova.respostas = item.respostas;
-                            }
-                            if (item.gabarito && item.gabarito.length > 0) {
-                                prova.gabarito = item.gabarito;
-                            }
-                        });
-                        
-                        const provasArray = Array.from(provasMap.values()).map(prova => {
-                            const portugues = prova.avaliacoes.Portugues || { nota: 0, acertos: 0, total: 20 };
-                            const matematica = prova.avaliacoes.Matematica || { nota: 0, acertos: 0, total: 20 };
-                            const producao = prova.avaliacoes.Producao || { nota: 0, acertos: 0, total: 20 };
-                            const ch = prova.avaliacoes.CH || { nota: 0, acertos: 0, total: 20 };
-                            const cn = prova.avaliacoes.CN || { nota: 0, acertos: 0, total: 20 };
-                            
-                            const erroPortugues = portugues.total - portugues.acertos;
-                            const erroMatematica = matematica.total - matematica.acertos;
-                            const erroProducao = producao.total - producao.acertos;
-                            const erroCH = ch.total - ch.acertos;
-                            const erroCN = cn.total - cn.acertos;
-                            
-                            const pctPortugues = portugues.total > 0 ? Math.round((portugues.acertos / portugues.total) * 100) : 0;
-                            const pctMatematica = matematica.total > 0 ? Math.round((matematica.acertos / matematica.total) * 100) : 0;
-                            const pctProducao = producao.total > 0 ? Math.round((producao.acertos / producao.total) * 100) : 0;
-                            const pctCH = ch.total > 0 ? Math.round((ch.acertos / ch.total) * 100) : 0;
-                            const pctCN = cn.total > 0 ? Math.round((cn.acertos / cn.total) * 100) : 0;
-                            
-                            const conceitoPortugues = calcularConceito(pctPortugues);
-                            const conceitoMatematica = calcularConceito(pctMatematica);
-                            const conceitoProducao = calcularConceito(pctProducao);
-                            const conceitoCH = calcularConceito(pctCH);
-                            const conceitoCN = calcularConceito(pctCN);
-                            
-                            return {
-                                ...prova,
-                                portugues: { ...portugues, erros: erroPortugues, conceito: conceitoPortugues },
-                                matematica: { ...matematica, erros: erroMatematica, conceito: conceitoMatematica },
-                                producao: { ...producao, erros: erroProducao, conceito: conceitoProducao },
-                                ch: { ...ch, erros: erroCH, conceito: conceitoCH },
-                                cn: { ...cn, erros: erroCN, conceito: conceitoCN }
-                            };
-                        });
-                        
-                        if (provasArray.length === 0) {
-                            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível</td></tr>';
-                            document.getElementById('total-historico').textContent = '0 registros';
-                            return;
-                        }
-                        
-                        document.getElementById('total-historico').textContent = provasArray.length + ' registros';
-                        
-                        function badgeConceito(c) {
-                            return `badge-conceito-${c}-sm`;
-                        }
-                        
-                        tbody.innerHTML = provasArray.map(p => {
-                            const data = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '—';
-                            
-                            return '<tr>' +
-                                '<td style="text-align:left;font-size:10px;">' + p.prova_titulo + '</td>' +
-                                '<td style="font-size:10px;">' + data + '</td>' +
-                                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + p.portugues.acertos + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + p.portugues.erros + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(p.portugues.conceito) + '">' + p.portugues.conceito + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + p.matematica.acertos + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + p.matematica.erros + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(p.matematica.conceito) + '">' + p.matematica.conceito + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + p.producao.acertos + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + p.producao.erros + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(p.producao.conceito) + '">' + p.producao.conceito + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + p.ch.acertos + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + p.ch.erros + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(p.ch.conceito) + '">' + p.ch.conceito + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + p.cn.acertos + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + p.cn.erros + '</span></td>' +
-                                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(p.cn.conceito) + '">' + p.cn.conceito + '</span></td>' +
-                                '</tr>';
-                        }).join('');
-                        
-                        atualizarConceitosDisciplinas(historico);
-                        
-                        const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
-                        atualizarHabilidades(historico, alunoNome);
-                        
-                        const evolucao = document.getElementById('rel-evolucao');
-                        if (evolucao && provasArray.length > 0) {
-                            const provasOrdenadas = [...provasArray].sort((a, b) => {
-                                const dataA = a.data ? new Date(a.data) : 0;
-                                const dataB = b.data ? new Date(b.data) : 0;
-                                return dataA - dataB;
-                            });
-                            const maxNota = Math.max(...provasOrdenadas.map(p => p.portugues.nota + p.matematica.nota + p.producao.nota + p.ch.nota + p.cn.nota), 1);
-                            let html = '<div class="chart-bars" style="height:100px;">';
-                            provasOrdenadas.forEach((p, index) => {
-                                const soma = p.portugues.nota + p.matematica.nota + p.producao.nota + p.ch.nota + p.cn.nota;
-                                const altura = Math.max(10, (soma / 50) * 80);
-                                const cor = soma >= 25 ? '#10b981' : (soma >= 15 ? '#f59e0b' : '#ef4444');
-                                const label = p.prova_titulo.substring(0, 10);
-                                html += `<div class="chart-bar-item" title="${p.prova_titulo} - Soma: ${soma.toFixed(1)}">
-                                    <div class="chart-bar-val">${soma.toFixed(1)}</div>
-                                    <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
-                                    <div class="chart-bar-lbl">${label}</div>
-                                </div>`;
-                            });
-                            html += '</div>';
-                            evolucao.innerHTML = html;
-                        }
-                    })
-                    .catch(e => {
-                        console.error('Erro ao carregar histórico:', e);
-                        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:var(--text3);">Erro ao carregar histórico</td></tr>';
-                    });
-            }
-
-            // ============================================
-            // FUNÇÕES PARA RELATÓRIO POR ALUNO
-            // ============================================
-            async function carregarEscolasRelAluno() {
-                try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
-                    const select = document.getElementById('rel-aluno-escola');
-                    if (select && escolas && !escolas.erro) {
-                        const current = select.value;
-                        select.innerHTML = '<option value="">Selecione a escola...</option>';
-                        escolas.forEach(e => {
-                            const opt = document.createElement('option');
-                            opt.value = e.id;
-                            opt.textContent = e.nome;
-                            select.appendChild(opt);
-                        });
-                        if (current) {
-                            select.value = current;
-                            carregarTurmasRelAluno(current);
-                        }
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar escolas:', erro);
-                }
-            }
-
-            async function carregarTurmasRelAluno(escolaId) {
-                const selectTurma = document.getElementById('rel-aluno-turma');
-                const selectProva = document.getElementById('rel-aluno-prova');
-                const selectAluno = document.getElementById('rel-aluno-select');
-                
-                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-                selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
-                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-                
-                if (!escolaId) return;
-                
-                try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
-                    if (turmas && !turmas.erro) {
-                        turmas.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            opt.dataset.serie = t.serie || '';
-                            selectTurma.appendChild(opt);
-                        });
-                    }
-                } catch (e) {
-                    console.error('Erro ao carregar turmas:', e);
-                }
-            }
-
-            async function carregarAlunosRelAluno(turmaId) {
-                const escolaId = document.getElementById('rel-aluno-escola').value;
-                const selectAluno = document.getElementById('rel-aluno-select');
-                const selectProva = document.getElementById('rel-aluno-prova');
-                
-                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-                
-                if (!turmaId) return;
-                
-                try {
-                    let url = API_URL + '/api/alunos?';
-                    const params = [];
-                    if (escolaId) params.push(`escola_id=${escolaId}`);
-                    if (turmaId) params.push(`turma_id=${turmaId}`);
-                    url += params.join('&');
-                    
-                    const response = await fetch(url);
-                    const alunos = await response.json();
-                    
-                    if (alunos && !alunos.erro) {
-                        alunos.forEach(a => {
-                            const opt = document.createElement('option');
-                            opt.value = a.id;
-                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                            selectAluno.appendChild(opt);
-                        });
-                    }
-                    
-                    const turmaAnterior = selectProva.dataset.turmaId || '';
-                    if (turmaId !== turmaAnterior) {
-                        const provasResp = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
-                        const provas = await provasResp.json();
-                        const currentProva = selectProva.value;
-                        selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
-                        if (provas && !provas.erro) {
-                            provas.forEach(p => {
-                                const opt = document.createElement('option');
-                                opt.value = p.id;
-                                opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
-                                selectProva.appendChild(opt);
-                            });
-                        }
-                        if (currentProva) {
-                            selectProva.value = currentProva;
-                        }
-                        selectProva.dataset.turmaId = turmaId;
-                    }
-                    
-                } catch (e) {
-                    console.error('Erro ao carregar alunos:', e);
-                }
-            }
-
-            // ============================================
-            // FUNÇÃO PARA EDITAR GABARITO DO ALUNO
-            // ============================================
-            function editarGabaritoAluno() {
-                const alunoId = document.getElementById('rel-aluno-select').value;
-                const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
-                const provaId = document.getElementById('rel-aluno-prova').value;
-                
-                if (!alunoId) {
-                    showToast('❌ Selecione um aluno!', 'error');
-                    return;
-                }
-                
                 if (!provaId) {
                     showToast('❌ Selecione uma prova!', 'error');
                     return;
                 }
-                
+
                 fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`)
                     .then(r => r.json())
                     .then(historico => {
@@ -4410,9 +3853,9 @@
                             showToast('❌ Nenhuma correção encontrada para este aluno e prova!', 'error');
                             return;
                         }
-                        
+
                         const correcao = historico[0];
-                        
+
                         fetch(`${API_URL}/api/provas/${provaId}`)
                             .then(r => r.json())
                             .then(prova => {
@@ -4420,7 +3863,7 @@
                                     showToast('❌ Erro ao carregar dados da prova!', 'error');
                                     return;
                                 }
-                                
+
                                 correcaoManualData.alunoId = parseInt(alunoId);
                                 correcaoManualData.alunoNome = alunoNome;
                                 correcaoManualData.provaId = parseInt(provaId);
@@ -4433,7 +3876,7 @@
                                 correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
                                 correcaoManualData.valorPorQuestao = correcaoManualData.notaMaxima / correcaoManualData.quantidade;
                                 correcaoManualData.serie = prova.serie || '1º Ano';
-                                
+
                                 document.getElementById('cm-aluno-nome').textContent = alunoNome;
                                 document.getElementById('cm-prova-titulo').textContent = prova.titulo || 'Prova';
                                 document.getElementById('cm-turma-info').textContent = (prova.serie || '') + ' | Turma: ' + (prova.turma_nome || '');
@@ -4441,6 +3884,8 @@
                                 gerarGridCorrecaoManual();
                                 atualizarResumoCorrecaoManual();
                                 openM('m-correcao-manual');
+
+                                showToast(`✏️ Editando gabarito de ${alunoNome}`, 'info');
                             })
                             .catch(e => {
                                 console.error('Erro ao carregar prova:', e);
@@ -4451,25 +3896,6 @@
                         console.error('Erro ao carregar histórico:', e);
                         showToast('❌ Erro ao carregar histórico do aluno', 'error');
                     });
-            }
-
-            // ============================================
-            // FUNÇÃO PARA EXCLUIR ALUNO DO RELATÓRIO
-            // ============================================
-            function excluirAlunoRelatorio() {
-                const alunoId = document.getElementById('rel-aluno-select').value;
-                const alunoNome = document.getElementById('rel-aluno-select')?.options[document.getElementById('rel-aluno-select')?.selectedIndex]?.text || 'Aluno';
-                
-                if (!alunoId) {
-                    showToast('❌ Selecione um aluno!', 'error');
-                    return;
-                }
-                
-                if (!confirm('Tem certeza que deseja excluir o aluno "' + alunoNome + '" e todas as suas correções?')) {
-                    return;
-                }
-                
-                excluirAluno(parseInt(alunoId), alunoNome);
             }
 
             // ============================================
@@ -4708,13 +4134,10 @@
                             opt.textContent = e.nome;
                             selectCadastro.appendChild(opt);
                         });
-                        // Se já tinha uma escola selecionada, restaura e carrega as turmas
                         if (current && escolas.some(e => e.id == current)) {
                             selectCadastro.value = current;
-                            // Carrega turmas automaticamente
                             carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
                         } else {
-                            // Se não tinha escola selecionada, limpa as turmas
                             const selectTurma = document.getElementById('aluno-turma');
                             if (selectTurma) {
                                 selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
@@ -4738,7 +4161,6 @@
                         });
                         if (current && escolas.some(e => e.id == current)) {
                             selectEdicao.value = current;
-                            // Carrega turmas automaticamente
                             carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
                         }
                         console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
@@ -4760,7 +4182,6 @@
                     return;
                 }
                 
-                // LIMPA o select de turma ANTES de adicionar novas opções
                 selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
                 
                 if (!escolaId || escolaId === '') {
@@ -6313,7 +5734,6 @@
                         carregarEscolasCorrigir();
                         carregarEscolasTexto();
                         carregarEscolasParaCorrecaoManual();
-                        carregarEscolasRelAluno();
                         carregarFiltrosRelTurma();
                         carregarFiltroEscolaTurmas();
                     }, 1000);
@@ -6547,7 +5967,6 @@
                         document.getElementById('editar-aluno-email').value = aluno.email || '';
                         document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
                         
-                        // Carregar escolas para o select de edição
                         fetch(API_URL + '/api/escolas')
                             .then(r => r.json())
                             .then(escolas => {
@@ -6562,7 +5981,6 @@
                                         selectEscola.appendChild(opt);
                                     });
                                 }
-                                // Carregar turmas da escola selecionada
                                 if (aluno.escola_id) {
                                     carregarTurmasPorEscolaParaAluno(aluno.escola_id, 'editar-aluno-turma')
                                         .then(() => {
@@ -7391,7 +6809,6 @@
                         if (current) select.value = current;
                     }
                     
-                    // Carregar provas
                     const provasResp = await fetch(API_URL + '/api/provas');
                     const provas = await provasResp.json();
                     const selectProva = document.getElementById('filtro-prova-desempenho');
@@ -7413,7 +6830,6 @@
                         if (current) selectProva.value = current;
                     }
                     
-                    // Limpar selects dependentes
                     document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
                     document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
                     
@@ -7489,19 +6905,15 @@
                 showToast('🔍 Buscando dados do aluno...', 'info');
 
                 try {
-                    // Buscar dados da escola
                     const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
                     const escola = await escolaResp.json();
                     
-                    // Buscar dados da turma
                     const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
                     const turma = await turmaResp.json();
                     
-                    // Buscar dados do aluno
                     const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
                     const aluno = await alunoResp.json();
                     
-                    // Buscar dados da prova
                     const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
                     const prova = await provaResp.json();
                     
@@ -7510,15 +6922,12 @@
                         return;
                     }
 
-                    // Buscar histórico do aluno para esta prova
                     const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
                     const historico = await historicoResp.json();
                     
-                    // Buscar gabarito da prova
                     const gabarito = prova.gabarito || [];
                     const totalQuestoes = prova.quantidade_questoes || 20;
                     
-                    // Obter respostas do aluno
                     let respostasAluno = [];
                     let disciplina = prova.disciplina || 'Português';
                     
@@ -7527,7 +6936,6 @@
                         respostasAluno = correcao.respostas || [];
                         if (correcao.disciplina) disciplina = correcao.disciplina;
                     } else {
-                        // Se não houver histórico, buscar respostas do aluno para esta prova
                         try {
                             const respostasResp = await fetch(`${API_URL}/api/respostas?aluno_id=${alunoId}&prova_id=${provaId}`);
                             const respostasData = await respostasResp.json();
@@ -7539,12 +6947,10 @@
                         }
                     }
 
-                    // Preencher respostas faltantes
                     while (respostasAluno.length < totalQuestoes) {
                         respostasAluno.push('');
                     }
 
-                    // Calcular acertos e erros
                     let acertos = 0;
                     let erros = 0;
                     const resultadoQuestoes = [];
@@ -7568,11 +6974,9 @@
                         });
                     }
 
-                    // Calcular nota (base 10)
                     const nota = totalQuestoes > 0 ? (acertos / totalQuestoes) * 10 : 0;
                     const notaFinal = Math.round(nota * 10) / 10;
 
-                    // Calcular conceito
                     const pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
                     let conceito = 'Inicial';
                     let conceitoCor = 'badge-red';
@@ -7580,7 +6984,6 @@
                     else if (pct > 60) { conceito = 'Proficiente'; conceitoCor = 'badge-blue'; }
                     else if (pct > 40) { conceito = 'Básico'; conceitoCor = 'badge-orange'; }
 
-                    // Armazenar dados para o documento
                     desempenhoData.alunoSelecionado = { 
                         escola, 
                         turma, 
@@ -7598,24 +7001,19 @@
                         pct: pct
                     };
 
-                    // ===== EXIBIR RESULTADOS =====
                     document.getElementById('resultado-desempenho').style.display = 'block';
 
-                    // Resumo geral
                     document.getElementById('resumo-nota').textContent = notaFinal.toFixed(1);
                     document.getElementById('resumo-acertos').textContent = acertos;
                     document.getElementById('resumo-erros').textContent = erros;
                     document.getElementById('resumo-conceito').textContent = conceito;
 
-                    // Informações do aluno
                     document.getElementById('info-escola').textContent = escola.nome || '—';
                     document.getElementById('info-turma').textContent = (turma.nome || '') + ' - ' + (turma.serie || '');
                     document.getElementById('info-aluno').textContent = aluno.nome || '—';
                     document.getElementById('info-prova').textContent = prova.titulo || '—';
                     document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
 
-                    // ===== DISCIPLINAS =====
-                    // Mapear disciplina para o ID do card
                     const disciplinaMap = {
                         'Português': 'portugues',
                         'Matemática': 'matematica',
@@ -7672,7 +7070,6 @@
                         const notaEl = document.getElementById(`nota-${key}`);
                         
                         if (key === discKey) {
-                            // Disciplina selecionada - exibir dados reais
                             let html = '';
                             resultadoQuestoes.forEach(q => {
                                 const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
@@ -7706,7 +7103,6 @@
                             const header = container.closest('.desempenho-disciplina').querySelector('h4');
                             header.textContent = `${iconesDisciplinas[key]} ${nomesDisciplinas[key]}`;
                             
-                            // Aplicar cor da disciplina
                             const card = container.closest('.desempenho-disciplina');
                             const cor = coresDisciplinas[key];
                             const colorMap = {
@@ -7718,7 +7114,6 @@
                             };
                             card.style.borderColor = `rgba(${colorMap[cor] || '59,130,246'}, 0.3)`;
                         } else {
-                            // Outras disciplinas - sem dados
                             container.innerHTML = `
                                 <div style="grid-column:1/-1; text-align:center; padding:16px; color:#64748b; font-size:12px;">
                                     ⚠️ Nenhuma resposta disponível para esta disciplina
@@ -7771,7 +7166,6 @@
                 const disciplina = data.disciplina || 'Português';
                 const totalQuestoes = data.totalQuestoes || 20;
 
-                // Gerar HTML das questões
                 let questoesHTML = '';
                 data.resultadoQuestoes.forEach(q => {
                     const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
@@ -7962,7 +7356,6 @@
                         carregarEscolasCorrigir(),
                         carregarEscolasTexto(),
                         carregarEscolasParaCorrecaoManual(),
-                        carregarEscolasRelAluno(),
                         carregarFiltrosRelTurma(),
                         carregarFiltroEscolaTurmas(),
                         carregarEscolasDesempenho()
@@ -7992,7 +7385,6 @@
                 if (tipoProva) gerarGabaritoModal(tipoProva.value);
                 atualizarDatasImpressao();
                 carregarEscolasParaCorrecaoManual();
-                carregarEscolasRelAluno();
                 carregarFiltrosRelTurma();
                 carregarFiltroEscolaTurmas();
                 carregarEscolasParaAluno();
