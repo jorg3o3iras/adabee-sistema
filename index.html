@@ -2348,15 +2348,32 @@
             </div>
         </div>
 
-        <!-- ========== MODAL USUÁRIO ========== -->
+        <!-- ========== MODAL USUÁRIO (CORRIGIDO) ========== -->
         <div class="modal-overlay no-print" id="m-usuario">
             <div class="modal">
-                <div class="modal-header"><h3>👤 Cadastrar Usuário</h3><button class="modal-close" onclick="closeM('m-usuario')">×</button></div>
-                <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="usuario-nome" placeholder="Nome completo"></div></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Usuário (Login) <span class="req">*</span></label><input class="form-control" id="usuario-username" placeholder="Ex: professor1"></div><div class="form-group"><label class="form-label">Senha <span class="req">*</span></label><input class="form-control" id="usuario-senha" type="password" placeholder="Mínimo 4 caracteres"></div></div>
-                <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="usuario-email" type="email" placeholder="email@exemplo.com"></div><div class="form-group"><label class="form-label">Perfil <span class="req">*</span></label><select class="form-control" id="usuario-perfil"><option value="usuario">Usuário</option><option value="admin">Administrador</option></select></div></div>
-                <div class="form-row c1"><div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="usuario-ativo" checked style="width:16px;height:16px;"> Usuário ativo</label></div></div>
-                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-usuario')">Cancelar</button><button class="btn btn-green" onclick="salvarUsuario()">💾 Salvar Usuário</button></div>
+                <div class="modal-header">
+                    <h3 id="usuario-modal-title">👤 Cadastrar Usuário</h3>
+                    <button class="modal-close" onclick="closeM('m-usuario')">×</button>
+                </div>
+                <input type="hidden" id="usuario-id" value="">
+                <div class="form-row c1">
+                    <div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="usuario-nome" placeholder="Nome completo"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Usuário (Login) <span class="req">*</span></label><input class="form-control" id="usuario-username" placeholder="Ex: professor1"></div>
+                    <div class="form-group"><label class="form-label">Senha <span class="req">*</span></label><input class="form-control" id="usuario-senha" type="password" placeholder="Mínimo 4 caracteres"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="usuario-email" type="email" placeholder="email@exemplo.com"></div>
+                    <div class="form-group"><label class="form-label">Perfil <span class="req">*</span></label><select class="form-control" id="usuario-perfil"><option value="usuario">Usuário</option><option value="admin">Administrador</option></select></div>
+                </div>
+                <div class="form-row c1">
+                    <div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="usuario-ativo" checked style="width:16px;height:16px;"> Usuário ativo</label></div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-usuario')">Cancelar</button>
+                    <button class="btn btn-green" id="btn-salvar-usuario" onclick="salvarUsuario()">💾 Salvar Usuário</button>
+                </div>
             </div>
         </div>
 
@@ -2966,35 +2983,34 @@
             // CARREGAR PROVAS
             // ============================================
             async function carregarProvas() {
-    try {
-        const response = await fetch(API_URL + '/api/provas');
-        const provas = await response.json();
-        const tbody = document.getElementById('tb-provas');
-        if (!tbody) return;
+                try {
+                    const response = await fetch(API_URL + '/api/provas');
+                    const provas = await response.json();
+                    const tbody = document.getElementById('tb-provas');
+                    if (!tbody) return;
 
-        if (!provas || provas.length === 0 || provas.erro) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
-        } else {
-            tbody.innerHTML = provas.map((p, i) => {
-                return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-                    '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
-                    '<td><strong>' + p.titulo + '</strong></td>' +
-                    '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
-                    '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
-                    '<td>' + (p.data_prova || '—') + '</td>' +
-                    '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-                    '<td><div class="btn-group">' +
-                    // 👇 CORREÇÃO AQUI: trocar editarProva por editarGabarito
-                    '<button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">👁️</button>' +
-                    (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') +
-                    '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button>' +
-                    '</div></td></tr>';
-            }).join('');
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar provas:', erro);
-    }
-}
+                    if (!provas || provas.length === 0 || provas.erro) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
+                    } else {
+                        tbody.innerHTML = provas.map((p, i) => {
+                            return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                                '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                                '<td><strong>' + p.titulo + '</strong></td>' +
+                                '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                                '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
+                                '<td>' + (p.data_prova || '—') + '</td>' +
+                                '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
+                                '<td><div class="btn-group">' +
+                                '<button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">👁️</button>' +
+                                (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') +
+                                '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button>' +
+                                '</div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar provas:', erro);
+                }
+            }
 
             // ============================================
             // CARREGAR DASHBOARD
@@ -3921,19 +3937,109 @@
             }
 
             // ============================================
-            // FUNÇÕES DE USUÁRIO
+            // FUNÇÕES DE USUÁRIO (CORRIGIDAS)
             // ============================================
             function abrirModalUsuario() {
+                document.getElementById('usuario-id').value = '';
                 document.getElementById('usuario-nome').value = '';
                 document.getElementById('usuario-username').value = '';
                 document.getElementById('usuario-senha').value = '';
                 document.getElementById('usuario-email').value = '';
                 document.getElementById('usuario-perfil').value = 'usuario';
                 document.getElementById('usuario-ativo').checked = true;
+                document.getElementById('usuario-modal-title').textContent = '👤 Cadastrar Usuário';
+                const btn = document.getElementById('btn-salvar-usuario');
+                btn.textContent = '💾 Salvar Usuário';
+                btn.className = 'btn btn-green';
                 openM('m-usuario');
             }
 
-            function editarUsuario(id) { showToast('✏️ Editando usuário ID ' + id + '...', 'info'); }
+            async function editarUsuario(id) {
+                try {
+                    showToast('✏️ Carregando dados do usuário...', 'info');
+                    const response = await fetch(API_URL + '/api/usuarios/' + id);
+                    const usuario = await response.json();
+
+                    if (usuario.erro) {
+                        showToast('❌ ' + usuario.erro, 'error');
+                        return;
+                    }
+
+                    document.getElementById('usuario-id').value = usuario.id;
+                    document.getElementById('usuario-nome').value = usuario.nome || '';
+                    document.getElementById('usuario-username').value = usuario.username || '';
+                    document.getElementById('usuario-senha').value = '';
+                    document.getElementById('usuario-email').value = usuario.email || '';
+                    document.getElementById('usuario-perfil').value = usuario.perfil || 'usuario';
+                    document.getElementById('usuario-ativo').checked = usuario.ativo !== false;
+
+                    document.getElementById('usuario-modal-title').textContent = '✏️ Editar Usuário';
+                    const btn = document.getElementById('btn-salvar-usuario');
+                    btn.textContent = '💾 Atualizar';
+                    btn.className = 'btn btn-primary';
+
+                    openM('m-usuario');
+                } catch (erro) {
+                    showToast('❌ Erro ao carregar usuário: ' + erro.message, 'error');
+                    console.error('Erro ao carregar usuário:', erro);
+                }
+            }
+
+            async function salvarUsuario() {
+                const id = document.getElementById('usuario-id').value;
+                const nome = document.getElementById('usuario-nome').value.trim();
+                const username = document.getElementById('usuario-username').value.trim();
+                const senha = document.getElementById('usuario-senha').value.trim();
+                const email = document.getElementById('usuario-email').value.trim();
+                const perfil = document.getElementById('usuario-perfil').value;
+                const ativo = document.getElementById('usuario-ativo').checked;
+
+                if (!nome) { showToast('❌ Nome do usuário é obrigatório!', 'error'); return; }
+                if (!username) { showToast('❌ Usuário (login) é obrigatório!', 'error'); return; }
+                if (username.length < 3) { showToast('❌ Usuário deve ter pelo menos 3 caracteres!', 'error'); return; }
+                if (!id && !senha) { showToast('❌ Senha é obrigatória para novo usuário!', 'error'); return; }
+                if (!id && senha.length < 4) { showToast('❌ Senha deve ter pelo menos 4 caracteres!', 'error'); return; }
+                if (email && !email.includes('@')) { showToast('❌ E-mail inválido!', 'error'); return; }
+
+                const payload = {
+                    nome,
+                    username,
+                    email,
+                    perfil,
+                    ativo
+                };
+                if (senha) payload.senha = senha;
+
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `${API_URL}/api/usuarios/${id}` : `${API_URL}/api/usuarios`;
+
+                try {
+                    showToast(id ? '💾 Atualizando usuário...' : '💾 Salvando usuário...', 'info');
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await processarRespostaAPI(response);
+
+                    if (result.ok) {
+                        showToast(id ? '✅ Usuário "' + username + '" atualizado!' : '✅ Usuário "' + username + '" criado!', 'success');
+                        closeM('m-usuario');
+                        // Reset do modal para próximo uso
+                        document.getElementById('usuario-id').value = '';
+                        document.getElementById('usuario-modal-title').textContent = '👤 Cadastrar Usuário';
+                        const btn = document.getElementById('btn-salvar-usuario');
+                        btn.textContent = '💾 Salvar Usuário';
+                        btn.className = 'btn btn-green';
+                        carregarUsuarios(); // recarrega a lista
+                    } else {
+                        showToast('❌ ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar: ' + erro.message, 'error');
+                    console.error('Erro ao salvar usuário:', erro);
+                }
+            }
 
             async function excluirUsuario(id, username) {
                 if (username === 'admin') { showToast('⚠️ Não é possível excluir o usuário administrador principal!', 'error'); return; }
@@ -3944,34 +4050,6 @@
                     if (result.ok) { showToast('🗑️ Usuário "' + username + '" excluído!', 'error');
                         carregarUsuarios(); } else { showToast('Erro: ' + (result.data.erro || 'Erro desconhecido'), 'error'); }
                 } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
-            }
-
-            async function salvarUsuario() {
-                const nome = document.getElementById('usuario-nome').value.trim();
-                const username = document.getElementById('usuario-username').value.trim();
-                const senha = document.getElementById('usuario-senha').value.trim();
-                const email = document.getElementById('usuario-email').value.trim();
-                const perfil = document.getElementById('usuario-perfil').value;
-                const ativo = document.getElementById('usuario-ativo').checked;
-                if (!nome) { showToast('❌ Nome do usuário é obrigatório!', 'error'); return; }
-                if (!username) { showToast('❌ Usuário (login) é obrigatório!', 'error'); return; }
-                if (username.length < 3) { showToast('❌ Usuário deve ter pelo menos 3 caracteres!', 'error'); return; }
-                if (!senha) { showToast('❌ Senha é obrigatória!', 'error'); return; }
-                if (senha.length < 4) { showToast('❌ Senha deve ter pelo menos 4 caracteres!', 'error'); return; }
-                if (email && !email.includes('@')) { showToast('❌ E-mail inválido!', 'error'); return; }
-                try {
-                    const response = await fetch(API_URL + '/api/usuarios', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nome: nome, username: username, senha: senha, email: email, perfil: perfil, ativo: ativo })
-                    });
-                    const result = await response.json();
-                    if (result.id) { showToast('✅ Usuário "' + username + '" criado com sucesso!', 'success');
-                        closeM('m-usuario');
-                        carregarUsuarios();
-                        carregarDados(); } else { showToast('❌ Erro ao criar usuário: ' + (result.erro || 'Erro desconhecido'), 'error'); }
-                } catch (erro) { showToast('❌ Erro ao salvar: ' + erro.message, 'error');
-                    console.error('Erro ao salvar usuário:', erro); }
             }
 
             // ============================================
@@ -4677,8 +4755,6 @@
                     console.error('Erro ao salvar prova:', erro);
                 }
             }
-
-            '<button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">👁️</button>'
 
             async function excluirProva(id, nome) {
                 if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
@@ -5427,7 +5503,6 @@
                     resultadoQuestoes.forEach(q => {
                         const div = document.createElement('div');
                         div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
-                        // CONSTRUÇÃO DO HTML INCLUINDO BNCC
                         let bnccHtml = '';
                         if (q.bncc && q.bncc.trim() !== '') {
                             bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
@@ -6030,114 +6105,109 @@
             }
 
             function imprimirAlunos() {
-    const tbody = document.getElementById('tb-alunos');
-    const rows = tbody.querySelectorAll('tr');
+                const tbody = document.getElementById('tb-alunos');
+                const rows = tbody.querySelectorAll('tr');
 
-    // Verifica se há dados
-    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
-        showToast('⚠️ Nenhum aluno para imprimir.', 'error');
-        return;
-    }
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+                    showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+                    return;
+                }
 
-    // Captura os nomes dos filtros atuais
-    const escolaSelect = document.getElementById('filtro-escola-alunos');
-    const turmaSelect = document.getElementById('filtro-turma-alunos');
-    const serieSelect = document.getElementById('filtro-serie-alunos');
-    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
-    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
-    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+                const escolaSelect = document.getElementById('filtro-escola-alunos');
+                const turmaSelect = document.getElementById('filtro-turma-alunos');
+                const serieSelect = document.getElementById('filtro-serie-alunos');
+                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
 
-    // Monta o HTML para impressão
-    let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Lista de Alunos</title>
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
-            h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
-            .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-            th { background: #f2f2f2; font-weight: 700; }
-            tr:nth-child(even) { background: #fafafa; }
-            .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
-            @media print {
-                body { margin: 10px; }
-                .no-print { display: none; }
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Lista de Alunos</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+                        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+                        .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                        th { background: #f2f2f2; font-weight: 700; }
+                        tr:nth-child(even) { background: #fafafa; }
+                        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+                        @media print {
+                            body { margin: 10px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📋 Lista de Alunos</h1>
+                    <div class="filtros">
+                        <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+                        <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+                        <strong>Série:</strong> ${serieNome}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Matrícula</th>
+                                <th>Nome Completo</th>
+                                <th>Série</th>
+                                <th>Turma</th>
+                                <th>Escola</th>
+                                <th>Data Nasc.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        const numero = cells[0].textContent.trim();
+                        const matricula = cells[1].textContent.trim();
+                        const nome = cells[2].textContent.trim();
+                        const serie = cells[3].textContent.trim();
+                        const turma = cells[4].textContent.trim();
+                        const escola = cells[5].textContent.trim();
+                        const dataNasc = cells[6].textContent.trim();
+                        html += `
+                            <tr>
+                                <td>${numero}</td>
+                                <td>${matricula}</td>
+                                <td>${nome}</td>
+                                <td>${serie}</td>
+                                <td>${turma}</td>
+                                <td>${escola}</td>
+                                <td>${dataNasc}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        Gerado em ${new Date().toLocaleString('pt-BR')}
+                    </div>
+                </body>
+                </html>
+                `;
+
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+                win.document.write(html);
+                win.document.close();
+                win.focus();
+                win.print();
             }
-        </style>
-    </head>
-    <body>
-        <h1>📋 Lista de Alunos</h1>
-        <div class="filtros">
-            <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
-            <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
-            <strong>Série:</strong> ${serieNome}
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nº</th>
-                    <th>Matrícula</th>
-                    <th>Nome Completo</th>
-                    <th>Série</th>
-                    <th>Turma</th>
-                    <th>Escola</th>
-                    <th>Data Nasc.</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    // Percorre as linhas visíveis da tabela (já filtradas)
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
-            const numero = cells[0].textContent.trim();
-            const matricula = cells[1].textContent.trim();
-            const nome = cells[2].textContent.trim();
-            const serie = cells[3].textContent.trim();
-            const turma = cells[4].textContent.trim();
-            const escola = cells[5].textContent.trim();
-            const dataNasc = cells[6].textContent.trim();
-            html += `
-                <tr>
-                    <td>${numero}</td>
-                    <td>${matricula}</td>
-                    <td>${nome}</td>
-                    <td>${serie}</td>
-                    <td>${turma}</td>
-                    <td>${escola}</td>
-                    <td>${dataNasc}</td>
-                </tr>
-            `;
-        }
-    });
-
-    html += `
-            </tbody>
-        </table>
-        <div class="footer">
-            Gerado em ${new Date().toLocaleString('pt-BR')}
-        </div>
-    </body>
-    </html>
-    `;
-
-    // Abre uma nova janela e imprime
-    const win = window.open('', '_blank');
-    if (!win) {
-        showToast('⚠️ Permita pop-ups para imprimir.', 'error');
-        return;
-    }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
-}
 
             function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
                 window.print(); }
