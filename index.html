@@ -1409,13 +1409,7 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label class="form-label">Nº de Questões</label>
-                                <select class="form-control" id="prova-questoes">
-                                    <option>10</option>
-                                    <option>15</option>
-                                    <option selected>20</option>
-                                    <option>25</option>
-                                    <option>30</option>
-                                </select>
+                                <select class="form-control" id="prova-questoes"></select>
                             </div>
                             <div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="prova-nota" type="number" value="10"></div>
                         </div>
@@ -2494,6 +2488,24 @@
             }
 
             // ============================================
+            // POPULAR SELECT DE QUESTÕES (1 a 30)
+            // ============================================
+            function popularSelectQuestoes() {
+                const select = document.getElementById('prova-questoes');
+                if (!select) return;
+                // Limpa opções atuais
+                select.innerHTML = '';
+                // Gera opções de 1 a 30
+                for (let i = 1; i <= 30; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    if (i === 20) opt.selected = true; // valor padrão 20
+                    select.appendChild(opt);
+                }
+            }
+
+            // ============================================
             // MENU TOGGLE
             // ============================================
             function toggleMenu() {
@@ -2569,6 +2581,7 @@
                 carregarEscolasParaCorrecaoManual();
                 carregarFiltrosRelTurma();
                 carregarEscolasDesempenho();
+                popularSelectQuestoes(); // <-- NOVO
             }
 
             function doLogout() {
@@ -4191,19 +4204,25 @@
                         return;
                     }
 
+                    // Atualiza badge com o número REAL de turmas (dados.length)
                     if (badge) badge.textContent = dados.length + ' turmas';
 
+                    // Ordena por porcentagem decrescente e limita a 5
                     const maxBarras = 5;
-                    let dadosFiltrados = dados;
-                    if (dados.length > maxBarras) {
-                        dadosFiltrados = [...dados].sort((a, b) => b.porcentagem - a.porcentagem).slice(0, maxBarras);
+                    let dadosFiltrados = [...dados];
+                    if (dadosFiltrados.length > maxBarras) {
+                        dadosFiltrados = dadosFiltrados.sort((a, b) => b.porcentagem - a.porcentagem).slice(0, maxBarras);
                     }
 
                     let html = '<div class="chart-bars">';
                     const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
 
                     dadosFiltrados.forEach((turma, index) => {
-                        const nome = turma.nome || 'Turma sem nome';
+                        // Se o nome estiver vazio, usa "Turma [ID]" para não mostrar "Turma sem nome"
+                        let nome = turma.nome || 'Turma sem nome';
+                        if (nome === 'Turma sem nome' && turma.id) {
+                            nome = 'Turma ' + turma.id;
+                        }
                         const porcentagem = turma.porcentagem || 0;
                         const altura = Math.max(20, (porcentagem / 100) * 130);
                         const cor = cores[index % cores.length];
@@ -4215,9 +4234,13 @@
                     });
                     html += '</div>';
 
+                    // Rodapé com detalhes das turmas (agora com nome correto)
                     html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
                     dadosFiltrados.forEach(turma => {
-                        const nome = turma.nome || 'Turma sem nome';
+                        let nome = turma.nome || 'Turma sem nome';
+                        if (nome === 'Turma sem nome' && turma.id) {
+                            nome = 'Turma ' + turma.id;
+                        }
                         html += `<span>${nome}: ${turma.total_correcoes || 0} corr.</span>`;
                     });
                     html += `</div>`;
@@ -7440,6 +7463,7 @@
                 carregarFiltroEscolaTurmas();
                 carregarEscolasParaAluno();
                 carregarEscolasDesempenho();
+                popularSelectQuestoes(); // <-- NOVO
             });
 
             document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
