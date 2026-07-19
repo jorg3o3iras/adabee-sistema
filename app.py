@@ -17,6 +17,7 @@ import random
 import traceback
 from dotenv import load_dotenv
 import hmac
+import logging
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -24,6 +25,9 @@ load_dotenv()
 app = Flask(__name__)
 # Configurar CORS para aceitar requisições de qualquer origem
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ============================================
 # CONFIGURAÇÃO GEMINI
@@ -1752,7 +1756,7 @@ def excluir_gabarito(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ESCOLAS (CRUD COMPLETO)
+# ROTA DE ESCOLAS (CRUD COMPLETO) - CORRIGIDA
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -1868,6 +1872,12 @@ def editar_escola(id):
 
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
+    """
+    Exclui a escola, suas turmas e alunos (em cascata via banco).
+    NÃO EXCLUI PROVAS em hipótese alguma.
+    """
+    logging.info(f"🔴 Tentativa de excluir escola ID {id} de {request.remote_addr}")
+
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -1875,6 +1885,7 @@ def excluir_escola(id):
     try:
         cur = conn.cursor()
 
+        # Verifica se a escola existe
         cur.execute("SELECT id, nome FROM escolas WHERE id = %s", (id,))
         escola = cur.fetchone()
         if not escola:
@@ -1882,61 +1893,43 @@ def excluir_escola(id):
             conn.close()
             return jsonify({'erro': 'Escola não encontrada'}), 404
 
-        escola_nome = escola[1]
+        escola_id, escola_nome = escola[0], escola[1]
 
-        cur.execute("SELECT id FROM turmas WHERE escola_id = %s", (id,))
-        turmas = cur.fetchall()
+        # Conta turmas e alunos para estatísticas (opcional)
+        cur.execute("SELECT COUNT(*) FROM turmas WHERE escola_id = %s", (escola_id,))
+        total_turmas = cur.fetchone()[0]
 
-        total_turmas = len(turmas)
-        total_alunos = 0
-        total_provas = 0
-        total_historicos = 0
+        cur.execute("SELECT COUNT(*) FROM alunos WHERE escola_id = %s", (escola_id,))
+        total_alunos = cur.fetchone()[0]
 
-        for turma in turmas:
-            turma_id = turma[0]
+        # NÃO EXCLUIMOS PROVAS - NENHUMA CONSULTA OU DELETE NA TABELA provas!
 
-            cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
-            alunos_count = cur.fetchone()[0]
-            total_alunos += alunos_count
-
-            cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
-            turma_serie = cur.fetchone()
-            if turma_serie:
-                cur.execute("SELECT COUNT(*) FROM provas WHERE serie = %s", (turma_serie[0],))
-                provas_count = cur.fetchone()[0]
-                total_provas += provas_count
-
-                cur.execute("SELECT id FROM provas WHERE serie = %s", (turma_serie[0],))
-                provas = cur.fetchall()
-                for prova in provas:
-                    cur.execute("SELECT COUNT(*) FROM historico WHERE prova_id = %s", (prova[0],))
-                    historico_count = cur.fetchone()[0]
-                    total_historicos += historico_count
-
-        cur.execute("DELETE FROM escolas WHERE id = %s", (id,))
+        # Exclui a escola (em cascata, turmas e alunos serão excluídos automaticamente)
+        cur.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
 
         conn.commit()
         cur.close()
         conn.close()
+
+        logging.info(f"✅ Escola '{escola_nome}' (ID {escola_id}) excluída com sucesso. Turmas: {total_turmas}, Alunos: {total_alunos}")
 
         return jsonify({
             'sucesso': True,
             'mensagem': f'Escola "{escola_nome}" excluída com sucesso!',
             'detalhes': {
                 'turmas_excluidas': total_turmas,
-                'alunos_excluidos': total_alunos,
-                'provas_excluidas': total_provas,
-                'historicos_excluidos': total_historicos
+                'alunos_excluidos': total_alunos
             }
         })
 
     except Exception as e:
-        print(f"❌ Erro ao excluir escola: {e}")
+        conn.rollback()
+        logging.error(f"❌ Erro ao excluir escola ID {id}: {str(e)}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO)
+# ROTA DE TURMAS (CRUD COMPLETO) - CORRIGIDA
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2103,6 +2096,12 @@ def editar_turma(id):
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
+    """
+    Exclui a turma e seus alunos (em cascata via banco).
+    NÃO EXCLUI PROVAS.
+    """
+    logging.info(f"🔴 Tentativa de excluir turma ID {id} de {request.remote_addr}")
+
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -2117,52 +2116,34 @@ def excluir_turma(id):
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
 
-        turma_id = turma[0]
-        turma_nome = turma[1]
-        turma_serie = turma[2]
+        turma_id, turma_nome, turma_serie = turma[0], turma[1], turma[2]
 
-        # CORREÇÃO: NÃO APAGA PROVAS DE OUTRAS ESCOLAS
-        # Apenas conta e exclui dados relacionados à turma
-
+        # Contar alunos para estatísticas
         cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
 
-        cur.execute("""
-            SELECT COUNT(*) FROM historico h
-            JOIN alunos a ON h.aluno_id = a.id
-            WHERE a.turma_id = %s
-        """, (turma_id,))
-        total_historicos = cur.fetchone()[0]
+        # NÃO EXCLUIMOS PROVAS - NENHUMA CONSULTA OU DELETE NA TABELA provas!
 
-        # Buscar IDs dos alunos para excluir registros relacionados
-        cur.execute("SELECT id FROM alunos WHERE turma_id = %s", (turma_id,))
-        alunos_ids = [row[0] for row in cur.fetchall()]
-
-        if alunos_ids:
-            cur.execute("DELETE FROM historico WHERE aluno_id = ANY(%s)", (alunos_ids,))
-            cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = ANY(%s)", (alunos_ids,))
-
-        # Excluir alunos e turma
-        cur.execute("DELETE FROM alunos WHERE turma_id = %s", (turma_id,))
+        # Excluir turma (em cascata, alunos serão excluídos automaticamente)
         cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
-
-        # NOTA: Não exclui provas - elas podem ser usadas por outras turmas/escolas
 
         conn.commit()
         cur.close()
         conn.close()
 
+        logging.info(f"✅ Turma '{turma_nome}' (ID {turma_id}) excluída com sucesso. Alunos: {total_alunos}")
+
         return jsonify({
             'sucesso': True,
             'mensagem': f'Turma "{turma_nome}" excluída com sucesso!',
             'detalhes': {
-                'alunos_excluidos': total_alunos,
-                'historicos_excluidos': total_historicos
+                'alunos_excluidos': total_alunos
             }
         })
 
     except Exception as e:
-        print(f"❌ Erro ao excluir turma: {e}")
+        conn.rollback()
+        logging.error(f"❌ Erro ao excluir turma ID {id}: {str(e)}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
@@ -2485,7 +2466,7 @@ def listar_provas():
                 p.tipo_questoes,
                 p.quantidade_questoes,
                 p.gabarito,
-                p.bncc,               -- <-- ADICIONADO
+                p.bncc,
                 p.created_at
             FROM provas p
             ORDER BY p.created_at DESC
@@ -2587,7 +2568,7 @@ def buscar_prova(id):
                 tipo_questoes,
                 quantidade_questoes,
                 gabarito,
-                bncc,               -- <-- ADICIONADO
+                bncc,
                 created_at
             FROM provas
             WHERE id = %s
@@ -2670,6 +2651,11 @@ def editar_prova(id):
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
+    """
+    Exclui uma prova específica (apenas quando o usuário seleciona para excluir).
+    """
+    logging.info(f"🔴 Tentativa de excluir prova ID {id} de {request.remote_addr}")
+
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -2686,9 +2672,7 @@ def excluir_prova(id):
 
         prova_titulo = prova[1]
 
-        cur.execute("SELECT COUNT(*) FROM historico WHERE prova_id = %s", (id,))
-        total_historicos = cur.fetchone()[0]
-
+        # Remove registros associados (histórico e correções de texto)
         cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM provas WHERE id = %s", (id,))
@@ -2697,16 +2681,16 @@ def excluir_prova(id):
         cur.close()
         conn.close()
 
+        logging.info(f"✅ Prova '{prova_titulo}' (ID {id}) excluída com sucesso.")
+
         return jsonify({
             'sucesso': True,
-            'mensagem': f'Prova "{prova_titulo}" excluída com sucesso!',
-            'detalhes': {
-                'historicos_excluidos': total_historicos
-            }
+            'mensagem': f'Prova "{prova_titulo}" excluída com sucesso!'
         })
 
     except Exception as e:
-        print(f"❌ Erro ao excluir prova: {e}")
+        conn.rollback()
+        logging.error(f"❌ Erro ao excluir prova ID {id}: {str(e)}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
@@ -3254,7 +3238,7 @@ def init_db():
                     tipo_questoes TEXT DEFAULT '4',
                     quantidade_questoes INTEGER DEFAULT 20,
                     gabarito TEXT[],
-                    bncc TEXT[],                  -- <-- ADICIONADO
+                    bncc TEXT[],
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
