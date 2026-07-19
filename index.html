@@ -1887,23 +1887,23 @@
             </div>
 
             <!-- ========== CONFIG ========== -->
-<div class="page" id="page-config">
-    <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
-    <div class="g2 no-print">
-        <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
-        <div class="card"><div class="card-header"><div class="card-title">🤖 IA & Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
-        <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div><div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div><div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div></div>
-        <!-- ===== NOVO CARD DE BACKUP ===== -->
-        <div class="card">
-            <div class="card-header"><div class="card-title">💾 Backup do Banco</div></div>
-            <p style="color:var(--text2);margin-bottom:12px;">
-                Faça o download de um arquivo ZIP contendo todos os dados (escolas, turmas, alunos, provas, histórico, usuários e correções de texto) em formato JSON.
-            </p>
-            <button class="btn btn-green no-print" onclick="fazerBackup()">📥 Baixar Backup</button>
-        </div>
-        <div class="card"><div class="card-header"><div class="card-title">👥 Usuários</div><button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo</button></div><div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tb-usuarios"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
-    </div>
-</div>
+            <div class="page" id="page-config">
+                <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
+                <div class="g2 no-print">
+                    <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">🤖 IA & Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div><div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div><div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div></div>
+                    <!-- ===== NOVO CARD DE BACKUP ===== -->
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">💾 Backup do Banco</div></div>
+                        <p style="color:var(--text2);margin-bottom:12px;">
+                            Faça o download de um arquivo ZIP contendo todos os dados (escolas, turmas, alunos, provas, histórico, usuários e correções de texto) em formato JSON.
+                        </p>
+                        <button class="btn btn-green no-print" onclick="fazerBackup()">📥 Baixar Backup</button>
+                    </div>
+                    <div class="card"><div class="card-header"><div class="card-title">👥 Usuários</div><button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo</button></div><div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tb-usuarios"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                </div>
+            </div>
 
             <!-- ========== USER PAGES ========== -->
             <div class="page" id="page-u-dashboard">
@@ -5719,6 +5719,50 @@
             }
 
             // ============================================
+            // FUNÇÃO PARA FAZER BACKUP
+            // ============================================
+            async function fazerBackup() {
+                if (!confirm('⚠️ Deseja fazer o backup completo do banco de dados?\n\nO arquivo ZIP será baixado com todos os dados.')) return;
+
+                try {
+                    showToast('⏳ Gerando backup...', 'info');
+
+                    // Substitua pela sua chave definida no .env
+                    const key = 'backup123';
+                    const response = await fetch('/api/backup?key=' + encodeURIComponent(key));
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        showToast('❌ Erro: ' + (err.erro || 'Falha no backup'), 'error');
+                        return;
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'backup.zip';
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename="?(.+)"?/);
+                        if (match) filename = match[1];
+                    }
+                    a.download = filename;
+
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                    showToast('✅ Backup concluído!', 'success');
+                } catch (e) {
+                    showToast('❌ Erro: ' + e.message, 'error');
+                    console.error('Erro no backup:', e);
+                }
+            }
+
+            // ============================================
             // CARREGAR DADOS - FUNÇÃO PRINCIPAL
             // ============================================
             async function carregarDados() {
@@ -6848,50 +6892,6 @@
                     }
                 } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
             }
-			
-			
-			async function fazerBackup() {
-    if (!confirm('⚠️ Deseja fazer o backup completo do banco de dados?\n\nO arquivo ZIP será baixado com todos os dados.')) return;
-
-    try {
-        showToast('⏳ Gerando backup...', 'info');
-
-        // A chave deve ser a mesma definida no .env
-        const key = 'backup123'; // Altere para a sua chave real
-        const response = await fetch('/api/backup?key=' + encodeURIComponent(key));
-
-        if (!response.ok) {
-            const err = await response.json();
-            showToast('❌ Erro: ' + (err.erro || 'Falha no backup'), 'error');
-            return;
-        }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-
-        // Tenta extrair o nome do arquivo do header Content-Disposition
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'backup.zip';
-        if (contentDisposition) {
-            const match = contentDisposition.match(/filename="?(.+)"?/);
-            if (match) filename = match[1];
-        }
-        a.download = filename;
-
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-
-        showToast('✅ Backup concluído!', 'success');
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-        console.error('Erro no backup:', e);
-    }
-}
-			
 
             // ============================================
             // DOM READY
