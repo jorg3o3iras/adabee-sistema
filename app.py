@@ -2829,47 +2829,46 @@ def dashboard_conceito():
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # Agrupa por turma, calcula média de acertos e total de correções
         cur.execute("""
             SELECT
-                a.id,
-                a.nome as aluno_nome,
+                t.id as turma_id,
                 t.nome as turma_nome,
                 t.serie,
-                COALESCE(AVG(h.nota), 0) as media_nota,
-                COALESCE(AVG(h.acertos), 0) as media_acertos,
-                COUNT(DISTINCT h.id) as total_correcoes
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
+                COUNT(DISTINCT a.id) as total_alunos,
+                COALESCE(AVG(h.acertos * 1.0 / NULLIF(h.total, 0)), 0) as media_porcentagem,
+                COALESCE(SUM(CASE WHEN h.id IS NOT NULL THEN 1 ELSE 0 END), 0) as total_correcoes
+            FROM turmas t
+            LEFT JOIN alunos a ON a.turma_id = t.id
             LEFT JOIN historico h ON h.aluno_id = a.id
-            GROUP BY a.id, a.nome, t.nome, t.serie
-            ORDER BY a.nome
+            GROUP BY t.id, t.nome, t.serie
+            HAVING COUNT(DISTINCT a.id) > 0
+            ORDER BY t.nome
         """)
 
-        alunos = cur.fetchall()
+        turmas = cur.fetchall()
         cur.close()
         conn.close()
 
         resultado = []
-        for aluno in alunos:
-            media_nota = float(aluno['media_nota'] or 0)
-            total_correcoes = int(aluno['total_correcoes'] or 0)
+        for turma in turmas:
+            media_porcentagem = float(turma['media_porcentagem'] or 0)
+            total_correcoes = int(turma['total_correcoes'] or 0)
 
-            if total_correcoes > 0:
-                porcentagem = round((media_nota / 10) * 100) if media_nota > 0 else 0
-                conceito = calcular_conceito(porcentagem)
-            else:
-                porcentagem = 0
-                conceito = calcular_conceito(0)
+            # Converte média de acertos para porcentagem (0-100)
+            porcentagem = round(media_porcentagem * 100) if media_porcentagem > 0 else 0
+
+            # Calcula conceito (opcional)
+            conceito = calcular_conceito(porcentagem)
 
             resultado.append({
-                'aluno_id': aluno['id'],
-                'aluno_nome': aluno['aluno_nome'],
-                'turma': aluno['turma_nome'],
-                'serie': aluno['serie'],
-                'media_nota': round(media_nota, 1),
+                'id': turma['turma_id'],
+                'nome': turma['turma_nome'] or f"Turma {turma['turma_id']}",
+                'serie': turma['serie'],
+                'total_alunos': turma['total_alunos'],
                 'porcentagem': porcentagem,
-                'conceito': conceito,
-                'total_correcoes': total_correcoes
+                'total_correcoes': total_correcoes,
+                'conceito': conceito
             })
 
         return jsonify(resultado)
