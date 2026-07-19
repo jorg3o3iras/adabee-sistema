@@ -4192,20 +4192,18 @@
             // ============================================
             async function carregarConceitoReal() {
     try {
-        // Buscar dados de conceito e lista de turmas em paralelo
         const [conceitoResp, turmasResp] = await Promise.all([
             fetch(`${API_URL}/api/dashboard/Conceito`),
             fetch(`${API_URL}/api/turmas`)
         ]);
 
-        let dados = await conceitoResp.json();
+        const dados = await conceitoResp.json();
         const turmasLista = await turmasResp.json();
 
         const container = document.getElementById('grafico-Conceito');
         const badge = document.getElementById('total-turmas-badge');
         if (!container) return;
 
-        // Se não houver dados de conceito
         if (!dados || dados.erro || (Array.isArray(dados) && dados.length === 0)) {
             container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
                 <div style="font-size:30px;margin-bottom:10px;">📭</div>
@@ -4216,10 +4214,8 @@
             return;
         }
 
-        // Converter para array se for objeto
         let dadosArray = Array.isArray(dados) ? dados : Object.values(dados);
 
-        // Mapear IDs das turmas para nomes reais
         const turmasMap = new Map();
         if (turmasLista && !turmasLista.erro && Array.isArray(turmasLista)) {
             turmasLista.forEach(t => {
@@ -4227,22 +4223,17 @@
             });
         }
 
-        // Agrupar por turma_id (ou id)
         const agrupado = new Map();
         dadosArray.forEach(item => {
-            // Tentar extrair o ID da turma de várias propriedades
             let turmaId = item.turma_id || item.id || item.turmaId;
             if (!turmaId) {
-                // Se não tiver ID, pode ser que o dado já venha agregado por turma
-                // e o nome esteja em item.nome
                 if (item.nome) {
-                    turmaId = 'nome_' + item.nome; // chave artificial
+                    turmaId = 'nome_' + item.nome;
                 } else {
-                    return; // ignora
+                    return;
                 }
             }
 
-            // Buscar nome real
             let nomeReal = turmasMap.get(turmaId);
             if (!nomeReal && item.nome && item.nome !== 'Turma sem nome') {
                 nomeReal = item.nome;
@@ -4272,13 +4263,11 @@
             } else {
                 turma.totalCorrecoes += 1;
             }
-            // Atualiza nome se o item tiver nome melhor
             if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') {
                 turma.nome = item.nome;
             }
         });
 
-        // Se não houver agrupamento (ex: dados já agregados sem turma_id)
         let turmasAgrupadas;
         if (agrupado.size === 0) {
             turmasAgrupadas = dadosArray.map((item, index) => ({
@@ -4298,10 +4287,8 @@
             }));
         }
 
-        // Atualizar badge com o número de turmas únicas
         if (badge) badge.textContent = turmasAgrupadas.length + ' turmas';
 
-        // Ordenar por porcentagem decrescente e limitar a 5
         const maxBarras = 5;
         let dadosFiltrados = turmasAgrupadas.sort((a, b) => b.porcentagem - a.porcentagem);
         if (dadosFiltrados.length > maxBarras) {
@@ -4324,13 +4311,7 @@
         });
         html += '</div>';
 
-        // Rodapé com detalhes das turmas
-        html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
-        dadosFiltrados.forEach(turma => {
-            const nome = turma.nome || `Turma ${turma.id}`;
-            html += `<span>${nome}: ${turma.total_correcoes || 0} corr.</span>`;
-        });
-        html += `</div>`;
+        // Rodapé removido – não exibe "Turma: X corr."
 
         container.innerHTML = html;
 
