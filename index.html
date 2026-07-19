@@ -4673,7 +4673,7 @@
                 }
             }
 
-            function editarProva(id) { showToast('👁️ Visualizando prova ID ' + id + '...', 'info'); }
+            '<button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">👁️</button>'
 
             async function excluirProva(id, nome) {
                 if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
