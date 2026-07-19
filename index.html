@@ -4187,77 +4187,100 @@
             // CARREGAR CONCEITO REAL - CORRIGIDO
             // ============================================
             async function carregarConceitoReal() {
-                try {
-                    const response = await fetch(`${API_URL}/api/dashboard/Conceito`);
-                    const dados = await response.json();
-                    const container = document.getElementById('grafico-Conceito');
-                    const badge = document.getElementById('total-turmas-badge');
-                    if (!container) return;
+    try {
+        const response = await fetch(`${API_URL}/api/dashboard/Conceito`);
+        const dados = await response.json();
+        const container = document.getElementById('grafico-Conceito');
+        const badge = document.getElementById('total-turmas-badge');
+        if (!container) return;
 
-                    if (dados.erro || !dados || dados.length === 0) {
-                        container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
-                            <div style="font-size:30px;margin-bottom:10px;">📭</div>
-                            <p>Nenhuma turma com correções ainda.</p>
-                            <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
-                        </div>`;
-                        if (badge) badge.textContent = '0 turmas';
-                        return;
-                    }
+        // Se não houver dados ou erro
+        if (dados.erro || !dados || dados.length === 0) {
+            container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
+                <div style="font-size:30px;margin-bottom:10px;">📭</div>
+                <p>Nenhuma turma com correções ainda.</p>
+                <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
+            </div>`;
+            if (badge) badge.textContent = '0 turmas';
+            return;
+        }
 
-                    // Atualiza badge com o número REAL de turmas (dados.length)
-                    if (badge) badge.textContent = dados.length + ' turmas';
-
-                    // Ordena por porcentagem decrescente e limita a 5
-                    const maxBarras = 5;
-                    let dadosFiltrados = [...dados];
-                    if (dadosFiltrados.length > maxBarras) {
-                        dadosFiltrados = dadosFiltrados.sort((a, b) => b.porcentagem - a.porcentagem).slice(0, maxBarras);
-                    }
-
-                    let html = '<div class="chart-bars">';
-                    const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
-
-                    dadosFiltrados.forEach((turma, index) => {
-                        // Se o nome estiver vazio, usa "Turma [ID]" para não mostrar "Turma sem nome"
-                        let nome = turma.nome || 'Turma sem nome';
-                        if (nome === 'Turma sem nome' && turma.id) {
-                            nome = 'Turma ' + turma.id;
-                        }
-                        const porcentagem = turma.porcentagem || 0;
-                        const altura = Math.max(20, (porcentagem / 100) * 130);
-                        const cor = cores[index % cores.length];
-                        html += `<div class="chart-bar-item" title="${nome} - Média: ${turma.media || 0}">
-                            <div class="chart-bar-val">${porcentagem}%</div>
-                            <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
-                            <div class="chart-bar-lbl">${nome}</div>
-                        </div>`;
-                    });
-                    html += '</div>';
-
-                    // Rodapé com detalhes das turmas (agora com nome correto)
-                    html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
-                    dadosFiltrados.forEach(turma => {
-                        let nome = turma.nome || 'Turma sem nome';
-                        if (nome === 'Turma sem nome' && turma.id) {
-                            nome = 'Turma ' + turma.id;
-                        }
-                        html += `<span>${nome}: ${turma.total_correcoes || 0} corr.</span>`;
-                    });
-                    html += `</div>`;
-
-                    container.innerHTML = html;
-
-                } catch (erro) {
-                    console.error('Erro ao carregar Conceito:', erro);
-                    const container = document.getElementById('grafico-Conceito');
-                    if (container) {
-                        container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
-                            <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
-                            <p>Erro ao carregar dados de Conceito.</p>
-                        </div>`;
-                    }
-                }
+        // Agrupar por turma (usando turma_id ou id)
+        const turmasMap = new Map();
+        dados.forEach(item => {
+            const id = item.turma_id || item.id;
+            if (!id) return;
+            if (!turmasMap.has(id)) {
+                turmasMap.set(id, {
+                    id: id,
+                    nome: item.nome || `Turma ${id}`,
+                    somaPorcentagem: 0,
+                    totalCorrecoes: 0,
+                    contagem: 0
+                });
             }
+            const turma = turmasMap.get(id);
+            turma.somaPorcentagem += (item.porcentagem || 0);
+            turma.totalCorrecoes += (item.total_correcoes || 1);
+            turma.contagem++;
+        });
+
+        // Calcular média e montar array final
+        const turmasAgrupadas = Array.from(turmasMap.values()).map(t => ({
+            id: t.id,
+            nome: t.nome,
+            porcentagem: t.contagem > 0 ? Math.round(t.somaPorcentagem / t.contagem) : 0,
+            total_correcoes: t.totalCorrecoes,
+            media: t.contagem > 0 ? (t.somaPorcentagem / t.contagem) : 0
+        }));
+
+        // Atualizar badge com o número de turmas
+        if (badge) badge.textContent = turmasAgrupadas.length + ' turmas';
+
+        // Ordenar por porcentagem decrescente e limitar a 5
+        const maxBarras = 5;
+        let dadosFiltrados = turmasAgrupadas.sort((a, b) => b.porcentagem - a.porcentagem);
+        if (dadosFiltrados.length > maxBarras) {
+            dadosFiltrados = dadosFiltrados.slice(0, maxBarras);
+        }
+
+        let html = '<div class="chart-bars">';
+        const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
+
+        dadosFiltrados.forEach((turma, index) => {
+            const nome = turma.nome || 'Turma sem nome';
+            const porcentagem = turma.porcentagem || 0;
+            const altura = Math.max(20, (porcentagem / 100) * 130);
+            const cor = cores[index % cores.length];
+            html += `<div class="chart-bar-item" title="${nome} - Média: ${turma.media || 0}">
+                <div class="chart-bar-val">${porcentagem}%</div>
+                <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                <div class="chart-bar-lbl">${nome}</div>
+            </div>`;
+        });
+        html += '</div>';
+
+        // Rodapé com detalhes das turmas
+        html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
+        dadosFiltrados.forEach(turma => {
+            const nome = turma.nome || 'Turma sem nome';
+            html += `<span>${nome}: ${turma.total_correcoes || 0} corr.</span>`;
+        });
+        html += `</div>`;
+
+        container.innerHTML = html;
+
+    } catch (erro) {
+        console.error('Erro ao carregar Conceito:', erro);
+        const container = document.getElementById('grafico-Conceito');
+        if (container) {
+            container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
+                <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
+                <p>Erro ao carregar dados de Conceito.</p>
+            </div>`;
+        }
+    }
+}
 
             // ============================================
             // CARREGAR ÚLTIMAS CORREÇÕES - CORRIGIDO
