@@ -1268,7 +1268,7 @@
                     </div>
                     <div class="card">
                         <div class="card-header"><div class="card-title">⚡ Últimas Correções</div><span class="badge badge-green">● Ao Vivo</span></div>
-                        <div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Nota</th><th>Status</th></tr></thead><tbody id="ultimas-correcoes"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div>
+                        <div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Porcentagem</th><th>Conceito</th></tr></thead><tbody id="ultimas-correcoes"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div>
                     </div>
                 </div>
             </div>
@@ -4171,7 +4171,7 @@
             }
 
             // ============================================
-            // CARREGAR CONCEITO REAL
+            // CARREGAR CONCEITO REAL - CORRIGIDO
             // ============================================
             async function carregarConceitoReal() {
                 try {
@@ -4203,19 +4203,22 @@
                     const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
 
                     dadosFiltrados.forEach((turma, index) => {
-                        const altura = Math.max(20, (turma.porcentagem / 100) * 130);
+                        const nome = turma.nome || 'Turma sem nome';
+                        const porcentagem = turma.porcentagem || 0;
+                        const altura = Math.max(20, (porcentagem / 100) * 130);
                         const cor = cores[index % cores.length];
-                        html += `<div class="chart-bar-item" title="${turma.nome} - Média: ${turma.media}">
-                            <div class="chart-bar-val">${turma.porcentagem}%</div>
+                        html += `<div class="chart-bar-item" title="${nome} - Média: ${turma.media || 0}">
+                            <div class="chart-bar-val">${porcentagem}%</div>
                             <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
-                            <div class="chart-bar-lbl">${turma.nome}</div>
+                            <div class="chart-bar-lbl">${nome}</div>
                         </div>`;
                     });
                     html += '</div>';
 
                     html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
                     dadosFiltrados.forEach(turma => {
-                        html += `<span>${turma.nome}: ${turma.total_correcoes} corr.</span>`;
+                        const nome = turma.nome || 'Turma sem nome';
+                        html += `<span>${nome}: ${turma.total_correcoes || 0} corr.</span>`;
                     });
                     html += `</div>`;
 
@@ -4234,7 +4237,7 @@
             }
 
             // ============================================
-            // CARREGAR ÚLTIMAS CORREÇÕES
+            // CARREGAR ÚLTIMAS CORREÇÕES - CORRIGIDO
             // ============================================
             async function carregarUltimasCorrecoes() {
                 try {
@@ -4247,10 +4250,30 @@
                     } else {
                         const recentes = historico.slice(0, 4);
                         tbody.innerHTML = recentes.map(item => {
-                            const status = item.nota >= 6 ? 'Aprovado' : 'Reprovado';
-                            const cor = item.nota >= 6 ? 'var(--green)' : 'var(--red)';
-                            const badge = item.nota >= 6 ? 'badge-green' : 'badge-red';
-                            return '<tr><td><strong>' + item.aluno_nome + '</strong></td><td>' + item.prova_titulo + '</td><td><strong style="color:' + cor + ';">' + item.nota + '</strong></td><td><span class="badge ' + badge + '">' + status + '</span></td></tr>';
+                            const acertos = item.acertos || 0;
+                            const total = item.total || 20;
+                            const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
+                            const conceito = calcularConceito(porcentagem);
+                            const badgeMap = {
+                                'inicial': 'badge-conceito-inicial',
+                                'basico': 'badge-conceito-basico',
+                                'proficiente': 'badge-conceito-proficiente',
+                                'avancado': 'badge-conceito-avancado'
+                            };
+                            const nomeConceito = {
+                                'inicial': '🔴 Inicial',
+                                'basico': '🟠 Básico',
+                                'proficiente': '🔵 Proficiente',
+                                'avancado': '🟢 Avançado'
+                            };
+                            const badge = badgeMap[conceito] || 'badge-gray';
+                            const label = nomeConceito[conceito] || 'Indefinido';
+                            return `<tr>
+                                <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
+                                <td>${item.prova_titulo || 'Prova'}</td>
+                                <td><strong>${porcentagem}%</strong></td>
+                                <td><span class="badge ${badge}">${label}</span></td>
+                            </tr>`;
                         }).join('');
                     }
                 } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
