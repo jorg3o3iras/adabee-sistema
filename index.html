@@ -4188,12 +4188,13 @@
             // ============================================
             async function carregarConceitoReal() {
     try {
+        // Buscar dados de conceito e lista de turmas em paralelo
         const [conceitoResp, turmasResp] = await Promise.all([
             fetch(`${API_URL}/api/dashboard/Conceito`),
             fetch(`${API_URL}/api/turmas`)
         ]);
 
-        const dados = await conceitoResp.json();
+        let dados = await conceitoResp.json();
         const turmasLista = await turmasResp.json();
 
         const container = document.getElementById('grafico-Conceito');
@@ -4222,24 +4223,40 @@
             });
         }
 
-        // Agrupar por turma_id
+        // Agrupar por turma_id (ou id)
         const agrupado = new Map();
         dadosArray.forEach(item => {
-            const id = item.turma_id || item.id || item.turmaId;
-            if (!id) return;
+            // Tentar extrair o ID da turma de várias propriedades
+            let turmaId = item.turma_id || item.id || item.turmaId;
+            if (!turmaId) {
+                // Se não tiver ID, pode ser que o dado já venha agregado por turma
+                // e o nome esteja em item.nome
+                if (item.nome) {
+                    turmaId = 'nome_' + item.nome; // chave artificial
+                } else {
+                    return; // ignora
+                }
+            }
 
-            if (!agrupado.has(id)) {
-                // Buscar nome real da turma
-                const nomeReal = turmasMap.get(id) || `Turma ${id}`;
-                agrupado.set(id, {
-                    id: id,
+            // Buscar nome real
+            let nomeReal = turmasMap.get(turmaId);
+            if (!nomeReal && item.nome && item.nome !== 'Turma sem nome') {
+                nomeReal = item.nome;
+            }
+            if (!nomeReal) {
+                nomeReal = `Turma ${turmaId}`;
+            }
+
+            if (!agrupado.has(turmaId)) {
+                agrupado.set(turmaId, {
+                    id: turmaId,
                     nome: nomeReal,
                     somaPorcentagem: 0,
                     totalCorrecoes: 0,
                     contagem: 0
                 });
             }
-            const turma = agrupado.get(id);
+            const turma = agrupado.get(turmaId);
             if (item.porcentagem !== undefined) {
                 turma.somaPorcentagem += item.porcentagem;
                 turma.contagem++;
@@ -4251,9 +4268,13 @@
             } else {
                 turma.totalCorrecoes += 1;
             }
+            // Atualiza nome se o item tiver nome melhor
+            if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') {
+                turma.nome = item.nome;
+            }
         });
 
-        // Se não houver turmas agrupadas, usa os dados como estão (fallback)
+        // Se não houver agrupamento (ex: dados já agregados sem turma_id)
         let turmasAgrupadas;
         if (agrupado.size === 0) {
             turmasAgrupadas = dadosArray.map((item, index) => ({
@@ -4273,7 +4294,7 @@
             }));
         }
 
-        // Atualizar badge com o número de turmas (agrupadas)
+        // Atualizar badge com o número de turmas únicas
         if (badge) badge.textContent = turmasAgrupadas.length + ' turmas';
 
         // Ordenar por porcentagem decrescente e limitar a 5
