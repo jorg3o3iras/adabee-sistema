@@ -2448,6 +2448,7 @@ def excluir_aluno(id):
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
+    # Ignora qualquer parâmetro escola_id – provas não estão vinculadas a escolas
     try:
         conn = get_db_connection()
         if not conn:
