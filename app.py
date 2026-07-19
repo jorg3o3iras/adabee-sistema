@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import cv2
 import numpy as np
@@ -18,6 +18,7 @@ import traceback
 from dotenv import load_dotenv
 import hmac
 import logging
+import zipfile  # <-- NOVO para compactar o backup
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -3101,6 +3102,76 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
+# ══ ROTA DE BACKUP DO BANCO DE DADOS ══
+# ============================================
+
+@app.route('/api/backup', methods=['GET'])
+def backup_database():
+    """
+    Exporta todas as tabelas do banco para um arquivo ZIP contendo um JSON.
+    Requer uma chave de segurança (BACKUP_KEY) para evitar acesso indevido.
+    """
+    # Verifica a chave de segurança (pode ser passada como query string ou cabeçalho)
+    backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
+    expected_key = os.getenv('BACKUP_KEY', 'backup123')
+
+    if not backup_key or backup_key != expected_key:
+        logging.warning(f"⚠️ Tentativa de backup com chave inválida: {backup_key}")
+        return jsonify({'erro': 'Não autorizado. Chave de backup inválida.'}), 403
+
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
+
+        # Lista de tabelas a serem exportadas (ordem respeita dependências)
+        tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto']
+        data = {}
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        for table in tables:
+            try:
+                cur.execute(f"SELECT * FROM {table}")
+                rows = cur.fetchall()
+                data[table] = rows
+                logging.info(f"📦 Tabela '{table}': {len(rows)} registros exportados.")
+            except Exception as e:
+                logging.warning(f"⚠️ Tabela '{table}' não encontrada ou erro: {e}")
+                data[table] = []
+
+        cur.close()
+        conn.close()
+
+        # Converte para JSON com tratamento de datas (default=str)
+        json_str = json.dumps(data, default=str, indent=2, ensure_ascii=False)
+
+        # Cria um arquivo ZIP em memória
+        memory_file = io.BytesIO()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        json_filename = f"backup_{timestamp}.json"
+        zip_filename = f"backup_{timestamp}.zip"
+
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(json_filename, json_str.encode('utf-8'))
+
+        memory_file.seek(0)
+
+        logging.info(f"✅ Backup gerado com sucesso: {zip_filename}")
+
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=zip_filename
+        )
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao gerar backup: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
+
+# ============================================
 # ROTA PRINCIPAL
 # ============================================
 
@@ -3132,7 +3203,8 @@ def index():
                 '/api/dashboard',
                 '/api/dashboard/Conceito',
                 '/api/dashboard/turmas_alunos',
-                '/api/gerar_gabarito'
+                '/api/gerar_gabarito',
+                '/api/backup'  # NOVO
             ]
         })
 
@@ -3365,29 +3437,31 @@ if __name__ == '__main__':
     print("   - Português")
     print("   - Matemática")
     print("   - Produção de Texto")
-    print("   - Ciências Humanas (CH) - NOVA")
-    print("   - Ciências Naturais (CN) - NOVA")
+    print("   - Ciências Humanas (CH)")
+    print("   - Ciências Naturais (CN)")
     print("=" * 60)
     print("📋 Endpoints disponíveis:")
-    print("   - /health - Verificar status")
-    print("   - /api/login - Login")
-    print("   - /api/corrigir - Correção com IA")
-    print("   - /api/corrigir_manual - Correção manual")
-    print("   - /api/corrigir_redacao - Correção de redação")
-    print("   - /api/salvar_correcao_texto - Salvar correção de texto")
-    print("   - /api/correcoes_texto - Listar correções de texto")
-    print("   - /api/escolas - Gerenciar escolas")
-    print("   - /api/turmas - Gerenciar turmas")
-    print("   - /api/turmas/<id>/alunos - Listar alunos de uma turma")
-    print("   - /api/turmas/estatisticas - Estatísticas de turmas")
-    print("   - /api/alunos - Gerenciar alunos")
-    print("   - /api/provas - Gerenciar provas (com BNCC)")
-    print("   - /api/gabaritos - Gerenciar gabaritos (com BNCC)")
-    print("   - /api/historico - Histórico de correções")
-    print("   - /api/historico/agrupado - Histórico agrupado por aluno (5 avaliações)")
-    print("   - /api/dashboard - Dados do dashboard")
-    print("   - /api/dashboard/Conceito - Dados de conceitos para dashboard")
-    print("   - /api/dashboard/turmas_alunos - Turmas com alunos")
-    print("   - /api/gerar_gabarito - Gerar cartão resposta")
+    print("   - /health")
+    print("   - /api/login")
+    print("   - /api/corrigir")
+    print("   - /api/corrigir_manual")
+    print("   - /api/corrigir_redacao")
+    print("   - /api/salvar_correcao_texto")
+    print("   - /api/correcoes_texto")
+    print("   - /api/escolas")
+    print("   - /api/turmas")
+    print("   - /api/alunos")
+    print("   - /api/provas")
+    print("   - /api/gabaritos")
+    print("   - /api/historico")
+    print("   - /api/historico/agrupado")
+    print("   - /api/dashboard")
+    print("   - /api/dashboard/Conceito")
+    print("   - /api/gerar_gabarito")
+    print("   - /api/backup  ✅ NOVO")
     print("=" * 60)
+
+    # Inicializar banco
+    init_db()
+
     app.run(host='0.0.0.0', port=port, debug=False)
