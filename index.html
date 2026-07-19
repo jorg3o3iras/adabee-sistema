@@ -2966,30 +2966,35 @@
             // CARREGAR PROVAS
             // ============================================
             async function carregarProvas() {
-                try {
-                    const response = await fetch(API_URL + '/api/provas');
-                    const provas = await response.json();
-                    const tbody = document.getElementById('tb-provas');
-                    if (!tbody) return;
+    try {
+        const response = await fetch(API_URL + '/api/provas');
+        const provas = await response.json();
+        const tbody = document.getElementById('tb-provas');
+        if (!tbody) return;
 
-                    if (!provas || provas.length === 0 || provas.erro) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
-                    } else {
-                        tbody.innerHTML = provas.map((p, i) => {
-                            return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-                                '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
-                                '<td><strong>' + p.titulo + '</strong></td>' +
-                                '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
-                                '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
-                                '<td>' + (p.data_prova || '—') + '</td>' +
-                                '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
-                        }).join('');
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar provas:', erro);
-                }
-            }
+        if (!provas || provas.length === 0 || provas.erro) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
+        } else {
+            tbody.innerHTML = provas.map((p, i) => {
+                return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                    '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                    '<td><strong>' + p.titulo + '</strong></td>' +
+                    '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                    '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
+                    '<td>' + (p.data_prova || '—') + '</td>' +
+                    '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
+                    '<td><div class="btn-group">' +
+                    // 👇 CORREÇÃO AQUI: trocar editarProva por editarGabarito
+                    '<button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">👁️</button>' +
+                    (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') +
+                    '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button>' +
+                    '</div></td></tr>';
+            }).join('');
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar provas:', erro);
+    }
+}
 
             // ============================================
             // CARREGAR DASHBOARD
