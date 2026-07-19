@@ -1435,7 +1435,9 @@
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
                         <div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="gab-serie" onchange="buildGabGrid()"><option value="1">1º Ano — A, B, C</option><option value="2" selected>2º Ano — A, B, C, D</option><option value="3">3º Ano — A, B, C, D</option><option value="4">4º Ano — A, B, C, D</option><option value="5">5º Ano — A, B, C, D</option><option value="6">6º Ano — A, B, C, D</option><option value="7">7º Ano — A, B, C, D</option><option value="8">8º Ano — A, B, C, D</option><option value="9">9º Ano — A, B, C, D</option></select></div>
-                        <div class="form-group"><label class="form-label">Nº de Questões</label><select class="form-control" id="gab-total" onchange="buildGabGrid()"><option>10</option><option>15</option><option selected>20</option><option>25</option><option>30</option></select></div>
+                        <div class="form-group"><label class="form-label">Nº de Questões</label>
+                            <select class="form-control" id="gab-total" onchange="buildGabGrid()"></select>
+                        </div>
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div><div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div></div>
                 </div>
@@ -2510,6 +2512,24 @@
             }
 
             // ============================================
+            // POPULAR SELECT DE GAB-TOTAL (1 a 30)
+            // ============================================
+            function popularSelectGabTotal() {
+                const select = document.getElementById('gab-total');
+                if (!select) return;
+                // Limpa opções atuais
+                select.innerHTML = '';
+                // Gera opções de 1 a 30
+                for (let i = 1; i <= 30; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    if (i === 20) opt.selected = true; // valor padrão 20
+                    select.appendChild(opt);
+                }
+            }
+
+            // ============================================
             // MENU TOGGLE
             // ============================================
             function toggleMenu() {
@@ -2586,6 +2606,7 @@
                 carregarFiltrosRelTurma();
                 carregarEscolasDesempenho();
                 popularSelectQuestoes(); // <-- NOVO
+                popularSelectGabTotal(); // <-- NOVO
             }
 
             function doLogout() {
@@ -7532,6 +7553,7 @@
                 carregarEscolasParaAluno();
                 carregarEscolasDesempenho();
                 popularSelectQuestoes(); // <-- NOVO
+                popularSelectGabTotal(); // <-- NOVO
             });
 
             document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
