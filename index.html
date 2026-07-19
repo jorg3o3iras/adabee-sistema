@@ -4188,15 +4188,28 @@
             // ============================================
             async function carregarConceitoReal() {
     try {
-        const response = await fetch(`${API_URL}/api/dashboard/Conceito`);
-        const dados = await response.json();
+        // Buscar dados de conceito e lista de turmas em paralelo
+        const [conceitoResp, turmasResp] = await Promise.all([
+            fetch(`${API_URL}/api/dashboard/Conceito`),
+            fetch(`${API_URL}/api/turmas`)
+        ]);
+
+        const dados = await conceitoResp.json();
+        const turmas = await turmasResp.json();
+
         const container = document.getElementById('grafico-Conceito');
         const badge = document.getElementById('total-turmas-badge');
         if (!container) return;
 
-        console.log('Dados recebidos do endpoint Conceito:', dados); // debug
+        // Criar mapa de turmas por id
+        const turmasMap = new Map();
+        if (turmas && !turmas.erro) {
+            turmas.forEach(t => {
+                turmasMap.set(t.id, t.nome || `Turma ${t.id}`);
+            });
+        }
 
-        // Se não houver dados ou erro
+        // Se não houver dados de conceito
         if (!dados || dados.erro || (Array.isArray(dados) && dados.length === 0)) {
             container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
                 <div style="font-size:30px;margin-bottom:10px;">📭</div>
@@ -4207,107 +4220,71 @@
             return;
         }
 
-        // Se os dados já vierem como objeto com chaves, converte para array
+        // Converter para array
         let dadosArray = Array.isArray(dados) ? dados : Object.values(dados);
 
-        if (dadosArray.length === 0) {
-            container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
-                <div style="font-size:30px;margin-bottom:10px;">📭</div>
-                <p>Nenhuma turma com correções ainda.</p>
-            </div>`;
-            if (badge) badge.textContent = '0 turmas';
-            return;
-        }
+        // Agrupar por turma
+        const turmasAgrupadas = new Map();
 
-        // Verificar se já temos uma entrada por turma (checando se há turma_id ou id)
-        // Se cada item já tem um nome e porcentagem, podemos usá-los diretamente
-        // Mas para garantir, agrupamos por turma_id (se existir)
-        const turmasMap = new Map();
         dadosArray.forEach(item => {
-            // Tentar extrair um identificador de turma
             const id = item.turma_id || item.id || item.turmaId;
-            if (!id) {
-                // Se não tem id, talvez seja uma entrada única sem turma (dados de uma turma só)
-                // Vamos usar um fallback
-                return;
-            }
-            // Obter nome da turma
-            let nome = item.nome || item.turma_nome || item.nome_turma || `Turma ${id}`;
-            // Se o nome for "Turma sem nome" ou vazio, usar o fallback
-            if (!nome || nome === 'Turma sem nome' || nome.trim() === '') {
-                nome = `Turma ${id}`;
-            }
+            if (!id) return;
 
-            if (!turmasMap.has(id)) {
-                turmasMap.set(id, {
+            if (!turmasAgrupadas.has(id)) {
+                turmasAgrupadas.set(id, {
                     id: id,
-                    nome: nome,
+                    nome: turmasMap.get(id) || `Turma ${id}`,
                     somaPorcentagem: 0,
                     totalCorrecoes: 0,
-                    contagem: 0,
-                    // Guardar também a porcentagem direta se não houver soma
-                    porcentagemDireta: item.porcentagem || 0
+                    contagem: 0
                 });
             }
-            const turma = turmasMap.get(id);
-            // Se o item tem porcentagem, adiciona à soma
-            if (item.porcentagem !== undefined) {
-                turma.somaPorcentagem += item.porcentagem;
-                turma.contagem++;
-            }
-            // Se tem total_correcoes, acumula
-            if (item.total_correcoes !== undefined) {
-                turma.totalCorrecoes += item.total_correcoes;
-            } else if (item.total_correcoes === undefined && item.correcoes !== undefined) {
-                turma.totalCorrecoes += item.correcoes;
-            } else {
-                // Se não tem, incrementa 1 por entrada
-                turma.totalCorrecoes += 1;
-            }
-            // Atualizar nome se o item tiver um nome melhor
-            if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') {
-                turma.nome = item.nome;
-            }
+            const turma = turmasAgrupadas.get(id);
+            turma.somaPorcentagem += (item.porcentagem || 0);
+            turma.totalCorrecoes += (item.total_correcoes || item.correcoes || 1);
+            turma.contagem++;
         });
 
-        // Se o mapa estiver vazio, significa que não conseguimos extrair turma_id, 
-        // então vamos assumir que cada item já é uma turma (caso de dados já agregados)
-        let turmasAgrupadas;
-        if (turmasMap.size === 0) {
-            // Usar os dados originais como cada item sendo uma turma
-            turmasAgrupadas = dadosArray.map((item, index) => ({
-                id: index,
-                nome: item.nome || item.turma_nome || `Turma ${index+1}`,
-                porcentagem: item.porcentagem || 0,
-                total_correcoes: item.total_correcoes || 0,
-                media: item.media || item.porcentagem || 0
-            }));
-        } else {
-            // Calcular médias para cada turma
-            turmasAgrupadas = Array.from(turmasMap.values()).map(t => ({
-                id: t.id,
-                nome: t.nome,
-                porcentagem: t.contagem > 0 ? Math.round(t.somaPorcentagem / t.contagem) : (t.porcentagemDireta || 0),
-                total_correcoes: t.totalCorrecoes,
-                media: t.contagem > 0 ? (t.somaPorcentagem / t.contagem) : (t.porcentagemDireta || 0)
-            }));
+        // Se não houver turmas agrupadas, tentar usar os dados como estão (ex: já agregados)
+        if (turmasAgrupadas.size === 0) {
+            dadosArray.forEach((item, index) => {
+                const id = item.turma_id || item.id || index;
+                const nome = item.nome || item.turma_nome || `Turma ${id}`;
+                turmasAgrupadas.set(id, {
+                    id: id,
+                    nome: turmasMap.get(id) || nome,
+                    somaPorcentagem: item.porcentagem || 0,
+                    totalCorrecoes: item.total_correcoes || 0,
+                    contagem: 1
+                });
+            });
         }
 
+        // Converter para array e calcular médias
+        const turmasFinal = Array.from(turmasAgrupadas.values()).map(t => ({
+            id: t.id,
+            nome: turmasMap.get(t.id) || t.nome || `Turma ${t.id}`,
+            porcentagem: t.contagem > 0 ? Math.round(t.somaPorcentagem / t.contagem) : 0,
+            total_correcoes: t.totalCorrecoes,
+            media: t.contagem > 0 ? (t.somaPorcentagem / t.contagem) : 0
+        }));
+
         // Atualizar badge com o número de turmas
-        if (badge) badge.textContent = turmasAgrupadas.length + ' turmas';
+        if (badge) badge.textContent = turmasFinal.length + ' turmas';
 
         // Ordenar por porcentagem decrescente e limitar a 5
         const maxBarras = 5;
-        let dadosFiltrados = turmasAgrupadas.sort((a, b) => b.porcentagem - a.porcentagem);
+        let dadosFiltrados = turmasFinal.sort((a, b) => b.porcentagem - a.porcentagem);
         if (dadosFiltrados.length > maxBarras) {
             dadosFiltrados = dadosFiltrados.slice(0, maxBarras);
         }
 
+        // Renderizar gráfico
         let html = '<div class="chart-bars">';
         const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
 
         dadosFiltrados.forEach((turma, index) => {
-            const nome = turma.nome || 'Turma sem nome';
+            const nome = turma.nome || `Turma ${turma.id}`;
             const porcentagem = turma.porcentagem || 0;
             const altura = Math.max(20, (porcentagem / 100) * 130);
             const cor = cores[index % cores.length];
@@ -4319,10 +4296,10 @@
         });
         html += '</div>';
 
-        // Rodapé com detalhes das turmas
+        // Rodapé
         html += `<div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:4px;margin-top:8px;font-size:9px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px;">`;
         dadosFiltrados.forEach(turma => {
-            const nome = turma.nome || 'Turma sem nome';
+            const nome = turma.nome || `Turma ${turma.id}`;
             html += `<span>${nome}: ${turma.total_correcoes || 0} corr.</span>`;
         });
         html += `</div>`;
