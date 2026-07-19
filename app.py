@@ -18,7 +18,7 @@ import traceback
 from dotenv import load_dotenv
 import hmac
 import logging
-import zipfile  # <-- NOVO para compactar o backup
+import zipfile
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -2697,7 +2697,7 @@ def excluir_prova(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE USUÁRIOS (RESUMO)
+# ROTA DE USUÁRIOS (CRUD COMPLETO) - CORRIGIDO
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -2773,6 +2773,168 @@ def criar_usuario():
 
     except Exception as e:
         print(f"Erro ao criar usuário: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTAS ADICIONAIS PARA USUÁRIOS (GET, PUT, DELETE)
+# ============================================
+
+@app.route('/api/usuarios/<int:id>', methods=['GET'])
+def buscar_usuario(id):
+    """Busca um usuário específico pelo ID."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, nome, username, email, perfil, ativo, criado_em
+            FROM usuarios
+            WHERE id = %s
+        """, (id,))
+        usuario = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+
+        return jsonify(usuario)
+
+    except Exception as e:
+        print(f"❌ Erro ao buscar usuário: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/usuarios/<int:id>', methods=['PUT'])
+def atualizar_usuario(id):
+    """Atualiza os dados de um usuário existente."""
+    try:
+        data = request.json
+        nome = data.get('nome')
+        username = data.get('username')
+        senha = data.get('senha')          # pode vir vazio
+        email = data.get('email', '')
+        perfil = data.get('perfil', 'usuario')
+        ativo = data.get('ativo', True)
+
+        if not nome or not username:
+            return jsonify({'erro': 'Nome e usuário são obrigatórios'}), 400
+
+        if len(username) < 3:
+            return jsonify({'erro': 'Usuário deve ter pelo menos 3 caracteres'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Verifica se o usuário existe
+        cur.execute("SELECT id FROM usuarios WHERE id = %s", (id,))
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+
+        # Verifica se o novo username já está em uso por outro usuário
+        cur.execute("SELECT id FROM usuarios WHERE username = %s AND id != %s", (username, id))
+        if cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Este nome de usuário já está em uso'}), 400
+
+        # Monta a query de atualização dinamicamente
+        update_fields = []
+        params = []
+
+        update_fields.append("nome = %s")
+        params.append(nome)
+
+        update_fields.append("username = %s")
+        params.append(username)
+
+        update_fields.append("email = %s")
+        params.append(email)
+
+        update_fields.append("perfil = %s")
+        params.append(perfil)
+
+        update_fields.append("ativo = %s")
+        params.append(ativo)
+
+        # Se a senha foi fornecida (não vazia), atualiza
+        if senha and len(senha) >= 4:
+            update_fields.append("senha_hash = %s")
+            params.append(senha)
+
+        params.append(id)  # para o WHERE
+
+        query = f"""
+            UPDATE usuarios
+            SET {', '.join(update_fields)}
+            WHERE id = %s
+            RETURNING id
+        """
+
+        cur.execute(query, params)
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            'sucesso': True,
+            'id': result['id'],
+            'mensagem': 'Usuário atualizado com sucesso'
+        })
+
+    except Exception as e:
+        print(f"❌ Erro ao atualizar usuário: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/usuarios/<int:id>', methods=['DELETE'])
+def excluir_usuario(id):
+    """Exclui um usuário (apenas se não for o admin principal)."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Busca o usuário
+        cur.execute("SELECT username FROM usuarios WHERE id = %s", (id,))
+        usuario = cur.fetchone()
+        if not usuario:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+
+        username = usuario['username']
+
+        # Impede exclusão do admin principal
+        if username == 'admin':
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Não é possível excluir o usuário administrador principal'}), 400
+
+        # Exclui o usuário
+        cur.execute("DELETE FROM usuarios WHERE id = %s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Usuário "{username}" excluído com sucesso'
+        })
+
+    except Exception as e:
+        print(f"❌ Erro ao excluir usuário: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
@@ -3204,7 +3366,7 @@ def index():
                 '/api/dashboard/Conceito',
                 '/api/dashboard/turmas_alunos',
                 '/api/gerar_gabarito',
-                '/api/backup'  # NOVO
+                '/api/backup'
             ]
         })
 
@@ -3458,7 +3620,9 @@ if __name__ == '__main__':
     print("   - /api/dashboard")
     print("   - /api/dashboard/Conceito")
     print("   - /api/gerar_gabarito")
-    print("   - /api/backup  ✅ NOVO")
+    print("   - /api/backup")
+    print("   - /api/usuarios (GET, POST)")
+    print("   - /api/usuarios/<id> (GET, PUT, DELETE)  ✅ NOVO")
     print("=" * 60)
 
     # Inicializar banco
