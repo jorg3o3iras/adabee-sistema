@@ -1357,7 +1357,7 @@
                             <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
                         </select>
                         <button class="btn btn-green" onclick="go('lista-turma')">📋 Lista</button>
-                        <button class="btn btn-outline" onclick="exportarAlunosCSV()">📤 CSV</button>
+                        <button class="btn btn-outline no-print" onclick="imprimirAlunos()">🖨️ Imprimir</button>
                         <button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo Aluno</button>
                     </div>
                 </div>
@@ -5972,23 +5972,115 @@
                 showToast('✅ Resultados exportados!', 'success');
             }
 
-            function exportarAlunosCSV() {
-                showToast('📤 Exportando alunos...', 'info');
-                fetch(API_URL + '/api/alunos').then(r => r.json()).then(alunos => {
-                    if (!alunos || alunos.length === 0) { showToast('⚠️ Nenhum aluno para exportar', 'error'); return; }
-                    let csv = 'Nº,Matrícula,Nome,Série,Turma, Escola,Data Nasc.\n';
-                    alunos.forEach(a => { csv += (a.numero_chamada || '') + ',' + (a.matricula || '') + ',' + a.nome + ',' + (a.turma_serie || '') + ',' + (a.turma_nome || '') + ',' + (a.escola_nome || '') + ',' + (a.data_nascimento || '') + '\n'; });
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'alunos.csv';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    showToast('✅ Alunos exportados!', 'success');
-                }).catch(e => { showToast('❌ Erro ao exportar', 'error');
-                    console.error(e); });
+            function imprimirAlunos() {
+    const tbody = document.getElementById('tb-alunos');
+    const rows = tbody.querySelectorAll('tr');
+
+    // Verifica se há dados
+    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+        showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+        return;
+    }
+
+    // Captura os nomes dos filtros atuais
+    const escolaSelect = document.getElementById('filtro-escola-alunos');
+    const turmaSelect = document.getElementById('filtro-turma-alunos');
+    const serieSelect = document.getElementById('filtro-serie-alunos');
+    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+
+    // Monta o HTML para impressão
+    let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Lista de Alunos</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+            h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+            .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+            th { background: #f2f2f2; font-weight: 700; }
+            tr:nth-child(even) { background: #fafafa; }
+            .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+            @media print {
+                body { margin: 10px; }
+                .no-print { display: none; }
             }
+        </style>
+    </head>
+    <body>
+        <h1>📋 Lista de Alunos</h1>
+        <div class="filtros">
+            <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+            <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+            <strong>Série:</strong> ${serieNome}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nº</th>
+                    <th>Matrícula</th>
+                    <th>Nome Completo</th>
+                    <th>Série</th>
+                    <th>Turma</th>
+                    <th>Escola</th>
+                    <th>Data Nasc.</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Percorre as linhas visíveis da tabela (já filtradas)
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 7) {
+            const numero = cells[0].textContent.trim();
+            const matricula = cells[1].textContent.trim();
+            const nome = cells[2].textContent.trim();
+            const serie = cells[3].textContent.trim();
+            const turma = cells[4].textContent.trim();
+            const escola = cells[5].textContent.trim();
+            const dataNasc = cells[6].textContent.trim();
+            html += `
+                <tr>
+                    <td>${numero}</td>
+                    <td>${matricula}</td>
+                    <td>${nome}</td>
+                    <td>${serie}</td>
+                    <td>${turma}</td>
+                    <td>${escola}</td>
+                    <td>${dataNasc}</td>
+                </tr>
+            `;
+        }
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <div class="footer">
+            Gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>
+    </body>
+    </html>
+    `;
+
+    // Abre uma nova janela e imprime
+    const win = window.open('', '_blank');
+    if (!win) {
+        showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+        return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+}
 
             function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
                 window.print(); }
