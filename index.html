@@ -3054,6 +3054,19 @@
             }
 
             // ============================================
+            // CARREGAR RESULTADOS
+            // ============================================
+            async function carregarResultados() {
+                try {
+                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
+                    const alunos = await response.json();
+                    console.log('📥 Resultados agrupados:', alunos);
+                } catch (erro) {
+                    console.error('Erro ao carregar resultados:', erro);
+                }
+            }
+
+            // ============================================
             // CARREGAR RESULTADOS COM FILTROS
             // ============================================
             async function carregarResultadosComFiltros() {
@@ -4925,7 +4938,7 @@
             }
 
             // ============================================
-            // CARREGAR RELATÓRIO POR TURMA (FILTRADO)
+            // CARREGAR RELATÓRIO POR TURMA (FILTRADO) - CORRIGIDO
             // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
@@ -5006,13 +5019,9 @@
                     }
 
                     const total = dadosAlunos.length;
-                    const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
-                    const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
                     document.getElementById('rel-total-alunos').textContent = total;
-                    document.getElementById('rel-Habilidades').textContent = Habilidades;
-                    document.getElementById('rel-recuperacao').textContent = recuperacao;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                     const porcentagem = (mediaGeral / notaMaxima) * 100;
                     document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
@@ -5048,6 +5057,18 @@
                             totais[chave].total += totalDisc;
                         });
                     });
+
+                    // Soma total de acertos e erros de todas as disciplinas (para os cards ACERTOS e ERROS)
+                    let totalAcertosGeral = 0;
+                    let totalErrosGeral = 0;
+                    Object.keys(totais).forEach(key => {
+                        totalAcertosGeral += totais[key].acertos;
+                        totalErrosGeral += totais[key].erros;
+                    });
+
+                    // Atualiza os cards de resumo (ACERTOS e ERROS)
+                    document.getElementById('rel-Habilidades').textContent = totalAcertosGeral;
+                    document.getElementById('rel-recuperacao').textContent = totalErrosGeral;
 
                     // Atualizar os cards de disciplina (apenas os ativos)
                     const discKeys = ['pt', 'mat', 'prod', 'ch', 'cn'];
