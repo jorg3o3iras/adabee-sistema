@@ -1807,15 +1807,22 @@
                     </div>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div>
-                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">ACERTOS</div></div></div>
-                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">ERROS</div></div></div>
+                <!-- STATS-GRID MODIFICADO: apenas Porcentagem e Conceito -->
+                <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+                    <!-- Card Porcentagem -->
                     <div class="stat-card purple">
                         <div class="stat-top"><div class="stat-icon purple">📊</div></div>
                         <div>
                             <div class="stat-val" id="rel-media">0</div>
                             <div class="stat-label">Porcentagem</div>
+                        </div>
+                    </div>
+                    <!-- Card Conceito -->
+                    <div class="stat-card" style="border-color: var(--border2);">
+                        <div class="stat-top"><div class="stat-icon" style="background:rgba(139,92,246,0.15);">🏅</div></div>
+                        <div>
+                            <div class="stat-val" id="rel-conceito" style="font-size:24px;">—</div>
+                            <div class="stat-label">Conceito</div>
                         </div>
                     </div>
                 </div>
