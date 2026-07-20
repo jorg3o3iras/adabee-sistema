@@ -1217,64 +1217,123 @@
 
         <div class="content">
             <!-- ========== DASHBOARD ========== -->
-            <div class="page active" id="page-dashboard">
-                <div class="page-header">
-                    <div><div class="page-title">🏠 Dashboard</div><p class="page-sub">Visão geral do sistema</p></div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="abrirCamera()">📱 Câmera</button>
-                        <button class="btn btn-primary" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-                    </div>
-                </div>
+<div class="page active" id="page-dashboard" role="tabpanel" aria-labelledby="page-dashboard-title">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title" id="page-dashboard-title">🏠 Dashboard</h1>
+            <p class="page-sub">Visão geral do sistema</p>
+        </div>
+        <div class="page-actions no-print">
+            <button class="btn btn-outline" onclick="abrirCamera()" aria-label="Abrir câmera para escanear cartão resposta">
+                📱 Câmera
+            </button>
+            <button class="btn btn-primary" onclick="go('corrigir-ia')" aria-label="Ir para correção com inteligência artificial">
+                🤖 Corrigir com IA
+            </button>
+        </div>
+    </div>
 
-                <div class="print-header print-only">
-                    <h2>📊 Relatório de Conceito</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-dash"></span></p>
-                </div>
+    <div class="print-header print-only">
+        <h2>📊 Relatório de Conceito</h2>
+        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+        <p style="font-size:11px; color:#666;">Data: <span id="print-data-dash"></span></p>
+    </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
-                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
-                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
-                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
-                </div>
+    <!-- Estatísticas gerais -->
+    <div class="stats-grid" role="group" aria-label="Estatísticas gerais do sistema">
+        <div class="stat-card blue">
+            <div class="stat-top"><div class="stat-icon blue" aria-hidden="true">🏫</div></div>
+            <div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-top"><div class="stat-icon green" aria-hidden="true">👥</div></div>
+            <div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-top"><div class="stat-icon orange" aria-hidden="true">🎒</div></div>
+            <div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-top"><div class="stat-icon purple" aria-hidden="true">📄</div></div>
+            <div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div>
+        </div>
+    </div>
 
-                <div class="ai-hero no-print">
-                    <div class="ai-hero-icon">🤖</div>
-                    <div class="ai-hero-text"><h3>Ferramentas de Inteligência Artificial</h3><p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p></div>
-                    <div class="ai-hero-actions">
-                        <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
-                        <button class="btn btn-outline" onclick="go('correcao-texto')">📝 Correção de Texto</button>
-                    </div>
-                </div>
+    <!-- Chamada para ferramentas de IA -->
+    <section class="ai-hero no-print" aria-labelledby="ai-hero-title">
+        <div class="ai-hero-icon" aria-hidden="true">🤖</div>
+        <div class="ai-hero-text">
+            <h3 id="ai-hero-title">Ferramentas de Inteligência Artificial</h3>
+            <p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p>
+        </div>
+        <div class="ai-hero-actions">
+            <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+            <button class="btn btn-outline" onclick="go('correcao-texto')">📝 Correção de Texto</button>
+        </div>
+    </section>
 
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;" class="no-print">
-                    <div class="ai-feature-btn afb-purple" onclick="go('corrigir-ia')"><div class="af-ico">🤖</div><div class="af-title">Corrigir com IA</div><div class="af-sub">Detecção automática</div></div>
-                    <div class="ai-feature-btn afb-blue" onclick="abrirCamera()"><div class="af-ico">📱</div><div class="af-title">Câmera do Celular</div><div class="af-sub">Scan em tempo real</div></div>
-                    <div class="ai-feature-btn afb-green" onclick="abrirArquivo()"><div class="af-ico">📂</div><div class="af-title">Escolher Arquivo</div><div class="af-sub">Imagem do cartão</div></div>
-                    <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">📝</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
-                </div>
+    <!-- Atalhos rápidos -->
+    <nav class="ai-features-grid no-print" aria-label="Atalhos de ferramentas">
+        <button class="ai-feature-btn afb-purple" onclick="go('corrigir-ia')">
+            <span class="af-ico" aria-hidden="true">🤖</span>
+            <span class="af-title">Corrigir com IA</span>
+            <span class="af-sub">Detecção automática</span>
+        </button>
+        <button class="ai-feature-btn afb-blue" onclick="abrirCamera()">
+            <span class="af-ico" aria-hidden="true">📱</span>
+            <span class="af-title">Câmera do Celular</span>
+            <span class="af-sub">Scan em tempo real</span>
+        </button>
+        <button class="ai-feature-btn afb-green" onclick="abrirArquivo()">
+            <span class="af-ico" aria-hidden="true">📂</span>
+            <span class="af-title">Escolher Arquivo</span>
+            <span class="af-sub">Imagem do cartão</span>
+        </button>
+        <button class="ai-feature-btn afb-red" onclick="go('correcao-texto')">
+            <span class="af-ico" aria-hidden="true">📝</span>
+            <span class="af-title">Correção de Texto</span>
+            <span class="af-sub">Coesão e coerência</span>
+        </button>
+    </nav>
 
-                <!-- Card Conceito por Turma -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">📊 Conceito por Turma</div>
-                        <span class="badge badge-green" id="total-turmas-badge">0 turmas</span>
-                    </div>
-                    <div id="grafico-Conceito" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:20px;">
-                        <div style="text-align:center;color:var(--text3);">
-                            <div style="font-size:40px;margin-bottom:10px;">📊</div>
-                            <p>Carregando dados de Conceito...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card Últimas Correções -->
-                <div class="card">
-                    <div class="card-header"><div class="card-title">⚡ Últimas Correções</div><span class="badge badge-green">● Ao Vivo</span></div>
-                    <div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Porcentagem</th><th>Conceito</th></tr></thead><tbody id="ultimas-correcoes"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div>
-                </div>
+    <!-- Conceito por turma -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📊 Conceito por Turma</h2>
+            <span class="badge badge-green" id="total-turmas-badge">0 turmas</span>
+        </div>
+        <div id="grafico-Conceito" class="chart-placeholder" aria-live="polite">
+            <div class="chart-loading">
+                <div class="chart-loading-icon" aria-hidden="true">📊</div>
+                <p>Carregando dados de Conceito...</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Últimas correções -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">⚡ Últimas Correções</h2>
+            <span class="badge badge-green"><span aria-hidden="true">●</span> Ao Vivo</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <caption class="sr-only">Lista das últimas correções realizadas</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Aluno</th>
+                        <th scope="col">Prova</th>
+                        <th scope="col">Porcentagem</th>
+                        <th scope="col">Conceito</th>
+                    </tr>
+                </thead>
+                <tbody id="ultimas-correcoes">
+                    <tr><td colspan="4" class="table-loading">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
             <!-- ========== ESCOLA ========== -->
             <div class="page" id="page-escola">
