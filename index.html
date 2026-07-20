@@ -2734,26 +2734,51 @@
             // ============================================
             // CARREGAR ESCOLAS PARA CORRIGIR
             // ============================================
-            async function carregarEscolasCorrigir() {
-                try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
-                    const select = document.getElementById('corrigir-escola');
-                    if (select && escolas && !escolas.erro) {
-                        const current = select.value;
-                        select.innerHTML = '<option value="">Selecione a escola...</option>';
-                        escolas.forEach(e => {
-                            const opt = document.createElement('option');
-                            opt.value = e.id;
-                            opt.textContent = e.nome;
-                            select.appendChild(opt);
-                        });
-                        if (current) select.value = current;
-                    }
-                } catch (erro) {
-                    console.error('Erro ao carregar escolas para correção:', erro);
-                }
-            }
+           // Carregar escolas para "Corrigir com IA"
+async function carregarEscolasCorrigir() {
+    try {
+        const response = await fetch(API_URL + '/api/escolas');
+        const escolas = await response.json();
+        const select = document.getElementById('corrigir-escola');
+        if (select && escolas && !escolas.erro) {
+            select.innerHTML = '<option value="">Selecione a escola...</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                select.appendChild(opt);
+            });
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar escolas para correção:', erro);
+    }
+}
+
+// Carregar turmas por escola (chamada pelo onchange)
+async function carregarTurmasPorEscolaCorrigir(escolaId) {
+    const selectTurma = document.getElementById('corrigir-turma');
+    const selectAluno = document.getElementById('corrigir-aluno');
+    selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+    selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+
+    if (!escolaId) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+        const turmas = await response.json();
+        if (turmas && !turmas.erro) {
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                opt.dataset.serie = t.serie || '';
+                selectTurma.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error('Erro ao carregar turmas:', e);
+    }
+}
 
             // ============================================
             // CARREGAR TURMAS POR ESCOLA PARA CORRIGIR
