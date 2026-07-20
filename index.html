@@ -1782,7 +1782,15 @@
                     <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div>
                     <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Adquiriu as Habilidades</div></div></div>
                     <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recomposição da Aprendizagem</div></div></div>
-                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Média</div></div></div>
+                    <div class="stat-card purple">
+    <div class="stat-top">
+        <div class="stat-icon purple">📊</div>
+    </div>
+    <div>
+        <div class="stat-val" id="rel-media">0</div>
+        <div class="stat-label">Porcentagem</div>
+    </div>
+</div>
                 </div>
 
                 <div class="card">
@@ -4990,7 +4998,9 @@
                     document.getElementById('rel-total-alunos').textContent = total;
                     document.getElementById('rel-Habilidades').textContent = Habilidades;
                     document.getElementById('rel-recuperacao').textContent = recuperacao;
-                    document.getElementById('rel-media').textContent = mediaGeral.toFixed(1);
+                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+const porcentagem = (mediaGeral / notaMaxima) * 100;
+document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     document.getElementById('rel-total-correcoes').textContent = total + ' correções';
 
                     let totalPtAcertos = 0,
