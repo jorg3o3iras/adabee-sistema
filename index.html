@@ -1523,7 +1523,7 @@
                 </div>
             </div>
 
-            <!-- ========== CORREÇÃO DE TEXTO IA (CORRIGIDA) ========== -->
+            <!-- ========== CORREÇÃO DE TEXTO IA ========== -->
             <div class="page" id="page-correcao-texto">
                 <div class="page-header"><div><div class="page-title">📝 Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
                 <div class="g2 no-print">
@@ -1541,23 +1541,11 @@
                             <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
                                 <div class="form-row">
                                     <div class="form-group"><label class="form-label">Prova</label><select class="form-control" id="txt-prova"><option value="">Selecione...</option></select></div>
-                                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)">
-                                            <option value="">Selecione a escola...</option>
-                                        </select>
-                                    </div>
+                                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)"><option value="">Selecione a escola...</option></select></div>
                                 </div>
                                 <div class="form-row">
-                                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
-                                        <select class="form-control" id="txt-turma" onchange="carregarAlunosPorTurmaTexto(this.value)">
-                                            <option value="">Selecione a turma...</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group"><label class="form-label">Aluno</label>
-                                        <select class="form-control" id="txt-aluno-select">
-                                            <option value="">Selecione...</option>
-                                        </select>
-                                    </div>
+                                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="txt-turma" onchange="carregarAlunosPorTurmaTexto(this.value)"><option value="">Selecione a turma...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
                                 </div>
                                 <div style="margin-bottom:14px;"><label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label><div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Coerência e Coesão</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Adequação ao Tema</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Ortografia e Gramática</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Riqueza Vocabular</label></div></div>
                                 <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
@@ -1794,7 +1782,15 @@
                     <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div>
                     <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Adquiriu as Habilidades</div></div></div>
                     <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recomposição da Aprendizagem</div></div></div>
-                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📊</div></div><div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Porcentagem</div></div></div>
+                    <div class="stat-card purple">
+    <div class="stat-top">
+        <div class="stat-icon purple">📊</div>
+    </div>
+    <div>
+        <div class="stat-val" id="rel-media">0</div>
+        <div class="stat-label">Porcentagem</div>
+    </div>
+</div>
                 </div>
 
                 <div class="card">
@@ -1937,7 +1933,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2230,25 +2226,6 @@
             </div>
         </div>
 
-        <!-- ========== MODAL MENSAGEM (NOVO) ========== -->
-        <div class="modal-overlay no-print" id="m-mensagem">
-            <div class="modal" style="max-width:500px;">
-                <div class="modal-header">
-                    <h3>💬 Enviar Mensagem para <span id="msg-username">Usuário</span></h3>
-                    <button class="modal-close" onclick="closeM('m-mensagem')">×</button>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Mensagem</label>
-                    <textarea class="form-control" id="msg-texto" rows="4" placeholder="Digite sua mensagem aqui..."></textarea>
-                </div>
-                <input type="hidden" id="msg-usuario-id">
-                <div class="modal-footer no-print">
-                    <button class="btn btn-outline" onclick="closeM('m-mensagem')">Cancelar</button>
-                    <button class="btn btn-primary" onclick="enviarMensagem()">📨 Enviar</button>
-                </div>
-            </div>
-        </div>
-
         <!-- ========== DELETE CONFIRM MODAL ========== -->
         <div class="del-modal no-print" id="del-modal">
             <div class="del-box"><div class="del-icon">🗑️</div><h3>Confirmar Exclusão</h3><p>Tem certeza que deseja excluir<br><span class="del-nome-txt" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p><div class="del-actions"><button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button><button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button></div></div>
@@ -2445,14 +2422,6 @@
             };
 
             // ============================================
-            // FUNÇÃO FALLBACK PARA carregarResultados (evita erro)
-            // ============================================
-            function carregarResultados() {
-                // Esta função foi substituída por carregarResultadosComFiltros()
-                console.warn('carregarResultados() está obsoleto. Use carregarResultadosComFiltros()');
-            }
-
-            // ============================================
             // FUNÇÃO PARA PROCESSAR RESPOSTAS DA API
             // ============================================
             async function processarRespostaAPI(response) {
@@ -2617,7 +2586,7 @@
                 document.getElementById('usr-sb').style.display = isAdmin ? 'none' : 'block';
                 go(isAdmin ? 'dashboard' : 'u-dashboard');
                 buildGabGrid();
-                carregarDados(); // agora não chama mais carregarResultados
+                carregarDados();
                 atualizarDatasImpressao();
                 carregarEscolasParaCorrecaoManual();
                 carregarFiltrosRelTurma();
@@ -3073,6 +3042,19 @@
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar gabaritos:', erro);
+                }
+            }
+
+            // ============================================
+            // CARREGAR RESULTADOS (não usamos mais, mantido para compatibilidade)
+            // ============================================
+            async function carregarResultados() {
+                try {
+                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
+                    const alunos = await response.json();
+                    console.log('📥 Resultados agrupados:', alunos);
+                } catch (erro) {
+                    console.error('Erro ao carregar resultados:', erro);
                 }
             }
 
@@ -3944,29 +3926,6 @@
                 document.getElementById('usuario-perfil').value = 'usuario';
                 document.getElementById('usuario-ativo').checked = true;
                 openM('m-usuario');
-            }
-
-            // NOVA FUNÇÃO: Abrir modal de mensagem
-            function abrirModalMensagem(id, username) {
-                document.getElementById('msg-usuario-id').value = id;
-                document.getElementById('msg-username').textContent = username;
-                document.getElementById('msg-texto').value = '';
-                openM('m-mensagem');
-            }
-
-            // NOVA FUNÇÃO: Enviar mensagem
-            function enviarMensagem() {
-                const id = document.getElementById('msg-usuario-id').value;
-                const texto = document.getElementById('msg-texto').value.trim();
-                if (!texto) {
-                    showToast('⚠️ Digite uma mensagem!', 'error');
-                    return;
-                }
-                // Aqui você pode fazer uma requisição para o backend, se houver
-                // Exemplo: fetch('/api/mensagens', { method: 'POST', ... })
-                // Por enquanto, apenas exibe um toast e fecha o modal.
-                showToast(`💬 Mensagem enviada para o usuário!`, 'success');
-                closeM('m-mensagem');
             }
 
             function editarUsuario(id) { showToast('✏️ Editando usuário ID ' + id + '...', 'info'); }
@@ -4846,9 +4805,6 @@
                 }
             }
 
-            // ============================================
-            // CARREGAR ESCOLAS PARA TEXTO (COM ONCHANGE)
-            // ============================================
             async function carregarEscolasTexto() {
                 try {
                     const response = await fetch(API_URL + '/api/escolas');
@@ -4864,86 +4820,9 @@
                             select.appendChild(opt);
                         });
                         if (current) select.value = current;
-                        // Se já tiver uma escola selecionada, carrega as turmas
-                        if (current) carregarTurmasTexto(current);
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar escolas para texto:', erro);
-                }
-            }
-
-            // ============================================
-            // CARREGAR TURMAS PARA CORREÇÃO DE TEXTO
-            // ============================================
-            async function carregarTurmasTexto(escolaId) {
-                const selectTurma = document.getElementById('txt-turma');
-                if (!selectTurma) return;
-
-                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-
-                // Limpa também o select de alunos
-                const selectAluno = document.getElementById('txt-aluno-select');
-                if (selectAluno) selectAluno.innerHTML = '<option value="">Selecione...</option>';
-
-                if (!escolaId) return;
-
-                try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
-
-                    if (turmas && !turmas.erro && turmas.length > 0) {
-                        turmas.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            opt.dataset.serie = t.serie || '';
-                            selectTurma.appendChild(opt);
-                        });
-                    } else {
-                        const opt = document.createElement('option');
-                        opt.value = '';
-                        opt.textContent = 'Nenhuma turma encontrada';
-                        opt.disabled = true;
-                        selectTurma.appendChild(opt);
-                    }
-                } catch (e) {
-                    console.error('Erro ao carregar turmas para texto:', e);
-                    showToast('❌ Erro ao carregar turmas', 'error');
-                }
-            }
-
-            // ============================================
-            // CARREGAR ALUNOS POR TURMA PARA CORREÇÃO DE TEXTO
-            // ============================================
-            async function carregarAlunosPorTurmaTexto(turmaId) {
-                const selectAluno = document.getElementById('txt-aluno-select');
-                if (!selectAluno) return;
-
-                selectAluno.innerHTML = '<option value="">Selecione...</option>';
-
-                if (!turmaId) return;
-
-                try {
-                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                    const alunos = await response.json();
-
-                    if (alunos && !alunos.erro && alunos.length > 0) {
-                        alunos.forEach(a => {
-                            const opt = document.createElement('option');
-                            opt.value = a.id;
-                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                            selectAluno.appendChild(opt);
-                        });
-                    } else {
-                        const opt = document.createElement('option');
-                        opt.value = '';
-                        opt.textContent = 'Nenhum aluno encontrado';
-                        opt.disabled = true;
-                        selectAluno.appendChild(opt);
-                    }
-                } catch (e) {
-                    console.error('Erro ao carregar alunos para texto:', e);
-                    showToast('❌ Erro ao carregar alunos', 'error');
                 }
             }
 
@@ -5050,9 +4929,6 @@
                 carregarRelatorioTurmaFiltrado();
             }
 
-            // ============================================
-            // CARREGAR RELATÓRIO POR TURMA FILTRADO (COM PORCENTAGEM)
-            // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
                     const escolaId = document.getElementById('rel-turma-escola').value;
@@ -5119,14 +4995,12 @@
                     const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
-                    // --- Cálculo da porcentagem ---
-                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-                    const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
-
                     document.getElementById('rel-total-alunos').textContent = total;
                     document.getElementById('rel-Habilidades').textContent = Habilidades;
                     document.getElementById('rel-recuperacao').textContent = recuperacao;
-                    document.getElementById('rel-media').textContent = porcentagemMedia.toFixed(1) + '%'; // Exibe com %
+                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+const porcentagem = (mediaGeral / notaMaxima) * 100;
+document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     document.getElementById('rel-total-correcoes').textContent = total + ' correções';
 
                     let totalPtAcertos = 0,
@@ -5313,8 +5187,9 @@
             }
 
             // ============================================
-            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL + BNCC)
             // ============================================
+
             async function carregarEscolasDesempenho() {
                 try {
                     const response = await fetch(API_URL + '/api/escolas');
@@ -5416,7 +5291,7 @@
                 }
             }
 
-            // ===== FUNÇÃO GERAR DESEMPENHO =====
+            // ===== FUNÇÃO GERAR DESEMPENHO (CORRIGIDA: inclui BNCC no card de questões) =====
             async function gerarDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -5549,6 +5424,7 @@
                     resultadoQuestoes.forEach(q => {
                         const div = document.createElement('div');
                         div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
+                        // CONSTRUÇÃO DO HTML INCLUINDO BNCC
                         let bnccHtml = '';
                         if (q.bncc && q.bncc.trim() !== '') {
                             bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
@@ -5602,7 +5478,7 @@
                 }
             }
 
-            // ===== FUNÇÃO GERAR DOCUMENTO =====
+            // ===== FUNÇÃO GERAR DOCUMENTO COM CONTROLE DE DUPLO CLIQUE =====
             function gerarDocumentoDesempenho() {
                 if (gerandoDocumento) {
                     showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
@@ -5649,6 +5525,7 @@
                         `;
                     });
 
+                    // Gabarito oficial com BNCC
                     let gabOficialHTML = '';
                     gabarito.forEach((gab, idx) => {
                         const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
@@ -5855,6 +5732,7 @@
                         carregarAlunos(),
                         carregarProvas(),
                         carregarDashboard(),
+                        carregarResultados(),
                         carregarGabaritos(),
                         carregarCombos(),
                         carregarRelatorios(),
@@ -6031,7 +5909,7 @@
             }
 
             // ============================================
-            // CARREGAR USUÁRIOS (COM BOTÃO DE MENSAGEM)
+            // CARREGAR USUÁRIOS
             // ============================================
             async function carregarUsuarios() {
                 try {
@@ -6048,27 +5926,15 @@
                         const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
                         const statusText = u.ativo ? 'Ativo' : 'Inativo';
                         const isAdmin = u.username === 'admin';
-
-                        // Botão de mensagem para todos, e para o admin apenas o botão de mensagem + "Sistema"
-                        let acoes = '';
-                        if (isAdmin) {
-                            acoes = `
-                                <button class="btn btn-outline btn-sm" onclick="abrirModalMensagem(${u.id}, '${u.username}')">💬</button>
-                                <span style="font-size:10px;color:var(--text3);margin-left:4px;">Sistema</span>
-                            `;
-                        } else {
-                            acoes = `
-                                <button class="btn btn-outline btn-sm" onclick="editarUsuario(${u.id})">✏️</button>
-                                <button class="btn btn-outline btn-sm" onclick="abrirModalMensagem(${u.id}, '${u.username}')">💬</button>
-                                <button class="btn-del" onclick="excluirUsuario(${u.id}, '${u.username}')">🗑️</button>
-                            `;
-                        }
-
                         return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
                             '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
                             '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
                             '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
-                            '<td><div class="btn-group">' + acoes + '</div></td></tr>';
+                            '<td>' +
+                            '<div class="btn-group">' +
+                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
+                            '</div>' +
+                            '</td></tr>';
                     }).join('');
                 } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
             }
@@ -6117,109 +5983,114 @@
             }
 
             function imprimirAlunos() {
-                const tbody = document.getElementById('tb-alunos');
-                const rows = tbody.querySelectorAll('tr');
+    const tbody = document.getElementById('tb-alunos');
+    const rows = tbody.querySelectorAll('tr');
 
-                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
-                    showToast('⚠️ Nenhum aluno para imprimir.', 'error');
-                    return;
-                }
+    // Verifica se há dados
+    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+        showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+        return;
+    }
 
-                const escolaSelect = document.getElementById('filtro-escola-alunos');
-                const turmaSelect = document.getElementById('filtro-turma-alunos');
-                const serieSelect = document.getElementById('filtro-serie-alunos');
-                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
-                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
-                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+    // Captura os nomes dos filtros atuais
+    const escolaSelect = document.getElementById('filtro-escola-alunos');
+    const turmaSelect = document.getElementById('filtro-turma-alunos');
+    const serieSelect = document.getElementById('filtro-serie-alunos');
+    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
 
-                let html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Lista de Alunos</title>
-                    <style>
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
-                        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
-                        .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
-                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-                        th { background: #f2f2f2; font-weight: 700; }
-                        tr:nth-child(even) { background: #fafafa; }
-                        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
-                        @media print {
-                            body { margin: 10px; }
-                            .no-print { display: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>📋 Lista de Alunos</h1>
-                    <div class="filtros">
-                        <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
-                        <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
-                        <strong>Série:</strong> ${serieNome}
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Nº</th>
-                                <th>Matrícula</th>
-                                <th>Nome Completo</th>
-                                <th>Série</th>
-                                <th>Turma</th>
-                                <th>Escola</th>
-                                <th>Data Nasc.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 7) {
-                        const numero = cells[0].textContent.trim();
-                        const matricula = cells[1].textContent.trim();
-                        const nome = cells[2].textContent.trim();
-                        const serie = cells[3].textContent.trim();
-                        const turma = cells[4].textContent.trim();
-                        const escola = cells[5].textContent.trim();
-                        const dataNasc = cells[6].textContent.trim();
-                        html += `
-                            <tr>
-                                <td>${numero}</td>
-                                <td>${matricula}</td>
-                                <td>${nome}</td>
-                                <td>${serie}</td>
-                                <td>${turma}</td>
-                                <td>${escola}</td>
-                                <td>${dataNasc}</td>
-                            </tr>
-                        `;
-                    }
-                });
-
-                html += `
-                        </tbody>
-                    </table>
-                    <div class="footer">
-                        Gerado em ${new Date().toLocaleString('pt-BR')}
-                    </div>
-                </body>
-                </html>
-                `;
-
-                const win = window.open('', '_blank');
-                if (!win) {
-                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
-                    return;
-                }
-                win.document.write(html);
-                win.document.close();
-                win.focus();
-                win.print();
+    // Monta o HTML para impressão
+    let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Lista de Alunos</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+            h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+            .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+            th { background: #f2f2f2; font-weight: 700; }
+            tr:nth-child(even) { background: #fafafa; }
+            .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+            @media print {
+                body { margin: 10px; }
+                .no-print { display: none; }
             }
+        </style>
+    </head>
+    <body>
+        <h1>📋 Lista de Alunos</h1>
+        <div class="filtros">
+            <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+            <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+            <strong>Série:</strong> ${serieNome}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nº</th>
+                    <th>Matrícula</th>
+                    <th>Nome Completo</th>
+                    <th>Série</th>
+                    <th>Turma</th>
+                    <th>Escola</th>
+                    <th>Data Nasc.</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Percorre as linhas visíveis da tabela (já filtradas)
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 7) {
+            const numero = cells[0].textContent.trim();
+            const matricula = cells[1].textContent.trim();
+            const nome = cells[2].textContent.trim();
+            const serie = cells[3].textContent.trim();
+            const turma = cells[4].textContent.trim();
+            const escola = cells[5].textContent.trim();
+            const dataNasc = cells[6].textContent.trim();
+            html += `
+                <tr>
+                    <td>${numero}</td>
+                    <td>${matricula}</td>
+                    <td>${nome}</td>
+                    <td>${serie}</td>
+                    <td>${turma}</td>
+                    <td>${escola}</td>
+                    <td>${dataNasc}</td>
+                </tr>
+            `;
+        }
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <div class="footer">
+            Gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>
+    </body>
+    </html>
+    `;
+
+    // Abre uma nova janela e imprime
+    const win = window.open('', '_blank');
+    if (!win) {
+        showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+        return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+}
 
             function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
                 window.print(); }
