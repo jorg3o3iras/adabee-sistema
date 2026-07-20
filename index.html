@@ -1827,16 +1827,23 @@
                     </div>
                 </div>
 
-                <!-- Cards de disciplina (sem gráfico) -->
+                <!-- Cards de disciplina (agora dinâmico, apenas o da prova selecionada) -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📈 Distribuição de Notas</div>
                         <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
                     </div>
 
+                    <!-- Mensagem informativa quando nenhuma prova é selecionada -->
+                    <div id="rel-sel-prova-msg" style="display: none; text-align:center; padding:30px; color:var(--text3); background:var(--bg2); border-radius:8px; margin-bottom:10px;">
+                        <div style="font-size:40px; margin-bottom:10px;">📌</div>
+                        <p style="font-size:15px; font-weight:600;">Selecione uma prova para visualizar o relatório por disciplina.</p>
+                        <p style="font-size:13px; margin-top:4px;">Apenas a disciplina da prova escolhida será exibida.</p>
+                    </div>
+
                     <div id="disciplinas-container" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; margin-bottom:16px;">
                         <!-- Português -->
-                        <div class="disciplina-card-rel portugues" data-disciplina="portugues">
+                        <div class="disciplina-card-rel portugues" data-disciplina="portugues" style="display:none;">
                             <div class="disc-nome">Português</div>
                             <div class="disc-acertos-erros">
                                 <span class="acertos">✅ Acertos: <span id="rel-pt-acertos">0</span></span>
@@ -1848,7 +1855,7 @@
                         </div>
 
                         <!-- Matemática -->
-                        <div class="disciplina-card-rel matematica" data-disciplina="matematica">
+                        <div class="disciplina-card-rel matematica" data-disciplina="matematica" style="display:none;">
                             <div class="disc-nome">Matemática</div>
                             <div class="disc-acertos-erros">
                                 <span class="acertos">✅ Acertos: <span id="rel-mat-acertos">0</span></span>
@@ -1860,7 +1867,7 @@
                         </div>
 
                         <!-- Produção de Texto -->
-                        <div class="disciplina-card-rel producao" data-disciplina="producao">
+                        <div class="disciplina-card-rel producao" data-disciplina="producao" style="display:none;">
                             <div class="disc-nome">Produção</div>
                             <div class="disc-acertos-erros">
                                 <span class="acertos">✅ Acertos: <span id="rel-prod-acertos">0</span></span>
@@ -1872,7 +1879,7 @@
                         </div>
 
                         <!-- CH -->
-                        <div class="disciplina-card-rel ch" data-disciplina="ch">
+                        <div class="disciplina-card-rel ch" data-disciplina="ch" style="display:none;">
                             <div class="disc-nome">CH</div>
                             <div class="disc-acertos-erros">
                                 <span class="acertos">✅ Acertos: <span id="rel-ch-acertos">0</span></span>
@@ -1884,7 +1891,7 @@
                         </div>
 
                         <!-- CN -->
-                        <div class="disciplina-card-rel cn" data-disciplina="cn">
+                        <div class="disciplina-card-rel cn" data-disciplina="cn" style="display:none;">
                             <div class="disc-nome">CN</div>
                             <div class="disc-acertos-erros">
                                 <span class="acertos">✅ Acertos: <span id="rel-cn-acertos">0</span></span>
@@ -4874,6 +4881,7 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                         if (current) selectProva.value = current;
@@ -4953,6 +4961,36 @@
                     const serie = document.getElementById('rel-turma-serie').value;
                     const turmaId = document.getElementById('rel-turma-turma').value;
                     const provaId = document.getElementById('rel-turma-prova').value;
+                    const selectProva = document.getElementById('rel-turma-prova');
+                    const provaOption = selectProva.options[selectProva.selectedIndex];
+                    const disciplinaDaProva = provaOption ? (provaOption.dataset.disciplina || '') : '';
+
+                    // Oculta/mostra mensagem de seleção de prova
+                    const msgEl = document.getElementById('rel-sel-prova-msg');
+                    const container = document.getElementById('disciplinas-container');
+
+                    if (!provaId || !disciplinaDaProva) {
+                        if (msgEl) msgEl.style.display = 'block';
+                        if (container) {
+                            container.style.display = 'grid';
+                            container.style.gridTemplateColumns = '1fr';
+                            // Esconde todos os cards
+                            document.querySelectorAll('.disciplina-card-rel').forEach(card => {
+                                card.style.display = 'none';
+                            });
+                            // Esconde o card de estatísticas também
+                            document.querySelector('.stats-grid').style.display = 'none';
+                        }
+                        // Zera os cards
+                        document.getElementById('rel-media').textContent = '0';
+                        document.getElementById('rel-conceito').textContent = '—';
+                        document.getElementById('rel-conceito').style.color = 'var(--text3)';
+                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                        return;
+                    }
+
+                    if (msgEl) msgEl.style.display = 'none';
+                    document.querySelector('.stats-grid').style.display = 'grid';
 
                     let url = API_URL + '/api/historico/agrupado';
                     const params = new URLSearchParams();
@@ -4965,52 +5003,90 @@
                     const response = await fetch(url);
                     const alunos = await response.json();
 
-                    // Determinar quais disciplinas exibir com base na série
-                    const seriesFund1 = ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano'];
-                    const seriesFund2 = ['6º Ano', '7º Ano', '8º Ano', '9º Ano'];
+                    // Mapeia disciplina para chave do card
+                    const disciplinaMap = {
+                        'português': 'pt',
+                        'portugues': 'pt',
+                        'matemática': 'mat',
+                        'matematica': 'mat',
+                        'produção de texto': 'prod',
+                        'producao de texto': 'prod',
+                        'produção': 'prod',
+                        'producao': 'prod',
+                        'ciências humanas': 'ch',
+                        'ch': 'ch',
+                        'ciências naturais': 'cn',
+                        'cn': 'cn',
+                        'história': 'ch',
+                        'geografia': 'ch'
+                    };
 
-                    let disciplinasAtivas = ['portugues', 'matematica', 'producao'];
-                    if (serie && seriesFund2.includes(serie)) {
-                        disciplinasAtivas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
-                    } else if (!serie) {
-                        // Se não houver série selecionada, mostrar todas (padrão)
-                        disciplinasAtivas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
+                    // Normaliza a disciplina da prova
+                    const discKey = disciplinaDaProva.toLowerCase().trim();
+                    let cardKey = disciplinaMap[discKey] || null;
+
+                    // Se não encontrar, tenta correspondência parcial
+                    if (!cardKey) {
+                        const keys = Object.keys(disciplinaMap);
+                        for (let k of keys) {
+                            if (discKey.includes(k) || k.includes(discKey)) {
+                                cardKey = disciplinaMap[k];
+                                break;
+                            }
+                        }
                     }
 
-                    // Mostrar/Esconder cards de disciplina
+                    // Se ainda não encontrou, usa 'mat' como fallback (Matemática)
+                    if (!cardKey) cardKey = 'mat';
+
+                    // Mapeamento inverso para o nome exibido
+                    const nomeDisciplinaMap = {
+                        'pt': 'Português',
+                        'mat': 'Matemática',
+                        'prod': 'Produção',
+                        'ch': 'CH',
+                        'cn': 'CN'
+                    };
+
+                    const nomeDisciplina = nomeDisciplinaMap[cardKey] || disciplinaDaProva;
+
+                    // Esconde todos os cards
                     document.querySelectorAll('.disciplina-card-rel').forEach(card => {
-                        const disc = card.dataset.disciplina;
-                        if (disciplinasAtivas.includes(disc)) {
-                            card.style.display = '';
-                        } else {
-                            card.style.display = 'none';
-                        }
+                        card.style.display = 'none';
                     });
 
-                    // Ajustar grid para o número correto de colunas
-                    const container = document.getElementById('disciplinas-container');
-                    if (container) {
-                        const count = disciplinasAtivas.length;
-                        if (count <= 3) {
-                            container.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
-                        } else {
+                    // Mostra apenas o card correspondente
+                    const cardToShow = document.querySelector(`.disciplina-card-rel[data-disciplina="${cardKey}"]`);
+                    if (cardToShow) {
+                        cardToShow.style.display = 'block';
+                        // Ajusta o container para uma coluna
+                        if (container) {
+                            container.style.display = 'grid';
+                            container.style.gridTemplateColumns = '1fr';
+                        }
+                    } else {
+                        // Caso o card não exista, mostra todos (fallback)
+                        document.querySelectorAll('.disciplina-card-rel').forEach(card => {
+                            card.style.display = 'block';
+                        });
+                        if (container) {
+                            container.style.display = 'grid';
                             container.style.gridTemplateColumns = 'repeat(5, 1fr)';
                         }
                     }
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        // Atualiza apenas os cards que ainda existem
                         document.getElementById('rel-media').textContent = '0';
                         document.getElementById('rel-conceito').textContent = '—';
                         document.getElementById('rel-conceito').style.color = 'var(--text3)';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        // Zerar todos os campos de disciplina
-                        const discIds = ['pt', 'mat', 'prod', 'ch', 'cn'];
-                        discIds.forEach(id => {
-                            document.getElementById(`rel-${id}-acertos`).textContent = '0';
-                            document.getElementById(`rel-${id}-erros`).textContent = '0';
-                            document.getElementById(`rel-${id}-media`).textContent = '0.0';
-                        });
+                        // Zera o card específico
+                        const elAcertos = document.getElementById(`rel-${cardKey}-acertos`);
+                        const elErros = document.getElementById(`rel-${cardKey}-erros`);
+                        const elMedia = document.getElementById(`rel-${cardKey}-media`);
+                        if (elAcertos) elAcertos.textContent = '0';
+                        if (elErros) elErros.textContent = '0';
+                        if (elMedia) elMedia.textContent = '0.0';
                         return;
                     }
 
@@ -5029,18 +5105,16 @@
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                     const porcentagem = (mediaGeral / notaMaxima) * 100;
 
-                    // Atualiza o card Porcentagem
                     document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
 
-                    // Atualiza o card Conceito
                     const conceito = calcularConceito(porcentagem);
                     const badgeMap = {
-                        'inicial': { label: 'INICIAL', cor: '#ef4444', badge: 'badge-conceito-inicial' },
-                        'basico': { label: 'BÁSICO', cor: '#f59e0b', badge: 'badge-conceito-basico' },
-                        'proficiente': { label: 'PROFICIENTE', cor: '#3b82f6', badge: 'badge-conceito-proficiente' },
-                        'avancado': { label: 'AVANÇADO', cor: '#10b981', badge: 'badge-conceito-avancado' }
+                        'inicial': { label: 'INICIAL', cor: '#ef4444' },
+                        'basico': { label: 'BÁSICO', cor: '#f59e0b' },
+                        'proficiente': { label: 'PROFICIENTE', cor: '#3b82f6' },
+                        'avancado': { label: 'AVANÇADO', cor: '#10b981' }
                     };
-                    const info = badgeMap[conceito] || { label: '—', cor: 'var(--text3)', badge: 'badge-gray' };
+                    const info = badgeMap[conceito] || { label: '—', cor: 'var(--text3)' };
                     const elConceito = document.getElementById('rel-conceito');
                     if (elConceito) {
                         elConceito.textContent = info.label;
@@ -5050,53 +5124,47 @@
 
                     document.getElementById('rel-total-correcoes').textContent = total + ' correções';
 
-                    // Calcular totais por disciplina apenas para as ativas
-                    let totais = {
-                        pt: { acertos: 0, erros: 0, total: 0 },
-                        mat: { acertos: 0, erros: 0, total: 0 },
-                        prod: { acertos: 0, erros: 0, total: 0 },
-                        ch: { acertos: 0, erros: 0, total: 0 },
-                        cn: { acertos: 0, erros: 0, total: 0 }
-                    };
+                    // Calcula totais apenas para a disciplina específica
+                    let totalAcertos = 0;
+                    let totalErros = 0;
+                    let totalDisc = 0;
 
                     dadosAlunos.forEach(aluno => {
-                        const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
-                        const chaves = ['pt', 'mat', 'prod', 'ch', 'cn'];
+                        // Mapeia o campo correto baseado na chave
+                        let campo = '';
+                        if (cardKey === 'pt') campo = 'portugues';
+                        else if (cardKey === 'mat') campo = 'matematica';
+                        else if (cardKey === 'prod') campo = 'producao';
+                        else if (cardKey === 'ch') campo = 'ch';
+                        else if (cardKey === 'cn') campo = 'cn';
 
-                        disciplinas.forEach((disc, idx) => {
-                            const chave = chaves[idx];
-                            const data = aluno[disc];
-                            let acertos = 0,
-                                totalDisc = 20;
-                            if (data && typeof data === 'object') {
-                                acertos = parseInt(data.acertos) || 0;
-                                totalDisc = parseInt(data.total) || 0;
-                            } else {
-                                acertos = parseInt(data) || 0;
-                            }
-                            const erros = totalDisc - acertos;
-                            totais[chave].acertos += acertos;
-                            totais[chave].erros += erros;
-                            totais[chave].total += totalDisc;
-                        });
+                        const data = aluno[campo];
+                        let acertos = 0,
+                            erros = 0,
+                            totalQ = 0;
+                        if (data && typeof data === 'object') {
+                            acertos = parseInt(data.acertos) || 0;
+                            totalQ = parseInt(data.total) || 0;
+                        } else {
+                            acertos = parseInt(data) || 0;
+                        }
+                        erros = totalQ - acertos;
+                        totalAcertos += acertos;
+                        totalErros += erros;
+                        totalDisc += totalQ;
                     });
 
-                    // Atualizar os cards de disciplina (apenas os ativos)
-                    const discKeys = ['pt', 'mat', 'prod', 'ch', 'cn'];
-                    discKeys.forEach(key => {
-                        const acertos = totais[key].acertos;
-                        const erros = totais[key].erros;
-                        const totalDisc = totais[key].total;
-                        const media = total > 0 ? (acertos / total) : 0;
+                    // Atualiza o card específico
+                    const elAcertos = document.getElementById(`rel-${cardKey}-acertos`);
+                    const elErros = document.getElementById(`rel-${cardKey}-erros`);
+                    const elMedia = document.getElementById(`rel-${cardKey}-media`);
+                    if (elAcertos) elAcertos.textContent = totalAcertos;
+                    if (elErros) elErros.textContent = totalErros;
+                    if (elMedia) elMedia.textContent = total > 0 ? (totalAcertos / total).toFixed(1) : '0.0';
 
-                        const elAcertos = document.getElementById(`rel-${key}-acertos`);
-                        const elErros = document.getElementById(`rel-${key}-erros`);
-                        const elMedia = document.getElementById(`rel-${key}-media`);
-
-                        if (elAcertos) elAcertos.textContent = acertos;
-                        if (elErros) elErros.textContent = erros;
-                        if (elMedia) elMedia.textContent = media.toFixed(1);
-                    });
+                    // Atualiza o título do card com o nome da disciplina
+                    const cardTitle = cardToShow ? cardToShow.querySelector('.disc-nome') : null;
+                    if (cardTitle) cardTitle.textContent = nomeDisciplina;
 
                 } catch (erro) {
                     console.error('❌ Erro ao carregar relatório por turma:', erro);
@@ -5135,6 +5203,7 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                     }
@@ -6497,7 +6566,7 @@
 
                     const respProvas = await fetch(API_URL + '/api/provas');
                     const provas = await respProvas.json();
-                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho', 'rel-turma-prova'].forEach(id => {
                         const select = document.getElementById(id);
                         if (select) {
                             const current = select.value;
