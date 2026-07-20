@@ -2230,6 +2230,25 @@
             </div>
         </div>
 
+        <!-- ========== MODAL MENSAGEM (NOVO) ========== -->
+        <div class="modal-overlay no-print" id="m-mensagem">
+            <div class="modal" style="max-width:500px;">
+                <div class="modal-header">
+                    <h3>💬 Enviar Mensagem para <span id="msg-username">Usuário</span></h3>
+                    <button class="modal-close" onclick="closeM('m-mensagem')">×</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mensagem</label>
+                    <textarea class="form-control" id="msg-texto" rows="4" placeholder="Digite sua mensagem aqui..."></textarea>
+                </div>
+                <input type="hidden" id="msg-usuario-id">
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-mensagem')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="enviarMensagem()">📨 Enviar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ========== DELETE CONFIRM MODAL ========== -->
         <div class="del-modal no-print" id="del-modal">
             <div class="del-box"><div class="del-icon">🗑️</div><h3>Confirmar Exclusão</h3><p>Tem certeza que deseja excluir<br><span class="del-nome-txt" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p><div class="del-actions"><button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button><button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button></div></div>
@@ -3925,6 +3944,29 @@
                 document.getElementById('usuario-perfil').value = 'usuario';
                 document.getElementById('usuario-ativo').checked = true;
                 openM('m-usuario');
+            }
+
+            // NOVA FUNÇÃO: Abrir modal de mensagem
+            function abrirModalMensagem(id, username) {
+                document.getElementById('msg-usuario-id').value = id;
+                document.getElementById('msg-username').textContent = username;
+                document.getElementById('msg-texto').value = '';
+                openM('m-mensagem');
+            }
+
+            // NOVA FUNÇÃO: Enviar mensagem
+            function enviarMensagem() {
+                const id = document.getElementById('msg-usuario-id').value;
+                const texto = document.getElementById('msg-texto').value.trim();
+                if (!texto) {
+                    showToast('⚠️ Digite uma mensagem!', 'error');
+                    return;
+                }
+                // Aqui você pode fazer uma requisição para o backend, se houver
+                // Exemplo: fetch('/api/mensagens', { method: 'POST', ... })
+                // Por enquanto, apenas exibe um toast e fecha o modal.
+                showToast(`💬 Mensagem enviada para o usuário!`, 'success');
+                closeM('m-mensagem');
             }
 
             function editarUsuario(id) { showToast('✏️ Editando usuário ID ' + id + '...', 'info'); }
@@ -5989,7 +6031,7 @@
             }
 
             // ============================================
-            // CARREGAR USUÁRIOS
+            // CARREGAR USUÁRIOS (COM BOTÃO DE MENSAGEM)
             // ============================================
             async function carregarUsuarios() {
                 try {
@@ -6006,15 +6048,27 @@
                         const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
                         const statusText = u.ativo ? 'Ativo' : 'Inativo';
                         const isAdmin = u.username === 'admin';
+
+                        // Botão de mensagem para todos, e para o admin apenas o botão de mensagem + "Sistema"
+                        let acoes = '';
+                        if (isAdmin) {
+                            acoes = `
+                                <button class="btn btn-outline btn-sm" onclick="abrirModalMensagem(${u.id}, '${u.username}')">💬</button>
+                                <span style="font-size:10px;color:var(--text3);margin-left:4px;">Sistema</span>
+                            `;
+                        } else {
+                            acoes = `
+                                <button class="btn btn-outline btn-sm" onclick="editarUsuario(${u.id})">✏️</button>
+                                <button class="btn btn-outline btn-sm" onclick="abrirModalMensagem(${u.id}, '${u.username}')">💬</button>
+                                <button class="btn-del" onclick="excluirUsuario(${u.id}, '${u.username}')">🗑️</button>
+                            `;
+                        }
+
                         return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
                             '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
                             '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
                             '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
-                            '<td>' +
-                            '<div class="btn-group">' +
-                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
-                            '</div>' +
-                            '</td></tr>';
+                            '<td><div class="btn-group">' + acoes + '</div></td></tr>';
                     }).join('');
                 } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
             }
