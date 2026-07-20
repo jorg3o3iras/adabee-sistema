@@ -1593,13 +1593,22 @@ def historico_agrupado():
             avaliacoes = dados['avaliacoes']
 
             # Agora com 5 disciplinas: Portugues, Matematica, Producao, CH, CN
-            notas = []
-            for tipo in ['Portugues', 'Matematica', 'Producao', 'CH', 'CN']:
-                if tipo in avaliacoes:
-                    notas.append(avaliacoes[tipo]['nota'])
-                else:
-                    notas.append(0)
+            # CORREÇÃO: Criação de cópias independentes para cada disciplina
+            default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}
+            portugues = dict(avaliacoes.get('Portugues', default))
+            matematica = dict(avaliacoes.get('Matematica', default))
+            producao = dict(avaliacoes.get('Producao', default))
+            ch = dict(avaliacoes.get('CH', default))
+            cn = dict(avaliacoes.get('CN', default))
 
+            # Cálculo da média (soma as notas das 5 disciplinas)
+            notas = [
+                portugues.get('nota', 0),
+                matematica.get('nota', 0),
+                producao.get('nota', 0),
+                ch.get('nota', 0),
+                cn.get('nota', 0)
+            ]
             soma = sum(notas)
             media = soma / 5 if notas else 0
 
@@ -1609,11 +1618,11 @@ def historico_agrupado():
                 'serie': dados['serie'],
                 'turma': dados['turma'],
                 'escola': dados['escola'],
-                'portugues': avaliacoes.get('Portugues', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
-                'matematica': avaliacoes.get('Matematica', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
-                'producao': avaliacoes.get('Producao', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
-                'ch': avaliacoes.get('CH', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
-                'cn': avaliacoes.get('CN', {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}),
+                'portugues': portugues,
+                'matematica': matematica,
+                'producao': producao,
+                'ch': ch,
+                'cn': cn,
                 'soma': round(soma, 1),
                 'media': round(media, 1)
             })
