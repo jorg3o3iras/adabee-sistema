@@ -266,9 +266,6 @@
         .multi-status.error { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); color:var(--red); }
         .multi-status.info { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2); color:var(--blue); }
 
-        /* ============================================
-           CORREÇÃO MANUAL (DENTRO DA IA) - DUAS LINHAS
-           ============================================ */
         .correcao-manual-grid {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -356,9 +353,6 @@
             color: var(--red);
         }
 
-        /* ============================================
-           CORREÇÃO MANUAL STANDALONE - DUAS LINHAS
-           ============================================ */
         .cm-grid-standalone {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -503,9 +497,6 @@
         .spinner { width:40px; height:40px; border:4px solid var(--border); border-top:4px solid var(--purple); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto; }
         @keyframes spin { to { transform:rotate(360deg); } }
 
-        /* ============================================
-           ESTILOS PARA A TABELA DE RESULTADOS
-           ============================================ */
         .disciplina-cell {
             padding: 3px 4px;
             text-align: center;
@@ -558,9 +549,6 @@
             font-size: 10px;
         }
 
-        /* ============================================
-           ESTILOS PARA O HISTÓRICO DO ALUNO
-           ============================================ */
         .historico-disciplina {
             min-width: 70px;
             padding: 3px 4px;
@@ -602,9 +590,6 @@
         .tag-ch-sm { color: #f59e0b; }
         .tag-cn-sm { color: #14b8a6; }
 
-        /* ============================================
-           ESTILOS PARA O CARD DESEMPENHO POR HABILIDADES
-           ============================================ */
         .habilidades-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -705,9 +690,6 @@
             font-weight: 700;
         }
 
-        /* ============================================
-           ESTILOS PARA O DESEMPENHO DO ALUNO (NOVA ABA) - ATUALIZADO
-           ============================================ */
         .desempenho-resumo {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -736,7 +718,6 @@
         .desempenho-resumo .item .valor.blue { color: var(--blue); }
         .desempenho-resumo .item .valor.purple { color: var(--purple); }
 
-        /* Estilos para o card único de disciplina */
         .questao-item {
             background: var(--bg2);
             border: 1px solid var(--border);
@@ -817,9 +798,45 @@
         }
         .desempenho-info strong { color: var(--text); }
 
-        /* ============================================
-           RESPONSIVIDADE
-           ============================================ */
+        .disciplina-card-rel {
+            background: var(--bg2);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        .disciplina-card-rel:hover {
+            border-color: var(--border2);
+            transform: translateY(-2px);
+        }
+        .disciplina-card-rel .disc-nome {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .disciplina-card-rel .disc-acertos-erros {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .disciplina-card-rel .disc-media {
+            font-size: 12px;
+            color: var(--text3);
+            margin-top: 4px;
+        }
+        .disciplina-card-rel .disc-media strong {
+            font-weight: 700;
+        }
+
+        .disciplina-card-rel.portugues .disc-nome { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+        .disciplina-card-rel.matematica .disc-nome { color: #10b981; border-bottom: 2px solid #10b981; }
+        .disciplina-card-rel.producao .disc-nome { color: #8b5cf6; border-bottom: 2px solid #8b5cf6; }
+        .disciplina-card-rel.ch .disc-nome { color: #f59e0b; border-bottom: 2px solid #f59e0b; }
+        .disciplina-card-rel.cn .disc-nome { color: #14b8a6; border-bottom: 2px solid #14b8a6; }
+
         @media (max-width:900px) {
             .menu-toggle { display:flex; align-items:center; justify-content:center; }
             .sidebar { transform:translateX(-100%); width:280px; }
@@ -883,6 +900,10 @@
             }
             .desempenho-info {
                 grid-template-columns: 1fr 1fr;
+            }
+            .disciplina-card-rel .disc-acertos-erros {
+                flex-direction: column;
+                gap: 4px;
             }
         }
         @media (max-width:480px) {
@@ -953,11 +974,12 @@
             .questao-item .q-status-text {
                 font-size: 6px;
             }
+            .disciplina-card-rel .disc-acertos-erros {
+                flex-direction: column;
+                gap: 4px;
+            }
         }
 
-        /* ============================================
-           ══ REGRAS PARA IMPRESSÃO ══
-           ============================================ */
         @media print {
             .no-print,
             .menu-toggle,
@@ -1075,6 +1097,17 @@
             .desempenho-resumo .item .valor.blue { color: #004085 !important; }
             .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
             .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .disciplina-card-rel {
+                background: #f9fafb !important;
+                border-color: #ddd !important;
+            }
+            .disciplina-card-rel .disc-nome {
+                color: #000 !important;
+                border-bottom-color: #aaa !important;
+            }
+            .disciplina-card-rel .disc-acertos-erros .acertos { color: #155724 !important; }
+            .disciplina-card-rel .disc-acertos-erros .erros { color: #721c24 !important; }
+            .disciplina-card-rel .disc-media { color: #555 !important; }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
@@ -1160,7 +1193,6 @@
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
-                    <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1197,7 +1229,6 @@
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
                     <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola</div>
-                    <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1255,7 +1286,6 @@
                     <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">📝</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
                 </div>
 
-                <!-- Card Conceito por Turma -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📊 Conceito por Turma</div>
@@ -1269,7 +1299,6 @@
                     </div>
                 </div>
 
-                <!-- Card Últimas Correções -->
                 <div class="card">
                     <div class="card-header"><div class="card-title">⚡ Últimas Correções</div><span class="badge badge-green">● Ao Vivo</span></div>
                     <div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Porcentagem</th><th>Conceito</th></tr></thead><tbody id="ultimas-correcoes"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div>
@@ -1641,8 +1670,8 @@
 
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
                     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Total de Alunos</div></div>
-                    <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Adquiriu as Habilidades</div></div>
-                    <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Recomposição da Aprendizagem</div></div>
+                    <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Acertos</div></div>
+                    <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Erros</div></div>
                     <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Média Geral</div></div>
                 </div>
 
@@ -1717,7 +1746,7 @@
                 </div>
             </div>
 
-            <!-- ========== RELATÓRIO POR TURMA ========== -->
+            <!-- ========== RELATÓRIO POR TURMA (ATUALIZADO) ========== -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header">
                     <div>
@@ -1780,108 +1809,89 @@
 
                 <div class="stats-grid">
                     <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div>
-                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Adquiriu as Habilidades</div></div></div>
-                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recomposição da Aprendizagem</div></div></div>
+                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">ACERTOS</div></div></div>
+                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">ERROS</div></div></div>
                     <div class="stat-card purple">
-    <div class="stat-top">
-        <div class="stat-icon purple">📊</div>
-    </div>
-    <div>
-        <div class="stat-val" id="rel-media">0</div>
-        <div class="stat-label">Porcentagem</div>
-    </div>
-</div>
+                        <div class="stat-top"><div class="stat-icon purple">📊</div></div>
+                        <div>
+                            <div class="stat-val" id="rel-media">0</div>
+                            <div class="stat-label">Porcentagem</div>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Cards de disciplina (sem gráfico) -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📈 Distribuição de Notas</div>
                         <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; margin-bottom:16px;">
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#3b82f6; margin-bottom:4px;"> Português</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-pt-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-pt-erros">0</span></span>
+                    <div id="disciplinas-container" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; margin-bottom:16px;">
+                        <!-- Português -->
+                        <div class="disciplina-card-rel portugues" data-disciplina="portugues">
+                            <div class="disc-nome">Português</div>
+                            <div class="disc-acertos-erros">
+                                <span class="acertos">✅ Acertos: <span id="rel-pt-acertos">0</span></span>
+                                <span class="erros">❌ Erros: <span id="rel-pt-erros">0</span></span>
                             </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-pt-media" style="font-weight:700; color:#3b82f6;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(16,185,129,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#10b981; margin-bottom:4px;"> Matemática</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-mat-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-mat-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-mat-media" style="font-weight:700; color:#10b981;">0.0</span>
+                            <div class="disc-media">
+                                Média: <strong id="rel-pt-media" style="color:#3b82f6;">0.0</strong>
                             </div>
                         </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(139,92,246,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#8b5cf6; margin-bottom:4px;"> Produção</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-prod-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-prod-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-prod-media" style="font-weight:700; color:#8b5cf6;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(245,158,11,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#f59e0b; margin-bottom:4px;"> CH</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-ch-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-ch-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-ch-media" style="font-weight:700; color:#f59e0b;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(20,184,166,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#14b8a6; margin-bottom:4px;"> CN</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-cn-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-cn-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-cn-media" style="font-weight:700; color:#14b8a6;">0.0</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="chart-bars" id="dist-notas">
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d0-2">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div>
-                            <div class="chart-bar-lbl">0–2</div>
+                        <!-- Matemática -->
+                        <div class="disciplina-card-rel matematica" data-disciplina="matematica">
+                            <div class="disc-nome">Matemática</div>
+                            <div class="disc-acertos-erros">
+                                <span class="acertos">✅ Acertos: <span id="rel-mat-acertos">0</span></span>
+                                <span class="erros">❌ Erros: <span id="rel-mat-erros">0</span></span>
+                            </div>
+                            <div class="disc-media">
+                                Média: <strong id="rel-mat-media" style="color:#10b981;">0.0</strong>
+                            </div>
                         </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d2-4">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div>
-                            <div class="chart-bar-lbl">2–4</div>
+
+                        <!-- Produção de Texto -->
+                        <div class="disciplina-card-rel producao" data-disciplina="producao">
+                            <div class="disc-nome">Produção</div>
+                            <div class="disc-acertos-erros">
+                                <span class="acertos">✅ Acertos: <span id="rel-prod-acertos">0</span></span>
+                                <span class="erros">❌ Erros: <span id="rel-prod-erros">0</span></span>
+                            </div>
+                            <div class="disc-media">
+                                Média: <strong id="rel-prod-media" style="color:#8b5cf6;">0.0</strong>
+                            </div>
                         </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d4-6">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div>
-                            <div class="chart-bar-lbl">4–6</div>
+
+                        <!-- CH -->
+                        <div class="disciplina-card-rel ch" data-disciplina="ch">
+                            <div class="disc-nome">CH</div>
+                            <div class="disc-acertos-erros">
+                                <span class="acertos">✅ Acertos: <span id="rel-ch-acertos">0</span></span>
+                                <span class="erros">❌ Erros: <span id="rel-ch-erros">0</span></span>
+                            </div>
+                            <div class="disc-media">
+                                Média: <strong id="rel-ch-media" style="color:#f59e0b;">0.0</strong>
+                            </div>
                         </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d6-8">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div>
-                            <div class="chart-bar-lbl">6–8</div>
-                        </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d8-10">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div>
-                            <div class="chart-bar-lbl">8–10</div>
+
+                        <!-- CN -->
+                        <div class="disciplina-card-rel cn" data-disciplina="cn">
+                            <div class="disc-nome">CN</div>
+                            <div class="disc-acertos-erros">
+                                <span class="acertos">✅ Acertos: <span id="rel-cn-acertos">0</span></span>
+                                <span class="erros">❌ Erros: <span id="rel-cn-erros">0</span></span>
+                            </div>
+                            <div class="disc-media">
+                                Média: <strong id="rel-cn-media" style="color:#14b8a6;">0.0</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- ========== RELATÓRIO POR ESCOLA ========== -->
             <div class="page" id="page-rel-escola">
                 <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
 
@@ -1933,7 +1943,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -1998,7 +2008,6 @@
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
                     </div>
 
-                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
                     <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -2015,7 +2024,6 @@
                         </div>
                     </div>
 
-                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -3042,19 +3050,6 @@
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar gabaritos:', erro);
-                }
-            }
-
-            // ============================================
-            // CARREGAR RESULTADOS (não usamos mais, mantido para compatibilidade)
-            // ============================================
-            async function carregarResultados() {
-                try {
-                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
-                    const alunos = await response.json();
-                    console.log('📥 Resultados agrupados:', alunos);
-                } catch (erro) {
-                    console.error('Erro ao carregar resultados:', erro);
                 }
             }
 
@@ -4929,6 +4924,9 @@
                 carregarRelatorioTurmaFiltrado();
             }
 
+            // ============================================
+            // CARREGAR RELATÓRIO POR TURMA (FILTRADO)
+            // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
                     const escolaId = document.getElementById('rel-turma-escola').value;
@@ -4947,34 +4945,51 @@
                     const response = await fetch(url);
                     const alunos = await response.json();
 
+                    // Determinar quais disciplinas exibir com base na série
+                    const seriesFund1 = ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano'];
+                    const seriesFund2 = ['6º Ano', '7º Ano', '8º Ano', '9º Ano'];
+
+                    let disciplinasAtivas = ['portugues', 'matematica', 'producao'];
+                    if (serie && seriesFund2.includes(serie)) {
+                        disciplinasAtivas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
+                    } else if (!serie) {
+                        // Se não houver série selecionada, mostrar todas (padrão)
+                        disciplinasAtivas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
+                    }
+
+                    // Mostrar/Esconder cards de disciplina
+                    document.querySelectorAll('.disciplina-card-rel').forEach(card => {
+                        const disc = card.dataset.disciplina;
+                        if (disciplinasAtivas.includes(disc)) {
+                            card.style.display = '';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    // Ajustar grid para o número correto de colunas
+                    const container = document.getElementById('disciplinas-container');
+                    if (container) {
+                        const count = disciplinasAtivas.length;
+                        if (count <= 3) {
+                            container.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+                        } else {
+                            container.style.gridTemplateColumns = 'repeat(5, 1fr)';
+                        }
+                    }
+
                     if (!alunos || alunos.length === 0 || alunos.erro) {
                         document.getElementById('rel-total-alunos').textContent = '0';
                         document.getElementById('rel-Habilidades').textContent = '0';
                         document.getElementById('rel-recuperacao').textContent = '0';
                         document.getElementById('rel-media').textContent = '0';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        document.getElementById('rel-pt-acertos').textContent = '0';
-                        document.getElementById('rel-pt-erros').textContent = '0';
-                        document.getElementById('rel-pt-media').textContent = '0.0';
-                        document.getElementById('rel-mat-acertos').textContent = '0';
-                        document.getElementById('rel-mat-erros').textContent = '0';
-                        document.getElementById('rel-mat-media').textContent = '0.0';
-                        document.getElementById('rel-prod-acertos').textContent = '0';
-                        document.getElementById('rel-prod-erros').textContent = '0';
-                        document.getElementById('rel-prod-media').textContent = '0.0';
-                        document.getElementById('rel-ch-acertos').textContent = '0';
-                        document.getElementById('rel-ch-erros').textContent = '0';
-                        document.getElementById('rel-ch-media').textContent = '0.0';
-                        document.getElementById('rel-cn-acertos').textContent = '0';
-                        document.getElementById('rel-cn-erros').textContent = '0';
-                        document.getElementById('rel-cn-media').textContent = '0.0';
-                        const faixas = ['0-2', '2-4', '4-6', '6-8', '8-10'];
-                        faixas.forEach(id => {
-                            const el = document.getElementById('d' + id.replace('-', ''));
-                            if (el) el.textContent = '0';
-                        });
-                        document.querySelectorAll('#dist-notas .chart-bar').forEach((bar, i) => {
-                            if (i < 5) bar.style.height = '10px';
+                        // Zerar todos os campos de disciplina
+                        const discIds = ['pt', 'mat', 'prod', 'ch', 'cn'];
+                        discIds.forEach(id => {
+                            document.getElementById(`rel-${id}-acertos`).textContent = '0';
+                            document.getElementById(`rel-${id}-erros`).textContent = '0';
+                            document.getElementById(`rel-${id}-media`).textContent = '0.0';
                         });
                         return;
                     }
@@ -4999,150 +5014,56 @@
                     document.getElementById('rel-Habilidades').textContent = Habilidades;
                     document.getElementById('rel-recuperacao').textContent = recuperacao;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-const porcentagem = (mediaGeral / notaMaxima) * 100;
-document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
+                    const porcentagem = (mediaGeral / notaMaxima) * 100;
+                    document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     document.getElementById('rel-total-correcoes').textContent = total + ' correções';
 
-                    let totalPtAcertos = 0,
-                        totalPtErros = 0,
-                        totalPtQuestoes = 0;
-                    let totalMatAcertos = 0,
-                        totalMatErros = 0,
-                        totalMatQuestoes = 0;
-                    let totalProdAcertos = 0,
-                        totalProdErros = 0,
-                        totalProdQuestoes = 0;
-                    let totalCHAcertos = 0,
-                        totalCHErros = 0,
-                        totalCHQuestoes = 0;
-                    let totalCNAcertos = 0,
-                        totalCNErros = 0,
-                        totalCNQuestoes = 0;
+                    // Calcular totais por disciplina apenas para as ativas
+                    let totais = {
+                        pt: { acertos: 0, erros: 0, total: 0 },
+                        mat: { acertos: 0, erros: 0, total: 0 },
+                        prod: { acertos: 0, erros: 0, total: 0 },
+                        ch: { acertos: 0, erros: 0, total: 0 },
+                        cn: { acertos: 0, erros: 0, total: 0 }
+                    };
 
                     dadosAlunos.forEach(aluno => {
-                        if (aluno.portugues && typeof aluno.portugues === 'object') {
-                            const acertos = parseInt(aluno.portugues.acertos) || 0;
-                            const totalDisc = parseInt(aluno.portugues.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalPtAcertos += acertos;
-                            totalPtErros += erros;
-                            totalPtQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.portugues) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalPtAcertos += acertos;
-                            totalPtErros += erros;
-                            totalPtQuestoes += totalDisc;
-                        }
+                        const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
+                        const chaves = ['pt', 'mat', 'prod', 'ch', 'cn'];
 
-                        if (aluno.matematica && typeof aluno.matematica === 'object') {
-                            const acertos = parseInt(aluno.matematica.acertos) || 0;
-                            const totalDisc = parseInt(aluno.matematica.total) || 0;
+                        disciplinas.forEach((disc, idx) => {
+                            const chave = chaves[idx];
+                            const data = aluno[disc];
+                            let acertos = 0,
+                                totalDisc = 20;
+                            if (data && typeof data === 'object') {
+                                acertos = parseInt(data.acertos) || 0;
+                                totalDisc = parseInt(data.total) || 0;
+                            } else {
+                                acertos = parseInt(data) || 0;
+                            }
                             const erros = totalDisc - acertos;
-                            totalMatAcertos += acertos;
-                            totalMatErros += erros;
-                            totalMatQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.matematica) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalMatAcertos += acertos;
-                            totalMatErros += erros;
-                            totalMatQuestoes += totalDisc;
-                        }
-
-                        if (aluno.producao && typeof aluno.producao === 'object') {
-                            const acertos = parseInt(aluno.producao.acertos) || 0;
-                            const totalDisc = parseInt(aluno.producao.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalProdAcertos += acertos;
-                            totalProdErros += erros;
-                            totalProdQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.producao) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalProdAcertos += acertos;
-                            totalProdErros += erros;
-                            totalProdQuestoes += totalDisc;
-                        }
-
-                        if (aluno.ch && typeof aluno.ch === 'object') {
-                            const acertos = parseInt(aluno.ch.acertos) || 0;
-                            const totalDisc = parseInt(aluno.ch.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalCHAcertos += acertos;
-                            totalCHErros += erros;
-                            totalCHQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.ch) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalCHAcertos += acertos;
-                            totalCHErros += erros;
-                            totalCHQuestoes += totalDisc;
-                        }
-
-                        if (aluno.cn && typeof aluno.cn === 'object') {
-                            const acertos = parseInt(aluno.cn.acertos) || 0;
-                            const totalDisc = parseInt(aluno.cn.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalCNAcertos += acertos;
-                            totalCNErros += erros;
-                            totalCNQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.cn) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalCNAcertos += acertos;
-                            totalCNErros += erros;
-                            totalCNQuestoes += totalDisc;
-                        }
+                            totais[chave].acertos += acertos;
+                            totais[chave].erros += erros;
+                            totais[chave].total += totalDisc;
+                        });
                     });
 
-                    const ptMedia = total > 0 ? (totalPtAcertos / total) : 0;
-                    const matMedia = total > 0 ? (totalMatAcertos / total) : 0;
-                    const prodMedia = total > 0 ? (totalProdAcertos / total) : 0;
-                    const chMedia = total > 0 ? (totalCHAcertos / total) : 0;
-                    const cnMedia = total > 0 ? (totalCNAcertos / total) : 0;
+                    // Atualizar os cards de disciplina (apenas os ativos)
+                    const discKeys = ['pt', 'mat', 'prod', 'ch', 'cn'];
+                    discKeys.forEach(key => {
+                        const acertos = totais[key].acertos;
+                        const erros = totais[key].erros;
+                        const totalDisc = totais[key].total;
+                        const media = total > 0 ? (acertos / total) : 0;
 
-                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
-                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
-                    document.getElementById('rel-pt-media').textContent = ptMedia.toFixed(1);
-                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
-                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
-                    document.getElementById('rel-mat-media').textContent = matMedia.toFixed(1);
-                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
-                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
-                    document.getElementById('rel-prod-media').textContent = prodMedia.toFixed(1);
-                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
-                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
-                    document.getElementById('rel-ch-media').textContent = chMedia.toFixed(1);
-                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
-                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
-                    document.getElementById('rel-cn-media').textContent = cnMedia.toFixed(1);
+                        const elAcertos = document.getElementById(`rel-${key}-acertos`);
+                        const elErros = document.getElementById(`rel-${key}-erros`);
+                        const elMedia = document.getElementById(`rel-${key}-media`);
 
-                    const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-                    dadosAlunos.forEach(a => {
-                        const nota = (a.media || 0) * 2;
-                        if (nota < 2) faixas['0-2']++;
-                        else if (nota < 4) faixas['2-4']++;
-                        else if (nota < 6) faixas['4-6']++;
-                        else if (nota < 8) faixas['6-8']++;
-                        else faixas['8-10']++;
-                    });
-
-                    const maxVal = Math.max(...Object.values(faixas), 1);
-                    const keys = ['0-2', '2-4', '4-6', '6-8', '8-10'];
-                    keys.forEach((key, index) => {
-                        const el = document.getElementById('d' + key.replace('-', ''));
-                        if (el) el.textContent = faixas[key];
-                        const bars = document.querySelectorAll('#dist-notas .chart-bar');
-                        if (bars[index]) {
-                            const altura = maxVal > 0 ? Math.max(10, (faixas[key] / maxVal) * 110) : 10;
-                            bars[index].style.height = altura + 'px';
-                        }
+                        if (elAcertos) elAcertos.textContent = acertos;
+                        if (elErros) elErros.textContent = erros;
+                        if (elMedia) elMedia.textContent = media.toFixed(1);
                     });
 
                 } catch (erro) {
@@ -5151,6 +5072,9 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                 }
             }
 
+            // ============================================
+            // LIMPAR FILTROS RELATÓRIO POR TURMA
+            // ============================================
             function limparFiltrosRelTurma() {
                 document.getElementById('rel-turma-escola').value = '';
                 document.getElementById('rel-turma-serie').value = '';
@@ -5187,7 +5111,7 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
             }
 
             // ============================================
-            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL + BNCC)
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
             // ============================================
 
             async function carregarEscolasDesempenho() {
@@ -5291,7 +5215,6 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                 }
             }
 
-            // ===== FUNÇÃO GERAR DESEMPENHO (CORRIGIDA: inclui BNCC no card de questões) =====
             async function gerarDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -5413,7 +5336,6 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     document.getElementById('info-prova').textContent = prova.titulo || '—';
                     document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
 
-                    // ---- CARD ÚNICO DA DISCIPLINA (com BNCC) ----
                     const card = document.getElementById('desempenho-disciplina-unica');
                     card.style.display = 'block';
 
@@ -5424,7 +5346,6 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     resultadoQuestoes.forEach(q => {
                         const div = document.createElement('div');
                         div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
-                        // CONSTRUÇÃO DO HTML INCLUINDO BNCC
                         let bnccHtml = '';
                         if (q.bncc && q.bncc.trim() !== '') {
                             bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
@@ -5451,7 +5372,7 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
 
                     document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
-                    // ---- CARD GABARITO OFICIAL DA PROVA (com BNCC) ----
+                    // Gabarito oficial
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
 
@@ -5478,7 +5399,6 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                 }
             }
 
-            // ===== FUNÇÃO GERAR DOCUMENTO COM CONTROLE DE DUPLO CLIQUE =====
             function gerarDocumentoDesempenho() {
                 if (gerandoDocumento) {
                     showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
@@ -5525,7 +5445,6 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                         `;
                     });
 
-                    // Gabarito oficial com BNCC
                     let gabOficialHTML = '';
                     gabarito.forEach((gab, idx) => {
                         const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
@@ -5642,7 +5561,6 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                             </div>
                         </div>
 
-                        <!-- CARD GABARITO OFICIAL COM BNCC -->
                         <div class="gabarito-oficial-card">
                             <div class="header">
                                 <strong>📋 Gabarito Oficial da Prova</strong>
@@ -5983,114 +5901,109 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
             }
 
             function imprimirAlunos() {
-    const tbody = document.getElementById('tb-alunos');
-    const rows = tbody.querySelectorAll('tr');
+                const tbody = document.getElementById('tb-alunos');
+                const rows = tbody.querySelectorAll('tr');
 
-    // Verifica se há dados
-    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
-        showToast('⚠️ Nenhum aluno para imprimir.', 'error');
-        return;
-    }
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+                    showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+                    return;
+                }
 
-    // Captura os nomes dos filtros atuais
-    const escolaSelect = document.getElementById('filtro-escola-alunos');
-    const turmaSelect = document.getElementById('filtro-turma-alunos');
-    const serieSelect = document.getElementById('filtro-serie-alunos');
-    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
-    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
-    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+                const escolaSelect = document.getElementById('filtro-escola-alunos');
+                const turmaSelect = document.getElementById('filtro-turma-alunos');
+                const serieSelect = document.getElementById('filtro-serie-alunos');
+                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
 
-    // Monta o HTML para impressão
-    let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Lista de Alunos</title>
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
-            h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
-            .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-            th { background: #f2f2f2; font-weight: 700; }
-            tr:nth-child(even) { background: #fafafa; }
-            .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
-            @media print {
-                body { margin: 10px; }
-                .no-print { display: none; }
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Lista de Alunos</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+                        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+                        .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                        th { background: #f2f2f2; font-weight: 700; }
+                        tr:nth-child(even) { background: #fafafa; }
+                        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+                        @media print {
+                            body { margin: 10px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📋 Lista de Alunos</h1>
+                    <div class="filtros">
+                        <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+                        <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+                        <strong>Série:</strong> ${serieNome}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Matrícula</th>
+                                <th>Nome Completo</th>
+                                <th>Série</th>
+                                <th>Turma</th>
+                                <th>Escola</th>
+                                <th>Data Nasc.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        const numero = cells[0].textContent.trim();
+                        const matricula = cells[1].textContent.trim();
+                        const nome = cells[2].textContent.trim();
+                        const serie = cells[3].textContent.trim();
+                        const turma = cells[4].textContent.trim();
+                        const escola = cells[5].textContent.trim();
+                        const dataNasc = cells[6].textContent.trim();
+                        html += `
+                            <tr>
+                                <td>${numero}</td>
+                                <td>${matricula}</td>
+                                <td>${nome}</td>
+                                <td>${serie}</td>
+                                <td>${turma}</td>
+                                <td>${escola}</td>
+                                <td>${dataNasc}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        Gerado em ${new Date().toLocaleString('pt-BR')}
+                    </div>
+                </body>
+                </html>
+                `;
+
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+                win.document.write(html);
+                win.document.close();
+                win.focus();
+                win.print();
             }
-        </style>
-    </head>
-    <body>
-        <h1>📋 Lista de Alunos</h1>
-        <div class="filtros">
-            <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
-            <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
-            <strong>Série:</strong> ${serieNome}
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nº</th>
-                    <th>Matrícula</th>
-                    <th>Nome Completo</th>
-                    <th>Série</th>
-                    <th>Turma</th>
-                    <th>Escola</th>
-                    <th>Data Nasc.</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    // Percorre as linhas visíveis da tabela (já filtradas)
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
-            const numero = cells[0].textContent.trim();
-            const matricula = cells[1].textContent.trim();
-            const nome = cells[2].textContent.trim();
-            const serie = cells[3].textContent.trim();
-            const turma = cells[4].textContent.trim();
-            const escola = cells[5].textContent.trim();
-            const dataNasc = cells[6].textContent.trim();
-            html += `
-                <tr>
-                    <td>${numero}</td>
-                    <td>${matricula}</td>
-                    <td>${nome}</td>
-                    <td>${serie}</td>
-                    <td>${turma}</td>
-                    <td>${escola}</td>
-                    <td>${dataNasc}</td>
-                </tr>
-            `;
-        }
-    });
-
-    html += `
-            </tbody>
-        </table>
-        <div class="footer">
-            Gerado em ${new Date().toLocaleString('pt-BR')}
-        </div>
-    </body>
-    </html>
-    `;
-
-    // Abre uma nova janela e imprime
-    const win = window.open('', '_blank');
-    if (!win) {
-        showToast('⚠️ Permita pop-ups para imprimir.', 'error');
-        return;
-    }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
-}
 
             function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
                 window.print(); }
