@@ -4999,10 +4999,10 @@
                     }
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        document.getElementById('rel-total-alunos').textContent = '0';
-                        document.getElementById('rel-Habilidades').textContent = '0';
-                        document.getElementById('rel-recuperacao').textContent = '0';
+                        // Atualiza apenas os cards que ainda existem
                         document.getElementById('rel-media').textContent = '0';
+                        document.getElementById('rel-conceito').textContent = '—';
+                        document.getElementById('rel-conceito').style.color = 'var(--text3)';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
                         // Zerar todos os campos de disciplina
                         const discIds = ['pt', 'mat', 'prod', 'ch', 'cn'];
@@ -5017,21 +5017,37 @@
                     const dadosAlunos = Array.isArray(alunos) ? alunos : [];
 
                     if (dadosAlunos.length === 0) {
-                        document.getElementById('rel-total-alunos').textContent = '0';
-                        document.getElementById('rel-Habilidades').textContent = '0';
-                        document.getElementById('rel-recuperacao').textContent = '0';
                         document.getElementById('rel-media').textContent = '0';
+                        document.getElementById('rel-conceito').textContent = '—';
+                        document.getElementById('rel-conceito').style.color = 'var(--text3)';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
                         return;
                     }
 
                     const total = dadosAlunos.length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
-
-                    document.getElementById('rel-total-alunos').textContent = total;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                     const porcentagem = (mediaGeral / notaMaxima) * 100;
+
+                    // Atualiza o card Porcentagem
                     document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
+
+                    // Atualiza o card Conceito
+                    const conceito = calcularConceito(porcentagem);
+                    const badgeMap = {
+                        'inicial': { label: 'INICIAL', cor: '#ef4444', badge: 'badge-conceito-inicial' },
+                        'basico': { label: 'BÁSICO', cor: '#f59e0b', badge: 'badge-conceito-basico' },
+                        'proficiente': { label: 'PROFICIENTE', cor: '#3b82f6', badge: 'badge-conceito-proficiente' },
+                        'avancado': { label: 'AVANÇADO', cor: '#10b981', badge: 'badge-conceito-avancado' }
+                    };
+                    const info = badgeMap[conceito] || { label: '—', cor: 'var(--text3)', badge: 'badge-gray' };
+                    const elConceito = document.getElementById('rel-conceito');
+                    if (elConceito) {
+                        elConceito.textContent = info.label;
+                        elConceito.style.color = info.cor;
+                        elConceito.className = 'stat-val';
+                    }
+
                     document.getElementById('rel-total-correcoes').textContent = total + ' correções';
 
                     // Calcular totais por disciplina apenas para as ativas
@@ -5064,18 +5080,6 @@
                             totais[chave].total += totalDisc;
                         });
                     });
-
-                    // Soma total de acertos e erros de todas as disciplinas (para os cards ACERTOS e ERROS)
-                    let totalAcertosGeral = 0;
-                    let totalErrosGeral = 0;
-                    Object.keys(totais).forEach(key => {
-                        totalAcertosGeral += totais[key].acertos;
-                        totalErrosGeral += totais[key].erros;
-                    });
-
-                    // Atualiza os cards de resumo (ACERTOS e ERROS)
-                    document.getElementById('rel-Habilidades').textContent = totalAcertosGeral;
-                    document.getElementById('rel-recuperacao').textContent = totalErrosGeral;
 
                     // Atualizar os cards de disciplina (apenas os ativos)
                     const discKeys = ['pt', 'mat', 'prod', 'ch', 'cn'];
