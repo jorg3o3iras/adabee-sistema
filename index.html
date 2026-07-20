@@ -125,6 +125,7 @@
         .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
         .form-row.c1 { grid-template-columns:1fr; }
+        .form-row.c2 { grid-template-columns:1fr 1fr; }
         .form-row.c3 { grid-template-columns:1fr 1fr 1fr; }
         .form-row.c4 { grid-template-columns:1fr 1fr 1fr 1fr; }
         .form-row.c5 { grid-template-columns:1fr 1fr 1fr 1fr 1fr; }
@@ -827,6 +828,7 @@
             .stats-grid { grid-template-columns:1fr 1fr; }
             .g2 { grid-template-columns:1fr; }
             .form-row { grid-template-columns:1fr; }
+            .form-row.c2 { grid-template-columns:1fr; }
             .form-row.c3 { grid-template-columns:1fr; }
             .form-row.c4 { grid-template-columns:1fr; }
             .form-row.c5 { grid-template-columns:1fr; }
@@ -1455,7 +1457,7 @@
                 </div>
             </div>
 
-            <!-- ========== CORRIGIR COM IA ========== -->
+            <!-- ========== CORRIGIR COM IA (ATUALIZADO COM ESCOLA E TURMA) ========== -->
             <div class="page" id="page-corrigir-ia">
                 <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção e correção automática de cartões resposta</p></div></div>
                 <div class="g2 no-print" style="margin-bottom:18px;">
@@ -1476,6 +1478,18 @@
                 </div>
                 <div class="card no-print">
                     <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
+                    <div class="form-row c2">
+                        <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-escola" onchange="carregarTurmasPorEscolaCorrigir(this.value)">
+                                <option value="">Selecione a escola...</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-turma" onchange="carregarAlunosPorTurmaCorrigir(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="form-row c2">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label>
                             <select class="form-control" id="corrigir-prova" onchange="carregarAlunosPorProva(this.value)">
@@ -1523,7 +1537,7 @@
                 </div>
             </div>
 
-            <!-- ========== CORREÇÃO DE TEXTO IA (CORRIGIDA) ========== -->
+            <!-- ========== CORREÇÃO DE TEXTO IA ========== -->
             <div class="page" id="page-correcao-texto">
                 <div class="page-header"><div><div class="page-title">📝 Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
                 <div class="g2 no-print">
@@ -2719,6 +2733,60 @@
                     }
                 } catch (e) {
                     console.error('Erro ao carregar alunos:', e);
+                }
+            }
+
+            // ============================================
+            // CARREGAR ALUNOS POR TURMA PARA CORRIGIR IA
+            // ============================================
+            async function carregarAlunosPorTurmaCorrigir(turmaId) {
+                const selectAluno = document.getElementById('corrigir-aluno');
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
+                if (!turmaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                    const alunos = await response.json();
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar alunos por turma:', e);
+                }
+            }
+
+            // ============================================
+            // CARREGAR TURMAS POR ESCOLA PARA CORRIGIR IA
+            // ============================================
+            async function carregarTurmasPorEscolaCorrigir(escolaId) {
+                const selectTurma = document.getElementById('corrigir-turma');
+                const selectProva = document.getElementById('corrigir-prova');
+                const selectAluno = document.getElementById('corrigir-aluno');
+
+                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+                selectProva.innerHTML = '<option value="">Selecione...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
+
+                if (!escolaId) return;
+
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas por escola:', e);
                 }
             }
 
