@@ -1156,6 +1156,10 @@
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
+                    <!-- ===== NOVA ABA: PRODUÇÃO DE TEXTO (MANUAL) ===== -->
+                    <div class="sb-item" onclick="go('producao-texto-manual')" style="border-left: 3px solid var(--green); background: rgba(16, 185, 129, 0.05);">
+                        <span class="sb-ico">📝</span> Produção de Texto <span class="sb-badge-new">NOVO</span>
+                    </div>
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
@@ -1191,6 +1195,10 @@
                     </div>
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
+                    </div>
+                    <!-- ===== NOVA ABA: PRODUÇÃO DE TEXTO (MANUAL) - USUÁRIO ===== -->
+                    <div class="sb-item" onclick="go('producao-texto-manual')" style="border-left: 3px solid var(--green); background: rgba(16, 185, 129, 0.05);">
+                        <span class="sb-ico">📝</span> Produção de Texto <span class="sb-badge-new">NOVO</span>
                     </div>
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
@@ -1836,6 +1844,66 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ========== PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL ========== -->
+            <div class="page" id="page-producao-texto-manual">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📝 Produção de Texto - Correção Manual</div>
+                        <p class="page-sub">Selecione a prova e o aluno para editar a produção de texto</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <div class="card no-print">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Prova <span class="req">*</span></label>
+                            <select class="form-control" id="pt-prova" onchange="carregarTextoProducao()">
+                                <option value="">Selecione a prova...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Escola <span class="req">*</span></label>
+                            <select class="form-control" id="pt-escola" onchange="carregarTurmasProducao(this.value)">
+                                <option value="">Selecione a escola...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma <span class="req">*</span></label>
+                            <select class="form-control" id="pt-turma" onchange="carregarAlunosProducao(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Aluno <span class="req">*</span></label>
+                            <select class="form-control" id="pt-aluno" onchange="carregarTextoProducao()">
+                                <option value="">Selecione o aluno...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button class="btn btn-primary" onclick="carregarTextoProducao()">🔍 Carregar Texto</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📄 Texto da Produção</div>
+                        <div class="btn-group no-print">
+                            <button class="btn btn-outline btn-sm" id="pt-btn-editar" onclick="habilitarEdicaoTexto()">✏️ Editar</button>
+                            <button class="btn btn-outline btn-sm" id="pt-btn-visualizar" onclick="visualizarTexto()">👁️ Visualizar</button>
+                            <button class="btn btn-green btn-sm" id="pt-btn-salvar" onclick="salvarTextoProducao()">💾 Salvar</button>
+                            <button class="btn btn-red btn-sm" id="pt-btn-excluir" onclick="excluirTextoProducao()">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                    <textarea id="pt-texto" rows="10" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:12px; font-size:14px; resize:vertical; outline:none;" readonly></textarea>
+                </div>
+
+                <div id="pt-status" style="margin-top:10px; font-size:13px; color:var(--text2);"></div>
             </div>
 
             <!-- ========== CONFIG ========== -->
@@ -2536,6 +2604,7 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
+                carregarCombosProducao(); // populates selects da aba produção de texto
             }
 
             function doLogout() {
@@ -2568,6 +2637,7 @@
                 if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
                 if (page === 'rel-escola') carregarRelatorios();
                 if (page === 'desempenho') { carregarEscolasDesempenho(); }
+                if (page === 'producao-texto-manual') { carregarCombosProducao(); carregarTextoProducao(); }
 
                 atualizarDatasImpressao();
 
@@ -5717,6 +5787,218 @@
             }
 
             // ============================================
+            // FUNÇÕES PARA PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL
+            // ============================================
+            async function carregarCombosProducao() {
+                try {
+                    // Escolas
+                    const respEscolas = await fetch(API_URL + '/api/escolas');
+                    const escolas = await respEscolas.json();
+                    const selectEscola = document.getElementById('pt-escola');
+                    if (selectEscola && escolas && !escolas.erro) {
+                        const current = selectEscola.value;
+                        selectEscola.innerHTML = '<option value="">Selecione a escola...</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectEscola.appendChild(opt);
+                        });
+                        if (current) selectEscola.value = current;
+                        if (current) carregarTurmasProducao(current);
+                    }
+
+                    // Provas
+                    const respProvas = await fetch(API_URL + '/api/provas');
+                    const provas = await respProvas.json();
+                    const selectProva = document.getElementById('pt-prova');
+                    if (selectProva && provas && !provas.erro) {
+                        const current = selectProva.value;
+                        selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            selectProva.appendChild(opt);
+                        });
+                        if (current) selectProva.value = current;
+                    }
+
+                    // Turma e Aluno serão carregados dinamicamente
+                    document.getElementById('pt-turma').innerHTML = '<option value="">Selecione a turma...</option>';
+                    document.getElementById('pt-aluno').innerHTML = '<option value="">Selecione o aluno...</option>';
+                } catch (erro) {
+                    console.error('Erro ao carregar combos para produção de texto:', erro);
+                }
+            }
+
+            async function carregarTurmasProducao(escolaId) {
+                const selectTurma = document.getElementById('pt-turma');
+                const selectAluno = document.getElementById('pt-aluno');
+                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                if (!escolaId) return;
+
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas para produção:', e);
+                }
+            }
+
+            async function carregarAlunosProducao(turmaId) {
+                const selectAluno = document.getElementById('pt-aluno');
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                if (!turmaId) return;
+
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                    const alunos = await response.json();
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar alunos para produção:', e);
+                }
+            }
+
+            function carregarTextoProducao() {
+                const provaId = document.getElementById('pt-prova').value;
+                const alunoId = document.getElementById('pt-aluno').value;
+                const textarea = document.getElementById('pt-texto');
+                const statusDiv = document.getElementById('pt-status');
+
+                if (!provaId || !alunoId) {
+                    textarea.value = '';
+                    statusDiv.innerHTML = '⚠️ Selecione uma prova e um aluno para carregar o texto.';
+                    textarea.readOnly = true;
+                    document.getElementById('pt-btn-editar').disabled = true;
+                    document.getElementById('pt-btn-visualizar').disabled = true;
+                    document.getElementById('pt-btn-salvar').disabled = true;
+                    document.getElementById('pt-btn-excluir').disabled = true;
+                    return;
+                }
+
+                // Buscar texto salvo no localStorage
+                const chave = `producao_texto_${provaId}_${alunoId}`;
+                const textoSalvo = localStorage.getItem(chave);
+                if (textoSalvo !== null) {
+                    textarea.value = textoSalvo;
+                    statusDiv.innerHTML = '✅ Texto carregado do armazenamento local.';
+                    textarea.readOnly = true;
+                    document.getElementById('pt-btn-editar').disabled = false;
+                    document.getElementById('pt-btn-visualizar').disabled = false;
+                    document.getElementById('pt-btn-salvar').disabled = false;
+                    document.getElementById('pt-btn-excluir').disabled = false;
+                } else {
+                    // Tentar buscar da API se existir (histórico de correção)
+                    fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`)
+                        .then(r => r.json())
+                        .then(historico => {
+                            if (historico && historico.length > 0 && historico[0].texto_producao) {
+                                const texto = historico[0].texto_producao;
+                                textarea.value = texto;
+                                localStorage.setItem(chave, texto);
+                                statusDiv.innerHTML = '✅ Texto carregado da base de dados.';
+                            } else {
+                                textarea.value = '';
+                                statusDiv.innerHTML = 'ℹ️ Nenhum texto encontrado para este aluno/prova.';
+                            }
+                            textarea.readOnly = true;
+                            document.getElementById('pt-btn-editar').disabled = false;
+                            document.getElementById('pt-btn-visualizar').disabled = false;
+                            document.getElementById('pt-btn-salvar').disabled = false;
+                            document.getElementById('pt-btn-excluir').disabled = false;
+                        })
+                        .catch(e => {
+                            console.warn('Erro ao buscar histórico:', e);
+                            textarea.value = '';
+                            statusDiv.innerHTML = '⚠️ Erro ao buscar texto.';
+                            textarea.readOnly = true;
+                            document.getElementById('pt-btn-editar').disabled = false;
+                            document.getElementById('pt-btn-visualizar').disabled = false;
+                            document.getElementById('pt-btn-salvar').disabled = false;
+                            document.getElementById('pt-btn-excluir').disabled = false;
+                        });
+                }
+            }
+
+            function habilitarEdicaoTexto() {
+                const textarea = document.getElementById('pt-texto');
+                textarea.readOnly = false;
+                textarea.focus();
+                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado.';
+                showToast('✏️ Agora você pode editar o texto.', 'info');
+            }
+
+            function visualizarTexto() {
+                const textarea = document.getElementById('pt-texto');
+                textarea.readOnly = true;
+                document.getElementById('pt-status').innerHTML = '👁️ Modo visualização.';
+                showToast('👁️ Modo visualização ativado (somente leitura).', 'info');
+            }
+
+            function salvarTextoProducao() {
+                const provaId = document.getElementById('pt-prova').value;
+                const alunoId = document.getElementById('pt-aluno').value;
+                const textarea = document.getElementById('pt-texto');
+                const texto = textarea.value;
+
+                if (!provaId || !alunoId) {
+                    showToast('❌ Selecione uma prova e um aluno.', 'error');
+                    return;
+                }
+
+                if (!texto.trim()) {
+                    showToast('⚠️ O texto não pode estar vazio.', 'warning');
+                    return;
+                }
+
+                const chave = `producao_texto_${provaId}_${alunoId}`;
+                localStorage.setItem(chave, texto);
+                document.getElementById('pt-status').innerHTML = '💾 Texto salvo com sucesso!';
+                showToast('✅ Texto salvo localmente.', 'success');
+                textarea.readOnly = true;
+
+                // Opcional: enviar para a API (se houver endpoint)
+                // Aqui você pode fazer um fetch para salvar no backend
+                // Exemplo:
+                // fetch(API_URL + '/api/salvar_texto_producao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prova_id: provaId, aluno_id: alunoId, texto: texto }) })
+            }
+
+            function excluirTextoProducao() {
+                const provaId = document.getElementById('pt-prova').value;
+                const alunoId = document.getElementById('pt-aluno').value;
+                if (!provaId || !alunoId) {
+                    showToast('❌ Selecione uma prova e um aluno.', 'error');
+                    return;
+                }
+
+                if (!confirm('Tem certeza que deseja excluir o texto desta produção?')) return;
+
+                const chave = `producao_texto_${provaId}_${alunoId}`;
+                localStorage.removeItem(chave);
+                document.getElementById('pt-texto').value = '';
+                document.getElementById('pt-status').innerHTML = '🗑️ Texto excluído.';
+                showToast('🗑️ Texto excluído com sucesso.', 'error');
+            }
+
+            // ============================================
             // CARREGAR DADOS - FUNÇÃO PRINCIPAL
             // ============================================
             async function carregarDados() {
@@ -5742,7 +6024,8 @@
                         carregarEscolasParaCorrecaoManual(),
                         carregarFiltrosRelTurma(),
                         carregarFiltroEscolaTurmas(),
-                        carregarEscolasDesempenho()
+                        carregarEscolasDesempenho(),
+                        carregarCombosProducao()
                     ]);
                     console.log('✅ Todos os dados carregados com sucesso!');
                     atualizarDatasImpressao();
@@ -6858,9 +7141,10 @@
                 carregarFiltrosRelTurma();
                 carregarFiltroEscolaTurmas();
                 carregarEscolasParaAluno();
-                carregarEscolasDesempenho(); // CORRIGIDO: sem o "a" extra
+                carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
+                carregarCombosProducao(); // inicializa a aba de produção de texto
             });
 
             document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
