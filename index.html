@@ -1847,6 +1847,7 @@
             </div>
 
             <!-- ========== PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL ========== -->
+            <!-- ===== CONTEÚDO SUBSTITUÍDO PELO FORMULÁRIO DA PROVA ONLINE ===== -->
             <div class="page" id="page-producao-texto-manual">
                 <div class="page-header">
                     <div>
@@ -1862,7 +1863,7 @@
                     <div class="form-row c4">
                         <div class="form-group">
                             <label class="form-label">Prova <span class="req">*</span></label>
-                            <select class="form-control" id="pt-prova" onchange="carregarTextoProducao()">
+                            <select class="form-control" id="pt-prova" onchange="carregarAvaliacaoProducao()">
                                 <option value="">Selecione a prova...</option>
                             </select>
                         </div>
@@ -1880,27 +1881,35 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Aluno <span class="req">*</span></label>
-                            <select class="form-control" id="pt-aluno" onchange="carregarTextoProducao()">
+                            <select class="form-control" id="pt-aluno" onchange="carregarAvaliacaoProducao()">
                                 <option value="">Selecione o aluno...</option>
                             </select>
                         </div>
                     </div>
                     <div style="display:flex; gap:8px; margin-top:8px;">
-                        <button class="btn btn-primary" onclick="carregarTextoProducao()">🔍 Carregar Texto</button>
+                        <button class="btn btn-primary" onclick="carregarAvaliacaoProducao()">🔍 Carregar Avaliação</button>
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="pt-avaliacao-card">
                     <div class="card-header">
-                        <div class="card-title">📄 Texto da Produção</div>
+                        <div class="card-title">📝 Avaliação da Produção de Texto</div>
                         <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" id="pt-btn-editar" onclick="habilitarEdicaoTexto()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" id="pt-btn-visualizar" onclick="visualizarTexto()">👁️ Visualizar</button>
-                            <button class="btn btn-green btn-sm" id="pt-btn-salvar" onclick="salvarTextoProducao()">💾 Salvar</button>
-                            <button class="btn btn-red btn-sm" id="pt-btn-excluir" onclick="excluirTextoProducao()">🗑️ Excluir</button>
+                            <button class="btn btn-outline btn-sm" id="pt-btn-editar" onclick="habilitarEdicaoAvaliacao()">✏️ Editar</button>
+                            <button class="btn btn-outline btn-sm" id="pt-btn-visualizar" onclick="visualizarAvaliacao()">👁️ Visualizar</button>
+                            <button class="btn btn-green btn-sm" id="pt-btn-salvar" onclick="salvarAvaliacaoProducao()">💾 Salvar</button>
+                            <button class="btn btn-red btn-sm" id="pt-btn-excluir" onclick="excluirAvaliacaoProducao()">🗑️ Excluir</button>
                         </div>
                     </div>
-                    <textarea id="pt-texto" rows="10" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:12px; font-size:14px; resize:vertical; outline:none;" readonly></textarea>
+                    <div id="pt-avaliacao-container">
+                        <!-- O conteúdo da prova online será injetado aqui via JavaScript -->
+                        <div style="text-align:center; padding:20px; color:var(--text3);">
+                            Selecione uma prova e um aluno e clique em "Carregar Avaliação".
+                        </div>
+                    </div>
+                    <div id="pt-resultado-container" style="margin-top:16px; display:none; padding:16px; background:var(--bg2); border-radius:8px; border-left:4px solid var(--green);">
+                        <!-- Resultado da avaliação será exibido aqui -->
+                    </div>
                 </div>
 
                 <div id="pt-status" style="margin-top:10px; font-size:13px; color:var(--text2);"></div>
@@ -2637,7 +2646,7 @@
                 if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
                 if (page === 'rel-escola') carregarRelatorios();
                 if (page === 'desempenho') { carregarEscolasDesempenho(); }
-                if (page === 'producao-texto-manual') { carregarCombosProducao(); carregarTextoProducao(); }
+                if (page === 'producao-texto-manual') { carregarCombosProducao(); carregarAvaliacaoProducao(); }
 
                 atualizarDatasImpressao();
 
@@ -5827,6 +5836,22 @@
                     // Turma e Aluno serão carregados dinamicamente
                     document.getElementById('pt-turma').innerHTML = '<option value="">Selecione a turma...</option>';
                     document.getElementById('pt-aluno').innerHTML = '<option value="">Selecione o aluno...</option>';
+
+                    // Inicializar a avaliação vazia
+                    document.getElementById('pt-avaliacao-container').innerHTML = `
+                        <div style="text-align:center; padding:20px; color:var(--text3);">
+                            Selecione uma prova e um aluno e clique em "Carregar Avaliação".
+                        </div>
+                    `;
+                    document.getElementById('pt-resultado-container').style.display = 'none';
+                    document.getElementById('pt-status').innerHTML = '';
+
+                    // Desabilitar botões até carregar
+                    document.getElementById('pt-btn-editar').disabled = true;
+                    document.getElementById('pt-btn-visualizar').disabled = true;
+                    document.getElementById('pt-btn-salvar').disabled = true;
+                    document.getElementById('pt-btn-excluir').disabled = true;
+
                 } catch (erro) {
                     console.error('Erro ao carregar combos para produção de texto:', erro);
                 }
@@ -5877,111 +5902,145 @@
                 }
             }
 
-            function carregarTextoProducao() {
+            // ============================================
+            // FUNÇÃO PRINCIPAL: CARREGAR AVALIAÇÃO (substitui carregarTextoProducao)
+            // ============================================
+            function carregarAvaliacaoProducao() {
                 const provaId = document.getElementById('pt-prova').value;
                 const alunoId = document.getElementById('pt-aluno').value;
-                const textarea = document.getElementById('pt-texto');
+                const container = document.getElementById('pt-avaliacao-container');
                 const statusDiv = document.getElementById('pt-status');
+                const resultadoContainer = document.getElementById('pt-resultado-container');
+
+                // Desabilitar botões enquanto carrega
+                document.getElementById('pt-btn-editar').disabled = true;
+                document.getElementById('pt-btn-visualizar').disabled = true;
+                document.getElementById('pt-btn-salvar').disabled = true;
+                document.getElementById('pt-btn-excluir').disabled = true;
 
                 if (!provaId || !alunoId) {
-                    textarea.value = '';
-                    statusDiv.innerHTML = '⚠️ Selecione uma prova e um aluno para carregar o texto.';
-                    textarea.readOnly = true;
-                    document.getElementById('pt-btn-editar').disabled = true;
-                    document.getElementById('pt-btn-visualizar').disabled = true;
-                    document.getElementById('pt-btn-salvar').disabled = true;
-                    document.getElementById('pt-btn-excluir').disabled = true;
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:20px; color:var(--text3);">
+                            Selecione uma prova e um aluno e clique em "Carregar Avaliação".
+                        </div>
+                    `;
+                    resultadoContainer.style.display = 'none';
+                    statusDiv.innerHTML = '⚠️ Selecione uma prova e um aluno.';
                     return;
                 }
 
-                // Buscar texto salvo no localStorage
-                const chave = `producao_texto_${provaId}_${alunoId}`;
-                const textoSalvo = localStorage.getItem(chave);
-                if (textoSalvo !== null) {
-                    textarea.value = textoSalvo;
-                    statusDiv.innerHTML = '✅ Texto carregado do armazenamento local.';
-                    textarea.readOnly = true;
-                    document.getElementById('pt-btn-editar').disabled = false;
-                    document.getElementById('pt-btn-visualizar').disabled = false;
-                    document.getElementById('pt-btn-salvar').disabled = false;
-                    document.getElementById('pt-btn-excluir').disabled = false;
+                statusDiv.innerHTML = '🔄 Carregando avaliação...';
+
+                // Buscar a prova para obter dados (disciplina, etc.) - mas o conteúdo é fixo
+                // A avaliação de produção de texto sempre será a mesma (questão 16 com critério de desenho)
+                // Então geramos o HTML fixo e carregamos a seleção salva, se houver.
+
+                const chave = `producao_avaliacao_${provaId}_${alunoId}`;
+                let selecionado = localStorage.getItem(chave);
+
+                // Renderizar o formulário da prova online com a seleção atual
+                renderizarAvaliacao(selecionado);
+
+                // Habilitar botões
+                document.getElementById('pt-btn-editar').disabled = false;
+                document.getElementById('pt-btn-visualizar').disabled = false;
+                document.getElementById('pt-btn-salvar').disabled = false;
+                document.getElementById('pt-btn-excluir').disabled = false;
+
+                statusDiv.innerHTML = '✅ Avaliação carregada. Utilize os botões para editar, visualizar, salvar ou excluir.';
+            }
+
+            // ============================================
+            // FUNÇÃO PARA RENDERIZAR O FORMULÁRIO DA PROVA ONLINE
+            // ============================================
+            function renderizarAvaliacao(selecionado) {
+                const container = document.getElementById('pt-avaliacao-container');
+                // Gerar HTML do formulário
+                const html = `
+                    <div style="background:#F5F9FF; border-left:6px solid #1565C0; padding:20px; border-radius:8px; margin-bottom:15px;">
+                        <h3 style="color:#0D47A1; margin-bottom:10px;">QUESTÃO 16</h3>
+                        <p><strong>Habilidade BNCC:</strong> EF15LP18</p>
+                        <p>Relacionar texto com ilustrações e outros recursos gráficos.</p>
+                    </div>
+
+                    <div style="background:#fafafa; border:1px solid #ddd; border-radius:8px; padding:20px;">
+                        <h4 style="color:#1565C0; margin-bottom:20px;">CRITÉRIO: DESENHO (REPRESENTAÇÃO DAS IDEIAS)</h4>
+
+                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '1' ? 'rgba(59,130,246,.1)' : 'transparent'};">
+                            <input type="radio" name="nota" id="n1" value="1" ${selecionado == '1' ? 'checked' : ''} disabled>
+                            <label for="n1" style="cursor:pointer; width:100%;">
+                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL INICIAL</div>
+                                O desenho não representa o tema ou não foi realizado.
+                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">1 Ponto</div>
+                            </label>
+                        </div>
+
+                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '2' ? 'rgba(59,130,246,.1)' : 'transparent'};">
+                            <input type="radio" name="nota" id="n2" value="2" ${selecionado == '2' ? 'checked' : ''} disabled>
+                            <label for="n2" style="cursor:pointer; width:100%;">
+                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL BÁSICO</div>
+                                O desenho representa parcialmente o tema ou possui poucos elementos relacionados à proposta.
+                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">2 Pontos</div>
+                            </label>
+                        </div>
+
+                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '3' ? 'rgba(59,130,246,.1)' : 'transparent'};">
+                            <input type="radio" name="nota" id="n3" value="3" ${selecionado == '3' ? 'checked' : ''} disabled>
+                            <label for="n3" style="cursor:pointer; width:100%;">
+                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL PROFICIENTE</div>
+                                O desenho representa o tema e apresenta alguns detalhes importantes.
+                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">3 Pontos</div>
+                            </label>
+                        </div>
+
+                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '4' ? 'rgba(59,130,246,.1)' : 'transparent'};">
+                            <input type="radio" name="nota" id="n4" value="4" ${selecionado == '4' ? 'checked' : ''} disabled>
+                            <label for="n4" style="cursor:pointer; width:100%;">
+                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL AVANÇADO</div>
+                                O desenho representa claramente o tema proposto, apresenta riqueza de detalhes e complementa a escrita.
+                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">4 Pontos</div>
+                            </label>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+
+                // Se houver seleção, exibir o resultado
+                const resultadoContainer = document.getElementById('pt-resultado-container');
+                if (selecionado) {
+                    const conceitos = { '1': 'Inicial', '2': 'Básico', '3': 'Proficiente', '4': 'Avançado' };
+                    const cores = { '1': '#ef4444', '2': '#f59e0b', '3': '#3b82f6', '4': '#10b981' };
+                    resultadoContainer.style.display = 'block';
+                    resultadoContainer.style.borderLeftColor = cores[selecionado] || 'var(--green)';
+                    resultadoContainer.innerHTML = `
+                        ✅ Avaliação registrada!
+                        <br><strong>Conceito:</strong> ${conceitos[selecionado] || '—'}
+                        <br><strong>Pontuação:</strong> ${selecionado} ponto(s).
+                    `;
                 } else {
-                    // Tentar buscar da API se existir (histórico de correção)
-                    fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`)
-                        .then(r => r.json())
-                        .then(historico => {
-                            if (historico && historico.length > 0 && historico[0].texto_producao) {
-                                const texto = historico[0].texto_producao;
-                                textarea.value = texto;
-                                localStorage.setItem(chave, texto);
-                                statusDiv.innerHTML = '✅ Texto carregado da base de dados.';
-                            } else {
-                                textarea.value = '';
-                                statusDiv.innerHTML = 'ℹ️ Nenhum texto encontrado para este aluno/prova.';
-                            }
-                            textarea.readOnly = true;
-                            document.getElementById('pt-btn-editar').disabled = false;
-                            document.getElementById('pt-btn-visualizar').disabled = false;
-                            document.getElementById('pt-btn-salvar').disabled = false;
-                            document.getElementById('pt-btn-excluir').disabled = false;
-                        })
-                        .catch(e => {
-                            console.warn('Erro ao buscar histórico:', e);
-                            textarea.value = '';
-                            statusDiv.innerHTML = '⚠️ Erro ao buscar texto.';
-                            textarea.readOnly = true;
-                            document.getElementById('pt-btn-editar').disabled = false;
-                            document.getElementById('pt-btn-visualizar').disabled = false;
-                            document.getElementById('pt-btn-salvar').disabled = false;
-                            document.getElementById('pt-btn-excluir').disabled = false;
-                        });
+                    resultadoContainer.style.display = 'none';
                 }
             }
 
-            function habilitarEdicaoTexto() {
-                const textarea = document.getElementById('pt-texto');
-                textarea.readOnly = false;
-                textarea.focus();
-                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado.';
-                showToast('✏️ Agora você pode editar o texto.', 'info');
+            // ============================================
+            // FUNÇÕES DE CONTROLE DOS BOTÕES
+            // ============================================
+            function habilitarEdicaoAvaliacao() {
+                const radios = document.querySelectorAll('input[name="nota"]');
+                radios.forEach(r => r.disabled = false);
+                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado. Selecione um nível e clique em Salvar.';
+                showToast('✏️ Agora você pode selecionar um conceito.', 'info');
             }
 
-            function visualizarTexto() {
-                const textarea = document.getElementById('pt-texto');
-                textarea.readOnly = true;
-                document.getElementById('pt-status').innerHTML = '👁️ Modo visualização.';
-                showToast('👁️ Modo visualização ativado (somente leitura).', 'info');
+            function visualizarAvaliacao() {
+                const radios = document.querySelectorAll('input[name="nota"]');
+                radios.forEach(r => r.disabled = true);
+                document.getElementById('pt-status').innerHTML = '👁️ Modo visualização (somente leitura).';
+                showToast('👁️ Modo visualização ativado.', 'info');
             }
 
-            function salvarTextoProducao() {
-                const provaId = document.getElementById('pt-prova').value;
-                const alunoId = document.getElementById('pt-aluno').value;
-                const textarea = document.getElementById('pt-texto');
-                const texto = textarea.value;
-
-                if (!provaId || !alunoId) {
-                    showToast('❌ Selecione uma prova e um aluno.', 'error');
-                    return;
-                }
-
-                if (!texto.trim()) {
-                    showToast('⚠️ O texto não pode estar vazio.', 'warning');
-                    return;
-                }
-
-                const chave = `producao_texto_${provaId}_${alunoId}`;
-                localStorage.setItem(chave, texto);
-                document.getElementById('pt-status').innerHTML = '💾 Texto salvo com sucesso!';
-                showToast('✅ Texto salvo localmente.', 'success');
-                textarea.readOnly = true;
-
-                // Opcional: enviar para a API (se houver endpoint)
-                // Aqui você pode fazer um fetch para salvar no backend
-                // Exemplo:
-                // fetch(API_URL + '/api/salvar_texto_producao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prova_id: provaId, aluno_id: alunoId, texto: texto }) })
-            }
-
-            function excluirTextoProducao() {
+            function salvarAvaliacaoProducao() {
                 const provaId = document.getElementById('pt-prova').value;
                 const alunoId = document.getElementById('pt-aluno').value;
                 if (!provaId || !alunoId) {
@@ -5989,13 +6048,45 @@
                     return;
                 }
 
-                if (!confirm('Tem certeza que deseja excluir o texto desta produção?')) return;
+                const selectedRadio = document.querySelector('input[name="nota"]:checked');
+                if (!selectedRadio) {
+                    showToast('⚠️ Selecione um nível de avaliação!', 'warning');
+                    return;
+                }
 
-                const chave = `producao_texto_${provaId}_${alunoId}`;
+                const valor = selectedRadio.value;
+                const chave = `producao_avaliacao_${provaId}_${alunoId}`;
+                localStorage.setItem(chave, valor);
+
+                // Atualizar visual
+                renderizarAvaliacao(valor);
+                document.getElementById('pt-status').innerHTML = '💾 Avaliação salva com sucesso!';
+                showToast('✅ Avaliação salva localmente.', 'success');
+
+                // Desabilitar radios após salvar (volta ao modo visualização)
+                document.querySelectorAll('input[name="nota"]').forEach(r => r.disabled = true);
+            }
+
+            function excluirAvaliacaoProducao() {
+                const provaId = document.getElementById('pt-prova').value;
+                const alunoId = document.getElementById('pt-aluno').value;
+                if (!provaId || !alunoId) {
+                    showToast('❌ Selecione uma prova e um aluno.', 'error');
+                    return;
+                }
+
+                if (!confirm('Tem certeza que deseja excluir a avaliação deste aluno?')) return;
+
+                const chave = `producao_avaliacao_${provaId}_${alunoId}`;
                 localStorage.removeItem(chave);
-                document.getElementById('pt-texto').value = '';
-                document.getElementById('pt-status').innerHTML = '🗑️ Texto excluído.';
-                showToast('🗑️ Texto excluído com sucesso.', 'error');
+
+                // Resetar visual
+                renderizarAvaliacao(null);
+                document.getElementById('pt-status').innerHTML = '🗑️ Avaliação excluída.';
+                document.getElementById('pt-resultado-container').style.display = 'none';
+                showToast('🗑️ Avaliação excluída com sucesso.', 'error');
+
+                document.querySelectorAll('input[name="nota"]').forEach(r => r.disabled = true);
             }
 
             // ============================================
@@ -7162,4 +7253,4 @@
             });
         </script>
     </body>
-    </html>
+</html>
