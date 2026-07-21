@@ -6,7 +6,7 @@
     <title>CorrigePro — Sistema de Correção de Provas</title>
     <style>
         /* ============================================
-           CSS COMPLETO OTIMIZADO
+           CSS COMPLETO OTIMIZADO (com fontes e cards maiores)
            ============================================ */
         :root {
             --bg: #0f172a;
@@ -722,11 +722,11 @@
             border: 1px solid var(--border);
         }
         .desempenho-resumo .item .valor {
-            font-size: 28px;
+            font-size: 32px; /* AUMENTADO */
             font-weight: 800;
         }
         .desempenho-resumo .item .label {
-            font-size: 11px;
+            font-size: 13px; /* AUMENTADO */
             color: var(--text3);
             text-transform: uppercase;
             letter-spacing: 0.3px;
@@ -736,89 +736,170 @@
         .desempenho-resumo .item .valor.blue { color: var(--blue); }
         .desempenho-resumo .item .valor.purple { color: var(--purple); }
 
-        /* Estilos para o card único de disciplina */
-        .questao-item {
+        /* ===== CARD ÚNICO DA DISCIPLINA - FONTES E TAMANHOS AMPLIADOS ===== */
+        .desempenho-disciplina-unica .card {
+            padding: 24px 28px; /* AUMENTADO */
+        }
+        .disciplina-unica-titulo {
+            font-size: 22px; /* AUMENTADO */
+        }
+        .questoes-grid-desempenho {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr); /* MENOS COLUNAS PARA ITENS MAIORES */
+            gap: 10px;
+            padding: 12px 6px;
+        }
+        .questao-item-desempenho {
             background: var(--bg2);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 4px 2px;
+            border-radius: 10px;
+            padding: 10px 6px; /* AUMENTADO */
             text-align: center;
-            font-size: 10px;
+            font-size: 14px; /* AUMENTADO */
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1px;
+            gap: 4px;
             transition: border-color 0.2s;
         }
-        .questao-item .q-num {
-            font-size: 7px;
+        .questao-item-desempenho .q-num {
+            font-size: 12px; /* AUMENTADO */
+            font-weight: 700;
             color: var(--text3);
-            font-weight: 700;
         }
-        .questao-item .q-resp {
-            font-weight: 700;
-            font-size: 12px;
+        .questao-item-desempenho .q-resp {
+            font-weight: 800;
+            font-size: 20px; /* AUMENTADO */
             background: var(--bg);
-            border-radius: 4px;
-            padding: 0 4px;
-            line-height: 20px;
+            border-radius: 6px;
+            padding: 0 6px;
+            line-height: 28px;
             width: 100%;
         }
-        .questao-item .q-gab {
-            font-size: 7px;
+        .questao-item-desempenho .q-gab {
+            font-size: 10px; /* AUMENTADO */
             color: var(--text3);
         }
-        .questao-item .q-status-text {
-            font-size: 7px;
+        .questao-item-desempenho .q-status-text {
+            font-size: 11px; /* AUMENTADO */
             font-weight: 700;
             display: block;
             line-height: 1.2;
-            margin-top: 1px;
-            padding: 1px 4px;
-            border-radius: 4px;
+            margin-top: 2px;
+            padding: 2px 6px;
+            border-radius: 6px;
             width: 100%;
         }
-        .questao-item.acertou {
+        .questao-item-desempenho.acertou {
             border-color: var(--green);
-            background: rgba(16, 185, 129, 0.08);
-        }
-        .questao-item.acertou .q-resp {
-            color: var(--green);
-        }
-        .questao-item.acertou .q-status-text {
-            color: var(--green);
             background: rgba(16, 185, 129, 0.12);
         }
-        .questao-item.errou {
+        .questao-item-desempenho.acertou .q-resp {
+            color: var(--green);
+        }
+        .questao-item-desempenho.acertou .q-status-text {
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.15);
+        }
+        .questao-item-desempenho.errou {
             border-color: var(--red);
-            background: rgba(239, 68, 68, 0.08);
+            background: rgba(239, 68, 68, 0.10);
         }
-        .questao-item.errou .q-resp {
+        .questao-item-desempenho.errou .q-resp {
             color: var(--red);
         }
-        .questao-item.errou .q-status-text {
+        .questao-item-desempenho.errou .q-status-text {
             color: var(--red);
-            background: rgba(239, 68, 68, 0.12);
+            background: rgba(239, 68, 68, 0.15);
         }
-        .questao-item .q-status-text:empty {
+        .questao-item-desempenho .q-status-text:empty {
             display: none;
         }
+        .desempenho-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 15px; /* AUMENTADO */
+            flex-wrap: wrap;
+        }
+        .desempenho-stats .acertos { color: var(--green); font-weight: 700; }
+        .desempenho-stats .erros { color: var(--red); font-weight: 700; }
+        .desempenho-stats .nota { color: var(--blue); font-weight: 700; }
+        .desempenho-stats .conceito { font-weight: 700; }
 
+        /* ===== GABARITO OFICIAL - CARDS COM TAMANHO AUMENTADO (CORRIGIDO) ===== */
+        .gabarito-oficial-card .card {
+            padding: 24px 28px;
+        }
+        .gabarito-oficial-card .questoes-grid-gabarito {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 12px;
+            padding: 16px 8px;
+        }
+        .gabarito-oficial-card .questao-item-gabarito {
+            background: var(--bg2);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 8px;
+            text-align: center;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .gabarito-oficial-card .questao-item-gabarito .q-num {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text3);
+        }
+        .gabarito-oficial-card .questao-item-gabarito .q-resp {
+            font-weight: 800;
+            font-size: 24px;
+            color: var(--green);
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 2px 8px;
+            line-height: 1.4;
+            width: 100%;
+        }
+        .gabarito-oficial-card .questao-item-gabarito .q-gab {
+            font-size: 12px;
+            color: var(--text3);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .gabarito-oficial-card .bncc-tag {
+            font-size: 10px;
+            color: var(--purple);
+            background: rgba(139, 92, 246, 0.12);
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* ===== INFO DO DESEMPENHO ===== */
         .desempenho-info {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
             gap: 10px;
             background: var(--bg2);
             border-radius: 10px;
-            padding: 12px 16px;
+            padding: 14px 18px;
             margin-top: 16px;
             border: 1px solid var(--border);
-            font-size: 12px;
+            font-size: 14px; /* AUMENTADO */
         }
         .desempenho-info strong { color: var(--text); }
 
         /* ============================================
-           RESPONSIVIDADE
+           RESPONSIVIDADE (ajustada para novos tamanhos)
            ============================================ */
         @media (max-width:900px) {
             .menu-toggle { display:flex; align-items:center; justify-content:center; }
@@ -884,6 +965,11 @@
             .desempenho-info {
                 grid-template-columns: 1fr 1fr;
             }
+            /* Ajuste dos grids para telas médias */
+            .questoes-grid-desempenho,
+            .gabarito-oficial-card .questoes-grid-gabarito {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
         @media (max-width:480px) {
             .stats-grid { grid-template-columns:1fr; }
@@ -947,11 +1033,15 @@
             .desempenho-info {
                 grid-template-columns: 1fr;
             }
-            .questao-item .q-resp {
-                font-size: 10px;
+            .questao-item-desempenho .q-resp {
+                font-size: 16px;
             }
-            .questao-item .q-status-text {
-                font-size: 6px;
+            .questao-item-desempenho .q-status-text {
+                font-size: 9px;
+            }
+            .questoes-grid-desempenho,
+            .gabarito-oficial-card .questoes-grid-gabarito {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
 
@@ -1062,25 +1152,32 @@
             .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
             .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
             .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
-            .questao-item { background: #f8fafc !important; border-color: #ccc !important; }
-            .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
-            .questao-item.acertou .q-resp { color: #155724 !important; }
-            .questao-item.acertou .q-status-text { color: #155724 !important; background: #d4edda !important; }
-            .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
-            .questao-item.errou .q-resp { color: #721c24 !important; }
-            .questao-item.errou .q-status-text { color: #721c24 !important; background: #f8d7da !important; }
+            .questao-item-desempenho { background: #f8fafc !important; border-color: #ccc !important; }
+            .questao-item-desempenho.acertou { border-color: #28a745 !important; background: #d4edda !important; }
+            .questao-item-desempenho.acertou .q-resp { color: #155724 !important; }
+            .questao-item-desempenho.acertou .q-status-text { color: #155724 !important; background: #d4edda !important; }
+            .questao-item-desempenho.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
+            .questao-item-desempenho.errou .q-resp { color: #721c24 !important; }
+            .questao-item-desempenho.errou .q-status-text { color: #721c24 !important; background: #f8d7da !important; }
             .desempenho-resumo .item { background: #f1f5f9 !important; border-color: #ccc !important; }
             .desempenho-resumo .item .valor.green { color: #155724 !important; }
             .desempenho-resumo .item .valor.red { color: #721c24 !important; }
             .desempenho-resumo .item .valor.blue { color: #004085 !important; }
             .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
             .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .questoes-grid-desempenho,
+            .gabarito-oficial-card .questoes-grid-gabarito {
+                grid-template-columns: repeat(8, 1fr) !important;
+            }
+            .gabarito-oficial-card .questao-item-gabarito { background: #f1f5f9 !important; border-color: #ccc !important; }
+            .gabarito-oficial-card .questao-item-gabarito .q-resp { color: #155724 !important; }
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
     </style>
 </head>
 <body>
+
 
     <!-- ══════════ BOTÃO MENU HAMBÚRGUER ══════════ -->
     <button class="menu-toggle no-print" id="menuToggle" onclick="toggleMenu()">☰</button>
