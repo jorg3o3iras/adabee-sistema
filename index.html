@@ -805,7 +805,6 @@
             text-align: center;
             border: 1px solid var(--border);
             transition: all 0.3s;
-            display: block; /* Garante que o display será controlado via JS */
         }
         .disciplina-card-rel:hover {
             border-color: var(--border2);
@@ -1747,163 +1746,90 @@
                 </div>
             </div>
 
-            <!-- ========== RELATÓRIO POR TURMA (ATUALIZADO - APENAS 1 CARD) ========== -->
-            <div class="page" id="page-rel-turma">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📊 Relatório por Turma</div>
-                        <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
-                    </div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                        <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
-                    </div>
-                </div>
+            <!-- ========== RELATÓRIO POR TURMA (VERSÃO CORRIGIDA) ========== -->
+<div class="page" id="page-rel-turma">
+    <div class="page-header">
+        <div>
+            <div class="page-title">📊 Relatório por Turma</div>
+            <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
+        </div>
+        <div class="page-actions no-print">
+            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+            <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
+        </div>
+    </div>
 
-                <div class="print-header print-only">
-                    <h2>📊 Relatório por Turma</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
-                </div>
+    <div class="print-header print-only">
+        <h2>📊 Relatório por Turma</h2>
+        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+        <p style="font-size:11px;color:#666;">Data: <span id="print-data-rel-turma"></span></p>
+    </div>
 
-                <div class="card no-print" style="margin-bottom:16px;">
-                    <div class="form-row c4">
-                        <div class="form-group">
-                            <label class="form-label">Escola</label>
-                            <select class="form-control" id="rel-turma-escola" onchange="carregarTurmasRelTurma(this.value)">
-                                <option value="">Todas as escolas</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Série</label>
-                            <select class="form-control" id="rel-turma-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('rel-turma-turma')); carregarRelatorioTurmaFiltrado();">
-                                <option value="">Todas as séries</option>
-                                <option value="1º Ano">1º Ano</option>
-                                <option value="2º Ano">2º Ano</option>
-                                <option value="3º Ano">3º Ano</option>
-                                <option value="4º Ano">4º Ano</option>
-                                <option value="5º Ano">5º Ano</option>
-                                <option value="6º Ano">6º Ano</option>
-                                <option value="7º Ano">7º Ano</option>
-                                <option value="8º Ano">8º Ano</option>
-                                <option value="9º Ano">9º Ano</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma</label>
-                            <select class="form-control" id="rel-turma-turma" onchange="carregarRelatorioTurmaFiltrado()">
-                                <option value="">Todas as turmas</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prova</label>
-                            <select class="form-control" id="rel-turma-prova" onchange="carregarRelatorioTurmaFiltrado()">
-                                <option value="">Todas as provas</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                        <button class="btn btn-primary btn-sm" onclick="carregarRelatorioTurmaFiltrado()">🔍 Filtrar</button>
-                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosRelTurma()">✕ Limpar Filtros</button>
-                    </div>
-                </div>
-
-                <!-- STATS-GRID: apenas Porcentagem e Conceito -->
-                <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="stat-card purple">
-                        <div class="stat-top"><div class="stat-icon purple">📊</div></div>
-                        <div>
-                            <div class="stat-val" id="rel-media">0</div>
-                            <div class="stat-label">Porcentagem</div>
-                        </div>
-                    </div>
-                    <div class="stat-card" style="border-color: var(--border2);">
-                        <div class="stat-top"><div class="stat-icon" style="background:rgba(139,92,246,0.15);">🏅</div></div>
-                        <div>
-                            <div class="stat-val" id="rel-conceito" style="font-size:24px;">—</div>
-                            <div class="stat-label">Conceito</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cards de disciplina: APENAS UM CARD SERÁ EXIBIDO -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">📈 Distribuição de Notas</div>
-                        <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
-                    </div>
-
-                    <!-- Mensagem informativa quando nenhuma prova é selecionada -->
-                    <div id="rel-sel-prova-msg" style="display: none; text-align:center; padding:30px; color:var(--text3); background:var(--bg2); border-radius:8px; margin-bottom:10px;">
-                        <div style="font-size:40px; margin-bottom:10px;">📌</div>
-                        <p style="font-size:15px; font-weight:600;">Selecione uma prova para visualizar o relatório por disciplina.</p>
-                        <p style="font-size:13px; margin-top:4px;">Apenas a disciplina da prova escolhida será exibida.</p>
-                    </div>
-
-                    <!-- Container dos cards - será preenchido com apenas 1 card visível -->
-                    <div id="disciplinas-container" style="display:grid; gap:16px; margin-bottom:16px;">
-                        <!-- Português -->
-                        <div class="disciplina-card-rel portugues" data-disciplina="portugues" style="display:none;">
-                            <div class="disc-nome">Português</div>
-                            <div class="disc-acertos-erros">
-                                <span class="acertos">✅ Acertos: <span id="rel-pt-acertos">0</span></span>
-                                <span class="erros">❌ Erros: <span id="rel-pt-erros">0</span></span>
-                            </div>
-                            <div class="disc-media">
-                                Média: <strong id="rel-pt-media" style="color:#3b82f6;">0.0</strong>
-                            </div>
-                        </div>
-
-                        <!-- Matemática -->
-                        <div class="disciplina-card-rel matematica" data-disciplina="matematica" style="display:none;">
-                            <div class="disc-nome">Matemática</div>
-                            <div class="disc-acertos-erros">
-                                <span class="acertos">✅ Acertos: <span id="rel-mat-acertos">0</span></span>
-                                <span class="erros">❌ Erros: <span id="rel-mat-erros">0</span></span>
-                            </div>
-                            <div class="disc-media">
-                                Média: <strong id="rel-mat-media" style="color:#10b981;">0.0</strong>
-                            </div>
-                        </div>
-
-                        <!-- Produção de Texto -->
-                        <div class="disciplina-card-rel producao" data-disciplina="producao" style="display:none;">
-                            <div class="disc-nome">Produção</div>
-                            <div class="disc-acertos-erros">
-                                <span class="acertos">✅ Acertos: <span id="rel-prod-acertos">0</span></span>
-                                <span class="erros">❌ Erros: <span id="rel-prod-erros">0</span></span>
-                            </div>
-                            <div class="disc-media">
-                                Média: <strong id="rel-prod-media" style="color:#8b5cf6;">0.0</strong>
-                            </div>
-                        </div>
-
-                        <!-- CH -->
-                        <div class="disciplina-card-rel ch" data-disciplina="ch" style="display:none;">
-                            <div class="disc-nome">CH</div>
-                            <div class="disc-acertos-erros">
-                                <span class="acertos">✅ Acertos: <span id="rel-ch-acertos">0</span></span>
-                                <span class="erros">❌ Erros: <span id="rel-ch-erros">0</span></span>
-                            </div>
-                            <div class="disc-media">
-                                Média: <strong id="rel-ch-media" style="color:#f59e0b;">0.0</strong>
-                            </div>
-                        </div>
-
-                        <!-- CN -->
-                        <div class="disciplina-card-rel cn" data-disciplina="cn" style="display:none;">
-                            <div class="disc-nome">CN</div>
-                            <div class="disc-acertos-erros">
-                                <span class="acertos">✅ Acertos: <span id="rel-cn-acertos">0</span></span>
-                                <span class="erros">❌ Erros: <span id="rel-cn-erros">0</span></span>
-                            </div>
-                            <div class="disc-media">
-                                Média: <strong id="rel-cn-media" style="color:#14b8a6;">0.0</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Filtros -->
+    <div class="card no-print" style="margin-bottom:16px;">
+        <div class="form-row c4">
+            <div class="form-group">
+                <label class="form-label">Escola</label>
+                <select class="form-control" id="rel-turma-escola" onchange="carregarTurmasRelTurma(this.value)">
+                    <option value="">Todas as escolas</option>
+                </select>
             </div>
+            <div class="form-group">
+                <label class="form-label">Série</label>
+                <select class="form-control" id="rel-turma-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('rel-turma-turma')); carregarRelatorioTurmaFiltrado();">
+                    <option value="">Todas as séries</option>
+                    <option value="1º Ano">1º Ano</option><option value="2º Ano">2º Ano</option><option value="3º Ano">3º Ano</option>
+                    <option value="4º Ano">4º Ano</option><option value="5º Ano">5º Ano</option><option value="6º Ano">6º Ano</option>
+                    <option value="7º Ano">7º Ano</option><option value="8º Ano">8º Ano</option><option value="9º Ano">9º Ano</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Turma</label>
+                <select class="form-control" id="rel-turma-turma" onchange="carregarRelatorioTurmaFiltrado()">
+                    <option value="">Todas as turmas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prova</label>
+                <select class="form-control" id="rel-turma-prova" onchange="carregarRelatorioTurmaFiltrado()">
+                    <option value="">Todas as provas</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button class="btn btn-primary btn-sm" onclick="carregarRelatorioTurmaFiltrado()">🔍 Filtrar</button>
+            <button class="btn btn-outline btn-sm" onclick="limparFiltrosRelTurma()">✕ Limpar Filtros</button>
+        </div>
+    </div>
+
+    <!-- Stats: Porcentagem e Conceito -->
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="stat-card purple">
+            <div class="stat-top"><div class="stat-icon purple">📊</div></div>
+            <div><div class="stat-val" id="rel-media">0</div><div class="stat-label">Porcentagem</div></div>
+        </div>
+        <div class="stat-card" style="border-color:var(--border2);">
+            <div class="stat-top"><div class="stat-icon" style="background:rgba(139,92,246,0.15);">🏅</div></div>
+            <div><div class="stat-val" id="rel-conceito" style="font-size:24px;">—</div><div class="stat-label">Conceito</div></div>
+        </div>
+    </div>
+
+    <!-- Container dos cards - gerado dinamicamente via JavaScript -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">📈 Distribuição de Notas</div>
+            <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
+        </div>
+        <div id="rel-sel-prova-msg" style="display:none;text-align:center;padding:30px;color:var(--text3);background:var(--bg2);border-radius:8px;margin-bottom:10px;">
+            <div style="font-size:40px;margin-bottom:10px;">📌</div>
+            <p style="font-size:15px;font-weight:600;">Selecione uma prova para visualizar o relatório por disciplina.</p>
+            <p style="font-size:13px;margin-top:4px;">Apenas a disciplina da prova escolhida será exibida.</p>
+        </div>
+        <div id="disciplinas-container" style="display:flex;flex-direction:column;gap:16px;margin-bottom:16px;">
+            <!-- Os cards serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+</div>
 
             <!-- ========== RELATÓRIO POR ESCOLA ========== -->
             <div class="page" id="page-rel-escola">
@@ -4881,7 +4807,6 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
-                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                         if (current) selectProva.value = current;
@@ -4952,235 +4877,161 @@
                 carregarRelatorioTurmaFiltrado();
             }
 
-            // ============================================
-            // CARREGAR RELATÓRIO POR TURMA (FILTRADO) - APENAS 1 CARD
-            // ============================================
-            async function carregarRelatorioTurmaFiltrado() {
-                try {
-                    const escolaId = document.getElementById('rel-turma-escola').value;
-                    const serie = document.getElementById('rel-turma-serie').value;
-                    const turmaId = document.getElementById('rel-turma-turma').value;
-                    const provaId = document.getElementById('rel-turma-prova').value;
-                    const selectProva = document.getElementById('rel-turma-prova');
-                    const provaOption = selectProva.options[selectProva.selectedIndex];
-                    const disciplinaDaProva = provaOption ? (provaOption.dataset.disciplina || '') : '';
+           // ============================================
+// CARREGAR RELATÓRIO POR TURMA (FILTRADO) - VERSÃO DEFINITIVA
+// ============================================
+async function carregarRelatorioTurmaFiltrado() {
+    try {
+        const escolaId = document.getElementById('rel-turma-escola').value;
+        const serie = document.getElementById('rel-turma-serie').value;
+        const turmaId = document.getElementById('rel-turma-turma').value;
+        const provaId = document.getElementById('rel-turma-prova').value;
+        const selectProva = document.getElementById('rel-turma-prova');
+        const provaOption = selectProva.options[selectProva.selectedIndex];
+        const disciplinaDaProva = provaOption ? (provaOption.dataset.disciplina || '') : '';
 
-                    // Referências dos elementos
-                    const msgEl = document.getElementById('rel-sel-prova-msg');
-                    const container = document.getElementById('disciplinas-container');
-                    const statsGrid = document.querySelector('.stats-grid');
+        const msgEl = document.getElementById('rel-sel-prova-msg');
+        const container = document.getElementById('disciplinas-container');
+        const statsGrid = document.querySelector('.stats-grid');
 
-                    // Oculta/mostra mensagem e stats
-                    if (!provaId || !disciplinaDaProva) {
-                        if (msgEl) msgEl.style.display = 'block';
-                        if (statsGrid) statsGrid.style.display = 'none';
-                        // Esconde todos os cards
-                        document.querySelectorAll('.disciplina-card-rel').forEach(card => {
-                            card.style.display = 'none';
-                        });
-                        // Zera estatísticas
-                        document.getElementById('rel-media').textContent = '0';
-                        document.getElementById('rel-conceito').textContent = '—';
-                        document.getElementById('rel-conceito').style.color = 'var(--text3)';
-                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        // Zera todos os campos de disciplina (para evitar dados antigos)
-                        const discKeys = ['pt', 'mat', 'prod', 'ch', 'cn'];
-                        discKeys.forEach(key => {
-                            const elAcertos = document.getElementById(`rel-${key}-acertos`);
-                            const elErros = document.getElementById(`rel-${key}-erros`);
-                            const elMedia = document.getElementById(`rel-${key}-media`);
-                            if (elAcertos) elAcertos.textContent = '0';
-                            if (elErros) elErros.textContent = '0';
-                            if (elMedia) elMedia.textContent = '0.0';
-                        });
-                        return;
-                    }
+        // Limpa o container para recriar os cards
+        container.innerHTML = '';
 
-                    // Se há prova, mostra stats e esconde mensagem
-                    if (msgEl) msgEl.style.display = 'none';
-                    if (statsGrid) statsGrid.style.display = 'grid';
+        // Se não houver prova ou disciplina, mostra mensagem e esconde stats
+        if (!provaId || !disciplinaDaProva) {
+            msgEl.style.display = 'block';
+            statsGrid.style.display = 'none';
+            document.getElementById('rel-media').textContent = '0';
+            document.getElementById('rel-conceito').textContent = '—';
+            document.getElementById('rel-conceito').style.color = 'var(--text3)';
+            document.getElementById('rel-total-correcoes').textContent = '0 correções';
+            return;
+        }
 
-                    // Mapeia disciplina para chave do card
-                    const disciplinaMap = {
-                        'português': 'pt',
-                        'portugues': 'pt',
-                        'matemática': 'mat',
-                        'matematica': 'mat',
-                        'produção de texto': 'prod',
-                        'producao de texto': 'prod',
-                        'produção': 'prod',
-                        'producao': 'prod',
-                        'ciências humanas': 'ch',
-                        'ch': 'ch',
-                        'ciências naturais': 'cn',
-                        'cn': 'cn',
-                        'história': 'ch',
-                        'geografia': 'ch'
-                    };
+        msgEl.style.display = 'none';
+        statsGrid.style.display = 'grid';
 
-                    // Normaliza a disciplina da prova
-                    const discKey = disciplinaDaProva.toLowerCase().trim();
-                    let cardKey = disciplinaMap[discKey] || null;
+        // Mapeia disciplina -> chave do card e nome
+        const disciplinaMap = {
+            'português': { key: 'pt', nome: 'Português', campo: 'portugues' },
+            'portugues': { key: 'pt', nome: 'Português', campo: 'portugues' },
+            'matemática': { key: 'mat', nome: 'Matemática', campo: 'matematica' },
+            'matematica': { key: 'mat', nome: 'Matemática', campo: 'matematica' },
+            'produção de texto': { key: 'prod', nome: 'Produção', campo: 'producao' },
+            'producao de texto': { key: 'prod', nome: 'Produção', campo: 'producao' },
+            'produção': { key: 'prod', nome: 'Produção', campo: 'producao' },
+            'producao': { key: 'prod', nome: 'Produção', campo: 'producao' },
+            'ciências humanas': { key: 'ch', nome: 'CH', campo: 'ch' },
+            'ch': { key: 'ch', nome: 'CH', campo: 'ch' },
+            'ciências naturais': { key: 'cn', nome: 'CN', campo: 'cn' },
+            'cn': { key: 'cn', nome: 'CN', campo: 'cn' },
+            'história': { key: 'ch', nome: 'CH', campo: 'ch' },
+            'geografia': { key: 'ch', nome: 'CH', campo: 'ch' }
+        };
 
-                    // Se não encontrar, tenta correspondência parcial
-                    if (!cardKey) {
-                        const keys = Object.keys(disciplinaMap);
-                        for (let k of keys) {
-                            if (discKey.includes(k) || k.includes(discKey)) {
-                                cardKey = disciplinaMap[k];
-                                break;
-                            }
-                        }
-                    }
-
-                    // Fallback: se ainda não encontrou, usa 'mat' (Matemática)
-                    if (!cardKey) cardKey = 'mat';
-
-                    // Nome da disciplina para exibição
-                    const nomeDisciplinaMap = {
-                        'pt': 'Português',
-                        'mat': 'Matemática',
-                        'prod': 'Produção',
-                        'ch': 'CH',
-                        'cn': 'CN'
-                    };
-                    const nomeDisciplina = nomeDisciplinaMap[cardKey] || disciplinaDaProva;
-
-                    // Esconde todos os cards
-                    document.querySelectorAll('.disciplina-card-rel').forEach(card => {
-                        card.style.display = 'none';
-                    });
-
-                    // Mostra apenas o card correspondente
-                    const cardToShow = document.querySelector(`.disciplina-card-rel[data-disciplina="${cardKey}"]`);
-                    if (cardToShow) {
-                        cardToShow.style.display = 'block';
-                        // Ajusta o container para uma coluna
-                        if (container) {
-                            container.style.display = 'grid';
-                            container.style.gridTemplateColumns = '1fr';
-                        }
-                    } else {
-                        // Se o card não existir (por segurança), mostra todos (fallback)
-                        document.querySelectorAll('.disciplina-card-rel').forEach(card => {
-                            card.style.display = 'block';
-                        });
-                        if (container) {
-                            container.style.display = 'grid';
-                            container.style.gridTemplateColumns = 'repeat(5, 1fr)';
-                        }
-                    }
-
-                    // Atualiza o título do card com o nome da disciplina
-                    if (cardToShow) {
-                        const titleEl = cardToShow.querySelector('.disc-nome');
-                        if (titleEl) titleEl.textContent = nomeDisciplina;
-                    }
-
-                    // Busca os dados
-                    let url = API_URL + '/api/historico/agrupado';
-                    const params = new URLSearchParams();
-                    if (escolaId && escolaId !== '') params.append('escola', escolaId);
-                    if (serie && serie !== '') params.append('serie', serie);
-                    if (turmaId && turmaId !== '') params.append('turma', turmaId);
-                    if (provaId && provaId !== '') params.append('prova', provaId);
-                    if (params.toString()) url += '?' + params.toString();
-
-                    const response = await fetch(url);
-                    const alunos = await response.json();
-
-                    if (!alunos || alunos.length === 0 || alunos.erro) {
-                        // Zera o card específico
-                        const elAcertos = document.getElementById(`rel-${cardKey}-acertos`);
-                        const elErros = document.getElementById(`rel-${cardKey}-erros`);
-                        const elMedia = document.getElementById(`rel-${cardKey}-media`);
-                        if (elAcertos) elAcertos.textContent = '0';
-                        if (elErros) elErros.textContent = '0';
-                        if (elMedia) elMedia.textContent = '0.0';
-                        document.getElementById('rel-media').textContent = '0';
-                        document.getElementById('rel-conceito').textContent = '—';
-                        document.getElementById('rel-conceito').style.color = 'var(--text3)';
-                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        return;
-                    }
-
-                    const dadosAlunos = Array.isArray(alunos) ? alunos : [];
-
-                    if (dadosAlunos.length === 0) {
-                        document.getElementById('rel-media').textContent = '0';
-                        document.getElementById('rel-conceito').textContent = '—';
-                        document.getElementById('rel-conceito').style.color = 'var(--text3)';
-                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        return;
-                    }
-
-                    const total = dadosAlunos.length;
-                    const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
-                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-                    const porcentagem = (mediaGeral / notaMaxima) * 100;
-
-                    document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
-
-                    const conceito = calcularConceito(porcentagem);
-                    const badgeMap = {
-                        'inicial': { label: 'INICIAL', cor: '#ef4444' },
-                        'basico': { label: 'BÁSICO', cor: '#f59e0b' },
-                        'proficiente': { label: 'PROFICIENTE', cor: '#3b82f6' },
-                        'avancado': { label: 'AVANÇADO', cor: '#10b981' }
-                    };
-                    const info = badgeMap[conceito] || { label: '—', cor: 'var(--text3)' };
-                    const elConceito = document.getElementById('rel-conceito');
-                    if (elConceito) {
-                        elConceito.textContent = info.label;
-                        elConceito.style.color = info.cor;
-                        elConceito.className = 'stat-val';
-                    }
-
-                    document.getElementById('rel-total-correcoes').textContent = total + ' correções';
-
-                    // Calcula totais apenas para a disciplina específica
-                    let totalAcertos = 0;
-                    let totalErros = 0;
-                    let totalDisc = 0;
-
-                    // Mapeia o campo correto baseado na chave
-                    let campo = '';
-                    if (cardKey === 'pt') campo = 'portugues';
-                    else if (cardKey === 'mat') campo = 'matematica';
-                    else if (cardKey === 'prod') campo = 'producao';
-                    else if (cardKey === 'ch') campo = 'ch';
-                    else if (cardKey === 'cn') campo = 'cn';
-
-                    dadosAlunos.forEach(aluno => {
-                        const data = aluno[campo];
-                        let acertos = 0,
-                            erros = 0,
-                            totalQ = 0;
-                        if (data && typeof data === 'object') {
-                            acertos = parseInt(data.acertos) || 0;
-                            totalQ = parseInt(data.total) || 0;
-                        } else {
-                            acertos = parseInt(data) || 0;
-                        }
-                        erros = totalQ - acertos;
-                        totalAcertos += acertos;
-                        totalErros += erros;
-                        totalDisc += totalQ;
-                    });
-
-                    // Atualiza o card específico
-                    const elAcertos = document.getElementById(`rel-${cardKey}-acertos`);
-                    const elErros = document.getElementById(`rel-${cardKey}-erros`);
-                    const elMedia = document.getElementById(`rel-${cardKey}-media`);
-                    if (elAcertos) elAcertos.textContent = totalAcertos;
-                    if (elErros) elErros.textContent = totalErros;
-                    if (elMedia) elMedia.textContent = total > 0 ? (totalAcertos / total).toFixed(1) : '0.0';
-
-                } catch (erro) {
-                    console.error('❌ Erro ao carregar relatório por turma:', erro);
-                    showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
+        const discKey = disciplinaDaProva.toLowerCase().trim();
+        let mapeado = disciplinaMap[discKey] || null;
+        if (!mapeado) {
+            // Tentativa de correspondência parcial
+            for (let [chave, valor] of Object.entries(disciplinaMap)) {
+                if (discKey.includes(chave) || chave.includes(discKey)) {
+                    mapeado = valor;
+                    break;
                 }
             }
+        }
+        if (!mapeado) mapeado = { key: 'mat', nome: 'Matemática', campo: 'matematica' };
+
+        const { key: cardKey, nome: nomeDisciplina, campo } = mapeado;
+
+        // Busca os dados da API
+        let url = API_URL + '/api/historico/agrupado';
+        const params = new URLSearchParams();
+        if (escolaId && escolaId !== '') params.append('escola', escolaId);
+        if (serie && serie !== '') params.append('serie', serie);
+        if (turmaId && turmaId !== '') params.append('turma', turmaId);
+        if (provaId && provaId !== '') params.append('prova', provaId);
+        if (params.toString()) url += '?' + params.toString();
+
+        const response = await fetch(url);
+        const alunos = await response.json();
+
+        // Prepara os dados
+        let totalAcertos = 0, totalErros = 0, totalDisc = 0;
+        let totalAlunos = 0;
+
+        if (alunos && !alunos.erro && Array.isArray(alunos) && alunos.length > 0) {
+            totalAlunos = alunos.length;
+            alunos.forEach(aluno => {
+                const data = aluno[campo];
+                let acertos = 0, totalQ = 0;
+                if (data && typeof data === 'object') {
+                    acertos = parseInt(data.acertos) || 0;
+                    totalQ = parseInt(data.total) || 0;
+                } else {
+                    acertos = parseInt(data) || 0;
+                }
+                totalAcertos += acertos;
+                totalErros += (totalQ - acertos);
+                totalDisc += totalQ;
+            });
+        }
+
+        // Calcula média geral e conceito
+        const mediaGeral = totalAlunos > 0 ? (totalAcertos / totalAlunos) : 0;
+        const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+        const porcentagem = (mediaGeral / notaMaxima) * 100;
+
+        document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
+
+        const conceito = calcularConceito(porcentagem);
+        const badgeMap = {
+            'inicial': { label: 'INICIAL', cor: '#ef4444' },
+            'basico': { label: 'BÁSICO', cor: '#f59e0b' },
+            'proficiente': { label: 'PROFICIENTE', cor: '#3b82f6' },
+            'avancado': { label: 'AVANÇADO', cor: '#10b981' }
+        };
+        const info = badgeMap[conceito] || { label: '—', cor: 'var(--text3)' };
+        const elConceito = document.getElementById('rel-conceito');
+        if (elConceito) {
+            elConceito.textContent = info.label;
+            elConceito.style.color = info.cor;
+        }
+
+        document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
+
+        // --- CRIA O CARD DINAMICAMENTE ---
+        const cardDiv = document.createElement('div');
+        cardDiv.className = `disciplina-card-rel ${cardKey}`;
+        cardDiv.dataset.disciplina = cardKey;
+        // Define a cor da borda inferior de acordo com a disciplina
+        const cores = {
+            'pt': '#3b82f6',
+            'mat': '#10b981',
+            'prod': '#8b5cf6',
+            'ch': '#f59e0b',
+            'cn': '#14b8a6'
+        };
+        cardDiv.style.borderBottom = `2px solid ${cores[cardKey] || '#3b82f6'}`;
+
+        cardDiv.innerHTML = `
+            <div class="disc-nome" style="color:${cores[cardKey] || '#3b82f6'};">${nomeDisciplina}</div>
+            <div class="disc-acertos-erros">
+                <span class="acertos">✅ Acertos: <span id="rel-${cardKey}-acertos">${totalAcertos}</span></span>
+                <span class="erros">❌ Erros: <span id="rel-${cardKey}-erros">${totalErros}</span></span>
+            </div>
+            <div class="disc-media">
+                Média: <strong id="rel-${cardKey}-media" style="color:${cores[cardKey] || '#3b82f6'};">${totalAlunos > 0 ? (totalAcertos / totalAlunos).toFixed(1) : '0.0'}</strong>
+            </div>
+        `;
+
+        container.appendChild(cardDiv);
+
+    } catch (erro) {
+        console.error('❌ Erro ao carregar relatório por turma:', erro);
+        showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
+    }
+}
 
             // ============================================
             // LIMPAR FILTROS RELATÓRIO POR TURMA
@@ -5213,7 +5064,6 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
-                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                     }
@@ -6576,7 +6426,7 @@
 
                     const respProvas = await fetch(API_URL + '/api/provas');
                     const provas = await respProvas.json();
-                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho', 'rel-turma-prova'].forEach(id => {
+                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
                         const select = document.getElementById(id);
                         if (select) {
                             const current = select.value;
