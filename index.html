@@ -2076,16 +2076,15 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
+ <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
-                        <div class="card" style="padding: 24px 28px;">
+                        <div class="card">
                             <div class="card-header">
-                                <div class="card-title" style="font-size: 22px;">📋 Gabarito Oficial da Prova</div>
+                                <div class="card-title">📋 Gabarito Oficial da Prova</div>
                                 <span class="badge badge-blue">Oficial</span>
                             </div>
-                            <div class="questoes-grid-gabarito" id="gabarito-oficial-grid"></div>
-                            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-size:14px; color:var(--text3); text-align:center;">
+                            <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); text-align:center;">
                                 Respostas corretas da prova
                             </div>
                         </div>
@@ -2099,10 +2098,10 @@
                         <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
                     </div>
 
-                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:13px;">
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
                         <span style="color:var(--text3);">|</span>
                         <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
                         <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
