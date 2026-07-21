@@ -6,7 +6,7 @@
     <title>CorrigePro — Sistema de Correção de Provas</title>
     <style>
         /* ============================================
-           CSS COMPLETO OTIMIZADO
+           CSS COMPLETO OTIMIZADO (MANTIDO IGUAL)
            ============================================ */
         :root {
             --bg: #0f172a;
@@ -1159,8 +1159,8 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                  
-				  <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
+                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
+                    <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1854,7 +1854,17 @@
                 </div>
             </div>
 
+            <div class="page" id="page-rel-escola">
+                <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
+
+                <div class="print-header print-only">
+                    <h2>🏫 Relatório por Escola</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-escola"></span></p>
+                </div>
+
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Conceito</th></tr></thead><tbody id="tb-rel-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+            </div>
 
             <!-- ========== CONFIG ========== -->
             <div class="page" id="page-config">
@@ -2060,7 +2070,7 @@
             </div>
         </div>
 
-        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) ========== -->
+        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) - COM CONTAINER DE SELECTS ========== -->
         <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
             <div class="modal" style="max-width:800px;width:95vw;">
                 <div class="modal-header">
@@ -2068,37 +2078,36 @@
                     <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
                 </div>
 
-                <div class="form-group" style="margin-bottom:12px;">
-                    <label class="form-label">Escola <span class="req">*</span></label>
-                    <select class="form-control" id="cm-escola-select" onchange="carregarTurmasParaCorrecaoManual(this.value)">
-                        <option value="">Selecione a escola...</option>
-                    </select>
+                <!-- Área de seleção (ocultada ao editar direto) -->
+                <div id="cm-selects-container">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Escola <span class="req">*</span></label>
+                        <select class="form-control" id="cm-escola-select" onchange="carregarTurmasParaCorrecaoManual(this.value)">
+                            <option value="">Selecione a escola...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Turma <span class="req">*</span></label>
+                        <select class="form-control" id="cm-turma-select" onchange="carregarAlunosParaCorrecaoManual(this.value); carregarProvasParaCorrecaoManualPorTurma(this.value);">
+                            <option value="">Selecione a turma...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Prova <span class="req">*</span></label>
+                        <select class="form-control" id="cm-prova-select" onchange="carregarGabaritoParaCorrecaoManual()">
+                            <option value="">Selecione a prova...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Aluno <span class="req">*</span></label>
+                        <select class="form-control" id="cm-aluno-select">
+                            <option value="">Selecione o aluno...</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-full" onclick="iniciarCorrecaoManualStandalone()" style="margin-top:8px;">
+                        📝 Iniciar Correção
+                    </button>
                 </div>
-
-                <div class="form-group" style="margin-bottom:12px;">
-                    <label class="form-label">Turma <span class="req">*</span></label>
-                    <select class="form-control" id="cm-turma-select" onchange="carregarAlunosParaCorrecaoManual(this.value); carregarProvasParaCorrecaoManualPorTurma(this.value);">
-                        <option value="">Selecione a turma...</option>
-                    </select>
-                </div>
-
-                <div class="form-group" style="margin-bottom:12px;">
-                    <label class="form-label">Prova <span class="req">*</span></label>
-                    <select class="form-control" id="cm-prova-select" onchange="carregarGabaritoParaCorrecaoManual()">
-                        <option value="">Selecione a prova...</option>
-                    </select>
-                </div>
-
-                <div class="form-group" style="margin-bottom:12px;">
-                    <label class="form-label">Aluno <span class="req">*</span></label>
-                    <select class="form-control" id="cm-aluno-select">
-                        <option value="">Selecione o aluno...</option>
-                    </select>
-                </div>
-
-                <button class="btn btn-primary btn-full" onclick="iniciarCorrecaoManualStandalone()" style="margin-top:8px;">
-                    📝 Iniciar Correção
-                </button>
 
                 <div id="cm-info-standalone" style="display:none;" class="correcao-aluno-info" style="margin-top:16px;">
                     <div class="info-item"><span class="label">Aluno</span><strong id="cm-sa-aluno">—</strong></div>
@@ -3878,7 +3887,103 @@
             }
 
             // ============================================
-            // FUNÇÕES DE USUÁRIO
+            // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE (SEM SELECTS)
+            // ============================================
+            async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
+                try {
+                    showToast('🔄 Carregando dados...', 'info');
+
+                    // Buscar dados da prova
+                    const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                    const prova = await provaResp.json();
+                    if (!prova || prova.erro) {
+                        showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
+                        return;
+                    }
+
+                    // Buscar dados do aluno
+                    const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
+                    const aluno = await alunoResp.json();
+                    if (!aluno || aluno.erro) {
+                        showToast('❌ Erro ao carregar aluno: ' + (aluno.erro || 'Desconhecido'), 'error');
+                        return;
+                    }
+
+                    // Buscar histórico (respostas do aluno para esta prova)
+                    const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
+                    const historico = await historicoResp.json();
+                    let respostas = [];
+                    if (historico && historico.length > 0 && !historico.erro) {
+                        respostas = historico[0].respostas || [];
+                    }
+
+                    // Preencher cmStandaloneData diretamente
+                    cmStandaloneData.escolaId = parseInt(escolaId);
+                    cmStandaloneData.turmaId = parseInt(turmaId);
+                    cmStandaloneData.provaId = parseInt(provaId);
+                    cmStandaloneData.alunoId = parseInt(alunoId);
+                    cmStandaloneData.alunoNome = aluno.nome || 'Aluno';
+                    cmStandaloneData.turmaNome = ''; // será buscado depois ou pode ficar vazio
+                    cmStandaloneData.serie = prova.serie || '';
+                    cmStandaloneData.gabarito = prova.gabarito || [];
+                    cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
+                    cmStandaloneData.alternativas = prova.tipo_questoes == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                    cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
+                    cmStandaloneData.respostas = respostas.slice(0, cmStandaloneData.quantidade);
+                    while (cmStandaloneData.respostas.length < cmStandaloneData.quantidade) {
+                        cmStandaloneData.respostas.push('');
+                    }
+                    cmStandaloneData.provaTitulo = prova.titulo || 'Prova';
+                    cmStandaloneData.provaData = prova.data_prova || '';
+
+                    // Abrir o modal
+                    openM('m-correcao-manual-standalone');
+
+                    // Ocultar a área de seleção (escola, turma, prova, aluno e botão "Iniciar Correção")
+                    const selectsContainer = document.getElementById('cm-selects-container');
+                    if (selectsContainer) selectsContainer.style.display = 'none';
+
+                    // Mostrar o container da grade e o botão salvar
+                    document.getElementById('cm-grid-standalone-container').style.display = 'block';
+                    document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
+
+                    // Preencher informações do aluno no modal
+                    document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
+                    document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
+                    document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
+                    document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+
+                    // Gerar grid e resumo
+                    gerarGridCorrecaoManualSA();
+                    atualizarResumoCorrecaoManualSA();
+
+                    showToast('📝 Correção manual carregada para ' + cmStandaloneData.alunoNome, 'success');
+                } catch (erro) {
+                    console.error('❌ Erro ao abrir correção manual direta:', erro);
+                    showToast('❌ Erro ao carregar dados: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO CHAMADA PELO BOTÃO "✏️ Editar Gabarito" NA ABA DESEMPENHO
+            // ============================================
+            async function editarGabaritoDesempenho() {
+                const escolaId = document.getElementById('filtro-escola-desempenho').value;
+                const turmaId = document.getElementById('filtro-turma-desempenho').value;
+                const alunoId = document.getElementById('filtro-aluno-desempenho').value;
+                const provaId = document.getElementById('filtro-prova-desempenho').value;
+
+                if (!escolaId || !turmaId || !alunoId || !provaId) {
+                    showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
+                    return;
+                }
+
+                // Chama a função que abre diretamente a correção manual
+                await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
+            }
+
+            // ============================================
+            // FUNÇÕES DE USUÁRIO (mantidas)
             // ============================================
             function abrirModalUsuario() {
                 document.getElementById('usuario-nome').value = '';
@@ -4047,7 +4152,7 @@
             }
 
             // ============================================
-            // FUNÇÃO DE CORREÇÃO COM IA
+            // FUNÇÃO DE CORREÇÃO COM IA (mantida)
             // ============================================
             async function processarComIA(imagemBase64) {
                 showToast('🤖 Processando...', 'ai');
@@ -4146,7 +4251,7 @@
             function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
             // ============================================
-            // FUNÇÕES DE CRUD CORRIGIDAS
+            // FUNÇÕES DE CRUD CORRIGIDAS (mantidas)
             // ============================================
 
             // ===== ESCOLA =====
@@ -4902,14 +5007,12 @@
                     const turmaId = document.getElementById('rel-turma-turma').value;
                     const provaId = document.getElementById('rel-turma-prova').value;
 
-                    // Obter a disciplina da prova selecionada
                     let disciplinaSelecionada = '';
                     const selectProva = document.getElementById('rel-turma-prova');
                     const optionProva = selectProva.options[selectProva.selectedIndex];
                     if (optionProva && optionProva.dataset.disciplina) {
                         disciplinaSelecionada = optionProva.dataset.disciplina;
                     }
-                    // Se não houver disciplina definida, usar um fallback
                     if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
 
                     let url = API_URL + '/api/historico/agrupado';
@@ -4924,11 +5027,9 @@
                     const alunos = await response.json();
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        // Zerar todos os indicadores
                         document.getElementById('rel-media').textContent = '0%';
                         document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        // Conceitos
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
                             document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
@@ -4962,7 +5063,6 @@
                     const totalAlunos = dadosAlunos.length;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
 
-                    // Média geral (nota)
                     let somaNotas = 0;
                     dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
                     const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
@@ -4971,7 +5071,6 @@
                     document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
                     document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
 
-                    // Calcular conceitos (porcentagem de acertos de cada aluno)
                     let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                     dadosAlunos.forEach(aluno => {
                         const nota = aluno.media || 0;
@@ -4980,7 +5079,6 @@
                         conceitos[conceito] = (conceitos[conceito] || 0) + 1;
                     });
 
-                    // Atualizar card de conceitos
                     const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
                     ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                         const count = conceitos[c] || 0;
@@ -4993,8 +5091,6 @@
                         }
                     });
 
-                    // ---- CARD ÚNICO DA DISCIPLINA SELECIONADA ----
-                    // Mapeamento da disciplina para a chave no objeto
                     const disciplinaMap = {
                         'Português': 'portugues',
                         'Matemática': 'matematica',
@@ -5003,7 +5099,7 @@
                         'Ciências Naturais': 'cn',
                         'História': 'ch',
                         'Geografia': 'ch',
-                        'Inglês': 'portugues' // fallback
+                        'Inglês': 'portugues'
                     };
                     const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
@@ -5104,7 +5200,7 @@
             }
 
             // ============================================
-            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO (COM API REAL + GABARITO OFICIAL + BNCC)
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
             // ============================================
 
             async function carregarEscolasDesempenho() {
@@ -5208,7 +5304,7 @@
                 }
             }
 
-            // ===== FUNÇÃO GERAR DESEMPENHO (CORRIGIDA: inclui BNCC no card de questões) =====
+            // ===== FUNÇÃO GERAR DESEMPENHO =====
             async function gerarDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -5394,45 +5490,7 @@
                 }
             }
 
-            // ============================================
-            // FUNÇÃO editarGabaritoDesempenho (CORRIGIDA)
-            // ============================================
-            async function editarGabaritoDesempenho() {
-    const escolaId = document.getElementById('filtro-escola-desempenho').value;
-    const turmaId = document.getElementById('filtro-turma-desempenho').value;
-    const alunoId = document.getElementById('filtro-aluno-desempenho').value;
-    const provaId = document.getElementById('filtro-prova-desempenho').value;
-
-    if (!escolaId || !turmaId || !alunoId || !provaId) {
-        showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
-        return;
-    }
-
-    // 1. Abre o modal (já existente)
-    abrirCorrecaoManualStandalone();
-
-    // Aguarda o modal ser exibido
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // 2. Preenche os selects
-    document.getElementById('cm-escola-select').value = escolaId;
-    document.getElementById('cm-turma-select').value = turmaId;
-    document.getElementById('cm-prova-select').value = provaId;
-    document.getElementById('cm-aluno-select').value = alunoId;
-
-    // 3. Dispara os eventos change para carregar dados
-    document.getElementById('cm-escola-select').dispatchEvent(new Event('change'));
-    document.getElementById('cm-turma-select').dispatchEvent(new Event('change'));
-    document.getElementById('cm-prova-select').dispatchEvent(new Event('change'));
-
-    // Aguarda o carregamento (turmas, alunos, gabarito)
-    await new Promise(resolve => setTimeout(resolve, 600));
-
-    // 4. Inicia a correção automaticamente
-    iniciarCorrecaoManualStandalone();
-}
-
-            // ===== FUNÇÃO GERAR DOCUMENTO COM CONTROLE DE DUPLO CLIQUE =====
+            // ===== FUNÇÃO GERAR DOCUMENTO =====
             function gerarDocumentoDesempenho() {
                 if (gerandoDocumento) {
                     showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
@@ -5479,7 +5537,6 @@
                         `;
                     });
 
-                    // Gabarito oficial com BNCC
                     let gabOficialHTML = '';
                     gabarito.forEach((gab, idx) => {
                         const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
@@ -6816,8 +6873,7 @@
                 carregarFiltrosRelTurma();
                 carregarFiltroEscolaTurmas();
                 carregarEscolasParaAluno();
-                // CORREÇÃO: chamada corrigida (sem "a" extra)
-                carregarEscolasDesempenho();
+                carregarEscolasDesempenho(); // CORRIGIDO: sem o "a" extra
                 popularSelectQuestoes();
                 popularSelectGabTotal();
             });
