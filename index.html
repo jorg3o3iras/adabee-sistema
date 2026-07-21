@@ -2617,296 +2617,280 @@
             };
 
             // ============================================
-            // DADOS DAS AVALIAÇÕES POR SÉRIE
+            // DADOS DAS AVALIAÇÕES POR SÉRIE (PERSONALIZÁVEL)
             // ============================================
+            // Edite os enunciados e descrições conforme necessário.
+            // Cada série pode ter quantas questões quiser.
             const avaliacoesPorSerie = {
                 '1º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 1º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🎨 Desenhe a sua família e, em seguida, escreva uma frase sobre o desenho.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Não realizou a atividade ou o desenho não representa a família.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Desenhou a família com alguns membros, mas sem detalhes.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Desenhou a família com todos os membros e escreveu uma frase coerente.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Desenho rico em detalhes e frase completa que descreve o desenho com criatividade.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '✏️ Escreva o nome de três pessoas da sua família e o que elas gostam de fazer.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Escreveu menos de 2 nomes ou a lista está incompleta.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Escreveu 3 nomes, mas sem descrever as atividades.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Escreveu 3 nomes e uma atividade para cada um.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Além dos nomes e atividades, usou adjetivos e criou uma frase para cada pessoa.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🎨 Desenhe a sua família e, em seguida, escreva uma frase sobre o desenho.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Não realizou a atividade ou o desenho não representa a família.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Desenhou a família com alguns membros, mas sem detalhes.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Desenhou a família com todos os membros e escreveu uma frase coerente.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Desenho rico em detalhes e frase completa que descreve o desenho com criatividade.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '✏️ Escreva o nome de três pessoas da sua família e o que elas gostam de fazer.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Escreveu menos de 2 nomes ou a lista está incompleta.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Escreveu 3 nomes, mas sem descrever as atividades.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Escreveu 3 nomes e uma atividade para cada um.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Além dos nomes e atividades, usou adjetivos e criou uma frase para cada pessoa.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '2º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 2º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🐶 Descreva seu animal de estimação favorito. Se não tiver, invente um! Use palavras que ajudem a imaginar como ele é.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Descreve o animal com poucas palavras ou de forma muito simples.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Descreve o animal com algumas características (cor, tamanho).',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o animal com várias características e inclui uma opinião sobre ele.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Descrição detalhada, com comparações e uso de linguagem expressiva.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '📝 Escreva um pequeno texto sobre o que você mais gosta de fazer na escola.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou com ideias desconectadas.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Texto com 2-3 frases sobre a atividade favorita.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com começo, meio e fim, explicando por que gosta da atividade.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto bem estruturado, com detalhes e emoção sobre a atividade.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🐶 Descreva seu animal de estimação favorito. Se não tiver, invente um! Use palavras que ajudem a imaginar como ele é.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Descreve o animal com poucas palavras ou de forma muito simples.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Descreve o animal com algumas características (cor, tamanho).',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Descreve o animal com várias características e inclui uma opinião sobre ele.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Descrição detalhada, com comparações e uso de linguagem expressiva.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '📝 Escreva um pequeno texto sobre o que você mais gosta de fazer na escola.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou com ideias desconectadas.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Texto com 2-3 frases sobre a atividade favorita.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Texto com começo, meio e fim, explicando por que gosta da atividade.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto bem estruturado, com detalhes e emoção sobre a atividade.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '3º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 3º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🧸 Descreva seu brinquedo favorito. Conte como ele é, de que cor, o que você faz com ele e por que gosta tanto.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Descrição muito simples ou sem detalhes.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Descreve o brinquedo com algumas características básicas.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o brinquedo com detalhes e explica como brinca com ele.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Descrição rica em detalhes, incluindo sentimentos e uma história com o brinquedo.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '📖 Crie uma história curta com um personagem que vive em um lugar diferente da sua casa.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'História muito curta ou sem conexão entre as partes.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'História com começo, meio e fim, mas com poucos detalhes.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'História bem estruturada, com personagem e cenário descritos.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'História criativa, com diálogos ou descrições que prendem a atenção.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🧸 Descreva seu brinquedo favorito. Conte como ele é, de que cor, o que você faz com ele e por que gosta tanto.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Descrição muito simples ou sem detalhes.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Descreve o brinquedo com algumas características básicas.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Descreve o brinquedo com detalhes e explica como brinca com ele.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Descrição rica em detalhes, incluindo sentimentos e uma história com o brinquedo.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '📖 Crie uma história curta com um personagem que vive em um lugar diferente da sua casa.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'História muito curta ou sem conexão entre as partes.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'História com começo, meio e fim, mas com poucos detalhes.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'História bem estruturada, com personagem e cenário descritos.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'História criativa, com diálogos ou descrições que prendem a atenção.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '4º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 4º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🌞 Escreva sobre um dia divertido que você passou com sua família ou amigos. Onde foi? O que aconteceu?',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou sem detalhes sobre o dia.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Texto com informações sobre o local e uma atividade, mas sem emoção.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com começo, meio e fim, descrevendo o que aconteceu e como se sentiu.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto envolvente, com descrições detalhadas e expressão de sentimentos.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '🏖️ Imagine que você foi a um lugar incrível. Descreva o lugar, o que viu, o que ouviu e como se sentiu.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Descrição superficial ou sem criatividade.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Descreve o lugar com algumas características visuais.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o lugar com detalhes sensoriais (visão, audição) e emoções.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Descrição vívida e criativa, que transporta o leitor para o lugar.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🌞 Escreva sobre um dia divertido que você passou com sua família ou amigos. Onde foi? O que aconteceu?',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou sem detalhes sobre o dia.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Texto com informações sobre o local e uma atividade, mas sem emoção.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Texto com começo, meio e fim, descrevendo o que aconteceu e como se sentiu.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto envolvente, com descrições detalhadas e expressão de sentimentos.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '🏖️ Imagine que você foi a um lugar incrível. Descreva o lugar, o que viu, o que ouviu e como se sentiu.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Descrição superficial ou sem criatividade.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Descreve o lugar com algumas características visuais.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Descreve o lugar com detalhes sensoriais (visão, audição) e emoções.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Descrição vívida e criativa, que transporta o leitor para o lugar.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '5º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 5º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '✈️ Escreva sobre a viagem dos seus sonhos. Para onde você iria? O que faria lá? Com quem iria? Justifique sua escolha.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou sem justificativa.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Descreve o destino e uma atividade, mas a justificativa é fraca.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o destino, atividades e dá uma justificativa convincente.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto completo, com descrições detalhadas, justificativa sólida e expressão de expectativas.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '📚 Escreva um texto de opinião sobre a importância da leitura para a sua vida.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Opinião muito simples ou sem argumentos.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Opinião com 1-2 argumentos superficiais.', pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Opinião com argumentos claros e exemplos do dia a dia.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo bem estruturado, com vários argumentos e conclusão impactante.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '✈️ Escreva sobre a viagem dos seus sonhos. Para onde você iria? O que faria lá? Com quem iria? Justifique sua escolha.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou sem justificativa.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Descreve o destino e uma atividade, mas a justificativa é fraca.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Descreve o destino, atividades e dá uma justificativa convincente.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto completo, com descrições detalhadas, justificativa sólida e expressão de expectativas.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '📚 Escreva um texto de opinião sobre a importância da leitura para a sua vida.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Opinião muito simples ou sem argumentos.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Opinião com 1-2 argumentos superficiais.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Opinião com argumentos claros e exemplos do dia a dia.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo bem estruturado, com vários argumentos e conclusão impactante.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '6º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 6º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🏫 Escreva uma narrativa sobre um acontecimento marcante em sua escola. Use elementos como tempo, espaço e personagens.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Narrativa confusa ou sem elementos básicos.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Narrativa com começo, meio e fim, mas com poucos detalhes.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Narrativa bem estruturada, com tempo, espaço e personagens definidos.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Narrativa envolvente, com descrições detalhadas e conflito que prende a atenção.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '📝 Escreva um texto descritivo sobre uma pessoa importante para você, destacando suas características físicas e psicológicas.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Descrição muito superficial ou sem características psicológicas.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Descreve características físicas básicas e algumas psicológicas.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve a pessoa com detalhes físicos e psicológicos, criando uma imagem clara.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Descrição rica e poética, com uso de figuras de linguagem e profundidade emocional.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🏫 Escreva uma narrativa sobre um acontecimento marcante em sua escola. Use elementos como tempo, espaço e personagens.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Narrativa confusa ou sem elementos básicos.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Narrativa com começo, meio e fim, mas com poucos detalhes.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Narrativa bem estruturada, com tempo, espaço e personagens definidos.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Narrativa envolvente, com descrições detalhadas e conflito que prende a atenção.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '📝 Escreva um texto descritivo sobre uma pessoa importante para você, destacando suas características físicas e psicológicas.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Descrição muito superficial ou sem características psicológicas.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Descreve características físicas básicas e algumas psicológicas.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Descreve a pessoa com detalhes físicos e psicológicos, criando uma imagem clara.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Descrição rica e poética, com uso de figuras de linguagem e profundidade emocional.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '7º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 7º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🌍 Escreva um texto sobre a importância de preservar o meio ambiente. Apresente argumentos e propostas de ação.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Texto com argumentos fracos ou sem propostas.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Apresenta alguns argumentos, mas com pouca profundidade.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Argumentos claros, com exemplos e propostas práticas.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo bem estruturado, com dados, exemplos e propostas inovadoras.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '📖 Crie um conto (história curta) com um tema social, como a amizade, a solidariedade ou a empatia.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Conto sem desenvolvimento ou com tema pouco explorado.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Conto com personagens e cenário, mas com pouca profundidade.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Conto bem estruturado, com personagens carismáticos e mensagem clara.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Conto criativo, com diálogos, descrições e uma mensagem que provoca reflexão.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🌍 Escreva um texto sobre a importância de preservar o meio ambiente. Apresente argumentos e propostas de ação.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Texto com argumentos fracos ou sem propostas.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Apresenta alguns argumentos, mas com pouca profundidade.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Argumentos claros, com exemplos e propostas práticas.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo bem estruturado, com dados, exemplos e propostas inovadoras.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '📖 Crie um conto (história curta) com um tema social, como a amizade, a solidariedade ou a empatia.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Conto sem desenvolvimento ou com tema pouco explorado.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Conto com personagens e cenário, mas com pouca profundidade.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Conto bem estruturado, com personagens carismáticos e mensagem clara.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Conto criativo, com diálogos, descrições e uma mensagem que provoca reflexão.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '8º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 8º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '📱 Escreva um texto argumentativo sobre o uso de redes sociais por adolescentes. Apresente pontos positivos e negativos.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Texto com argumentos superficiais ou sem equilíbrio.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Apresenta pontos positivos e negativos, mas com pouca profundidade.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com argumentos bem desenvolvidos, exemplos e uma posição clara.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo completo, com dados, contra-argumentos e conclusão forte.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '✍️ Escreva uma resenha crítica sobre um filme, livro ou série que você assistiu/leu recentemente.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Resenha muito curta ou sem opinião crítica.', pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Resenha com descrição básica e uma opinião simples.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Resenha com descrição detalhada e uma opinião bem fundamentada.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Resenha crítica com análise profunda, comparações e conclusão original.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '📱 Escreva um texto argumentativo sobre o uso de redes sociais por adolescentes. Apresente pontos positivos e negativos.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Texto com argumentos superficiais ou sem equilíbrio.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Apresenta pontos positivos e negativos, mas com pouca profundidade.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Texto com argumentos bem desenvolvidos, exemplos e uma posição clara.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo completo, com dados, contra-argumentos e conclusão forte.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '✍️ Escreva uma resenha crítica sobre um filme, livro ou série que você assistiu/leu recentemente.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Resenha muito curta ou sem opinião crítica.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Resenha com descrição básica e uma opinião simples.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Resenha com descrição detalhada e uma opinião bem fundamentada.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Resenha crítica com análise profunda, comparações e conclusão original.',
+                                pontos: 4 }
+                        ]
+                    }]
                 },
                 '9º Ano': {
                     titulo: 'Avaliação de Produção de Texto — 9º Ano',
-                    questoes: [
-                        {
-                            id: 1,
-                            enunciado: '🎓 Escreva um texto dissertativo-argumentativo sobre o papel da educação na formação do cidadão no século XXI.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Texto sem argumentos sólidos ou com estrutura confusa.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Apresenta uma tese e alguns argumentos, mas com pouca profundidade.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com tese clara, argumentos bem desenvolvidos e exemplos concretos.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Texto dissertativo completo, com tese forte, argumentos consistentes, contra-argumentos e conclusão impactante.',
-                                    pontos: 4 }
-                            ]
-                        },
-                        {
-                            id: 2,
-                            enunciado: '📰 Escreva uma carta aberta para a sociedade sobre um tema que você considera urgente, como a desigualdade ou a violência.',
-                            niveis: [
-                                { valor: '1', nome: 'Inicial', descricao: 'Carta muito curta ou sem argumentação consistente.',
-                                    pontos: 1 },
-                                { valor: '2', nome: 'Básico', descricao: 'Carta com uma ideia central e alguns argumentos superficiais.',
-                                    pontos: 2 },
-                                { valor: '3', nome: 'Proficiente', descricao: 'Carta com argumentos fortes, apelo emocional e proposta de solução.',
-                                    pontos: 3 },
-                                { valor: '4', nome: 'Avançado', descricao: 'Carta aberta impactante, com retórica persuasiva, dados e um chamado à ação.',
-                                    pontos: 4 }
-                            ]
-                        }
-                    ]
+                    questoes: [{
+                        id: 1,
+                        enunciado: '🎓 Escreva um texto dissertativo-argumentativo sobre o papel da educação na formação do cidadão no século XXI.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Texto sem argumentos sólidos ou com estrutura confusa.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Apresenta uma tese e alguns argumentos, mas com pouca profundidade.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Texto com tese clara, argumentos bem desenvolvidos e exemplos concretos.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Texto dissertativo completo, com tese forte, argumentos consistentes, contra-argumentos e conclusão impactante.',
+                                pontos: 4 }
+                        ]
+                    }, {
+                        id: 2,
+                        enunciado: '📰 Escreva uma carta aberta para a sociedade sobre um tema que você considera urgente, como a desigualdade ou a violência.',
+                        niveis: [
+                            { valor: '1', nome: 'Inicial', descricao: 'Carta muito curta ou sem argumentação consistente.',
+                                pontos: 1 },
+                            { valor: '2', nome: 'Básico', descricao: 'Carta com uma ideia central e alguns argumentos superficiais.',
+                                pontos: 2 },
+                            { valor: '3', nome: 'Proficiente', descricao: 'Carta com argumentos fortes, apelo emocional e proposta de solução.',
+                                pontos: 3 },
+                            { valor: '4', nome: 'Avançado', descricao: 'Carta aberta impactante, com retórica persuasiva, dados e um chamado à ação.',
+                                pontos: 4 }
+                        ]
+                    }]
                 }
             };
 
@@ -3538,6 +3522,21 @@
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar gabaritos:', erro);
+                }
+            }
+
+            // ================================================================
+            // FUNÇÃO carregarResultados (definida antes de ser chamada)
+            // ================================================================
+            async function carregarResultados() {
+                // Esta função é chamada em carregarDados, mas já temos carregarResultadosComFiltros
+                // Vamos apenas garantir que ela não cause erro.
+                try {
+                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
+                    const alunos = await response.json();
+                    console.log('📥 Resultados agrupados (carregarResultados):', alunos);
+                } catch (erro) {
+                    console.error('Erro ao carregar resultados:', erro);
                 }
             }
 
@@ -6431,12 +6430,10 @@
 
                 statusDiv.innerHTML = '🔄 Carregando avaliação...';
 
-                // Obter a série da prova
                 const selectProva = document.getElementById('pt-prova');
                 const optionProva = selectProva.options[selectProva.selectedIndex];
                 let serie = optionProva?.dataset?.serie || '1º Ano';
 
-                // Carregar a avaliação correspondente à série
                 const avaliacao = avaliacoesPorSerie[serie];
                 if (!avaliacao) {
                     container.innerHTML = `
@@ -6449,15 +6446,12 @@
                     return;
                 }
 
-                // Mostrar indicador da série
                 serieIndicador.style.display = 'inline-block';
                 serieIndicador.textContent = serie;
 
-                // Atualizar título
                 tituloSerie.textContent = `— ${avaliacao.titulo}`;
                 qtdeQuestoes.textContent = `${avaliacao.questoes.length} questões`;
 
-                // Recuperar respostas salvas (localStorage)
                 const chave = `producao_avaliacao_${provaId}_${alunoId}`;
                 const salvo = localStorage.getItem(chave);
                 let respostasSalvas = {};
@@ -6469,10 +6463,8 @@
                     }
                 }
 
-                // Renderizar as questões
                 renderizarAvaliacaoProducao(avaliacao, respostasSalvas, serie);
 
-                // Habilitar botões
                 document.getElementById('pt-btn-editar').disabled = false;
                 document.getElementById('pt-btn-visualizar').disabled = false;
                 document.getElementById('pt-btn-salvar').disabled = false;
@@ -6480,7 +6472,6 @@
 
                 statusDiv.innerHTML = `✅ Avaliação da série <strong>${serie}</strong> carregada. Utilize os botões para editar, visualizar, salvar ou excluir.`;
 
-                // Calcular resumo
                 calcularResumoProducao(avaliacao, respostasSalvas);
             }
 
@@ -6492,7 +6483,8 @@
                 const resultadoContainer = document.getElementById('pt-resultado-container');
 
                 if (!avaliacao || !avaliacao.questoes || avaliacao.questoes.length === 0) {
-                    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">❌ Avaliação sem questões.</div>`;
+                    container.innerHTML =
+                    `<div style="text-align:center; padding:20px; color:var(--red);">❌ Avaliação sem questões.</div>`;
                     return;
                 }
 
@@ -6504,7 +6496,6 @@
                     const valorSalvo = respostasSalvas[questao.id] || '';
                     const isSelecionada = valorSalvo !== '';
 
-                    // Encontrar o nível selecionado para exibir
                     let nivelSelecionado = null;
                     if (isSelecionada) {
                         nivelSelecionado = questao.niveis.find(n => n.valor === valorSalvo);
@@ -6556,7 +6547,6 @@
 
                 container.innerHTML = html;
 
-                // Mostrar resumo geral
                 const resumoContainer = document.getElementById('pt-resumo-geral-container');
                 if (totalSelecionadas > 0) {
                     resumoContainer.style.display = 'grid';
@@ -6588,7 +6578,6 @@
                     resumoContainer.style.display = 'none';
                 }
 
-                // Mostrar resultado container (compatibilidade)
                 if (totalSelecionadas > 0) {
                     resultadoContainer.style.display = 'block';
                     resultadoContainer.style.borderLeftColor = 'var(--green)';
@@ -6658,7 +6647,8 @@
             function habilitarEdicaoAvaliacao() {
                 const radios = document.querySelectorAll('#pt-avaliacao-container input[type="radio"]');
                 radios.forEach(r => r.disabled = false);
-                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado. Selecione os níveis e clique em Salvar.';
+                document.getElementById('pt-status').innerHTML =
+                '✏️ Modo edição ativado. Selecione os níveis e clique em Salvar.';
                 showToast('✏️ Agora você pode selecionar os níveis de cada questão.', 'info');
             }
 
@@ -6677,7 +6667,6 @@
                     return;
                 }
 
-                // Coletar todos os radios selecionados
                 const radios = document.querySelectorAll('#pt-avaliacao-container input[type="radio"]:checked');
                 const respostas = {};
 
@@ -6695,12 +6684,10 @@
                 const chave = `producao_avaliacao_${provaId}_${alunoId}`;
                 localStorage.setItem(chave, JSON.stringify(respostas));
 
-                // Atualizar visual
                 carregarAvaliacaoProducao();
                 document.getElementById('pt-status').innerHTML = '💾 Avaliação salva com sucesso!';
                 showToast('✅ Avaliação salva localmente.', 'success');
 
-                // Desabilitar radios após salvar (volta ao modo visualização)
                 document.querySelectorAll('#pt-avaliacao-container input[type="radio"]').forEach(r => r.disabled = true);
             }
 
@@ -6717,7 +6704,6 @@
                 const chave = `producao_avaliacao_${provaId}_${alunoId}`;
                 localStorage.removeItem(chave);
 
-                // Resetar visual
                 carregarAvaliacaoProducao();
                 document.getElementById('pt-status').innerHTML = '🗑️ Avaliação excluída.';
                 document.getElementById('pt-resultado-container').style.display = 'none';
