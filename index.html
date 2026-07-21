@@ -1781,18 +1781,7 @@
                     </div>
                 </div>
 
-                <!-- STATS: APENAS O CARD PORCENTAGEM -->
-                <div style="display:grid; grid-template-columns: 1fr; gap:16px; margin-bottom:24px;">
-                    <div class="stat-card purple" style="justify-content:center; text-align:center;">
-                        <div class="stat-icon purple">📊</div>
-                        <div>
-                            <div class="stat-val" id="rel-media">0%</div>
-                            <div class="stat-label">Porcentagem</div>
-                        </div>
-                    </div>
-                </div>
-
-                               <!-- CARD ÚNICO: PORCENTAGEM + CONCEITOS -->
+                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📊 Porcentagem e Conceitos</div>
@@ -1864,7 +1853,6 @@
                     </div>
                 </div>
             </div>
-            <!-- ===== FIM RELATÓRIO POR TURMA ===== -->
 
             <div class="page" id="page-rel-escola">
                 <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
@@ -4948,9 +4936,9 @@
                     if (!alunos || alunos.length === 0 || alunos.erro) {
                         // Zerar todos os indicadores
                         document.getElementById('rel-media').textContent = '0%';
+                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
                         // Conceitos
-                        document.getElementById('rel-conceito-total').textContent = '0 alunos';
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
                             document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
@@ -4967,12 +4955,12 @@
 
                     if (dadosAlunos.length === 0) {
                         document.getElementById('rel-media').textContent = '0%';
+                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
                             document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
                         });
-                        document.getElementById('rel-conceito-total').textContent = '0 alunos';
                         document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
                         document.getElementById('rel-disc-acertos').textContent = '0';
                         document.getElementById('rel-disc-erros').textContent = '0';
@@ -4990,6 +4978,7 @@
                     const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
                     const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
                     document.getElementById('rel-media').textContent = porcentagemMedia.toFixed(1) + '%';
+                    document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
                     document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
 
                     // Calcular conceitos (porcentagem de acertos de cada aluno)
@@ -5002,7 +4991,6 @@
                     });
 
                     // Atualizar card de conceitos
-                    document.getElementById('rel-conceito-total').textContent = totalAlunos + ' alunos';
                     const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
                     ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                         const count = conceitos[c] || 0;
