@@ -1718,141 +1718,152 @@
             </div>
 
             <!-- ============================================================ -->
-<!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
-<!-- ============================================================ -->
-<div class="page" id="page-rel-turma">
-    <div class="page-header">
-        <div>
-            <div class="page-title">📊 Relatório por Turma</div>
-            <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
-        </div>
-        <div class="page-actions no-print">
-            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-            <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
-        </div>
-    </div>
+            <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ============================================================ -->
+            <div class="page" id="page-rel-turma">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Relatório por Turma</div>
+                        <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
+                    </div>
+                </div>
 
-    <div class="print-header print-only">
-        <h2>📊 Relatório por Turma</h2>
-        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-        <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
-    </div>
+                <div class="print-header print-only">
+                    <h2>📊 Relatório por Turma</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
+                </div>
 
-    <!-- Filtros -->
-    <div class="card no-print" style="margin-bottom:16px;">
-        <div class="form-row c4">
-            <div class="form-group">
-                <label class="form-label">Escola</label>
-                <select class="form-control" id="rel-turma-escola" onchange="carregarTurmasRelTurma(this.value)">
-                    <option value="">Todas as escolas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Série</label>
-                <select class="form-control" id="rel-turma-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('rel-turma-turma')); carregarRelatorioTurmaFiltrado();">
-                    <option value="">Todas as séries</option>
-                    <option value="1º Ano">1º Ano</option>
-                    <option value="2º Ano">2º Ano</option>
-                    <option value="3º Ano">3º Ano</option>
-                    <option value="4º Ano">4º Ano</option>
-                    <option value="5º Ano">5º Ano</option>
-                    <option value="6º Ano">6º Ano</option>
-                    <option value="7º Ano">7º Ano</option>
-                    <option value="8º Ano">8º Ano</option>
-                    <option value="9º Ano">9º Ano</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Turma</label>
-                <select class="form-control" id="rel-turma-turma" onchange="carregarRelatorioTurmaFiltrado()">
-                    <option value="">Todas as turmas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Prova</label>
-                <select class="form-control" id="rel-turma-prova" onchange="carregarRelatorioTurmaFiltrado()">
-                    <option value="">Todas as provas</option>
-                </select>
-            </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-            <button class="btn btn-primary btn-sm" onclick="carregarRelatorioTurmaFiltrado()">🔍 Filtrar</button>
-            <button class="btn btn-outline btn-sm" onclick="limparFiltrosRelTurma()">✕ Limpar Filtros</button>
-        </div>
-    </div>
+                <!-- Filtros -->
+                <div class="card no-print" style="margin-bottom:16px;">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Escola</label>
+                            <select class="form-control" id="rel-turma-escola" onchange="carregarTurmasRelTurma(this.value)">
+                                <option value="">Todas as escolas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série</label>
+                            <select class="form-control" id="rel-turma-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('rel-turma-turma')); carregarRelatorioTurmaFiltrado();">
+                                <option value="">Todas as séries</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="rel-turma-turma" onchange="carregarRelatorioTurmaFiltrado()">
+                                <option value="">Todas as turmas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova</label>
+                            <select class="form-control" id="rel-turma-prova" onchange="carregarRelatorioTurmaFiltrado()">
+                                <option value="">Todas as provas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="carregarRelatorioTurmaFiltrado()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosRelTurma()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
 
-    <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">📊 Porcentagem e Conceitos</div>
-            <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-            <!-- Lado esquerdo: porcentagem -->
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
-                <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
-                <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
-            </div>
-            <!-- Lado direito: conceitos -->
-            <div style="display:flex; flex-direction:column; gap:12px;">
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🔴 Inicial (até 40%)</span>
-                        <span style="font-weight:700; color:#ef4444;" id="rel-conceito-inicial-count">0</span>
-                    </div>
-                    <div class="progress" style="height:16px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#ef4444,#dc2626);" id="rel-conceito-inicial-bar"></div>
+                <!-- STATS: APENAS O CARD PORCENTAGEM -->
+                <div style="display:grid; grid-template-columns: 1fr; gap:16px; margin-bottom:24px;">
+                    <div class="stat-card purple" style="justify-content:center; text-align:center;">
+                        <div class="stat-icon purple">📊</div>
+                        <div>
+                            <div class="stat-val" id="rel-media">0%</div>
+                            <div class="stat-label">Porcentagem</div>
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🟠 Básico (41% – 60%)</span>
-                        <span style="font-weight:700; color:#f59e0b;" id="rel-conceito-basico-count">0</span>
-                    </div>
-                    <div class="progress" style="height:16px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#f59e0b,#d97706);" id="rel-conceito-basico-bar"></div>
-                    </div>
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🔵 Proficiente (61% – 80%)</span>
-                        <span style="font-weight:700; color:#3b82f6;" id="rel-conceito-proficiente-count">0</span>
-                    </div>
-                    <div class="progress" style="height:16px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#3b82f6,#2563eb);" id="rel-conceito-proficiente-bar"></div>
-                    </div>
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🟢 Avançado (acima de 80%)</span>
-                        <span style="font-weight:700; color:#10b981;" id="rel-conceito-avancado-count">0</span>
-                    </div>
-                    <div class="progress" style="height:16px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#10b981,#059669);" id="rel-conceito-avancado-bar"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
-    <div class="card" id="rel-distribuicao-unica">
-        <div class="card-header">
-            <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
-            <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr; gap:12px;">
-            <div style="background:var(--bg2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--border);">
-                <div style="display:flex; justify-content:center; gap:32px; font-size:16px; font-weight:600; flex-wrap:wrap;">
-                    <span style="color:var(--green);">✅ Acertos: <span id="rel-disc-acertos">0</span></span>
-                    <span style="color:var(--red);">❌ Erros: <span id="rel-disc-erros">0</span></span>
-                    <span style="color:var(--blue);">⭐ Média: <span id="rel-disc-media">0.0</span></span>
-                    <span style="color:var(--purple);">📊 Conceito: <span id="rel-disc-conceito">—</span></span>
+                               <!-- CARD ÚNICO: PORCENTAGEM + CONCEITOS -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 Porcentagem e Conceitos</div>
+                        <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <!-- Lado esquerdo: porcentagem -->
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
+                            <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
+                            <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
+                        </div>
+                        <!-- Lado direito: conceitos -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 Inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="rel-conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#ef4444,#dc2626);" id="rel-conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 Básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="rel-conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#f59e0b,#d97706);" id="rel-conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 Proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="rel-conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#3b82f6,#2563eb);" id="rel-conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 Avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="rel-conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#10b981,#059669);" id="rel-conceito-avancado-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
+                <div class="card" id="rel-distribuicao-unica">
+                    <div class="card-header">
+                        <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
+                        <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr; gap:12px;">
+                        <div style="background:var(--bg2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--border);">
+                            <div style="display:flex; justify-content:center; gap:32px; font-size:16px; font-weight:600; flex-wrap:wrap;">
+                                <span style="color:var(--green);">✅ Acertos: <span id="rel-disc-acertos">0</span></span>
+                                <span style="color:var(--red);">❌ Erros: <span id="rel-disc-erros">0</span></span>
+                                <span style="color:var(--blue);">⭐ Média: <span id="rel-disc-media">0.0</span></span>
+                                <span style="color:var(--purple);">📊 Conceito: <span id="rel-disc-conceito">—</span></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
             <!-- ===== FIM RELATÓRIO POR TURMA ===== -->
 
             <div class="page" id="page-rel-escola">
