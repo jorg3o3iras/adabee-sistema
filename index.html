@@ -5035,6 +5035,22 @@
                     const totalAlunos = dadosAlunos.length;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
 
+                    // 🔹 Mapeamento de disciplinas
+                    const disciplinaMap = {
+                        'Português': 'portugues',
+                        'Matemática': 'matematica',
+                        'Produção de Texto': 'producao',
+                        'Ciências Humanas': 'ch',
+                        'Ciências Naturais': 'cn',
+                        'História': 'ch',
+                        'Geografia': 'ch',
+                        'Inglês': 'portugues'
+                    };
+                    const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
+
+                    // ============================================
+                    // 🔥 CÁLCULO DA MÉDIA GERAL (rel-media)
+                    // ============================================
                     let somaNotas = 0;
                     dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
                     const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
@@ -5043,10 +5059,16 @@
                     document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
                     document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
 
+                    // ============================================
+                    // 🔥 CÁLCULO DOS CONCEITOS (agora com base APENAS na disciplina selecionada)
+                    // ============================================
                     let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                     dadosAlunos.forEach(aluno => {
-                        const nota = aluno.media || 0;
-                        const pct = (nota / notaMaxima) * 100;
+                        // Pega os dados da disciplina específica
+                        const discData = aluno[chave] || {};
+                        const acertos = discData.acertos || 0;
+                        const total = discData.total || 20; // fallback
+                        const pct = (acertos / total) * 100;
                         const conceito = calcularConceito(pct);
                         conceitos[conceito] = (conceitos[conceito] || 0) + 1;
                     });
@@ -5063,18 +5085,9 @@
                         }
                     });
 
-                    const disciplinaMap = {
-                        'Português': 'portugues',
-                        'Matemática': 'matematica',
-                        'Produção de Texto': 'producao',
-                        'Ciências Humanas': 'ch',
-                        'Ciências Naturais': 'cn',
-                        'História': 'ch',
-                        'Geografia': 'ch',
-                        'Inglês': 'portugues'
-                    };
-                    const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
-
+                    // ============================================
+                    // 🔥 DADOS DA DISCIPLINA PARA O CARD INFERIOR
+                    // ============================================
                     let totalAcertos = 0,
                         totalErros = 0,
                         totalQuestoes = 0;
