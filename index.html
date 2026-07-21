@@ -1159,8 +1159,8 @@
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <div class="sb-item" onclick="go('rel-escola')" data-p="rel-escola"><span class="sb-ico">🏫</span> Rel. por Escola CSV</div>
-                    <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
+                  
+				  <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1854,17 +1854,7 @@
                 </div>
             </div>
 
-            <div class="page" id="page-rel-escola">
-                <div class="page-header"><div><div class="page-title">🏫 Relatório por Escola</div></div><button class="btn btn-green page-actions no-print" onclick="exportarRelatorioEscola()">📥 Exportar</button></div>
-
-                <div class="print-header print-only">
-                    <h2>🏫 Relatório por Escola</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-escola"></span></p>
-                </div>
-
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>Escola</th><th>Turmas</th><th>Alunos</th><th>Média</th><th>Aprovação</th><th>Conceito</th></tr></thead><tbody id="tb-rel-escola"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
-            </div>
 
             <!-- ========== CONFIG ========== -->
             <div class="page" id="page-config">
