@@ -1821,6 +1821,53 @@
                     </div>
                 </div>
 
+                <!-- ========== CARD ADICIONADO: LISTA DE ALUNOS ========== -->
+                <div class="card" id="rel-tabela-alunos">
+                    <div class="card-header">
+                        <div class="card-title">📋 Lista de Alunos</div>
+                        <span class="badge badge-gray" id="rel-total-alunos-tabela">0 alunos</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
+                                    <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
+                                    <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
+                                </tr>
+                                <tr>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-rel-alunos">
+                                <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
                 <div class="card" id="rel-distribuicao-unica">
                     <div class="card-header">
@@ -5013,6 +5060,9 @@
                         document.getElementById('rel-disc-erros').textContent = '0';
                         document.getElementById('rel-disc-media').textContent = '0.0';
                         document.getElementById('rel-disc-conceito').textContent = '—';
+                        // Limpar tabela de alunos
+                        document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
+                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
                         return;
                     }
 
@@ -5031,6 +5081,8 @@
                         document.getElementById('rel-disc-erros').textContent = '0';
                         document.getElementById('rel-disc-media').textContent = '0.0';
                         document.getElementById('rel-disc-conceito').textContent = '—';
+                        document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
+                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
                         return;
                     }
 
@@ -5143,6 +5195,71 @@
                         conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
                         conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
                     }
+
+                    // ============================================
+                    // 🔥 PREENCHER TABELA DE ALUNOS (CARD ADICIONADO)
+                    // ============================================
+                    function getDadosDisciplina(disciplinaData, totalQuestoes) {
+                        if (!disciplinaData || typeof disciplinaData !== 'object') {
+                            return { acertos: 0, erros: 0, conceito: 'inicial' };
+                        }
+                        const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                        let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                        const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                        if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+                        const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        const conceito = calcularConceito(porcentagem);
+                        return { acertos, erros, conceito };
+                    }
+
+                    function badgeConceito(c) {
+                        return `badge-conceito-${c}-sm`;
+                    }
+
+                    const tbody = document.getElementById('tb-rel-alunos');
+                    if (!tbody) return;
+
+                    // Ordenar por média (maior primeiro)
+                    const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
+
+                    tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
+                        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+
+                        const portugues = getDadosDisciplina(aluno.portugues, 20);
+                        const matematica = getDadosDisciplina(aluno.matematica, 20);
+                        const producao = getDadosDisciplina(aluno.producao, 20);
+                        const ch = getDadosDisciplina(aluno.ch, 20);
+                        const cn = getDadosDisciplina(aluno.cn, 20);
+
+                        const nomeEscola = aluno.escola || '';
+                        const nomeTurma = aluno.turma || '';
+
+                        return '<tr>' +
+                            '<td>' + medalha + '</td>' +
+                            '<td>' + (index + 1) + '</td>' +
+                            '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                            '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                            '</tr>';
+                    }).join('');
+
+                    document.getElementById('rel-total-alunos-tabela').textContent = totalAlunos + ' alunos';
 
                 } catch (erro) {
                     console.error('❌ Erro ao carregar relatório por turma:', erro);
