@@ -1078,6 +1078,182 @@
         }
         .print-only { display: none !important; }
         @media print { .print-only { display: block !important; } }
+
+        /* ============================================
+           ESTILOS EXCLUSIVOS PARA PRODUÇÃO DE TEXTO (MULTI-QUESTÕES)
+           ============================================ */
+        .pt-questao {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            transition: border-color 0.3s;
+        }
+        .pt-questao:last-child {
+            margin-bottom: 0;
+        }
+        .pt-questao .enunciado {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .pt-questao .enunciado .badge-questao {
+            font-size: 11px;
+            background: var(--blue);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        .pt-questao .rubrica {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .pt-questao .rubrica .opcao {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.25s;
+            cursor: pointer;
+            background: transparent;
+        }
+        .pt-questao .rubrica .opcao:hover {
+            border-color: var(--border2);
+            background: rgba(255,255,255,0.02);
+        }
+        .pt-questao .rubrica .opcao.selecionada {
+            border-color: var(--blue);
+            background: rgba(59,130,246,0.08);
+        }
+        .pt-questao .rubrica .opcao input[type="radio"] {
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--blue);
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .pt-questao .rubrica .opcao label {
+            cursor: pointer;
+            width: 100%;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text2);
+        }
+        .pt-questao .rubrica .opcao label strong {
+            color: var(--text);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .pt-questao .rubrica .opcao label .descricao {
+            color: var(--text2);
+            font-size: 12px;
+        }
+        .pt-questao .rubrica .opcao label .pontos {
+            display: inline-block;
+            font-weight: 700;
+            color: var(--blue);
+            margin-top: 3px;
+            font-size: 12px;
+        }
+        .pt-questao .rubrica .opcao.selecionada label .pontos {
+            color: var(--green);
+        }
+
+        .pt-resultado-questao {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 32px;
+            margin-top: 6px;
+            padding: 10px 14px;
+            background: rgba(16,185,129,0.06);
+            border-radius: 8px;
+            border-left: 4px solid var(--green);
+        }
+        .pt-resultado-questao .item {
+            font-size: 13px;
+            color: var(--text2);
+        }
+        .pt-resultado-questao .item strong {
+            color: var(--text);
+        }
+        .pt-resultado-questao .item .conceito-badge {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .pt-resultado-questao .item .conceito-badge.inicial { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .pt-resultado-questao .item .conceito-badge.basico { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .pt-resultado-questao .item .conceito-badge.proficiente { background: rgba(59,130,246,0.2); color: #3b82f6; }
+        .pt-resultado-questao .item .conceito-badge.avancado { background: rgba(16,185,129,0.2); color: #10b981; }
+
+        .pt-resumo-geral {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg2);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        .pt-resumo-geral .item {
+            text-align: center;
+        }
+        .pt-resumo-geral .item .valor {
+            font-size: 28px;
+            font-weight: 800;
+        }
+        .pt-resumo-geral .item .rotulo {
+            font-size: 11px;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .pt-resumo-geral .item .valor.green { color: var(--green); }
+        .pt-resumo-geral .item .valor.blue { color: var(--blue); }
+        .pt-resumo-geral .item .valor.purple { color: var(--purple); }
+        .pt-resumo-geral .item .valor.orange { color: var(--orange); }
+
+        .pt-serie-indicador {
+            display: inline-block;
+            background: var(--purple);
+            color: #fff;
+            padding: 2px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        @media (max-width:600px) {
+            .pt-questao .rubrica .opcao {
+                flex-direction: column;
+                gap: 6px;
+                padding: 10px;
+            }
+            .pt-questao .rubrica .opcao input[type="radio"] {
+                margin-top: 0;
+            }
+            .pt-resumo-geral {
+                grid-template-columns: 1fr 1fr;
+            }
+            .pt-resultado-questao {
+                flex-direction: column;
+                gap: 6px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1846,13 +2022,14 @@
                 </div>
             </div>
 
-            <!-- ========== PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL ========== -->
-            <!-- ===== CONTEÚDO SUBSTITUÍDO PELO FORMULÁRIO DA PROVA ONLINE ===== -->
+            <!-- ============================================================ -->
+            <!-- ========== PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL (NOVO) ====== -->
+            <!-- ============================================================ -->
             <div class="page" id="page-producao-texto-manual">
                 <div class="page-header">
                     <div>
-                        <div class="page-title">📝 Produção de Texto - Correção Manual</div>
-                        <p class="page-sub">Selecione a prova e o aluno para editar a produção de texto</p>
+                        <div class="page-title">📝 Produção de Texto <span id="pt-serie-indicador" class="pt-serie-indicador" style="display:none;">1º Ano</span></div>
+                        <p class="page-sub">Selecione a prova e o aluno para avaliar a produção textual — <strong>cada série tem sua própria avaliação</strong></p>
                     </div>
                     <div class="page-actions no-print">
                         <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
@@ -1886,23 +2063,22 @@
                             </select>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; margin-top:8px;">
+                    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
                         <button class="btn btn-primary" onclick="carregarAvaliacaoProducao()">🔍 Carregar Avaliação</button>
+                        <button class="btn btn-outline btn-sm" id="pt-btn-editar" onclick="habilitarEdicaoAvaliacao()" disabled>✏️ Editar</button>
+                        <button class="btn btn-outline btn-sm" id="pt-btn-visualizar" onclick="visualizarAvaliacao()" disabled>👁️ Visualizar</button>
+                        <button class="btn btn-green btn-sm" id="pt-btn-salvar" onclick="salvarAvaliacaoProducao()" disabled>💾 Salvar</button>
+                        <button class="btn btn-red btn-sm" id="pt-btn-excluir" onclick="excluirAvaliacaoProducao()" disabled>🗑️ Excluir</button>
                     </div>
                 </div>
 
+                <!-- Card da Avaliação -->
                 <div class="card" id="pt-avaliacao-card">
                     <div class="card-header">
-                        <div class="card-title">📝 Avaliação da Produção de Texto</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" id="pt-btn-editar" onclick="habilitarEdicaoAvaliacao()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" id="pt-btn-visualizar" onclick="visualizarAvaliacao()">👁️ Visualizar</button>
-                            <button class="btn btn-green btn-sm" id="pt-btn-salvar" onclick="salvarAvaliacaoProducao()">💾 Salvar</button>
-                            <button class="btn btn-red btn-sm" id="pt-btn-excluir" onclick="excluirAvaliacaoProducao()">🗑️ Excluir</button>
-                        </div>
+                        <div class="card-title">📝 Avaliação da Produção de Texto <span id="pt-titulo-serie" style="font-size:13px;color:var(--text2);font-weight:400;"></span></div>
+                        <span class="badge badge-blue" id="pt-qtde-questoes">0 questões</span>
                     </div>
                     <div id="pt-avaliacao-container">
-                        <!-- O conteúdo da prova online será injetado aqui via JavaScript -->
                         <div style="text-align:center; padding:20px; color:var(--text3);">
                             Selecione uma prova e um aluno e clique em "Carregar Avaliação".
                         </div>
@@ -1910,6 +2086,7 @@
                     <div id="pt-resultado-container" style="margin-top:16px; display:none; padding:16px; background:var(--bg2); border-radius:8px; border-left:4px solid var(--green);">
                         <!-- Resultado da avaliação será exibido aqui -->
                     </div>
+                    <div id="pt-resumo-geral-container" style="margin-top:16px; display:none;"></div>
                 </div>
 
                 <div id="pt-status" style="margin-top:10px; font-size:13px; color:var(--text2);"></div>
@@ -1954,7 +2131,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2119,15 +2296,13 @@
             </div>
         </div>
 
-        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) - COM CONTAINER DE SELECTS ========== -->
+        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) ========== -->
         <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
             <div class="modal" style="max-width:800px;width:95vw;">
                 <div class="modal-header">
                     <h3>✏️ Correção Manual</h3>
                     <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
                 </div>
-
-                <!-- Área de seleção (ocultada ao editar direto) -->
                 <div id="cm-selects-container">
                     <div class="form-group" style="margin-bottom:12px;">
                         <label class="form-label">Escola <span class="req">*</span></label>
@@ -2442,8 +2617,302 @@
             };
 
             // ============================================
-            // FUNÇÃO PARA PROCESSAR RESPOSTAS DA API
+            // DADOS DAS AVALIAÇÕES POR SÉRIE
             // ============================================
+            const avaliacoesPorSerie = {
+                '1º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 1º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🎨 Desenhe a sua família e, em seguida, escreva uma frase sobre o desenho.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Não realizou a atividade ou o desenho não representa a família.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Desenhou a família com alguns membros, mas sem detalhes.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Desenhou a família com todos os membros e escreveu uma frase coerente.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Desenho rico em detalhes e frase completa que descreve o desenho com criatividade.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '✏️ Escreva o nome de três pessoas da sua família e o que elas gostam de fazer.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Escreveu menos de 2 nomes ou a lista está incompleta.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Escreveu 3 nomes, mas sem descrever as atividades.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Escreveu 3 nomes e uma atividade para cada um.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Além dos nomes e atividades, usou adjetivos e criou uma frase para cada pessoa.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '2º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 2º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🐶 Descreva seu animal de estimação favorito. Se não tiver, invente um! Use palavras que ajudem a imaginar como ele é.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Descreve o animal com poucas palavras ou de forma muito simples.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Descreve o animal com algumas características (cor, tamanho).',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o animal com várias características e inclui uma opinião sobre ele.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Descrição detalhada, com comparações e uso de linguagem expressiva.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '📝 Escreva um pequeno texto sobre o que você mais gosta de fazer na escola.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou com ideias desconectadas.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Texto com 2-3 frases sobre a atividade favorita.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com começo, meio e fim, explicando por que gosta da atividade.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto bem estruturado, com detalhes e emoção sobre a atividade.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '3º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 3º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🧸 Descreva seu brinquedo favorito. Conte como ele é, de que cor, o que você faz com ele e por que gosta tanto.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Descrição muito simples ou sem detalhes.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Descreve o brinquedo com algumas características básicas.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o brinquedo com detalhes e explica como brinca com ele.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Descrição rica em detalhes, incluindo sentimentos e uma história com o brinquedo.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '📖 Crie uma história curta com um personagem que vive em um lugar diferente da sua casa.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'História muito curta ou sem conexão entre as partes.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'História com começo, meio e fim, mas com poucos detalhes.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'História bem estruturada, com personagem e cenário descritos.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'História criativa, com diálogos ou descrições que prendem a atenção.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '4º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 4º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🌞 Escreva sobre um dia divertido que você passou com sua família ou amigos. Onde foi? O que aconteceu?',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou sem detalhes sobre o dia.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Texto com informações sobre o local e uma atividade, mas sem emoção.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com começo, meio e fim, descrevendo o que aconteceu e como se sentiu.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto envolvente, com descrições detalhadas e expressão de sentimentos.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '🏖️ Imagine que você foi a um lugar incrível. Descreva o lugar, o que viu, o que ouviu e como se sentiu.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Descrição superficial ou sem criatividade.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Descreve o lugar com algumas características visuais.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o lugar com detalhes sensoriais (visão, audição) e emoções.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Descrição vívida e criativa, que transporta o leitor para o lugar.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '5º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 5º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '✈️ Escreva sobre a viagem dos seus sonhos. Para onde você iria? O que faria lá? Com quem iria? Justifique sua escolha.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Texto muito curto ou sem justificativa.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Descreve o destino e uma atividade, mas a justificativa é fraca.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve o destino, atividades e dá uma justificativa convincente.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto completo, com descrições detalhadas, justificativa sólida e expressão de expectativas.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '📚 Escreva um texto de opinião sobre a importância da leitura para a sua vida.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Opinião muito simples ou sem argumentos.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Opinião com 1-2 argumentos superficiais.', pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Opinião com argumentos claros e exemplos do dia a dia.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo bem estruturado, com vários argumentos e conclusão impactante.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '6º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 6º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🏫 Escreva uma narrativa sobre um acontecimento marcante em sua escola. Use elementos como tempo, espaço e personagens.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Narrativa confusa ou sem elementos básicos.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Narrativa com começo, meio e fim, mas com poucos detalhes.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Narrativa bem estruturada, com tempo, espaço e personagens definidos.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Narrativa envolvente, com descrições detalhadas e conflito que prende a atenção.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '📝 Escreva um texto descritivo sobre uma pessoa importante para você, destacando suas características físicas e psicológicas.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Descrição muito superficial ou sem características psicológicas.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Descreve características físicas básicas e algumas psicológicas.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Descreve a pessoa com detalhes físicos e psicológicos, criando uma imagem clara.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Descrição rica e poética, com uso de figuras de linguagem e profundidade emocional.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '7º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 7º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🌍 Escreva um texto sobre a importância de preservar o meio ambiente. Apresente argumentos e propostas de ação.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Texto com argumentos fracos ou sem propostas.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Apresenta alguns argumentos, mas com pouca profundidade.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Argumentos claros, com exemplos e propostas práticas.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo bem estruturado, com dados, exemplos e propostas inovadoras.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '📖 Crie um conto (história curta) com um tema social, como a amizade, a solidariedade ou a empatia.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Conto sem desenvolvimento ou com tema pouco explorado.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Conto com personagens e cenário, mas com pouca profundidade.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Conto bem estruturado, com personagens carismáticos e mensagem clara.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Conto criativo, com diálogos, descrições e uma mensagem que provoca reflexão.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '8º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 8º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '📱 Escreva um texto argumentativo sobre o uso de redes sociais por adolescentes. Apresente pontos positivos e negativos.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Texto com argumentos superficiais ou sem equilíbrio.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Apresenta pontos positivos e negativos, mas com pouca profundidade.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com argumentos bem desenvolvidos, exemplos e uma posição clara.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto argumentativo completo, com dados, contra-argumentos e conclusão forte.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '✍️ Escreva uma resenha crítica sobre um filme, livro ou série que você assistiu/leu recentemente.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Resenha muito curta ou sem opinião crítica.', pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Resenha com descrição básica e uma opinião simples.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Resenha com descrição detalhada e uma opinião bem fundamentada.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Resenha crítica com análise profunda, comparações e conclusão original.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                },
+                '9º Ano': {
+                    titulo: 'Avaliação de Produção de Texto — 9º Ano',
+                    questoes: [
+                        {
+                            id: 1,
+                            enunciado: '🎓 Escreva um texto dissertativo-argumentativo sobre o papel da educação na formação do cidadão no século XXI.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Texto sem argumentos sólidos ou com estrutura confusa.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Apresenta uma tese e alguns argumentos, mas com pouca profundidade.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Texto com tese clara, argumentos bem desenvolvidos e exemplos concretos.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Texto dissertativo completo, com tese forte, argumentos consistentes, contra-argumentos e conclusão impactante.',
+                                    pontos: 4 }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            enunciado: '📰 Escreva uma carta aberta para a sociedade sobre um tema que você considera urgente, como a desigualdade ou a violência.',
+                            niveis: [
+                                { valor: '1', nome: 'Inicial', descricao: 'Carta muito curta ou sem argumentação consistente.',
+                                    pontos: 1 },
+                                { valor: '2', nome: 'Básico', descricao: 'Carta com uma ideia central e alguns argumentos superficiais.',
+                                    pontos: 2 },
+                                { valor: '3', nome: 'Proficiente', descricao: 'Carta com argumentos fortes, apelo emocional e proposta de solução.',
+                                    pontos: 3 },
+                                { valor: '4', nome: 'Avançado', descricao: 'Carta aberta impactante, com retórica persuasiva, dados e um chamado à ação.',
+                                    pontos: 4 }
+                            ]
+                        }
+                    ]
+                }
+            };
+
+            // ================================================================
+            // FUNÇÃO PARA PROCESSAR RESPOSTAS DA API
+            // ================================================================
             async function processarRespostaAPI(response) {
                 let result;
                 const contentType = response.headers.get('content-type');
@@ -2474,9 +2943,9 @@
                 };
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÃO PARA ATUALIZAR DATAS NOS CABEÇALHOS DE IMPRESSÃO
-            // ============================================
+            // ================================================================
             function atualizarDatasImpressao() {
                 const agora = new Date();
                 const dataFormatada = agora.toLocaleDateString('pt-BR', {
@@ -2503,9 +2972,9 @@
                 });
             }
 
-            // ============================================
+            // ================================================================
             // POPULAR SELECT DE QUESTÕES (1 a 30)
-            // ============================================
+            // ================================================================
             function popularSelectQuestoes() {
                 const select = document.getElementById('prova-questoes');
                 if (!select) return;
@@ -2519,9 +2988,6 @@
                 }
             }
 
-            // ============================================
-            // POPULAR SELECT DE GAB-TOTAL (1 a 30)
-            // ============================================
             function popularSelectGabTotal() {
                 const select = document.getElementById('gab-total');
                 if (!select) return;
@@ -2535,9 +3001,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // MENU TOGGLE
-            // ============================================
+            // ================================================================
             function toggleMenu() {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('menuOverlay');
@@ -2548,9 +3014,9 @@
                 toggle.innerHTML = sidebar.classList.contains('open') ? '✕' : '☰';
             }
 
-            // ============================================
+            // ================================================================
             // LOGIN
-            // ============================================
+            // ================================================================
             function setLTab(t) {
                 loginType = t;
                 document.querySelectorAll('.login-tab').forEach((el, i) => {
@@ -2613,7 +3079,7 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
-                carregarCombosProducao(); // populates selects da aba produção de texto
+                carregarCombosProducao();
             }
 
             function doLogout() {
@@ -2624,9 +3090,9 @@
                 fecharCamera();
             }
 
-            // ============================================
+            // ================================================================
             // NAVEGAÇÃO
-            // ============================================
+            // ================================================================
             function go(page) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                 const el = document.getElementById('page-' + page);
@@ -2634,19 +3100,22 @@
                 document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
 
                 if (page === 'escola') carregarEscolas();
-                if (page === 'turmas') { carregarFiltroEscolaTurmas(); carregarTurmas(); }
+                if (page === 'turmas') { carregarFiltroEscolaTurmas();
+                    carregarTurmas(); }
                 if (page === 'alunos') {
                     const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
                     carregarAlunos(escolaId);
                 }
                 if (page === 'provas') carregarProvas();
                 if (page === 'dashboard') carregarDashboard();
-                if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
+                if (page === 'resultados') { carregarFiltrosResultados();
+                    carregarResultadosComFiltros(); }
                 if (page === 'gabaritos') carregarGabaritos();
-                if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
-                if (page === 'rel-escola') carregarRelatorios();
+                if (page === 'rel-turma') { carregarFiltrosRelTurma();
+                    carregarRelatorioTurmaFiltrado(); }
                 if (page === 'desempenho') { carregarEscolasDesempenho(); }
-                if (page === 'producao-texto-manual') { carregarCombosProducao(); carregarAvaliacaoProducao(); }
+                if (page === 'producao-texto-manual') { carregarCombosProducao();
+                    carregarAvaliacaoProducao(); }
 
                 atualizarDatasImpressao();
 
@@ -2663,9 +3132,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÃO PARA CALCULAR CONCEITO
-            // ============================================
+            // ================================================================
             function calcularConceito(porcentagem) {
                 if (porcentagem <= 40) return 'inicial';
                 if (porcentagem <= 60) return 'basico';
@@ -2673,9 +3142,20 @@
                 return 'avancado';
             }
 
-            // ============================================
-            // FUNÇÃO PARA FILTRAR TURMAS POR SÉRIE
-            // ============================================
+            function calcularConceitoLabel(porcentagem) {
+                const mapa = { inicial: 'Inicial', basico: 'Básico', proficiente: 'Proficiente', avancado: 'Avançado' };
+                return mapa[calcularConceito(porcentagem)] || '—';
+            }
+
+            function calcularConceitoBadge(conceito) {
+                const mapa = { inicial: 'badge-conceito-inicial', basico: 'badge-conceito-basico',
+                    proficiente: 'badge-conceito-proficiente', avancado: 'badge-conceito-avancado' };
+                return mapa[conceito] || 'badge-gray';
+            }
+
+            // ================================================================
+            // FILTRAR TURMAS POR SÉRIE
+            // ================================================================
             function filtrarTurmasPorSerie(selectSerie, selectTurma) {
                 const serieSelecionada = selectSerie.value;
                 let firstVisible = false;
@@ -2701,9 +3181,9 @@
                 selectTurma.dispatchEvent(new Event('change'));
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR ALUNOS POR PROVA
-            // ============================================
+            // ================================================================
             async function carregarAlunosPorProva(provaId) {
                 const selectAluno = document.getElementById('corrigir-aluno');
                 selectAluno.innerHTML = '<option value="">Selecione...</option>';
@@ -2732,9 +3212,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR ESCOLAS
-            // ============================================
+            // ================================================================
             async function carregarEscolas() {
                 try {
                     const response = await fetch(`${API_URL}/api/escolas`);
@@ -2769,9 +3249,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR TURMAS
-            // ============================================
+            // ================================================================
             async function carregarTurmas() {
                 try {
                     const response = await fetch(API_URL + '/api/turmas');
@@ -2812,9 +3292,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR FILTRO DE ESCOLA PARA TURMAS
-            // ============================================
+            // ================================================================
             async function carregarFiltroEscolaTurmas() {
                 try {
                     const response = await fetch(API_URL + '/api/escolas');
@@ -2836,9 +3316,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // APLICAR FILTROS NAS TURMAS
-            // ============================================
+            // ================================================================
             function aplicarFiltrosTurmas() {
                 const escolaId = document.getElementById('filtro-escola-turmas').value;
                 const serie = document.getElementById('filtro-serie-turmas').value;
@@ -2860,9 +3340,6 @@
                 showToast(`🔍 ${totalVisiveis} turmas encontradas com os filtros aplicados.`, 'info');
             }
 
-            // ============================================
-            // LIMPAR FILTROS DAS TURMAS
-            // ============================================
             function limparFiltrosTurmas() {
                 document.getElementById('filtro-escola-turmas').value = '';
                 document.getElementById('filtro-serie-turmas').value = '';
@@ -2870,9 +3347,9 @@
                 showToast('✕ Filtros limpos!', 'info');
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR ALUNOS
-            // ============================================
+            // ================================================================
             async function carregarAlunos(escolaId = null) {
                 try {
                     let url = API_URL + '/api/alunos';
@@ -2923,9 +3400,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR ESCOLAS PARA FILTRO DE ALUNOS
-            // ============================================
+            // ================================================================
             async function carregarEscolasFiltroAlunos() {
                 try {
                     const response = await fetch(API_URL + '/api/escolas');
@@ -2950,9 +3427,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // FILTRAR ALUNOS POR ESCOLA
-            // ============================================
+            // ================================================================
             function filtrarAlunosPorEscola(escolaId) {
                 const selectTurma = document.getElementById('filtro-turma-alunos');
                 if (selectTurma) {
@@ -2976,17 +3453,14 @@
                 carregarAlunos(escolaId);
             }
 
-            // ============================================
-            // FILTRAR ALUNOS POR SÉRIE
-            // ============================================
             function filtrarAlunosPorSerie(serie) {
                 const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
                 carregarAlunos(escolaId);
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR PROVAS
-            // ============================================
+            // ================================================================
             async function carregarProvas() {
                 try {
                     const response = await fetch(API_URL + '/api/provas');
@@ -3013,9 +3487,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR DASHBOARD
-            // ============================================
+            // ================================================================
             async function carregarDashboard() {
                 try {
                     const response = await fetch(API_URL + '/api/dashboard');
@@ -3032,9 +3506,9 @@
                 }
             }
 
-            // ============================================
-            // CARREGAR GABARITOS (COM INDICADOR BNCC)
-            // ============================================
+            // ================================================================
+            // CARREGAR GABARITOS
+            // ================================================================
             async function carregarGabaritos() {
                 try {
                     const response = await fetch(API_URL + '/api/provas');
@@ -3067,22 +3541,9 @@
                 }
             }
 
-            // ============================================
-            // CARREGAR RESULTADOS (não usamos mais, mantido para compatibilidade)
-            // ============================================
-            async function carregarResultados() {
-                try {
-                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
-                    const alunos = await response.json();
-                    console.log('📥 Resultados agrupados:', alunos);
-                } catch (erro) {
-                    console.error('Erro ao carregar resultados:', erro);
-                }
-            }
-
-            // ============================================
+            // ================================================================
             // CARREGAR RESULTADOS COM FILTROS
-            // ============================================
+            // ================================================================
             async function carregarResultadosComFiltros() {
                 try {
                     const escolaId = document.getElementById('filtro-escola').value;
@@ -3203,9 +3664,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR FILTROS RESULTADOS
-            // ============================================
+            // ================================================================
             async function carregarFiltrosResultados() {
                 try {
                     const respEscolas = await fetch(API_URL + '/api/escolas');
@@ -3254,9 +3715,9 @@
                 } catch (erro) { console.error('Erro ao carregar filtros:', erro); }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR TURMAS POR ESCOLA
-            // ============================================
+            // ================================================================
             async function carregarTurmasPorEscola(escolaId) {
                 const selectTurma = document.getElementById('filtro-turma');
                 const selectSerie = document.getElementById('filtro-serie');
@@ -3282,9 +3743,6 @@
                 carregarResultadosComFiltros();
             }
 
-            // ============================================
-            // LIMPAR FILTROS RESULTADOS
-            // ============================================
             function limparFiltrosResultados() {
                 document.getElementById('filtro-escola').value = '';
                 document.getElementById('filtro-serie').value = '';
@@ -3319,9 +3777,9 @@
                 }).catch(e => console.error('Erro ao recarregar provas:', e));
             }
 
-            // ============================================
+            // ================================================================
             // ATUALIZAR GRÁFICOS DE CONCEITOS
-            // ============================================
+            // ================================================================
             function atualizarGraficosConceitos(dados) {
                 const conceitos = { 'inicial': 0, 'basico': 0, 'proficiente': 0, 'avancado': 0 };
                 dados.forEach(item => {
@@ -3331,7 +3789,8 @@
                     conceitos[conceito] = (conceitos[conceito] || 0) + 1;
                 });
                 const total = dados.length || 1;
-                const cores = { 'inicial': { bg: '#ef4444' }, 'basico': { bg: '#f59e0b' }, 'proficiente': { bg: '#3b82f6' }, 'avancado': { bg: '#10b981' } };
+                const cores = { 'inicial': { bg: '#ef4444' }, 'basico': { bg: '#f59e0b' }, 'proficiente': { bg: '#3b82f6' },
+                    'avancado': { bg: '#10b981' } };
                 ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
                     const count = conceitos[conceito] || 0;
                     const pct = total > 0 ? (count / total) * 100 : 0;
@@ -3346,9 +3805,9 @@
                 atualizarDonut(conceitos, total);
             }
 
-            // ============================================
+            // ================================================================
             // ATUALIZAR DONUT
-            // ============================================
+            // ================================================================
             function atualizarDonut(conceitos, total) {
                 const canvas = document.getElementById('donut-chart');
                 if (!canvas) return;
@@ -3398,15 +3857,16 @@
                 ctx.stroke();
             }
 
-            // ============================================
+            // ================================================================
             // CORREÇÃO MANUAL (DENTRO DA IA)
-            // ============================================
+            // ================================================================
             function abrirCorrecaoManual() {
                 if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
                     showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
                     return;
                 }
-                if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData.gabarito.length === 0) {
+                if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData
+                    .gabarito.length === 0) {
                     showToast('❌ Gabarito não disponível para esta prova!', 'error');
                     return;
                 }
@@ -3437,7 +3897,8 @@
                     div.className = 'correcao-manual-item';
                     const respostaAluno = (i < respostas.length) ? respostas[i] : '';
                     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
-                    const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+                    const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito
+                        .toUpperCase();
                     let options = '<option value="">—</option>';
                     alternativas.forEach(alt => {
                         const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
@@ -3450,10 +3911,12 @@
                             statusText = '✅'; } else { statusClass = 'errada';
                             statusText = '❌'; }
                     }
-                    div.innerHTML = `<div class="q-num">Q${i+1}</div><div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div><select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select><div class="q-status ${statusClass}">${statusText}</div>`;
+                    div.innerHTML =
+                        `<div class="q-num">Q${i+1}</div><div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div><select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select><div class="q-status ${statusClass}">${statusText}</div>`;
                     const select = div.querySelector('.q-select');
                     if (select) {
-                        if (isCorreto && respostaAluno) { select.className = 'q-select correta'; } else if (respostaAluno && !isCorreto) { select.className = 'q-select errada'; }
+                        if (isCorreto && respostaAluno) { select.className = 'q-select correta'; } else if (respostaAluno &&
+                            !isCorreto) { select.className = 'q-select errada'; }
                     }
                     grid.appendChild(div);
                 }
@@ -3462,7 +3925,8 @@
             function atualizarRespostaManual(select) {
                 const questaoIndex = parseInt(select.dataset.questao);
                 const novaResposta = select.value;
-                if (novaResposta) { correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase(); } else { correcaoManualData.respostasAluno[questaoIndex] = ''; }
+                if (novaResposta) { correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase(); } else { correcaoManualData
+                        .respostasAluno[questaoIndex] = ''; }
                 const item = select.closest('.correcao-manual-item');
                 const qResposta = item.querySelector('.q-resposta');
                 const qStatus = item.querySelector('.q-status');
@@ -3506,7 +3970,8 @@
                 if (notaFinal >= (correcaoManualData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
                     statusBadge.className = 'badge badge-green';
                     statusAtual.textContent = 'Aprovado';
-                    statusAtual.style.color = 'var(--green)'; } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
+                    statusAtual.style.color = 'var(--green)'; } else if (notaFinal >= (correcaoManualData.notaMinima || 5) *
+                    0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
                     statusBadge.className = 'badge badge-orange';
                     statusAtual.textContent = 'Recuperação';
                     statusAtual.style.color = 'var(--orange)'; } else { statusBadge.textContent = '❌ REPROVADO';
@@ -3519,7 +3984,8 @@
             function preencherGabaritoCM() {
                 const qtd = correcaoManualData.quantidade || 20;
                 const gabarito = correcaoManualData.gabarito || [];
-                for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) { correcaoManualData.respostasAluno[i] = gabarito[i]; } }
+                for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) { correcaoManualData.respostasAluno[i] =
+                            gabarito[i]; } }
                 gerarGridCorrecaoManual();
                 atualizarResumoCorrecaoManual();
                 showToast('📋 Respostas preenchidas com o gabarito!', 'success');
@@ -3545,16 +4011,20 @@
                 }
                 const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
                 showToast('💾 Salvando correção manual...', 'info');
-                const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acertos: acertos, nota: nota, total: qtd };
-                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
+                const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId,
+                    respostas: respostas, acertos: acertos, nota: nota, total: qtd };
+                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dadosCorrecao) })
                     .then(response => response.json())
                     .then(data => {
                         if (data.sucesso) {
                             showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
                             closeM('m-correcao-manual');
-                            const notaEl = document.getElementById('ia-nota'); if (notaEl) { notaEl.textContent = nota.toFixed(1);
+                            const notaEl = document.getElementById('ia-nota'); if (notaEl) { notaEl.textContent = nota.toFixed(
+                                    1);
                                 notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)'; }
-                            const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ? 'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
+                            const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ?
+                                    'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
                                 statusEl.textContent = status;
                                 statusEl.className = 'badge ' + badgeClass; }
                             setTimeout(() => { carregarResultados();
@@ -3566,9 +4036,9 @@
                         console.error('Erro ao salvar correção manual:', erro); });
             }
 
-            // ============================================
+            // ================================================================
             // CORREÇÃO MANUAL STANDALONE (MENU)
-            // ============================================
+            // ================================================================
             function abrirCorrecaoManualStandalone() {
                 carregarEscolasParaCorrecaoManual();
                 document.getElementById('cm-turma-select').innerHTML = '<option value="">Selecione a turma...</option>';
@@ -3773,9 +4243,11 @@
                 }
 
                 document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
-                document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
+                document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData
+                    .turmaNome;
                 document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
-                document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+                document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date()
+                    .toLocaleDateString('pt-BR');
 
                 document.getElementById('cm-info-standalone').style.display = 'grid';
                 document.getElementById('cm-grid-standalone-container').style.display = 'block';
@@ -3872,7 +4344,8 @@
 
                 const statusBadge = document.getElementById('cm-sa-status-badge');
                 if (notaFinal >= (cmStandaloneData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
-                    statusBadge.className = 'badge badge-green'; } else if (notaFinal >= (cmStandaloneData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
+                    statusBadge.className = 'badge badge-green'; } else if (notaFinal >= (cmStandaloneData.notaMinima || 5) *
+                    0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
                     statusBadge.className = 'badge badge-orange'; } else { statusBadge.textContent = '❌ REPROVADO';
                     statusBadge.className = 'badge badge-red'; }
                 document.getElementById('cm-sa-porcentagem').textContent = porcentagem + '% de aproveitamento';
@@ -3881,7 +4354,8 @@
             function preencherGabaritoManualSA() {
                 const qtd = cmStandaloneData.quantidade || 20;
                 const gabarito = cmStandaloneData.gabarito || [];
-                for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) cmStandaloneData.respostas[i] = gabarito[i]; }
+                for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) cmStandaloneData.respostas[i] =
+                        gabarito[i]; }
                 gerarGridCorrecaoManualSA();
                 atualizarResumoCorrecaoManualSA();
                 showToast('📋 Respostas preenchidas com o gabarito!', 'success');
@@ -3922,7 +4396,8 @@
                     total: qtd
                 };
 
-                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
+                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dadosCorrecao) })
                     .then(response => response.json())
                     .then(data => {
                         if (data.sucesso) {
@@ -3937,14 +4412,13 @@
                         console.error('Erro ao salvar correção manual:', erro); });
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE (SEM SELECTS)
-            // ============================================
+            // ================================================================
             async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
                 try {
                     showToast('🔄 Carregando dados...', 'info');
 
-                    // Buscar dados da prova
                     const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
                     const prova = await provaResp.json();
                     if (!prova || prova.erro) {
@@ -3952,7 +4426,6 @@
                         return;
                     }
 
-                    // Buscar dados do aluno
                     const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
                     const aluno = await alunoResp.json();
                     if (!aluno || aluno.erro) {
@@ -3960,7 +4433,6 @@
                         return;
                     }
 
-                    // Buscar histórico (respostas do aluno para esta prova)
                     const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
                     const historico = await historicoResp.json();
                     let respostas = [];
@@ -3968,13 +4440,12 @@
                         respostas = historico[0].respostas || [];
                     }
 
-                    // Preencher cmStandaloneData diretamente
                     cmStandaloneData.escolaId = parseInt(escolaId);
                     cmStandaloneData.turmaId = parseInt(turmaId);
                     cmStandaloneData.provaId = parseInt(provaId);
                     cmStandaloneData.alunoId = parseInt(alunoId);
                     cmStandaloneData.alunoNome = aluno.nome || 'Aluno';
-                    cmStandaloneData.turmaNome = ''; // será buscado depois ou pode ficar vazio
+                    cmStandaloneData.turmaNome = '';
                     cmStandaloneData.serie = prova.serie || '';
                     cmStandaloneData.gabarito = prova.gabarito || [];
                     cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
@@ -3987,24 +4458,21 @@
                     cmStandaloneData.provaTitulo = prova.titulo || 'Prova';
                     cmStandaloneData.provaData = prova.data_prova || '';
 
-                    // Abrir o modal
                     openM('m-correcao-manual-standalone');
 
-                    // Ocultar a área de seleção (escola, turma, prova, aluno e botão "Iniciar Correção")
                     const selectsContainer = document.getElementById('cm-selects-container');
                     if (selectsContainer) selectsContainer.style.display = 'none';
 
-                    // Mostrar o container da grade e o botão salvar
                     document.getElementById('cm-grid-standalone-container').style.display = 'block';
                     document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
-                    // Preencher informações do aluno no modal
                     document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
-                    document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
+                    document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData
+                        .turmaNome;
                     document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
-                    document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+                    document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date()
+                        .toLocaleDateString('pt-BR');
 
-                    // Gerar grid e resumo
                     gerarGridCorrecaoManualSA();
                     atualizarResumoCorrecaoManualSA();
 
@@ -4015,9 +4483,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÃO CHAMADA PELO BOTÃO "✏️ Editar Gabarito" NA ABA DESEMPENHO
-            // ============================================
+            // ================================================================
             async function editarGabaritoDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -4025,17 +4493,17 @@
                 const provaId = document.getElementById('filtro-prova-desempenho').value;
 
                 if (!escolaId || !turmaId || !alunoId || !provaId) {
-                    showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
+                    showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!',
+                        'error');
                     return;
                 }
 
-                // Chama a função que abre diretamente a correção manual
                 await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
             }
 
-            // ============================================
-            // FUNÇÕES DE USUÁRIO (mantidas)
-            // ============================================
+            // ================================================================
+            // FUNÇÕES DE USUÁRIO
+            // ================================================================
             function abrirModalUsuario() {
                 document.getElementById('usuario-nome').value = '';
                 document.getElementById('usuario-username').value = '';
@@ -4049,13 +4517,15 @@
             function editarUsuario(id) { showToast('✏️ Editando usuário ID ' + id + '...', 'info'); }
 
             async function excluirUsuario(id, username) {
-                if (username === 'admin') { showToast('⚠️ Não é possível excluir o usuário administrador principal!', 'error'); return; }
+                if (username === 'admin') { showToast('⚠️ Não é possível excluir o usuário administrador principal!',
+                        'error'); return; }
                 if (!confirm('Excluir o usuário "' + username + '"? Esta ação não pode ser desfeita.')) return;
                 try {
                     const response = await fetch(API_URL + '/api/usuarios/' + id, { method: 'DELETE' });
                     const result = await processarRespostaAPI(response);
                     if (result.ok) { showToast('🗑️ Usuário "' + username + '" excluído!', 'error');
-                        carregarUsuarios(); } else { showToast('Erro: ' + (result.data.erro || 'Erro desconhecido'), 'error'); }
+                        carregarUsuarios(); } else { showToast('Erro: ' + (result.data.erro || 'Erro desconhecido'),
+                            'error'); }
                 } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
             }
 
@@ -4076,20 +4546,22 @@
                     const response = await fetch(API_URL + '/api/usuarios', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nome: nome, username: username, senha: senha, email: email, perfil: perfil, ativo: ativo })
+                        body: JSON.stringify({ nome: nome, username: username, senha: senha, email: email, perfil: perfil,
+                            ativo: ativo })
                     });
                     const result = await response.json();
                     if (result.id) { showToast('✅ Usuário "' + username + '" criado com sucesso!', 'success');
                         closeM('m-usuario');
                         carregarUsuarios();
-                        carregarDados(); } else { showToast('❌ Erro ao criar usuário: ' + (result.erro || 'Erro desconhecido'), 'error'); }
+                        carregarDados(); } else { showToast('❌ Erro ao criar usuário: ' + (result.erro ||
+                            'Erro desconhecido'), 'error'); }
                 } catch (erro) { showToast('❌ Erro ao salvar: ' + erro.message, 'error');
                     console.error('Erro ao salvar usuário:', erro); }
             }
 
-            // ============================================
-            // FUNÇÕES DE TEXTO IA (simplificadas)
-            // ============================================
+            // ================================================================
+            // FUNÇÕES DE TEXTO IA
+            // ================================================================
             function prevTexto(input) {
                 const file = input.files[0];
                 if (!file) return;
@@ -4102,7 +4574,8 @@
             async function avaliarTexto() {
                 const texto = document.getElementById('txt-aluno').value;
                 const alunoId = document.getElementById('txt-aluno-select').value;
-                if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error'); return; }
+                if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!',
+                        'error'); return; }
                 document.getElementById('txt-waiting').style.display = 'none';
                 document.getElementById('txt-loading').style.display = 'block';
                 document.getElementById('txt-res').style.display = 'none';
@@ -4119,23 +4592,30 @@
 
             async function processarAvaliacaoTexto(texto, alunoId) {
                 try {
-                    const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: texto, aluno_id: alunoId || null }) });
+                    const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: {
+                            'Content-Type': 'application/json' }, body: JSON.stringify({ texto: texto, aluno_id: alunoId ||
+                                null }) });
                     const dados = await response.json();
                     document.getElementById('txt-loading').style.display = 'none';
                     document.getElementById('txt-res').style.display = 'block';
                     if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
                     document.getElementById('txt-nota').textContent = dados.nota || 0;
                     document.getElementById('txt-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                    document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                    document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' :
+                        'badge-red');
                     if (dados.metricas) {
                         document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
                         document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
                         document.getElementById('c-ort').textContent = dados.metricas.nota_gramatica || 0;
                         document.getElementById('c-voc').textContent = dados.metricas.nota_vocabulario || 0;
-                        document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
-                        document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
-                        document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
-                        document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
+                        document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) +
+                            '%';
+                        document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) +
+                            '%';
+                        document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) +
+                            '%';
+                        document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) +
+                            '%';
                     }
                     const fb = document.getElementById('txt-fb');
                     if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
@@ -4154,14 +4634,15 @@
 
             function salvarAvaliacaoTexto() { showToast('💾 Avaliação salva com sucesso!', 'success'); }
 
-            // ============================================
+            // ================================================================
             // FUNÇÕES DE CÂMERA
-            // ============================================
+            // ================================================================
             async function abrirCamera() {
                 document.getElementById('cam-modal').classList.add('show');
                 try {
                     if (camStream) camStream.getTracks().forEach(t => t.stop());
-                    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } } });
+                    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1280 },
+                            height: { ideal: 720 } } });
                     document.getElementById('cam-video').srcObject = camStream;
                 } catch (e) { showToast('❌ Câmera não disponível: ' + e.message, 'error');
                     fecharCamera(); }
@@ -4170,7 +4651,8 @@
             function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';
                 abrirCamera(); }
 
-            function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop());
+            function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream
+                        .getTracks().forEach(t => t.stop());
                     camStream = null; } }
 
             function capturarFoto() {
@@ -4202,9 +4684,9 @@
                 reader.readAsDataURL(file);
             }
 
-            // ============================================
-            // FUNÇÃO DE CORREÇÃO COM IA (mantida)
-            // ============================================
+            // ================================================================
+            // FUNÇÃO DE CORREÇÃO COM IA
+            // ================================================================
             async function processarComIA(imagemBase64) {
                 showToast('🤖 Processando...', 'ai');
                 const box = document.getElementById('ia-result');
@@ -4238,7 +4720,8 @@
                     const response = await fetch(`${API_URL}/api/corrigir`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imagem: imagemEnvio, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) })
+                        body: JSON.stringify({ imagem: imagemEnvio, prova_id: parseInt(provaId), aluno_id: parseInt(
+                                alunoId) })
                     });
 
                     if (!response.ok) {
@@ -4256,7 +4739,11 @@
                         rd.innerHTML = dados.respostas_detectadas.map((a, i) => {
                             const gab = dados.gabarito && dados.gabarito[i] ? dados.gabarito[i] : '';
                             const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
-                            return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + (a || '—') + '</span>';
+                            return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' :
+                                    'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ?
+                                    'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') +
+                                ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ?
+                                    'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + (a || '—') + '</span>';
                         }).join('');
                     }
 
@@ -4265,7 +4752,12 @@
                         cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
                             const gab = dados.gabarito && dados.gabarito[i] ? dados.gabarito[i] : '';
                             const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
-                            return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + (a || '—') + '</div></div>';
+                            return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' +
+                                (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' :
+                                    'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ?
+                                    'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') +
+                                ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ?
+                                    'var(--green)' : 'var(--red)') + ';">' + (a || '—') + '</div></div>';
                         }).join('');
                     }
 
@@ -4274,7 +4766,8 @@
                     document.getElementById('ia-turma').textContent = dados.prova || prova.titulo || 'Prova';
                     document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
                     document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                    document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                    document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' :
+                        'badge-red');
 
                     correcaoManualData.alunoId = parseInt(alunoId);
                     correcaoManualData.alunoNome = dados.aluno || aluno.nome || 'Aluno';
@@ -4286,11 +4779,13 @@
                     correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                     correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
                     correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
-                    correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+                    correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima /
+                        correcaoManualData.quantidade);
                     correcaoManualData.serie = prova.serie || '1º Ano';
 
                     if (box) box.style.display = 'block';
-                    showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
+                    showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados
+                        .nota || 0).toFixed(1), 'success');
                     carregarDashboard();
                     carregarResultados();
                 } catch (erro) {
@@ -4301,9 +4796,9 @@
 
             function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
-            // ============================================
-            // FUNÇÕES DE CRUD CORRIGIDAS (mantidas)
-            // ============================================
+            // ================================================================
+            // FUNÇÕES DE CRUD
+            // ================================================================
 
             // ===== ESCOLA =====
             async function salvarEscola() {
@@ -4398,7 +4893,9 @@
             }
 
             async function excluirEscola(id, nome) {
-                if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome + '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n\nAs provas NÃO serão afetadas.\n\nEsta ação NÃO pode ser desfeita!')) return;
+                if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome +
+                        '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n\nAs provas NÃO serão afetadas.\n\nEsta ação NÃO pode ser desfeita!'
+                        )) return;
 
                 try {
                     showToast('⏳ Excluindo escola...', 'info');
@@ -4570,7 +5067,8 @@
                         carregarDashboard();
                         carregarCombos();
                     } else {
-                        showToast('❌ Erro ao excluir turma: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                        showToast('❌ Erro ao excluir turma: ' + (result.data.erro || result.data.mensagem ||
+                            'Erro desconhecido'), 'error');
                     }
                 } catch (erro) {
                     console.error('Erro ao excluir turma:', erro);
@@ -4668,7 +5166,8 @@
                                 if (aluno.escola_id) {
                                     carregarTurmasPorEscolaParaAluno(aluno.escola_id, 'editar-aluno-turma')
                                         .then(() => {
-                                            const selectTurma = document.getElementById('editar-aluno-turma');
+                                            const selectTurma = document.getElementById(
+                                            'editar-aluno-turma');
                                             if (selectTurma) selectTurma.value = aluno.turma_id;
                                         });
                                 }
@@ -4740,7 +5239,8 @@
                         carregarDashboard();
                         carregarCombos();
                     } else {
-                        showToast('❌ Erro ao excluir aluno: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                        showToast('❌ Erro ao excluir aluno: ' + (result.data.erro || result.data.mensagem ||
+                            'Erro desconhecido'), 'error');
                     }
                 } catch (erro) {
                     console.error('Erro ao excluir aluno:', erro);
@@ -4808,7 +5308,8 @@
                         carregarDashboard();
                         carregarCombos();
                     } else {
-                        showToast('❌ Erro ao excluir prova: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                        showToast('❌ Erro ao excluir prova: ' + (result.data.erro || result.data.mensagem ||
+                            'Erro desconhecido'), 'error');
                     }
                 } catch (erro) {
                     console.error('Erro ao excluir prova:', erro);
@@ -4824,9 +5325,9 @@
                 carregarProvas();
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÕES ADICIONAIS
-            // ============================================
+            // ================================================================
             function verAlunosDaTurma(id) {
                 showToast('📋 Visualizando alunos da turma ID ' + id + '...', 'info');
                 const selectTurma = document.getElementById('filtro-turma-alunos');
@@ -4881,7 +5382,8 @@
                 if (adicionados > 0) {
                     statusDiv.style.display = 'block';
                     statusDiv.className = 'multi-status success';
-                    statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
+                    statusText.textContent =
+                    `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
                     textarea.value = '';
                 } else {
                     statusDiv.style.display = 'block';
@@ -4899,9 +5401,9 @@
                 go('lista-turma');
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÕES PARA CORREÇÃO (IA)
-            // ============================================
+            // ================================================================
             async function carregarEscolasCorrigir() {
                 try {
                     const response = await fetch(API_URL + '/api/escolas');
@@ -4944,9 +5446,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR FILTROS DO RELATÓRIO POR TURMA
-            // ============================================
+            // ================================================================
             async function carregarFiltrosRelTurma() {
                 try {
                     const respEscolas = await fetch(API_URL + '/api/escolas');
@@ -5048,9 +5550,9 @@
                 carregarRelatorioTurmaFiltrado();
             }
 
-            // ============================================
-            // CARREGAR RELATÓRIO POR TURMA FILTRADO (MODIFICADO)
-            // ============================================
+            // ================================================================
+            // CARREGAR RELATÓRIO POR TURMA FILTRADO
+            // ================================================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
                     const escolaId = document.getElementById('rel-turma-escola').value;
@@ -5114,7 +5616,6 @@
                     const totalAlunos = dadosAlunos.length;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
 
-                    // 🔹 Mapeamento de disciplinas
                     const disciplinaMap = {
                         'Português': 'portugues',
                         'Matemática': 'matematica',
@@ -5127,9 +5628,6 @@
                     };
                     const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
-                    // ============================================
-                    // 🔥 CÁLCULO DA MÉDIA GERAL (rel-media)
-                    // ============================================
                     let somaNotas = 0;
                     dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
                     const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
@@ -5138,15 +5636,11 @@
                     document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
                     document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
 
-                    // ============================================
-                    // 🔥 CÁLCULO DOS CONCEITOS (agora com base APENAS na disciplina selecionada)
-                    // ============================================
                     let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                     dadosAlunos.forEach(aluno => {
-                        // Pega os dados da disciplina específica
                         const discData = aluno[chave] || {};
                         const acertos = discData.acertos || 0;
-                        const total = discData.total || 20; // fallback
+                        const total = discData.total || 20;
                         const pct = (acertos / total) * 100;
                         const conceito = calcularConceito(pct);
                         conceitos[conceito] = (conceitos[conceito] || 0) + 1;
@@ -5164,9 +5658,6 @@
                         }
                     });
 
-                    // ============================================
-                    // 🔥 DADOS DA DISCIPLINA PARA O CARD INFERIOR
-                    // ============================================
                     let totalAcertos = 0,
                         totalErros = 0,
                         totalQuestoes = 0;
@@ -5263,9 +5754,9 @@
                 }).catch(e => console.error('Erro ao recarregar provas:', e));
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
-            // ============================================
+            // ================================================================
 
             async function carregarEscolasDesempenho() {
                 try {
@@ -5307,8 +5798,10 @@
                         if (current) selectProva.value = current;
                     }
 
-                    document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
-                    document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
+                    document.getElementById('filtro-turma-desempenho').innerHTML =
+                    '<option value="">Selecione a turma...</option>';
+                    document.getElementById('filtro-aluno-desempenho').innerHTML =
+                    '<option value="">Selecione o aluno...</option>';
 
                 } catch (erro) {
                     console.error('Erro ao carregar escolas para desempenho:', erro);
@@ -5368,7 +5861,6 @@
                 }
             }
 
-            // ===== FUNÇÃO GERAR DESEMPENHO =====
             async function gerarDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -5416,7 +5908,8 @@
                         if (correcao.disciplina) disciplina = correcao.disciplina;
                     } else {
                         try {
-                            const respostasResp = await fetch(`${API_URL}/api/respostas?aluno_id=${alunoId}&prova_id=${provaId}`);
+                            const respostasResp = await fetch(
+                            `${API_URL}/api/respostas?aluno_id=${alunoId}&prova_id=${provaId}`);
                             const respostasData = await respostasResp.json();
                             if (respostasData && !respostasData.erro) {
                                 respostasAluno = respostasData.respostas || [];
@@ -5490,7 +5983,6 @@
                     document.getElementById('info-prova').textContent = prova.titulo || '—';
                     document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
 
-                    // ---- CARD ÚNICO DA DISCIPLINA (com BNCC) ----
                     const card = document.getElementById('desempenho-disciplina-unica');
                     card.style.display = 'block';
 
@@ -5503,7 +5995,8 @@
                         div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
                         let bnccHtml = '';
                         if (q.bncc && q.bncc.trim() !== '') {
-                            bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                            bnccHtml =
+                                `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
                         }
                         div.innerHTML = `
                             <div class="q-num">Q${q.numero}</div>
@@ -5527,7 +6020,6 @@
 
                     document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
-                    // ---- CARD GABARITO OFICIAL DA PROVA (com BNCC) ----
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
 
@@ -5546,7 +6038,8 @@
                         gabGrid.appendChild(div);
                     });
 
-                    showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
+                    showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`,
+                        'success');
 
                 } catch (erro) {
                     console.error('❌ Erro ao gerar desempenho:', erro);
@@ -5554,7 +6047,6 @@
                 }
             }
 
-            // ===== FUNÇÃO GERAR DOCUMENTO =====
             function gerarDocumentoDesempenho() {
                 if (gerandoDocumento) {
                     showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
@@ -5582,14 +6074,17 @@
                         return;
                     }
 
-                    const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
+                    const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito,
+                        disciplina, totalQuestoes, gabarito, bncc } = data;
 
                     let questoesHTML = '';
                     resultadoQuestoes.forEach(q => {
                         const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                        const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                        const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ?
+                            '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
                         let bnccHTML = '';
-                        if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                        if (q.bncc && q.bncc.trim() !== '') bnccHTML =
+                            `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
                         questoesHTML += `
                             <div class="questao-item ${classe}">
                                 <div class="q-num">Q${q.numero}</div>
@@ -5717,7 +6212,6 @@
                             </div>
                         </div>
 
-                        <!-- CARD GABARITO OFICIAL COM BNCC -->
                         <div class="gabarito-oficial-card">
                             <div class="header">
                                 <strong>📋 Gabarito Oficial da Prova</strong>
@@ -5785,8 +6279,10 @@
 
             function limparFiltrosDesempenho() {
                 document.getElementById('filtro-escola-desempenho').value = '';
-                document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
-                document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
+                document.getElementById('filtro-turma-desempenho').innerHTML =
+                '<option value="">Selecione a turma...</option>';
+                document.getElementById('filtro-aluno-desempenho').innerHTML =
+                '<option value="">Selecione o aluno...</option>';
                 document.getElementById('filtro-prova-desempenho').value = '';
                 document.getElementById('resultado-desempenho').style.display = 'none';
                 document.getElementById('desempenho-disciplina-unica').style.display = 'none';
@@ -5795,12 +6291,12 @@
                 showToast('✕ Filtros limpos!', 'info');
             }
 
-            // ============================================
-            // FUNÇÕES PARA PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL
-            // ============================================
+            // ================================================================
+            // FUNÇÕES PARA PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL (NOVO)
+            // ================================================================
+
             async function carregarCombosProducao() {
                 try {
-                    // Escolas
                     const respEscolas = await fetch(API_URL + '/api/escolas');
                     const escolas = await respEscolas.json();
                     const selectEscola = document.getElementById('pt-escola');
@@ -5817,7 +6313,6 @@
                         if (current) carregarTurmasProducao(current);
                     }
 
-                    // Provas
                     const respProvas = await fetch(API_URL + '/api/provas');
                     const provas = await respProvas.json();
                     const selectProva = document.getElementById('pt-prova');
@@ -5828,25 +6323,25 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.serie = p.serie || '';
                             selectProva.appendChild(opt);
                         });
                         if (current) selectProva.value = current;
                     }
 
-                    // Turma e Aluno serão carregados dinamicamente
                     document.getElementById('pt-turma').innerHTML = '<option value="">Selecione a turma...</option>';
                     document.getElementById('pt-aluno').innerHTML = '<option value="">Selecione o aluno...</option>';
 
-                    // Inicializar a avaliação vazia
                     document.getElementById('pt-avaliacao-container').innerHTML = `
                         <div style="text-align:center; padding:20px; color:var(--text3);">
                             Selecione uma prova e um aluno e clique em "Carregar Avaliação".
                         </div>
                     `;
                     document.getElementById('pt-resultado-container').style.display = 'none';
+                    document.getElementById('pt-resumo-geral-container').style.display = 'none';
                     document.getElementById('pt-status').innerHTML = '';
+                    document.getElementById('pt-serie-indicador').style.display = 'none';
 
-                    // Desabilitar botões até carregar
                     document.getElementById('pt-btn-editar').disabled = true;
                     document.getElementById('pt-btn-visualizar').disabled = true;
                     document.getElementById('pt-btn-salvar').disabled = true;
@@ -5902,17 +6397,20 @@
                 }
             }
 
-            // ============================================
-            // FUNÇÃO PRINCIPAL: CARREGAR AVALIAÇÃO (substitui carregarTextoProducao)
-            // ============================================
+            // ================================================================
+            // FUNÇÃO PRINCIPAL: CARREGAR AVALIAÇÃO POR SÉRIE
+            // ================================================================
             function carregarAvaliacaoProducao() {
                 const provaId = document.getElementById('pt-prova').value;
                 const alunoId = document.getElementById('pt-aluno').value;
                 const container = document.getElementById('pt-avaliacao-container');
                 const statusDiv = document.getElementById('pt-status');
                 const resultadoContainer = document.getElementById('pt-resultado-container');
+                const resumoContainer = document.getElementById('pt-resumo-geral-container');
+                const serieIndicador = document.getElementById('pt-serie-indicador');
+                const tituloSerie = document.getElementById('pt-titulo-serie');
+                const qtdeQuestoes = document.getElementById('pt-qtde-questoes');
 
-                // Desabilitar botões enquanto carrega
                 document.getElementById('pt-btn-editar').disabled = true;
                 document.getElementById('pt-btn-visualizar').disabled = true;
                 document.getElementById('pt-btn-salvar').disabled = true;
@@ -5925,21 +6423,54 @@
                         </div>
                     `;
                     resultadoContainer.style.display = 'none';
+                    resumoContainer.style.display = 'none';
+                    serieIndicador.style.display = 'none';
                     statusDiv.innerHTML = '⚠️ Selecione uma prova e um aluno.';
                     return;
                 }
 
                 statusDiv.innerHTML = '🔄 Carregando avaliação...';
 
-                // Buscar a prova para obter dados (disciplina, etc.) - mas o conteúdo é fixo
-                // A avaliação de produção de texto sempre será a mesma (questão 16 com critério de desenho)
-                // Então geramos o HTML fixo e carregamos a seleção salva, se houver.
+                // Obter a série da prova
+                const selectProva = document.getElementById('pt-prova');
+                const optionProva = selectProva.options[selectProva.selectedIndex];
+                let serie = optionProva?.dataset?.serie || '1º Ano';
 
+                // Carregar a avaliação correspondente à série
+                const avaliacao = avaliacoesPorSerie[serie];
+                if (!avaliacao) {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:20px; color:var(--red);">
+                            ❌ Nenhuma avaliação cadastrada para a série <strong>${serie}</strong>.
+                            <br><small>Entre em contato com o administrador.</small>
+                        </div>
+                    `;
+                    statusDiv.innerHTML = '❌ Série não encontrada.';
+                    return;
+                }
+
+                // Mostrar indicador da série
+                serieIndicador.style.display = 'inline-block';
+                serieIndicador.textContent = serie;
+
+                // Atualizar título
+                tituloSerie.textContent = `— ${avaliacao.titulo}`;
+                qtdeQuestoes.textContent = `${avaliacao.questoes.length} questões`;
+
+                // Recuperar respostas salvas (localStorage)
                 const chave = `producao_avaliacao_${provaId}_${alunoId}`;
-                let selecionado = localStorage.getItem(chave);
+                const salvo = localStorage.getItem(chave);
+                let respostasSalvas = {};
+                if (salvo) {
+                    try {
+                        respostasSalvas = JSON.parse(salvo);
+                    } catch (e) {
+                        respostasSalvas = {};
+                    }
+                }
 
-                // Renderizar o formulário da prova online com a seleção atual
-                renderizarAvaliacao(selecionado);
+                // Renderizar as questões
+                renderizarAvaliacaoProducao(avaliacao, respostasSalvas, serie);
 
                 // Habilitar botões
                 document.getElementById('pt-btn-editar').disabled = false;
@@ -5947,102 +6478,192 @@
                 document.getElementById('pt-btn-salvar').disabled = false;
                 document.getElementById('pt-btn-excluir').disabled = false;
 
-                statusDiv.innerHTML = '✅ Avaliação carregada. Utilize os botões para editar, visualizar, salvar ou excluir.';
+                statusDiv.innerHTML = `✅ Avaliação da série <strong>${serie}</strong> carregada. Utilize os botões para editar, visualizar, salvar ou excluir.`;
+
+                // Calcular resumo
+                calcularResumoProducao(avaliacao, respostasSalvas);
             }
 
-            // ============================================
-            // FUNÇÃO PARA RENDERIZAR O FORMULÁRIO DA PROVA ONLINE
-            // ============================================
-            function renderizarAvaliacao(selecionado) {
+            // ================================================================
+            // RENDERIZAR AVALIAÇÃO DE PRODUÇÃO DE TEXTO
+            // ================================================================
+            function renderizarAvaliacaoProducao(avaliacao, respostasSalvas, serie) {
                 const container = document.getElementById('pt-avaliacao-container');
-                // Gerar HTML do formulário
-                const html = `
-                    <div style="background:#F5F9FF; border-left:6px solid #1565C0; padding:20px; border-radius:8px; margin-bottom:15px;">
-                        <h3 style="color:#0D47A1; margin-bottom:10px;">QUESTÃO 16</h3>
-                        <p><strong>Habilidade BNCC:</strong> EF15LP18</p>
-                        <p>Relacionar texto com ilustrações e outros recursos gráficos.</p>
-                    </div>
+                const resultadoContainer = document.getElementById('pt-resultado-container');
 
-                    <div style="background:#fafafa; border:1px solid #ddd; border-radius:8px; padding:20px;">
-                        <h4 style="color:#1565C0; margin-bottom:20px;">CRITÉRIO: DESENHO (REPRESENTAÇÃO DAS IDEIAS)</h4>
+                if (!avaliacao || !avaliacao.questoes || avaliacao.questoes.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">❌ Avaliação sem questões.</div>`;
+                    return;
+                }
 
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '1' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n1" value="1" ${selecionado == '1' ? 'checked' : ''} disabled>
-                            <label for="n1" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL INICIAL</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho não representa o tema ou não foi realizado.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">1 Ponto</div>
-                            </label>
+                let html = '';
+                let totalSelecionadas = 0;
+                let somaPontos = 0;
+
+                avaliacao.questoes.forEach((questao, idx) => {
+                    const valorSalvo = respostasSalvas[questao.id] || '';
+                    const isSelecionada = valorSalvo !== '';
+
+                    // Encontrar o nível selecionado para exibir
+                    let nivelSelecionado = null;
+                    if (isSelecionada) {
+                        nivelSelecionado = questao.niveis.find(n => n.valor === valorSalvo);
+                        if (nivelSelecionado) {
+                            totalSelecionadas++;
+                            somaPontos += parseInt(nivelSelecionado.pontos) || 0;
+                        }
+                    }
+
+                    let opcoesHTML = '';
+                    questao.niveis.forEach(nivel => {
+                        const checked = nivel.valor === valorSalvo ? 'checked' : '';
+                        const selecionadaClass = nivel.valor === valorSalvo ? 'selecionada' : '';
+                        opcoesHTML += `
+                            <div class="opcao ${selecionadaClass}" style="display:flex; align-items:flex-start; gap:14px; padding:12px 14px; border:1.5px solid ${nivel.valor === valorSalvo ? 'var(--blue)' : 'var(--border)'}; border-radius:8px; transition:all 0.25s; background:${nivel.valor === valorSalvo ? 'rgba(59,130,246,0.08)' : 'transparent'};">
+                                <input type="radio" name="questao_${questao.id}" id="q${questao.id}_n${nivel.valor}" value="${nivel.valor}" ${checked} disabled>
+                                <label for="q${questao.id}_n${nivel.valor}" style="cursor:pointer; width:100%;">
+                                    <strong style="color:${nivel.valor === valorSalvo ? 'var(--blue)' : 'var(--text)'};">${nivel.nome}</strong>
+                                    <div class="descricao" style="color:var(--text2); font-size:12px; margin-top:2px;">${nivel.descricao}</div>
+                                    <div class="pontos" style="color:${nivel.valor === valorSalvo ? 'var(--green)' : 'var(--blue)'}; font-weight:700; margin-top:3px; font-size:12px;">${nivel.pontos} ponto${nivel.pontos > 1 ? 's' : ''}</div>
+                                </label>
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        <div class="pt-questao" style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:18px;">
+                            <div class="enunciado">
+                                <span class="badge-questao" style="font-size:11px; background:var(--blue); color:#fff; padding:2px 10px; border-radius:20px; margin-right:8px; display:inline-block;">Q${idx+1}</span>
+                                ${questao.enunciado}
+                            </div>
+                            <div class="rubrica" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                                ${opcoesHTML}
+                            </div>
+                            ${isSelecionada && nivelSelecionado ? `
+                                <div class="pt-resultado-questao" style="display:flex; flex-wrap:wrap; gap:16px 32px; margin-top:12px; padding:10px 14px; background:rgba(16,185,129,0.06); border-radius:8px; border-left:4px solid var(--green);">
+                                    <span class="item"><strong>Nível:</strong> ${nivelSelecionado.nome}</span>
+                                    <span class="item"><strong>Pontos:</strong> ${nivelSelecionado.pontos}</span>
+                                    <span class="item"><span class="conceito-badge ${nivelSelecionado.nome.toLowerCase()}">${nivelSelecionado.nome}</span></span>
+                                </div>
+                            ` : `
+                                <div style="margin-top:10px; padding:8px 12px; background:rgba(239,68,68,0.06); border-radius:6px; border-left:3px solid var(--red); font-size:12px; color:var(--text3);">
+                                    ⚠️ Nenhum nível selecionado para esta questão.
+                                </div>
+                            `}
                         </div>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '2' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n2" value="2" ${selecionado == '2' ? 'checked' : ''} disabled>
-                            <label for="n2" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL BÁSICO</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho representa parcialmente o tema ou possui poucos elementos relacionados à proposta.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">2 Pontos</div>
-                            </label>
-                        </div>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '3' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n3" value="3" ${selecionado == '3' ? 'checked' : ''} disabled>
-                            <label for="n3" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL PROFICIENTE</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho representa o tema e apresenta alguns detalhes importantes.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">3 Pontos</div>
-                            </label>
-                        </div>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '4' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n4" value="4" ${selecionado == '4' ? 'checked' : ''} disabled>
-                            <label for="n4" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL AVANÇADO</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho representa claramente o tema proposto, apresenta riqueza de detalhes e complementa a escrita.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">4 Pontos</div>
-                            </label>
-                        </div>
-                    </div>
-                `;
+                    `;
+                });
 
                 container.innerHTML = html;
 
-                // Se houver seleção, exibir o resultado
-                const resultadoContainer = document.getElementById('pt-resultado-container');
-                if (selecionado) {
-                    const conceitos = { '1': 'Inicial', '2': 'Básico', '3': 'Proficiente', '4': 'Avançado' };
-                    const cores = { '1': '#ef4444', '2': '#f59e0b', '3': '#3b82f6', '4': '#10b981' };
+                // Mostrar resumo geral
+                const resumoContainer = document.getElementById('pt-resumo-geral-container');
+                if (totalSelecionadas > 0) {
+                    resumoContainer.style.display = 'grid';
+                    const totalQuestoes = avaliacao.questoes.length;
+                    const media = totalQuestoes > 0 ? (somaPontos / totalQuestoes) : 0;
+                    const pct = totalQuestoes > 0 ? Math.round((totalSelecionadas / totalQuestoes) * 100) : 0;
+                    const conceito = calcularConceitoLabel(pct);
+                    const badgeClass = calcularConceitoBadge(calcularConceito(pct));
+
+                    resumoContainer.innerHTML = `
+                        <div class="item">
+                            <div class="valor green">${totalSelecionadas}/${totalQuestoes}</div>
+                            <div class="rotulo">Questões Avaliadas</div>
+                        </div>
+                        <div class="item">
+                            <div class="valor blue">${somaPontos.toFixed(1)}</div>
+                            <div class="rotulo">Pontuação Total</div>
+                        </div>
+                        <div class="item">
+                            <div class="valor orange">${pct}%</div>
+                            <div class="rotulo">Aproveitamento</div>
+                        </div>
+                        <div class="item">
+                            <div class="valor purple"><span class="badge ${badgeClass}" style="font-size:14px; padding:4px 14px;">${conceito}</span></div>
+                            <div class="rotulo">Conceito Geral</div>
+                        </div>
+                    `;
+                } else {
+                    resumoContainer.style.display = 'none';
+                }
+
+                // Mostrar resultado container (compatibilidade)
+                if (totalSelecionadas > 0) {
                     resultadoContainer.style.display = 'block';
-                    resultadoContainer.style.borderLeftColor = cores[selecionado] || 'var(--green)';
+                    resultadoContainer.style.borderLeftColor = 'var(--green)';
                     resultadoContainer.innerHTML = `
-                        ✅ Avaliação registrada!
-                        <br><strong>Conceito:</strong> ${conceitos[selecionado] || '—'}
-                        <br><strong>Pontuação:</strong> ${selecionado} ponto(s).
+                        ✅ Avaliação registrada para ${totalSelecionadas} questão(ões).
+                        <br><strong>Pontuação total:</strong> ${somaPontos.toFixed(1)} pontos.
                     `;
                 } else {
                     resultadoContainer.style.display = 'none';
                 }
             }
 
-            // ============================================
-            // FUNÇÕES DE CONTROLE DOS BOTÕES
-            // ============================================
+            // ================================================================
+            // CALCULAR RESUMO DA PRODUÇÃO DE TEXTO
+            // ================================================================
+            function calcularResumoProducao(avaliacao, respostasSalvas) {
+                const resumoContainer = document.getElementById('pt-resumo-geral-container');
+                if (!avaliacao || !avaliacao.questoes) return;
+
+                let totalSelecionadas = 0;
+                let somaPontos = 0;
+                const totalQuestoes = avaliacao.questoes.length;
+
+                avaliacao.questoes.forEach(q => {
+                    const val = respostasSalvas[q.id] || '';
+                    if (val) {
+                        totalSelecionadas++;
+                        const nivel = q.niveis.find(n => n.valor === val);
+                        if (nivel) somaPontos += parseInt(nivel.pontos) || 0;
+                    }
+                });
+
+                if (totalSelecionadas === 0) {
+                    resumoContainer.style.display = 'none';
+                    return;
+                }
+
+                resumoContainer.style.display = 'grid';
+                const media = totalQuestoes > 0 ? (somaPontos / totalQuestoes) : 0;
+                const pct = totalQuestoes > 0 ? Math.round((totalSelecionadas / totalQuestoes) * 100) : 0;
+                const conceito = calcularConceitoLabel(pct);
+                const badgeClass = calcularConceitoBadge(calcularConceito(pct));
+
+                resumoContainer.innerHTML = `
+                    <div class="item">
+                        <div class="valor green">${totalSelecionadas}/${totalQuestoes}</div>
+                        <div class="rotulo">Questões Avaliadas</div>
+                    </div>
+                    <div class="item">
+                        <div class="valor blue">${somaPontos.toFixed(1)}</div>
+                        <div class="rotulo">Pontuação Total</div>
+                    </div>
+                    <div class="item">
+                        <div class="valor orange">${pct}%</div>
+                        <div class="rotulo">Aproveitamento</div>
+                    </div>
+                    <div class="item">
+                        <div class="valor purple"><span class="badge ${badgeClass}" style="font-size:14px; padding:4px 14px;">${conceito}</span></div>
+                        <div class="rotulo">Conceito Geral</div>
+                    </div>
+                `;
+            }
+
+            // ================================================================
+            // FUNÇÕES DE CONTROLE DOS BOTÕES DA PRODUÇÃO DE TEXTO
+            // ================================================================
             function habilitarEdicaoAvaliacao() {
-                const radios = document.querySelectorAll('input[name="nota"]');
+                const radios = document.querySelectorAll('#pt-avaliacao-container input[type="radio"]');
                 radios.forEach(r => r.disabled = false);
-                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado. Selecione um nível e clique em Salvar.';
-                showToast('✏️ Agora você pode selecionar um conceito.', 'info');
+                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado. Selecione os níveis e clique em Salvar.';
+                showToast('✏️ Agora você pode selecionar os níveis de cada questão.', 'info');
             }
 
             function visualizarAvaliacao() {
-                const radios = document.querySelectorAll('input[name="nota"]');
+                const radios = document.querySelectorAll('#pt-avaliacao-container input[type="radio"]');
                 radios.forEach(r => r.disabled = true);
                 document.getElementById('pt-status').innerHTML = '👁️ Modo visualização (somente leitura).';
                 showToast('👁️ Modo visualização ativado.', 'info');
@@ -6056,23 +6677,31 @@
                     return;
                 }
 
-                const selectedRadio = document.querySelector('input[name="nota"]:checked');
-                if (!selectedRadio) {
-                    showToast('⚠️ Selecione um nível de avaliação!', 'warning');
+                // Coletar todos os radios selecionados
+                const radios = document.querySelectorAll('#pt-avaliacao-container input[type="radio"]:checked');
+                const respostas = {};
+
+                radios.forEach(r => {
+                    const nome = r.name;
+                    const questaoId = nome.replace('questao_', '');
+                    respostas[questaoId] = r.value;
+                });
+
+                if (Object.keys(respostas).length === 0) {
+                    showToast('⚠️ Selecione pelo menos um nível de avaliação!', 'warning');
                     return;
                 }
 
-                const valor = selectedRadio.value;
                 const chave = `producao_avaliacao_${provaId}_${alunoId}`;
-                localStorage.setItem(chave, valor);
+                localStorage.setItem(chave, JSON.stringify(respostas));
 
                 // Atualizar visual
-                renderizarAvaliacao(valor);
+                carregarAvaliacaoProducao();
                 document.getElementById('pt-status').innerHTML = '💾 Avaliação salva com sucesso!';
                 showToast('✅ Avaliação salva localmente.', 'success');
 
                 // Desabilitar radios após salvar (volta ao modo visualização)
-                document.querySelectorAll('input[name="nota"]').forEach(r => r.disabled = true);
+                document.querySelectorAll('#pt-avaliacao-container input[type="radio"]').forEach(r => r.disabled = true);
             }
 
             function excluirAvaliacaoProducao() {
@@ -6089,17 +6718,18 @@
                 localStorage.removeItem(chave);
 
                 // Resetar visual
-                renderizarAvaliacao(null);
+                carregarAvaliacaoProducao();
                 document.getElementById('pt-status').innerHTML = '🗑️ Avaliação excluída.';
                 document.getElementById('pt-resultado-container').style.display = 'none';
+                document.getElementById('pt-resumo-geral-container').style.display = 'none';
                 showToast('🗑️ Avaliação excluída com sucesso.', 'error');
 
-                document.querySelectorAll('input[name="nota"]').forEach(r => r.disabled = true);
+                document.querySelectorAll('#pt-avaliacao-container input[type="radio"]').forEach(r => r.disabled = true);
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR DADOS - FUNÇÃO PRINCIPAL
-            // ============================================
+            // ================================================================
             async function carregarDados() {
                 console.log('🔄 Carregando dados do sistema...');
                 try {
@@ -6134,9 +6764,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR CONCEITO REAL
-            // ============================================
+            // ================================================================
             async function carregarConceitoReal() {
                 try {
                     const [conceitoResp, turmasResp] = await Promise.all([
@@ -6195,7 +6825,8 @@
                         if (item.total_correcoes !== undefined) turma.totalCorrecoes += item.total_correcoes;
                         else if (item.correcoes !== undefined) turma.totalCorrecoes += item.correcoes;
                         else turma.totalCorrecoes += 1;
-                        if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') turma.nome = item.nome;
+                        if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') turma.nome = item
+                            .nome;
                     });
 
                     let turmasAgrupadas;
@@ -6224,7 +6855,12 @@
                     if (dadosFiltrados.length > maxBarras) dadosFiltrados = dadosFiltrados.slice(0, maxBarras);
 
                     let html = '<div class="chart-bars">';
-                    const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
+                    const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)',
+                        'linear-gradient(180deg,#06b6d4,#0e7490)',
+                        'linear-gradient(180deg,#8b5cf6,#6d28d9)',
+                        'linear-gradient(180deg,#10b981,#047857)',
+                        'linear-gradient(180deg,#f59e0b,#b45309)'
+                    ];
 
                     dadosFiltrados.forEach((turma, index) => {
                         const nome = turma.nome || `Turma ${turma.id}`;
@@ -6253,9 +6889,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR ÚLTIMAS CORREÇÕES
-            // ============================================
+            // ================================================================
             async function carregarUltimasCorrecoes() {
                 try {
                     const response = await fetch(API_URL + '/api/historico');
@@ -6271,8 +6907,10 @@
                             const total = item.total || 20;
                             const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
                             const conceito = calcularConceito(porcentagem);
-                            const badgeMap = { 'inicial': 'badge-conceito-inicial', 'basico': 'badge-conceito-basico', 'proficiente': 'badge-conceito-proficiente', 'avancado': 'badge-conceito-avancado' };
-                            const nomeConceito = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' };
+                            const badgeMap = { 'inicial': 'badge-conceito-inicial', 'basico': 'badge-conceito-basico',
+                                'proficiente': 'badge-conceito-proficiente', 'avancado': 'badge-conceito-avancado' };
+                            const nomeConceito = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico',
+                                'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' };
                             const badge = badgeMap[conceito] || 'badge-gray';
                             const label = nomeConceito[conceito] || 'Indefinido';
                             return `<tr>
@@ -6286,9 +6924,9 @@
                 } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR USUÁRIOS
-            // ============================================
+            // ================================================================
             async function carregarUsuarios() {
                 try {
                     const response = await fetch(API_URL + '/api/usuarios');
@@ -6305,26 +6943,32 @@
                         const statusText = u.ativo ? 'Ativo' : 'Inativo';
                         const isAdmin = u.username === 'admin';
                         return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
-                            '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
-                            '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
+                            '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' +
+                            (u.nome || '') + '</small></td>' +
+                            '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' :
+                                'Usuário') + '</span></td>' +
                             '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
                             '<td>' +
                             '<div class="btn-group">' +
-                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
+                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' :
+                                '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id +
+                                ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id +
+                                ', \'' + u.username + '\')">🗑️</button>') +
                             '</div>' +
                             '</td></tr>';
                     }).join('');
                 } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
             }
 
-            // ============================================
+            // ================================================================
             // EXPORTAR FUNCTIONS
-            // ============================================
+            // ================================================================
             function exportarResultadosFiltrados() {
                 showToast('📥 Exportando resultados filtrados...', 'info');
                 const tbody = document.getElementById('tb-resultados-filtrado');
                 if (!tbody) return;
-                let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,CH_Acertos,CH_Erros,CH_Conceito,CN_Acertos,CN_Erros,CN_Conceito,Escola,Turma\n';
+                let csv =
+                    'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,CH_Acertos,CH_Erros,CH_Conceito,CN_Acertos,CN_Erros,CN_Conceito,Escola,Turma\n';
                 tbody.querySelectorAll('tr').forEach(row => {
                     const cells = row.querySelectorAll('td');
                     if (cells.length >= 20) {
@@ -6471,7 +7115,9 @@
                 let csv = 'Escola,Turmas,Alunos,Média,Aprovação\n';
                 tbody.querySelectorAll('tr').forEach(row => {
                     const cells = row.querySelectorAll('td');
-                    if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + '\n'; }
+                    if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() +
+                            ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4]
+                            .textContent.trim() + '\n'; }
                 });
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
@@ -6483,9 +7129,9 @@
                 showToast('✅ Relatório exportado!', 'success');
             }
 
-            // ============================================
+            // ================================================================
             // GABARITO - BUILD GRID (COM BNCC)
-            // ============================================
+            // ================================================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
                 if (!grid) return;
@@ -6496,7 +7142,8 @@
                 const total = parseInt(totalEl.value) || 20;
                 const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                 const lbl = document.getElementById('gab-label');
-                if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
+                if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' :
+                        '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
                 grid.innerHTML = '';
                 for (let i = 1; i <= total; i++) {
                     const div = document.createElement('div');
@@ -6515,7 +7162,8 @@
             function fillGabRand() {
                 const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
                 const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)];
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts
+                        .length)];
                     s.classList.add('filled'); });
                 showToast('🎲 Gabarito de teste preenchido!');
             }
@@ -6526,9 +7174,9 @@
                 document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
             }
 
-            // ============================================
+            // ================================================================
             // SALVAR GABARITO (COM BNCC)
-            // ============================================
+            // ================================================================
             async function saveGab() {
                 try {
                     const selects = document.querySelectorAll('.gab-select');
@@ -6540,7 +7188,8 @@
                     bnccInputs.forEach(inp => { bncc.push(inp.value.trim() || ''); });
 
                     const respostasValidas = respostas.filter(r => r !== '');
-                    if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
+                    if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!',
+                            'error'); return; }
 
                     const provaId = document.getElementById('gab-prova').value;
                     if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
@@ -6567,9 +7216,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // EDITAR GABARITO (COM BNCC)
-            // ============================================
+            // ================================================================
             function editarGabarito(id) {
                 showToast('✏️ Carregando gabarito...', 'info');
                 fetch(API_URL + '/api/provas/' + id)
@@ -6583,7 +7232,9 @@
                             go('gabarito');
 
                             setTimeout(() => {
-                                const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
+                                const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4',
+                                    '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8',
+                                    '9º Ano': '9' };
                                 const serieVal = serieMap[prova.serie] || '2';
                                 document.getElementById('gab-serie').value = serieVal;
                                 document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
@@ -6597,7 +7248,8 @@
                                     const newSelects = document.querySelectorAll('.gab-select');
                                     const newBncc = document.querySelectorAll('.gab-bncc');
                                     newSelects.forEach((s, i) => {
-                                        if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i];
+                                        if (i < gabarito.length && gabarito[i]) { s.value =
+                                            gabarito[i];
                                             s.classList.add('filled'); }
                                     });
                                     newBncc.forEach((inp, i) => {
@@ -6615,9 +7267,9 @@
                         console.error('Erro ao carregar gabarito:', e); });
             }
 
-            // ============================================
+            // ================================================================
             // EXCLUIR GABARITO
-            // ============================================
+            // ================================================================
             async function excluirGabarito(id, nome) {
                 if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
                 try {
@@ -6632,7 +7284,8 @@
                         carregarGabaritos();
                         carregarProvas();
                     } else {
-                        showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                        showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem ||
+                            'Erro desconhecido'), 'error');
                     }
                 } catch (erro) {
                     console.error('Erro ao excluir gabarito:', erro);
@@ -6640,9 +7293,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // LISTA POR TURMA
-            // ============================================
+            // ================================================================
             async function carregarTurmasLista(escolaId) {
                 const select = document.getElementById('lista-turma');
                 select.innerHTML = '<option value="">Selecione a turma</option>';
@@ -6676,22 +7329,36 @@
                     const turma = turmas.find(t => t.id == turmaId);
                     const container = document.getElementById('lista-resultado');
                     if (!container) return;
-                    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+                    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML =
+                            '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
                         showToast('❌ Nenhum aluno na turma!', 'error'); return; }
                     const provasResp = await fetch(API_URL + '/api/provas');
                     const provas = await provasResp.json();
                     const prova = provas.find(p => p.turma_id == turmaId);
-                    if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
+                    if (!prova) { container.innerHTML =
+                            '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
                         showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
                     const escolaResp = await fetch(API_URL + '/api/escolas');
                     const escolas = await escolaResp.json();
                     const escola = escolas.find(e => e.id == turma?.escola_id);
-                    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
+                    let html =
+                        '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' +
+                        (escola?.nome || 'Escola') +
+                        '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' +
+                        (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos
+                        .length + ' alunos</div></div>';
                     html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-                    alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
-                    html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
+                    alunos.forEach(aluno => { html +=
+                            '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' +
+                            aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada ||
+                                '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' +
+                            escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id +
+                            ')">📄 Gerar Cartão</button></div>'; });
+                    html +=
+                        '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
                     container.innerHTML = html;
-                    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
+                    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!',
+                    'info');
                 } catch (erro) { console.error('Erro ao gerar lista:', erro);
                     showToast('❌ Erro: ' + erro.message, 'error'); }
             }
@@ -6705,14 +7372,19 @@
                     const response = await fetch(API_URL + '/api/gerar_gabarito', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
+                        body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId),
+                            aluno_id: parseInt(alunoId), prova_id: parseInt(provaId),
+                            quantidade_questoes: qtdQuestoes })
                     });
                     if (response.ok) {
                         const html = await response.text();
                         const novaAba = window.open('', '_blank');
                         novaAba.document.write(html);
                         novaAba.document.close();
-                        document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
+                        document.getElementById('lista-resultado').innerHTML =
+                            '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' +
+                            qtdQuestoes +
+                            ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
                         showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
                     } else {
                         const erro = await response.json();
@@ -6722,15 +7394,16 @@
                     showToast('❌ Erro: ' + erro.message, 'error'); }
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÕES AUXILIARES
-            // ============================================
+            // ================================================================
             function switchTab(idx, btn) {
                 const parent = btn.closest('.tab-nav');
                 if (parent) { parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active'); }
                 const card = btn.closest('.card');
-                if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
+                if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' :
+                            'none'; }); }
             }
 
             function openM(id) {
@@ -6743,7 +7416,8 @@
 
             function closeM(id) { document.getElementById(id).classList.remove('show'); }
 
-            document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
+            document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target ===
+                        m) m.classList.remove('show'); }); });
 
             function gerarGabaritoModal(tipo) {
                 const grid = document.getElementById('modal-gabarito-grid');
@@ -6767,7 +7441,8 @@
                     input.style.textTransform = 'uppercase';
                     input.placeholder = i;
                     input.title = 'Questão ' + i;
-                    input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
+                    input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g,
+                            ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
                     grid.appendChild(input);
                 }
             }
@@ -6788,7 +7463,8 @@
                 const { row, tipo, nome } = delTarget;
                 row.classList.add('deleting');
                 setTimeout(() => { row.remove();
-                    showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
+                    showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).',
+                        'error');
                     delTarget = null;
                     renumerarTabela(row.closest('tbody')); }, 350);
             }
@@ -6806,12 +7482,14 @@
 
             function filtrarTabela(input, tbodyId) {
                 const val = input.value.toLowerCase();
-                document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none'; });
+                document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent
+                        .toLowerCase().includes(val) ? '' : 'none'; });
             }
 
             function filtrarSerie(sel) {
                 const val = sel.value;
-                document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
+                document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset
+                        .serie === val) ? '' : 'none'; });
             }
 
             function showToast(msg, type) {
@@ -6835,7 +7513,8 @@
                 const info = document.getElementById('info-alts');
                 if (!s || !info) return;
                 const is1 = s.value.startsWith('1');
-                info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
+                info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value +
+                    ' — Gabarito com 4 alternativas: A, B, C, D';
                 info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
                 info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
                 info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
@@ -6865,7 +7544,12 @@
                             if (turmas && turmas.length > 0) {
                                 tbody.innerHTML = turmas.map(t => {
                                     const totalAlunos = t.total_alunos || 0;
-                                    return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                                    return '<tr><td><strong>' + t.nome +
+                                        '</strong></td><td><span class="badge badge-purple">' + (t
+                                            .serie || '—') +
+                                        '</span></td><td>' + (t.professor || '—') +
+                                        '</td><td><span class="badge badge-blue">' + totalAlunos +
+                                        '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
                                 }).join('');
                             }
                         }).catch(e => console.error(e));
@@ -6873,9 +7557,9 @@
                 } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR COMBOS (COM ESCOLAS PARA ALUNO)
-            // ============================================
+            // ================================================================
             async function carregarCombos() {
                 try {
                     const respEscolas = await fetch(API_URL + '/api/escolas');
@@ -6921,7 +7605,9 @@
 
                     const respProvas = await fetch(API_URL + '/api/provas');
                     const provas = await respProvas.json();
-                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova',
+                        'filtro-prova-desempenho'
+                    ].forEach(id => {
                         const select = document.getElementById(id);
                         if (select) {
                             const current = select.value;
@@ -6947,7 +7633,8 @@
 
                     const respAlunos = await fetch(API_URL + '/api/alunos');
                     const alunos = await respAlunos.json();
-                    ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
+                    ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(
+                    id => {
                         const select = document.getElementById(id);
                         if (select) {
                             const current = select.value;
@@ -6968,9 +7655,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
-            // ============================================
+            // ================================================================
             async function carregarEscolasParaAluno() {
                 try {
                     console.log('🔄 Carregando escolas para o select de aluno...');
@@ -7029,9 +7716,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
-            // ============================================
+            // ================================================================
             async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
                 console.log('🔄 Carregando turmas para escola:', escolaId);
                 const selectTurma = document.getElementById(selectTurmaId);
@@ -7083,9 +7770,9 @@
                 }
             }
 
-            // ============================================
+            // ================================================================
             // CARREGAR RELATÓRIOS (por escola)
-            // ============================================
+            // ================================================================
             async function carregarRelatorios() {
                 try {
                     const alunosResp = await fetch(API_URL + '/api/alunos');
@@ -7116,7 +7803,8 @@
 
                     const bars = document.querySelectorAll('#dist-notas .chart-bar');
                     const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
-                    vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
+                    vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v /
+                            maxVal) * 110) : 10) + 'px'; } });
 
                     let totalPtAcertos = 0,
                         totalPtErros = 0,
@@ -7150,7 +7838,8 @@
                                 totalMatAcertos += acertos;
                                 totalMatErros += erros;
                                 totalMatQuestoes += total;
-                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower
+                                .includes('texto')) {
                                 totalProdAcertos += acertos;
                                 totalProdErros += erros;
                                 totalProdQuestoes += total;
@@ -7169,23 +7858,28 @@
                     const totalCorrecoes = correcoes.length || 1;
                     document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
                     document.getElementById('rel-pt-erros').textContent = totalPtErros;
-                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos /
+                        totalCorrecoes).toFixed(1) : '0.0';
 
                     document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
                     document.getElementById('rel-mat-erros').textContent = totalMatErros;
-                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos /
+                        totalCorrecoes).toFixed(1) : '0.0';
 
                     document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
                     document.getElementById('rel-prod-erros').textContent = totalProdErros;
-                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos /
+                        totalCorrecoes).toFixed(1) : '0.0';
 
                     document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
                     document.getElementById('rel-ch-erros').textContent = totalCHErros;
-                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos /
+                        totalCorrecoes).toFixed(1) : '0.0';
 
                     document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
                     document.getElementById('rel-cn-erros').textContent = totalCNErros;
-                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos /
+                        totalCorrecoes).toFixed(1) : '0.0';
 
                     await carregarRelatorioEscola();
                     atualizarDatasImpressao();
@@ -7210,19 +7904,28 @@
                         tbody.innerHTML = escolas.map(e => {
                             const turmasEscola = turmas.filter(t => t.escola_id === e.id);
                             const alunosEscola = alunos.filter(a => a.escola_id === e.id);
-                            const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
-                            const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
+                            const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a
+                                    .id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
+                            const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s +
+                                c.nota, 0) / correcoesEscola.length) : 0;
                             const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
-                            const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
-                            return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+                            const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola
+                                .length) * 100) : 0;
+                            return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length +
+                                '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >=
+                                    6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) +
+                                '</strong></td><td>' + perc +
+                                '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' +
+                                (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc +
+                                '%;"></div></div></td></tr>';
                         }).join('');
                     }
                 } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
             }
 
-            // ============================================
+            // ================================================================
             // DOM READY
-            // ============================================
+            // ================================================================
             document.addEventListener('DOMContentLoaded', function() {
                 const tipoSelect = document.getElementById('modal-prova-tipo');
                 if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
@@ -7243,10 +7946,11 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
-                carregarCombosProducao(); // inicializa a aba de produção de texto
+                carregarCombosProducao();
             });
 
-            document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
+            document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget)
+                    cancelarDel(); });
 
             window.addEventListener('resize', function() {
                 if (window.innerWidth > 900) {
