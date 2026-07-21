@@ -1953,7 +1953,6 @@
                     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
                         <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
                         <button class="btn btn-green no-print" id="btnGerarDocumento" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
-                        <!-- Botão que chama a função corrigida -->
                         <button class="btn btn-orange no-print" onclick="editarGabaritoDesempenho()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
                         <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
                     </div>
@@ -5635,34 +5634,6 @@
                 }
             }
 
-            // ============================================
-            // FUNÇÃO CORRIGIDA: editarGabaritoDesempenho
-            // ============================================
-            function editarGabaritoDesempenho() {
-                const data = desempenhoData.alunoSelecionado;
-                if (!data) {
-                    showToast('⚠️ Gere o desempenho do aluno primeiro!', 'warning');
-                    return;
-                }
-
-                // Preenche os dados da correção manual
-                correcaoManualData.alunoId = data.aluno.id;
-                correcaoManualData.alunoNome = data.aluno.nome;
-                correcaoManualData.provaId = data.prova.id;
-                correcaoManualData.provaTitulo = data.prova.titulo;
-                correcaoManualData.gabarito = data.gabarito || [];
-                correcaoManualData.respostasAluno = data.respostas || [];
-                correcaoManualData.quantidade = data.totalQuestoes || 20;
-                correcaoManualData.alternativas = data.prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-                correcaoManualData.serie = data.prova.serie || '1º Ano';
-                correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-                correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
-                correcaoManualData.valorPorQuestao = correcaoManualData.notaMaxima / correcaoManualData.quantidade;
-
-                // Abre o modal de correção manual
-                abrirCorrecaoManual();
-            }
-
             function limparFiltrosDesempenho() {
                 document.getElementById('filtro-escola-desempenho').value = '';
                 document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
@@ -5676,7 +5647,992 @@
             }
 
             // ============================================
-            // CARREGAR RELATÓRIOS (CORRIGIDO)
+            // CARREGAR DADOS - FUNÇÃO PRINCIPAL
+            // ============================================
+            async function carregarDados() {
+                console.log('🔄 Carregando dados do sistema...');
+                try {
+                    await Promise.all([
+                        carregarEscolas(),
+                        carregarTurmas(),
+                        carregarAlunos(),
+                        carregarProvas(),
+                        carregarDashboard(),
+                        carregarResultados(),
+                        carregarGabaritos(),
+                        carregarCombos(),
+                        carregarRelatorios(),
+                        carregarUltimasCorrecoes(),
+                        carregarUserData(),
+                        carregarConceitoReal(),
+                        carregarUsuarios(),
+                        carregarEscolasFiltroAlunos(),
+                        carregarEscolasCorrigir(),
+                        carregarEscolasTexto(),
+                        carregarEscolasParaCorrecaoManual(),
+                        carregarFiltrosRelTurma(),
+                        carregarFiltroEscolaTurmas(),
+                        carregarEscolasDesempenho()
+                    ]);
+                    console.log('✅ Todos os dados carregados com sucesso!');
+                    atualizarDatasImpressao();
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar dados:', erro);
+                    showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+                }
+            }
+
+            // ============================================
+            // CARREGAR CONCEITO REAL
+            // ============================================
+            async function carregarConceitoReal() {
+                try {
+                    const [conceitoResp, turmasResp] = await Promise.all([
+                        fetch(`${API_URL}/api/dashboard/Conceito`),
+                        fetch(`${API_URL}/api/turmas`)
+                    ]);
+
+                    const dados = await conceitoResp.json();
+                    const turmasLista = await turmasResp.json();
+
+                    const container = document.getElementById('grafico-Conceito');
+                    const badge = document.getElementById('total-turmas-badge');
+                    if (!container) return;
+
+                    if (!dados || dados.erro || (Array.isArray(dados) && dados.length === 0)) {
+                        container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">📭</div>
+                            <p>Nenhuma turma com correções ainda.</p>
+                            <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
+                        </div>`;
+                        if (badge) badge.textContent = '0 turmas';
+                        return;
+                    }
+
+                    let dadosArray = Array.isArray(dados) ? dados : Object.values(dados);
+
+                    const turmasMap = new Map();
+                    if (turmasLista && !turmasLista.erro && Array.isArray(turmasLista)) {
+                        turmasLista.forEach(t => { turmasMap.set(t.id, t.nome || `Turma ${t.id}`); });
+                    }
+
+                    const agrupado = new Map();
+                    dadosArray.forEach(item => {
+                        let turmaId = item.turma_id || item.id || item.turmaId;
+                        if (!turmaId) {
+                            if (item.nome) turmaId = 'nome_' + item.nome;
+                            else return;
+                        }
+
+                        let nomeReal = turmasMap.get(turmaId);
+                        if (!nomeReal && item.nome && item.nome !== 'Turma sem nome') nomeReal = item.nome;
+                        if (!nomeReal) nomeReal = `Turma ${turmaId}`;
+
+                        if (!agrupado.has(turmaId)) {
+                            agrupado.set(turmaId, {
+                                id: turmaId,
+                                nome: nomeReal,
+                                somaPorcentagem: 0,
+                                totalCorrecoes: 0,
+                                contagem: 0
+                            });
+                        }
+                        const turma = agrupado.get(turmaId);
+                        if (item.porcentagem !== undefined) { turma.somaPorcentagem += item.porcentagem;
+                            turma.contagem++; }
+                        if (item.total_correcoes !== undefined) turma.totalCorrecoes += item.total_correcoes;
+                        else if (item.correcoes !== undefined) turma.totalCorrecoes += item.correcoes;
+                        else turma.totalCorrecoes += 1;
+                        if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') turma.nome = item.nome;
+                    });
+
+                    let turmasAgrupadas;
+                    if (agrupado.size === 0) {
+                        turmasAgrupadas = dadosArray.map((item, index) => ({
+                            id: index,
+                            nome: item.nome || `Turma ${index+1}`,
+                            porcentagem: item.porcentagem || 0,
+                            total_correcoes: item.total_correcoes || 0,
+                            media: item.media || item.porcentagem || 0
+                        }));
+                    } else {
+                        turmasAgrupadas = Array.from(agrupado.values()).map(t => ({
+                            id: t.id,
+                            nome: t.nome,
+                            porcentagem: t.contagem > 0 ? Math.round(t.somaPorcentagem / t.contagem) : 0,
+                            total_correcoes: t.totalCorrecoes,
+                            media: t.contagem > 0 ? (t.somaPorcentagem / t.contagem) : 0
+                        }));
+                    }
+
+                    if (badge) badge.textContent = turmasAgrupadas.length + ' turmas';
+
+                    const maxBarras = 5;
+                    let dadosFiltrados = turmasAgrupadas.sort((a, b) => b.porcentagem - a.porcentagem);
+                    if (dadosFiltrados.length > maxBarras) dadosFiltrados = dadosFiltrados.slice(0, maxBarras);
+
+                    let html = '<div class="chart-bars">';
+                    const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
+
+                    dadosFiltrados.forEach((turma, index) => {
+                        const nome = turma.nome || `Turma ${turma.id}`;
+                        const porcentagem = turma.porcentagem || 0;
+                        const altura = Math.max(20, (porcentagem / 100) * 130);
+                        const cor = cores[index % cores.length];
+                        html += `<div class="chart-bar-item" title="${nome} - Média: ${turma.media || 0}">
+                            <div class="chart-bar-val">${porcentagem}%</div>
+                            <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                            <div class="chart-bar-lbl">${nome}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+
+                    container.innerHTML = html;
+
+                } catch (erro) {
+                    console.error('Erro ao carregar Conceito:', erro);
+                    const container = document.getElementById('grafico-Conceito');
+                    if (container) {
+                        container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
+                            <p>Erro ao carregar dados de Conceito.</p>
+                        </div>`;
+                    }
+                }
+            }
+
+            // ============================================
+            // CARREGAR ÚLTIMAS CORREÇÕES
+            // ============================================
+            async function carregarUltimasCorrecoes() {
+                try {
+                    const response = await fetch(API_URL + '/api/historico');
+                    const historico = await response.json();
+                    const tbody = document.getElementById('ultimas-correcoes');
+                    if (!tbody) return;
+                    if (!historico || historico.length === 0 || historico.erro) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+                    } else {
+                        const recentes = historico.slice(0, 4);
+                        tbody.innerHTML = recentes.map(item => {
+                            const acertos = item.acertos || 0;
+                            const total = item.total || 20;
+                            const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
+                            const conceito = calcularConceito(porcentagem);
+                            const badgeMap = { 'inicial': 'badge-conceito-inicial', 'basico': 'badge-conceito-basico', 'proficiente': 'badge-conceito-proficiente', 'avancado': 'badge-conceito-avancado' };
+                            const nomeConceito = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' };
+                            const badge = badgeMap[conceito] || 'badge-gray';
+                            const label = nomeConceito[conceito] || 'Indefinido';
+                            return `<tr>
+                                <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
+                                <td>${item.prova_titulo || 'Prova'}</td>
+                                <td><strong>${porcentagem}%</strong></td>
+                                <td><span class="badge ${badge}">${label}</span></td>
+                            </tr>`;
+                        }).join('');
+                    }
+                } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
+            }
+
+            // ============================================
+            // CARREGAR USUÁRIOS
+            // ============================================
+            async function carregarUsuarios() {
+                try {
+                    const response = await fetch(API_URL + '/api/usuarios');
+                    const usuarios = await response.json();
+                    const tbody = document.getElementById('tb-usuarios');
+                    if (!tbody) return;
+                    if (!usuarios || usuarios.length === 0 || usuarios.erro) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário cadastrado</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = usuarios.map(u => {
+                        const perfilBadge = u.perfil === 'admin' ? 'badge-orange' : 'badge-blue';
+                        const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
+                        const statusText = u.ativo ? 'Ativo' : 'Inativo';
+                        const isAdmin = u.username === 'admin';
+                        return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
+                            '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
+                            '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
+                            '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
+                            '<td>' +
+                            '<div class="btn-group">' +
+                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
+                            '</div>' +
+                            '</td></tr>';
+                    }).join('');
+                } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
+            }
+
+            // ============================================
+            // EXPORTAR FUNCTIONS
+            // ============================================
+            function exportarResultadosFiltrados() {
+                showToast('📥 Exportando resultados filtrados...', 'info');
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (!tbody) return;
+                let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,CH_Acertos,CH_Erros,CH_Conceito,CN_Acertos,CN_Erros,CN_Conceito,Escola,Turma\n';
+                tbody.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 20) {
+                        csv += cells[0].textContent.trim() + ',' +
+                            cells[1].textContent.trim() + ',' +
+                            cells[2].textContent.trim() + ',' +
+                            cells[3].textContent.trim() + ',' +
+                            cells[4].textContent.trim() + ',' +
+                            cells[5].textContent.trim() + ',' +
+                            cells[6].textContent.trim() + ',' +
+                            cells[7].textContent.trim() + ',' +
+                            cells[8].textContent.trim() + ',' +
+                            cells[9].textContent.trim() + ',' +
+                            cells[10].textContent.trim() + ',' +
+                            cells[11].textContent.trim() + ',' +
+                            cells[12].textContent.trim() + ',' +
+                            cells[13].textContent.trim() + ',' +
+                            cells[14].textContent.trim() + ',' +
+                            cells[15].textContent.trim() + ',' +
+                            cells[16].textContent.trim() + ',' +
+                            cells[17].textContent.trim() + ',' +
+                            cells[18].textContent.trim() + ',' +
+                            cells[19].textContent.trim() + '\n';
+                    }
+                });
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'resultados_filtrados.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Resultados exportados!', 'success');
+            }
+
+            function imprimirAlunos() {
+                const tbody = document.getElementById('tb-alunos');
+                const rows = tbody.querySelectorAll('tr');
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+                    showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+                    return;
+                }
+                const escolaSelect = document.getElementById('filtro-escola-alunos');
+                const turmaSelect = document.getElementById('filtro-turma-alunos');
+                const serieSelect = document.getElementById('filtro-serie-alunos');
+                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Lista de Alunos</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+                        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+                        .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                        th { background: #f2f2f2; font-weight: 700; }
+                        tr:nth-child(even) { background: #fafafa; }
+                        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+                        @media print {
+                            body { margin: 10px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📋 Lista de Alunos</h1>
+                    <div class="filtros">
+                        <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+                        <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+                        <strong>Série:</strong> ${serieNome}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Matrícula</th>
+                                <th>Nome Completo</th>
+                                <th>Série</th>
+                                <th>Turma</th>
+                                <th>Escola</th>
+                                <th>Data Nasc.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        const numero = cells[0].textContent.trim();
+                        const matricula = cells[1].textContent.trim();
+                        const nome = cells[2].textContent.trim();
+                        const serie = cells[3].textContent.trim();
+                        const turma = cells[4].textContent.trim();
+                        const escola = cells[5].textContent.trim();
+                        const dataNasc = cells[6].textContent.trim();
+                        html += `
+                            <tr>
+                                <td>${numero}</td>
+                                <td>${matricula}</td>
+                                <td>${nome}</td>
+                                <td>${serie}</td>
+                                <td>${turma}</td>
+                                <td>${escola}</td>
+                                <td>${dataNasc}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                html += `
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        Gerado em ${new Date().toLocaleString('pt-BR')}
+                    </div>
+                </body>
+                </html>
+                `;
+
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+                win.document.write(html);
+                win.document.close();
+                win.focus();
+                win.print();
+            }
+
+            function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
+                window.print(); }
+
+            function exportarRelatorioEscola() {
+                showToast('📥 Exportando relatório por escola...', 'info');
+                const tbody = document.getElementById('tb-rel-escola');
+                if (!tbody) return;
+                let csv = 'Escola,Turmas,Alunos,Média,Aprovação\n';
+                tbody.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + '\n'; }
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'relatorio_escolas.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Relatório exportado!', 'success');
+            }
+
+            // ============================================
+            // GABARITO - BUILD GRID (COM BNCC)
+            // ============================================
+            function buildGabGrid() {
+                const grid = document.getElementById('gab-grid');
+                if (!grid) return;
+                const serieEl = document.getElementById('gab-serie');
+                const totalEl = document.getElementById('gab-total');
+                if (!serieEl || !totalEl) return;
+                const is1 = (parseInt(serieEl.value) || 1) === 1;
+                const total = parseInt(totalEl.value) || 20;
+                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                const lbl = document.getElementById('gab-label');
+                if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
+                grid.innerHTML = '';
+                for (let i = 1; i <= total; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'gab-item';
+                    let opts = '<option value="">—</option>';
+                    alts.forEach(a => { opts += '<option>' + a + '</option>'; });
+                    div.innerHTML = `
+                        <div class="gab-num">Q${i}</div>
+                        <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
+                        <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                    `;
+                    grid.appendChild(div);
+                }
+            }
+
+            function fillGabRand() {
+                const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
+                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)];
+                    s.classList.add('filled'); });
+                showToast('🎲 Gabarito de teste preenchido!');
+            }
+
+            function clearGab() {
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = '';
+                    s.classList.remove('filled'); });
+                document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
+            }
+
+            // ============================================
+            // SALVAR GABARITO (COM BNCC)
+            // ============================================
+            async function saveGab() {
+                try {
+                    const selects = document.querySelectorAll('.gab-select');
+                    const bnccInputs = document.querySelectorAll('.gab-bncc');
+                    const respostas = [];
+                    const bncc = [];
+
+                    selects.forEach(s => { respostas.push(s.value || ''); });
+                    bnccInputs.forEach(inp => { bncc.push(inp.value.trim() || ''); });
+
+                    const respostasValidas = respostas.filter(r => r !== '');
+                    if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
+
+                    const provaId = document.getElementById('gab-prova').value;
+                    if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
+
+                    showToast('💾 Salvando gabarito...', 'info');
+                    const payload = { prova_id: parseInt(provaId), respostas: respostas, bncc: bncc };
+                    const response = await fetch(`${API_URL}/api/gabaritos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (response.ok && result.id) {
+                        showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
+                        selects.forEach(s => { if (s.value) s.classList.add('filled'); });
+                        carregarGabaritos();
+                        carregarCombos();
+                        carregarProvas();
+                    } else {
+                        showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // EDITAR GABARITO (COM BNCC)
+            // ============================================
+            function editarGabarito(id) {
+                showToast('✏️ Carregando gabarito...', 'info');
+                fetch(API_URL + '/api/provas/' + id)
+                    .then(r => r.json())
+                    .then(prova => {
+                        if (prova.erro) { showToast('❌ ' + prova.erro, 'error'); return; }
+                        if (prova.gabarito && prova.gabarito.length > 0) {
+                            const gabarito = prova.gabarito;
+                            const bncc = prova.bncc || [];
+
+                            go('gabarito');
+
+                            setTimeout(() => {
+                                const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
+                                const serieVal = serieMap[prova.serie] || '2';
+                                document.getElementById('gab-serie').value = serieVal;
+                                document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
+
+                                const selectProva = document.getElementById('gab-prova');
+                                if (selectProva) selectProva.value = id;
+
+                                buildGabGrid();
+
+                                setTimeout(() => {
+                                    const newSelects = document.querySelectorAll('.gab-select');
+                                    const newBncc = document.querySelectorAll('.gab-bncc');
+                                    newSelects.forEach((s, i) => {
+                                        if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i];
+                                            s.classList.add('filled'); }
+                                    });
+                                    newBncc.forEach((inp, i) => {
+                                        if (i < bncc.length && bncc[i]) inp.value = bncc[i];
+                                    });
+                                    showToast('📋 Gabarito carregado para edição!', 'success');
+                                }, 100);
+                            }, 150);
+                        } else {
+                            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
+                            go('gabarito');
+                        }
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
+                        console.error('Erro ao carregar gabarito:', e); });
+            }
+
+            // ============================================
+            // EXCLUIR GABARITO
+            // ============================================
+            async function excluirGabarito(id, nome) {
+                if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
+                try {
+                    showToast('🗑️ Excluindo gabarito...', 'error');
+                    const response = await fetch(API_URL + '/api/gabaritos/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('🗑️ Gabarito excluído com sucesso!', 'success');
+                        carregarGabaritos();
+                        carregarProvas();
+                    } else {
+                        showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao excluir gabarito:', erro);
+                    showToast('❌ Erro ao excluir gabarito: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // LISTA POR TURMA
+            // ============================================
+            async function carregarTurmasLista(escolaId) {
+                const select = document.getElementById('lista-turma');
+                select.innerHTML = '<option value="">Selecione a turma</option>';
+                if (!escolaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            select.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas:', e);
+                }
+            }
+
+            async function gerarListaTurma() {
+                const escolaId = document.getElementById('lista-escola').value;
+                const turmaId = document.getElementById('lista-turma').value;
+                if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+                try {
+                    const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
+                    const alunos = await alunosResp.json();
+                    const turmaResp = await fetch(API_URL + '/api/turmas');
+                    const turmas = await turmaResp.json();
+                    const turma = turmas.find(t => t.id == turmaId);
+                    const container = document.getElementById('lista-resultado');
+                    if (!container) return;
+                    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+                        showToast('❌ Nenhum aluno na turma!', 'error'); return; }
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const prova = provas.find(p => p.turma_id == turmaId);
+                    if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
+                        showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
+                    const escolaResp = await fetch(API_URL + '/api/escolas');
+                    const escolas = await escolaResp.json();
+                    const escola = escolas.find(e => e.id == turma?.escola_id);
+                    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
+                    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+                    alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
+                    html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
+                    container.innerHTML = html;
+                    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
+                } catch (erro) { console.error('Erro ao gerar lista:', erro);
+                    showToast('❌ Erro: ' + erro.message, 'error'); }
+            }
+
+            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+                try {
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const prova = provas.find(p => p.id == provaId);
+                    const qtdQuestoes = prova?.quantidade_questoes || 20;
+                    const response = await fetch(API_URL + '/api/gerar_gabarito', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
+                    });
+                    if (response.ok) {
+                        const html = await response.text();
+                        const novaAba = window.open('', '_blank');
+                        novaAba.document.write(html);
+                        novaAba.document.close();
+                        document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
+                        showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
+                    } else {
+                        const erro = await response.json();
+                        showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) { console.error('Erro ao gerar cartão:', erro);
+                    showToast('❌ Erro: ' + erro.message, 'error'); }
+            }
+
+            // ============================================
+            // FUNÇÕES AUXILIARES
+            // ============================================
+            function switchTab(idx, btn) {
+                const parent = btn.closest('.tab-nav');
+                if (parent) { parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active'); }
+                const card = btn.closest('.card');
+                if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
+            }
+
+            function openM(id) {
+                document.getElementById(id).classList.add('show');
+                if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
+                if (id === 'm-prova') { carregarCombos();
+                    const tipo = document.getElementById('modal-prova-tipo').value;
+                    gerarGabaritoModal(tipo); }
+            }
+
+            function closeM(id) { document.getElementById(id).classList.remove('show'); }
+
+            document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
+
+            function gerarGabaritoModal(tipo) {
+                const grid = document.getElementById('modal-gabarito-grid');
+                if (!grid) return;
+                const numQuestoes = 20;
+                const alts = tipo == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                grid.innerHTML = '';
+                for (let i = 1; i <= numQuestoes; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.style.width = '40px';
+                    input.style.height = '35px';
+                    input.style.textAlign = 'center';
+                    input.style.background = 'var(--bg2)';
+                    input.style.border = '1.5px solid var(--border2)';
+                    input.style.borderRadius = '6px';
+                    input.style.color = 'var(--text)';
+                    input.style.fontWeight = 'bold';
+                    input.style.fontSize = '14px';
+                    input.style.textTransform = 'uppercase';
+                    input.placeholder = i;
+                    input.title = 'Questão ' + i;
+                    input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
+                    grid.appendChild(input);
+                }
+            }
+
+            function excluir(btn, tipo, nome) {
+                const row = btn.closest('tr');
+                delTarget = { row, tipo, nome };
+                document.getElementById('del-nome-txt').textContent = '"' + nome + '"';
+                document.getElementById('del-modal').classList.add('show');
+            }
+
+            function cancelarDel() { document.getElementById('del-modal').classList.remove('show');
+                delTarget = null; }
+
+            function confirmarDel() {
+                document.getElementById('del-modal').classList.remove('show');
+                if (!delTarget) return;
+                const { row, tipo, nome } = delTarget;
+                row.classList.add('deleting');
+                setTimeout(() => { row.remove();
+                    showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
+                    delTarget = null;
+                    renumerarTabela(row.closest('tbody')); }, 350);
+            }
+
+            function renumerarTabela(tbody) {
+                if (!tbody) return;
+                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                    const badge = tr.querySelector('.badge-blue, .badge-gray');
+                    if (badge) {
+                        const num = String(i + 1).padStart(2, '0');
+                        if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
+                    }
+                });
+            }
+
+            function filtrarTabela(input, tbodyId) {
+                const val = input.value.toLowerCase();
+                document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none'; });
+            }
+
+            function filtrarSerie(sel) {
+                const val = sel.value;
+                document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
+            }
+
+            function showToast(msg, type) {
+                type = type || 'info';
+                const c = document.getElementById('toast-c');
+                const t = document.createElement('div');
+                t.className = 'toast toast-' + type;
+                const icons = { info: 'ℹ️', success: '✅', error: '❌', ai: '🤖', warning: '⚠️' };
+                t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + msg + '</span>';
+                c.appendChild(t);
+                setTimeout(() => { t.style.opacity = '0';
+                    t.style.transition = 'opacity .3s';
+                    setTimeout(() => t.remove(), 300); }, 3200);
+            }
+
+            function simUpload() { setTimeout(() => { document.getElementById('up-ok').style.display = 'block';
+                    showToast('✅ Arquivo enviado!', 'success'); }, 600); }
+
+            function atualizarInfoAlts() {
+                const s = document.getElementById('prova-serie');
+                const info = document.getElementById('info-alts');
+                if (!s || !info) return;
+                const is1 = s.value.startsWith('1');
+                info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
+                info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
+                info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
+                info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+            }
+
+            function carregarTurmasProva() {
+                const escolaId = document.getElementById('prova-escola').value;
+                if (!escolaId) return;
+                const select = document.getElementById('prova-turma');
+                select.innerHTML = '<option value="">Selecione a turma</option>';
+                fetch(API_URL + '/api/turmas?escola_id=' + escolaId).then(r => r.json()).then(turmas => {
+                    if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '—');
+                            select.appendChild(opt); }); }
+                }).catch(e => console.error(e));
+            }
+
+            function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
+
+            function carregarUserData() {
+                console.log('🔄 Carregando dados do usuário...');
+                try {
+                    const tbody = document.getElementById('u-tb-turmas');
+                    if (tbody) {
+                        fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                            if (turmas && turmas.length > 0) {
+                                tbody.innerHTML = turmas.map(t => {
+                                    const totalAlunos = t.total_alunos || 0;
+                                    return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                                }).join('');
+                            }
+                        }).catch(e => console.error(e));
+                    }
+                } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
+            }
+
+            // ============================================
+            // CARREGAR COMBOS (COM ESCOLAS PARA ALUNO)
+            // ============================================
+            async function carregarCombos() {
+                try {
+                    const respEscolas = await fetch(API_URL + '/api/escolas');
+                    const escolas = await respEscolas.json();
+
+                    ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) {
+                                escolas.forEach(e => {
+                                    const opt = document.createElement('option');
+                                    opt.value = e.id;
+                                    opt.textContent = e.nome;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+
+                    await carregarEscolasParaAluno();
+
+                    const respTurmas = await fetch(API_URL + '/api/turmas');
+                    const turmas = await respTurmas.json();
+                    ['aluno-turma', 'modal-prova-turma', 'lista-turma', 'editar-aluno-turma'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a turma</option>';
+                            if (turmas && !turmas.erro) {
+                                turmas.forEach(t => {
+                                    const opt = document.createElement('option');
+                                    opt.value = t.id;
+                                    opt.textContent = t.nome + ' - ' + (t.serie || '—');
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+
+                    const respProvas = await fetch(API_URL + '/api/provas');
+                    const provas = await respProvas.json();
+                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a prova</option>';
+                            if (provas && !provas.erro) {
+                                provas.forEach(p => {
+                                    const opt = document.createElement('option');
+                                    opt.value = p.id;
+                                    const serie = p.serie || 'Série não definida';
+                                    opt.textContent = p.titulo + ' - ' + serie;
+                                    opt.dataset.serie = serie;
+                                    opt.dataset.quantidade = p.quantidade_questoes || 20;
+                                    opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                                    opt.dataset.tipo = p.tipo_questoes || '4';
+                                    opt.dataset.disciplina = p.disciplina || '';
+                                    opt.dataset.bncc = JSON.stringify(p.bncc || []);
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+
+                    const respAlunos = await fetch(API_URL + '/api/alunos');
+                    const alunos = await respAlunos.json();
+                    ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione o aluno</option>';
+                            if (alunos && !alunos.erro) {
+                                alunos.forEach(a => {
+                                    const opt = document.createElement('option');
+                                    opt.value = a.id;
+                                    opt.textContent = a.nome;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+                } catch (erro) {
+                    console.error('Erro ao carregar combos:', erro);
+                }
+            }
+
+            // ============================================
+            // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
+            // ============================================
+            async function carregarEscolasParaAluno() {
+                try {
+                    console.log('🔄 Carregando escolas para o select de aluno...');
+
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+
+                    console.log('📥 Escolas recebidas:', escolas);
+
+                    if (!escolas || escolas.length === 0 || escolas.erro) {
+                        console.warn('⚠️ Nenhuma escola encontrada ou erro na API');
+                        return;
+                    }
+
+                    const selectCadastro = document.getElementById('aluno-escola');
+                    if (selectCadastro) {
+                        const current = selectCadastro.value;
+                        selectCadastro.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectCadastro.appendChild(opt);
+                        });
+                        if (current && escolas.some(e => e.id == current)) {
+                            selectCadastro.value = current;
+                            carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
+                        } else {
+                            const selectTurma = document.getElementById('aluno-turma');
+                            if (selectTurma) selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+                        }
+                        console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
+                    } else {
+                        console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
+                    }
+
+                    const selectEdicao = document.getElementById('editar-aluno-escola');
+                    if (selectEdicao) {
+                        const current = selectEdicao.value;
+                        selectEdicao.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectEdicao.appendChild(opt);
+                        });
+                        if (current && escolas.some(e => e.id == current)) {
+                            selectEdicao.value = current;
+                            carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
+                        }
+                        console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
+                    }
+
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar escolas para o select de aluno:', erro);
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
+            // ============================================
+            async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
+                console.log('🔄 Carregando turmas para escola:', escolaId);
+                const selectTurma = document.getElementById(selectTurmaId);
+                if (!selectTurma) {
+                    console.warn('⚠️ Select de turma não encontrado:', selectTurmaId);
+                    return;
+                }
+
+                selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+
+                if (!escolaId || escolaId === '') {
+                    console.log('ℹ️ Nenhuma escola selecionada');
+                    return;
+                }
+
+                try {
+                    showToast('🔄 Carregando turmas...', 'info');
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    console.log('📥 Turmas recebidas:', turmas);
+
+                    if (turmas && !turmas.erro && turmas.length > 0) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                        console.log(`✅ ${turmas.length} turmas carregadas para a escola`);
+                        showToast(`✅ ${turmas.length} turmas encontradas`, 'success');
+                    } else {
+                        console.log('ℹ️ Nenhuma turma encontrada para esta escola');
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Nenhuma turma cadastrada';
+                        opt.disabled = true;
+                        selectTurma.appendChild(opt);
+                        showToast('ℹ️ Esta escola não possui turmas cadastradas', 'info');
+                    }
+                } catch (e) {
+                    console.error('❌ Erro ao carregar turmas:', e);
+                    showToast('❌ Erro ao carregar turmas: ' + e.message, 'error');
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Erro ao carregar turmas';
+                    opt.disabled = true;
+                    selectTurma.appendChild(opt);
+                }
+            }
+
+            // ============================================
+            // CARREGAR RELATÓRIOS (por escola)
             // ============================================
             async function carregarRelatorios() {
                 try {
@@ -5688,19 +6644,10 @@
                         Habilidades = correcoes.filter(c => c.nota >= 6).length || 0,
                         recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0,
                         media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
-
-                    // VERIFICAÇÃO DE NULL
-                    const elTotal = document.getElementById('rel-total-alunos');
-                    if (elTotal) elTotal.textContent = totalAlunos;
-
-                    const elHabilidades = document.getElementById('rel-Habilidades');
-                    if (elHabilidades) elHabilidades.textContent = Habilidades;
-
-                    const elRecuperacao = document.getElementById('rel-recuperacao');
-                    if (elRecuperacao) elRecuperacao.textContent = recuperacao;
-
-                    const elMedia = document.getElementById('rel-media');
-                    if (elMedia) elMedia.textContent = media.toFixed(1);
+                    document.getElementById('rel-total-alunos').textContent = totalAlunos;
+                    document.getElementById('rel-Habilidades').textContent = Habilidades;
+                    document.getElementById('rel-recuperacao').textContent = recuperacao;
+                    document.getElementById('rel-media').textContent = media.toFixed(1);
 
                     const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
                     correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
@@ -5709,17 +6656,11 @@
                         else if (c.nota < 8) faixas['6-8']++;
                         else faixas['8-10']++; });
                     const maxVal = Math.max(...Object.values(faixas), 1);
-
-                    const elD0 = document.getElementById('d0-2');
-                    if (elD0) elD0.textContent = faixas['0-2'];
-                    const elD24 = document.getElementById('d2-4');
-                    if (elD24) elD24.textContent = faixas['2-4'];
-                    const elD46 = document.getElementById('d4-6');
-                    if (elD46) elD46.textContent = faixas['4-6'];
-                    const elD68 = document.getElementById('d6-8');
-                    if (elD68) elD68.textContent = faixas['6-8'];
-                    const elD810 = document.getElementById('d8-10');
-                    if (elD810) elD810.textContent = faixas['8-10'];
+                    document.getElementById('d0-2').textContent = faixas['0-2'];
+                    document.getElementById('d2-4').textContent = faixas['2-4'];
+                    document.getElementById('d4-6').textContent = faixas['4-6'];
+                    document.getElementById('d6-8').textContent = faixas['6-8'];
+                    document.getElementById('d8-10').textContent = faixas['8-10'];
 
                     const bars = document.querySelectorAll('#dist-notas .chart-bar');
                     const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
@@ -5774,48 +6715,29 @@
                     }
 
                     const totalCorrecoes = correcoes.length || 1;
+                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
+                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
+                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
 
-                    const elPtAc = document.getElementById('rel-pt-acertos');
-                    if (elPtAc) elPtAc.textContent = totalPtAcertos;
-                    const elPtEr = document.getElementById('rel-pt-erros');
-                    if (elPtEr) elPtEr.textContent = totalPtErros;
-                    const elPtMed = document.getElementById('rel-pt-media');
-                    if (elPtMed) elPtMed.textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
+                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
+                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
 
-                    const elMatAc = document.getElementById('rel-mat-acertos');
-                    if (elMatAc) elMatAc.textContent = totalMatAcertos;
-                    const elMatEr = document.getElementById('rel-mat-erros');
-                    if (elMatEr) elMatEr.textContent = totalMatErros;
-                    const elMatMed = document.getElementById('rel-mat-media');
-                    if (elMatMed) elMatMed.textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
+                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
+                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
 
-                    const elProdAc = document.getElementById('rel-prod-acertos');
-                    if (elProdAc) elProdAc.textContent = totalProdAcertos;
-                    const elProdEr = document.getElementById('rel-prod-erros');
-                    if (elProdEr) elProdEr.textContent = totalProdErros;
-                    const elProdMed = document.getElementById('rel-prod-media');
-                    if (elProdMed) elProdMed.textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
+                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
+                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
 
-                    const elChAc = document.getElementById('rel-ch-acertos');
-                    if (elChAc) elChAc.textContent = totalCHAcertos;
-                    const elChEr = document.getElementById('rel-ch-erros');
-                    if (elChEr) elChEr.textContent = totalCHErros;
-                    const elChMed = document.getElementById('rel-ch-media');
-                    if (elChMed) elChMed.textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
-
-                    const elCnAc = document.getElementById('rel-cn-acertos');
-                    if (elCnAc) elCnAc.textContent = totalCNAcertos;
-                    const elCnEr = document.getElementById('rel-cn-erros');
-                    if (elCnEr) elCnEr.textContent = totalCNErros;
-                    const elCnMed = document.getElementById('rel-cn-media');
-                    if (elCnMed) elCnMed.textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
+                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
+                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
 
                     await carregarRelatorioEscola();
                     atualizarDatasImpressao();
-                } catch (erro) {
-                    console.error('Erro ao carregar relatórios:', erro);
-                    // Não exibe toast para não poluir a interface, apenas log
-                }
+                } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
             }
 
             async function carregarRelatorioEscola() {
@@ -5866,7 +6788,7 @@
                 carregarFiltrosRelTurma();
                 carregarFiltroEscolaTurmas();
                 carregarEscolasParaAluno();
-                carregarEscolasDesempenho();
+                carregarEascolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
             });
