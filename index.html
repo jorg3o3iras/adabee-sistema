@@ -805,6 +805,7 @@
             text-align: center;
             border: 1px solid var(--border);
             transition: all 0.3s;
+            display: block; /* Garante que o display será controlado via JS */
         }
         .disciplina-card-rel:hover {
             border-color: var(--border2);
@@ -1839,7 +1840,8 @@
                         <p style="font-size:13px; margin-top:4px;">Apenas a disciplina da prova escolhida será exibida.</p>
                     </div>
 
-                    <div id="disciplinas-container" style="display:grid; grid-template-columns: 1fr; gap:16px; margin-bottom:16px;">
+                    <!-- Container dos cards - será preenchido com apenas 1 card visível -->
+                    <div id="disciplinas-container" style="display:grid; gap:16px; margin-bottom:16px;">
                         <!-- Português -->
                         <div class="disciplina-card-rel portugues" data-disciplina="portugues" style="display:none;">
                             <div class="disc-nome">Português</div>
@@ -4972,10 +4974,6 @@
                     if (!provaId || !disciplinaDaProva) {
                         if (msgEl) msgEl.style.display = 'block';
                         if (statsGrid) statsGrid.style.display = 'none';
-                        if (container) {
-                            container.style.display = 'grid';
-                            container.style.gridTemplateColumns = '1fr';
-                        }
                         // Esconde todos os cards
                         document.querySelectorAll('.disciplina-card-rel').forEach(card => {
                             card.style.display = 'none';
