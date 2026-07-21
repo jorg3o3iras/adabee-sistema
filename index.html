@@ -5408,41 +5408,39 @@
             // FUNÇÃO editarGabaritoDesempenho (CORRIGIDA)
             // ============================================
             async function editarGabaritoDesempenho() {
-                // Obtém os valores atuais dos filtros
-                const escolaId = document.getElementById('filtro-escola-desempenho').value;
-                const turmaId = document.getElementById('filtro-turma-desempenho').value;
-                const alunoId = document.getElementById('filtro-aluno-desempenho').value;
-                const provaId = document.getElementById('filtro-prova-desempenho').value;
+    const escolaId = document.getElementById('filtro-escola-desempenho').value;
+    const turmaId = document.getElementById('filtro-turma-desempenho').value;
+    const alunoId = document.getElementById('filtro-aluno-desempenho').value;
+    const provaId = document.getElementById('filtro-prova-desempenho').value;
 
-                // Valida se todos os campos estão preenchidos
-                if (!escolaId || !turmaId || !alunoId || !provaId) {
-                    showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
-                    return;
-                }
+    if (!escolaId || !turmaId || !alunoId || !provaId) {
+        showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
+        return;
+    }
 
-                // 1. Abre o modal de correção manual standalone (já existente)
-                abrirCorrecaoManualStandalone();
+    // 1. Abre o modal (já existente)
+    abrirCorrecaoManualStandalone();
 
-                // Pequeno delay para o modal ser exibido e os selects serem populados (escolas)
-                await new Promise(resolve => setTimeout(resolve, 150));
+    // Aguarda o modal ser exibido
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-                // 2. Seta os valores nos selects do modal
-                document.getElementById('cm-escola-select').value = escolaId;
-                document.getElementById('cm-turma-select').value = turmaId;
-                document.getElementById('cm-prova-select').value = provaId;
-                document.getElementById('cm-aluno-select').value = alunoId;
+    // 2. Preenche os selects
+    document.getElementById('cm-escola-select').value = escolaId;
+    document.getElementById('cm-turma-select').value = turmaId;
+    document.getElementById('cm-prova-select').value = provaId;
+    document.getElementById('cm-aluno-select').value = alunoId;
 
-                // 3. Dispara os eventos 'change' para carregar os dados dependentes (turmas, alunos, provas, gabarito)
-                document.getElementById('cm-escola-select').dispatchEvent(new Event('change'));
-                document.getElementById('cm-turma-select').dispatchEvent(new Event('change'));
-                document.getElementById('cm-prova-select').dispatchEvent(new Event('change'));
+    // 3. Dispara os eventos change para carregar dados
+    document.getElementById('cm-escola-select').dispatchEvent(new Event('change'));
+    document.getElementById('cm-turma-select').dispatchEvent(new Event('change'));
+    document.getElementById('cm-prova-select').dispatchEvent(new Event('change'));
 
-                // Aguarda o carregamento assíncrono (ex: turmas, alunos, gabarito)
-                await new Promise(resolve => setTimeout(resolve, 600));
+    // Aguarda o carregamento (turmas, alunos, gabarito)
+    await new Promise(resolve => setTimeout(resolve, 600));
 
-                // 4. Inicia a correção manual com os dados já preenchidos
-                iniciarCorrecaoManualStandalone();
-            }
+    // 4. Inicia a correção automaticamente
+    iniciarCorrecaoManualStandalone();
+}
 
             // ===== FUNÇÃO GERAR DOCUMENTO COM CONTROLE DE DUPLO CLIQUE =====
             function gerarDocumentoDesempenho() {
