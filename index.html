@@ -1156,10 +1156,7 @@
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
-                    <!-- ===== NOVA ABA: PRODUÇÃO DE TEXTO (MANUAL) ===== -->
-                    <div class="sb-item" onclick="go('producao-texto-manual')" style="border-left: 3px solid var(--green); background: rgba(16, 185, 129, 0.05);">
-                        <span class="sb-ico">📝</span> Produção de Texto <span class="sb-badge-new">NOVO</span>
-                    </div>
+                    <!-- === A ABA "PRODUÇÃO DE TEXTO" FOI REMOVIDA AQUI === -->
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
@@ -1196,10 +1193,7 @@
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
-                    <!-- ===== NOVA ABA: PRODUÇÃO DE TEXTO (MANUAL) - USUÁRIO ===== -->
-                    <div class="sb-item" onclick="go('producao-texto-manual')" style="border-left: 3px solid var(--green); background: rgba(16, 185, 129, 0.05);">
-                        <span class="sb-ico">📝</span> Produção de Texto <span class="sb-badge-new">NOVO</span>
-                    </div>
+                    <!-- === A ABA "PRODUÇÃO DE TEXTO" FOI REMOVIDA AQUI === -->
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
@@ -1844,75 +1838,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ========== PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL ========== -->
-            <!-- ===== CONTEÚDO SUBSTITUÍDO PELO FORMULÁRIO DA PROVA ONLINE ===== -->
-            <div class="page" id="page-producao-texto-manual">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📝 Produção de Texto - Correção Manual</div>
-                        <p class="page-sub">Selecione a prova e o aluno para editar a produção de texto</p>
-                    </div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                    </div>
-                </div>
-
-                <div class="card no-print">
-                    <div class="form-row c4">
-                        <div class="form-group">
-                            <label class="form-label">Prova <span class="req">*</span></label>
-                            <select class="form-control" id="pt-prova" onchange="carregarAvaliacaoProducao()">
-                                <option value="">Selecione a prova...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Escola <span class="req">*</span></label>
-                            <select class="form-control" id="pt-escola" onchange="carregarTurmasProducao(this.value)">
-                                <option value="">Selecione a escola...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma <span class="req">*</span></label>
-                            <select class="form-control" id="pt-turma" onchange="carregarAlunosProducao(this.value)">
-                                <option value="">Selecione a turma...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Aluno <span class="req">*</span></label>
-                            <select class="form-control" id="pt-aluno" onchange="carregarAvaliacaoProducao()">
-                                <option value="">Selecione o aluno...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:8px; margin-top:8px;">
-                        <button class="btn btn-primary" onclick="carregarAvaliacaoProducao()">🔍 Carregar Avaliação</button>
-                    </div>
-                </div>
-
-                <div class="card" id="pt-avaliacao-card">
-                    <div class="card-header">
-                        <div class="card-title">📝 Avaliação da Produção de Texto</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" id="pt-btn-editar" onclick="habilitarEdicaoAvaliacao()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" id="pt-btn-visualizar" onclick="visualizarAvaliacao()">👁️ Visualizar</button>
-                            <button class="btn btn-green btn-sm" id="pt-btn-salvar" onclick="salvarAvaliacaoProducao()">💾 Salvar</button>
-                            <button class="btn btn-red btn-sm" id="pt-btn-excluir" onclick="excluirAvaliacaoProducao()">🗑️ Excluir</button>
-                        </div>
-                    </div>
-                    <div id="pt-avaliacao-container">
-                        <!-- O conteúdo da prova online será injetado aqui via JavaScript -->
-                        <div style="text-align:center; padding:20px; color:var(--text3);">
-                            Selecione uma prova e um aluno e clique em "Carregar Avaliação".
-                        </div>
-                    </div>
-                    <div id="pt-resultado-container" style="margin-top:16px; display:none; padding:16px; background:var(--bg2); border-radius:8px; border-left:4px solid var(--green);">
-                        <!-- Resultado da avaliação será exibido aqui -->
-                    </div>
-                </div>
-
-                <div id="pt-status" style="margin-top:10px; font-size:13px; color:var(--text2);"></div>
             </div>
 
             <!-- ========== CONFIG ========== -->
@@ -2613,7 +2538,6 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
-                carregarCombosProducao(); // populates selects da aba produção de texto
             }
 
             function doLogout() {
@@ -2646,7 +2570,6 @@
                 if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
                 if (page === 'rel-escola') carregarRelatorios();
                 if (page === 'desempenho') { carregarEscolasDesempenho(); }
-                if (page === 'producao-texto-manual') { carregarCombosProducao(); carregarAvaliacaoProducao(); }
 
                 atualizarDatasImpressao();
 
@@ -5796,74 +5719,14 @@
             }
 
             // ============================================
-            // FUNÇÕES PARA PRODUÇÃO DE TEXTO - CORREÇÃO MANUAL
+            // FUNÇÕES DE TURMA PARA TEXTO IA (mantidas)
             // ============================================
-            async function carregarCombosProducao() {
-                try {
-                    // Escolas
-                    const respEscolas = await fetch(API_URL + '/api/escolas');
-                    const escolas = await respEscolas.json();
-                    const selectEscola = document.getElementById('pt-escola');
-                    if (selectEscola && escolas && !escolas.erro) {
-                        const current = selectEscola.value;
-                        selectEscola.innerHTML = '<option value="">Selecione a escola...</option>';
-                        escolas.forEach(e => {
-                            const opt = document.createElement('option');
-                            opt.value = e.id;
-                            opt.textContent = e.nome;
-                            selectEscola.appendChild(opt);
-                        });
-                        if (current) selectEscola.value = current;
-                        if (current) carregarTurmasProducao(current);
-                    }
-
-                    // Provas
-                    const respProvas = await fetch(API_URL + '/api/provas');
-                    const provas = await respProvas.json();
-                    const selectProva = document.getElementById('pt-prova');
-                    if (selectProva && provas && !provas.erro) {
-                        const current = selectProva.value;
-                        selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
-                        provas.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
-                            selectProva.appendChild(opt);
-                        });
-                        if (current) selectProva.value = current;
-                    }
-
-                    // Turma e Aluno serão carregados dinamicamente
-                    document.getElementById('pt-turma').innerHTML = '<option value="">Selecione a turma...</option>';
-                    document.getElementById('pt-aluno').innerHTML = '<option value="">Selecione o aluno...</option>';
-
-                    // Inicializar a avaliação vazia
-                    document.getElementById('pt-avaliacao-container').innerHTML = `
-                        <div style="text-align:center; padding:20px; color:var(--text3);">
-                            Selecione uma prova e um aluno e clique em "Carregar Avaliação".
-                        </div>
-                    `;
-                    document.getElementById('pt-resultado-container').style.display = 'none';
-                    document.getElementById('pt-status').innerHTML = '';
-
-                    // Desabilitar botões até carregar
-                    document.getElementById('pt-btn-editar').disabled = true;
-                    document.getElementById('pt-btn-visualizar').disabled = true;
-                    document.getElementById('pt-btn-salvar').disabled = true;
-                    document.getElementById('pt-btn-excluir').disabled = true;
-
-                } catch (erro) {
-                    console.error('Erro ao carregar combos para produção de texto:', erro);
-                }
-            }
-
-            async function carregarTurmasProducao(escolaId) {
-                const selectTurma = document.getElementById('pt-turma');
-                const selectAluno = document.getElementById('pt-aluno');
+            async function carregarTurmasTexto(escolaId) {
+                const selectTurma = document.getElementById('txt-turma');
+                const selectAluno = document.getElementById('txt-aluno-select');
                 selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
                 if (!escolaId) return;
-
                 try {
                     const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
                     const turmas = await response.json();
@@ -5872,20 +5735,16 @@
                             const opt = document.createElement('option');
                             opt.value = t.id;
                             opt.textContent = t.nome + ' - ' + (t.serie || '');
-                            opt.dataset.serie = t.serie || '';
                             selectTurma.appendChild(opt);
                         });
                     }
-                } catch (e) {
-                    console.error('Erro ao carregar turmas para produção:', e);
-                }
+                } catch (e) { console.error('Erro ao carregar turmas:', e); }
             }
 
-            async function carregarAlunosProducao(turmaId) {
-                const selectAluno = document.getElementById('pt-aluno');
-                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+            async function carregarAlunosPorTurmaTexto(turmaId) {
+                const selectAluno = document.getElementById('txt-aluno-select');
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
                 if (!turmaId) return;
-
                 try {
                     const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
                     const alunos = await response.json();
@@ -5897,204 +5756,7 @@
                             selectAluno.appendChild(opt);
                         });
                     }
-                } catch (e) {
-                    console.error('Erro ao carregar alunos para produção:', e);
-                }
-            }
-
-            // ============================================
-            // FUNÇÃO PRINCIPAL: CARREGAR AVALIAÇÃO (substitui carregarTextoProducao)
-            // ============================================
-            function carregarAvaliacaoProducao() {
-                const provaId = document.getElementById('pt-prova').value;
-                const alunoId = document.getElementById('pt-aluno').value;
-                const container = document.getElementById('pt-avaliacao-container');
-                const statusDiv = document.getElementById('pt-status');
-                const resultadoContainer = document.getElementById('pt-resultado-container');
-
-                // Desabilitar botões enquanto carrega
-                document.getElementById('pt-btn-editar').disabled = true;
-                document.getElementById('pt-btn-visualizar').disabled = true;
-                document.getElementById('pt-btn-salvar').disabled = true;
-                document.getElementById('pt-btn-excluir').disabled = true;
-
-                if (!provaId || !alunoId) {
-                    container.innerHTML = `
-                        <div style="text-align:center; padding:20px; color:var(--text3);">
-                            Selecione uma prova e um aluno e clique em "Carregar Avaliação".
-                        </div>
-                    `;
-                    resultadoContainer.style.display = 'none';
-                    statusDiv.innerHTML = '⚠️ Selecione uma prova e um aluno.';
-                    return;
-                }
-
-                statusDiv.innerHTML = '🔄 Carregando avaliação...';
-
-                // Buscar a prova para obter dados (disciplina, etc.) - mas o conteúdo é fixo
-                // A avaliação de produção de texto sempre será a mesma (questão 16 com critério de desenho)
-                // Então geramos o HTML fixo e carregamos a seleção salva, se houver.
-
-                const chave = `producao_avaliacao_${provaId}_${alunoId}`;
-                let selecionado = localStorage.getItem(chave);
-
-                // Renderizar o formulário da prova online com a seleção atual
-                renderizarAvaliacao(selecionado);
-
-                // Habilitar botões
-                document.getElementById('pt-btn-editar').disabled = false;
-                document.getElementById('pt-btn-visualizar').disabled = false;
-                document.getElementById('pt-btn-salvar').disabled = false;
-                document.getElementById('pt-btn-excluir').disabled = false;
-
-                statusDiv.innerHTML = '✅ Avaliação carregada. Utilize os botões para editar, visualizar, salvar ou excluir.';
-            }
-
-            // ============================================
-            // FUNÇÃO PARA RENDERIZAR O FORMULÁRIO DA PROVA ONLINE
-            // ============================================
-            function renderizarAvaliacao(selecionado) {
-                const container = document.getElementById('pt-avaliacao-container');
-                // Gerar HTML do formulário
-                const html = `
-                    <div style="background:#F5F9FF; border-left:6px solid #1565C0; padding:20px; border-radius:8px; margin-bottom:15px;">
-                        <h3 style="color:#0D47A1; margin-bottom:10px;">QUESTÃO 16</h3>
-                        <p><strong>Habilidade BNCC:</strong> EF15LP18</p>
-                        <p>Relacionar texto com ilustrações e outros recursos gráficos.</p>
-                    </div>
-
-                    <div style="background:#fafafa; border:1px solid #ddd; border-radius:8px; padding:20px;">
-                        <h4 style="color:#1565C0; margin-bottom:20px;">CRITÉRIO: DESENHO (REPRESENTAÇÃO DAS IDEIAS)</h4>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '1' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n1" value="1" ${selecionado == '1' ? 'checked' : ''} disabled>
-                            <label for="n1" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL INICIAL</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho não representa o tema ou não foi realizado.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">1 Ponto</div>
-                            </label>
-                        </div>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '2' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n2" value="2" ${selecionado == '2' ? 'checked' : ''} disabled>
-                            <label for="n2" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL BÁSICO</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho representa parcialmente o tema ou possui poucos elementos relacionados à proposta.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">2 Pontos</div>
-                            </label>
-                        </div>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '3' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n3" value="3" ${selecionado == '3' ? 'checked' : ''} disabled>
-                            <label for="n3" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL PROFICIENTE</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho representa o tema e apresenta alguns detalhes importantes.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">3 Pontos</div>
-                            </label>
-                        </div>
-
-                        <div class="opcao" style="display:flex; align-items:flex-start; gap:15px; padding:15px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; transition:.3s; background:${selecionado == '4' ? 'rgba(59,130,246,.1)' : 'transparent'};">
-                            <input type="radio" name="nota" id="n4" value="4" ${selecionado == '4' ? 'checked' : ''} disabled>
-                            <label for="n4" style="cursor:pointer; width:100%;">
-                                <div style="font-weight:bold; color:#0D47A1;">NÍVEL AVANÇADO</div>
-                                <div style="color:#444; margin-top:5px;">
-    O desenho representa claramente o tema proposto, apresenta riqueza de detalhes e complementa a escrita.
-</div>
-                                <div style="color:#2E7D32; font-weight:bold; margin-top:5px;">4 Pontos</div>
-                            </label>
-                        </div>
-                    </div>
-                `;
-
-                container.innerHTML = html;
-
-                // Se houver seleção, exibir o resultado
-                const resultadoContainer = document.getElementById('pt-resultado-container');
-                if (selecionado) {
-                    const conceitos = { '1': 'Inicial', '2': 'Básico', '3': 'Proficiente', '4': 'Avançado' };
-                    const cores = { '1': '#ef4444', '2': '#f59e0b', '3': '#3b82f6', '4': '#10b981' };
-                    resultadoContainer.style.display = 'block';
-                    resultadoContainer.style.borderLeftColor = cores[selecionado] || 'var(--green)';
-                    resultadoContainer.innerHTML = `
-                        ✅ Avaliação registrada!
-                        <br><strong>Conceito:</strong> ${conceitos[selecionado] || '—'}
-                        <br><strong>Pontuação:</strong> ${selecionado} ponto(s).
-                    `;
-                } else {
-                    resultadoContainer.style.display = 'none';
-                }
-            }
-
-            // ============================================
-            // FUNÇÕES DE CONTROLE DOS BOTÕES
-            // ============================================
-            function habilitarEdicaoAvaliacao() {
-                const radios = document.querySelectorAll('input[name="nota"]');
-                radios.forEach(r => r.disabled = false);
-                document.getElementById('pt-status').innerHTML = '✏️ Modo edição ativado. Selecione um nível e clique em Salvar.';
-                showToast('✏️ Agora você pode selecionar um conceito.', 'info');
-            }
-
-            function visualizarAvaliacao() {
-                const radios = document.querySelectorAll('input[name="nota"]');
-                radios.forEach(r => r.disabled = true);
-                document.getElementById('pt-status').innerHTML = '👁️ Modo visualização (somente leitura).';
-                showToast('👁️ Modo visualização ativado.', 'info');
-            }
-
-            function salvarAvaliacaoProducao() {
-                const provaId = document.getElementById('pt-prova').value;
-                const alunoId = document.getElementById('pt-aluno').value;
-                if (!provaId || !alunoId) {
-                    showToast('❌ Selecione uma prova e um aluno.', 'error');
-                    return;
-                }
-
-                const selectedRadio = document.querySelector('input[name="nota"]:checked');
-                if (!selectedRadio) {
-                    showToast('⚠️ Selecione um nível de avaliação!', 'warning');
-                    return;
-                }
-
-                const valor = selectedRadio.value;
-                const chave = `producao_avaliacao_${provaId}_${alunoId}`;
-                localStorage.setItem(chave, valor);
-
-                // Atualizar visual
-                renderizarAvaliacao(valor);
-                document.getElementById('pt-status').innerHTML = '💾 Avaliação salva com sucesso!';
-                showToast('✅ Avaliação salva localmente.', 'success');
-
-                // Desabilitar radios após salvar (volta ao modo visualização)
-                document.querySelectorAll('input[name="nota"]').forEach(r => r.disabled = true);
-            }
-
-            function excluirAvaliacaoProducao() {
-                const provaId = document.getElementById('pt-prova').value;
-                const alunoId = document.getElementById('pt-aluno').value;
-                if (!provaId || !alunoId) {
-                    showToast('❌ Selecione uma prova e um aluno.', 'error');
-                    return;
-                }
-
-                if (!confirm('Tem certeza que deseja excluir a avaliação deste aluno?')) return;
-
-                const chave = `producao_avaliacao_${provaId}_${alunoId}`;
-                localStorage.removeItem(chave);
-
-                // Resetar visual
-                renderizarAvaliacao(null);
-                document.getElementById('pt-status').innerHTML = '🗑️ Avaliação excluída.';
-                document.getElementById('pt-resultado-container').style.display = 'none';
-                showToast('🗑️ Avaliação excluída com sucesso.', 'error');
-
-                document.querySelectorAll('input[name="nota"]').forEach(r => r.disabled = true);
+                } catch (e) { console.error('Erro ao carregar alunos:', e); }
             }
 
             // ============================================
@@ -6123,8 +5785,7 @@
                         carregarEscolasParaCorrecaoManual(),
                         carregarFiltrosRelTurma(),
                         carregarFiltroEscolaTurmas(),
-                        carregarEscolasDesempenho(),
-                        carregarCombosProducao()
+                        carregarEscolasDesempenho()
                     ]);
                     console.log('✅ Todos os dados carregados com sucesso!');
                     atualizarDatasImpressao();
@@ -7243,7 +6904,6 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
-                carregarCombosProducao(); // inicializa a aba de produção de texto
             });
 
             document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
