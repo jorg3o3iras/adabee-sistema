@@ -829,59 +829,57 @@
         .desempenho-stats .nota { color: var(--blue); font-weight: 700; }
         .desempenho-stats .conceito { font-weight: 700; }
 
-        /* ===== GABARITO OFICIAL - CARDS COM TAMANHO AUMENTADO (CORRIGIDO) ===== */
-        .gabarito-oficial-card .card {
-            padding: 24px 28px;
-        }
+        /* ===== GABARITO OFICIAL - AGORA COM O MESMO VISUAL DOS CARDS DE DESEMPENHO ===== */
         .gabarito-oficial-card .questoes-grid-gabarito {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            gap: 12px;
-            padding: 16px 8px;
+            gap: 10px;
+            padding: 12px 6px;
         }
+
         .gabarito-oficial-card .questao-item-gabarito {
             background: var(--bg2);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 8px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 6px;
             text-align: center;
-            font-size: 16px;
+            font-size: 14px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
+            gap: 4px;
+            transition: border-color 0.2s;
         }
+
         .gabarito-oficial-card .questao-item-gabarito .q-num {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--text3);
         }
+
         .gabarito-oficial-card .questao-item-gabarito .q-resp {
             font-weight: 800;
-            font-size: 24px;
+            font-size: 20px;
             color: var(--green);
             background: var(--bg);
-            border-radius: 8px;
-            padding: 2px 8px;
-            line-height: 1.4;
+            border-radius: 6px;
+            padding: 0 6px;
+            line-height: 28px;
             width: 100%;
         }
+
         .gabarito-oficial-card .questao-item-gabarito .q-gab {
-            font-size: 12px;
-            color: var(--text3);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .gabarito-oficial-card .bncc-tag {
             font-size: 10px;
+            color: var(--text3);
+        }
+
+        .gabarito-oficial-card .questao-item-gabarito .bncc-tag {
+            font-size: 8px;
             color: var(--purple);
-            background: rgba(139, 92, 246, 0.12);
-            padding: 2px 8px;
-            border-radius: 6px;
-            margin-top: 4px;
-            font-weight: 600;
+            background: rgba(139, 92, 246, 0.1);
+            padding: 0 6px;
+            border-radius: 4px;
+            margin-top: 2px;
         }
 
         /* ===== INFO DO DESEMPENHO ===== */
@@ -1178,7 +1176,6 @@
 </head>
 <body>
 
-
     <!-- ══════════ BOTÃO MENU HAMBÚRGUER ══════════ -->
     <button class="menu-toggle no-print" id="menuToggle" onclick="toggleMenu()">☰</button>
     <div class="menu-overlay no-print" id="menuOverlay" onclick="toggleMenu()"></div>
@@ -1267,6 +1264,7 @@
                 <div id="usr-sb" style="display:none;">
                     <div class="sb-section">Menu</div>
                     <div class="sb-item active" onclick="go('u-dashboard')" data-p="u-dashboard"><span class="sb-ico">🏠</span> Início</div>
+                    <div class="sb-section">Cadastros</div>
                     <div class="sb-item" onclick="go('u-escola')" data-p="u-escola"><span class="sb-ico">🏫</span> Escola</div>
                     <div class="sb-item" onclick="go('u-turmas')" data-p="u-turmas"><span class="sb-ico">👥</span> Turmas</div>
                     <div class="sb-item" onclick="go('u-alunos')" data-p="u-alunos"><span class="sb-ico">🎒</span> Alunos</div>
@@ -1814,7 +1812,9 @@
                 </div>
             </div>
 
-            <!-- ========== RELATÓRIO POR TURMA ========== -->
+            <!-- ============================================================ -->
+            <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ============================================================ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header">
                     <div>
@@ -1833,6 +1833,7 @@
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
                 </div>
 
+                <!-- Filtros -->
                 <div class="card no-print" style="margin-bottom:16px;">
                     <div class="form-row c4">
                         <div class="form-group">
@@ -1875,105 +1876,74 @@
                     </div>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">👥</div></div><div><div class="stat-val" id="rel-total-alunos">0</div><div class="stat-label">Total Alunos</div></div></div>
-                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">✅</div></div><div><div class="stat-val" id="rel-Habilidades">0</div><div class="stat-label">Adquiriu as Habilidades</div></div></div>
-                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">⚠️</div></div><div><div class="stat-val" id="rel-recuperacao">0</div><div class="stat-label">Recomposição da Aprendizagem</div></div></div>
-                    <div class="stat-card purple">
-    <div class="stat-top">
-        <div class="stat-icon purple">📊</div>
-    </div>
-    <div>
-        <div class="stat-val" id="rel-media">0</div>
-        <div class="stat-label">Porcentagem</div>
-    </div>
-</div>
-                </div>
-
+                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">📈 Distribuição de Notas</div>
+                        <div class="card-title">📊 Porcentagem e Conceitos</div>
+                        <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <!-- Lado esquerdo: porcentagem -->
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
+                            <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
+                            <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
+                        </div>
+                        <!-- Lado direito: conceitos -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 Inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="rel-conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#ef4444,#dc2626);" id="rel-conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 Básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="rel-conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#f59e0b,#d97706);" id="rel-conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 Proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="rel-conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#3b82f6,#2563eb);" id="rel-conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 Avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="rel-conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#10b981,#059669);" id="rel-conceito-avancado-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
+                <div class="card" id="rel-distribuicao-unica">
+                    <div class="card-header">
+                        <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
                         <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
                     </div>
-
-                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:16px; margin-bottom:16px;">
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(59,130,246,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#3b82f6; margin-bottom:4px;"> Português</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-pt-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-pt-erros">0</span></span>
+                    <div style="display:grid; grid-template-columns:1fr; gap:12px;">
+                        <div style="background:var(--bg2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--border);">
+                            <div style="display:flex; justify-content:center; gap:32px; font-size:16px; font-weight:600; flex-wrap:wrap;">
+                                <span style="color:var(--green);">✅ Acertos: <span id="rel-disc-acertos">0</span></span>
+                                <span style="color:var(--red);">❌ Erros: <span id="rel-disc-erros">0</span></span>
+                                <span style="color:var(--blue);">⭐ Média: <span id="rel-disc-media">0.0</span></span>
+                                <span style="color:var(--purple);">📊 Conceito: <span id="rel-disc-conceito">—</span></span>
                             </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-pt-media" style="font-weight:700; color:#3b82f6;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(16,185,129,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#10b981; margin-bottom:4px;"> Matemática</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-mat-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-mat-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-mat-media" style="font-weight:700; color:#10b981;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(139,92,246,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#8b5cf6; margin-bottom:4px;"> Produção</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-prod-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-prod-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-prod-media" style="font-weight:700; color:#8b5cf6;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(245,158,11,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#f59e0b; margin-bottom:4px;"> CH</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-ch-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-ch-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-ch-media" style="font-weight:700; color:#f59e0b;">0.0</span>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg2); border-radius:12px; padding:14px; text-align:center; border:1px solid rgba(20,184,166,0.2);">
-                            <div style="font-size:18px; font-weight:700; color:#14b8a6; margin-bottom:4px;"> CN</div>
-                            <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:600;">
-                                <span style="color:var(--green);">✅ Acertos: <span id="rel-cn-acertos">0</span></span>
-                                <span style="color:var(--red);">❌ Erros: <span id="rel-cn-erros">0</span></span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;">
-                                Média: <span id="rel-cn-media" style="font-weight:700; color:#14b8a6;">0.0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="chart-bars" id="dist-notas">
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d0-2">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);"></div>
-                            <div class="chart-bar-lbl">0–2</div>
-                        </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d2-4">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#f59e0b,#b45309);"></div>
-                            <div class="chart-bar-lbl">2–4</div>
-                        </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d4-6">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div>
-                            <div class="chart-bar-lbl">4–6</div>
-                        </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d6-8">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div>
-                            <div class="chart-bar-lbl">6–8</div>
-                        </div>
-                        <div class="chart-bar-item">
-                            <div class="chart-bar-val" id="d8-10">0</div>
-                            <div class="chart-bar" style="height:10px;background:linear-gradient(180deg,#10b981,#047857);"></div>
-                            <div class="chart-bar-lbl">8–10</div>
                         </div>
                     </div>
                 </div>
@@ -2095,15 +2065,16 @@
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
                     </div>
 
-                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA (COM FONTES E CARDS AMPLIADOS) ===== -->
                     <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
-                        <div class="card">
+                        <div class="card" style="padding: 24px 28px;">
                             <div class="card-header">
-                                <div class="card-title" id="disciplina-unica-titulo">📖 Disciplina</div>
+                                <div class="card-title" id="disciplina-unica-titulo" style="font-size: 22px;">📖 Disciplina</div>
                                 <span class="badge" id="disciplina-unica-status">—</span>
                             </div>
-                            <div class="questoes-grid" id="disciplina-unica-questoes" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
-                            <div class="stats" style="display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13px;">
+                            <!-- GRID COM 8 COLUNAS E ITENS MAIORES -->
+                            <div class="questoes-grid-desempenho" id="disciplina-unica-questoes"></div>
+                            <div class="desempenho-stats">
                                 <span>✅ Acertos: <span class="acertos" id="disciplina-unica-acertos">0</span></span>
                                 <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
                                 <span>⭐ Aproveitamento: <span class="nota" id="disciplina-unica-nota">0%</span></span>
@@ -2112,15 +2083,15 @@
                         </div>
                     </div>
 
-                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
+                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) - AGORA COM O MESMO VISUAL ===== -->
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
-                        <div class="card">
+                        <div class="card" style="padding: 24px 28px;">
                             <div class="card-header">
-                                <div class="card-title">📋 Gabarito Oficial da Prova</div>
+                                <div class="card-title" style="font-size: 22px;">📋 Gabarito Oficial da Prova</div>
                                 <span class="badge badge-blue">Oficial</span>
                             </div>
-                            <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
-                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); text-align:center;">
+                            <div class="questoes-grid-gabarito" id="gabarito-oficial-grid"></div>
+                            <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-size:14px; color:var(--text3); text-align:center;">
                                 Respostas corretas da prova
                             </div>
                         </div>
@@ -2134,10 +2105,10 @@
                         <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
                     </div>
 
-                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
-                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:13px;">
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:16px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
                         <span style="color:var(--text3);">|</span>
                         <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
                         <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
@@ -2462,7 +2433,7 @@
 
         <script>
             // ============================================
-            // CONFIGURAÇÃO DA API
+            // CONFIGURAÇÃO DA API (MANTIDA IGUAL)
             // ============================================
             const API_URL = 'https://adabee-sistema-3.onrender.com';
             let loginType = 'admin';
@@ -4956,6 +4927,7 @@
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                         if (current) selectProva.value = current;
@@ -5026,12 +4998,25 @@
                 carregarRelatorioTurmaFiltrado();
             }
 
+            // ============================================
+            // CARREGAR RELATÓRIO POR TURMA FILTRADO (MODIFICADO)
+            // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
                     const escolaId = document.getElementById('rel-turma-escola').value;
                     const serie = document.getElementById('rel-turma-serie').value;
                     const turmaId = document.getElementById('rel-turma-turma').value;
                     const provaId = document.getElementById('rel-turma-prova').value;
+
+                    // Obter a disciplina da prova selecionada
+                    let disciplinaSelecionada = '';
+                    const selectProva = document.getElementById('rel-turma-prova');
+                    const optionProva = selectProva.options[selectProva.selectedIndex];
+                    if (optionProva && optionProva.dataset.disciplina) {
+                        disciplinaSelecionada = optionProva.dataset.disciplina;
+                    }
+                    // Se não houver disciplina definida, usar um fallback
+                    if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
 
                     let url = API_URL + '/api/historico/agrupado';
                     const params = new URLSearchParams();
@@ -5045,202 +5030,142 @@
                     const alunos = await response.json();
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        document.getElementById('rel-total-alunos').textContent = '0';
-                        document.getElementById('rel-Habilidades').textContent = '0';
-                        document.getElementById('rel-recuperacao').textContent = '0';
-                        document.getElementById('rel-media').textContent = '0';
+                        // Zerar todos os indicadores
+                        document.getElementById('rel-media').textContent = '0%';
+                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
-                        document.getElementById('rel-pt-acertos').textContent = '0';
-                        document.getElementById('rel-pt-erros').textContent = '0';
-                        document.getElementById('rel-pt-media').textContent = '0.0';
-                        document.getElementById('rel-mat-acertos').textContent = '0';
-                        document.getElementById('rel-mat-erros').textContent = '0';
-                        document.getElementById('rel-mat-media').textContent = '0.0';
-                        document.getElementById('rel-prod-acertos').textContent = '0';
-                        document.getElementById('rel-prod-erros').textContent = '0';
-                        document.getElementById('rel-prod-media').textContent = '0.0';
-                        document.getElementById('rel-ch-acertos').textContent = '0';
-                        document.getElementById('rel-ch-erros').textContent = '0';
-                        document.getElementById('rel-ch-media').textContent = '0.0';
-                        document.getElementById('rel-cn-acertos').textContent = '0';
-                        document.getElementById('rel-cn-erros').textContent = '0';
-                        document.getElementById('rel-cn-media').textContent = '0.0';
-                        const faixas = ['0-2', '2-4', '4-6', '6-8', '8-10'];
-                        faixas.forEach(id => {
-                            const el = document.getElementById('d' + id.replace('-', ''));
-                            if (el) el.textContent = '0';
+                        // Conceitos
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
                         });
-                        document.querySelectorAll('#dist-notas .chart-bar').forEach((bar, i) => {
-                            if (i < 5) bar.style.height = '10px';
-                        });
+                        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
+                        document.getElementById('rel-disc-acertos').textContent = '0';
+                        document.getElementById('rel-disc-erros').textContent = '0';
+                        document.getElementById('rel-disc-media').textContent = '0.0';
+                        document.getElementById('rel-disc-conceito').textContent = '—';
                         return;
                     }
 
                     const dadosAlunos = Array.isArray(alunos) ? alunos : [];
 
                     if (dadosAlunos.length === 0) {
-                        document.getElementById('rel-total-alunos').textContent = '0';
-                        document.getElementById('rel-Habilidades').textContent = '0';
-                        document.getElementById('rel-recuperacao').textContent = '0';
-                        document.getElementById('rel-media').textContent = '0';
+                        document.getElementById('rel-media').textContent = '0%';
+                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
                         document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
+                        });
+                        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
+                        document.getElementById('rel-disc-acertos').textContent = '0';
+                        document.getElementById('rel-disc-erros').textContent = '0';
+                        document.getElementById('rel-disc-media').textContent = '0.0';
+                        document.getElementById('rel-disc-conceito').textContent = '—';
                         return;
                     }
 
-                    const total = dadosAlunos.length;
-                    const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
-                    const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
-                    const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
-
-                    document.getElementById('rel-total-alunos').textContent = total;
-                    document.getElementById('rel-Habilidades').textContent = Habilidades;
-                    document.getElementById('rel-recuperacao').textContent = recuperacao;
+                    const totalAlunos = dadosAlunos.length;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-const porcentagem = (mediaGeral / notaMaxima) * 100;
-document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
-                    document.getElementById('rel-total-correcoes').textContent = total + ' correções';
 
-                    let totalPtAcertos = 0,
-                        totalPtErros = 0,
-                        totalPtQuestoes = 0;
-                    let totalMatAcertos = 0,
-                        totalMatErros = 0,
-                        totalMatQuestoes = 0;
-                    let totalProdAcertos = 0,
-                        totalProdErros = 0,
-                        totalProdQuestoes = 0;
-                    let totalCHAcertos = 0,
-                        totalCHErros = 0,
-                        totalCHQuestoes = 0;
-                    let totalCNAcertos = 0,
-                        totalCNErros = 0,
-                        totalCNQuestoes = 0;
+                    // Média geral (nota)
+                    let somaNotas = 0;
+                    dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
+                    const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
+                    const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
+                    document.getElementById('rel-media').textContent = porcentagemMedia.toFixed(1) + '%';
+                    document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
+                    document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
+
+                    // Calcular conceitos (porcentagem de acertos de cada aluno)
+                    let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
+                    dadosAlunos.forEach(aluno => {
+                        const nota = aluno.media || 0;
+                        const pct = (nota / notaMaxima) * 100;
+                        const conceito = calcularConceito(pct);
+                        conceitos[conceito] = (conceitos[conceito] || 0) + 1;
+                    });
+
+                    // Atualizar card de conceitos
+                    const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
+                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                        const count = conceitos[c] || 0;
+                        const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
+                        document.getElementById(`rel-conceito-${c}-count`).textContent = count;
+                        const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                        if (bar) {
+                            bar.style.width = Math.max(pct, 0) + '%';
+                            bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
+                        }
+                    });
+
+                    // ---- CARD ÚNICO DA DISCIPLINA SELECIONADA ----
+                    // Mapeamento da disciplina para a chave no objeto
+                    const disciplinaMap = {
+                        'Português': 'portugues',
+                        'Matemática': 'matematica',
+                        'Produção de Texto': 'producao',
+                        'Ciências Humanas': 'ch',
+                        'Ciências Naturais': 'cn',
+                        'História': 'ch',
+                        'Geografia': 'ch',
+                        'Inglês': 'portugues' // fallback
+                    };
+                    const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
+
+                    let totalAcertos = 0,
+                        totalErros = 0,
+                        totalQuestoes = 0;
+                    let alunosComDados = 0;
 
                     dadosAlunos.forEach(aluno => {
-                        if (aluno.portugues && typeof aluno.portugues === 'object') {
-                            const acertos = parseInt(aluno.portugues.acertos) || 0;
-                            const totalDisc = parseInt(aluno.portugues.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalPtAcertos += acertos;
-                            totalPtErros += erros;
-                            totalPtQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.portugues) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalPtAcertos += acertos;
-                            totalPtErros += erros;
-                            totalPtQuestoes += totalDisc;
-                        }
-
-                        if (aluno.matematica && typeof aluno.matematica === 'object') {
-                            const acertos = parseInt(aluno.matematica.acertos) || 0;
-                            const totalDisc = parseInt(aluno.matematica.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalMatAcertos += acertos;
-                            totalMatErros += erros;
-                            totalMatQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.matematica) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalMatAcertos += acertos;
-                            totalMatErros += erros;
-                            totalMatQuestoes += totalDisc;
-                        }
-
-                        if (aluno.producao && typeof aluno.producao === 'object') {
-                            const acertos = parseInt(aluno.producao.acertos) || 0;
-                            const totalDisc = parseInt(aluno.producao.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalProdAcertos += acertos;
-                            totalProdErros += erros;
-                            totalProdQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.producao) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalProdAcertos += acertos;
-                            totalProdErros += erros;
-                            totalProdQuestoes += totalDisc;
-                        }
-
-                        if (aluno.ch && typeof aluno.ch === 'object') {
-                            const acertos = parseInt(aluno.ch.acertos) || 0;
-                            const totalDisc = parseInt(aluno.ch.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalCHAcertos += acertos;
-                            totalCHErros += erros;
-                            totalCHQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.ch) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalCHAcertos += acertos;
-                            totalCHErros += erros;
-                            totalCHQuestoes += totalDisc;
-                        }
-
-                        if (aluno.cn && typeof aluno.cn === 'object') {
-                            const acertos = parseInt(aluno.cn.acertos) || 0;
-                            const totalDisc = parseInt(aluno.cn.total) || 0;
-                            const erros = totalDisc - acertos;
-                            totalCNAcertos += acertos;
-                            totalCNErros += erros;
-                            totalCNQuestoes += totalDisc;
-                        } else {
-                            const acertos = parseInt(aluno.cn) || 0;
-                            const totalDisc = 20;
-                            const erros = totalDisc - acertos;
-                            totalCNAcertos += acertos;
-                            totalCNErros += erros;
-                            totalCNQuestoes += totalDisc;
+                        const disciplinaData = aluno[chave];
+                        if (disciplinaData) {
+                            let acertos = 0,
+                                erros = 0,
+                                total = 0;
+                            if (typeof disciplinaData === 'object') {
+                                acertos = parseInt(disciplinaData.acertos) || 0;
+                                total = parseInt(disciplinaData.total) || 0;
+                                erros = total - acertos;
+                            } else {
+                                acertos = parseInt(disciplinaData) || 0;
+                                total = 20;
+                                erros = total - acertos;
+                            }
+                            totalAcertos += acertos;
+                            totalErros += erros;
+                            totalQuestoes += total;
+                            alunosComDados++;
                         }
                     });
 
-                    const ptMedia = total > 0 ? (totalPtAcertos / total) : 0;
-                    const matMedia = total > 0 ? (totalMatAcertos / total) : 0;
-                    const prodMedia = total > 0 ? (totalProdAcertos / total) : 0;
-                    const chMedia = total > 0 ? (totalCHAcertos / total) : 0;
-                    const cnMedia = total > 0 ? (totalCNAcertos / total) : 0;
+                    const mediaDisc = alunosComDados > 0 ? (totalAcertos / alunosComDados) : 0;
+                    const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
+                    const conceitoDisc = calcularConceito(pctDisc);
 
-                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
-                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
-                    document.getElementById('rel-pt-media').textContent = ptMedia.toFixed(1);
-                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
-                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
-                    document.getElementById('rel-mat-media').textContent = matMedia.toFixed(1);
-                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
-                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
-                    document.getElementById('rel-prod-media').textContent = prodMedia.toFixed(1);
-                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
-                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
-                    document.getElementById('rel-ch-media').textContent = chMedia.toFixed(1);
-                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
-                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
-                    document.getElementById('rel-cn-media').textContent = cnMedia.toFixed(1);
+                    document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
+                    document.getElementById('rel-disc-acertos').textContent = totalAcertos;
+                    document.getElementById('rel-disc-erros').textContent = totalErros;
+                    document.getElementById('rel-disc-media').textContent = mediaDisc.toFixed(1);
 
-                    const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-                    dadosAlunos.forEach(a => {
-                        const nota = (a.media || 0) * 2;
-                        if (nota < 2) faixas['0-2']++;
-                        else if (nota < 4) faixas['2-4']++;
-                        else if (nota < 6) faixas['4-6']++;
-                        else if (nota < 8) faixas['6-8']++;
-                        else faixas['8-10']++;
-                    });
-
-                    const maxVal = Math.max(...Object.values(faixas), 1);
-                    const keys = ['0-2', '2-4', '4-6', '6-8', '8-10'];
-                    keys.forEach((key, index) => {
-                        const el = document.getElementById('d' + key.replace('-', ''));
-                        if (el) el.textContent = faixas[key];
-                        const bars = document.querySelectorAll('#dist-notas .chart-bar');
-                        if (bars[index]) {
-                            const altura = maxVal > 0 ? Math.max(10, (faixas[key] / maxVal) * 110) : 10;
-                            bars[index].style.height = altura + 'px';
-                        }
-                    });
+                    const badgeMap = {
+                        'inicial': 'badge-conceito-inicial',
+                        'basico': 'badge-conceito-basico',
+                        'proficiente': 'badge-conceito-proficiente',
+                        'avancado': 'badge-conceito-avancado'
+                    };
+                    const labelMap = {
+                        'inicial': '🔴 Inicial',
+                        'basico': '🟠 Básico',
+                        'proficiente': '🔵 Proficiente',
+                        'avancado': '🟢 Avançado'
+                    };
+                    const conceitoSpan = document.getElementById('rel-disc-conceito');
+                    if (conceitoSpan) {
+                        conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
+                        conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
+                    }
 
                 } catch (erro) {
                     console.error('❌ Erro ao carregar relatório por turma:', erro);
@@ -5276,6 +5201,7 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                             const opt = document.createElement('option');
                             opt.value = p.id;
                             opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.disciplina = p.disciplina || '';
                             selectProva.appendChild(opt);
                         });
                     }
@@ -5517,14 +5443,14 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     document.getElementById('disciplina-unica-titulo').textContent = `📖 ${disciplina}`;
 
                     const grid = document.getElementById('disciplina-unica-questoes');
+                    grid.className = 'questoes-grid-desempenho'; // classe com grid 8 colunas
                     grid.innerHTML = '';
                     resultadoQuestoes.forEach(q => {
                         const div = document.createElement('div');
-                        div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
-                        // CONSTRUÇÃO DO HTML INCLUINDO BNCC
+                        div.className = `questao-item-desempenho ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
                         let bnccHtml = '';
                         if (q.bncc && q.bncc.trim() !== '') {
-                            bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                            bnccHtml = `<div class="bncc-tag">BNCC: ${q.bncc}</div>`;
                         }
                         div.innerHTML = `
                             <div class="q-num">Q${q.numero}</div>
@@ -5548,21 +5474,22 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
 
                     document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
-                    // ---- CARD GABARITO OFICIAL DA PROVA (com BNCC) ----
+                    // ---- CARD GABARITO OFICIAL DA PROVA (com BNCC) - CORRIGIDO: AGORA COM O MESMO VISUAL DOS CARDS DE DESEMPENHO ----
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
 
                     const gabGrid = document.getElementById('gabarito-oficial-grid');
+                    gabGrid.className = 'questoes-grid-gabarito';
                     gabGrid.innerHTML = '';
                     gabarito.forEach((gab, idx) => {
                         const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
                         const div = document.createElement('div');
-                        div.className = 'questao-item';
+                        div.className = 'questao-item-gabarito'; // classe que aplica o estilo de card
                         div.innerHTML = `
                             <div class="q-num">Q${idx+1}</div>
-                            <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
+                            <div class="q-resp">${gab || '—'}</div>
                             <div class="q-gab">Oficial</div>
-                            ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${codigoBncc}</div>` : ''}
+                            ${codigoBncc ? `<div class="bncc-tag">BNCC: ${codigoBncc}</div>` : ''}
                         `;
                         gabGrid.appendChild(div);
                     });
@@ -5612,7 +5539,7 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                         let bnccHTML = '';
                         if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
                         questoesHTML += `
-                            <div class="questao-item ${classe}">
+                            <div class="questao-item-desempenho ${classe}">
                                 <div class="q-num">Q${q.numero}</div>
                                 <div class="q-resp">${q.resposta}</div>
                                 <div class="q-gab">${q.gabarito}</div>
@@ -5627,11 +5554,11 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                     gabarito.forEach((gab, idx) => {
                         const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
                         gabOficialHTML += `
-                            <div class="questao-item" style="border-color: #86efac;">
+                            <div class="questao-item-gabarito" style="border-color: #86efac;">
                                 <div class="q-num">Q${idx+1}</div>
                                 <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
                                 <div class="q-gab">Oficial</div>
-                                ${codigoBncc ? `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${codigoBncc}</div>` : ''}
+                                ${codigoBncc ? `<div class="bncc-tag">BNCC: ${codigoBncc}</div>` : ''}
                             </div>
                         `;
                     });
@@ -5659,27 +5586,27 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                             .resumo-item .valor.blue { color:#2563eb; }
                             .resumo-item .valor.purple { color:#7c3aed; }
                             .footer { margin-top:25px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:12px; color:#64748b; }
-                            .questao-item { background:#f8fafc; border-radius:4px; padding:4px 2px; text-align:center; font-size:10px; border:1px solid #e2e8f0; }
-                            .questao-item .q-num { font-size:7px; color:#94a3b8; }
-                            .questao-item .q-resp { font-weight:700; font-size:12px; }
-                            .questao-item .q-gab { font-size:7px; color:#94a3b8; }
-                            .questao-item .q-status-text { font-size:7px; font-weight:700; display:block; margin-top:2px; }
-                            .questao-item.acertou { border-color:#16a34a; background:#dcfce7; }
-                            .questao-item.acertou .q-resp { color:#16a34a; }
-                            .questao-item.acertou .q-status-text { color:#16a34a; }
-                            .questao-item.errou { border-color:#dc2626; background:#fee2e2; }
-                            .questao-item.errou .q-resp { color:#dc2626; }
-                            .questao-item.errou .q-status-text { color:#dc2626; }
+                            .questao-item-desempenho { background:#f8fafc; border-radius:4px; padding:4px 2px; text-align:center; font-size:10px; border:1px solid #e2e8f0; }
+                            .questao-item-desempenho .q-num { font-size:7px; color:#94a3b8; }
+                            .questao-item-desempenho .q-resp { font-weight:700; font-size:12px; }
+                            .questao-item-desempenho .q-gab { font-size:7px; color:#94a3b8; }
+                            .questao-item-desempenho .q-status-text { font-size:7px; font-weight:700; display:block; margin-top:2px; }
+                            .questao-item-desempenho.acertou { border-color:#16a34a; background:#dcfce7; }
+                            .questao-item-desempenho.acertou .q-resp { color:#16a34a; }
+                            .questao-item-desempenho.acertou .q-status-text { color:#16a34a; }
+                            .questao-item-desempenho.errou { border-color:#dc2626; background:#fee2e2; }
+                            .questao-item-desempenho.errou .q-resp { color:#dc2626; }
+                            .questao-item-desempenho.errou .q-status-text { color:#dc2626; }
                             .disciplina-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px; page-break-inside:avoid; }
                             .disciplina-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
                             .disciplina-card .header strong { font-size:15px; color:#0f172a; }
-                            .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
+                            .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; margin-bottom:8px; }
                             .disciplina-card .stats { display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px; }
                             .disciplina-card .stats strong { color:#0f172a; }
                             .gabarito-oficial-card { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:16px; page-break-inside:avoid; }
                             .gabarito-oficial-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
                             .gabarito-oficial-card .header strong { font-size:15px; color:#0f172a; }
-                            .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
+                            .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; margin-bottom:8px; }
                             @media print {
                                 .no-print { display:none !important; }
                                 body { padding:20px; }
@@ -5689,7 +5616,7 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
                             @media (max-width:768px) {
                                 .info-grid { grid-template-columns:1fr 1fr; }
                                 .resumo { grid-template-columns:1fr 1fr; }
-                                .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
+                                .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(4,1fr); }
                             }
                         </style>
                     </head>
@@ -6080,114 +6007,105 @@ document.getElementById('rel-media').textContent = porcentagem.toFixed(1) + '%';
             }
 
             function imprimirAlunos() {
-    const tbody = document.getElementById('tb-alunos');
-    const rows = tbody.querySelectorAll('tr');
+                const tbody = document.getElementById('tb-alunos');
+                const rows = tbody.querySelectorAll('tr');
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+                    showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+                    return;
+                }
+                const escolaSelect = document.getElementById('filtro-escola-alunos');
+                const turmaSelect = document.getElementById('filtro-turma-alunos');
+                const serieSelect = document.getElementById('filtro-serie-alunos');
+                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
 
-    // Verifica se há dados
-    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
-        showToast('⚠️ Nenhum aluno para imprimir.', 'error');
-        return;
-    }
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Lista de Alunos</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+                        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+                        .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                        th { background: #f2f2f2; font-weight: 700; }
+                        tr:nth-child(even) { background: #fafafa; }
+                        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+                        @media print {
+                            body { margin: 10px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📋 Lista de Alunos</h1>
+                    <div class="filtros">
+                        <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+                        <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+                        <strong>Série:</strong> ${serieNome}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Matrícula</th>
+                                <th>Nome Completo</th>
+                                <th>Série</th>
+                                <th>Turma</th>
+                                <th>Escola</th>
+                                <th>Data Nasc.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        const numero = cells[0].textContent.trim();
+                        const matricula = cells[1].textContent.trim();
+                        const nome = cells[2].textContent.trim();
+                        const serie = cells[3].textContent.trim();
+                        const turma = cells[4].textContent.trim();
+                        const escola = cells[5].textContent.trim();
+                        const dataNasc = cells[6].textContent.trim();
+                        html += `
+                            <tr>
+                                <td>${numero}</td>
+                                <td>${matricula}</td>
+                                <td>${nome}</td>
+                                <td>${serie}</td>
+                                <td>${turma}</td>
+                                <td>${escola}</td>
+                                <td>${dataNasc}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                html += `
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        Gerado em ${new Date().toLocaleString('pt-BR')}
+                    </div>
+                </body>
+                </html>
+                `;
 
-    // Captura os nomes dos filtros atuais
-    const escolaSelect = document.getElementById('filtro-escola-alunos');
-    const turmaSelect = document.getElementById('filtro-turma-alunos');
-    const serieSelect = document.getElementById('filtro-serie-alunos');
-    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
-    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
-    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
-
-    // Monta o HTML para impressão
-    let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Lista de Alunos</title>
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
-            h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
-            .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-            th { background: #f2f2f2; font-weight: 700; }
-            tr:nth-child(even) { background: #fafafa; }
-            .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
-            @media print {
-                body { margin: 10px; }
-                .no-print { display: none; }
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+                win.document.write(html);
+                win.document.close();
+                win.focus();
+                win.print();
             }
-        </style>
-    </head>
-    <body>
-        <h1>📋 Lista de Alunos</h1>
-        <div class="filtros">
-            <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
-            <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
-            <strong>Série:</strong> ${serieNome}
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nº</th>
-                    <th>Matrícula</th>
-                    <th>Nome Completo</th>
-                    <th>Série</th>
-                    <th>Turma</th>
-                    <th>Escola</th>
-                    <th>Data Nasc.</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    // Percorre as linhas visíveis da tabela (já filtradas)
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
-            const numero = cells[0].textContent.trim();
-            const matricula = cells[1].textContent.trim();
-            const nome = cells[2].textContent.trim();
-            const serie = cells[3].textContent.trim();
-            const turma = cells[4].textContent.trim();
-            const escola = cells[5].textContent.trim();
-            const dataNasc = cells[6].textContent.trim();
-            html += `
-                <tr>
-                    <td>${numero}</td>
-                    <td>${matricula}</td>
-                    <td>${nome}</td>
-                    <td>${serie}</td>
-                    <td>${turma}</td>
-                    <td>${escola}</td>
-                    <td>${dataNasc}</td>
-                </tr>
-            `;
-        }
-    });
-
-    html += `
-            </tbody>
-        </table>
-        <div class="footer">
-            Gerado em ${new Date().toLocaleString('pt-BR')}
-        </div>
-    </body>
-    </html>
-    `;
-
-    // Abre uma nova janela e imprime
-    const win = window.open('', '_blank');
-    if (!win) {
-        showToast('⚠️ Permita pop-ups para imprimir.', 'error');
-        return;
-    }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
-}
 
             function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
                 window.print(); }
