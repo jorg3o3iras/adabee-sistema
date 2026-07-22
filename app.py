@@ -1583,7 +1583,8 @@ def historico_agrupado():
                 alunos_map[aluno_key]['avaliacoes'][tipo] = {
                     'nota': float(item.get('nota', 0)),
                     'acertos': int(item.get('acertos', 0)),
-                    'total': int(item.get('total_questoes', 20)),
+                    # 🔥 USAR O TOTAL DO HISTÓRICO, NÃO DA PROVA
+                    'total': int(item.get('total', 20)),
                     'prova': prova_titulo,
                     'data': item.get('data_correcao', ''),
                     'disciplina': disciplina,
