@@ -1632,10 +1632,37 @@
                 </div>
             </div>
 
-            <!-- ========== GABARITOS LIST ========== -->
+            <!-- ========== GABARITOS LIST (COM DETALHES PARA PRODUÇÃO DE TEXTO) ========== -->
             <div class="page" id="page-gabaritos">
-                <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>BNCC</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="page-header">
+                    <div><div class="page-title">📋 Gabaritos</div></div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button>
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Prova</th>
+                                    <th>Série</th>
+                                    <th>Questões</th>
+                                    <th>Alternativas</th>
+                                    <th>BNCC</th>
+                                    <th>Detalhes</th>
+                                    <th>Criado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-gabaritos">
+                                <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- ========== PROVAS ========== -->
@@ -3083,7 +3110,7 @@
             }
 
             // ============================================
-            // CARREGAR GABARITOS (COM INDICADOR BNCC)
+            // CARREGAR GABARITOS (COM DETALHES PARA PRODUÇÃO DE TEXTO)
             // ============================================
             async function carregarGabaritos() {
                 try {
@@ -3093,27 +3120,50 @@
                     if (!tbody) return;
                     const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
                     if (!comGabarito || comGabarito.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
-                    } else {
-                        tbody.innerHTML = comGabarito.map((p, i) => {
-                            let bnccText = '—';
-                            if (p.bncc && p.bncc.length > 0) {
-                                const codigos = p.bncc.filter(c => c && c.trim() !== '');
-                                if (codigos.length > 0) bnccText = codigos.join(', ');
-                            }
-                            return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
-                                '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
-                                '<td>' + p.titulo + '</td>' +
-                                '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
-                                '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
-                                '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
-                                '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
-                                '<td>' + (p.data_prova || '—') + '</td>' +
-                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
-                        }).join('');
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
+                        return;
                     }
+
+                    tbody.innerHTML = comGabarito.map((p, i) => {
+                        let bnccText = '—';
+                        if (p.bncc && p.bncc.length > 0) {
+                            const codigos = p.bncc.filter(c => c && c.trim() !== '');
+                            if (codigos.length > 0) bnccText = codigos.join(', ');
+                        }
+
+                        let detalhesText = '';
+                        let detalhesTitle = '';
+                        const isProducao = p.disciplina === 'Produção de Texto';
+                        if (isProducao && p.textos_questoes && p.textos_questoes.length > 0) {
+                            const textos = p.textos_questoes.filter(t => t && t.trim() !== '');
+                            if (textos.length > 0) {
+                                const resumo = textos.slice(0, 3).map(t => t.substring(0, 25) + (t.length > 25 ? '…' : '')).join(' | ');
+                                detalhesText = `📝 ${resumo}`;
+                                detalhesTitle = textos.join(' | ');
+                            } else {
+                                detalhesText = '📝 (sem textos)';
+                            }
+                        } else if (isProducao) {
+                            detalhesText = '📝 (sem textos)';
+                        } else {
+                            detalhesText = bnccText; // fallback
+                        }
+
+                        return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                            '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                            '<td>' + p.titulo + '</td>' +
+                            '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                            '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
+                            '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
+                            '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
+                            '<td style="font-size:9px; max-width:150px; word-wrap:break-word;" title="' + detalhesTitle + '">' + detalhesText + '</td>' +
+                            '<td>' + (p.data_prova || '—') + '</td>' +
+                            '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                    }).join('');
                 } catch (erro) {
                     console.error('Erro ao carregar gabaritos:', erro);
+                    const tbody = document.getElementById('tb-gabaritos');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar gabaritos</td></tr>';
                 }
             }
 
@@ -6556,7 +6606,7 @@
 
                 if (isProducao) {
                     const items = document.querySelectorAll('.gab-item-producao');
-                    items.forEach(item => {
+                    items.forEach((item, idx) => {
                         const radioSim = item.querySelector('.gab-radio-sim');
                         const radioNao = item.querySelector('.gab-radio-nao');
                         const escolha = Math.random() < 0.5 ? 'SIM' : 'NÃO';
@@ -6565,7 +6615,7 @@
                         item.style.borderColor = 'var(--green)';
                         const textoInput = item.querySelector('.gab-texto');
                         if (textoInput && !textoInput.value) {
-                            textoInput.value = `Questão ${item.querySelector('.gab-num')?.textContent?.trim() || ''}`;
+                            textoInput.value = `Exemplo de texto para Q${idx+1}`;
                         }
                     });
                 } else {
