@@ -207,6 +207,8 @@
         .gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
         .gab-bncc { width:100%; padding:2px 2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center; outline:none; transition:border .2s; margin-top:2px; }
         .gab-bncc:focus { border-color:var(--purple); }
+        .gab-texto { width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical; }
+        .gab-nivel { width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; }
 
         .ai-hero { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.06)); border:1px solid rgba(139,92,246,0.15); border-radius:var(--r); padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
         .ai-hero-icon { font-size:44px; }
@@ -356,6 +358,20 @@
             color: var(--red);
         }
 
+        .correcao-manual-item .q-resposta-texto {
+            width: 100%;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            padding: 4px;
+            font-size: 12px;
+        }
+        .correcao-manual-item .q-gabarito {
+            font-size: 10px;
+            color: var(--text3);
+        }
+
         /* ============================================
            CORREÇÃO MANUAL STANDALONE - DUAS LINHAS
            ============================================ */
@@ -430,6 +446,20 @@
         .cm-item-standalone .q-status-icon {
             font-size: 11px;
             min-height: 16px;
+        }
+
+        .cm-item-standalone .q-resposta-texto {
+            width: 100%;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            padding: 4px;
+            font-size: 11px;
+        }
+        .cm-item-standalone .q-gabarito-texto {
+            font-size: 7px;
+            color: var(--text3);
         }
 
         .resumo-correcao { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:12px 0; }
@@ -1363,7 +1393,7 @@
                         <div class="card-header"><div class="card-title">📝 Informações</div></div>
                         <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
                         <div class="form-row"><div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label>
-                            <select class="form-control" id="prova-disciplina">
+                            <select class="form-control" id="prova-disciplina" onchange="atualizarInfoAlts()">
                                 <option value="Matemática">Matemática</option>
                                 <option value="Português">Português</option>
                                 <option value="Produção de Texto">Produção de Texto</option>
@@ -2012,7 +2042,7 @@
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
-                                <div class="card-title">📋 Gabarito Oficial da Prova</div>
+                                <div class="card-title" id="gabarito-oficial-titulo">📋 Gabarito Oficial da Prova</div>
                                 <span class="badge badge-blue">Oficial</span>
                             </div>
                             <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
@@ -2380,7 +2410,8 @@
                 notaMaxima: 10,
                 notaMinima: 5,
                 valorPorQuestao: 0.5,
-                serie: '1º Ano'
+                serie: '1º Ano',
+                disciplina: '' // <-- ADICIONADO
             };
 
             // Dados para correção manual standalone (menu)
@@ -2401,7 +2432,8 @@
                 notaMinima: 5,
                 valorPorQuestao: 0.5,
                 provaTitulo: '',
-                provaData: ''
+                provaData: '',
+                disciplina: '' // <-- ADICIONADO
             };
 
             // Dados para a aba Desempenho do Aluno
@@ -3021,12 +3053,13 @@
                                 const codigos = p.bncc.filter(c => c && c.trim() !== '');
                                 if (codigos.length > 0) bnccText = codigos.join(', ');
                             }
+                            const tipoTexto = p.disciplina === 'Produção de Texto' ? 'Texto' : (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D');
                             return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                                 '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                                 '<td>' + p.titulo + '</td>' +
                                 '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                                 '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
-                                '<td><span class="badge ' + (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue') + '">' + (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D') + '</span></td>' +
+                                '<td><span class="badge ' + (tipoTexto === 'Texto' ? 'badge-purple' : (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue')) + '">' + tipoTexto + '</span></td>' +
                                 '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
                                 '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
@@ -3286,6 +3319,7 @@
                             selectProva.appendChild(opt);
                         });
                     }
+                    carregarResultadosComFiltros();
                 }).catch(e => console.error('Erro ao recarregar provas:', e));
             }
 
@@ -3401,29 +3435,52 @@
                 const alternativas = correcaoManualData.alternativas || ['A', 'B', 'C', 'D'];
                 const respostas = correcaoManualData.respostasAluno || [];
                 const gabarito = correcaoManualData.gabarito || [];
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+
                 grid.innerHTML = '';
                 for (let i = 0; i < qtd; i++) {
                     const div = document.createElement('div');
                     div.className = 'correcao-manual-item';
                     const respostaAluno = (i < respostas.length) ? respostas[i] : '';
                     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
-                    const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
-                    let options = '<option value="">—</option>';
-                    alternativas.forEach(alt => {
-                        const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
-                        options += `<option value="${alt}" ${selected}>${alt}</option>`;
-                    });
-                    let statusClass = '';
-                    let statusText = '';
-                    if (respostaAluno) {
-                        if (isCorreto) { statusClass = 'correta';
-                            statusText = '✅'; } else { statusClass = 'errada';
-                            statusText = '❌'; }
-                    }
-                    div.innerHTML = `<div class="q-num">Q${i+1}</div><div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div><select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select><div class="q-status ${statusClass}">${statusText}</div>`;
-                    const select = div.querySelector('.q-select');
-                    if (select) {
-                        if (isCorreto && respostaAluno) { select.className = 'q-select correta'; } else if (respostaAluno && !isCorreto) { select.className = 'q-select errada'; }
+
+                    if (isProducao) {
+                        // Produção de texto: campo de texto e gabarito como referência
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-gabarito">Gabarito: ${respostaGabarito || '—'}</div>
+                            <input class="q-resposta-texto" type="text" placeholder="Resposta do aluno..." value="${respostaAluno}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px;" />
+                            <div class="q-status" style="font-size:10px;"></div>
+                        `;
+                        const input = div.querySelector('.q-resposta-texto');
+                        input.dataset.questao = i;
+                        input.addEventListener('input', function() {
+                            correcaoManualData.respostasAluno[i] = this.value;
+                            atualizarResumoCorrecaoManual();
+                        });
+                    } else {
+                        // Alternativas
+                        let options = '<option value="">—</option>';
+                        alternativas.forEach(alt => {
+                            const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
+                            options += `<option value="${alt}" ${selected}>${alt}</option>`;
+                        });
+                        let statusClass = '';
+                        let statusText = '';
+                        if (respostaAluno) {
+                            const isCorreto = respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+                            if (isCorreto) { statusClass = 'correta'; statusText = '✅'; } else { statusClass = 'errada'; statusText = '❌'; }
+                        }
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div>
+                            <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
+                            <div class="q-status ${statusClass}">${statusText}</div>
+                        `;
+                        const select = div.querySelector('.q-select');
+                        if (select) {
+                            if (respostaAluno && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase()) { select.className = 'q-select correta'; } else if (respostaAluno) { select.className = 'q-select errada'; }
+                        }
                     }
                     grid.appendChild(div);
                 }
@@ -3457,20 +3514,31 @@
                 const qtd = correcaoManualData.quantidade || 20;
                 const respostas = correcaoManualData.respostasAluno || [];
                 const gabarito = correcaoManualData.gabarito || [];
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+
                 let acertos = 0,
                     respondidas = 0;
                 for (let i = 0; i < qtd; i++) {
                     const resp = i < respostas.length ? respostas[i] : '';
                     const gab = i < gabarito.length ? gabarito[i] : '';
-                    if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) { acertos++; } }
+                    if (resp) {
+                        respondidas++;
+                        if (isProducao) {
+                            if (resp.trim().toLowerCase() === gab.trim().toLowerCase()) acertos++;
+                        } else {
+                            if (resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                        }
+                    }
                 }
                 const erros = respondidas - acertos;
                 const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
                 const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
                 const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+
                 document.getElementById('cm-acertos').textContent = acertos;
                 document.getElementById('cm-erros').textContent = erros;
                 document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
+
                 const statusBadge = document.getElementById('cm-status-badge');
                 const statusAtual = document.getElementById('cm-status-atual');
                 if (notaFinal >= (correcaoManualData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
@@ -3489,16 +3557,42 @@
             function preencherGabaritoCM() {
                 const qtd = correcaoManualData.quantidade || 20;
                 const gabarito = correcaoManualData.gabarito || [];
-                for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) { correcaoManualData.respostasAluno[i] = gabarito[i]; } }
-                gerarGridCorrecaoManual();
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        if (i < gabarito.length) {
+                            input.value = gabarito[i] || '';
+                            correcaoManualData.respostasAluno[i] = gabarito[i] || '';
+                        }
+                    });
+                } else {
+                    for (let i = 0; i < qtd; i++) {
+                        if (i < gabarito.length && gabarito[i]) {
+                            correcaoManualData.respostasAluno[i] = gabarito[i];
+                        }
+                    }
+                    gerarGridCorrecaoManual();
+                }
                 atualizarResumoCorrecaoManual();
                 showToast('📋 Respostas preenchidas com o gabarito!', 'success');
             }
 
             function limparRespostasCM() {
                 const qtd = correcaoManualData.quantidade || 20;
-                for (let i = 0; i < qtd; i++) { correcaoManualData.respostasAluno[i] = ''; }
-                gerarGridCorrecaoManual();
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        input.value = '';
+                        correcaoManualData.respostasAluno[i] = '';
+                    });
+                } else {
+                    for (let i = 0; i < qtd; i++) {
+                        correcaoManualData.respostasAluno[i] = '';
+                    }
+                    gerarGridCorrecaoManual();
+                }
                 atualizarResumoCorrecaoManual();
                 showToast('🗑️ Respostas limpas!', 'info');
             }
@@ -3675,6 +3769,7 @@
                     cmStandaloneData.gabarito = [];
                     cmStandaloneData.quantidade = 20;
                     cmStandaloneData.alternativas = ['A', 'B', 'C', 'D'];
+                    cmStandaloneData.disciplina = '';
                     return;
                 }
                 try {
@@ -3689,6 +3784,7 @@
                     cmStandaloneData.gabarito = gabarito;
                     cmStandaloneData.quantidade = quantidade;
                     cmStandaloneData.alternativas = alternativas;
+                    cmStandaloneData.disciplina = option.dataset.disciplina || '';
                     cmStandaloneData.valorPorQuestao = 10 / quantidade;
                     cmStandaloneData.respostas = new Array(quantidade).fill('');
 
@@ -3730,6 +3826,7 @@
                         cmStandaloneData.alternativas = tipo === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                         cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
                         cmStandaloneData.respostas = new Array(cmStandaloneData.quantidade).fill('');
+                        cmStandaloneData.disciplina = provaOption.dataset.disciplina || '';
                     } catch (e) {
                         showToast('❌ Erro ao carregar gabarito da prova', 'error');
                         return;
@@ -3765,6 +3862,7 @@
                 const alternativas = cmStandaloneData.alternativas || ['A', 'B', 'C', 'D'];
                 const gabarito = cmStandaloneData.gabarito || [];
                 const respostas = cmStandaloneData.respostas || [];
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
 
                 grid.innerHTML = '';
 
@@ -3774,29 +3872,45 @@
 
                     const gab = (i < gabarito.length) ? gabarito[i] : '';
                     const resp = (i < respostas.length) ? respostas[i] : '';
-                    const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
 
-                    let options = '<option value="">—</option>';
-                    alternativas.forEach(alt => {
-                        const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
-                        options += `<option value="${alt}" ${selected}>${alt}</option>`;
-                    });
+                    if (isProducao) {
+                        // Produção de texto
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-gabarito-texto">Gabarito: ${gab || '—'}</div>
+                            <input class="q-resposta-texto" type="text" placeholder="Resposta do aluno..." value="${resp}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px;" />
+                            <div class="q-status-icon"></div>
+                        `;
+                        const input = div.querySelector('.q-resposta-texto');
+                        input.dataset.questao = i;
+                        input.addEventListener('input', function() {
+                            cmStandaloneData.respostas[i] = this.value;
+                            atualizarResumoCorrecaoManualSA();
+                        });
+                    } else {
+                        // Alternativas
+                        let options = '<option value="">—</option>';
+                        alternativas.forEach(alt => {
+                            const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
+                            options += `<option value="${alt}" ${selected}>${alt}</option>`;
+                        });
 
-                    let statusIcon = '';
-                    if (resp) statusIcon = isCorreto ? '✅' : '❌';
+                        const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
+                        let statusIcon = '';
+                        if (resp) statusIcon = isCorreto ? '✅' : '❌';
 
-                    let selectClass = 'q-select-manual';
-                    if (resp) selectClass += isCorreto ? ' correta' : ' errada';
+                        let selectClass = 'q-select-manual';
+                        if (resp) selectClass += isCorreto ? ' correta' : ' errada';
 
-                    div.innerHTML = `
-                        <div class="q-num">Q${i+1}</div>
-                        <div class="q-gabarito">${gab || '—'}</div>
-                        <select class="${selectClass}" data-questao="${i}" onchange="atualizarRespostaManualSA(this)">
-                            ${options}
-                        </select>
-                        <div class="q-status-icon">${statusIcon}</div>
-                    `;
-
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-gabarito">${gab || '—'}</div>
+                            <select class="${selectClass}" data-questao="${i}" onchange="atualizarRespostaManualSA(this)">
+                                ${options}
+                            </select>
+                            <div class="q-status-icon">${statusIcon}</div>
+                        `;
+                    }
                     grid.appendChild(div);
                 }
             }
@@ -3823,13 +3937,21 @@
                 const qtd = cmStandaloneData.quantidade || 20;
                 const respostas = cmStandaloneData.respostas || [];
                 const gabarito = cmStandaloneData.gabarito || [];
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
 
                 let acertos = 0,
                     respondidas = 0;
                 for (let i = 0; i < qtd; i++) {
                     const resp = i < respostas.length ? respostas[i] : '';
                     const gab = i < gabarito.length ? gabarito[i] : '';
-                    if (resp) { respondidas++; if (resp.toUpperCase() === gab.toUpperCase()) acertos++; }
+                    if (resp) {
+                        respondidas++;
+                        if (isProducao) {
+                            if (resp.trim().toLowerCase() === gab.trim().toLowerCase()) acertos++;
+                        } else {
+                            if (resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                        }
+                    }
                 }
                 const erros = respondidas - acertos;
                 const nota = (acertos * cmStandaloneData.valorPorQuestao) || 0;
@@ -3851,16 +3973,44 @@
             function preencherGabaritoManualSA() {
                 const qtd = cmStandaloneData.quantidade || 20;
                 const gabarito = cmStandaloneData.gabarito || [];
-                for (let i = 0; i < qtd; i++) { if (i < gabarito.length && gabarito[i]) cmStandaloneData.respostas[i] = gabarito[i]; }
-                gerarGridCorrecaoManualSA();
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid-standalone .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        if (i < gabarito.length) {
+                            input.value = gabarito[i] || '';
+                            cmStandaloneData.respostas[i] = gabarito[i] || '';
+                        }
+                    });
+                } else {
+                    const selects = document.querySelectorAll('#cm-grid-standalone .q-select-manual');
+                    selects.forEach((select, i) => {
+                        if (i < gabarito.length && gabarito[i]) {
+                            select.value = gabarito[i];
+                            cmStandaloneData.respostas[i] = gabarito[i];
+                        }
+                    });
+                }
                 atualizarResumoCorrecaoManualSA();
                 showToast('📋 Respostas preenchidas com o gabarito!', 'success');
             }
 
             function limparRespostasManualSA() {
                 const qtd = cmStandaloneData.quantidade || 20;
-                for (let i = 0; i < qtd; i++) cmStandaloneData.respostas[i] = '';
-                gerarGridCorrecaoManualSA();
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid-standalone .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        input.value = '';
+                        cmStandaloneData.respostas[i] = '';
+                    });
+                } else {
+                    const selects = document.querySelectorAll('#cm-grid-standalone .q-select-manual');
+                    selects.forEach((select, i) => {
+                        select.value = '';
+                        cmStandaloneData.respostas[i] = '';
+                    });
+                }
                 atualizarResumoCorrecaoManualSA();
                 showToast('🗑️ Respostas limpas!', 'info');
             }
@@ -3956,6 +4106,7 @@
                     }
                     cmStandaloneData.provaTitulo = prova.titulo || 'Prova';
                     cmStandaloneData.provaData = prova.data_prova || '';
+                    cmStandaloneData.disciplina = prova.disciplina || '';
 
                     // Abrir o modal
                     openM('m-correcao-manual-standalone');
@@ -4258,6 +4409,7 @@
                     correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
                     correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
                     correcaoManualData.serie = prova.serie || '1º Ano';
+                    correcaoManualData.disciplina = prova.disciplina || '';
 
                     if (box) box.style.display = 'block';
                     showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
@@ -5571,6 +5723,11 @@
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
 
+                    const gabCardTitle = document.querySelector('#gabarito-oficial-card .card-title');
+                    if (gabCardTitle) {
+                        gabCardTitle.textContent = disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova';
+                    }
+
                     const gabGrid = document.getElementById('gabarito-oficial-grid');
                     gabGrid.innerHTML = '';
                     gabarito.forEach((gab, idx) => {
@@ -5760,7 +5917,7 @@
                         <!-- CARD GABARITO OFICIAL COM BNCC -->
                         <div class="gabarito-oficial-card">
                             <div class="header">
-                                <strong>📋 Gabarito Oficial da Prova</strong>
+                                <strong>${disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova'}</strong>
                                 <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
                             </div>
                             <div class="questoes-grid">
@@ -6269,39 +6426,80 @@
                 if (!grid) return;
                 const serieEl = document.getElementById('gab-serie');
                 const totalEl = document.getElementById('gab-total');
-                if (!serieEl || !totalEl) return;
+                const provaSelect = document.getElementById('gab-prova');
+                if (!serieEl || !totalEl || !provaSelect) return;
+
+                const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                const isProducao = (disciplina === 'Produção de Texto');
+
                 const is1 = (parseInt(serieEl.value) || 1) === 1;
                 const total = parseInt(totalEl.value) || 20;
                 const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                 const lbl = document.getElementById('gab-label');
-                if (lbl) { lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D'; }
+                if (lbl) {
+                    if (isProducao) {
+                        lbl.textContent = '📝 Produção de Texto — Resposta descritiva e nível BNCC';
+                    } else {
+                        lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D';
+                    }
+                }
                 grid.innerHTML = '';
                 for (let i = 1; i <= total; i++) {
                     const div = document.createElement('div');
                     div.className = 'gab-item';
-                    let opts = '<option value="">—</option>';
-                    alts.forEach(a => { opts += '<option>' + a + '</option>'; });
-                    div.innerHTML = `
-                        <div class="gab-num">Q${i}</div>
-                        <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
-                        <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
-                    `;
+                    if (isProducao) {
+                        // Para produção de texto: campo de texto para a resposta e select de níveis BNCC
+                        div.innerHTML = `
+                            <div class="gab-num">Q${i}</div>
+                            <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;"></textarea>
+                            <select class="gab-nivel" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
+                                <option value="">Nível BNCC</option>
+                                <option value="Inicial">Inicial</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Proficiente">Proficiente</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                        `;
+                    } else {
+                        let opts = '<option value="">—</option>';
+                        alts.forEach(a => { opts += '<option>' + a + '</option>'; });
+                        div.innerHTML = `
+                            <div class="gab-num">Q${i}</div>
+                            <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
+                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                        `;
+                    }
                     grid.appendChild(div);
                 }
             }
 
             function fillGabRand() {
+                const provaSelect = document.getElementById('gab-prova');
+                const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                if (disciplina === 'Produção de Texto') {
+                    showToast('🎲 Preenchimento automático não disponível para produção de texto.', 'warning');
+                    return;
+                }
                 const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
                 const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)];
-                    s.classList.add('filled'); });
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)]; s.classList.add('filled'); });
                 showToast('🎲 Gabarito de teste preenchido!');
             }
 
             function clearGab() {
-                document.querySelectorAll('.gab-select').forEach(s => { s.value = '';
-                    s.classList.remove('filled'); });
-                document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
+                const provaSelect = document.getElementById('gab-prova');
+                const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                const isProducao = (disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    document.querySelectorAll('.gab-texto').forEach(ta => ta.value = '');
+                    document.querySelectorAll('.gab-nivel').forEach(sel => sel.value = '');
+                } else {
+                    document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
+                    document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
+                }
             }
 
             // ============================================
@@ -6309,18 +6507,37 @@
             // ============================================
             async function saveGab() {
                 try {
-                    const selects = document.querySelectorAll('.gab-select');
-                    const bnccInputs = document.querySelectorAll('.gab-bncc');
+                    const provaSelect = document.getElementById('gab-prova');
+                    const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                    const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                    const isProducao = (disciplina === 'Produção de Texto');
+
                     const respostas = [];
                     const bncc = [];
 
-                    selects.forEach(s => { respostas.push(s.value || ''); });
-                    bnccInputs.forEach(inp => { bncc.push(inp.value.trim() || ''); });
+                    if (isProducao) {
+                        // Produção de texto: ler textarea e select de nível
+                        const textareas = document.querySelectorAll('.gab-texto');
+                        const niveis = document.querySelectorAll('.gab-nivel');
+                        textareas.forEach((ta, idx) => {
+                            respostas.push(ta.value.trim() || '');
+                            if (niveis[idx]) bncc.push(niveis[idx].value.trim() || '');
+                        });
+                    } else {
+                        // Alternativas
+                        const selects = document.querySelectorAll('.gab-select');
+                        const bnccInputs = document.querySelectorAll('.gab-bncc');
+                        selects.forEach((s, idx) => {
+                            respostas.push(s.value || '');
+                            if (bnccInputs[idx]) bncc.push(bnccInputs[idx].value.trim() || '');
+                        });
+                    }
 
+                    // Validação: pelo menos uma resposta preenchida
                     const respostasValidas = respostas.filter(r => r !== '');
                     if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
 
-                    const provaId = document.getElementById('gab-prova').value;
+                    const provaId = provaSelect.value;
                     if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
 
                     showToast('💾 Salvando gabarito...', 'info');
@@ -6333,7 +6550,6 @@
                     const result = await response.json();
                     if (response.ok && result.id) {
                         showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
-                        selects.forEach(s => { if (s.value) s.classList.add('filled'); });
                         carregarGabaritos();
                         carregarCombos();
                         carregarProvas();
@@ -6357,6 +6573,7 @@
                         if (prova.gabarito && prova.gabarito.length > 0) {
                             const gabarito = prova.gabarito;
                             const bncc = prova.bncc || [];
+                            const disciplina = prova.disciplina || '';
 
                             go('gabarito');
 
@@ -6372,15 +6589,26 @@
                                 buildGabGrid();
 
                                 setTimeout(() => {
-                                    const newSelects = document.querySelectorAll('.gab-select');
-                                    const newBncc = document.querySelectorAll('.gab-bncc');
-                                    newSelects.forEach((s, i) => {
-                                        if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i];
-                                            s.classList.add('filled'); }
-                                    });
-                                    newBncc.forEach((inp, i) => {
-                                        if (i < bncc.length && bncc[i]) inp.value = bncc[i];
-                                    });
+                                    const isProducao = (disciplina === 'Produção de Texto');
+                                    if (isProducao) {
+                                        const textareas = document.querySelectorAll('.gab-texto');
+                                        const niveis = document.querySelectorAll('.gab-nivel');
+                                        textareas.forEach((ta, i) => {
+                                            if (i < gabarito.length) ta.value = gabarito[i] || '';
+                                        });
+                                        niveis.forEach((sel, i) => {
+                                            if (i < bncc.length && bncc[i]) sel.value = bncc[i];
+                                        });
+                                    } else {
+                                        const selects = document.querySelectorAll('.gab-select');
+                                        const bnccInputs = document.querySelectorAll('.gab-bncc');
+                                        selects.forEach((s, i) => {
+                                            if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i]; s.classList.add('filled'); }
+                                        });
+                                        bnccInputs.forEach((inp, i) => {
+                                            if (i < bncc.length && bncc[i]) inp.value = bncc[i];
+                                        });
+                                    }
                                     showToast('📋 Gabarito carregado para edição!', 'success');
                                 }, 100);
                             }, 150);
@@ -6389,8 +6617,7 @@
                             go('gabarito');
                         }
                     })
-                    .catch(e => { showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
-                        console.error('Erro ao carregar gabarito:', e); });
+                    .catch(e => { showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error'); console.error('Erro ao carregar gabarito:', e); });
             }
 
             // ============================================
@@ -6610,13 +6837,21 @@
 
             function atualizarInfoAlts() {
                 const s = document.getElementById('prova-serie');
+                const disciplina = document.getElementById('prova-disciplina').value;
                 const info = document.getElementById('info-alts');
                 if (!s || !info) return;
                 const is1 = s.value.startsWith('1');
-                info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
-                info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
-                info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
-                info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+                if (disciplina === 'Produção de Texto') {
+                    info.textContent = '📝 Produção de Texto — Gabarito com resposta descritiva e níveis BNCC';
+                    info.style.color = '#a78bfa';
+                    info.style.borderColor = 'rgba(139,92,246,.25)';
+                    info.style.background = 'rgba(139,92,246,.07)';
+                } else {
+                    info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
+                    info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
+                    info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
+                    info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+                }
             }
 
             function carregarTurmasProva() {
@@ -6709,7 +6944,7 @@
                                     const opt = document.createElement('option');
                                     opt.value = p.id;
                                     const serie = p.serie || 'Série não definida';
-                                    opt.textContent = p.titulo + ' - ' + serie;
+                                    opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
                                     opt.dataset.serie = serie;
                                     opt.dataset.quantidade = p.quantidade_questoes || 20;
                                     opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
@@ -7021,6 +7256,18 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
+
+                // Adicionar event listener para o select de disciplina na página de cadastro de prova
+                const disciplinaSelect = document.getElementById('prova-disciplina');
+                if (disciplinaSelect) {
+                    disciplinaSelect.addEventListener('change', atualizarInfoAlts);
+                }
+
+                // Adicionar event listener para o select de prova na página de gabarito
+                const gabProvaSelect = document.getElementById('gab-prova');
+                if (gabProvaSelect) {
+                    gabProvaSelect.addEventListener('change', buildGabGrid);
+                }
             });
 
             document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
