@@ -3644,7 +3644,7 @@
                             const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ? 'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
                                 statusEl.textContent = status;
                                 statusEl.className = 'badge ' + badgeClass; }
-                            setTimeout(() => { carregarResultados();
+                            setTimeout(() => { carregarResultadosComFiltros();
                                 carregarDashboard();
                                 carregarUltimasCorrecoes(); }, 500);
                         } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
@@ -4015,7 +4015,7 @@
                         if (data.sucesso) {
                             showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
                             closeM('m-correcao-manual-standalone');
-                            setTimeout(() => { carregarResultados();
+                            setTimeout(() => { carregarResultadosComFiltros();
                                 carregarDashboard();
                                 carregarUltimasCorrecoes(); }, 500);
                         } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
@@ -4379,7 +4379,7 @@
                     if (box) box.style.display = 'block';
                     showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
                     carregarDashboard();
-                    carregarResultados();
+                    carregarResultadosComFiltros();
                 } catch (erro) {
                     console.error('❌ Erro na correção:', erro);
                     showToast('❌ Erro ao processar correção: ' + erro.message, 'error');
@@ -4506,7 +4506,7 @@
                         carregarAlunos();
                         carregarProvas();
                         carregarDashboard();
-                        carregarResultados();
+                        carregarResultadosComFiltros();
                         carregarGabaritos();
                         carregarCombos();
                         carregarRelatorios();
@@ -5994,7 +5994,7 @@
             }
 
             // ============================================
-            // CARREGAR DADOS - FUNÇÃO PRINCIPAL
+            // CARREGAR DADOS - FUNÇÃO PRINCIPAL (CORRIGIDA)
             // ============================================
             async function carregarDados() {
                 console.log('🔄 Carregando dados do sistema...');
@@ -6005,7 +6005,7 @@
                         carregarAlunos(),
                         carregarProvas(),
                         carregarDashboard(),
-                        carregarResultados(),
+                        carregarResultadosComFiltros(), // substituído carregarResultados
                         carregarGabaritos(),
                         carregarCombos(),
                         carregarRelatorios(),
