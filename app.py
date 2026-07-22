@@ -1578,22 +1578,23 @@ def historico_agrupado():
                 except:
                     questoes_status = []
 
-            alunos_map[aluno_key]['avaliacoes'][tipo] = {
-                'nota': float(item.get('nota', 0)),
-                'acertos': int(item.get('acertos', 0)),
-                'total': int(item.get('total_questoes', 20)),
-                'prova': prova_titulo,
-                'data': item.get('data_correcao', ''),
-                'disciplina': disciplina,
-                'questoes_status': questoes_status
-            }
+            # CORREÇÃO: só adiciona se ainda não existir (mantém a mais recente)
+            if tipo not in alunos_map[aluno_key]['avaliacoes']:
+                alunos_map[aluno_key]['avaliacoes'][tipo] = {
+                    'nota': float(item.get('nota', 0)),
+                    'acertos': int(item.get('acertos', 0)),
+                    'total': int(item.get('total_questoes', 20)),
+                    'prova': prova_titulo,
+                    'data': item.get('data_correcao', ''),
+                    'disciplina': disciplina,
+                    'questoes_status': questoes_status
+                }
 
         resultado = []
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
 
             # Agora com 5 disciplinas: Portugues, Matematica, Producao, CH, CN
-            # CORREÇÃO: Criação de cópias independentes para cada disciplina
             default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}
             portugues = dict(avaliacoes.get('Portugues', default))
             matematica = dict(avaliacoes.get('Matematica', default))
