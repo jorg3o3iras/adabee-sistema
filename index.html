@@ -1665,10 +1665,17 @@
                 </div>
             </div>
 
-            <!-- ========== PROVAS ========== -->
+            <!-- ========== PROVAS (COM BOTÃO EDITAR FUNCIONAL) ========== -->
             <div class="page" id="page-provas">
                 <div class="page-header"><div><div class="page-title">📑 Provas</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('prova-upload')">+ Nova Prova</button></div></div>
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+                            <tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- ========== RESULTADOS ========== -->
@@ -2435,7 +2442,67 @@
             </div>
         </div>
 
-        <!-- Modal Prova -->
+        <!-- ========== MODAL EDITAR PROVA (ADICIONADO) ========== -->
+        <div class="modal-overlay no-print" id="m-editar-prova">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>✏️ Editar Prova</h3>
+                    <button class="modal-close" onclick="closeM('m-editar-prova')">×</button>
+                </div>
+                <input type="hidden" id="editar-prova-id">
+                <div class="form-row c1">
+                    <div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="editar-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label>
+                        <select class="form-control" id="editar-prova-disciplina">
+                            <option value="Matemática">Matemática</option>
+                            <option value="Português">Português</option>
+                            <option value="Produção de Texto">Produção de Texto</option>
+                            <option value="Ciências Humanas">Ciências Humanas</option>
+                            <option value="Ciências Naturais">Ciências Naturais</option>
+                            <option value="História">História</option>
+                            <option value="Geografia">Geografia</option>
+                            <option value="Inglês">Inglês</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Bimestre</label>
+                        <select class="form-control" id="editar-prova-bimestre">
+                            <option value="1º e 2º bimestre">1º e 2º bimestre</option>
+                            <option value="3º e 4º bimestre">3º e 4º bimestre</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
+                        <select class="form-control" id="editar-prova-serie">
+                            <option value="1º Ano">1º Ano</option>
+                            <option value="2º Ano">2º Ano</option>
+                            <option value="3º Ano">3º Ano</option>
+                            <option value="4º Ano">4º Ano</option>
+                            <option value="5º Ano">5º Ano</option>
+                            <option value="6º Ano">6º Ano</option>
+                            <option value="7º Ano">7º Ano</option>
+                            <option value="8º Ano">8º Ano</option>
+                            <option value="9º Ano">9º Ano</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Data</label><input class="form-control" id="editar-prova-data" type="date"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Nº de Questões</label>
+                        <select class="form-control" id="editar-prova-questoes"></select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="editar-prova-nota" type="number" value="10"></div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-editar-prova')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="salvarEdicaoProva()">💾 Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Prova (cadastro) -->
         <div class="modal-overlay no-print" id="m-prova">
             <div class="modal"><div class="modal-header"><h3>📝 Cadastrar Prova</h3><button class="modal-close" onclick="closeM('m-prova')">×</button></div>
                 <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="modal-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
@@ -2692,6 +2759,7 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
+                popularSelectProvaEdit(); // para o modal de edição
             }
 
             function doLogout() {
@@ -3062,7 +3130,7 @@
             }
 
             // ============================================
-            // CARREGAR PROVAS
+            // CARREGAR PROVAS (COM BOTÃO EDITAR FUNCIONAL)
             // ============================================
             async function carregarProvas() {
                 try {
@@ -3075,18 +3143,101 @@
                         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
                     } else {
                         tbody.innerHTML = provas.map((p, i) => {
+                            const status = (p.gabarito && p.gabarito.length > 0) ? 'badge-green' : 'badge-orange';
+                            const statusText = (p.gabarito && p.gabarito.length > 0) ? 'Com Gabarito' : 'Sem Gabarito';
                             return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                                 '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                                 '<td><strong>' + p.titulo + '</strong></td>' +
                                 '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                                 '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
-                                '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                                '<td><span class="badge ' + status + '">' + statusText + '</span></td>' +
+                                '<td><div class="btn-group">' +
+                                '<button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' +
+                                (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') +
+                                '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button>' +
+                                '</div></td></tr>';
                         }).join('');
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar provas:', erro);
+                }
+            }
+
+            // ============================================
+            // FUNÇÕES PARA EDITAR PROVA (ADICIONADO)
+            // ============================================
+            function popularSelectProvaEdit() {
+                const select = document.getElementById('editar-prova-questoes');
+                if (!select) return;
+                select.innerHTML = '';
+                for (let i = 1; i <= 30; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    if (i === 20) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            }
+
+            function editarProva(id) {
+                showToast('✏️ Carregando dados da prova...', 'info');
+                fetch(API_URL + '/api/provas/' + id)
+                    .then(r => r.json())
+                    .then(prova => {
+                        if (prova.erro) { showToast('❌ ' + prova.erro, 'error'); return; }
+                        document.getElementById('editar-prova-id').value = prova.id;
+                        document.getElementById('editar-prova-titulo').value = prova.titulo || '';
+                        document.getElementById('editar-prova-disciplina').value = prova.disciplina || 'Matemática';
+                        document.getElementById('editar-prova-bimestre').value = prova.bimestre || '1º e 2º bimestre';
+                        document.getElementById('editar-prova-serie').value = prova.serie || '1º Ano';
+                        document.getElementById('editar-prova-data').value = prova.data_prova || '';
+                        document.getElementById('editar-prova-questoes').value = prova.quantidade_questoes || 20;
+                        document.getElementById('editar-prova-nota').value = prova.nota_maxima || 10;
+                        openM('m-editar-prova');
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar prova: ' + e.message, 'error');
+                        console.error('Erro ao carregar prova:', e); });
+            }
+
+            async function salvarEdicaoProva() {
+                const id = document.getElementById('editar-prova-id').value;
+                const titulo = document.getElementById('editar-prova-titulo').value.trim();
+                if (!titulo) { showToast('❌ O título é obrigatório!', 'error'); return; }
+                const serie = document.getElementById('editar-prova-serie').value;
+                if (!serie) { showToast('❌ Selecione a série!', 'error'); return; }
+
+                const dados = {
+                    titulo: titulo,
+                    serie: serie,
+                    disciplina: document.getElementById('editar-prova-disciplina').value || 'Matemática',
+                    bimestre: document.getElementById('editar-prova-bimestre').value || '1º e 2º bimestre',
+                    data_prova: document.getElementById('editar-prova-data').value || null,
+                    quantidade_questoes: parseInt(document.getElementById('editar-prova-questoes').value) || 20,
+                    nota_maxima: parseFloat(document.getElementById('editar-prova-nota').value) || 10,
+                    tipo_questoes: serie.startsWith('1º') ? '3' : '4'
+                };
+
+                try {
+                    showToast('💾 Atualizando prova...', 'info');
+                    const response = await fetch(API_URL + '/api/provas/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('✅ Prova "' + titulo + '" atualizada com sucesso!', 'success');
+                        closeM('m-editar-prova');
+                        carregarProvas();
+                        carregarCombos();
+                        carregarGabaritos();
+                    } else {
+                        showToast('❌ Erro ao atualizar prova: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao atualizar prova: ' + erro.message, 'error');
+                    console.error('Erro ao atualizar prova:', erro);
                 }
             }
 
@@ -3146,7 +3297,7 @@
                         } else if (isProducao) {
                             detalhesText = '📝 (sem textos)';
                         } else {
-                            detalhesText = bnccText; // fallback
+                            detalhesText = bnccText;
                         }
 
                         return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
@@ -4878,8 +5029,6 @@
                 }
             }
 
-            function editarProva(id) { showToast('👁️ Visualizando prova ID ' + id + '...', 'info'); }
-
             async function excluirProva(id, nome) {
                 if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
                 try {
@@ -6005,7 +6154,7 @@
                         carregarAlunos(),
                         carregarProvas(),
                         carregarDashboard(),
-                        carregarResultadosComFiltros(), // substituído carregarResultados
+                        carregarResultadosComFiltros(),
                         carregarGabaritos(),
                         carregarCombos(),
                         carregarRelatorios(),
@@ -7282,6 +7431,7 @@
                 carregarEscolasDesempenho();
                 popularSelectQuestoes();
                 popularSelectGabTotal();
+                popularSelectProvaEdit();
             });
 
             document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
