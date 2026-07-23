@@ -39,11 +39,7 @@
         ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:10px; }
 
         /* LOGIN */
-        background: var(--bg);
-background-image: url('https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/bandeira.jpeg');
-background-size: cover;
-background-position: center;
-background-repeat: no-repeat;
+        #login-screen { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:var(--bg); }
         .login-bg { position:absolute; inset:0; overflow:hidden; }
         .login-blob { position:absolute; border-radius:50%; filter:blur(80px); opacity:.15; }
         .lb1 { width:500px; height:500px; background:var(--blue); top:-150px; right:-100px; animation:float 12s ease-in-out infinite; }
