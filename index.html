@@ -2374,11 +2374,26 @@
         <div class="modal-overlay no-print" id="m-usuario">
             <div class="modal">
                 <div class="modal-header"><h3>👤 Cadastrar Usuário</h3><button class="modal-close" onclick="closeM('m-usuario')">×</button></div>
+                <input type="hidden" id="editar-usuario-id" value="">
                 <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="usuario-nome" placeholder="Nome completo"></div></div>
                 <div class="form-row"><div class="form-group"><label class="form-label">Usuário (Login) <span class="req">*</span></label><input class="form-control" id="usuario-username" placeholder="Ex: professor1"></div><div class="form-group"><label class="form-label">Senha <span class="req">*</span></label><input class="form-control" id="usuario-senha" type="password" placeholder="Mínimo 4 caracteres"></div></div>
                 <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="usuario-email" type="email" placeholder="email@exemplo.com"></div><div class="form-group"><label class="form-label">Perfil <span class="req">*</span></label><select class="form-control" id="usuario-perfil"><option value="usuario">Usuário</option><option value="admin">Administrador</option></select></div></div>
                 <div class="form-row c1"><div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="usuario-ativo" checked style="width:16px;height:16px;"> Usuário ativo</label></div></div>
                 <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-usuario')">Cancelar</button><button class="btn btn-green" onclick="salvarUsuario()">💾 Salvar Usuário</button></div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL VISUALIZAR PROVA ========== -->
+        <div class="modal-overlay no-print" id="m-visualizar-prova">
+            <div class="modal" style="max-width:750px;width:95vw;">
+                <div class="modal-header"><h3>📋 Visualizar Prova</h3><button class="modal-close" onclick="closeM('m-visualizar-prova')">×</button></div>
+                <div id="visualizar-prova-conteudo">
+                    <div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-visualizar-prova')">Fechar</button>
+                    <button class="btn btn-primary" onclick="editarProvaDireto()">✏️ Editar</button>
+                </div>
             </div>
         </div>
 
@@ -2411,7 +2426,7 @@
                 notaMinima: 5,
                 valorPorQuestao: 0.5,
                 serie: '1º Ano',
-                disciplina: '' // <-- ADICIONADO
+                disciplina: ''
             };
 
             // Dados para correção manual standalone (menu)
@@ -2433,7 +2448,7 @@
                 valorPorQuestao: 0.5,
                 provaTitulo: '',
                 provaData: '',
-                disciplina: '' // <-- ADICIONADO
+                disciplina: ''
             };
 
             // Dados para a aba Desempenho do Aluno
@@ -2444,6 +2459,9 @@
                 questoes: [],
                 disciplinas: []
             };
+
+            // Variável para edição de usuário
+            let usuarioEditandoId = null;
 
             // ============================================
             // FUNÇÃO PARA PROCESSAR RESPOSTAS DA API
@@ -2647,7 +2665,6 @@
                 if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
                 if (page === 'gabaritos') carregarGabaritos();
                 if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
-                if (page === 'rel-escola') carregarRelatorios();
                 if (page === 'desempenho') { carregarEscolasDesempenho(); }
 
                 atualizarDatasImpressao();
@@ -3007,11 +3024,85 @@
                                 '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
                                 '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="visualizarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
                         }).join('');
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar provas:', erro);
+                }
+            }
+
+            // ============================================
+            // VISUALIZAR PROVA (CORREÇÃO DO ÍCONE 👁️)
+            // ============================================
+            let visualizarProvaId = null;
+            let visualizarProvaData = null;
+
+            async function visualizarProva(id) {
+                showToast('👁️ Carregando dados da prova...', 'info');
+                try {
+                    const response = await fetch(`${API_URL}/api/provas/${id}`);
+                    const prova = await response.json();
+                    if (!prova || prova.erro) {
+                        showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
+                        return;
+                    }
+
+                    visualizarProvaId = id;
+                    visualizarProvaData = prova;
+
+                    const conteudo = document.getElementById('visualizar-prova-conteudo');
+                    if (!conteudo) return;
+
+                    const gabarito = prova.gabarito || [];
+                    const bncc = prova.bncc || [];
+                    const total = prova.quantidade_questoes || 20;
+                    const isProducao = (prova.disciplina === 'Produção de Texto');
+
+                    let gabHtml = '';
+                    if (gabarito.length > 0) {
+                        gabHtml = '<div style="margin-top:12px;"><strong style="color:var(--text2);">📋 Gabarito:</strong><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:6px;">';
+                        for (let i = 0; i < Math.min(gabarito.length, total); i++) {
+                            const texto = gabarito[i] || '—';
+                            const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
+                            gabHtml += `<div style="background:var(--bg2);border-radius:6px;padding:4px 6px;text-align:center;border:1px solid var(--border);">
+                                <div style="font-size:8px;color:var(--text3);font-weight:700;">Q${i+1}</div>
+                                <div style="font-weight:700;font-size:12px;color:var(--green);">${texto}</div>
+                                ${codigo ? `<div style="font-size:7px;color:var(--purple);margin-top:2px;">BNCC: ${codigo}</div>` : ''}
+                            </div>`;
+                        }
+                        gabHtml += '</div></div>';
+                    } else {
+                        gabHtml = '<div style="margin-top:12px;color:var(--text3);font-size:13px;">⚠️ Nenhum gabarito cadastrado para esta prova.</div>';
+                    }
+
+                    conteudo.innerHTML = `
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                            <div><strong style="color:var(--text2);">📝 Título</strong><br>${prova.titulo || '—'}</div>
+                            <div><strong style="color:var(--text2);">📚 Disciplina</strong><br>${prova.disciplina || '—'}</div>
+                            <div><strong style="color:var(--text2);">🎓 Série</strong><br>${prova.serie || '—'}</div>
+                            <div><strong style="color:var(--text2);">📅 Data</strong><br>${prova.data_prova || '—'}</div>
+                            <div><strong style="color:var(--text2);">📊 Bimestre</strong><br>${prova.bimestre || '—'}</div>
+                            <div><strong style="color:var(--text2);">🔢 Questões</strong><br>${prova.quantidade_questoes || 20}</div>
+                            <div><strong style="color:var(--text2);">📈 Nota Máxima</strong><br>${prova.nota_maxima || 10}</div>
+                            <div><strong style="color:var(--text2);">📋 Tipo</strong><br>${isProducao ? '📝 Produção de Texto' : (prova.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D')}</div>
+                        </div>
+                        ${gabHtml}
+                    `;
+
+                    openM('m-visualizar-prova');
+                } catch (erro) {
+                    console.error('Erro ao visualizar prova:', erro);
+                    showToast('❌ Erro ao carregar prova: ' + erro.message, 'error');
+                }
+            }
+
+            function editarProvaDireto() {
+                if (visualizarProvaId) {
+                    closeM('m-visualizar-prova');
+                    editarGabarito(visualizarProvaId);
+                } else {
+                    showToast('❌ Nenhuma prova selecionada para editar.', 'error');
                 }
             }
 
@@ -3445,7 +3536,6 @@
                     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
                     if (isProducao) {
-                        // Produção de texto: campo de texto e gabarito como referência
                         div.innerHTML = `
                             <div class="q-num">Q${i+1}</div>
                             <div class="q-gabarito">Gabarito: ${respostaGabarito || '—'}</div>
@@ -3459,7 +3549,6 @@
                             atualizarResumoCorrecaoManual();
                         });
                     } else {
-                        // Alternativas
                         let options = '<option value="">—</option>';
                         alternativas.forEach(alt => {
                             const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
@@ -3874,7 +3963,6 @@
                     const resp = (i < respostas.length) ? respostas[i] : '';
 
                     if (isProducao) {
-                        // Produção de texto
                         div.innerHTML = `
                             <div class="q-num">Q${i+1}</div>
                             <div class="q-gabarito-texto">Gabarito: ${gab || '—'}</div>
@@ -3888,7 +3976,6 @@
                             atualizarResumoCorrecaoManualSA();
                         });
                     } else {
-                        // Alternativas
                         let options = '<option value="">—</option>';
                         alternativas.forEach(alt => {
                             const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
@@ -4064,7 +4151,6 @@
                 try {
                     showToast('🔄 Carregando dados...', 'info');
 
-                    // Buscar dados da prova
                     const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
                     const prova = await provaResp.json();
                     if (!prova || prova.erro) {
@@ -4072,7 +4158,6 @@
                         return;
                     }
 
-                    // Buscar dados do aluno
                     const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
                     const aluno = await alunoResp.json();
                     if (!aluno || aluno.erro) {
@@ -4080,7 +4165,6 @@
                         return;
                     }
 
-                    // Buscar histórico (respostas do aluno para esta prova)
                     const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
                     const historico = await historicoResp.json();
                     let respostas = [];
@@ -4088,13 +4172,12 @@
                         respostas = historico[0].respostas || [];
                     }
 
-                    // Preencher cmStandaloneData diretamente
                     cmStandaloneData.escolaId = parseInt(escolaId);
                     cmStandaloneData.turmaId = parseInt(turmaId);
                     cmStandaloneData.provaId = parseInt(provaId);
                     cmStandaloneData.alunoId = parseInt(alunoId);
                     cmStandaloneData.alunoNome = aluno.nome || 'Aluno';
-                    cmStandaloneData.turmaNome = ''; // será buscado depois ou pode ficar vazio
+                    cmStandaloneData.turmaNome = '';
                     cmStandaloneData.serie = prova.serie || '';
                     cmStandaloneData.gabarito = prova.gabarito || [];
                     cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
@@ -4108,24 +4191,19 @@
                     cmStandaloneData.provaData = prova.data_prova || '';
                     cmStandaloneData.disciplina = prova.disciplina || '';
 
-                    // Abrir o modal
                     openM('m-correcao-manual-standalone');
 
-                    // Ocultar a área de seleção (escola, turma, prova, aluno e botão "Iniciar Correção")
                     const selectsContainer = document.getElementById('cm-selects-container');
                     if (selectsContainer) selectsContainer.style.display = 'none';
 
-                    // Mostrar o container da grade e o botão salvar
                     document.getElementById('cm-grid-standalone-container').style.display = 'block';
                     document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
-                    // Preencher informações do aluno no modal
                     document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
                     document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
                     document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
                     document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
 
-                    // Gerar grid e resumo
                     gerarGridCorrecaoManualSA();
                     atualizarResumoCorrecaoManualSA();
 
@@ -4150,24 +4228,91 @@
                     return;
                 }
 
-                // Chama a função que abre diretamente a correção manual
                 await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
             }
 
             // ============================================
-            // FUNÇÕES DE USUÁRIO (mantidas)
+            // FUNÇÕES DE USUÁRIO (COM CORREÇÃO DO ÍCONE ✏️)
             // ============================================
             function abrirModalUsuario() {
+                usuarioEditandoId = null;
+                document.getElementById('editar-usuario-id').value = '';
                 document.getElementById('usuario-nome').value = '';
                 document.getElementById('usuario-username').value = '';
                 document.getElementById('usuario-senha').value = '';
                 document.getElementById('usuario-email').value = '';
                 document.getElementById('usuario-perfil').value = 'usuario';
                 document.getElementById('usuario-ativo').checked = true;
+                document.querySelector('#m-usuario .modal-header h3').textContent = '👤 Cadastrar Usuário';
                 openM('m-usuario');
             }
 
-            function editarUsuario(id) { showToast('✏️ Editando usuário ID ' + id + '...', 'info'); }
+            function editarUsuario(id) {
+                showToast('✏️ Carregando dados do usuário...', 'info');
+                fetch(API_URL + '/api/usuarios/' + id)
+                    .then(r => r.json())
+                    .then(usuario => {
+                        if (usuario.erro) { showToast('❌ ' + usuario.erro, 'error'); return; }
+                        usuarioEditandoId = id;
+                        document.getElementById('editar-usuario-id').value = id;
+                        document.getElementById('usuario-nome').value = usuario.nome || '';
+                        document.getElementById('usuario-username').value = usuario.username || '';
+                        document.getElementById('usuario-senha').value = ''; // não preenchemos a senha
+                        document.getElementById('usuario-email').value = usuario.email || '';
+                        document.getElementById('usuario-perfil').value = usuario.perfil || 'usuario';
+                        document.getElementById('usuario-ativo').checked = usuario.ativo !== false;
+                        document.querySelector('#m-usuario .modal-header h3').textContent = '✏️ Editar Usuário';
+                        openM('m-usuario');
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar usuário: ' + e.message, 'error');
+                        console.error('Erro ao carregar usuário:', e); });
+            }
+
+            async function salvarUsuario() {
+                const nome = document.getElementById('usuario-nome').value.trim();
+                const username = document.getElementById('usuario-username').value.trim();
+                const senha = document.getElementById('usuario-senha').value.trim();
+                const email = document.getElementById('usuario-email').value.trim();
+                const perfil = document.getElementById('usuario-perfil').value;
+                const ativo = document.getElementById('usuario-ativo').checked;
+                const id = document.getElementById('editar-usuario-id').value;
+
+                if (!nome) { showToast('❌ Nome do usuário é obrigatório!', 'error'); return; }
+                if (!username) { showToast('❌ Usuário (login) é obrigatório!', 'error'); return; }
+                if (username.length < 3) { showToast('❌ Usuário deve ter pelo menos 3 caracteres!', 'error'); return; }
+                if (!id && !senha) { showToast('❌ Senha é obrigatória para novos usuários!', 'error'); return; }
+                if (senha && senha.length < 4) { showToast('❌ Senha deve ter pelo menos 4 caracteres!', 'error'); return; }
+                if (email && !email.includes('@')) { showToast('❌ E-mail inválido!', 'error'); return; }
+
+                const dados = { nome, username, email, perfil, ativo };
+                if (senha) dados.senha = senha;
+
+                try {
+                    let url = API_URL + '/api/usuarios';
+                    let method = 'POST';
+                    if (id) { url += '/' + id;
+                        method = 'PUT'; }
+
+                    showToast('💾 Salvando usuário...', 'info');
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('✅ Usuário "' + username + '" salvo com sucesso!', 'success');
+                        closeM('m-usuario');
+                        carregarUsuarios();
+                        carregarDados();
+                    } else {
+                        showToast('❌ Erro ao salvar usuário: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar: ' + erro.message, 'error');
+                    console.error('Erro ao salvar usuário:', erro);
+                }
+            }
 
             async function excluirUsuario(id, username) {
                 if (username === 'admin') { showToast('⚠️ Não é possível excluir o usuário administrador principal!', 'error'); return; }
@@ -4178,34 +4323,6 @@
                     if (result.ok) { showToast('🗑️ Usuário "' + username + '" excluído!', 'error');
                         carregarUsuarios(); } else { showToast('Erro: ' + (result.data.erro || 'Erro desconhecido'), 'error'); }
                 } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
-            }
-
-            async function salvarUsuario() {
-                const nome = document.getElementById('usuario-nome').value.trim();
-                const username = document.getElementById('usuario-username').value.trim();
-                const senha = document.getElementById('usuario-senha').value.trim();
-                const email = document.getElementById('usuario-email').value.trim();
-                const perfil = document.getElementById('usuario-perfil').value;
-                const ativo = document.getElementById('usuario-ativo').checked;
-                if (!nome) { showToast('❌ Nome do usuário é obrigatório!', 'error'); return; }
-                if (!username) { showToast('❌ Usuário (login) é obrigatório!', 'error'); return; }
-                if (username.length < 3) { showToast('❌ Usuário deve ter pelo menos 3 caracteres!', 'error'); return; }
-                if (!senha) { showToast('❌ Senha é obrigatória!', 'error'); return; }
-                if (senha.length < 4) { showToast('❌ Senha deve ter pelo menos 4 caracteres!', 'error'); return; }
-                if (email && !email.includes('@')) { showToast('❌ E-mail inválido!', 'error'); return; }
-                try {
-                    const response = await fetch(API_URL + '/api/usuarios', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nome: nome, username: username, senha: senha, email: email, perfil: perfil, ativo: ativo })
-                    });
-                    const result = await response.json();
-                    if (result.id) { showToast('✅ Usuário "' + username + '" criado com sucesso!', 'success');
-                        closeM('m-usuario');
-                        carregarUsuarios();
-                        carregarDados(); } else { showToast('❌ Erro ao criar usuário: ' + (result.erro || 'Erro desconhecido'), 'error'); }
-                } catch (erro) { showToast('❌ Erro ao salvar: ' + erro.message, 'error');
-                    console.error('Erro ao salvar usuário:', erro); }
             }
 
             // ============================================
@@ -5212,7 +5329,6 @@
                         document.getElementById('rel-disc-erros').textContent = '0';
                         document.getElementById('rel-disc-media').textContent = '0.0';
                         document.getElementById('rel-disc-conceito').textContent = '—';
-                        // Limpar tabela de alunos
                         document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
                         document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
                         return;
@@ -5241,7 +5357,6 @@
                     const totalAlunos = dadosAlunos.length;
                     const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
 
-                    // 🔹 Mapeamento de disciplinas
                     const disciplinaMap = {
                         'Português': 'portugues',
                         'Matemática': 'matematica',
@@ -5254,9 +5369,6 @@
                     };
                     const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
-                    // ============================================
-                    // 🔥 CÁLCULO DA MÉDIA GERAL (rel-media)
-                    // ============================================
                     let somaNotas = 0;
                     dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
                     const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
@@ -5265,15 +5377,11 @@
                     document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
                     document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
 
-                    // ============================================
-                    // 🔥 CÁLCULO DOS CONCEITOS (agora com base APENAS na disciplina selecionada)
-                    // ============================================
                     let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                     dadosAlunos.forEach(aluno => {
-                        // Pega os dados da disciplina específica
                         const discData = aluno[chave] || {};
                         const acertos = discData.acertos || 0;
-                        const total = discData.total || 20; // fallback
+                        const total = discData.total || 20;
                         const pct = (acertos / total) * 100;
                         const conceito = calcularConceito(pct);
                         conceitos[conceito] = (conceitos[conceito] || 0) + 1;
@@ -5291,9 +5399,6 @@
                         }
                     });
 
-                    // ============================================
-                    // 🔥 DADOS DA DISCIPLINA PARA O CARD INFERIOR
-                    // ============================================
                     let totalAcertos = 0,
                         totalErros = 0,
                         totalQuestoes = 0;
@@ -5348,9 +5453,6 @@
                         conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
                     }
 
-                    // ============================================
-                    // 🔥 PREENCHER TABELA DE ALUNOS (CARD ADICIONADO)
-                    // ============================================
                     function getDadosDisciplina(disciplinaData, totalQuestoes) {
                         if (!disciplinaData || typeof disciplinaData !== 'object') {
                             return { acertos: 0, erros: 0, conceito: 'inicial' };
@@ -5371,7 +5473,6 @@
                     const tbody = document.getElementById('tb-rel-alunos');
                     if (!tbody) return;
 
-                    // Ordenar por média (maior primeiro)
                     const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
 
                     tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
@@ -5682,7 +5783,6 @@
                     document.getElementById('info-prova').textContent = prova.titulo || '—';
                     document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
 
-                    // ---- CARD ÚNICO DA DISCIPLINA (com BNCC) ----
                     const card = document.getElementById('desempenho-disciplina-unica');
                     card.style.display = 'block';
 
@@ -5719,7 +5819,6 @@
 
                     document.getElementById('disciplina-unica-conceito').textContent = conceito;
 
-                    // ---- CARD GABARITO OFICIAL DA PROVA (com BNCC) ----
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
 
@@ -5914,7 +6013,6 @@
                             </div>
                         </div>
 
-                        <!-- CARD GABARITO OFICIAL COM BNCC -->
                         <div class="gabarito-oficial-card">
                             <div class="header">
                                 <strong>${disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova'}</strong>
@@ -6449,7 +6547,6 @@
                     const div = document.createElement('div');
                     div.className = 'gab-item';
                     if (isProducao) {
-                        // Para produção de texto: campo de texto para a resposta e select de níveis BNCC
                         div.innerHTML = `
                             <div class="gab-num">Q${i}</div>
                             <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;"></textarea>
@@ -6516,7 +6613,6 @@
                     const bncc = [];
 
                     if (isProducao) {
-                        // Produção de texto: ler textarea e select de nível
                         const textareas = document.querySelectorAll('.gab-texto');
                         const niveis = document.querySelectorAll('.gab-nivel');
                         textareas.forEach((ta, idx) => {
@@ -6524,7 +6620,6 @@
                             if (niveis[idx]) bncc.push(niveis[idx].value.trim() || '');
                         });
                     } else {
-                        // Alternativas
                         const selects = document.querySelectorAll('.gab-select');
                         const bnccInputs = document.querySelectorAll('.gab-bncc');
                         selects.forEach((s, idx) => {
@@ -6533,7 +6628,6 @@
                         });
                     }
 
-                    // Validação: pelo menos uma resposta preenchida
                     const respostasValidas = respostas.filter(r => r !== '');
                     if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
 
@@ -7257,13 +7351,11 @@
                 popularSelectQuestoes();
                 popularSelectGabTotal();
 
-                // Adicionar event listener para o select de disciplina na página de cadastro de prova
                 const disciplinaSelect = document.getElementById('prova-disciplina');
                 if (disciplinaSelect) {
                     disciplinaSelect.addEventListener('change', atualizarInfoAlts);
                 }
 
-                // Adicionar event listener para o select de prova na página de gabarito
                 const gabProvaSelect = document.getElementById('gab-prova');
                 if (gabProvaSelect) {
                     gabProvaSelect.addEventListener('change', buildGabGrid);
