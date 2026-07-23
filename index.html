@@ -1608,7 +1608,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
-            <!-- ========== RESULTADOS ========== -->
+            <!-- ========== RESULTADOS (MODIFICADO) ========== -->
             <div class="page" id="page-resultados">
                 <div class="page-header">
                     <div>
@@ -1669,32 +1669,61 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--blue);" id="res-total-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Total de Alunos</div></div>
-                    <div style="background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--green);" id="res-Habilidades-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Adquiriu as Habilidades</div></div>
-                    <div style="background:var(--surface);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:var(--orange);" id="res-recuperacao-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Recomposição da Aprendizagem</div></div>
-                    <div style="background:var(--surface);border:1px solid rgba(139,92,246,.3);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-size:26px;font-weight:800;color:#a78bfa;" id="res-media-filtrado">0</div><div style="font-size:11px;color:var(--text2);">Média Geral</div></div>
+                <!-- Cards de estatísticas: apenas Total de Alunos e Média Geral -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-filtrado">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Total de Alunos</div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(139,92,246,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:#a78bfa;" id="res-media-filtrado">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Média Geral</div>
+                    </div>
                 </div>
 
-                <div class="conceito-graficos" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <!-- Distribuição por Conceito (barras) – agora com todos os conceitos -->
+                <div class="conceito-graficos" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
                     <div class="card">
-                        <div class="card-header"><div class="card-title">📊 Distribuição por Conceito</div><span class="badge badge-blue no-print">Barras</span></div>
-                        <div id="conceito-barras" style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔴 inicial (até 40%)</span><span style="font-weight:700;color:#ef4444;" id="conceito-inicial-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#ef4444,#dc2626);border-radius:10px;transition:width 0.8s ease;" id="conceito-inicial-bar"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟠 básico (41% - 60%)</span><span style="font-weight:700;color:#f59e0b;" id="conceito-basico-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:10px;transition:width 0.8s ease;" id="conceito-basico-bar"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🔵 proficiente (61% - 80%)</span><span style="font-weight:700;color:#3b82f6;" id="conceito-proficiente-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#2563eb);border-radius:10px;transition:width 0.8s ease;" id="conceito-proficiente-bar"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>🟢 avançado (acima de 80%)</span><span style="font-weight:700;color:#10b981;" id="conceito-avancado-count">0</span></div><div class="progress" style="height:20px;border-radius:10px;background:var(--bg2);"><div class="progress-fill" style="width:0%;background:linear-gradient(90deg,#10b981,#059669);border-radius:10px;transition:width 0.8s ease;" id="conceito-avancado-bar"></div></div></div>
+                        <div class="card-header">
+                            <div class="card-title">📊 Distribuição por Conceito</div>
+                            <span class="badge badge-blue no-print">Barras</span>
                         </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header"><div class="card-title">🍩 Distribuição Percentual</div><span class="badge badge-purple no-print">Donut</span></div>
-                        <div style="display:flex;align-items:center;justify-content:center;padding:10px 0;">
-                            <div style="position:relative;width:200px;height:200px;" id="donut-container"><canvas id="donut-chart" width="200" height="200"></canvas><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:12px;color:var(--text3);">Total</div><div style="font-size:24px;font-weight:900;color:var(--text);" id="donut-total">0</div></div></div>
-                            <div style="margin-left:20px;display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#ef4444;vertical-align:middle;margin-right:8px;"></span> inicial: <strong id="donut-inicial-pct">0%</strong></div>
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#f59e0b;vertical-align:middle;margin-right:8px;"></span> básico: <strong id="donut-basico-pct">0%</strong></div>
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#3b82f6;vertical-align:middle;margin-right:8px;"></span> proficiente: <strong id="donut-proficiente-pct">0%</strong></div>
-                                <div><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#10b981;vertical-align:middle;margin-right:8px;"></span> avançado: <strong id="donut-avancado-pct">0%</strong></div>
+                        <div id="conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px; transition:width 0.8s ease;" id="conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px; transition:width 0.8s ease;" id="conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px; transition:width 0.8s ease;" id="conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px; transition:width 0.8s ease;" id="conceito-avancado-bar"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3176,20 +3205,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RESULTADOS (não usamos mais, mantido para compatibilidade)
-            // ============================================
-            async function carregarResultados() {
-                try {
-                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
-                    const alunos = await response.json();
-                    console.log('📥 Resultados agrupados:', alunos);
-                } catch (erro) {
-                    console.error('Erro ao carregar resultados:', erro);
-                }
-            }
-
-            // ============================================
-            // CARREGAR RESULTADOS COM FILTROS
+            // CARREGAR RESULTADOS COM FILTROS (modificado)
             // ============================================
             async function carregarResultadosComFiltros() {
                 try {
@@ -3215,10 +3231,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     if (!alunos || alunos.length === 0 || alunos.erro) {
                         tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
                         document.getElementById('res-total-filtrado').textContent = '0';
-                        document.getElementById('res-Habilidades-filtrado').textContent = '0';
-                        document.getElementById('res-recuperacao-filtrado').textContent = '0';
                         document.getElementById('res-media-filtrado').textContent = '0';
-                        atualizarGraficosConceitos([]);
+                        document.getElementById('total-alunos-tabela').textContent = '0 alunos';
+                        // Atualiza barras com zeros
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`conceito-${c}-bar`).style.width = '2%';
+                        });
                         return;
                     }
 
@@ -3226,21 +3245,35 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     if (dadosAlunos.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                        document.getElementById('res-total-filtrado').textContent = '0';
+                        document.getElementById('res-media-filtrado').textContent = '0';
+                        document.getElementById('total-alunos-tabela').textContent = '0 alunos';
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`conceito-${c}-bar`).style.width = '2%';
+                        });
                         return;
                     }
 
                     dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
 
                     const total = dadosAlunos.length;
-                    const Habilidades = dadosAlunos.filter(a => (a.media || 0) >= 5).length;
-                    const recuperacao = dadosAlunos.filter(a => (a.media || 0) >= 3 && (a.media || 0) < 5).length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
                     document.getElementById('res-total-filtrado').textContent = total;
-                    document.getElementById('res-Habilidades-filtrado').textContent = Habilidades;
-                    document.getElementById('res-recuperacao-filtrado').textContent = recuperacao;
                     document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                     document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+
+                    // Processa dados para o gráfico de conceitos
+                    const dadosParaGraficos = dadosAlunos.map(a => {
+                        // Tenta extrair a média de cada disciplina, mas usamos a média geral para o conceito
+                        const media = a.media || 0;
+                        return {
+                            acertos: Math.round(media * 2), // aproximação
+                            total_questoes: 20
+                        };
+                    });
+                    atualizarGraficosConceitos(dadosParaGraficos);
 
                     function getDadosDisciplina(disciplinaData, totalQuestoes) {
                         if (!disciplinaData || typeof disciplinaData !== 'object') {
@@ -3295,12 +3328,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
                             '</tr>';
                     }).join('');
-
-                    const dadosParaGraficos = dadosAlunos.map(a => ({
-                        acertos: Math.round((a.media || 0) * 2),
-                        total_questoes: 20
-                    }));
-                    atualizarGraficosConceitos(dadosParaGraficos);
 
                 } catch (erro) {
                     console.error('❌ Erro ao carregar resultados com filtros:', erro);
@@ -3429,7 +3456,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // ATUALIZAR GRÁFICOS DE CONCEITOS
+            // ATUALIZAR GRÁFICOS DE CONCEITOS (com largura mínima)
             // ============================================
             function atualizarGraficosConceitos(dados) {
                 const conceitos = { 'inicial': 0, 'basico': 0, 'proficiente': 0, 'avancado': 0 };
@@ -3443,68 +3470,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const cores = { 'inicial': { bg: '#ef4444' }, 'basico': { bg: '#f59e0b' }, 'proficiente': { bg: '#3b82f6' }, 'avancado': { bg: '#10b981' } };
                 ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
                     const count = conceitos[conceito] || 0;
-                    const pct = total > 0 ? (count / total) * 100 : 0;
+                    // Garante que a barra tenha pelo menos 2% de largura para ficar visível
+                    let pct = total > 0 ? (count / total) * 100 : 0;
+                    pct = Math.max(pct, 2); // largura mínima de 2%
                     const countEl = document.getElementById(`conceito-${conceito}-count`);
                     const barEl = document.getElementById(`conceito-${conceito}-bar`);
                     if (countEl) countEl.textContent = count;
                     if (barEl) {
-                        barEl.style.width = Math.max(pct, 0) + '%';
+                        barEl.style.width = pct + '%';
                         barEl.style.background = `linear-gradient(90deg, ${cores[conceito].bg}, ${cores[conceito].bg}dd)`;
                     }
                 });
-                atualizarDonut(conceitos, total);
-            }
-
-            // ============================================
-            // ATUALIZAR DONUT
-            // ============================================
-            function atualizarDonut(conceitos, total) {
-                const canvas = document.getElementById('donut-chart');
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const width = canvas.width,
-                    height = canvas.height;
-                const centerX = width / 2,
-                    centerY = height / 2;
-                const radius = Math.min(width, height) / 2 - 20;
-                const innerRadius = radius * 0.6;
-                ctx.clearRect(0, 0, width, height);
-                const labels = ['inicial', 'basico', 'proficiente', 'avancado'];
-                const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'];
-                const values = labels.map(l => conceitos[l] || 0);
-                document.getElementById('donut-total').textContent = total;
-                const totalVal = values.reduce((a, b) => a + b, 0) || 1;
-                const pcts = values.map(v => (v / totalVal) * 100);
-                document.getElementById('donut-inicial-pct').textContent = pcts[0].toFixed(1) + '%';
-                document.getElementById('donut-basico-pct').textContent = pcts[1].toFixed(1) + '%';
-                document.getElementById('donut-proficiente-pct').textContent = pcts[2].toFixed(1) + '%';
-                document.getElementById('donut-avancado-pct').textContent = pcts[3].toFixed(1) + '%';
-                let startAngle = -Math.PI / 2;
-                values.forEach((value, index) => {
-                    if (value === 0) return;
-                    const sliceAngle = (value / totalVal) * 2 * Math.PI;
-                    const endAngle = startAngle + sliceAngle;
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                    ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
-                    ctx.closePath();
-                    ctx.fillStyle = colors[index];
-                    ctx.fill();
-                    ctx.strokeStyle = 'var(--bg)';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    startAngle = endAngle;
-                });
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.strokeStyle = 'var(--border2)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI);
-                ctx.strokeStyle = 'var(--border2)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
             }
 
             // ============================================
@@ -5408,7 +5384,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById(`rel-conceito-${c}-count`).textContent = count;
                         const bar = document.getElementById(`rel-conceito-${c}-bar`);
                         if (bar) {
-                            bar.style.width = Math.max(pct, 0) + '%';
+                            bar.style.width = Math.max(pct, 2) + '%';
                             bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
                         }
                     });
@@ -6578,7 +6554,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         div.innerHTML = `
                             <div class="gab-num">Q${i}</div>
                             <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
-                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
                         `;
                     }
                     grid.appendChild(div);
