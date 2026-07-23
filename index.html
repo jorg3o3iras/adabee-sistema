@@ -1117,9 +1117,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .desempenho-resumo .item .valor.blue { color: #004085 !important; }
     .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
     .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+    .print-header .rg-print-footer { display: block !important; text-align:center; font-size:9pt; color:#666; margin-top:15px; border-top:1px solid #ccc; padding-top:8px; }
 }
 .print-only { display: none !important; }
 @media print { .print-only { display: block !important; } }
+.print-header .rg-print-footer { display: none; }
     </style>
 </head>
 <body>
@@ -1138,8 +1140,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <div class="login-card">
             <div class="login-logo">
                 <div class="l-icon">
-  <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="width: 240px; height: 100px;">
-</div>
+                    <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="width: 240px; height: 100px;">
+                </div>
                 <h1>CorrigePro</h1>
                 <p>Sistema Inteligente de Correção de Provas</p>
                 <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
@@ -1206,7 +1208,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
-                    <!-- NOVA ABA RELATORIOS GERAIS -->
+                    <!-- NOVA ABA RELATORIOS GERAIS (sub-aba) -->
                     <div class="sb-item" onclick="go('relatorios-gerais')" data-p="relatorios-gerais" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05); margin-top: 4px;">
                         <span class="sb-ico">📊</span> RELATÓRIOS GERAIS <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1245,7 +1247,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
-                    <!-- NOVA ABA RELATORIOS GERAIS -->
                     <div class="sb-item" onclick="go('relatorios-gerais')" data-p="relatorios-gerais" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05); margin-top: 4px;">
                         <span class="sb-ico">📊</span> RELATÓRIOS GERAIS <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -2117,280 +2118,280 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
 
             <!-- ============================================================ -->
-<!-- ========== NOVA ABA: RELATÓRIOS GERAIS (COM SUB-ABAS) ========== -->
-<!-- ============================================================ -->
-<div class="page" id="page-relatorios-gerais">
-    <div class="page-header">
-        <div>
-            <div class="page-title">📊 RELATÓRIOS GERAIS</div>
-            <p class="page-sub">Selecione uma categoria e aplique os filtros para visualizar relatórios detalhados</p>
-        </div>
-        <div class="page-actions no-print">
-            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-            <button class="btn btn-green" onclick="exportarRelatorioAtivo()">📥 Exportar (CSV)</button>
-        </div>
-    </div>
-
-    <!-- Cabeçalho para impressão (aparece apenas no print) -->
-    <div class="print-header print-only">
-        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:15px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="height:60px;">
-                <div>
-                    <h2 style="margin:0; font-size:20px; color:#0f172a;">CorrigePro — Relatórios</h2>
-                    <p style="margin:2px 0 0; font-size:12px; color:#475569;">Secretaria Municipal de Educação — São Sebastião da Boa Vista</p>
-                </div>
-            </div>
-            <div style="text-align:right; font-size:12px; color:#475569;">
-                <div><strong>Data:</strong> <span id="print-data-rg"></span></div>
-                <div><strong>Relatório:</strong> <span id="print-titulo-rg">Geral</span></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navegação por abas -->
-    <div class="tab-nav no-print" style="display:flex; gap:4px; background:var(--bg2); padding:4px; border-radius:12px; margin-bottom:18px; flex-wrap:wrap;">
-        <button class="tab-btn active" onclick="switchRGTab(0, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">🏫 Escolas</button>
-        <button class="tab-btn" onclick="switchRGTab(1, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">👥 Turmas</button>
-        <button class="tab-btn" onclick="switchRGTab(2, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">🎒 Alunos</button>
-        <button class="tab-btn" onclick="switchRGTab(3, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📊 Conceitos</button>
-        <button class="tab-btn" onclick="switchRGTab(4, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📈 Desempenho</button>
-        <button class="tab-btn" onclick="switchRGTab(5, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📑 Provas</button>
-        <button class="tab-btn" onclick="switchRGTab(6, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📜 Histórico</button>
-        <button class="tab-btn" onclick="switchRGTab(7, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📊 Comparativo</button>
-    </div>
-
-    <!-- Filtros gerais (aplicados a todas as abas) -->
-    <div class="card no-print" style="margin-bottom:18px;">
-        <div class="form-row c5">
-            <div class="form-group">
-                <label class="form-label">Escola</label>
-                <select class="form-control" id="rg-filtro-escola" onchange="carregarRGTurmas(this.value); carregarRG()">
-                    <option value="">Todas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Série</label>
-                <select class="form-control" id="rg-filtro-serie" onchange="filtrarRGTurmas(); carregarRG()">
-                    <option value="">Todas</option>
-                    <option value="1º Ano">1º Ano</option>
-                    <option value="2º Ano">2º Ano</option>
-                    <option value="3º Ano">3º Ano</option>
-                    <option value="4º Ano">4º Ano</option>
-                    <option value="5º Ano">5º Ano</option>
-                    <option value="6º Ano">6º Ano</option>
-                    <option value="7º Ano">7º Ano</option>
-                    <option value="8º Ano">8º Ano</option>
-                    <option value="9º Ano">9º Ano</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Turma</label>
-                <select class="form-control" id="rg-filtro-turma" onchange="carregarRGAlunos(this.value); carregarRG()">
-                    <option value="">Todas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Aluno</label>
-                <select class="form-control" id="rg-filtro-aluno" onchange="carregarRG()">
-                    <option value="">Todos</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Prova</label>
-                <select class="form-control" id="rg-filtro-prova" onchange="carregarRG()">
-                    <option value="">Todas</option>
-                </select>
-            </div>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-            <button class="btn btn-primary btn-sm" onclick="carregarRG()">🔍 Filtrar</button>
-            <button class="btn btn-outline btn-sm" onclick="limparRGFiltros()">✕ Limpar</button>
-        </div>
-    </div>
-
-    <!-- ===== CONTEÚDO DAS ABAS ===== -->
-    <div class="rg-tab-content" id="rg-tab-0" style="display:block;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">🏫 Relatório de Escolas</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('escolas')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('escola')">✏️ Editar</button>
-                </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor</th><th>Turmas</th><th>Alunos</th></tr></thead>
-                    <tbody id="rg-tb-escolas"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="rg-tab-content" id="rg-tab-1" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">👥 Relatório de Turmas</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('turmas')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('turmas')">✏️ Editar</button>
-                </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor</th><th>Alunos</th></tr></thead>
-                    <tbody id="rg-tb-turmas"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="rg-tab-content" id="rg-tab-2" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">🎒 Relatório de Alunos</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('alunos')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('alunos')">✏️ Editar</button>
-                </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Escola</th></tr></thead>
-                    <tbody id="rg-tb-alunos"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="rg-tab-content" id="rg-tab-3" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">📊 Distribuição por Conceito</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('conceitos')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('resultados')">✏️ Editar</button>
-                </div>
-            </div>
-            <div id="rg-conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🔴 Inicial (até 40%)</span>
-                        <span style="font-weight:700; color:#ef4444;" id="rg-conceito-inicial-count">0</span>
+            <!-- ========== NOVA ABA: RELATÓRIOS GERAIS (COM SUB-ABAS) ========== -->
+            <!-- ============================================================ -->
+            <div class="page" id="page-relatorios-gerais">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 RELATÓRIOS GERAIS</div>
+                        <p class="page-sub">Selecione uma categoria e aplique os filtros para visualizar relatórios detalhados</p>
                     </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px;" id="rg-conceito-inicial-bar"></div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-green" onclick="exportarRelatorioAtivo()">📥 Exportar (CSV)</button>
                     </div>
                 </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🟠 Básico (41% – 60%)</span>
-                        <span style="font-weight:700; color:#f59e0b;" id="rg-conceito-basico-count">0</span>
-                    </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px;" id="rg-conceito-basico-bar"></div>
-                    </div>
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🔵 Proficiente (61% – 80%)</span>
-                        <span style="font-weight:700; color:#3b82f6;" id="rg-conceito-proficiente-count">0</span>
-                    </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px;" id="rg-conceito-proficiente-bar"></div>
-                    </div>
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🟢 Avançado (acima de 80%)</span>
-                        <span style="font-weight:700; color:#10b981;" id="rg-conceito-avancado-count">0</span>
-                    </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px;" id="rg-conceito-avancado-bar"></div>
-                    </div>
-                </div>
-            </div>
-            <div style="margin-top:12px; font-size:12px; color:var(--text2); text-align:center;">
-                Total de alunos corrigidos: <strong id="rg-total-conceitos">0</strong>
-            </div>
-        </div>
-    </div>
 
-    <div class="rg-tab-content" id="rg-tab-4" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">📈 Desempenho por Disciplina</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('desempenho')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('desempenho')">✏️ Editar</button>
+                <!-- Cabeçalho para impressão (aparece apenas no print) -->
+                <div class="print-header print-only">
+                    <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:15px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="height:60px;">
+                            <div>
+                                <h2 style="margin:0; font-size:20px; color:#0f172a;">CorrigePro — Relatórios</h2>
+                                <p style="margin:2px 0 0; font-size:12px; color:#475569;">Secretaria Municipal de Educação — São Sebastião da Boa Vista</p>
+                            </div>
+                        </div>
+                        <div style="text-align:right; font-size:12px; color:#475569;">
+                            <div><strong>Data:</strong> <span id="print-data-rg"></span></div>
+                            <div><strong>Relatório:</strong> <span id="print-titulo-rg">Geral</span></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Disciplina</th><th>Total Acertos</th><th>Total Erros</th><th>Média</th><th>Conceito</th></tr></thead>
-                    <tbody id="rg-tb-desempenho"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
-    <div class="rg-tab-content" id="rg-tab-5" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">📑 Relatório de Provas</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('provas')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('provas')">✏️ Editar</button>
+                <!-- Navegação por abas -->
+                <div class="tab-nav no-print" style="display:flex; gap:4px; background:var(--bg2); padding:4px; border-radius:12px; margin-bottom:18px; flex-wrap:wrap;">
+                    <button class="tab-btn active" onclick="switchRGTab(0, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">🏫 Escolas</button>
+                    <button class="tab-btn" onclick="switchRGTab(1, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">👥 Turmas</button>
+                    <button class="tab-btn" onclick="switchRGTab(2, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">🎒 Alunos</button>
+                    <button class="tab-btn" onclick="switchRGTab(3, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📊 Conceitos</button>
+                    <button class="tab-btn" onclick="switchRGTab(4, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📈 Desempenho</button>
+                    <button class="tab-btn" onclick="switchRGTab(5, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📑 Provas</button>
+                    <button class="tab-btn" onclick="switchRGTab(6, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📜 Histórico</button>
+                    <button class="tab-btn" onclick="switchRGTab(7, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📊 Comparativo</button>
                 </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Série</th><th>Data</th><th>Questões</th></tr></thead>
-                    <tbody id="rg-tb-provas"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
-    <div class="rg-tab-content" id="rg-tab-6" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">📜 Histórico do Aluno (últimas correções)</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('historico')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('desempenho')">✏️ Editar</button>
+                <!-- Filtros gerais (aplicados a todas as abas) -->
+                <div class="card no-print" style="margin-bottom:18px;">
+                    <div class="form-row c5">
+                        <div class="form-group">
+                            <label class="form-label">Escola</label>
+                            <select class="form-control" id="rg-filtro-escola" onchange="carregarRGTurmas(this.value); carregarRG()">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série</label>
+                            <select class="form-control" id="rg-filtro-serie" onchange="filtrarRGTurmas(); carregarRG()">
+                                <option value="">Todas</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="rg-filtro-turma" onchange="carregarRGAlunos(this.value); carregarRG()">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Aluno</label>
+                            <select class="form-control" id="rg-filtro-aluno" onchange="carregarRG()">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova</label>
+                            <select class="form-control" id="rg-filtro-prova" onchange="carregarRG()">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="carregarRG()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparRGFiltros()">✕ Limpar</button>
+                    </div>
                 </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Aluno</th><th>Prova</th><th>Disciplina</th><th>Acertos</th><th>Nota</th><th>Data</th></tr></thead>
-                    <tbody id="rg-tb-historico"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
-    <div class="rg-tab-content" id="rg-tab-7" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">📊 Comparativo de Turmas (Média por Disciplina)</div>
-                <div class="btn-group no-print">
-                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('comparativo')">👁️ Visualizar</button>
-                    <button class="btn btn-outline btn-sm" onclick="go('rel-turma')">✏️ Editar</button>
+                <!-- ===== CONTEÚDO DAS ABAS ===== -->
+                <div class="rg-tab-content" id="rg-tab-0" style="display:block;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🏫 Relatório de Escolas</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('escolas')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('escola')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor</th><th>Turmas</th><th>Alunos</th></tr></thead>
+                                <tbody id="rg-tb-escolas"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Turma</th><th>Português</th><th>Matemática</th><th>Produção</th><th>CH</th><th>CN</th><th>Média Geral</th></tr></thead>
-                    <tbody id="rg-tb-comparativo"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
-</div>
-<!-- ========== FIM RELATÓRIOS GERAIS ========== -->
+                <div class="rg-tab-content" id="rg-tab-1" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">👥 Relatório de Turmas</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('turmas')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('turmas')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor</th><th>Alunos</th></tr></thead>
+                                <tbody id="rg-tb-turmas"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rg-tab-content" id="rg-tab-2" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🎒 Relatório de Alunos</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('alunos')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('alunos')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Escola</th></tr></thead>
+                                <tbody id="rg-tb-alunos"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rg-tab-content" id="rg-tab-3" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 Distribuição por Conceito</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('conceitos')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('resultados')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div id="rg-conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 Inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="rg-conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px;" id="rg-conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 Básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="rg-conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px;" id="rg-conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 Proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="rg-conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px;" id="rg-conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 Avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="rg-conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px;" id="rg-conceito-avancado-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px; font-size:12px; color:var(--text2); text-align:center;">
+                            Total de alunos corrigidos: <strong id="rg-total-conceitos">0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rg-tab-content" id="rg-tab-4" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📈 Desempenho por Disciplina</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('desempenho')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('desempenho')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Disciplina</th><th>Total Acertos</th><th>Total Erros</th><th>Média</th><th>Conceito</th></tr></thead>
+                                <tbody id="rg-tb-desempenho"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rg-tab-content" id="rg-tab-5" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📑 Relatório de Provas</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('provas')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('provas')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Série</th><th>Data</th><th>Questões</th></tr></thead>
+                                <tbody id="rg-tb-provas"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rg-tab-content" id="rg-tab-6" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📜 Histórico do Aluno (últimas correções)</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('historico')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('desempenho')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Aluno</th><th>Prova</th><th>Disciplina</th><th>Acertos</th><th>Nota</th><th>Data</th></tr></thead>
+                                <tbody id="rg-tb-historico"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rg-tab-content" id="rg-tab-7" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 Comparativo de Turmas (Média por Disciplina)</div>
+                            <div class="btn-group no-print">
+                                <button class="btn btn-outline btn-sm" onclick="visualizarRG('comparativo')">👁️ Visualizar</button>
+                                <button class="btn btn-outline btn-sm" onclick="go('rel-turma')">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Turma</th><th>Português</th><th>Matemática</th><th>Produção</th><th>CH</th><th>CN</th><th>Média Geral</th></tr></thead>
+                                <tbody id="rg-tb-comparativo"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- ========== FIM RELATÓRIOS GERAIS ========== -->
 
             <!-- ========== CÂMERA MODAL ========== -->
             <div class="cam-modal no-print" id="cam-modal">
@@ -2740,6 +2741,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 let delTarget = null;
                 let ultimaImagem = null;
                 let gerandoDocumento = false;
+                let rgTabAtiva = 0;
 
                 // Dados para correção manual (dentro da IA)
                 let correcaoManualData = {
@@ -2846,7 +2848,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         'print-data-u-dash',
                         'print-data-u-rel',
                         'print-data-desempenho',
-                        'print-data-relatorios-gerais'
+                        'print-data-rg'
                     ];
 
                     elementosData.forEach(id => {
@@ -3554,7 +3556,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                         document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                        // Contagem de conceitos por disciplina
                         const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                         const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
 
@@ -7622,13 +7623,30 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 // FUNÇÕES DA ABA RELATÓRIOS GERAIS
                 // ============================================
 
+                // Alternar abas na RG
+                function switchRGTab(idx, btn) {
+                    rgTabAtiva = idx;
+                    // Esconder todas as abas
+                    document.querySelectorAll('.rg-tab-content').forEach(el => el.style.display = 'none');
+                    // Mostrar a aba selecionada
+                    const target = document.getElementById('rg-tab-' + idx);
+                    if (target) target.style.display = 'block';
+                    // Atualizar botões
+                    document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
+                    if (btn) btn.classList.add('active');
+                    // Atualizar título de impressão
+                    const titulo = btn ? btn.textContent.trim() : 'Geral';
+                    document.getElementById('print-titulo-rg').textContent = titulo;
+                    carregarRG();
+                }
+
                 // Carregar filtros da RG
                 async function carregarRGFiltros() {
                     try {
                         // Escolas
                         const escolasResp = await fetch(API_URL + '/api/escolas');
                         const escolas = await escolasResp.json();
-                        const selectEscola = document.getElementById('rg-escola');
+                        const selectEscola = document.getElementById('rg-filtro-escola');
                         if (selectEscola && escolas && !escolas.erro) {
                             const current = selectEscola.value;
                             selectEscola.innerHTML = '<option value="">Todas</option>';
@@ -7645,7 +7663,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         // Provas
                         const provasResp = await fetch(API_URL + '/api/provas');
                         const provas = await provasResp.json();
-                        const selectProva = document.getElementById('rg-prova');
+                        const selectProva = document.getElementById('rg-filtro-prova');
                         if (selectProva && provas && !provas.erro) {
                             const current = selectProva.value;
                             selectProva.innerHTML = '<option value="">Todas</option>';
@@ -7660,7 +7678,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
 
                         // Alunos (inicialmente vazio)
-                        const selectAluno = document.getElementById('rg-aluno');
+                        const selectAluno = document.getElementById('rg-filtro-aluno');
                         if (selectAluno) {
                             selectAluno.innerHTML = '<option value="">Todos</option>';
                         }
@@ -7672,9 +7690,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 // Carregar turmas para o filtro RG
                 async function carregarRGTurmas(escolaId) {
-                    const selectTurma = document.getElementById('rg-turma');
-                    const selectAluno = document.getElementById('rg-aluno');
-                    const selectSerie = document.getElementById('rg-serie');
+                    const selectTurma = document.getElementById('rg-filtro-turma');
+                    const selectAluno = document.getElementById('rg-filtro-aluno');
+                    const selectSerie = document.getElementById('rg-filtro-serie');
 
                     selectTurma.innerHTML = '<option value="">Todas</option>';
                     selectAluno.innerHTML = '<option value="">Todos</option>';
@@ -7723,8 +7741,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 // Filtrar turmas por série na RG
                 function filtrarRGTurmas() {
-                    const serie = document.getElementById('rg-serie').value;
-                    const selectTurma = document.getElementById('rg-turma');
+                    const serie = document.getElementById('rg-filtro-serie').value;
+                    const selectTurma = document.getElementById('rg-filtro-turma');
                     let firstVisible = false;
                     for (let opt of selectTurma.options) {
                         if (opt.value === '') { opt.style.display = ''; continue; }
@@ -7743,7 +7761,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 // Carregar alunos para o filtro RG baseado na turma selecionada
                 async function carregarRGAlunos(turmaId) {
-                    const selectAluno = document.getElementById('rg-aluno');
+                    const selectAluno = document.getElementById('rg-filtro-aluno');
                     selectAluno.innerHTML = '<option value="">Todos</option>';
                     if (!turmaId) return;
                     try {
@@ -7763,11 +7781,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 // Função principal para carregar todos os dados da RG
                 async function carregarRG() {
                     try {
-                        const escolaId = document.getElementById('rg-escola').value;
-                        const serie = document.getElementById('rg-serie').value;
-                        const turmaId = document.getElementById('rg-turma').value;
-                        const alunoId = document.getElementById('rg-aluno').value;
-                        const provaId = document.getElementById('rg-prova').value;
+                        const escolaId = document.getElementById('rg-filtro-escola').value;
+                        const serie = document.getElementById('rg-filtro-serie').value;
+                        const turmaId = document.getElementById('rg-filtro-turma').value;
+                        const alunoId = document.getElementById('rg-filtro-aluno').value;
+                        const provaId = document.getElementById('rg-filtro-prova').value;
 
                         // ===== Carregar Escola =====
                         const escolasResp = await fetch(API_URL + '/api/escolas');
@@ -7795,10 +7813,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (turmaId && turmaId !== '') {
                             turmasFiltradas = turmasFiltradas.filter(t => t.id == turmaId);
                             alunosFiltrados = alunosFiltrados.filter(a => a.turma_id == turmaId);
-                            // Carregar alunos do filtro
                             await carregarRGAlunos(turmaId);
                         } else {
-                            const selectAluno = document.getElementById('rg-aluno');
+                            const selectAluno = document.getElementById('rg-filtro-aluno');
                             if (selectAluno) selectAluno.innerHTML = '<option value="">Todos</option>';
                         }
                         if (alunoId && alunoId !== '') {
@@ -7808,13 +7825,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             provasFiltradas = provasFiltradas.filter(p => p.id == provaId);
                         }
 
-                        // Atualizar resumos
-                        document.getElementById('rg-total-escolas').textContent = escolas.length;
-                        document.getElementById('rg-total-turmas').textContent = turmasFiltradas.length;
-                        document.getElementById('rg-total-alunos').textContent = alunosFiltrados.length;
-                        document.getElementById('rg-total-provas').textContent = provasFiltradas.length;
-
-                        // ===== RELATÓRIO DE ESCOLAS =====
+                        // ===== RELATÓRIO DE ESCOLAS (aba 0) =====
                         const tbodyEscola = document.getElementById('rg-tb-escolas');
                         if (tbodyEscola) {
                             if (escolas.length === 0) {
@@ -7836,7 +7847,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             }
                         }
 
-                        // ===== RELATÓRIO DE TURMAS =====
+                        // ===== RELATÓRIO DE TURMAS (aba 1) =====
                         const tbodyTurma = document.getElementById('rg-tb-turmas');
                         if (tbodyTurma) {
                             if (turmasFiltradas.length === 0) {
@@ -7860,7 +7871,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             }
                         }
 
-                        // ===== RELATÓRIO DE ALUNOS =====
+                        // ===== RELATÓRIO DE ALUNOS (aba 2) =====
                         const tbodyAluno = document.getElementById('rg-tb-alunos');
                         if (tbodyAluno) {
                             if (alunosFiltrados.length === 0) {
@@ -7884,16 +7895,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             }
                         }
 
-                        // ===== RELATÓRIO DE CONCEITOS =====
-                        // Buscar dados de histórico para calcular conceitos
+                        // ===== RELATÓRIO DE CONCEITOS (aba 3) =====
                         const historicoResp = await fetch(API_URL + '/api/historico/agrupado');
                         const historico = await historicoResp.json();
                         const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
-                        let totalAlunosComCorrecao = 0;
+                        let totalAlunosConceitos = 0;
 
                         if (historico && !historico.erro && Array.isArray(historico)) {
                             let dadosHistorico = historico;
-                            // Aplicar filtros
                             if (turmaId && turmaId !== '') {
                                 dadosHistorico = dadosHistorico.filter(h => h.turma_id == turmaId);
                             }
@@ -7906,12 +7915,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             if (escolaId && escolaId !== '') {
                                 dadosHistorico = dadosHistorico.filter(h => h.escola_id == escolaId);
                             }
-                            // Corrigir: filtrar por série se necessário
                             if (serie && serie !== '') {
                                 dadosHistorico = dadosHistorico.filter(h => h.serie === serie);
                             }
-
-                            totalAlunosComCorrecao = dadosHistorico.length;
+                            totalAlunosConceitos = dadosHistorico.length;
 
                             dadosHistorico.forEach(item => {
                                 const acertos = item.acertos || 0;
@@ -7922,7 +7929,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             });
                         }
 
-                        // Se não houver dados, exibir zeros
                         const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico + contagemConceitos.proficiente + contagemConceitos.avancado || 1;
                         const coresRG = {
                             inicial: '#ef4444',
@@ -7941,14 +7947,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 barEl.style.background = `linear-gradient(90deg, ${coresRG[c]}, ${coresRG[c]}dd)`;
                             }
                         });
+                        document.getElementById('rg-total-conceitos').textContent = totalAlunosConceitos;
 
-                        // ===== RELATÓRIO DE DESEMPENHO POR DISCIPLINA =====
+                        // ===== RELATÓRIO DE DESEMPENHO POR DISCIPLINA (aba 4) =====
                         const tbodyDesempenho = document.getElementById('rg-tb-desempenho');
                         if (tbodyDesempenho) {
                             if (!historico || historico.erro || historico.length === 0) {
                                 tbodyDesempenho.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado de desempenho disponível</td></tr>';
                             } else {
-                                // Calcular por disciplina
                                 const disciplinas = ['Português', 'Matemática', 'Produção de Texto', 'Ciências Humanas', 'Ciências Naturais'];
                                 const mapDisc = {
                                     'Português': 'portugues',
@@ -7961,7 +7967,24 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 disciplinas.forEach(nome => {
                                     const chave = mapDisc[nome] || nome.toLowerCase();
                                     let totalAcertos = 0, totalErros = 0, totalQuestoes = 0, count = 0;
-                                    historico.forEach(item => {
+                                    // Filtrar dados de historico pela disciplina
+                                    let dadosFiltrados = historico;
+                                    if (turmaId && turmaId !== '') {
+                                        dadosFiltrados = dadosFiltrados.filter(h => h.turma_id == turmaId);
+                                    }
+                                    if (alunoId && alunoId !== '') {
+                                        dadosFiltrados = dadosFiltrados.filter(h => h.aluno_id == alunoId);
+                                    }
+                                    if (provaId && provaId !== '') {
+                                        dadosFiltrados = dadosFiltrados.filter(h => h.prova_id == provaId);
+                                    }
+                                    if (escolaId && escolaId !== '') {
+                                        dadosFiltrados = dadosFiltrados.filter(h => h.escola_id == escolaId);
+                                    }
+                                    if (serie && serie !== '') {
+                                        dadosFiltrados = dadosFiltrados.filter(h => h.serie === serie);
+                                    }
+                                    dadosFiltrados.forEach(item => {
                                         const disc = item.disciplina || '';
                                         if (disc.toLowerCase() === nome.toLowerCase() || disc === nome) {
                                             const acertos = item.acertos || 0;
@@ -8008,7 +8031,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             }
                         }
 
-                        // ===== RELATÓRIO DE PROVAS =====
+                        // ===== RELATÓRIO DE PROVAS (aba 5) =====
                         const tbodyProva = document.getElementById('rg-tb-provas');
                         if (tbodyProva) {
                             if (provasFiltradas.length === 0) {
@@ -8027,6 +8050,137 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             }
                         }
 
+                        // ===== RELATÓRIO HISTÓRICO (aba 6) =====
+                        const tbodyHistorico = document.getElementById('rg-tb-historico');
+                        if (tbodyHistorico) {
+                            if (!historico || historico.erro || historico.length === 0) {
+                                tbodyHistorico.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Nenhum histórico disponível</td></tr>';
+                            } else {
+                                let dadosHist = historico;
+                                if (turmaId && turmaId !== '') {
+                                    dadosHist = dadosHist.filter(h => h.turma_id == turmaId);
+                                }
+                                if (alunoId && alunoId !== '') {
+                                    dadosHist = dadosHist.filter(h => h.aluno_id == alunoId);
+                                }
+                                if (provaId && provaId !== '') {
+                                    dadosHist = dadosHist.filter(h => h.prova_id == provaId);
+                                }
+                                if (escolaId && escolaId !== '') {
+                                    dadosHist = dadosHist.filter(h => h.escola_id == escolaId);
+                                }
+                                if (serie && serie !== '') {
+                                    dadosHist = dadosHist.filter(h => h.serie === serie);
+                                }
+                                const recentes = dadosHist.slice(0, 20);
+                                tbodyHistorico.innerHTML = recentes.map(item => `
+                                    <tr>
+                                        <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
+                                        <td>${item.prova_titulo || '—'}</td>
+                                        <td>${item.disciplina || '—'}</td>
+                                        <td><span class="badge badge-green">${item.acertos || 0}</span>/<span class="badge badge-red">${(item.total||0)-(item.acertos||0)}</span></td>
+                                        <td><strong>${(item.nota || 0).toFixed(1)}</strong></td>
+                                        <td>${item.data_correcao ? new Date(item.data_correcao).toLocaleDateString('pt-BR') : '—'}</td>
+                                    </tr>
+                                `).join('');
+                            }
+                        }
+
+                        // ===== RELATÓRIO COMPARATIVO (aba 7) =====
+                        const tbodyComparativo = document.getElementById('rg-tb-comparativo');
+                        if (tbodyComparativo) {
+                            if (!historico || historico.erro || historico.length === 0) {
+                                tbodyComparativo.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Nenhum dado comparativo disponível</td></tr>';
+                            } else {
+                                // Agrupar por turma
+                                const mapTurmas = new Map();
+                                let dadosComp = historico;
+                                if (escolaId && escolaId !== '') {
+                                    dadosComp = dadosComp.filter(h => h.escola_id == escolaId);
+                                }
+                                if (serie && serie !== '') {
+                                    dadosComp = dadosComp.filter(h => h.serie === serie);
+                                }
+                                if (turmaId && turmaId !== '') {
+                                    dadosComp = dadosComp.filter(h => h.turma_id == turmaId);
+                                }
+                                if (provaId && provaId !== '') {
+                                    dadosComp = dadosComp.filter(h => h.prova_id == provaId);
+                                }
+
+                                dadosComp.forEach(item => {
+                                    const turmaIdKey = item.turma_id || '0';
+                                    const turmaNome = item.turma_nome || 'Turma sem nome';
+                                    if (!mapTurmas.has(turmaIdKey)) {
+                                        mapTurmas.set(turmaIdKey, {
+                                            nome: turmaNome,
+                                            portugues: { total: 0, acertos: 0 },
+                                            matematica: { total: 0, acertos: 0 },
+                                            producao: { total: 0, acertos: 0 },
+                                            ch: { total: 0, acertos: 0 },
+                                            cn: { total: 0, acertos: 0 },
+                                            count: 0
+                                        });
+                                    }
+                                    const turma = mapTurmas.get(turmaIdKey);
+                                    const disc = item.disciplina || '';
+                                    const acertos = item.acertos || 0;
+                                    const total = item.total || 20;
+                                    const chave = disc.toLowerCase();
+                                    if (chave.includes('português') || chave.includes('portugues')) {
+                                        turma.portugues.total += total;
+                                        turma.portugues.acertos += acertos;
+                                    } else if (chave.includes('matemática') || chave.includes('matematica')) {
+                                        turma.matematica.total += total;
+                                        turma.matematica.acertos += acertos;
+                                    } else if (chave.includes('produção') || chave.includes('producao') || chave.includes('texto')) {
+                                        turma.producao.total += total;
+                                        turma.producao.acertos += acertos;
+                                    } else if (chave.includes('ciências humanas') || chave.includes('ch')) {
+                                        turma.ch.total += total;
+                                        turma.ch.acertos += acertos;
+                                    } else if (chave.includes('ciências naturais') || chave.includes('cn')) {
+                                        turma.cn.total += total;
+                                        turma.cn.acertos += acertos;
+                                    }
+                                    turma.count++;
+                                });
+
+                                const resultadoComp = Array.from(mapTurmas.values()).map(t => {
+                                    const calcMedia = (obj) => obj.total > 0 ? (obj.acertos / obj.total) * 100 : 0;
+                                    const mediaPortugues = calcMedia(t.portugues);
+                                    const mediaMatematica = calcMedia(t.matematica);
+                                    const mediaProducao = calcMedia(t.producao);
+                                    const mediaCH = calcMedia(t.ch);
+                                    const mediaCN = calcMedia(t.cn);
+                                    const mediaGeral = (mediaPortugues + mediaMatematica + mediaProducao + mediaCH + mediaCN) / 5;
+                                    return {
+                                        nome: t.nome,
+                                        portugues: mediaPortugues,
+                                        matematica: mediaMatematica,
+                                        producao: mediaProducao,
+                                        ch: mediaCH,
+                                        cn: mediaCN,
+                                        geral: mediaGeral
+                                    };
+                                });
+
+                                resultadoComp.sort((a,b) => b.geral - a.geral);
+
+                                tbodyComparativo.innerHTML = resultadoComp.map(r => `
+                                    <tr>
+                                        <td><strong>${r.nome}</strong></td>
+                                        <td>${r.portugues.toFixed(1)}%</td>
+                                        <td>${r.matematica.toFixed(1)}%</td>
+                                        <td>${r.producao.toFixed(1)}%</td>
+                                        <td>${r.ch.toFixed(1)}%</td>
+                                        <td>${r.cn.toFixed(1)}%</td>
+                                        <td><strong style="color:${r.geral >= 70 ? 'var(--green)' : r.geral >= 50 ? 'var(--orange)' : 'var(--red)'}">${r.geral.toFixed(1)}%</strong></td>
+                                    </tr>
+                                `).join('');
+                            }
+                        }
+
                         atualizarDatasImpressao();
 
                     } catch (erro) {
@@ -8037,174 +8191,118 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 // Limpar filtros da RG
                 function limparRGFiltros() {
-                    document.getElementById('rg-escola').value = '';
-                    document.getElementById('rg-serie').value = '';
-                    document.getElementById('rg-turma').innerHTML = '<option value="">Todas</option>';
-                    document.getElementById('rg-aluno').innerHTML = '<option value="">Todos</option>';
-                    document.getElementById('rg-prova').value = '';
-                    // Recarregar turmas
+                    document.getElementById('rg-filtro-escola').value = '';
+                    document.getElementById('rg-filtro-serie').value = '';
+                    document.getElementById('rg-filtro-turma').innerHTML = '<option value="">Todas</option>';
+                    document.getElementById('rg-filtro-aluno').innerHTML = '<option value="">Todos</option>';
+                    document.getElementById('rg-filtro-prova').value = '';
                     carregarRGTurmas('');
                 }
 
-                // Visualizar relatório de escolas (abrir modal)
-                function visualizarRelatorioEscolas() {
-                    const tbody = document.getElementById('rg-tb-escolas');
-                    if (!tbody) return;
-                    const rows = tbody.querySelectorAll('tr');
-                    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhuma'))) {
-                        showToast('⚠️ Nenhuma escola para visualizar.', 'warning');
+                // Visualizar relatório (modal) - adaptado para cada aba
+                function visualizarRG(tipo) {
+                    let tbodyId = '';
+                    let titulo = '';
+                    let header = '';
+                    let colunas = 7;
+                    switch(tipo) {
+                        case 'escolas': tbodyId = 'rg-tb-escolas'; titulo = '🏫 Relatório de Escolas'; header = '#,Nome,Município,INEP, Diretor,Turmas,Alunos'; break;
+                        case 'turmas': tbodyId = 'rg-tb-turmas'; titulo = '👥 Relatório de Turmas'; header = '#,Turma,Série,Turno,Escola,Professor,Alunos'; break;
+                        case 'alunos': tbodyId = 'rg-tb-alunos'; titulo = '🎒 Relatório de Alunos'; header = 'Nº,Matrícula,Nome,Série,Turma,Escola'; colunas = 6; break;
+                        case 'conceitos': tbodyId = 'rg-conceito-barras'; titulo = '📊 Distribuição por Conceito'; break;
+                        case 'desempenho': tbodyId = 'rg-tb-desempenho'; titulo = '📈 Desempenho por Disciplina'; header = 'Disciplina,Acertos,Erros,Média,Conceito'; colunas = 5; break;
+                        case 'provas': tbodyId = 'rg-tb-provas'; titulo = '📑 Relatório de Provas'; header = '#,Título,Disciplina,Série,Data,Questões'; colunas = 6; break;
+                        case 'historico': tbodyId = 'rg-tb-historico'; titulo = '📜 Histórico do Aluno'; header = 'Aluno,Prova,Disciplina,Acertos,Nota,Data'; colunas = 6; break;
+                        case 'comparativo': tbodyId = 'rg-tb-comparativo'; titulo = '📊 Comparativo de Turmas'; header = 'Turma,Português,Matemática,Produção,CH,CN,Média Geral'; colunas = 7; break;
+                        default: return;
+                    }
+
+                    const container = document.getElementById('vr-conteudo');
+                    document.getElementById('vr-titulo').textContent = titulo;
+
+                    if (tipo === 'conceitos') {
+                        // Copiar o conteúdo das barras
+                        const barras = document.getElementById('rg-conceito-barras').cloneNode(true);
+                        barras.style.padding = '10px';
+                        container.innerHTML = barras.outerHTML;
+                        openM('m-visualizar-relatorio');
                         return;
                     }
-                    let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor</th><th>Turmas</th><th>Alunos</th></tr></thead><tbody>';
-                    rows.forEach(row => { html += row.outerHTML; });
-                    html += '</tbody></table></div>';
-                    document.getElementById('vr-titulo').textContent = '🏫 Visualizar Relatório de Escolas';
-                    document.getElementById('vr-conteudo').innerHTML = html;
-                    openM('m-visualizar-relatorio');
-                }
 
-                function visualizarRelatorioTurmas() {
-                    const tbody = document.getElementById('rg-tb-turmas');
-                    if (!tbody) return;
-                    const rows = tbody.querySelectorAll('tr');
-                    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhuma'))) {
-                        showToast('⚠️ Nenhuma turma para visualizar.', 'warning');
-                        return;
-                    }
-                    let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor</th><th>Alunos</th></tr></thead><tbody>';
-                    rows.forEach(row => { html += row.outerHTML; });
-                    html += '</tbody></table></div>';
-                    document.getElementById('vr-titulo').textContent = '👥 Visualizar Relatório de Turmas';
-                    document.getElementById('vr-conteudo').innerHTML = html;
-                    openM('m-visualizar-relatorio');
-                }
-
-                function visualizarRelatorioAlunos() {
-                    const tbody = document.getElementById('rg-tb-alunos');
+                    const tbody = document.getElementById(tbodyId);
                     if (!tbody) return;
                     const rows = tbody.querySelectorAll('tr');
                     if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum'))) {
-                        showToast('⚠️ Nenhum aluno para visualizar.', 'warning');
+                        showToast('⚠️ Nenhum dado para visualizar.', 'warning');
                         return;
                     }
-                    let html = '<div class="table-wrap"><table><thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Escola</th></tr></thead><tbody>';
+
+                    let html = '<div class="table-wrap"><table><thead><tr>';
+                    const headers = header.split(',');
+                    headers.forEach(h => html += `<th>${h}</th>`);
+                    html += '</tr></thead><tbody>';
                     rows.forEach(row => { html += row.outerHTML; });
                     html += '</tbody></table></div>';
-                    document.getElementById('vr-titulo').textContent = '🎒 Visualizar Relatório de Alunos';
-                    document.getElementById('vr-conteudo').innerHTML = html;
+                    container.innerHTML = html;
                     openM('m-visualizar-relatorio');
                 }
 
-                function visualizarRelatorioConceitos() {
-                    let html = '<div style="padding:10px;">';
-                    html += '<div style="display:flex;flex-direction:column;gap:12px;">';
-                    const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
-                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                        const count = document.getElementById(`rg-conceito-${c}-count`).textContent;
-                        const pct = document.getElementById(`rg-conceito-${c}-bar`).style.width || '2%';
-                        const labelMap = { inicial: '🔴 Inicial (até 40%)', basico: '🟠 Básico (41-60%)', proficiente: '🔵 Proficiente (61-80%)', avancado: '🟢 Avançado (>80%)' };
-                        html += `<div>
-                            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-                                <span>${labelMap[c]}</span>
-                                <span style="font-weight:700;color:${cores[c]};">${count}</span>
-                            </div>
-                            <div class="progress" style="height:20px;background:#e9ecef;border-radius:10px;overflow:hidden;">
-                                <div style="height:100%;width:${pct};background:linear-gradient(90deg,${cores[c]},${cores[c]}dd);border-radius:10px;transition:width 0.8s;"></div>
-                            </div>
-                        </div>`;
-                    });
-                    html += '</div></div>';
-                    document.getElementById('vr-titulo').textContent = '📊 Visualizar Relatório de Conceitos';
-                    document.getElementById('vr-conteudo').innerHTML = html;
-                    openM('m-visualizar-relatorio');
-                }
-
-                function visualizarRelatorioDesempenho() {
-                    const tbody = document.getElementById('rg-tb-desempenho');
-                    if (!tbody) return;
-                    const rows = tbody.querySelectorAll('tr');
-                    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum'))) {
-                        showToast('⚠️ Nenhum dado de desempenho para visualizar.', 'warning');
-                        return;
-                    }
-                    let html = '<div class="table-wrap"><table><thead><tr><th>Disciplina</th><th>Total Acertos</th><th>Total Erros</th><th>Média</th><th>Conceito</th></tr></thead><tbody>';
-                    rows.forEach(row => { html += row.outerHTML; });
-                    html += '</tbody></table></div>';
-                    document.getElementById('vr-titulo').textContent = '📈 Visualizar Relatório de Desempenho por Disciplina';
-                    document.getElementById('vr-conteudo').innerHTML = html;
-                    openM('m-visualizar-relatorio');
-                }
-
-                function visualizarRelatorioProvas() {
-                    const tbody = document.getElementById('rg-tb-provas');
-                    if (!tbody) return;
-                    const rows = tbody.querySelectorAll('tr');
-                    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhuma'))) {
-                        showToast('⚠️ Nenhuma prova para visualizar.', 'warning');
-                        return;
-                    }
-                    let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Série</th><th>Data</th><th>Questões</th></tr></thead><tbody>';
-                    rows.forEach(row => { html += row.outerHTML; });
-                    html += '</tbody></table></div>';
-                    document.getElementById('vr-titulo').textContent = '📑 Visualizar Relatório de Provas';
-                    document.getElementById('vr-conteudo').innerHTML = html;
-                    openM('m-visualizar-relatorio');
-                }
-
-                // Editar - redirecionar para a página correspondente
-                function editarRelatorioEscolas() { go('escola'); }
-                function editarRelatorioTurmas() { go('turmas'); }
-                function editarRelatorioAlunos() { go('alunos'); }
-                function editarRelatorioConceitos() { go('resultados'); }
-                function editarRelatorioDesempenho() { go('desempenho'); }
-                function editarRelatorioProvas() { go('provas'); }
-
-                // Exportar RG
-                function exportarRelatoriosGerais() {
-                    showToast('📥 Exportando Relatórios Gerais...', 'info');
-                    // Coletar dados das tabelas
-                    const tables = [
-                        { id: 'rg-tb-escolas', header: 'Escola,Nome,Município,INEP, Diretor,Turmas,Alunos' },
-                        { id: 'rg-tb-turmas', header: 'Turma,Série,Turno,Escola,Professor,Alunos' },
-                        { id: 'rg-tb-alunos', header: 'Nº,Matrícula,Nome,Série,Turma,Escola' },
-                        { id: 'rg-tb-desempenho', header: 'Disciplina,Total Acertos,Total Erros,Média,Conceito' },
-                        { id: 'rg-tb-provas', header: 'Título,Disciplina,Série,Data,Questões' }
+                // Exportar RG (apenas a aba ativa)
+                function exportarRelatorioAtivo() {
+                    const tabNames = ['Escolas', 'Turmas', 'Alunos', 'Conceitos', 'Desempenho', 'Provas', 'Histórico', 'Comparativo'];
+                    const tabIdMap = ['rg-tb-escolas', 'rg-tb-turmas', 'rg-tb-alunos', 'rg-conceito-barras', 'rg-tb-desempenho', 'rg-tb-provas', 'rg-tb-historico', 'rg-tb-comparativo'];
+                    const headerMap = [
+                        '#,Nome,Município,INEP,Diretor,Turmas,Alunos',
+                        '#,Turma,Série,Turno,Escola,Professor,Alunos',
+                        'Nº,Matrícula,Nome,Série,Turma,Escola',
+                        'Conceito,Quantidade',
+                        'Disciplina,Acertos,Erros,Média,Conceito',
+                        '#,Título,Disciplina,Série,Data,Questões',
+                        'Aluno,Prova,Disciplina,Acertos,Nota,Data',
+                        'Turma,Português,Matemática,Produção,CH,CN,Média Geral'
                     ];
-                    let csv = '==== RELATÓRIOS GERAIS ====\n\n';
-                    tables.forEach(t => {
-                        const tbody = document.getElementById(t.id);
-                        if (!tbody) return;
-                        const rows = tbody.querySelectorAll('tr');
-                        if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum'))) return;
-                        csv += t.header + '\n';
-                        rows.forEach(row => {
-                            const cells = row.querySelectorAll('td');
-                            const rowData = [];
-                            cells.forEach(cell => {
-                                let text = cell.textContent.trim();
-                                // Se tiver vírgula, colocar entre aspas
-                                if (text.includes(',')) text = `"${text}"`;
-                                rowData.push(text);
-                            });
-                            csv += rowData.join(',') + '\n';
+
+                    const idx = rgTabAtiva;
+                    const tbodyId = tabIdMap[idx];
+                    const header = headerMap[idx];
+                    const nome = tabNames[idx];
+
+                    showToast(`📥 Exportando ${nome}...`, 'info');
+
+                    let csv = `==== RELATÓRIO: ${nome.toUpperCase()} ====\n`;
+                    csv += header + '\n';
+
+                    if (idx === 3) { // Conceitos
+                        const conceitos = ['inicial', 'basico', 'proficiente', 'avancado'];
+                        conceitos.forEach(c => {
+                            const count = document.getElementById(`rg-conceito-${c}-count`).textContent || '0';
+                            csv += `${c},${count}\n`;
                         });
-                        csv += '\n';
-                    });
-                    // Adicionar dados de conceitos
-                    csv += '==== DISTRIBUIÇÃO POR CONCEITO ====\n';
-                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                        const count = document.getElementById(`rg-conceito-${c}-count`).textContent || '0';
-                        csv += `${c},${count}\n`;
-                    });
+                    } else {
+                        const tbody = document.getElementById(tbodyId);
+                        if (tbody) {
+                            const rows = tbody.querySelectorAll('tr');
+                            rows.forEach(row => {
+                                const cells = row.querySelectorAll('td');
+                                const rowData = [];
+                                cells.forEach(cell => {
+                                    let text = cell.textContent.trim();
+                                    if (text.includes(',')) text = `"${text}"`;
+                                    rowData.push(text);
+                                });
+                                csv += rowData.join(',') + '\n';
+                            });
+                        }
+                    }
 
                     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'relatorios_gerais.csv';
+                    a.download = `relatorio_${nome.toLowerCase()}.csv`;
                     a.click();
                     URL.revokeObjectURL(url);
-                    showToast('✅ Relatórios Gerais exportados!', 'success');
+                    showToast(`✅ ${nome} exportado!`, 'success');
                 }
 
                 // ============================================
@@ -8243,6 +8341,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     // Inicializar filtros da RG
                     carregarRGFiltros();
+                    // Atualizar título de impressão
+                    document.getElementById('print-titulo-rg').textContent = 'Geral';
                 });
 
                 document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
