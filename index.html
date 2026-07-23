@@ -2117,237 +2117,280 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
 
             <!-- ============================================================ -->
-            <!-- ========== NOVA ABA: RELATÓRIOS GERAIS ========== -->
-            <!-- ============================================================ -->
-            <div class="page" id="page-relatorios-gerais">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📊 RELATÓRIOS GERAIS</div>
-                        <p class="page-sub">Todos os relatórios do sistema em um só lugar: Escolas, Turmas, Alunos, Conceitos e Desempenho</p>
-                    </div>
-                    <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
-                        <button class="btn btn-green" onclick="exportarRelatoriosGerais()">📥 Excel</button>
-                    </div>
-                </div>
+<!-- ========== NOVA ABA: RELATÓRIOS GERAIS (COM SUB-ABAS) ========== -->
+<!-- ============================================================ -->
+<div class="page" id="page-relatorios-gerais">
+    <div class="page-header">
+        <div>
+            <div class="page-title">📊 RELATÓRIOS GERAIS</div>
+            <p class="page-sub">Selecione uma categoria e aplique os filtros para visualizar relatórios detalhados</p>
+        </div>
+        <div class="page-actions no-print">
+            <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+            <button class="btn btn-green" onclick="exportarRelatorioAtivo()">📥 Exportar (CSV)</button>
+        </div>
+    </div>
 
-                <div class="print-header print-only">
-                    <h2>📊 RELATÓRIOS GERAIS</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-relatorios-gerais"></span></p>
+    <!-- Cabeçalho para impressão (aparece apenas no print) -->
+    <div class="print-header print-only">
+        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="height:60px;">
+                <div>
+                    <h2 style="margin:0; font-size:20px; color:#0f172a;">CorrigePro — Relatórios</h2>
+                    <p style="margin:2px 0 0; font-size:12px; color:#475569;">Secretaria Municipal de Educação — São Sebastião da Boa Vista</p>
                 </div>
-
-                <!-- FILTROS GLOBAIS -->
-                <div class="card no-print" style="margin-bottom:18px;">
-                    <div class="form-row c5">
-                        <div class="form-group">
-                            <label class="form-label">Escola</label>
-                            <select class="form-control" id="rg-escola" onchange="carregarRGTurmas(this.value)">
-                                <option value="">Todas</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Série</label>
-                            <select class="form-control" id="rg-serie" onchange="filtrarRGTurmas(); carregarRG();">
-                                <option value="">Todas</option>
-                                <option value="1º Ano">1º Ano</option>
-                                <option value="2º Ano">2º Ano</option>
-                                <option value="3º Ano">3º Ano</option>
-                                <option value="4º Ano">4º Ano</option>
-                                <option value="5º Ano">5º Ano</option>
-                                <option value="6º Ano">6º Ano</option>
-                                <option value="7º Ano">7º Ano</option>
-                                <option value="8º Ano">8º Ano</option>
-                                <option value="9º Ano">9º Ano</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma</label>
-                            <select class="form-control" id="rg-turma" onchange="carregarRG();">
-                                <option value="">Todas</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Aluno</label>
-                            <select class="form-control" id="rg-aluno" onchange="carregarRG();">
-                                <option value="">Todos</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prova</label>
-                            <select class="form-control" id="rg-prova" onchange="carregarRG();">
-                                <option value="">Todas</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                        <button class="btn btn-primary btn-sm" onclick="carregarRG()">🔍 Filtrar</button>
-                        <button class="btn btn-outline btn-sm" onclick="limparRGFiltros()">✕ Limpar Filtros</button>
-                        <button class="btn btn-green btn-sm" onclick="exportarRelatoriosGerais()">📥 Exportar</button>
-                        <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                    </div>
-                </div>
-
-                <!-- RESUMO -->
-                <div class="stats-grid" style="grid-template-columns: repeat(4,1fr); margin-bottom:18px;">
-                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="rg-total-escolas">0</div><div class="stat-label">Escolas</div></div></div>
-                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="rg-total-turmas">0</div><div class="stat-label">Turmas</div></div></div>
-                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="rg-total-alunos">0</div><div class="stat-label">Alunos</div></div></div>
-                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="rg-total-provas">0</div><div class="stat-label">Provas</div></div></div>
-                </div>
-
-                <!-- SEÇÃO 1: RELATÓRIO DE ESCOLAS -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">🏫 Relatório de Escolas</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" onclick="visualizarRelatorioEscolas()">👁️ Visualizar</button>
-                            <button class="btn btn-outline btn-sm" onclick="editarRelatorioEscolas()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor</th><th>Turmas</th><th>Alunos</th></tr></thead>
-                            <tbody id="rg-tb-escolas">
-                                <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 2: RELATÓRIO DE TURMAS -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">👥 Relatório de Turmas</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" onclick="visualizarRelatorioTurmas()">👁️ Visualizar</button>
-                            <button class="btn btn-outline btn-sm" onclick="editarRelatorioTurmas()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor</th><th>Alunos</th></tr></thead>
-                            <tbody id="rg-tb-turmas">
-                                <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 3: RELATÓRIO DE ALUNOS -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">🎒 Relatório de Alunos</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" onclick="visualizarRelatorioAlunos()">👁️ Visualizar</button>
-                            <button class="btn btn-outline btn-sm" onclick="editarRelatorioAlunos()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Escola</th></tr></thead>
-                            <tbody id="rg-tb-alunos">
-                                <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 4: RELATÓRIO POR CONCEITOS -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">📊 Distribuição por Conceito</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" onclick="visualizarRelatorioConceitos()">👁️ Visualizar</button>
-                            <button class="btn btn-outline btn-sm" onclick="editarRelatorioConceitos()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-                    <div id="rg-conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                <span>🔴 inicial (até 40%)</span>
-                                <span style="font-weight:700; color:#ef4444;" id="rg-conceito-inicial-count">0</span>
-                            </div>
-                            <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                                <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px; transition:width 0.8s ease;" id="rg-conceito-inicial-bar"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                <span>🟠 básico (41% – 60%)</span>
-                                <span style="font-weight:700; color:#f59e0b;" id="rg-conceito-basico-count">0</span>
-                            </div>
-                            <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                                <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px; transition:width 0.8s ease;" id="rg-conceito-basico-bar"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                <span>🔵 proficiente (61% – 80%)</span>
-                                <span style="font-weight:700; color:#3b82f6;" id="rg-conceito-proficiente-count">0</span>
-                            </div>
-                            <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                                <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px; transition:width 0.8s ease;" id="rg-conceito-proficiente-bar"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                <span>🟢 avançado (acima de 80%)</span>
-                                <span style="font-weight:700; color:#10b981;" id="rg-conceito-avancado-count">0</span>
-                            </div>
-                            <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                                <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px; transition:width 0.8s ease;" id="rg-conceito-avancado-bar"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 5: RELATÓRIO DE DESEMPENHO POR DISCIPLINA -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">📈 Desempenho por Disciplina</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" onclick="visualizarRelatorioDesempenho()">👁️ Visualizar</button>
-                            <button class="btn btn-outline btn-sm" onclick="editarRelatorioDesempenho()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead><tr><th>Disciplina</th><th>Total Acertos</th><th>Total Erros</th><th>Média</th><th>Conceito</th></tr></thead>
-                            <tbody id="rg-tb-desempenho">
-                                <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 6: RELATÓRIO DE PROVAS -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">📑 Relatório de Provas</div>
-                        <div class="btn-group no-print">
-                            <button class="btn btn-outline btn-sm" onclick="visualizarRelatorioProvas()">👁️ Visualizar</button>
-                            <button class="btn btn-outline btn-sm" onclick="editarRelatorioProvas()">✏️ Editar</button>
-                            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimir</button>
-                        </div>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Série</th><th>Data</th><th>Questões</th></tr></thead>
-                            <tbody id="rg-tb-provas">
-                                <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
             </div>
-            <!-- ========== FIM RELATÓRIOS GERAIS ========== -->
+            <div style="text-align:right; font-size:12px; color:#475569;">
+                <div><strong>Data:</strong> <span id="print-data-rg"></span></div>
+                <div><strong>Relatório:</strong> <span id="print-titulo-rg">Geral</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação por abas -->
+    <div class="tab-nav no-print" style="display:flex; gap:4px; background:var(--bg2); padding:4px; border-radius:12px; margin-bottom:18px; flex-wrap:wrap;">
+        <button class="tab-btn active" onclick="switchRGTab(0, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">🏫 Escolas</button>
+        <button class="tab-btn" onclick="switchRGTab(1, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">👥 Turmas</button>
+        <button class="tab-btn" onclick="switchRGTab(2, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">🎒 Alunos</button>
+        <button class="tab-btn" onclick="switchRGTab(3, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📊 Conceitos</button>
+        <button class="tab-btn" onclick="switchRGTab(4, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📈 Desempenho</button>
+        <button class="tab-btn" onclick="switchRGTab(5, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📑 Provas</button>
+        <button class="tab-btn" onclick="switchRGTab(6, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📜 Histórico</button>
+        <button class="tab-btn" onclick="switchRGTab(7, this)" style="flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; min-width:80px;">📊 Comparativo</button>
+    </div>
+
+    <!-- Filtros gerais (aplicados a todas as abas) -->
+    <div class="card no-print" style="margin-bottom:18px;">
+        <div class="form-row c5">
+            <div class="form-group">
+                <label class="form-label">Escola</label>
+                <select class="form-control" id="rg-filtro-escola" onchange="carregarRGTurmas(this.value); carregarRG()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Série</label>
+                <select class="form-control" id="rg-filtro-serie" onchange="filtrarRGTurmas(); carregarRG()">
+                    <option value="">Todas</option>
+                    <option value="1º Ano">1º Ano</option>
+                    <option value="2º Ano">2º Ano</option>
+                    <option value="3º Ano">3º Ano</option>
+                    <option value="4º Ano">4º Ano</option>
+                    <option value="5º Ano">5º Ano</option>
+                    <option value="6º Ano">6º Ano</option>
+                    <option value="7º Ano">7º Ano</option>
+                    <option value="8º Ano">8º Ano</option>
+                    <option value="9º Ano">9º Ano</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Turma</label>
+                <select class="form-control" id="rg-filtro-turma" onchange="carregarRGAlunos(this.value); carregarRG()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Aluno</label>
+                <select class="form-control" id="rg-filtro-aluno" onchange="carregarRG()">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prova</label>
+                <select class="form-control" id="rg-filtro-prova" onchange="carregarRG()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            <button class="btn btn-primary btn-sm" onclick="carregarRG()">🔍 Filtrar</button>
+            <button class="btn btn-outline btn-sm" onclick="limparRGFiltros()">✕ Limpar</button>
+        </div>
+    </div>
+
+    <!-- ===== CONTEÚDO DAS ABAS ===== -->
+    <div class="rg-tab-content" id="rg-tab-0" style="display:block;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🏫 Relatório de Escolas</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('escolas')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('escola')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Nome</th><th>Município</th><th>INEP</th><th>Diretor</th><th>Turmas</th><th>Alunos</th></tr></thead>
+                    <tbody id="rg-tb-escolas"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-1" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">👥 Relatório de Turmas</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('turmas')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('turmas')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor</th><th>Alunos</th></tr></thead>
+                    <tbody id="rg-tb-turmas"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-2" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🎒 Relatório de Alunos</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('alunos')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('alunos')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th><th>Turma</th><th>Escola</th></tr></thead>
+                    <tbody id="rg-tb-alunos"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-3" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📊 Distribuição por Conceito</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('conceitos')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('resultados')">✏️ Editar</button>
+                </div>
+            </div>
+            <div id="rg-conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                        <span>🔴 Inicial (até 40%)</span>
+                        <span style="font-weight:700; color:#ef4444;" id="rg-conceito-inicial-count">0</span>
+                    </div>
+                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px;" id="rg-conceito-inicial-bar"></div>
+                    </div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                        <span>🟠 Básico (41% – 60%)</span>
+                        <span style="font-weight:700; color:#f59e0b;" id="rg-conceito-basico-count">0</span>
+                    </div>
+                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px;" id="rg-conceito-basico-bar"></div>
+                    </div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                        <span>🔵 Proficiente (61% – 80%)</span>
+                        <span style="font-weight:700; color:#3b82f6;" id="rg-conceito-proficiente-count">0</span>
+                    </div>
+                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px;" id="rg-conceito-proficiente-bar"></div>
+                    </div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                        <span>🟢 Avançado (acima de 80%)</span>
+                        <span style="font-weight:700; color:#10b981;" id="rg-conceito-avancado-count">0</span>
+                    </div>
+                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px;" id="rg-conceito-avancado-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:12px; font-size:12px; color:var(--text2); text-align:center;">
+                Total de alunos corrigidos: <strong id="rg-total-conceitos">0</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-4" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📈 Desempenho por Disciplina</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('desempenho')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('desempenho')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Disciplina</th><th>Total Acertos</th><th>Total Erros</th><th>Média</th><th>Conceito</th></tr></thead>
+                    <tbody id="rg-tb-desempenho"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-5" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📑 Relatório de Provas</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('provas')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('provas')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Título</th><th>Disciplina</th><th>Série</th><th>Data</th><th>Questões</th></tr></thead>
+                    <tbody id="rg-tb-provas"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-6" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📜 Histórico do Aluno (últimas correções)</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('historico')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('desempenho')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Aluno</th><th>Prova</th><th>Disciplina</th><th>Acertos</th><th>Nota</th><th>Data</th></tr></thead>
+                    <tbody id="rg-tb-historico"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-tab-content" id="rg-tab-7" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📊 Comparativo de Turmas (Média por Disciplina)</div>
+                <div class="btn-group no-print">
+                    <button class="btn btn-outline btn-sm" onclick="visualizarRG('comparativo')">👁️ Visualizar</button>
+                    <button class="btn btn-outline btn-sm" onclick="go('rel-turma')">✏️ Editar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Turma</th><th>Português</th><th>Matemática</th><th>Produção</th><th>CH</th><th>CN</th><th>Média Geral</th></tr></thead>
+                    <tbody id="rg-tb-comparativo"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- ========== FIM RELATÓRIOS GERAIS ========== -->
 
             <!-- ========== CÂMERA MODAL ========== -->
             <div class="cam-modal no-print" id="cam-modal">
