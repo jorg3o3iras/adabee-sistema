@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CorrigePro — Sistema de Correção de Provas</title>
     <style>
         /* ============================================
@@ -1125,7 +1125,9 @@
         </div>
         <div class="login-card">
             <div class="login-logo">
-                <div class="l-icon">🎓</div>
+                <div class="l-icon">
+  <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="width: 100px; height: 80px;">
+</div>
                 <h1>CorrigePro</h1>
                 <p>Sistema Inteligente de Correção de Provas</p>
                 <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
@@ -1186,9 +1188,11 @@
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
+                    <!-- === A ABA "PRODUÇÃO DE TEXTO" FOI REMOVIDA AQUI === -->
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
+                    <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1221,9 +1225,11 @@
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
+                    <!-- === A ABA "PRODUÇÃO DE TEXTO" FOI REMOVIDA AQUI === -->
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
+                    <!-- ===== NOVA ABA: DESEMPENHO DO ALUNO ===== -->
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
@@ -1729,7 +1735,9 @@
                 </div>
             </div>
 
+            <!-- ============================================================ -->
             <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ============================================================ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header">
                     <div>
@@ -1798,10 +1806,12 @@
                         <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <!-- Lado esquerdo: porcentagem -->
                         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
                             <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
                             <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
                         </div>
+                        <!-- Lado direito: conceitos -->
                         <div style="display:flex; flex-direction:column; gap:12px;">
                             <div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
@@ -1843,7 +1853,7 @@
                     </div>
                 </div>
 
-                <!-- ===== CARD ADICIONADO: LISTA DE ALUNOS ===== -->
+                <!-- ========== CARD ADICIONADO: LISTA DE ALUNOS ========== -->
                 <div class="card" id="rel-tabela-alunos">
                     <div class="card-header">
                         <div class="card-title">📋 Lista de Alunos</div>
@@ -1890,7 +1900,7 @@
                     </div>
                 </div>
 
-                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA -->
+                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
                 <div class="card" id="rel-distribuicao-unica">
                     <div class="card-header">
                         <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
@@ -1948,7 +1958,7 @@
                 <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
             </div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2013,6 +2023,7 @@
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
                     </div>
 
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
                     <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -2029,6 +2040,7 @@
                         </div>
                     </div>
 
+                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -2111,7 +2123,7 @@
             </div>
         </div>
 
-        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) ========== -->
+        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) - COM CONTAINER DE SELECTS ========== -->
         <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
             <div class="modal" style="max-width:800px;width:95vw;">
                 <div class="modal-header">
@@ -2636,7 +2648,7 @@
             }
 
             // ============================================
-            // NAVEGAÇÃO (CORRIGIDA)
+            // NAVEGAÇÃO
             // ============================================
             function go(page) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2644,64 +2656,21 @@
                 if (el) el.classList.add('active');
                 document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
 
-                // ========== CARREGAMENTO DE DADOS POR PÁGINA ==========
-                switch (page) {
-                    case 'dashboard':
-                        carregarDashboard();
-                        break;
-                    case 'u-dashboard':
-                        carregarDashboard(); // já atualiza os elementos da página u-dashboard
-                        break;
-                    case 'escola':
-                        carregarEscolas();
-                        break;
-                    case 'u-escola':
-                        carregarEscolasUsuario();
-                        break;
-                    case 'turmas':
-                        carregarFiltroEscolaTurmas();
-                        carregarTurmas();
-                        break;
-                    case 'u-turmas':
-                        carregarTurmasUsuario();
-                        break;
-                    case 'alunos':
-                        const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
-                        carregarAlunos(escolaId);
-                        break;
-                    case 'u-alunos':
-                        carregarAlunosUsuario();
-                        break;
-                    case 'provas':
-                        carregarProvas();
-                        break;
-                    case 'resultados':
-                        carregarFiltrosResultados();
-                        carregarResultadosComFiltros();
-                        break;
-                    case 'u-resultados':
-                        carregarResultadosUsuario();
-                        break;
-                    case 'gabaritos':
-                        carregarGabaritos();
-                        break;
-                    case 'rel-turma':
-                        carregarFiltrosRelTurma();
-                        carregarRelatorioTurmaFiltrado();
-                        break;
-                    case 'u-relatorios':
-                        carregarRelatoriosUsuario();
-                        break;
-                    case 'lista-turma':
-                        carregarDadosListaTurma();
-                        break;
-                    case 'desempenho':
-                        carregarEscolasDesempenho();
-                        break;
-                    // outras páginas não precisam de carregamento específico
+                if (page === 'escola') carregarEscolas();
+                if (page === 'turmas') { carregarFiltroEscolaTurmas(); carregarTurmas(); }
+                if (page === 'alunos') {
+                    const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                    carregarAlunos(escolaId);
                 }
+                if (page === 'provas') carregarProvas();
+                if (page === 'dashboard') carregarDashboard();
+                if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
+                if (page === 'gabaritos') carregarGabaritos();
+                if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
+                if (page === 'desempenho') { carregarEscolasDesempenho(); }
 
-                // Fechar menu mobile
+                atualizarDatasImpressao();
+
                 if (window.innerWidth <= 900) {
                     const sidebar = document.getElementById('sidebar');
                     const overlay = document.getElementById('menuOverlay');
@@ -2712,173 +2681,6 @@
                         toggle.classList.remove('active');
                         toggle.innerHTML = '☰';
                     }
-                }
-            }
-
-            // ========== USUÁRIO: ESCOLAS ==========
-            async function carregarEscolasUsuario() {
-                const container = document.getElementById('u-escola-info');
-                if (!container) return;
-                try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
-                    if (!escolas || escolas.length === 0 || escolas.erro) {
-                        container.innerHTML = '<p style="color:var(--text3);">Nenhuma escola cadastrada.</p>';
-                        return;
-                    }
-                    let html = '<ul style="list-style:none;padding:0;">';
-                    escolas.forEach(e => {
-                        html += `<li style="padding:8px 0;border-bottom:1px solid var(--border);">
-                                    <strong>${e.nome}</strong><br>
-                                    <span style="font-size:12px;color:var(--text2);">
-                                        ${e.municipio || ''} ${e.estado ? '— ' + e.estado : ''} 
-                                        ${e.inep ? '| INEP: ' + e.inep : ''}
-                                    </span>
-                                 </li>`;
-                    });
-                    html += '</ul>';
-                    container.innerHTML = html;
-                } catch (erro) {
-                    container.innerHTML = '<p style="color:var(--red);">Erro ao carregar escolas.</p>';
-                    console.error(erro);
-                }
-            }
-
-            // ========== USUÁRIO: TURMAS ==========
-            async function carregarTurmasUsuario() {
-                const tbody = document.getElementById('u-tb-turmas');
-                if (!tbody) return;
-                try {
-                    const response = await fetch(API_URL + '/api/turmas');
-                    const turmas = await response.json();
-                    if (!turmas || turmas.length === 0 || turmas.erro) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma turma encontrada.</td></tr>';
-                        return;
-                    }
-                    tbody.innerHTML = turmas.map(t => `
-                        <tr>
-                            <td><strong>${t.nome}</strong></td>
-                            <td><span class="badge badge-purple">${t.serie || '—'}</span></td>
-                            <td>${t.professor || '—'}</td>
-                            <td><span class="badge badge-blue">${t.total_alunos || 0}</span></td>
-                            <td><button class="btn btn-green btn-sm" onclick="go('lista-turma')">📋</button></td>
-                        </tr>
-                    `).join('');
-                } catch (erro) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--red);">Erro ao carregar turmas.</td></tr>';
-                    console.error(erro);
-                }
-            }
-
-            // ========== USUÁRIO: ALUNOS ==========
-            async function carregarAlunosUsuario() {
-                const tbody = document.getElementById('u-tb-alunos');
-                if (!tbody) return;
-                try {
-                    const response = await fetch(API_URL + '/api/alunos');
-                    const alunos = await response.json();
-                    if (!alunos || alunos.length === 0 || alunos.erro) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
-                        return;
-                    }
-                    tbody.innerHTML = alunos.map((a, i) => `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td>${a.matricula || '—'}</td>
-                            <td><strong>${a.nome}</strong></td>
-                            <td><span class="badge badge-purple">${a.turma_serie || '—'}</span></td>
-                        </tr>
-                    `).join('');
-                } catch (erro) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--red);">Erro ao carregar alunos.</td></tr>';
-                    console.error(erro);
-                }
-            }
-
-            // ========== USUÁRIO: RESULTADOS ==========
-            async function carregarResultadosUsuario() {
-                const tbody = document.getElementById('u-tb-resultados');
-                if (!tbody) return;
-                try {
-                    const response = await fetch(API_URL + '/api/historico');
-                    const historico = await response.json();
-                    if (!historico || historico.length === 0 || historico.erro) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum resultado encontrado.</td></tr>';
-                        return;
-                    }
-                    const recentes = historico.slice(0, 10);
-                    tbody.innerHTML = recentes.map(item => {
-                        const nota = item.nota || 0;
-                        const status = nota >= 5 ? 'Aprovado' : 'Reprovado';
-                        const badge = nota >= 5 ? 'badge-green' : 'badge-red';
-                        return `
-                            <tr>
-                                <td>${item.aluno_nome || 'Aluno'}</td>
-                                <td>${item.prova_titulo || 'Prova'}</td>
-                                <td><strong>${nota.toFixed(1)}</strong></td>
-                                <td><span class="badge ${badge}">${status}</span></td>
-                            </tr>
-                        `;
-                    }).join('');
-                } catch (erro) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--red);">Erro ao carregar resultados.</td></tr>';
-                    console.error(erro);
-                }
-            }
-
-            // ========== USUÁRIO: RELATÓRIOS ==========
-            async function carregarRelatoriosUsuario() {
-                const container = document.getElementById('u-chart');
-                if (!container) return;
-                try {
-                    const response = await fetch(API_URL + '/api/dashboard/Conceito');
-                    const dados = await response.json();
-                    if (!dados || dados.length === 0 || dados.erro) {
-                        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível.</div>';
-                        return;
-                    }
-                    let html = '<div class="chart-bars">';
-                    const maxVal = Math.max(...dados.map(t => t.porcentagem || 0), 1);
-                    dados.slice(0, 6).forEach((turma, index) => {
-                        const altura = (turma.porcentagem || 0) / 100 * 120;
-                        const cores = ['#3b82f6', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'];
-                        html += `
-                            <div class="chart-bar-item">
-                                <div class="chart-bar-val">${turma.porcentagem || 0}%</div>
-                                <div class="chart-bar" style="height:${Math.max(20, altura)}px; background:${cores[index % cores.length]};"></div>
-                                <div class="chart-bar-lbl">${turma.nome || 'Turma'}</div>
-                            </div>
-                        `;
-                    });
-                    html += '</div>';
-                    container.innerHTML = html;
-                } catch (erro) {
-                    container.innerHTML = '<p style="color:var(--red);">Erro ao carregar relatórios.</p>';
-                    console.error(erro);
-                }
-            }
-
-            // ========== LISTA POR TURMA ==========
-            async function carregarDadosListaTurma() {
-                const selectEscola = document.getElementById('lista-escola');
-                if (!selectEscola) return;
-                try {
-                    const resp = await fetch(API_URL + '/api/escolas');
-                    const escolas = await resp.json();
-                    if (escolas && !escolas.erro) {
-                        selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
-                        escolas.forEach(e => {
-                            const opt = document.createElement('option');
-                            opt.value = e.id;
-                            opt.textContent = e.nome;
-                            selectEscola.appendChild(opt);
-                        });
-                    }
-                    if (selectEscola.value) {
-                        carregarTurmasLista(selectEscola.value);
-                    }
-                } catch (e) {
-                    console.error('Erro ao carregar escolas para lista:', e);
                 }
             }
 
@@ -3233,7 +3035,7 @@
             }
 
             // ============================================
-            // VISUALIZAR PROVA
+            // VISUALIZAR PROVA (CORREÇÃO DO ÍCONE 👁️)
             // ============================================
             let visualizarProvaId = null;
             let visualizarProvaData = null;
@@ -3326,7 +3128,7 @@
             }
 
             // ============================================
-            // CARREGAR GABARITOS
+            // CARREGAR GABARITOS (COM INDICADOR BNCC)
             // ============================================
             async function carregarGabaritos() {
                 try {
@@ -3358,6 +3160,19 @@
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar gabaritos:', erro);
+                }
+            }
+
+            // ============================================
+            // CARREGAR RESULTADOS (não usamos mais, mantido para compatibilidade)
+            // ============================================
+            async function carregarResultados() {
+                try {
+                    const response = await fetch(`${API_URL}/api/historico/agrupado`);
+                    const alunos = await response.json();
+                    console.log('📥 Resultados agrupados:', alunos);
+                } catch (erro) {
+                    console.error('Erro ao carregar resultados:', erro);
                 }
             }
 
