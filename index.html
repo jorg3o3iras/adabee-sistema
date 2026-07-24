@@ -1171,6 +1171,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 <div class="sb-brand-name">Corrige<span>Pro</span></div>
             </div>
             <div class="sb-nav">
+                <!-- Menu para ADMIN e USUÁRIO (compartilhado) -->
                 <div id="adm-sb">
                     <div class="sb-section">Principal</div>
                     <div class="sb-item active" onclick="go('dashboard')" data-p="dashboard"><span class="sb-ico">🏠</span> Dashboard</div>
@@ -1207,40 +1208,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
                     <div class="sb-section">Sistema</div>
-                    <div class="sb-item" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
+                    <!-- Item Configurações com ID único para ocultar quando usuário -->
+                    <div class="sb-item" id="menu-config" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
                 </div>
+                <!-- Menu específico para usuário (oculto, pois usaremos o mesmo menu acima) -->
                 <div id="usr-sb" style="display:none;">
-                    <div class="sb-section">Menu</div>
-                    <div class="sb-item active" onclick="go('u-dashboard')" data-p="u-dashboard"><span class="sb-ico">🏠</span> Início</div>
-                    <div class="sb-item" onclick="go('u-escola')" data-p="u-escola"><span class="sb-ico">🏫</span> Escola</div>
-                    <div class="sb-item" onclick="go('u-turmas')" data-p="u-turmas"><span class="sb-ico">👥</span> Turmas</div>
-                    <div class="sb-item" onclick="go('u-alunos')" data-p="u-alunos"><span class="sb-ico">🎒</span> Alunos</div>
-                    <div class="sb-item" onclick="go('lista-turma')" data-p="lista-turma"><span class="sb-ico">📋</span> Lista por Turma</div>
-                    <div class="sb-section">Consultas</div>
-                    <div class="sb-item" onclick="go('u-resultados')" data-p="u-resultados"><span class="sb-ico">🏆</span> Resultados</div>
-                    <div class="sb-item" onclick="go('u-relatorios')" data-p="u-relatorios"><span class="sb-ico">📊</span> Relatórios</div>
-                    <div class="sb-section">IA & Correção</div>
-                    <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia">
-                        <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
-                    </div>
-                    <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
-                        <span class="sb-ico">📝</span> Texto com IA <span class="sb-badge">IA</span>
-                    </div>
-                    <div class="sb-item" onclick="abrirCamera()">
-                        <span class="sb-ico">📱</span> Câmera do Celular
-                    </div>
-                    <div class="sb-item" onclick="abrirArquivo()">
-                        <span class="sb-ico">📂</span> Escolher Arquivo
-                    </div>
-                    <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
-                        <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
-                    </div>
-                    <div class="sb-section">Resultados</div>
-                    <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
-                    <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
-                    <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
-                        <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
-                    </div>
+                    <!-- este bloco permanece vazio ou pode ser removido, pois não será usado -->
                 </div>
             </div>
             <div class="sb-footer">
@@ -1967,33 +1940,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ========== USER PAGES ========== -->
-            <div class="page" id="page-u-dashboard">
-                <div class="page-header"><div><div class="page-title">🏠 Início</div><p class="page-sub">Portal do Usuário</p></div></div>
-
-                <div class="print-header print-only">
-                    <h2>📊 Painel do Usuário</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-u-dash"></span></p>
-                </div>
-
-                <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);"><div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="u-total-escolas">0</div><div class="stat-label">Escola</div></div></div><div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="u-total-turmas">0</div><div class="stat-label">Turmas</div></div></div><div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="u-total-alunos">0</div><div class="stat-label">Alunos</div></div></div></div>
-                <div class="card"><div class="card-header"><div class="card-title">📋 Provas Recentes</div></div><div class="table-wrap"><table><thead><tr><th>Prova</th><th>Série</th><th>Data</th><th>Status</th></tr></thead><tbody id="u-provas-recentes"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
-            </div>
-            <div class="page" id="page-u-escola"><div class="page-header"><div><div class="page-title">🏫 Escola</div></div><button class="btn btn-primary no-print" onclick="openM('m-escola')">+ Nova</button></div><div class="card" id="u-escola-info"><div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div></div></div>
-            <div class="page" id="page-u-turmas"><div class="page-header"><div><div class="page-title">👥 Turmas</div></div><button class="btn btn-primary no-print" onclick="openM('m-turma')">+ Nova</button></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Turma</th><th>Série</th><th>Professor</th><th>Alunos</th><th>Lista</th></tr></thead><tbody id="u-tb-turmas"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
-            <div class="page" id="page-u-alunos"><div class="page-header"><div><div class="page-title">🎒 Alunos</div></div><button class="btn btn-primary no-print" onclick="openM('m-aluno')">+ Novo</button></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Nº</th><th>Matrícula</th><th>Nome</th><th>Série</th></tr></thead><tbody id="u-tb-alunos"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
-            <div class="page" id="page-u-resultados"><div class="page-header"><div><div class="page-title">🏆 Resultados</div></div></div><div class="card"><div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Nota</th><th>Status</th></tr></thead><tbody id="u-tb-resultados"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div></div>
-            <div class="page" id="page-u-relatorios"><div class="page-header"><div><div class="page-title">📊 Relatórios</div></div><div class="page-actions no-print"><button class="btn btn-outline" onclick="window.print()">🖨️</button><button class="btn btn-green">📥 PDF</button></div></div>
-
-                <div class="print-header print-only">
-                    <h2>📊 Relatórios</h2>
-                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-u-rel"></span></p>
-                </div>
-
-                <div class="card"><div class="card-header"><div class="card-title">📊 Conceito</div></div><div class="chart-bars" style="height:100px;" id="u-chart"><div style="text-align:center;padding:30px;color:var(--text3);width:100%;">Carregando dados...</div></div></div>
-            </div>
+            <!-- ========== USER PAGES (não utilizadas, mantidas apenas para compatibilidade) ========== -->
+            <div class="page" id="page-u-dashboard" style="display:none;"></div>
+            <div class="page" id="page-u-escola" style="display:none;"></div>
+            <div class="page" id="page-u-turmas" style="display:none;"></div>
+            <div class="page" id="page-u-alunos" style="display:none;"></div>
+            <div class="page" id="page-u-resultados" style="display:none;"></div>
+            <div class="page" id="page-u-relatorios" style="display:none;"></div>
 
             <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
             <div class="page" id="page-desempenho">
@@ -2662,10 +2615,24 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 document.getElementById('sb-avatar').textContent = uname[0].toUpperCase();
                 document.getElementById('sb-uname').textContent = uname;
                 document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
+
+                // Define se é administrador
                 const isAdmin = role === 'admin';
-                document.getElementById('adm-sb').style.display = isAdmin ? 'block' : 'none';
-                document.getElementById('usr-sb').style.display = isAdmin ? 'none' : 'block';
-                go(isAdmin ? 'dashboard' : 'u-dashboard');
+
+                // Sempre exibe o menu principal (adm-sb) e oculta o menu do usuário (usr-sb)
+                document.getElementById('adm-sb').style.display = 'block';
+                document.getElementById('usr-sb').style.display = 'none';
+
+                // Oculta ou exibe o item "Configurações" com base no perfil
+                const menuConfig = document.getElementById('menu-config');
+                if (menuConfig) {
+                    menuConfig.style.display = isAdmin ? 'block' : 'none';
+                }
+
+                // Navega para a página inicial correspondente
+                go(isAdmin ? 'dashboard' : 'dashboard'); // ambos vão para o mesmo dashboard
+
+                // Carrega os dados e inicializa
                 buildGabGrid();
                 carregarDados();
                 atualizarDatasImpressao();
