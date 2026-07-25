@@ -1638,15 +1638,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
-                <!-- Cards de estatísticas: apenas Total de Alunos Provas Corrigidas e Média Geral -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <!-- CARDS: Total de Alunos Provas Corrigidas + Nº DE ALUNOS NA TURMA + Alunos sem correção -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                     <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; text-align:center;">
                         <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-filtrado">0</div>
                         <div style="font-size:12px; color:var(--text2);">Total de Alunos Provas Corrigidas</div>
                     </div>
-                    <div style="background:var(--surface); border:1px solid rgba(139,92,246,.3); border-radius:var(--r); padding:16px; text-align:center;">
-                        <div style="font-size:28px; font-weight:800; color:#a78bfa;" id="res-media-filtrado">0</div>
-                        <div style="font-size:12px; color:var(--text2);">Média Geral</div>
+                    <div style="background:var(--surface); border:1px solid rgba(245,158,11,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--orange);" id="res-total-alunos-turma">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Nº DE ALUNOS NA TURMA</div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(239,68,68,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--red);" id="res-diferenca">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Alunos sem correção</div>
                     </div>
                 </div>
 
@@ -3181,13 +3185,37 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const turmaId = document.getElementById('filtro-turma').value;
                     const provaId = document.getElementById('filtro-prova').value;
 
+                    // ---- BUSCAR TOTAL DE ALUNOS DA TURMA/ESCOLA ----
+                    let totalAlunosTurma = 0;
+                    let alunosDaTurma = [];
+
+                    // Monta parâmetros para buscar alunos
+                    const paramsAlunos = new URLSearchParams();
+                    if (turmaId && turmaId !== '') paramsAlunos.append('turma_id', turmaId);
+                    else if (escolaId && escolaId !== '') paramsAlunos.append('escola_id', escolaId);
+                    if (serie && serie !== '') paramsAlunos.append('serie', serie);
+
+                    if (paramsAlunos.toString()) {
+                        try {
+                            const respAlunos = await fetch(`${API_URL}/api/alunos?${paramsAlunos.toString()}`);
+                            const alunosData = await respAlunos.json();
+                            if (alunosData && !alunosData.erro && Array.isArray(alunosData)) {
+                                alunosDaTurma = alunosData;
+                                totalAlunosTurma = alunosData.length;
+                            }
+                        } catch (e) {
+                            console.warn('Erro ao buscar total de alunos da turma:', e);
+                        }
+                    }
+
+                    // ---- BUSCAR RESULTADOS CORRIGIDOS (histórico agrupado) ----
                     let url = API_URL + '/api/historico/agrupado';
-                    const params = new URLSearchParams();
-                    if (escolaId && escolaId !== '') params.append('escola', escolaId);
-                    if (serie && serie !== '') params.append('serie', serie);
-                    if (turmaId && turmaId !== '') params.append('turma', turmaId);
-                    if (provaId && provaId !== '') params.append('prova', provaId);
-                    if (params.toString()) url += '?' + params.toString();
+                    const paramsHist = new URLSearchParams();
+                    if (escolaId && escolaId !== '') paramsHist.append('escola', escolaId);
+                    if (serie && serie !== '') paramsHist.append('serie', serie);
+                    if (turmaId && turmaId !== '') paramsHist.append('turma', turmaId);
+                    if (provaId && provaId !== '') paramsHist.append('prova', provaId);
+                    if (paramsHist.toString()) url += '?' + paramsHist.toString();
 
                     const response = await fetch(url);
                     const alunos = await response.json();
@@ -3195,10 +3223,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const tbody = document.getElementById('tb-resultados-filtrado');
                     if (!tbody) return;
 
+                    // ---- ATUALIZAR CARDS ----
+                    const totalCorrigidos = (alunos && !alunos.erro && Array.isArray(alunos)) ? alunos.length : 0;
+                    const diff = Math.max(0, totalAlunosTurma - totalCorrigidos);
+
+                    document.getElementById('res-total-filtrado').textContent = totalCorrigidos;
+                    document.getElementById('res-total-alunos-turma').textContent = totalAlunosTurma;
+                    document.getElementById('res-diferenca').textContent = diff;
+
                     if (!alunos || alunos.length === 0 || alunos.erro) {
                         tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-                        document.getElementById('res-total-filtrado').textContent = '0';
-                        document.getElementById('res-media-filtrado').textContent = '0';
                         document.getElementById('total-alunos-tabela').textContent = '0 alunos';
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             document.getElementById(`conceito-${c}-count`).textContent = '0';
@@ -3212,8 +3246,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     if (dadosAlunos.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
-                        document.getElementById('res-total-filtrado').textContent = '0';
-                        document.getElementById('res-media-filtrado').textContent = '0';
                         document.getElementById('total-alunos-tabela').textContent = '0 alunos';
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             document.getElementById(`conceito-${c}-count`).textContent = '0';
@@ -3223,7 +3255,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         return;
                     }
 
-                    // ---- NOVO: IDENTIFICAR A DISCIPLINA DA PROVA (se houver) ----
+                    // ---- IDENTIFICAR A DISCIPLINA DA PROVA (se houver) ----
                     let disciplinaAlvo = null;
                     if (provaId && provaId !== '') {
                         try {
@@ -3237,7 +3269,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     }
 
-                    // Função auxiliar para mapear nome da disciplina para a chave usada no JSON
                     function mapearDisciplina(nome) {
                         const mapa = {
                             'Português': 'portugues',
@@ -3256,7 +3287,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
 
                     if (disciplinaAlvo) {
-                        // Se temos uma disciplina alvo (prova selecionada), contamos APENAS ela
                         dadosAlunos.forEach(aluno => {
                             const discData = aluno[disciplinaAlvo];
                             if (discData && typeof discData === 'object') {
@@ -3266,12 +3296,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 const conceito = calcularConceito(pct);
                                 contagemConceitos[conceito]++;
                             } else {
-                                // Se o aluno não tiver dados para essa disciplina, consideramos Inicial
                                 contagemConceitos.inicial++;
                             }
                         });
                     } else {
-                        // Nenhuma prova selecionada: mantém o comportamento antigo (contar todas as 5 disciplinas)
                         const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
                         dadosAlunos.forEach(aluno => {
                             disciplinas.forEach(chave => {
@@ -3289,22 +3317,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         });
                     }
 
-                    // Atualiza o gráfico com as contagens
                     atualizarGraficosConceitos(contagemConceitos);
 
-                    // Soma total de conceitos = número de alunos avaliados (quando há prova)
                     const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico +
                                            contagemConceitos.proficiente + contagemConceitos.avancado;
                     document.getElementById('total-conceitos-label').textContent = totalConceitos;
 
-                    // ---- O RESTO DA FUNÇÃO: montagem da tabela de resultados ----
+                    // ---- MONTAGEM DA TABELA ----
                     dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
-
                     const total = dadosAlunos.length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
-                    document.getElementById('res-total-filtrado').textContent = total;
-                    document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                     document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
                     function getDadosDisciplina(disciplinaData, totalQuestoes) {
@@ -3371,7 +3394,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // ATUALIZAR GRÁFICOS DE CONCEITOS (CORRIGIDO)
+            // ATUALIZAR GRÁFICOS DE CONCEITOS
             // ============================================
             function atualizarGraficosConceitos(contagem) {
                 const total = contagem.inicial + contagem.basico + contagem.proficiente + contagem.avancado || 1;
@@ -3386,7 +3409,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
                     const count = contagem[conceito] || 0;
                     let pct = total > 0 ? (count / total) * 100 : 0;
-                    pct = Math.max(pct, 2); // largura mínima de 2%
+                    pct = Math.max(pct, 2);
 
                     const countEl = document.getElementById(`conceito-${conceito}-count`);
                     const barEl = document.getElementById(`conceito-${conceito}-bar`);
