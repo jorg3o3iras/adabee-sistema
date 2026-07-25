@@ -1650,7 +1650,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
-                <!-- Distribuição por Conceito (barras) – agora com todos os conceitos -->
+                <!-- Distribuição por Conceito (barras) – agora com totalizador -->
                 <div class="conceito-graficos" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
                     <div class="card">
                         <div class="card-header">
@@ -1694,6 +1694,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                     <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px; transition:width 0.8s ease;" id="conceito-avancado-bar"></div>
                                 </div>
                             </div>
+                        </div>
+                        <!-- Totalizador adicionado -->
+                        <div style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+                            Total de alunos avaliados: <span id="total-conceitos-label">0</span>
                         </div>
                     </div>
                 </div>
@@ -3200,6 +3204,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             document.getElementById(`conceito-${c}-count`).textContent = '0';
                             document.getElementById(`conceito-${c}-bar`).style.width = '2%';
                         });
+                        document.getElementById('total-conceitos-label').textContent = '0';
                         return;
                     }
 
@@ -3214,10 +3219,85 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             document.getElementById(`conceito-${c}-count`).textContent = '0';
                             document.getElementById(`conceito-${c}-bar`).style.width = '2%';
                         });
+                        document.getElementById('total-conceitos-label').textContent = '0';
                         return;
                     }
 
-                    // Ordenar por média
+                    // ---- NOVO: IDENTIFICAR A DISCIPLINA DA PROVA (se houver) ----
+                    let disciplinaAlvo = null;
+                    if (provaId && provaId !== '') {
+                        try {
+                            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                            const prova = await provaResp.json();
+                            if (prova && !prova.erro && prova.disciplina) {
+                                disciplinaAlvo = mapearDisciplina(prova.disciplina);
+                            }
+                        } catch (e) {
+                            console.warn('Não foi possível obter a disciplina da prova:', e);
+                        }
+                    }
+
+                    // Função auxiliar para mapear nome da disciplina para a chave usada no JSON
+                    function mapearDisciplina(nome) {
+                        const mapa = {
+                            'Português': 'portugues',
+                            'Matemática': 'matematica',
+                            'Produção de Texto': 'producao',
+                            'Ciências Humanas': 'ch',
+                            'Ciências Naturais': 'cn',
+                            'História': 'ch',
+                            'Geografia': 'ch',
+                            'Inglês': 'portugues'
+                        };
+                        return mapa[nome] || null;
+                    }
+
+                    // ---- CÁLCULO DOS CONCEITOS (APENAS UMA DISCIPLINA OU TODAS) ----
+                    const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
+
+                    if (disciplinaAlvo) {
+                        // Se temos uma disciplina alvo (prova selecionada), contamos APENAS ela
+                        dadosAlunos.forEach(aluno => {
+                            const discData = aluno[disciplinaAlvo];
+                            if (discData && typeof discData === 'object') {
+                                const acertos = discData.acertos || 0;
+                                const totalDisc = discData.total || 0;
+                                const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                                const conceito = calcularConceito(pct);
+                                contagemConceitos[conceito]++;
+                            } else {
+                                // Se o aluno não tiver dados para essa disciplina, consideramos Inicial
+                                contagemConceitos.inicial++;
+                            }
+                        });
+                    } else {
+                        // Nenhuma prova selecionada: mantém o comportamento antigo (contar todas as 5 disciplinas)
+                        const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
+                        dadosAlunos.forEach(aluno => {
+                            disciplinas.forEach(chave => {
+                                const discData = aluno[chave];
+                                if (discData && typeof discData === 'object') {
+                                    const acertos = discData.acertos || 0;
+                                    const totalDisc = discData.total || 0;
+                                    const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                                    const conceito = calcularConceito(pct);
+                                    contagemConceitos[conceito]++;
+                                } else {
+                                    contagemConceitos.inicial++;
+                                }
+                            });
+                        });
+                    }
+
+                    // Atualiza o gráfico com as contagens
+                    atualizarGraficosConceitos(contagemConceitos);
+
+                    // Soma total de conceitos = número de alunos avaliados (quando há prova)
+                    const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico +
+                                           contagemConceitos.proficiente + contagemConceitos.avancado;
+                    document.getElementById('total-conceitos-label').textContent = totalConceitos;
+
+                    // ---- O RESTO DA FUNÇÃO: montagem da tabela de resultados ----
                     dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
 
                     const total = dadosAlunos.length;
@@ -3227,30 +3307,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     document.getElementById('res-media-filtrado').textContent = mediaGeral.toFixed(1);
                     document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-                    // ===== NOVA LÓGICA PARA CONTAR CONCEITOS POR DISCIPLINA =====
-                    const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
-                    const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
-
-                    dadosAlunos.forEach(aluno => {
-                        disciplinas.forEach(chave => {
-                            const discData = aluno[chave];
-                            if (discData && typeof discData === 'object') {
-                                const acertos = discData.acertos || 0;
-                                const totalDisc = discData.total || 0;
-                                const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-                                const conceito = calcularConceito(pct);
-                                contagemConceitos[conceito] = (contagemConceitos[conceito] || 0) + 1;
-                            } else {
-                                // Se não houver dados, considera "inicial"
-                                contagemConceitos.inicial++;
-                            }
-                        });
-                    });
-
-                    // Atualiza o gráfico com as contagens por disciplina
-                    atualizarGraficosConceitos(contagemConceitos);
-
-                    // ===== O restante da função (montagem da tabela) permanece igual =====
                     function getDadosDisciplina(disciplinaData, totalQuestoes) {
                         if (!disciplinaData || typeof disciplinaData !== 'object') {
                             return { acertos: 0, erros: 0, conceito: 'inicial' };
@@ -3318,19 +3374,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ATUALIZAR GRÁFICOS DE CONCEITOS (CORRIGIDO)
             // ============================================
             function atualizarGraficosConceitos(contagem) {
-                // contagem é um objeto { inicial, basico, proficiente, avancado }
                 const total = contagem.inicial + contagem.basico + contagem.proficiente + contagem.avancado || 1;
 
                 const cores = {
-                    inicial: { bg: '#ef4444' },
-                    basico: { bg: '#f59e0b' },
-                    proficiente: { bg: '#3b82f6' },
-                    avancado: { bg: '#10b981' }
+                    inicial: '#ef4444',
+                    basico: '#f59e0b',
+                    proficiente: '#3b82f6',
+                    avancado: '#10b981'
                 };
 
                 ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
                     const count = contagem[conceito] || 0;
-                    // Garante que a barra tenha pelo menos 2% de largura para ficar visível
                     let pct = total > 0 ? (count / total) * 100 : 0;
                     pct = Math.max(pct, 2); // largura mínima de 2%
 
@@ -3340,7 +3394,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     if (countEl) countEl.textContent = count;
                     if (barEl) {
                         barEl.style.width = pct + '%';
-                        barEl.style.background = `linear-gradient(90deg, ${cores[conceito].bg}, ${cores[conceito].bg}dd)`;
+                        barEl.style.background = `linear-gradient(90deg, ${cores[conceito]}, ${cores[conceito]}dd)`;
                     }
                 });
             }
