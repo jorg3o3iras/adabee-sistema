@@ -217,7 +217,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .gab-select { width:100%; padding:4px 2px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-weight:700; font-size:13px; text-align:center; outline:none; transition:all .2s; }
 .gab-select:focus { border-color:var(--blue); }
 .gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
-/* Campos BNCC só para Produção de Texto */
 .gab-bncc { width:100%; padding:2px 2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center; outline:none; transition:border .2s; margin-top:2px; }
 .gab-bncc:focus { border-color:var(--purple); }
 .gab-texto { width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical; }
@@ -1427,9 +1426,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ========== GABARITO (COM CAMPOS BNCC APENAS PARA PRODUÇÃO DE TEXTO) ========== -->
+            <!-- ========== GABARITO (COM CAMPOS BNCC) ========== -->
             <div class="page" id="page-gabarito">
-                <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas (e BNCC apenas para Produção de Texto)</p></div></div>
+                <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas e os códigos BNCC (opcional)</p></div></div>
                 <div class="card no-print">
                     <div class="form-row c3">
                         <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
@@ -1566,10 +1565,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ========== GABARITOS LIST (COLUNA BNCC CONDICIONAL) ========== -->
+            <!-- ========== GABARITOS LIST ========== -->
             <div class="page" id="page-gabaritos">
                 <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
-                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th id="th-bncc">BNCC</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>BNCC</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
             <!-- ========== PROVAS ========== -->
@@ -1578,7 +1577,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
-            <!-- ========== RESULTADOS ========== -->
+            <!-- ========== RESULTADOS (MODIFICADO) ========== -->
             <div class="page" id="page-resultados">
                 <div class="page-header">
                     <div>
@@ -1639,7 +1638,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
-                <!-- CARDS -->
+                <!-- CARDS: Total de Alunos Provas Corrigidas + Nº DE ALUNOS NA TURMA + Alunos sem correção -->
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                     <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; text-align:center;">
                         <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-filtrado">0</div>
@@ -1655,7 +1654,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
-                <!-- Distribuição por Conceito -->
+                <!-- Distribuição por Conceito (barras) – agora com totalizador -->
                 <div class="conceito-graficos" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
                     <div class="card">
                         <div class="card-header">
@@ -1700,6 +1699,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 </div>
                             </div>
                         </div>
+                        <!-- Totalizador adicionado -->
                         <div style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
                             Total de alunos avaliados: <span id="total-conceitos-label">0</span>
                         </div>
@@ -1753,7 +1753,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ========== RELATÓRIO POR TURMA ========== -->
+            <!-- ============================================================ -->
+            <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ============================================================ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header">
                     <div>
@@ -1772,6 +1774,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
                 </div>
 
+                <!-- Filtros -->
                 <div class="card no-print" style="margin-bottom:16px;">
                     <div class="form-row c4">
                         <div class="form-group">
@@ -1814,16 +1817,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📊 Porcentagem e Conceitos</div>
                         <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <!-- Lado esquerdo: porcentagem -->
                         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
                             <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
                             <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
                         </div>
+                        <!-- Lado direito: conceitos -->
                         <div style="display:flex; flex-direction:column; gap:12px;">
                             <div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
@@ -1865,6 +1871,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- ========== CARD ADICIONADO: LISTA DE ALUNOS ========== -->
                 <div class="card" id="rel-tabela-alunos">
                     <div class="card-header">
                         <div class="card-title">📋 Lista de Alunos</div>
@@ -1911,6 +1918,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
                 <div class="card" id="rel-distribuicao-unica">
                     <div class="card-header">
                         <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
@@ -1940,7 +1948,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ========== USER PAGES ========== -->
+            <!-- ========== USER PAGES (não utilizadas, mantidas apenas para compatibilidade) ========== -->
             <div class="page" id="page-u-dashboard" style="display:none;"></div>
             <div class="page" id="page-u-escola" style="display:none;"></div>
             <div class="page" id="page-u-turmas" style="display:none;"></div>
@@ -1948,7 +1956,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <div class="page" id="page-u-resultados" style="display:none;"></div>
             <div class="page" id="page-u-relatorios" style="display:none;"></div>
 
-            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (BNCC CONDICIONAL) ========== -->
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
             <div class="page" id="page-desempenho">
                 <div class="page-header">
                     <div>
@@ -2013,6 +2021,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
                     </div>
 
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
                     <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -2029,6 +2038,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         </div>
                     </div>
 
+                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
                     <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
                         <div class="card">
                             <div class="card-header">
@@ -2077,7 +2087,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <canvas id="cam-canvas" style="display:none;"></canvas>
         </div>
 
-        <!-- ========== MODAL CORREÇÃO MANUAL ========== -->
+        <!-- ========== MODAL CORREÇÃO MANUAL (DENTRO DA IA) ========== -->
         <div class="modal-overlay no-print" id="m-correcao-manual">
             <div class="modal" style="max-width:800px;width:95vw;">
                 <div class="modal-header"><h3>✏️ Correção Manual — <span id="cm-aluno-nome">Aluno</span></h3><button class="modal-close" onclick="closeM('m-correcao-manual')">×</button></div>
@@ -2111,7 +2121,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
         </div>
 
-        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE ========== -->
+        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) - COM CONTAINER DE SELECTS ========== -->
         <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
             <div class="modal" style="max-width:800px;width:95vw;">
                 <div class="modal-header">
@@ -2119,6 +2129,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
                 </div>
 
+                <!-- Área de seleção (ocultada ao editar direto) -->
                 <div id="cm-selects-container">
                     <div class="form-group" style="margin-bottom:12px;">
                         <label class="form-label">Escola <span class="req">*</span></label>
@@ -2243,6 +2254,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         </div>
 
         <!-- ========== MODALS ========== -->
+        <!-- Modal Escola -->
         <div class="modal-overlay no-print" id="m-escola">
             <div class="modal"><div class="modal-header"><h3>🏫 Cadastrar Escola</h3><button class="modal-close" onclick="closeM('m-escola')">×</button></div>
                 <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="escola-nome" placeholder="Ex: E.E. Prof. João Ribeiro"></div></div>
@@ -2253,6 +2265,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
         </div>
 
+        <!-- Modal Turma -->
         <div class="modal-overlay no-print" id="m-turma">
             <div class="modal"><div class="modal-header"><h3>👥 Cadastrar Turma</h3><button class="modal-close" onclick="closeM('m-turma')">×</button></div>
                 <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="turma-escola"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Ano Letivo</label><input class="form-control" id="turma-ano" value="2025" type="number"></div></div>
@@ -2263,6 +2276,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
         </div>
 
+        <!-- Modal Aluno -->
         <div class="modal-overlay no-print" id="m-aluno">
             <div class="modal">
                 <div class="modal-header">
@@ -2344,6 +2358,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
         </div>
 
+        <!-- Modal Prova -->
         <div class="modal-overlay no-print" id="m-prova">
             <div class="modal"><div class="modal-header"><h3>📝 Cadastrar Prova</h3><button class="modal-close" onclick="closeM('m-prova')">×</button></div>
                 <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="modal-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
@@ -2445,6 +2460,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 disciplinas: []
             };
 
+            // Variável para edição de usuário
             let usuarioEditandoId = null;
 
             // ============================================
@@ -2608,18 +2624,23 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 document.getElementById('sb-uname').textContent = uname;
                 document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
 
+                // Define se é administrador
                 const isAdmin = role === 'admin';
 
+                // Sempre exibe o menu principal (adm-sb) e oculta o menu do usuário (usr-sb)
                 document.getElementById('adm-sb').style.display = 'block';
                 document.getElementById('usr-sb').style.display = 'none';
 
+                // Oculta ou exibe o item "Configurações" com base no perfil
                 const menuConfig = document.getElementById('menu-config');
                 if (menuConfig) {
                     menuConfig.style.display = isAdmin ? 'block' : 'none';
                 }
 
-                go(isAdmin ? 'dashboard' : 'dashboard');
+                // Navega para a página inicial correspondente
+                go(isAdmin ? 'dashboard' : 'dashboard'); // ambos vão para o mesmo dashboard
 
+                // Carrega os dados e inicializa
                 buildGabGrid();
                 carregarDados();
                 atualizarDatasImpressao();
@@ -2686,7 +2707,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FILTRAR TURMAS POR SÉRIE
+            // FUNÇÃO PARA FILTRAR TURMAS POR SÉRIE
             // ============================================
             function filtrarTurmasPorSerie(selectSerie, selectTurma) {
                 const serieSelecionada = selectSerie.value;
@@ -3057,7 +3078,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         gabHtml = '<div style="margin-top:12px;"><strong style="color:var(--text2);">📋 Gabarito:</strong><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:6px;">';
                         for (let i = 0; i < Math.min(gabarito.length, total); i++) {
                             const texto = gabarito[i] || '—';
-                            const codigo = (i < bncc.length && bncc[i] && isProducao) ? bncc[i] : '';
+                            const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
                             gabHtml += `<div style="background:var(--bg2);border-radius:6px;padding:4px 6px;text-align:center;border:1px solid var(--border);">
                                 <div style="font-size:8px;color:var(--text3);font-weight:700;">Q${i+1}</div>
                                 <div style="font-weight:700;font-size:12px;color:var(--green);">${texto}</div>
@@ -3119,7 +3140,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR GABARITOS (COM BNCC CONDICIONAL)
+            // CARREGAR GABARITOS (COM INDICADOR BNCC)
             // ============================================
             async function carregarGabaritos() {
                 try {
@@ -3130,28 +3151,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
                     if (!comGabarito || comGabarito.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
-                        // Esconde a coluna BNCC se não houver produção de texto
-                        document.getElementById('th-bncc').style.display = 'none';
                     } else {
-                        // Verifica se há alguma produção de texto
-                        const temProducao = comGabarito.some(p => p.disciplina === 'Produção de Texto');
-                        document.getElementById('th-bncc').style.display = temProducao ? '' : 'none';
-
                         tbody.innerHTML = comGabarito.map((p, i) => {
                             let bnccText = '—';
-                            if (p.disciplina === 'Produção de Texto' && p.bncc && p.bncc.length > 0) {
+                            if (p.bncc && p.bncc.length > 0) {
                                 const codigos = p.bncc.filter(c => c && c.trim() !== '');
                                 if (codigos.length > 0) bnccText = codigos.join(', ');
                             }
                             const tipoTexto = p.disciplina === 'Produção de Texto' ? 'Texto' : (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D');
-                            const mostrarBncc = (p.disciplina === 'Produção de Texto');
                             return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
                                 '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                                 '<td>' + p.titulo + '</td>' +
                                 '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
                                 '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
                                 '<td><span class="badge ' + (tipoTexto === 'Texto' ? 'badge-purple' : (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue')) + '">' + tipoTexto + '</span></td>' +
-                                `<td style="font-size:9px; max-width:120px; word-wrap:break-word;">${mostrarBncc ? bnccText : '—'}</td>` +
+                                '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
                                 '<td>' + (p.data_prova || '—') + '</td>' +
                                 '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
                         }).join('');
@@ -3162,7 +3176,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RESULTADOS COM FILTROS
+            // CARREGAR RESULTADOS COM FILTROS (CORRIGIDO)
             // ============================================
             async function carregarResultadosComFiltros() {
                 try {
@@ -3171,9 +3185,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const turmaId = document.getElementById('filtro-turma').value;
                     const provaId = document.getElementById('filtro-prova').value;
 
+                    // ---- BUSCAR TOTAL DE ALUNOS DA TURMA/ESCOLA ----
                     let totalAlunosTurma = 0;
                     let alunosDaTurma = [];
 
+                    // Monta parâmetros para buscar alunos
                     const paramsAlunos = new URLSearchParams();
                     if (turmaId && turmaId !== '') paramsAlunos.append('turma_id', turmaId);
                     else if (escolaId && escolaId !== '') paramsAlunos.append('escola_id', escolaId);
@@ -3192,6 +3208,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     }
 
+                    // ---- BUSCAR RESULTADOS CORRIGIDOS (histórico agrupado) ----
                     let url = API_URL + '/api/historico/agrupado';
                     const paramsHist = new URLSearchParams();
                     if (escolaId && escolaId !== '') paramsHist.append('escola', escolaId);
@@ -3206,6 +3223,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const tbody = document.getElementById('tb-resultados-filtrado');
                     if (!tbody) return;
 
+                    // ---- ATUALIZAR CARDS ----
                     const totalCorrigidos = (alunos && !alunos.erro && Array.isArray(alunos)) ? alunos.length : 0;
                     const diff = Math.max(0, totalAlunosTurma - totalCorrigidos);
 
@@ -3237,6 +3255,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         return;
                     }
 
+                    // ---- IDENTIFICAR A DISCIPLINA DA PROVA (se houver) ----
                     let disciplinaAlvo = null;
                     if (provaId && provaId !== '') {
                         try {
@@ -3264,6 +3283,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         return mapa[nome] || null;
                     }
 
+                    // ---- CÁLCULO DOS CONCEITOS (APENAS UMA DISCIPLINA OU TODAS) ----
                     const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
 
                     if (disciplinaAlvo) {
@@ -3303,6 +3323,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                            contagemConceitos.proficiente + contagemConceitos.avancado;
                     document.getElementById('total-conceitos-label').textContent = totalConceitos;
 
+                    // ---- MONTAGEM DA TABELA ----
                     dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
                     const total = dadosAlunos.length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
@@ -4257,7 +4278,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÕES DE USUÁRIO
+            // FUNÇÕES DE USUÁRIO (COM CORREÇÃO DO ÍCONE ✏️)
             // ============================================
             function abrirModalUsuario() {
                 usuarioEditandoId = null;
@@ -4282,7 +4303,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('editar-usuario-id').value = id;
                         document.getElementById('usuario-nome').value = usuario.nome || '';
                         document.getElementById('usuario-username').value = usuario.username || '';
-                        document.getElementById('usuario-senha').value = '';
+                        document.getElementById('usuario-senha').value = ''; // não preenchemos a senha
                         document.getElementById('usuario-email').value = usuario.email || '';
                         document.getElementById('usuario-perfil').value = usuario.perfil || 'usuario';
                         document.getElementById('usuario-ativo').checked = usuario.ativo !== false;
@@ -4351,7 +4372,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÕES DE TEXTO IA
+            // FUNÇÕES DE TEXTO IA (simplificadas)
             // ============================================
             function prevTexto(input) {
                 const file = input.files[0];
@@ -4466,7 +4487,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÃO DE CORREÇÃO COM IA
+            // FUNÇÃO DE CORREÇÃO COM IA (mantida)
             // ============================================
             async function processarComIA(imagemBase64) {
                 showToast('🤖 Processando...', 'ai');
@@ -4566,7 +4587,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
             // ============================================
-            // FUNÇÕES DE CRUD
+            // FUNÇÕES DE CRUD CORRIGIDAS (mantidas)
             // ============================================
 
             // ===== ESCOLA =====
@@ -5313,7 +5334,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RELATÓRIO POR TURMA FILTRADO
+            // CARREGAR RELATÓRIO POR TURMA FILTRADO (MODIFICADO)
             // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
@@ -5749,12 +5770,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     let acertos = 0,
                         erros = 0;
                     const resultadoQuestoes = [];
-                    const isProducao = (disciplina === 'Produção de Texto');
 
                     for (let i = 0; i < totalQuestoes; i++) {
                         const resp = (i < respostasAluno.length) ? (respostasAluno[i] || '') : '';
                         const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
-                        const codigoBncc = (i < bncc.length && isProducao) ? (bncc[i] || '') : '';
+                        const codigoBncc = (i < bncc.length) ? (bncc[i] || '') : '';
                         const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
 
                         if (resp) { if (isCorreto) acertos++;
@@ -5856,7 +5876,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const gabGrid = document.getElementById('gabarito-oficial-grid');
                     gabGrid.innerHTML = '';
                     gabarito.forEach((gab, idx) => {
-                        const codigoBncc = (idx < bncc.length && isProducao) ? bncc[idx] : '';
+                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
                         const div = document.createElement('div');
                         div.className = 'questao-item';
                         div.innerHTML = `
@@ -5905,14 +5925,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     }
 
                     const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
-                    const isProducao = (disciplina === 'Produção de Texto');
 
                     let questoesHTML = '';
                     resultadoQuestoes.forEach(q => {
                         const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
                         const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
                         let bnccHTML = '';
-                        if (isProducao && q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                        if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
                         questoesHTML += `
                             <div class="questao-item ${classe}">
                                 <div class="q-num">Q${q.numero}</div>
@@ -5926,7 +5945,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     let gabOficialHTML = '';
                     gabarito.forEach((gab, idx) => {
-                        const codigoBncc = (idx < bncc.length && isProducao) ? bncc[idx] : '';
+                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
                         gabOficialHTML += `
                             <div class="questao-item" style="border-color: #86efac;">
                                 <div class="q-num">Q${idx+1}</div>
@@ -6118,7 +6137,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÕES DE TURMA PARA TEXTO IA
+            // FUNÇÕES DE TURMA PARA TEXTO IA (mantidas)
             // ============================================
             async function carregarTurmasTexto(escolaId) {
                 const selectTurma = document.getElementById('txt-turma');
@@ -6544,7 +6563,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // GABARITO - BUILD GRID (COM BNCC CONDICIONAL)
+            // GABARITO - BUILD GRID (COM BNCC)
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
@@ -6591,7 +6610,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         div.innerHTML = `
                             <div class="gab-num">Q${i}</div>
                             <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
-                            <!-- BNCC não aparece para disciplinas que não sejam Produção de Texto -->
+                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
                         `;
                     }
                     grid.appendChild(div);
@@ -6622,11 +6641,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     document.querySelectorAll('.gab-nivel').forEach(sel => sel.value = '');
                 } else {
                     document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
+                    document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
                 }
             }
 
             // ============================================
-            // SALVAR GABARITO (COM BNCC CONDICIONAL)
+            // SALVAR GABARITO (COM BNCC)
             // ============================================
             async function saveGab() {
                 try {
@@ -6647,9 +6667,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         });
                     } else {
                         const selects = document.querySelectorAll('.gab-select');
-                        selects.forEach((s) => {
+                        const bnccInputs = document.querySelectorAll('.gab-bncc');
+                        selects.forEach((s, idx) => {
                             respostas.push(s.value || '');
-                            // Não envia BNCC para outras disciplinas
+                            if (bnccInputs[idx]) bncc.push(bnccInputs[idx].value.trim() || '');
                         });
                     }
 
@@ -6681,7 +6702,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // EDITAR GABARITO (COM BNCC CONDICIONAL)
+            // EDITAR GABARITO (COM BNCC)
             // ============================================
             function editarGabarito(id) {
                 showToast('✏️ Carregando gabarito...', 'info');
@@ -6693,7 +6714,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             const gabarito = prova.gabarito;
                             const bncc = prova.bncc || [];
                             const disciplina = prova.disciplina || '';
-                            const isProducao = (disciplina === 'Produção de Texto');
 
                             go('gabarito');
 
@@ -6709,6 +6729,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 buildGabGrid();
 
                                 setTimeout(() => {
+                                    const isProducao = (disciplina === 'Produção de Texto');
                                     if (isProducao) {
                                         const textareas = document.querySelectorAll('.gab-texto');
                                         const niveis = document.querySelectorAll('.gab-nivel');
@@ -6720,10 +6741,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                         });
                                     } else {
                                         const selects = document.querySelectorAll('.gab-select');
+                                        const bnccInputs = document.querySelectorAll('.gab-bncc');
                                         selects.forEach((s, i) => {
                                             if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i]; s.classList.add('filled'); }
                                         });
-                                        // Não carrega BNCC para outras disciplinas
+                                        bnccInputs.forEach((inp, i) => {
+                                            if (i < bncc.length && bncc[i]) inp.value = bncc[i];
+                                        });
                                     }
                                     showToast('📋 Gabarito carregado para edição!', 'success');
                                 }, 100);
