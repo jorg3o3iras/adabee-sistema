@@ -165,7 +165,7 @@ def calcular_conceito(porcentagem):
         }
 
 # ============================================
-# FUNÇÃO PARA IDENTIFICAR DISCIPLINA
+# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA COM \b)
 # ============================================
 
 def identificar_disciplina(prova_titulo, disciplina, serie):
@@ -1666,7 +1666,7 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE GABARITOS (COM BNCC, TEXTOS, NÍVEIS E ALTERNATIVAS)
+# ROTA DE GABARITOS (COM BNCC, TEXTOS E NÍVEIS)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -1678,7 +1678,6 @@ def salvar_gabarito():
         bncc = data.get('bncc', [])
         textos_questoes = data.get('textos_questoes', [])
         niveis = data.get('niveis', [])
-        alternativas = data.get('alternativas', [])   # <-- NOVO: recebe alternativas
 
         if not prova_id:
             return jsonify({'erro': 'Prova ID é obrigatório'}), 400
@@ -1698,17 +1697,6 @@ def salvar_gabarito():
         textos_validos = [str(t).strip() for t in textos_questoes]
         niveis_validos = [str(n).strip() for n in niveis]
 
-        # Normaliza alternativas (mantém o array como recebido)
-        # Se for uma string JSON, converte; senão mantém o array
-        if isinstance(alternativas, str):
-            try:
-                alternativas = json.loads(alternativas)
-            except:
-                alternativas = []
-        # Garante que seja uma lista
-        if not isinstance(alternativas, list):
-            alternativas = []
-
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -1720,19 +1708,18 @@ def salvar_gabarito():
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
 
-        # Atualiza gabarito, bncc, textos, níveis e alternativas
+        # Atualiza gabarito, bncc, textos e níveis
         cur.execute("""
             UPDATE provas
             SET gabarito = %s::text[],
                 quantidade_questoes = %s,
                 bncc = %s::text[],
                 textos_questoes = %s::text[],
-                niveis = %s::text[],
-                alternativas = %s::jsonb
+                niveis = %s::text[]
             WHERE id = %s
             RETURNING id
         """, (respostas_validas, len(respostas_validas), bncc_validos,
-              textos_validos, niveis_validos, json.dumps(alternativas), prova_id))
+              textos_validos, niveis_validos, prova_id))
 
         result = cur.fetchone()
         conn.commit()
@@ -1776,8 +1763,7 @@ def excluir_gabarito(id):
                 quantidade_questoes = 0,
                 bncc = NULL,
                 textos_questoes = NULL,
-                niveis = NULL,
-                alternativas = NULL
+                niveis = NULL
             WHERE id = %s
         """, (id,))
 
@@ -2482,11 +2468,12 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS, NÍVEIS E ALTERNATIVAS)
+# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS E NÍVEIS)
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
+    # Ignora qualquer parâmetro escola_id – provas não estão vinculadas a escolas
     try:
         conn = get_db_connection()
         if not conn:
@@ -2508,7 +2495,6 @@ def listar_provas():
                 p.bncc,
                 p.textos_questoes,
                 p.niveis,
-                p.alternativas,   -- <-- NOVO: incluído
                 p.created_at
             FROM provas p
             ORDER BY p.created_at DESC
@@ -2560,22 +2546,12 @@ def criar_prova():
         niveis = data.get('niveis', [])
         niveis_validos = [str(n).strip() for n in niveis if n]
 
-        # Alternativas: pode vir como array ou string JSON
-        alternativas = data.get('alternativas', [])
-        if isinstance(alternativas, str):
-            try:
-                alternativas = json.loads(alternativas)
-            except:
-                alternativas = []
-        if not isinstance(alternativas, list):
-            alternativas = []
-
         cur.execute("""
             INSERT INTO provas
                 (titulo, serie, disciplina, bimestre, data_prova,
                  valor_nota, tipo_questoes, quantidade_questoes, gabarito,
-                 bncc, textos_questoes, niveis, alternativas)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 bncc, textos_questoes, niveis)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """, (
             titulo,
@@ -2589,8 +2565,7 @@ def criar_prova():
             data.get('gabarito', []),
             bncc_validos,
             textos_validos,
-            niveis_validos,
-            json.dumps(alternativas) if alternativas else None
+            niveis_validos
         ))
 
         result = cur.fetchone()
@@ -2632,7 +2607,6 @@ def buscar_prova(id):
                 bncc,
                 textos_questoes,
                 niveis,
-                alternativas,   -- <-- NOVO: incluído
                 created_at
             FROM provas
             WHERE id = %s
@@ -2683,15 +2657,6 @@ def editar_prova(id):
         niveis = data.get('niveis', [])
         niveis_validos = [str(n).strip() for n in niveis if n]
 
-        alternativas = data.get('alternativas', [])
-        if isinstance(alternativas, str):
-            try:
-                alternativas = json.loads(alternativas)
-            except:
-                alternativas = []
-        if not isinstance(alternativas, list):
-            alternativas = []
-
         cur.execute("""
             UPDATE provas
             SET titulo = %s,
@@ -2705,16 +2670,14 @@ def editar_prova(id):
                 gabarito = %s,
                 bncc = %s,
                 textos_questoes = %s,
-                niveis = %s,
-                alternativas = %s
+                niveis = %s
             WHERE id = %s
             RETURNING id
         """, (titulo, serie, data.get('disciplina', ''),
               data.get('bimestre', ''), data.get('data_prova'),
               data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
               data.get('quantidade_questoes', 20), data.get('gabarito', []),
-              bncc_validos, textos_validos, niveis_validos,
-              json.dumps(alternativas) if alternativas else None, id))
+              bncc_validos, textos_validos, niveis_validos, id))
 
         result = cur.fetchone()
         conn.commit()
@@ -3472,7 +3435,7 @@ def health_check():
     return jsonify(status)
 
 # ============================================
-# INICIALIZAÇÃO DO BANCO (com coluna alternativas)
+# INICIALIZAÇÃO DO BANCO
 # ============================================
 
 def init_db():
@@ -3556,7 +3519,6 @@ def init_db():
                     bncc TEXT[],
                     textos_questoes TEXT[],
                     niveis TEXT[],
-                    alternativas JSONB,   -- <-- NOVO: coluna para armazenar alternativas
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -3641,20 +3603,6 @@ def init_db():
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
 
-            # NOVO: Verificar e adicionar coluna alternativas
-            cur.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'provas' AND column_name = 'alternativas'
-            """)
-            if not cur.fetchone():
-                print("🔧 Adicionando coluna alternativas à tabela provas (JSONB)...")
-                try:
-                    cur.execute("ALTER TABLE provas ADD COLUMN alternativas JSONB")
-                    print("✅ Coluna alternativas adicionada com sucesso!")
-                except Exception as e:
-                    print(f"⚠️ Erro ao adicionar coluna alternativas: {e}")
-
             # Verificar se a coluna questoes_status existe
             cur.execute("""
                 SELECT column_name
@@ -3734,7 +3682,7 @@ if __name__ == '__main__':
     print("   - /api/gerar_gabarito")
     print("   - /api/backup")
     print("   - /api/usuarios (GET, POST)")
-    print("   - /api/usuarios/<id> (GET, PUT, DELETE)")
+    print("   - /api/usuarios/<id> (GET, PUT, DELETE)  ✅ NOVO")
     print("=" * 60)
 
     # Inicializar banco
