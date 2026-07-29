@@ -835,21 +835,11 @@ def corrigir_com_ia():
                 conn.close()
                 return jsonify({'erro': 'Prova não encontrada'}), 404
 
-            # Obter gabarito: tentar gabarito_json primeiro, senão gabarito
-            gabarito = prova.get('gabarito_json') or prova.get('gabarito', [])
+            gabarito = prova.get('gabarito', [])
             if not gabarito or len(gabarito) == 0:
                 cur.close()
                 conn.close()
                 return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
-
-            # Se for um array de objetos, extrair a alternativa correta para usar na correção
-            # (para Produção de Texto, extrai 'correta' de cada objeto)
-            gabarito_simples = []
-            for item in gabarito:
-                if isinstance(item, dict):
-                    gabarito_simples.append(item.get('correta', ''))
-                else:
-                    gabarito_simples.append(str(item))
 
             cur.execute("""
                 SELECT a.id, a.nome, a.turma_id, t.serie, e.nome as escola_nome, e.id as escola_id
@@ -896,7 +886,7 @@ def corrigir_com_ia():
             print(f"📌 Disciplina: {disciplina}")
             print(f"📌 Série: {serie}")
 
-            resultado = corrigir_com_gemini(imagem_base64, gabarito_simples, nome_aluno, serie, tipo_questoes, disciplina)
+            resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes, disciplina)
 
             if resultado.get('erro'):
                 return jsonify(resultado), 400
@@ -1023,7 +1013,7 @@ def corrigir_manual():
 
         cur = conn.cursor()
 
-        cur.execute("SELECT disciplina, titulo, serie, gabarito, gabarito_json FROM provas WHERE id = %s", (prova_id,))
+        cur.execute("SELECT disciplina, titulo, serie, gabarito FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
         print(f"📌 Prova encontrada: {prova}")
 
@@ -1031,17 +1021,7 @@ def corrigir_manual():
         prova_titulo = prova[1] if prova else ''
         serie_prova = prova[2] if prova else ''
         gabarito = prova[3] if prova else []
-        gabarito_json = prova[4] if prova else []
-
-        # Se houver gabarito_json, usar ele
-        if gabarito_json:
-            # Extrair apenas as respostas corretas (strings) para comparar
-            if isinstance(gabarito_json, list) and len(gabarito_json) > 0 and isinstance(gabarito_json[0], dict):
-                gabarito = [item.get('correta', '') for item in gabarito_json]
-            else:
-                gabarito = gabarito_json
-
-        print(f"📌 Gabarito usado: {gabarito} (tipo: {type(gabarito)})")
+        print(f"📌 Gabarito: {gabarito} (tipo: {type(gabarito)})")
 
         cur.execute("""
             SELECT t.serie FROM alunos a
@@ -1686,7 +1666,7 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE GABARITOS (COM BNCC, TEXTOS, NÍVEIS E SUPORTE A OBJETOS)
+# ROTA DE GABARITOS (COM BNCC, TEXTOS E NÍVEIS)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -1705,60 +1685,41 @@ def salvar_gabarito():
         if not respostas or len(respostas) == 0:
             return jsonify({'erro': 'Respostas são obrigatórias'}), 400
 
+        # Normaliza respostas
+        respostas_validas = [str(r).strip().upper() for r in respostas if r]
+        if not respostas_validas:
+            return jsonify({'erro': 'Nenhuma resposta válida'}), 400
+
+        # Normaliza BNCC (mantém apenas strings não vazias)
+        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
+
+        # Normaliza textos e níveis (mantém vazios para alinhamento)
+        textos_validos = [str(t).strip() for t in textos_questoes]
+        niveis_validos = [str(n).strip() for n in niveis]
+
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
+        cur = conn.cursor()
         cur.execute("SELECT id FROM provas WHERE id = %s", (prova_id,))
         if not cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
 
-        # --- DETECTA SE AS RESPOSTAS SÃO OBJETOS (PRODUÇÃO DE TEXTO) ---
-        is_objeto = False
-        if len(respostas) > 0 and isinstance(respostas[0], dict):
-            is_objeto = True
-
-        if is_objeto:
-            # Salva o array de objetos como JSONB
-            gabarito_json = json.dumps(respostas)  # será armazenado como JSONB
-            # Limpa o gabarito antigo (strings)
-            cur.execute("""
-                UPDATE provas
-                SET gabarito = NULL,
-                    gabarito_json = %s::jsonb,
-                    quantidade_questoes = %s,
-                    bncc = %s::text[],
-                    textos_questoes = %s::text[],
-                    niveis = %s::text[]
-                WHERE id = %s
-                RETURNING id
-            """, (gabarito_json, len(respostas), bncc, textos_questoes, niveis, prova_id))
-        else:
-            # Modo tradicional (strings)
-            respostas_validas = [str(r).strip().upper() for r in respostas if r]
-            if not respostas_validas:
-                return jsonify({'erro': 'Nenhuma resposta válida'}), 400
-
-            bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-            textos_validos = [str(t).strip() for t in textos_questoes]
-            niveis_validos = [str(n).strip() for n in niveis]
-
-            cur.execute("""
-                UPDATE provas
-                SET gabarito = %s::text[],
-                    gabarito_json = NULL,
-                    quantidade_questoes = %s,
-                    bncc = %s::text[],
-                    textos_questoes = %s::text[],
-                    niveis = %s::text[]
-                WHERE id = %s
-                RETURNING id
-            """, (respostas_validas, len(respostas_validas), bncc_validos,
-                  textos_validos, niveis_validos, prova_id))
+        # Atualiza gabarito, bncc, textos e níveis
+        cur.execute("""
+            UPDATE provas
+            SET gabarito = %s::text[],
+                quantidade_questoes = %s,
+                bncc = %s::text[],
+                textos_questoes = %s::text[],
+                niveis = %s::text[]
+            WHERE id = %s
+            RETURNING id
+        """, (respostas_validas, len(respostas_validas), bncc_validos,
+              textos_validos, niveis_validos, prova_id))
 
         result = cur.fetchone()
         conn.commit()
@@ -1766,10 +1727,9 @@ def salvar_gabarito():
         conn.close()
 
         return jsonify({
-            'id': result['id'],
+            'id': result[0],
             'mensagem': 'Gabarito salvo com sucesso',
-            'total_questoes': len(respostas),
-            'tipo': 'objeto' if is_objeto else 'strings'
+            'total_questoes': len(respostas_validas)
         })
 
     except Exception as e:
@@ -1797,11 +1757,9 @@ def excluir_gabarito(id):
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
 
-        # Limpa gabarito, gabarito_json, bncc, textos e niveis
         cur.execute("""
             UPDATE provas
             SET gabarito = NULL,
-                gabarito_json = NULL,
                 quantidade_questoes = 0,
                 bncc = NULL,
                 textos_questoes = NULL,
@@ -2510,7 +2468,7 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS, NÍVEIS E GABARITO_JSON)
+# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS E NÍVEIS)
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -2534,7 +2492,6 @@ def listar_provas():
                 p.tipo_questoes,
                 p.quantidade_questoes,
                 p.gabarito,
-                p.gabarito_json,
                 p.bncc,
                 p.textos_questoes,
                 p.niveis,
@@ -2545,13 +2502,6 @@ def listar_provas():
         provas = cur.fetchall()
         cur.close()
         conn.close()
-
-        # Para cada prova, se houver gabarito_json, substitui gabarito
-        for prova in provas:
-            if prova.get('gabarito_json'):
-                prova['gabarito'] = prova['gabarito_json']
-                # Opcional: remover gabarito_json para não duplicar
-                # del prova['gabarito_json']
 
         return jsonify(provas)
 
@@ -2654,7 +2604,6 @@ def buscar_prova(id):
                 tipo_questoes,
                 quantidade_questoes,
                 gabarito,
-                gabarito_json,
                 bncc,
                 textos_questoes,
                 niveis,
@@ -2668,12 +2617,6 @@ def buscar_prova(id):
 
         if not prova:
             return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        # Se existir gabarito_json, substitui o gabarito (ou adiciona)
-        if prova.get('gabarito_json'):
-            prova['gabarito'] = prova['gabarito_json']
-            # Opcional: remove gabarito_json para não duplicar
-            # del prova['gabarito_json']
 
         return jsonify(prova)
 
@@ -3576,7 +3519,6 @@ def init_db():
                     bncc TEXT[],
                     textos_questoes TEXT[],
                     niveis TEXT[],
-                    gabarito_json JSONB,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -3676,20 +3618,6 @@ def init_db():
                     print("✅ Coluna questoes_status adicionada com sucesso!")
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna questoes_status: {e}")
-
-            # Verificar se a coluna gabarito_json existe
-            cur.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'provas' AND column_name = 'gabarito_json'
-            """)
-            if not cur.fetchone():
-                print("🔧 Adicionando coluna gabarito_json à tabela provas...")
-                try:
-                    cur.execute("ALTER TABLE provas ADD COLUMN gabarito_json JSONB")
-                    print("✅ Coluna gabarito_json adicionada com sucesso!")
-                except Exception as e:
-                    print(f"⚠️ Erro ao adicionar coluna gabarito_json: {e}")
 
         # Inserir usuários fixos se não existirem
         for username, dados in USUARIOS_FIXOS.items():
