@@ -1636,6 +1636,69 @@ def historico_agrupado():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+# ============================================
+# ══ NOVA ROTA ADICIONADA: /api/respostas ══
+# ============================================
+
+@app.route('/api/respostas', methods=['GET'])
+def obter_respostas():
+    """
+    Retorna as respostas de um aluno em uma prova específica.
+    Espera os parâmetros: aluno_id e prova_id (query string).
+    """
+    try:
+        aluno_id = request.args.get('aluno_id')
+        prova_id = request.args.get('prova_id')
+
+        if not aluno_id or not prova_id:
+            return jsonify({'erro': 'aluno_id e prova_id são obrigatórios'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT
+                h.*,
+                a.nome as aluno_nome,
+                p.titulo as prova_titulo,
+                p.disciplina,
+                p.serie as prova_serie
+            FROM historico h
+            JOIN alunos a ON h.aluno_id = a.id
+            JOIN provas p ON h.prova_id = p.id
+            WHERE h.aluno_id = %s AND h.prova_id = %s
+        """, (aluno_id, prova_id))
+
+        registro = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not registro:
+            return jsonify({'erro': 'Nenhuma correção encontrada para este aluno e prova'}), 404
+
+        # Adiciona conceito e porcentagem (opcional, mas útil)
+        total = registro.get('total', 0)
+        acertos = registro.get('acertos', 0)
+        porcentagem = round((acertos / total) * 100) if total > 0 else 0
+        conceito = calcular_conceito(porcentagem)
+
+        registro['porcentagem'] = porcentagem
+        registro['conceito'] = conceito
+
+        # Se o frontend esperar o campo 'respostas' ou 'questoes_status', já estão inclusos
+        return jsonify(registro)
+
+    except Exception as e:
+        print(f"❌ Erro em /api/respostas: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# ROTA DE HISTÓRICO - DELETE
+# ============================================
+
 @app.route('/api/historico/<int:id>', methods=['DELETE'])
 def excluir_correcao(id):
     try:
@@ -3683,6 +3746,7 @@ if __name__ == '__main__':
     print("   - /api/backup")
     print("   - /api/usuarios (GET, POST)")
     print("   - /api/usuarios/<id> (GET, PUT, DELETE)  ✅ NOVO")
+    print("   - /api/respostas                         ✅ NOVA ROTA CORRIGIDA")
     print("=" * 60)
 
     # Inicializar banco
