@@ -1,3691 +1,7430 @@
-from flask import Flask, request, jsonify, send_from_directory, send_file
-from flask_cors import CORS
-import cv2
-import numpy as np
-import base64
-import json
-import io
-import csv
-import re
-from datetime import datetime
-import os
-from PIL import Image
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import pytesseract
-import random
-import traceback
-from dotenv import load_dotenv
-import hmac
-import logging
-import zipfile
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>CorrigePro — Sistema de Correção de Provas</title>
+    <style>
+       /* ============================================
+   CSS COMPLETO OTIMIZADO (COM FUNDO DA TELA DE LOGIN ALTERADO)
+   ============================================ */
+:root {
+    --bg: #0f172a;
+    --bg2: #1e293b;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #334155;
+    --border2: #475569;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --r: 12px;
+    --blue: #3b82f6;
+    --cyan: #06b6d4;
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --pink: #ec4899;
+    --teal: #14b8a6;
+    --amber: #f59e0b;
+    --lime: #84cc16;
+    --grad-blue: linear-gradient(135deg, #3b82f6, #2563eb);
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:var(--bg2); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:10px; }
 
-# Carregar variáveis de ambiente
-load_dotenv()
+/* LOGIN */
+#login-screen {
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: var(--bg);
+    background-image: url('https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/bandeira.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+.login-bg { position:absolute; inset:0; overflow:hidden; }
+.login-blob { position:absolute; border-radius:50%; filter:blur(80px); opacity:.15; }
+.lb1 { width:500px; height:500px; background:var(--blue); top:-150px; right:-100px; animation:float 12s ease-in-out infinite; }
+.lb2 { width:400px; height:400px; background:var(--purple); bottom:-100px; left:-100px; animation:float 15s ease-in-out infinite reverse; }
+.lb3 { width:300px; height:300px; background:var(--cyan); top:50%; left:50%; transform:translate(-50%,-50%); animation:float 10s ease-in-out infinite 2s; }
+@keyframes float { 0%,100% { transform:translate(0,0) scale(1); } 33% { transform:translate(30px,-30px) scale(1.05); } 66% { transform:translate(-20px,20px) scale(0.95); } }
 
-app = Flask(__name__)
-# Configurar CORS para aceitar requisições de qualquer origem
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+.login-card { position:relative; z-index:1; background:rgba(30,41,59,0.85); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.06); border-radius:24px; padding:40px 36px; width:100%; max-width:420px; box-shadow:0 32px 80px rgba(0,0,0,0.5); }
+.login-logo { text-align:center; margin-bottom:28px; }
+.login-logo .l-icon { font-size:48px; margin-bottom:6px; }
+.login-logo h1 { font-size:28px; font-weight:800; background:var(--grad-blue); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.login-logo p { font-size:13px; color:var(--text2); margin-top:4px; }
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+.login-tabs { display:flex; gap:6px; margin-bottom:20px; background:var(--bg2); padding:4px; border-radius:12px; }
+.login-tab { flex:1; padding:10px; border:none; border-radius:10px; background:transparent; color:var(--text2); font-weight:600; font-size:13px; cursor:pointer; transition:all .3s; }
+.login-tab.active { background:var(--blue); color:#fff; box-shadow:0 4px 14px rgba(59,130,246,.3); }
 
-# ============================================
-# CONFIGURAÇÃO GEMINI
-# ============================================
+.lf-group { margin-bottom:16px; }
+.lf-group label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px; }
+.lf-input { width:100%; padding:12px 14px; background:var(--bg2); border:1.5px solid var(--border); border-radius:10px; color:var(--text); font-size:14px; transition:border .3s; outline:none; }
+.lf-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,.2); }
+.btn-login { width:100%; padding:14px; border:none; border-radius:12px; background:var(--grad-blue); color:#fff; font-size:16px; font-weight:700; cursor:pointer; transition:all .3s; box-shadow:0 4px 20px rgba(59,130,246,.3); margin-top:4px; }
+.btn-login:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(59,130,246,.4); }
 
-GEMINI_AVAILABLE = False
-model = None
-GEMINI_MODEL = None
+/* APP */
+#app { display:none; height:100vh; overflow:hidden; }
+.sidebar { width:260px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; padding:16px 0; position:fixed; top:0; left:0; bottom:0; z-index:1000; transition:transform .3s ease; }
+.sidebar.open { transform:translateX(0) !important; }
+.sb-brand { display:flex; align-items:center; gap:12px; padding:0 18px 18px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+.sb-logo { font-size:28px; }
+.sb-brand-name { font-size:20px; font-weight:800; background:var(--grad-blue); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.sb-brand-name span { font-weight:300; -webkit-text-fill-color:var(--text2); }
+.sb-nav { flex:1; overflow-y:auto; padding:0 10px; }
+.sb-section { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; padding:12px 12px 6px; }
+.sb-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; color:var(--text2); font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; margin-bottom:2px; position:relative; }
+.sb-item:hover { background:rgba(255,255,255,0.04); color:var(--text); }
+.sb-item.active { background:rgba(59,130,246,0.12); color:var(--blue); }
+.sb-item .sb-ico { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
+.sb-badge { font-size:8px; font-weight:700; background:var(--purple); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; }
+.sb-badge-new { font-size:8px; font-weight:700; background:var(--orange); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+.sb-footer { padding:14px 16px 0; border-top:1px solid var(--border); margin-top:8px; }
+.sb-user { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sb-avatar { width:36px; height:36px; border-radius:50%; background:var(--grad-blue); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0; }
+.sb-uname { font-size:14px; font-weight:600; }
+.sb-urole { font-size:10px; color:var(--text3); }
+.sb-logout { width:100%; padding:10px; border:1px solid rgba(239,68,68,0.3); border-radius:10px; background:transparent; color:var(--red); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+.sb-logout:hover { background:rgba(239,68,68,0.1); }
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
+.content { flex:1; margin-left:260px; padding:20px 28px; overflow-y:auto; height:100vh; }
+.page { display:none; animation:fadeUp .3s ease; }
+.page.active { display:block; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
-try:
-    import google.generativeai as genai
+.menu-toggle { display:none; position:fixed; top:14px; left:14px; z-index:1100; background:var(--surface); border:1px solid var(--border); color:var(--text); width:42px; height:42px; border-radius:12px; font-size:20px; cursor:pointer; transition:all .3s; box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+.menu-toggle:hover { background:var(--bg2); }
+.menu-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:999; backdrop-filter:blur(4px); }
+.menu-overlay.show { display:block; }
 
-    if GEMINI_API_KEY and GEMINI_API_KEY != '':
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel(GEMINI_MODEL)
+.page-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+.page-title { font-size:22px; font-weight:700; }
+.page-sub { font-size:14px; color:var(--text2); margin-top:2px; }
+.page-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
-            test_response = model.generate_content("Teste de conexão - responda apenas OK")
-            if test_response and test_response.text:
-                GEMINI_AVAILABLE = True
-                print("=" * 60)
-                print("✅ Gemini AI configurado com sucesso!")
-                print(f"📌 Modelo: {GEMINI_MODEL}")
-                print("=" * 60)
-            else:
-                print("⚠️ Falha no teste da chave")
-                GEMINI_AVAILABLE = False
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px 20px; display:flex; align-items:center; gap:14px; transition:all .3s; }
+.stat-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+.stat-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+.stat-icon.blue { background:rgba(59,130,246,0.15); }
+.stat-icon.green { background:rgba(16,185,129,0.15); }
+.stat-icon.orange { background:rgba(245,158,11,0.15); }
+.stat-icon.purple { background:rgba(139,92,246,0.15); }
+.stat-val { font-size:28px; font-weight:800; line-height:1.2; }
+.stat-label { font-size:12px; color:var(--text2); font-weight:500; }
 
-        except Exception as e:
-            print(f"⚠️ Erro ao configurar Gemini: {e}")
-            GEMINI_AVAILABLE = False
-    else:
-        print("⚠️ GEMINI_API_KEY não encontrada no .env")
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px 20px; margin-bottom:16px; }
+.card-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.card-title { font-size:15px; font-weight:700; }
+.card-glow-blue { border-color:rgba(59,130,246,.3); box-shadow:0 0 30px rgba(59,130,246,.05); }
+.card-glow-green { border-color:rgba(16,185,129,.3); box-shadow:0 0 30px rgba(16,185,129,.05); }
+.card-glow-purple { border-color:rgba(139,92,246,.3); box-shadow:0 0 30px rgba(139,92,246,.05); }
 
-except ImportError as e:
-    print(f"❌ Erro ao importar google-generativeai: {e}")
-    GEMINI_AVAILABLE = False
-except Exception as e:
-    print(f"⚠️ Erro ao configurar Gemini: {e}")
-    GEMINI_AVAILABLE = False
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.form-row.c1 { grid-template-columns:1fr; }
+.form-row.c3 { grid-template-columns:1fr 1fr 1fr; }
+.form-row.c4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.form-row.c5 { grid-template-columns:1fr 1fr 1fr 1fr 1fr; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.4px; }
+.form-control { padding:9px 12px; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; outline:none; transition:border .3s; width:100%; }
+.form-control:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.form-control option { background:var(--bg2); color:var(--text); }
+.req { color:var(--red); }
+.form-hint { font-size:10px; color:var(--text3); margin-top:2px; }
 
-# ============================================
-# CONFIGURAÇÃO RELAYFREELLM
-# ============================================
+.btn { padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .25s; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.btn-primary { background:var(--blue); color:#fff; box-shadow:0 4px 12px rgba(59,130,246,.25); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(59,130,246,.35); }
+.btn-green { background:var(--green); color:#fff; }
+.btn-green:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(16,185,129,.35); }
+.btn-purple { background:var(--purple); color:#fff; }
+.btn-purple:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(139,92,246,.35); }
+.btn-red { background:var(--red); color:#fff; }
+.btn-red:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(239,68,68,.35); }
+.btn-orange { background:var(--orange); color:#fff; }
+.btn-orange:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(245,158,11,.35); }
+.btn-pink { background:var(--pink); color:#fff; }
+.btn-pink:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(236,72,153,.35); }
+.btn-teal { background:var(--teal); color:#fff; }
+.btn-teal:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(20,184,166,.35); }
+.btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--text2); }
+.btn-outline:hover { border-color:var(--text); color:var(--text); background:rgba(255,255,255,0.04); }
+.btn-ghost { background:transparent; color:var(--text2); }
+.btn-ghost:hover { background:rgba(255,255,255,0.04); color:var(--text); }
+.btn-sm { padding:4px 12px; font-size:11px; }
+.btn-lg { padding:12px 24px; font-size:15px; }
+.btn-full { width:100%; justify-content:center; }
+.btn-group { display:flex; gap:6px; flex-wrap:wrap; }
+.btn-del { background:transparent; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; transition:all .2s; }
+.btn-del:hover { background:rgba(239,68,68,0.15); }
 
-RELAY_AVAILABLE = False
-RELAY_API_URL = os.getenv('RELAY_API_URL', '')
-RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')
-RELAY_MODEL = os.getenv('RELAY_MODEL', 'gemini-1.5-flash')
+.badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+.badge-blue { background:rgba(59,130,246,0.15); color:var(--blue); }
+.badge-green { background:rgba(16,185,129,0.15); color:var(--green); }
+.badge-red { background:rgba(239,68,68,0.15); color:var(--red); }
+.badge-orange { background:rgba(245,158,11,0.15); color:var(--orange); }
+.badge-purple { background:rgba(139,92,246,0.15); color:var(--purple); }
+.badge-cyan { background:rgba(6,182,212,0.15); color:var(--cyan); }
+.badge-gray { background:rgba(148,163,184,0.12); color:var(--text3); }
+.badge-pink { background:rgba(236,72,153,0.15); color:var(--pink); }
+.badge-teal { background:rgba(20,184,166,0.15); color:var(--teal); }
+.badge-conceito-inicial { background:rgba(239,68,68,0.2); color:#ef4444; }
+.badge-conceito-basico { background:rgba(245,158,11,0.2); color:#f59e0b; }
+.badge-conceito-proficiente { background:rgba(59,130,246,0.2); color:#3b82f6; }
+.badge-conceito-avancado { background:rgba(16,185,129,0.2); color:#10b981; }
+.badge-conceito-inicial-sm { background:rgba(239,68,68,0.2); color:#ef4444; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+.badge-conceito-basico-sm { background:rgba(245,158,11,0.2); color:#f59e0b; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+.badge-conceito-proficiente-sm { background:rgba(59,130,246,0.2); color:#3b82f6; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
+.badge-conceito-avancado-sm { background:rgba(16,185,129,0.2); color:#10b981; font-size:8px; padding:1px 6px; border-radius:10px; font-weight:700; }
 
-try:
-    import openai
+.chip { display:inline-block; padding:2px 10px; background:var(--bg2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--text2); }
 
-    if RELAY_API_URL:
-        openai.api_base = RELAY_API_URL + "/v1"
-        openai.api_key = RELAY_API_KEY or "sk-placeholder"
-        RELAY_AVAILABLE = True
-        print("✅ RelayFreeLLM configurado como fallback!")
-except Exception as e:
-    print(f"⚠️ RelayFreeLLM não disponível: {e}")
-    RELAY_AVAILABLE = False
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { text-align:center; padding:5px 3px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:8px; text-transform:uppercase; letter-spacing:.2px; }
+td { padding:5px 3px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; vertical-align:middle; font-size:11px; }
+tr:hover td { background:rgba(255,255,255,0.02); }
 
-# ============================================
-# CONFIGURAÇÃO DO BANCO DE DADOS
-# ============================================
+.search-wrap { display:flex; align-items:center; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; padding:0 12px; transition:border .3s; }
+.search-wrap:focus-within { border-color:var(--blue); }
+.search-ico { font-size:14px; color:var(--text3); margin-right:8px; }
+.search-wrap input { background:transparent; border:none; padding:8px 0; color:var(--text); font-size:13px; outline:none; width:140px; }
 
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-if not SUPABASE_URL:
-    print("❌ ERRO: SUPABASE_URL não definida no .env")
-    print("⚠️ O servidor não conseguirá conectar ao banco de dados!")
-    print("⚠️ Configure a variável SUPABASE_URL no arquivo .env")
+.upload-zone { border:2px dashed var(--border); border-radius:12px; padding:30px 20px; text-align:center; cursor:pointer; transition:all .3s; }
+.upload-zone:hover { border-color:var(--blue); background:rgba(59,130,246,0.04); }
+.upload-zone .uz-ico { font-size:40px; margin-bottom:8px; }
+.upload-zone .uz-hint { font-size:12px; color:var(--text3); margin-top:4px; }
 
-def get_db_connection():
-    if not SUPABASE_URL:
-        print("❌ SUPABASE_URL não configurada")
-        return None
-    try:
-        conn = psycopg2.connect(SUPABASE_URL)
-        return conn
-    except Exception as e:
-        print(f"❌ Erro ao conectar ao banco: {e}")
-        return None
+.gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; margin:10px 0; }
+.gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; display:flex; flex-direction:column; gap:2px; }
+.gab-num { font-size:9px; color:var(--text3); font-weight:700; }
+.gab-select { width:100%; padding:4px 2px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-weight:700; font-size:13px; text-align:center; outline:none; transition:all .2s; }
+.gab-select:focus { border-color:var(--blue); }
+.gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
+.gab-bncc { width:100%; padding:2px 2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center; outline:none; transition:border .2s; margin-top:2px; }
+.gab-bncc:focus { border-color:var(--purple); }
+.gab-texto { width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical; }
+.gab-nivel { width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; }
 
-# ============================================
-# USUÁRIOS FIXOS
-# ============================================
+.ai-hero { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.06)); border:1px solid rgba(139,92,246,0.15); border-radius:var(--r); padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
+.ai-hero-icon { font-size:44px; }
+.ai-hero-text { flex:1; min-width:180px; }
+.ai-hero-text h3 { font-size:16px; font-weight:700; margin-bottom:2px; }
+.ai-hero-text p { font-size:13px; color:var(--text2); }
+.ai-hero-actions { display:flex; gap:10px; flex-wrap:wrap; }
 
-USUARIOS_FIXOS = {
-    'admin': {'senha': 'admin', 'perfil': 'admin', 'nome': 'Administrador'},
-    'usuario': {'senha': '123', 'perfil': 'usuario', 'nome': 'Usuário'},
-    'professor1': {'senha': '123', 'perfil': 'usuario', 'nome': 'Professor 1'}
+.ai-feature-btn { flex:1; min-width:120px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; text-align:center; cursor:pointer; transition:all .3s; }
+.ai-feature-btn:hover { transform:translateY(-3px); border-color:var(--border2); }
+.af-ico { font-size:28px; margin-bottom:4px; }
+.af-title { font-size:13px; font-weight:700; }
+.af-sub { font-size:10px; color:var(--text3); }
+
+.chart-bars { display:flex; align-items:flex-end; justify-content:space-around; gap:6px; padding:10px 0; min-height:140px; }
+.chart-bar-item { display:flex; flex-direction:column; align-items:center; flex:1; }
+.chart-bar { width:100%; max-width:50px; border-radius:4px 4px 0 0; min-height:10px; transition:height .6s ease; }
+.chart-bar-val { font-size:11px; font-weight:700; margin-bottom:4px; }
+.chart-bar-lbl { font-size:10px; color:var(--text3); margin-top:4px; text-align:center; max-width:60px; word-break:break-word; }
+
+.conceito-graficos { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+
+.cam-modal { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px; }
+.cam-modal.show { display:flex; }
+.cam-container { background:var(--surface); border-radius:20px; padding:24px; max-width:600px; width:100%; max-height:90vh; overflow-y:auto; }
+.cam-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.cam-header h3 { font-size:18px; }
+.cam-video-wrap { position:relative; border-radius:12px; overflow:hidden; background:var(--bg2); }
+.cam-video-wrap video { width:100%; display:block; border-radius:12px; }
+.cam-frame { position:absolute; inset:30px; border:3px solid rgba(16,185,129,0.6); border-radius:16px; pointer-events:none; }
+.cam-corner { position:absolute; width:20px; height:20px; border-color:var(--green); border-style:solid; border-width:0; }
+.cc-tl { top:-3px; left:-3px; border-top-width:4px; border-left-width:4px; border-radius:4px 0 0 0; }
+.cc-tr { top:-3px; right:-3px; border-top-width:4px; border-right-width:4px; border-radius:0 4px 0 0; }
+.cc-bl { bottom:-3px; left:-3px; border-bottom-width:4px; border-left-width:4px; border-radius:0 0 0 4px; }
+.cc-br { bottom:-3px; right:-3px; border-bottom-width:4px; border-right-width:4px; border-radius:0 0 4px 0; }
+.cam-scan-line { position:absolute; top:0; left:30px; right:30px; height:3px; background:linear-gradient(90deg,transparent,var(--green),transparent); animation:scan 2s ease-in-out infinite; box-shadow:0 0 20px rgba(16,185,129,0.3); }
+@keyframes scan { 0%,100% { top:30px; } 50% { top:calc(100% - 33px); } }
+.cam-controls { display:flex; gap:12px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
+.cam-hint { text-align:center; font-size:12px; color:var(--text3); margin-top:12px; }
+
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:9998; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.show { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px 30px; max-width:750px; width:100%; max-height:90vh; overflow-y:auto; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.modal-header h3 { font-size:18px; font-weight:700; }
+.modal-close { background:transparent; border:none; color:var(--text2); font-size:28px; cursor:pointer; transition:all .2s; padding:0 4px; line-height:1; }
+.modal-close:hover { color:var(--text); }
+.modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+
+.multi-import-area { background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:12px 14px; margin:8px 0; }
+.multi-import-area textarea { width:100%; background:transparent; border:none; color:var(--text); font-size:13px; outline:none; resize:vertical; min-height:80px; font-family:inherit; padding:4px 0; }
+.multi-import-area textarea::placeholder { color:var(--text3); }
+.multi-import-hint { font-size:10px; color:var(--text3); margin-top:4px; line-height:1.5; }
+.multi-import-hint strong { color:var(--text2); }
+.multi-status { padding:8px 12px; border-radius:6px; margin:6px 0; font-size:12px; }
+.multi-status.success { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.2); color:var(--green); }
+.multi-status.error { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); color:var(--red); }
+.multi-status.info { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2); color:var(--blue); }
+
+/* ============================================
+   CORREÇÃO MANUAL (DENTRO DA IA) - DUAS LINHAS
+   ============================================ */
+.correcao-manual-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    padding: 8px 4px 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.15);
+    max-height: 280px;
+    overflow-y: auto;
 }
 
-# ============================================
-# FUNÇÃO PARA CALCULAR CONCEITO
-# ============================================
-
-def calcular_conceito(porcentagem):
-    """Calcula o conceito baseado na porcentagem de acertos"""
-    if porcentagem <= 40:
-        return {
-            'nome': 'inicial',
-            'rotulo': '🔴 inicial',
-            'faixa': 'até 40%',
-            'cor': '#ef4444',
-            'badge': 'badge-conceito-inicial'
-        }
-    elif porcentagem <= 60:
-        return {
-            'nome': 'basico',
-            'rotulo': '🟠 básico',
-            'faixa': '41% - 60%',
-            'cor': '#f59e0b',
-            'badge': 'badge-conceito-basico'
-        }
-    elif porcentagem <= 80:
-        return {
-            'nome': 'proficiente',
-            'rotulo': '🔵 proficiente',
-            'faixa': '61% - 80%',
-            'cor': '#3b82f6',
-            'badge': 'badge-conceito-proficiente'
-        }
-    else:
-        return {
-            'nome': 'avancado',
-            'rotulo': '🟢 avançado',
-            'faixa': 'acima de 80%',
-            'cor': '#10b981',
-            'badge': 'badge-conceito-avancado'
-        }
-
-# ============================================
-# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA COM \b)
-# ============================================
-
-def identificar_disciplina(prova_titulo, disciplina, serie):
-    """
-    Identifica o tipo de avaliação com base no título, disciplina e série
-    Retorna: 'Portugues', 'Matematica', 'Producao', 'CH', 'CN' ou 'Geral'
-    Usa \b (word boundary) para evitar falsos positivos
-    """
-    # PRIMEIRO: verificar a disciplina informada (mais confiável)
-    disciplina_lower = (disciplina or '').lower().strip()
-
-    # Usa word boundaries para evitar falsos positivos
-    if re.search(r'\bportugu[êe]s\b', disciplina_lower) or 'língua' in disciplina_lower:
-        return 'Portugues'
-    if re.search(r'\bmatem[áa]tica\b', disciplina_lower):
-        return 'Matematica'
-    if re.search(r'\bprodu[cç][ãa]o\b', disciplina_lower) or 'texto' in disciplina_lower or 'redação' in disciplina_lower or 'redacao' in disciplina_lower:
-        return 'Producao'
-    if re.search(r'\bch\b', disciplina_lower) or 'ciencias humanas' in disciplina_lower:
-        return 'CH'
-    if re.search(r'\bcn\b', disciplina_lower) or 'ciencias naturais' in disciplina_lower:
-        return 'CN'
-
-    # SEGUNDO: verificar o título da prova
-    texto = f"{prova_titulo or ''}".lower()
-
-    if re.search(r'\bportugu[êe]s\b', texto) or 'língua' in texto:
-        return 'Portugues'
-    if re.search(r'\bmatem[áa]tica\b', texto) or re.search(r'\bmat\b', texto):
-        return 'Matematica'
-    if re.search(r'\bprodu[cç][ãa]o\b', texto) or 'texto' in texto or 'redação' in texto or 'redacao' in texto:
-        return 'Producao'
-    if re.search(r'\bch\b', texto) or 'ciencias humanas' in texto:
-        return 'CH'
-    if re.search(r'\bcn\b', texto) or 'ciencias naturais' in texto:
-        return 'CN'
-
-    # TERCEIRO: fallback baseado na série
-    if serie:
-        serie_num = re.search(r'(\d+)', serie)
-        if serie_num:
-            num = int(serie_num.group(1))
-            if num <= 5:
-                return 'Portugues'
-            else:
-                return 'Matematica'
-
-    return 'Geral'
-
-# ============================================
-# FUNÇÃO PARA EXTRAIR MIMETYPE DA IMAGEM
-# ============================================
-
-def extrair_mimetype(imagem_base64):
-    """Extrai o mimetype real do prefixo data:image/...;base64"""
-    if not imagem_base64:
-        return 'image/jpeg'
-
-    match = re.match(r'data:image/(\w+);base64,', imagem_base64)
-    if match:
-        tipo = match.group(1)
-        return f'image/{tipo}'
-
-    return 'image/jpeg'
-
-# ============================================
-# FUNÇÃO DE CORREÇÃO COM GEMINI (COM QUESTÕES_STATUS)
-# ============================================
-
-def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando Gemini ou simulação"""
-
-    if not gabarito or len(gabarito) == 0:
-        conceito = calcular_conceito(0)
-        return {
-            'erro': 'Gabarito não disponível',
-            'aluno': aluno_nome,
-            'serie': serie,
-            'disciplina': disciplina,
-            'total': 0,
-            'acertos': 0,
-            'nota': 0,
-            'porcentagem': 0,
-            'conceito': conceito,
-            'respostas_detectadas': [],
-            'gabarito': gabarito,
-            'correcoes': [],
-            'questoes_status': [],
-            'tipo_questoes': str(tipo_questoes),
-            'confianca': 0,
-            'modo': 'erro',
-            'valor_por_questao': 0
-        }
-
-    try:
-        imagem_limpa = imagem_base64
-        if ',' in imagem_base64:
-            imagem_limpa = imagem_base64.split(',')[1]
-
-        if GEMINI_AVAILABLE and model is not None:
-            try:
-                image_data = base64.b64decode(imagem_limpa)
-                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
-
-                prompt = f"""
-                Você é um assistente especializado em correção de provas escolares.
-
-                Analise a imagem do cartão resposta e identifique as respostas marcadas.
-
-                INFORMAÇÕES DA PROVA:
-                - Total de questões: {len(gabarito)}
-                - Alternativas disponíveis: {alternativas}
-                - Gabarito correto: {gabarito}
-
-                INSTRUÇÕES:
-                1. Analise cada questão e identifique qual alternativa foi marcada
-                2. Se a marcação não estiver clara, faça a melhor estimativa
-                3. Compare com o gabarito e determine se está correta
-
-                Responda APENAS em formato JSON válido:
-                {{
-                    "respostas": ["A", "B", "C", ...],
-                    "confianca": 85
-                }}
-                """
-
-                response = model.generate_content([
-                    prompt,
-                    {"mime_type": "image/jpeg", "data": image_data}
-                ])
-
-                resposta_texto = response.text
-                print(f"📝 Resposta Gemini: {resposta_texto[:200]}...")
-
-                json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
-
-                if json_match:
-                    try:
-                        dados = json.loads(json_match.group())
-                        respostas_detectadas = dados.get('respostas', [])
-                        confianca = dados.get('confianca', 70)
-                    except:
-                        respostas_detectadas = []
-                        confianca = 50
-                else:
-                    respostas_detectadas = []
-                    confianca = 50
-
-                if not respostas_detectadas or len(respostas_detectadas) == 0:
-                    print("⚠️ Nenhuma resposta detectada, tentando Relay...")
-                    return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
-
-                while len(respostas_detectadas) < len(gabarito):
-                    respostas_detectadas.append(random.choice(alternativas_lista))
-
-                respostas_detectadas = respostas_detectadas[:len(gabarito)]
-                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
-
-                acertos = 0
-                correcoes = []
-                questoes_status = []
-
-                for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-                    gab_normalizado = str(gab).strip().upper() if gab else ''
-                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
-
-                    if is_correto:
-                        acertos += 1
-                        status_msg = 'ADQUIRIU HABILIDADE'
-                    elif resp:
-                        status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
-                    else:
-                        status_msg = 'NÃO RESPONDEU'
-
-                    correcoes.append({
-                        'questao': i+1,
-                        'resposta': resp,
-                        'gabarito': gab_normalizado,
-                        'correto': is_correto,
-                        'status': status_msg
-                    })
-
-                    questoes_status.append({
-                        'numero': i+1,
-                        'resposta': resp or '—',
-                        'gabarito': gab_normalizado or '—',
-                        'acertou': is_correto,
-                        'status': status_msg,
-                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
-                    })
-
-                valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
-                nota = acertos * valor_por_questao
-                porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
-                conceito = calcular_conceito(porcentagem)
-
-                return {
-                    'aluno': aluno_nome,
-                    'serie': serie,
-                    'disciplina': disciplina,
-                    'total': len(gabarito),
-                    'acertos': acertos,
-                    'nota': round(nota, 1),
-                    'porcentagem': porcentagem,
-                    'conceito': conceito,
-                    'respostas_detectadas': respostas_detectadas,
-                    'gabarito': gabarito,
-                    'correcoes': correcoes,
-                    'questoes_status': questoes_status,
-                    'tipo_questoes': str(tipo_questoes),
-                    'confianca': confianca,
-                    'modo': 'gemini',
-                    'valor_por_questao': round(valor_por_questao, 2)
-                }
-
-            except Exception as e:
-                print(f"❌ Erro no Gemini: {e}")
-                print("⚠️ Tentando RelayFreeLLM...")
-                return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-        else:
-            print("⚠️ Gemini não disponível, tentando RelayFreeLLM...")
-            return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-    except Exception as e:
-        print(f"❌ Erro geral: {e}")
-        return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando RelayFreeLLM ou simulação"""
-
-    if not gabarito or len(gabarito) == 0:
-        conceito = calcular_conceito(0)
-        return {
-            'erro': 'Gabarito não disponível',
-            'aluno': aluno_nome,
-            'serie': serie,
-            'disciplina': disciplina,
-            'total': 0,
-            'acertos': 0,
-            'nota': 0,
-            'porcentagem': 0,
-            'conceito': conceito,
-            'respostas_detectadas': [],
-            'gabarito': gabarito,
-            'correcoes': [],
-            'questoes_status': [],
-            'tipo_questoes': str(tipo_questoes),
-            'confianca': 0,
-            'modo': 'erro',
-            'valor_por_questao': 0
-        }
-
-    try:
-        if RELAY_AVAILABLE:
-            try:
-                import openai
-
-                # Extrair o mimetype real da imagem
-                mimetype = extrair_mimetype(imagem_base64)
-
-                imagem_limpa = imagem_base64
-                if ',' in imagem_base64:
-                    imagem_limpa = imagem_base64.split(',')[1]
-
-                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
-
-                # Montar mensagem com imagem no formato multimodal
-                prompt = f"""
-                Você é um assistente especializado em correção de provas escolares.
-
-                Analise a imagem do cartão resposta e identifique as respostas marcadas.
-
-                INFORMAÇÕES DA PROVA:
-                - Total de questões: {len(gabarito)}
-                - Alternativas disponíveis: {alternativas}
-                - Gabarito correto: {gabarito}
-
-                INSTRUÇÕES:
-                1. Analise cada questão e identifique qual alternativa foi marcada
-                2. Se a marcação não estiver clara, faça a melhor estimativa
-                3. Compare com o gabarito e determine se está correta
-
-                Responda APENAS em formato JSON válido:
-                {{
-                    "respostas": ["A", "B", "C", ...],
-                    "confianca": 85
-                }}
-                """
-
-                # Usar a API OpenAI com suporte a multimodal
-                try:
-                    # Tentar usar a API com suporte a imagens
-                    if hasattr(openai, 'ChatCompletion') and hasattr(openai.ChatCompletion, 'create'):
-                        response = openai.ChatCompletion.create(
-                            model=RELAY_MODEL,
-                            messages=[
-                                {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {"type": "text", "text": prompt},
-                                        {"type": "image_url", "image_url": {"url": f"data:{mimetype};base64,{imagem_limpa}"}}
-                                    ]
-                                }
-                            ],
-                            max_tokens=500,
-                            temperature=0.3
-                        )
-                        resposta_texto = response.choices[0].message.content
-                    else:
-                        # Fallback: enviar apenas texto
-                        print("⚠️ API não suporta multimodal, enviando apenas texto")
-                        response = openai.ChatCompletion.create(
-                            model=RELAY_MODEL,
-                            messages=[
-                                {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            max_tokens=500,
-                            temperature=0.3
-                        )
-                        resposta_texto = response.choices[0].message.content
-                except Exception as e:
-                    print(f"⚠️ Erro na API multimodal: {e}")
-                    # Tentar fallback sem imagem
-                    response = openai.ChatCompletion.create(
-                        model=RELAY_MODEL,
-                        messages=[
-                            {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=500,
-                        temperature=0.3
-                    )
-                    resposta_texto = response.choices[0].message.content
-
-                print(f"📝 Resposta Relay: {resposta_texto[:200]}...")
-
-                json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
-
-                if json_match:
-                    try:
-                        dados = json.loads(json_match.group())
-                        respostas_detectadas = dados.get('respostas', [])
-                        confianca = dados.get('confianca', 70)
-                    except:
-                        respostas_detectadas = []
-                        confianca = 50
-                else:
-                    respostas_detectadas = []
-                    confianca = 50
-
-                if not respostas_detectadas or len(respostas_detectadas) == 0:
-                    return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
-
-                while len(respostas_detectadas) < len(gabarito):
-                    respostas_detectadas.append(random.choice(alternativas_lista))
-
-                respostas_detectadas = respostas_detectadas[:len(gabarito)]
-                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
-
-                acertos = 0
-                correcoes = []
-                questoes_status = []
-
-                for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-                    gab_normalizado = str(gab).strip().upper() if gab else ''
-                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
-
-                    if is_correto:
-                        acertos += 1
-                        status_msg = 'ADQUIRIU HABILIDADE'
-                    elif resp:
-                        status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
-                    else:
-                        status_msg = 'NÃO RESPONDEU'
-
-                    correcoes.append({
-                        'questao': i+1,
-                        'resposta': resp,
-                        'gabarito': gab_normalizado,
-                        'correto': is_correto,
-                        'status': status_msg
-                    })
-
-                    questoes_status.append({
-                        'numero': i+1,
-                        'resposta': resp or '—',
-                        'gabarito': gab_normalizado or '—',
-                        'acertou': is_correto,
-                        'status': status_msg,
-                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
-                    })
-
-                valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
-                nota = acertos * valor_por_questao
-                porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
-                conceito = calcular_conceito(porcentagem)
-
-                return {
-                    'aluno': aluno_nome,
-                    'serie': serie,
-                    'disciplina': disciplina,
-                    'total': len(gabarito),
-                    'acertos': acertos,
-                    'nota': round(nota, 1),
-                    'porcentagem': porcentagem,
-                    'conceito': conceito,
-                    'respostas_detectadas': respostas_detectadas,
-                    'gabarito': gabarito,
-                    'correcoes': correcoes,
-                    'questoes_status': questoes_status,
-                    'tipo_questoes': str(tipo_questoes),
-                    'confianca': confianca,
-                    'modo': 'relay',
-                    'valor_por_questao': round(valor_por_questao, 2)
-                }
-
-            except Exception as e:
-                print(f"❌ Erro no RelayFreeLLM: {e}")
-                return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-        else:
-            print("⚠️ RelayFreeLLM não disponível, usando simulação")
-            return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-    except Exception as e:
-        print(f"❌ Erro geral: {e}")
-        return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Correção simulada quando nenhuma IA está disponível"""
-    try:
-        alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-        respostas_detectadas = []
-
-        import hashlib
-
-        if imagem_base64 and len(imagem_base64) > 10:
-            hash_val = int(hashlib.md5(imagem_base64.encode()).hexdigest()[:8], 16)
-            random.seed(hash_val)
-        else:
-            random.seed(datetime.now().timestamp())
-
-        for i, gab in enumerate(gabarito):
-            if random.random() < 0.75:
-                respostas_detectadas.append(gab)
-            else:
-                erradas = [a for a in alternativas if a != gab]
-                respostas_detectadas.append(random.choice(erradas) if erradas else gab)
-
-        acertos = 0
-        correcoes = []
-        questoes_status = []
-
-        for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-            is_correto = resp == gab if resp else False
-
-            if is_correto:
-                acertos += 1
-                status_msg = 'ADQUIRIU HABILIDADE'
-            elif resp:
-                status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
-            else:
-                status_msg = 'NÃO RESPONDEU'
-
-            correcoes.append({
-                'questao': i+1,
-                'resposta': resp,
-                'gabarito': gab,
-                'correto': is_correto,
-                'status': status_msg
-            })
-
-            questoes_status.append({
-                'numero': i+1,
-                'resposta': resp or '—',
-                'gabarito': gab or '—',
-                'acertou': is_correto,
-                'status': status_msg,
-                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
-            })
-
-        valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
-        nota = acertos * valor_por_questao
-        porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
-        conceito = calcular_conceito(porcentagem)
-
-        return {
-            'aluno': aluno_nome,
-            'serie': serie,
-            'disciplina': disciplina,
-            'total': len(gabarito),
-            'acertos': acertos,
-            'nota': round(nota, 1),
-            'porcentagem': porcentagem,
-            'conceito': conceito,
-            'respostas_detectadas': respostas_detectadas,
-            'gabarito': gabarito,
-            'correcoes': correcoes,
-            'questoes_status': questoes_status,
-            'tipo_questoes': str(tipo_questoes),
-            'confianca': 70,
-            'modo': 'simulado',
-            'valor_por_questao': round(valor_por_questao, 2)
-        }
-    except Exception as e:
-        print(f"❌ Erro na simulação: {e}")
-        conceito = calcular_conceito(0)
-        return {
-            'aluno': aluno_nome,
-            'serie': serie,
-            'disciplina': disciplina,
-            'total': len(gabarito),
-            'acertos': 0,
-            'nota': 0,
-            'porcentagem': 0,
-            'conceito': conceito,
-            'respostas_detectadas': [],
-            'gabarito': gabarito,
-            'correcoes': [],
-            'questoes_status': [],
-            'tipo_questoes': str(tipo_questoes),
-            'confianca': 0,
-            'modo': 'erro',
-            'valor_por_questao': 0,
-            'erro': 'Erro na correção simulada'
-        }
-
-# ============================================
-# MIDDLEWARE PARA GARANTIR RESPOSTAS JSON
-# ============================================
-
-@app.after_request
-def after_request(response):
-    """Garante que todas as respostas da API sejam JSON"""
-    if request.path.startswith('/api/') and response.status_code != 200:
-        # Se não for JSON, converte para JSON
-        if not response.headers.get('Content-Type', '').startswith('application/json'):
-            try:
-                # Se for HTML, converte para JSON de erro
-                if 'text/html' in response.headers.get('Content-Type', ''):
-                    response = jsonify({
-                        'erro': 'Erro interno do servidor',
-                        'status': response.status_code,
-                        'detalhes': 'A requisição retornou HTML em vez de JSON'
-                    })
-                    response.status_code = 500
-            except:
-                pass
-    return response
-
-# ============================================
-# ROTA DE LOGIN (COM hmac.compare_digest)
-# ============================================
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    try:
-        data = request.json
-        username = data.get('username')
-        senha = data.get('senha')
-
-        if not username or not senha:
-            return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
-
-        print(f"🔑 Tentativa de login: {username}")
-
-        conn = get_db_connection()
-        if conn:
-            try:
-                cur = conn.cursor(cursor_factory=RealDictCursor)
-                cur.execute("""
-                    SELECT id, nome, username, senha_hash, perfil, ativo
-                    FROM usuarios
-                    WHERE username = %s
-                """, (username,))
-                usuario = cur.fetchone()
-                cur.close()
-                conn.close()
-
-                if usuario:
-                    print(f"📌 Usuário encontrado no banco: {usuario['username']}")
-                    print(f"📌 Ativo: {usuario['ativo']}")
-
-                    # Usar hmac.compare_digest para comparação segura
-                    if hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)) and usuario['ativo'] == True:
-                        print(f"✅ Login via banco: {username}")
-                        return jsonify({
-                            'sucesso': True,
-                            'perfil': usuario['perfil'],
-                            'usuario': usuario['username'],
-                            'nome': usuario['nome']
-                        })
-                    else:
-                        print(f"❌ Senha incorreta ou usuário inativo")
-                else:
-                    print(f"❌ Usuário não encontrado no banco: {username}")
-
-            except Exception as e:
-                print(f"❌ Erro no banco: {e}")
-                traceback.print_exc()
-
-        # Verificar usuários fixos com comparação segura
-        if username in USUARIOS_FIXOS:
-            dados = USUARIOS_FIXOS[username]
-            if hmac.compare_digest(str(dados['senha']), str(senha)):
-                print(f"✅ Login via usuário fixo: {username}")
-                return jsonify({
-                    'sucesso': True,
-                    'perfil': dados['perfil'],
-                    'usuario': username,
-                    'nome': dados['nome']
-                })
-
-        print(f"❌ Login falhou para: {username}")
-        return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
-    except Exception as e:
-        print(f"❌ Erro no login: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE CORREÇÃO COM IA
-# ============================================
-
-@app.route('/api/corrigir', methods=['POST'])
-def corrigir_com_ia():
-    try:
-        print("📥 Recebendo requisição de correção...")
-
-        data = request.json
-        if not data:
-            return jsonify({'erro': 'Nenhum dado recebido'}), 400
-
-        imagem_base64 = data.get('imagem')
-        prova_id = data.get('prova_id')
-        aluno_id = data.get('aluno_id')
-
-        if not imagem_base64:
-            return jsonify({'erro': 'Imagem é obrigatória'}), 400
-
-        if not prova_id:
-            return jsonify({'erro': 'Prova ID é obrigatório'}), 400
-
-        if not aluno_id:
-            return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-
-            cur.execute("""
-                SELECT p.*
-                FROM provas p
-                WHERE p.id = %s
-            """, (prova_id,))
-            prova = cur.fetchone()
-
-            if not prova:
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Prova não encontrada'}), 404
-
-            gabarito = prova.get('gabarito', [])
-            if not gabarito or len(gabarito) == 0:
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
-
-            cur.execute("""
-                SELECT a.id, a.nome, a.turma_id, t.serie, e.nome as escola_nome, e.id as escola_id
-                FROM alunos a
-                LEFT JOIN turmas t ON a.turma_id = t.id
-                LEFT JOIN escolas e ON a.escola_id = e.id
-                WHERE a.id = %s
-            """, (aluno_id,))
-            aluno = cur.fetchone()
-            cur.close()
-            conn.close()
-
-            nome_aluno = aluno['nome'] if aluno else 'Aluno'
-            turma_id = aluno['turma_id'] if aluno else None
-            escola_id = aluno['escola_id'] if aluno else None
-
-            serie = '1º Ano'
-            if turma_id:
-                try:
-                    conn2 = get_db_connection()
-                    if conn2:
-                        cur2 = conn2.cursor(cursor_factory=RealDictCursor)
-                        cur2.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
-                        turma = cur2.fetchone()
-                        if turma:
-                            serie = turma['serie']
-                        cur2.close()
-                        conn2.close()
-                except Exception as e:
-                    print(f"⚠️ Erro ao buscar série: {e}")
-
-            # CORREÇÃO: usar or 4 para tratar None
-            tipo_questoes = prova.get('tipo_questoes') or 4
-            if isinstance(tipo_questoes, str):
-                try:
-                    tipo_questoes = int(tipo_questoes)
-                except:
-                    tipo_questoes = 4
-
-            disciplina = prova.get('disciplina', '')
-            prova_titulo = prova.get('titulo', '')
-
-            print(f"🤖 Iniciando correção para {nome_aluno}...")
-            print(f"📌 Disciplina: {disciplina}")
-            print(f"📌 Série: {serie}")
-
-            resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes, disciplina)
-
-            if resultado.get('erro'):
-                return jsonify(resultado), 400
-
-            tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
-            print(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
-
-            # Salvar no banco com questoes_status
-            try:
-                conn = get_db_connection()
-                if conn:
-                    cur = conn.cursor()
-
-                    questoes_status_json = json.dumps(resultado.get('questoes_status', []))
-
-                    cur.execute("""
-                        SELECT id FROM historico
-                        WHERE prova_id = %s AND aluno_id = %s
-                    """, (prova_id, aluno_id))
-                    existe = cur.fetchone()
-
-                    if existe:
-                        cur.execute("""
-                            UPDATE historico
-                            SET respostas = %s::text[],
-                                acertos = %s,
-                                nota = %s,
-                                total = %s,
-                                tipo_correcao = %s,
-                                disciplina = %s,
-                                tipo_avaliacao = %s,
-                                questoes_status = %s::jsonb,
-                                data_correcao = CURRENT_TIMESTAMP
-                            WHERE prova_id = %s AND aluno_id = %s
-                        """, (
-                            resultado.get('respostas_detectadas', []),
-                            resultado.get('acertos', 0),
-                            resultado.get('nota', 0),
-                            resultado.get('total', 0),
-                            resultado.get('modo', 'ia'),
-                            disciplina,
-                            tipo_avaliacao,
-                            questoes_status_json,
-                            prova_id,
-                            aluno_id
-                        ))
-                        print("✅ Histórico atualizado com sucesso")
-                    else:
-                        cur.execute("""
-                            INSERT INTO historico
-                            (prova_id, aluno_id, respostas, acertos, nota, total,
-                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
-                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb)
-                        """, (
-                            prova_id,
-                            aluno_id,
-                            resultado.get('respostas_detectadas', []),
-                            resultado.get('acertos', 0),
-                            resultado.get('nota', 0),
-                            resultado.get('total', 0),
-                            resultado.get('modo', 'ia'),
-                            disciplina,
-                            tipo_avaliacao,
-                            questoes_status_json
-                        ))
-                        print("✅ Histórico salvo com sucesso")
-
-                    conn.commit()
-                    cur.close()
-                    conn.close()
-
-            except Exception as e:
-                print(f"⚠️ Erro ao salvar histórico: {e}")
-                traceback.print_exc()
-
-            resultado['tipo_avaliacao'] = tipo_avaliacao
-            resultado['disciplina'] = disciplina
-
-            return jsonify(resultado)
-
-        except Exception as e:
-            print(f"❌ Erro na correção: {e}")
-            traceback.print_exc()
-            return jsonify({'erro': str(e)}), 500
-
-    except Exception as e:
-        print(f"❌ Erro geral: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE CORREÇÃO MANUAL (COM str() ANTES DE .upper())
-# ============================================
-
-@app.route('/api/corrigir_manual', methods=['POST'])
-def corrigir_manual():
-    try:
-        data = request.json
-        print("=" * 60)
-        print("📥 DADOS RECEBIDOS NA CORREÇÃO MANUAL:")
-        print(json.dumps(data, indent=2, default=str))
-        print("=" * 60)
-
-        prova_id = data.get('prova_id')
-        aluno_id = data.get('aluno_id')
-        respostas = data.get('respostas', [])
-        acertos = data.get('acertos', 0)
-        nota = data.get('nota', 0)
-        total = data.get('total', 0)
-
-        print(f"📌 prova_id: {prova_id} (tipo: {type(prova_id)})")
-        print(f"📌 aluno_id: {aluno_id} (tipo: {type(aluno_id)})")
-        print(f"📌 respostas: {respostas} (tipo: {type(respostas)})")
-        print(f"📌 acertos: {acertos} (tipo: {type(acertos)})")
-        print(f"📌 nota: {nota} (tipo: {type(nota)})")
-        print(f"📌 total: {total} (tipo: {type(total)})")
-
-        if not prova_id or not aluno_id:
-            return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro no banco'}), 500
-
-        cur = conn.cursor()
-
-        cur.execute("SELECT disciplina, titulo, serie, gabarito FROM provas WHERE id = %s", (prova_id,))
-        prova = cur.fetchone()
-        print(f"📌 Prova encontrada: {prova}")
-
-        disciplina = prova[0] if prova else ''
-        prova_titulo = prova[1] if prova else ''
-        serie_prova = prova[2] if prova else ''
-        gabarito = prova[3] if prova else []
-        print(f"📌 Gabarito: {gabarito} (tipo: {type(gabarito)})")
-
-        cur.execute("""
-            SELECT t.serie FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            WHERE a.id = %s
-        """, (aluno_id,))
-        serie_result = cur.fetchone()
-        serie = serie_result[0] if serie_result else serie_prova or '1º Ano'
-
-        tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
-        print(f"📌 Tipo avaliação: {tipo_avaliacao}")
-
-        # Gerar questoes_status - NORMALIZAÇÃO COM str() ANTES DE .upper()
-        questoes_status = []
-        for i in range(total):
-            resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
-            gab = str(gabarito[i]) if i < len(gabarito) and gabarito[i] is not None else ''
-            is_correto = resp and gab and resp.upper() == gab.upper()
-
-            if is_correto:
-                status_msg = 'ADQUIRIU HABILIDADE'
-            elif resp:
-                status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
-            else:
-                status_msg = 'NÃO RESPONDEU'
-
-            questoes_status.append({
-                'numero': i+1,
-                'resposta': resp or '—',
-                'gabarito': gab or '—',
-                'acertou': is_correto,
-                'status': status_msg,
-                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
-            })
-
-        print(f"📌 questoes_status gerado: {questoes_status}")
-
-        try:
-            questoes_status_json = json.dumps(questoes_status)
-            print(f"📌 JSON gerado: {questoes_status_json[:100]}...")
-        except Exception as e:
-            print(f"❌ ERRO AO GERAR JSON: {e}")
-            return jsonify({'erro': f'Erro ao converter para JSON: {str(e)}'}), 500
-
-        cur.execute("""
-            SELECT id FROM historico
-            WHERE prova_id = %s AND aluno_id = %s
-        """, (prova_id, aluno_id))
-        existe = cur.fetchone()
-        print(f"📌 Registro existe? {existe}")
-
-        if existe:
-            print("📌 Atualizando registro existente...")
-            cur.execute("""
-                UPDATE historico
-                SET respostas = %s::text[],
-                    acertos = %s,
-                    nota = %s,
-                    total = %s,
-                    tipo_correcao = 'manual',
-                    disciplina = %s,
-                    tipo_avaliacao = %s,
-                    questoes_status = %s::jsonb,
-                    data_correcao = CURRENT_TIMESTAMP
-                WHERE prova_id = %s AND aluno_id = %s
-            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, prova_id, aluno_id))
-            result_id = existe[0] if isinstance(existe, tuple) else existe
-            print(f"✅ Atualizado! ID: {result_id}")
-        else:
-            print("📌 Criando novo registro...")
-            cur.execute("""
-                INSERT INTO historico
-                (prova_id, aluno_id, respostas, acertos, nota, total,
-                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
-                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s, %s::jsonb)
-                RETURNING id
-            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json))
-            result = cur.fetchone()
-            result_id = result[0] if result else None
-            print(f"✅ Criado! ID: {result_id}")
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        porcentagem = round((acertos / total) * 100) if total > 0 else 0
-        conceito = calcular_conceito(porcentagem)
-
-        return jsonify({
-            'sucesso': True,
-            'id': result_id,
-            'mensagem': 'Correção manual salva com sucesso',
-            'conceito': conceito,
-            'porcentagem': porcentagem,
-            'tipo_avaliacao': tipo_avaliacao,
-            'questoes_status': questoes_status
-        })
-    except Exception as e:
-        print("=" * 60)
-        print("❌ ERRO NA CORREÇÃO MANUAL:")
-        print(f"❌ Tipo: {type(e)}")
-        print(f"❌ Mensagem: {str(e)}")
-        print("❌ Traceback completo:")
-        traceback.print_exc()
-        print("=" * 60)
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO
-# ============================================
-
-@app.route('/api/corrigir_redacao', methods=['POST'])
-def corrigir_redacao():
-    try:
-        data = request.json
-        texto = data.get('texto')
-        aluno_id = data.get('aluno_id')
-
-        if not texto:
-            return jsonify({'erro': 'Texto é obrigatório'}), 400
-
-        if GEMINI_AVAILABLE and model is not None:
-            try:
-                prompt = f"""
-                Avalie a redação: {texto}
-                Responda em JSON: {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
-                """
-                response = model.generate_content(prompt)
-                json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
-                if json_match:
-                    try:
-                        resultado = json.loads(json_match.group())
-                        resultado['modo'] = 'gemini'
-                        return jsonify(resultado)
-                    except:
-                        pass
-            except Exception as e:
-                print(f"⚠️ Erro no Gemini para redação: {e}")
-
-        if RELAY_AVAILABLE:
-            try:
-                import openai
-
-                prompt = f"""
-                Avalie a redação: {texto}
-                Responda em JSON: {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
-                """
-
-                response = openai.ChatCompletion.create(
-                    model=RELAY_MODEL,
-                    messages=[
-                        {"role": "system", "content": "Você é um professor especializado em avaliar redações."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=300,
-                    temperature=0.5
-                )
-
-                resposta_texto = response.choices[0].message.content
-                json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
-
-                if json_match:
-                    try:
-                        resultado = json.loads(json_match.group())
-                        resultado['modo'] = 'relay'
-                        return jsonify(resultado)
-                    except:
-                        pass
-            except Exception as e:
-                print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
-
-        # FALLBACK: ANÁLISE LOCAL
-        import re
-        from collections import Counter
-
-        texto_limpo = texto.strip()
-        palavras = re.findall(r'\b[a-zA-ZáéíóúãõâêôçÁÉÍÓÚÃÕÂÊÔÇ]+\b', texto_limpo)
-        num_palavras = len(palavras)
-        frases = re.split(r'[.!?;]+', texto_limpo)
-        num_frases = len([f for f in frases if f.strip()])
-
-        palavras_unicas = len(set([p.lower() for p in palavras]))
-        diversidade = palavras_unicas / num_palavras if num_palavras > 0 else 0
-        tamanho_medio = sum(len(p) for p in palavras) / num_palavras if num_palavras > 0 else 0
-
-        contagem = Counter([p.lower() for p in palavras])
-        palavras_repetidas = sum(1 for v in contagem.values() if v > 3)
-
-        nota_coerencia = min(10, max(0, (diversidade * 5) + (min(1, num_frases / 4) * 3) + (min(1, num_palavras / 50) * 2)))
-        nota_estrutura = min(10, max(0, (min(1, num_frases / 3) * 5) + (min(1, tamanho_medio / 6) * 5)))
-        nota_gramatica = min(10, max(0, (min(1, tamanho_medio / 5) * 4) + (min(1, num_palavras / 40) * 4) + (2 - min(2, palavras_repetidas * 0.4))))
-        nota_vocabulario = min(10, max(0, diversidade * 12))
-
-        if num_palavras < 5:
-            nota_coerencia *= 0.2
-            nota_estrutura *= 0.2
-            nota_gramatica *= 0.2
-            nota_vocabulario *= 0.2
-
-        nota_final = round((nota_coerencia * 0.30 + nota_estrutura * 0.25 + nota_gramatica * 0.25 + nota_vocabulario * 0.20), 1)
-        nota_final = min(10, max(0, nota_final))
-
-        feedback_parts = []
-        if num_palavras < 10:
-            feedback_parts.append(f"⚠️ Texto muito curto ({num_palavras} palavras). Escreva pelo menos 20 palavras.")
-        elif num_palavras < 30:
-            feedback_parts.append(f"📝 Bom início! Tente expandir seus argumentos.")
-        else:
-            feedback_parts.append("✅ Bom desenvolvimento textual.")
-
-        if diversidade < 0.4:
-            feedback_parts.append("🔤 Tente usar vocabulário mais variado.")
-        elif diversidade < 0.6:
-            feedback_parts.append("📚 Bom uso do vocabulário.")
-        else:
-            feedback_parts.append("📚 Ótimo vocabulário!")
-
-        if palavras_repetidas > 5:
-            feedback_parts.append("⚠️ Muitas palavras repetidas. Use sinônimos.")
-
-        if nota_final >= 7:
-            feedback_parts.append("🌟 Bom trabalho! Continue praticando.")
-        elif nota_final >= 5:
-            feedback_parts.append("📈 Continue melhorando!")
-        else:
-            feedback_parts.append("📝 Revise seu texto e tente novamente.")
-
-        feedback = " ".join(feedback_parts)
-
-        resultado = {
-            'nota': nota_final,
-            'metricas': {
-                'nota_coerencia': round(nota_coerencia, 1),
-                'nota_estrutura': round(nota_estrutura, 1),
-                'nota_gramatica': round(nota_gramatica, 1),
-                'nota_vocabulario': round(nota_vocabulario, 1)
-            },
-            'feedback': feedback,
-            'modo': 'local'
-        }
-
-        return jsonify(resultado)
-
-    except Exception as e:
-        print(f"❌ Erro na correção de redação: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA PARA SALVAR CORREÇÃO DE TEXTO
-# ============================================
-
-@app.route('/api/salvar_correcao_texto', methods=['POST'])
-def salvar_correcao_texto():
-    try:
-        data = request.json
-        aluno_id = data.get('aluno_id')
-        prova_id = data.get('prova_id')
-        texto = data.get('texto')
-        nota = data.get('nota')
-        metricas = data.get('metricas', {})
-        feedback = data.get('feedback', '')
-
-        if not aluno_id:
-            return jsonify({'erro': 'Aluno é obrigatório'}), 400
-
-        if not texto:
-            return jsonify({'erro': 'Texto é obrigatório'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO correcoes_texto
-            (aluno_id, prova_id, texto, nota, metrica_coerencia, metrica_estrutura,
-             metrica_gramatica, metrica_vocabulario, feedback, tipo_correcao)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            aluno_id,
-            prova_id,
-            texto,
-            nota,
-            metricas.get('nota_coerencia', 0),
-            metricas.get('nota_estrutura', 0),
-            metricas.get('nota_gramatica', 0),
-            metricas.get('nota_vocabulario', 0),
-            feedback,
-            'ia'
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result[0],
-            'mensagem': 'Correção de texto salva com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao salvar correção de texto: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA PARA LISTAR CORREÇÕES DE TEXTO
-# ============================================
-
-@app.route('/api/correcoes_texto', methods=['GET'])
-def listar_correcoes_texto():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT ct.*, a.nome as aluno_nome, t.serie
-            FROM correcoes_texto ct
-            LEFT JOIN alunos a ON ct.aluno_id = a.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            ORDER BY ct.data_correcao DESC
-        """)
-
-        resultados = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(resultados)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar correções de texto: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE HISTÓRICO - VERSÃO COM 5 AVALIAÇÕES (INCLUINDO CH E CN)
-# ============================================
-
-@app.route('/api/historico', methods=['GET'])
-def listar_historico():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        escola_id = request.args.get('escola')
-        turma_id = request.args.get('turma')
-        aluno_id = request.args.get('aluno_id')
-        prova_id = request.args.get('prova_id')
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                h.*,
-                a.nome as aluno_nome,
-                p.titulo as prova_titulo,
-                p.disciplina,
-                p.serie as prova_serie,
-                t.serie,
-                t.nome as turma_nome,
-                e.nome as escola_nome,
-                t.id as turma_id,
-                e.id as escola_id,
-                p.quantidade_questoes as total_questoes,
-                p.tipo_questoes
-            FROM historico h
-            LEFT JOIN alunos a ON h.aluno_id = a.id
-            LEFT JOIN provas p ON h.prova_id = p.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null':
-            try:
-                escola_id_int = int(escola_id)
-                query += " AND e.id = %s"
-                params.append(escola_id_int)
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null':
-            try:
-                turma_id_int = int(turma_id)
-                query += " AND t.id = %s"
-                params.append(turma_id_int)
-            except ValueError:
-                pass
-
-        if aluno_id and aluno_id != '' and aluno_id != 'null':
-            try:
-                aluno_id_int = int(aluno_id)
-                query += " AND h.aluno_id = %s"
-                params.append(aluno_id_int)
-            except ValueError:
-                pass
-
-        if prova_id and prova_id != '' and prova_id != 'null':
-            try:
-                prova_id_int = int(prova_id)
-                query += " AND h.prova_id = %s"
-                params.append(prova_id_int)
-            except ValueError:
-                pass
-
-        query += " ORDER BY h.data_correcao DESC"
-
-        cur.execute(query, params)
-        historico = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        for item in historico:
-            if 'total_questoes' not in item or item['total_questoes'] is None:
-                item['total_questoes'] = 20
-
-            total = item.get('total_questoes', 20)
-            acertos = item.get('acertos', 0)
-            porcentagem = round((acertos / total) * 100) if total > 0 else 0
-
-            conceito = calcular_conceito(porcentagem)
-            item['conceito'] = conceito['nome']
-            item['conceito_rotulo'] = conceito['rotulo']
-            item['conceito_cor'] = conceito['cor']
-            item['porcentagem'] = porcentagem
-
-            if 'tipo_avaliacao' not in item or not item['tipo_avaliacao']:
-                disciplina = item.get('disciplina', '')
-                prova_titulo = item.get('prova_titulo', '')
-                serie = item.get('serie', '')
-                item['tipo_avaliacao'] = identificar_disciplina(prova_titulo, disciplina, serie)
-
-        return jsonify(historico)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar histórico: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (5 AVALIAÇÕES - COM CH E CN)
-# ============================================
-
-@app.route('/api/historico/agrupado', methods=['GET'])
-def historico_agrupado():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        escola_id = request.args.get('escola')
-        turma_id = request.args.get('turma')
-        aluno_id = request.args.get('aluno_id')
-        serie = request.args.get('serie')
-        prova_id = request.args.get('prova')
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                h.*,
-                a.nome as aluno_nome,
-                p.titulo as prova_titulo,
-                p.disciplina,
-                p.serie as prova_serie,
-                t.serie,
-                t.nome as turma_nome,
-                e.nome as escola_nome
-            FROM historico h
-            LEFT JOIN alunos a ON h.aluno_id = a.id
-            LEFT JOIN provas p ON h.prova_id = p.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null':
-            try:
-                escola_id_int = int(escola_id)
-                query += " AND e.id = %s"
-                params.append(escola_id_int)
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null':
-            try:
-                turma_id_int = int(turma_id)
-                query += " AND t.id = %s"
-                params.append(turma_id_int)
-            except ValueError:
-                pass
-
-        if aluno_id and aluno_id != '' and aluno_id != 'null':
-            try:
-                aluno_id_int = int(aluno_id)
-                query += " AND h.aluno_id = %s"
-                params.append(aluno_id_int)
-            except ValueError:
-                pass
-
-        if serie and serie != '' and serie != 'null':
-            query += " AND t.serie = %s"
-            params.append(serie)
-
-        if prova_id and prova_id != '' and prova_id != 'null':
-            try:
-                prova_id_int = int(prova_id)
-                query += " AND h.prova_id = %s"
-                params.append(prova_id_int)
-            except ValueError:
-                pass
-
-        query += " ORDER BY a.nome, h.data_correcao DESC"
-
-        cur.execute(query, params)
-        historico = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        alunos_map = {}
-        for item in historico:
-            aluno_key = item.get('aluno_id') or item.get('aluno_nome')
-            if not aluno_key:
-                continue
-
-            if aluno_key not in alunos_map:
-                alunos_map[aluno_key] = {
-                    'aluno_id': item.get('aluno_id'),
-                    'aluno_nome': item.get('aluno_nome', 'Aluno'),
-                    'serie': item.get('serie', ''),
-                    'turma': item.get('turma_nome', ''),
-                    'escola': item.get('escola_nome', ''),
-                    'avaliacoes': {}
-                }
-
-            disciplina = item.get('disciplina', '')
-            prova_titulo = item.get('prova_titulo', '')
-            serie_aluno = item.get('serie', '')
-            tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
-
-            # Extrair questoes_status
-            questoes_status = item.get('questoes_status', [])
-            if isinstance(questoes_status, str):
-                try:
-                    questoes_status = json.loads(questoes_status)
-                except:
-                    questoes_status = []
-
-            # CORREÇÃO: só adiciona se ainda não existir (mantém a mais recente)
-            if tipo not in alunos_map[aluno_key]['avaliacoes']:
-                alunos_map[aluno_key]['avaliacoes'][tipo] = {
-                    'nota': float(item.get('nota', 0)),
-                    'acertos': int(item.get('acertos', 0)),
-                    # 🔥 USAR O TOTAL DO HISTÓRICO, NÃO DA PROVA
-                    'total': int(item.get('total', 20)),
-                    'prova': prova_titulo,
-                    'data': item.get('data_correcao', ''),
-                    'disciplina': disciplina,
-                    'questoes_status': questoes_status
-                }
-
-        resultado = []
-        for aluno_key, dados in alunos_map.items():
-            avaliacoes = dados['avaliacoes']
-
-            # Agora com 5 disciplinas: Portugues, Matematica, Producao, CH, CN
-            default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}
-            portugues = dict(avaliacoes.get('Portugues', default))
-            matematica = dict(avaliacoes.get('Matematica', default))
-            producao = dict(avaliacoes.get('Producao', default))
-            ch = dict(avaliacoes.get('CH', default))
-            cn = dict(avaliacoes.get('CN', default))
-
-            # Cálculo da média (soma as notas das 5 disciplinas)
-            notas = [
-                portugues.get('nota', 0),
-                matematica.get('nota', 0),
-                producao.get('nota', 0),
-                ch.get('nota', 0),
-                cn.get('nota', 0)
-            ]
-            soma = sum(notas)
-            media = soma / 5 if notas else 0
-
-            resultado.append({
-                'aluno_id': dados['aluno_id'],
-                'aluno_nome': dados['aluno_nome'],
-                'serie': dados['serie'],
-                'turma': dados['turma'],
-                'escola': dados['escola'],
-                'portugues': portugues,
-                'matematica': matematica,
-                'producao': producao,
-                'ch': ch,
-                'cn': cn,
-                'soma': round(soma, 1),
-                'media': round(media, 1)
-            })
-
-        return jsonify(resultado)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar histórico agrupado: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/historico/<int:id>', methods=['DELETE'])
-def excluir_correcao(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM historico WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Correção não encontrada'}), 404
-
-        cur.execute("DELETE FROM historico WHERE id = %s", (id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': 'Correção excluída com sucesso',
-            'id': id
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao excluir correção: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE GABARITOS (COM BNCC, TEXTOS E NÍVEIS)
-# ============================================
-
-@app.route('/api/gabaritos', methods=['POST'])
-def salvar_gabarito():
-    try:
-        data = request.json
-        prova_id = data.get('prova_id')
-        respostas = data.get('respostas', [])
-        bncc = data.get('bncc', [])
-        textos_questoes = data.get('textos_questoes', [])
-        niveis = data.get('niveis', [])
-
-        if not prova_id:
-            return jsonify({'erro': 'Prova ID é obrigatório'}), 400
-
-        if not respostas or len(respostas) == 0:
-            return jsonify({'erro': 'Respostas são obrigatórias'}), 400
-
-        # Normaliza respostas
-        respostas_validas = [str(r).strip().upper() for r in respostas if r]
-        if not respostas_validas:
-            return jsonify({'erro': 'Nenhuma resposta válida'}), 400
-
-        # Normaliza BNCC (mantém apenas strings não vazias)
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-
-        # Normaliza textos e níveis (mantém vazios para alinhamento)
-        textos_validos = [str(t).strip() for t in textos_questoes]
-        niveis_validos = [str(n).strip() for n in niveis]
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM provas WHERE id = %s", (prova_id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        # Atualiza gabarito, bncc, textos e níveis
-        cur.execute("""
-            UPDATE provas
-            SET gabarito = %s::text[],
-                quantidade_questoes = %s,
-                bncc = %s::text[],
-                textos_questoes = %s::text[],
-                niveis = %s::text[]
-            WHERE id = %s
-            RETURNING id
-        """, (respostas_validas, len(respostas_validas), bncc_validos,
-              textos_validos, niveis_validos, prova_id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'id': result[0],
-            'mensagem': 'Gabarito salvo com sucesso',
-            'total_questoes': len(respostas_validas)
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao salvar gabarito: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE GABARITOS - DELETE
-# ============================================
-
-@app.route('/api/gabaritos/<int:id>', methods=['DELETE'])
-def excluir_gabarito(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (id,))
-        prova = cur.fetchone()
-        if not prova:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE provas
-            SET gabarito = NULL,
-                quantidade_questoes = 0,
-                bncc = NULL,
-                textos_questoes = NULL,
-                niveis = NULL
-            WHERE id = %s
-        """, (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Gabarito da prova "{prova[1]}" removido com sucesso!'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao excluir gabarito: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE ESCOLAS (CRUD COMPLETO) - CORRIGIDA
-# ============================================
-
-@app.route('/api/escolas', methods=['GET'])
-def listar_escolas():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM escolas ORDER BY nome")
-            escolas = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(escolas)
-        except Exception as e:
-            print(f"Erro ao listar escolas: {e}")
-    return jsonify([])
-
-@app.route('/api/escolas', methods=['POST'])
-def criar_escola():
-    data = request.json
-    nome = data.get('nome')
-    if not nome:
-        return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO escolas (nome, inep, municipio, estado, telefone, diretor)
-                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-            """, (nome, data.get('inep', ''), data.get('municipio', ''),
-                  data.get('estado', 'PA'), data.get('telefone', ''), data.get('diretor', '')))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Escola criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar escola: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar escola'}), 500
-
-@app.route('/api/escolas/<int:id>', methods=['GET'])
-def buscar_escola(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM escolas WHERE id = %s", (id,))
-        escola = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not escola:
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        return jsonify(escola)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar escola: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/escolas/<int:id>', methods=['PUT'])
-def editar_escola(id):
-    try:
-        data = request.json
-        nome = data.get('nome')
-
-        if not nome:
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE escolas
-            SET nome = %s,
-                inep = %s,
-                municipio = %s,
-                estado = %s,
-                telefone = %s,
-                diretor = %s
-            WHERE id = %s
-            RETURNING id
-        """, (nome, data.get('inep', ''), data.get('municipio', ''),
-              data.get('estado', 'PA'), data.get('telefone', ''), data.get('diretor', ''), id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result['id'],
-            'mensagem': 'Escola atualizada com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao editar escola: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/escolas/<int:id>', methods=['DELETE'])
-def excluir_escola(id):
-    """
-    Exclui a escola, suas turmas e alunos (em cascata via banco).
-    NÃO EXCLUI PROVAS em hipótese alguma.
-    """
-    logging.info(f"🔴 Tentativa de excluir escola ID {id} de {request.remote_addr}")
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        # Verifica se a escola existe
-        cur.execute("SELECT id, nome FROM escolas WHERE id = %s", (id,))
-        escola = cur.fetchone()
-        if not escola:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        escola_id, escola_nome = escola[0], escola[1]
-
-        # Conta turmas e alunos para estatísticas (opcional)
-        cur.execute("SELECT COUNT(*) FROM turmas WHERE escola_id = %s", (escola_id,))
-        total_turmas = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE escola_id = %s", (escola_id,))
-        total_alunos = cur.fetchone()[0]
-
-        # NÃO EXCLUIMOS PROVAS - NENHUMA CONSULTA OU DELETE NA TABELA provas!
-
-        # Exclui a escola (em cascata, turmas e alunos serão excluídos automaticamente)
-        cur.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        logging.info(f"✅ Escola '{escola_nome}' (ID {escola_id}) excluída com sucesso. Turmas: {total_turmas}, Alunos: {total_alunos}")
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Escola "{escola_nome}" excluída com sucesso!',
-            'detalhes': {
-                'turmas_excluidas': total_turmas,
-                'alunos_excluidos': total_alunos
-            }
-        })
-
-    except Exception as e:
-        conn.rollback()
-        logging.error(f"❌ Erro ao excluir escola ID {id}: {str(e)}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE TURMAS (CRUD COMPLETO) - CORRIGIDA
-# ============================================
-
-@app.route('/api/turmas', methods=['GET'])
-def listar_turmas():
-    try:
-        escola_id = request.args.get('escola_id')
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                t.id,
-                t.nome,
-                t.serie,
-                t.turno,
-                t.professor,
-                t.capacidade,
-                t.ano_letivo,
-                t.escola_id,
-                e.nome as escola_nome,
-                COUNT(a.id) as total_alunos
-            FROM turmas t
-            LEFT JOIN escolas e ON t.escola_id = e.id
-            LEFT JOIN alunos a ON a.turma_id = t.id
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-            try:
-                escola_id_int = int(escola_id)
-                query += " WHERE t.escola_id = %s"
-                params.append(escola_id_int)
-            except ValueError:
-                pass
-
-        query += " GROUP BY t.id, e.nome ORDER BY t.nome"
-
-        cur.execute(query, params)
-        turmas = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(turmas)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar turmas: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-@app.route('/api/turmas', methods=['POST'])
-def criar_turma():
-    data = request.json
-    if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
-                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-                  data.get('turno', 'Manhã'), data.get('professor', ''),
-                  data.get('capacidade', 35), data.get('ano_letivo', 2025)))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
-
-@app.route('/api/turmas/<int:id>', methods=['GET'])
-def buscar_turma(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT
-                t.id,
-                t.nome,
-                t.serie,
-                t.turno,
-                t.professor,
-                t.capacidade,
-                t.ano_letivo,
-                t.escola_id,
-                e.nome as escola_nome
-            FROM turmas t
-            LEFT JOIN escolas e ON t.escola_id = e.id
-            WHERE t.id = %s
-        """, (id,))
-        turma = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not turma:
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        return jsonify(turma)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar turma: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/turmas/<int:id>', methods=['PUT'])
-def editar_turma(id):
-    try:
-        data = request.json
-
-        if not data.get('nome') or not data.get('escola_id'):
-            return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE turmas
-            SET escola_id = %s,
-                nome = %s,
-                serie = %s,
-                turno = %s,
-                professor = %s,
-                capacidade = %s,
-                ano_letivo = %s
-            WHERE id = %s
-            RETURNING id
-        """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-              data.get('turno', 'Manhã'), data.get('professor', ''),
-              data.get('capacidade', 35), data.get('ano_letivo', 2025), id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result['id'],
-            'mensagem': 'Turma atualizada com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao editar turma: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/turmas/<int:id>', methods=['DELETE'])
-def excluir_turma(id):
-    """
-    Exclui a turma e seus alunos (em cascata via banco).
-    NÃO EXCLUI PROVAS.
-    """
-    logging.info(f"🔴 Tentativa de excluir turma ID {id} de {request.remote_addr}")
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
-        turma = cur.fetchone()
-        if not turma:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        turma_id, turma_nome, turma_serie = turma[0], turma[1], turma[2]
-
-        # Contar alunos para estatísticas
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
-        total_alunos = cur.fetchone()[0]
-
-        # NÃO EXCLUIMOS PROVAS - NENHUMA CONSULTA OU DELETE NA TABELA provas!
-
-        # Excluir turma (em cascata, alunos serão excluídos automaticamente)
-        cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        logging.info(f"✅ Turma '{turma_nome}' (ID {turma_id}) excluída com sucesso. Alunos: {total_alunos}")
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Turma "{turma_nome}" excluída com sucesso!',
-            'detalhes': {
-                'alunos_excluidos': total_alunos
-            }
-        })
-
-    except Exception as e:
-        conn.rollback()
-        logging.error(f"❌ Erro ao excluir turma ID {id}: {str(e)}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE ALUNOS (CRUD COMPLETO)
-# ============================================
-
-@app.route('/api/alunos', methods=['GET'])
-def listar_alunos():
-    try:
-        escola_id = request.args.get('escola_id')
-        turma_id = request.args.get('turma_id')
-        serie = request.args.get('serie')
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify([])
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                a.id,
-                a.nome,
-                a.matricula,
-                a.numero_chamada,
-                a.data_nascimento,
-                a.genero,
-                a.responsavel,
-                a.telefone,
-                a.email,
-                a.observacoes,
-                a.turma_id,
-                a.escola_id,
-                t.nome as turma_nome,
-                t.serie as turma_serie,
-                t.turno as turma_turno,
-                e.nome as escola_nome
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-            try:
-                escola_id_int = int(escola_id)
-                query += " AND a.escola_id = %s"
-                params.append(escola_id_int)
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
-            try:
-                turma_id_int = int(turma_id)
-                query += " AND a.turma_id = %s"
-                params.append(turma_id_int)
-            except ValueError:
-                pass
-
-        if serie and serie != '' and serie != 'null' and serie != 'undefined':
-            query += " AND t.serie = %s"
-            params.append(serie)
-
-        query += " ORDER BY a.numero_chamada NULLS LAST, a.nome"
-
-        cur.execute(query, params)
-        alunos = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(alunos)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar alunos: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-@app.route('/api/alunos', methods=['POST'])
-def criar_aluno():
-    try:
-        data = request.json
-
-        if not data.get('nome'):
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-        if not data.get('escola_id'):
-            return jsonify({'erro': 'Escola é obrigatória'}), 400
-
-        if not data.get('turma_id'):
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            INSERT INTO alunos
-            (escola_id, turma_id, nome, matricula, numero_chamada, data_nascimento,
-             genero, responsavel, telefone, email, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            data['escola_id'],
-            data['turma_id'],
-            data['nome'],
-            data.get('matricula', ''),
-            data.get('numero_chamada'),
-            data.get('data_nascimento'),
-            data.get('genero', 'Masculino'),
-            data.get('responsavel', ''),
-            data.get('telefone', ''),
-            data.get('email', ''),
-            data.get('observacoes', '')
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'id': result['id'],
-            'mensagem': 'Aluno criado com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao criar aluno: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/alunos/<int:id>', methods=['GET'])
-def buscar_aluno(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT
-                a.*,
-                t.nome as turma_nome,
-                t.serie as turma_serie,
-                e.nome as escola_nome,
-                e.id as escola_id
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE a.id = %s
-        """, (id,))
-        aluno = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not aluno:
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        return jsonify(aluno)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar aluno: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/alunos/<int:id>', methods=['PUT'])
-def editar_aluno(id):
-    try:
-        data = request.json
-
-        if not data.get('nome'):
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-        if not data.get('escola_id'):
-            return jsonify({'erro': 'Escola é obrigatória'}), 400
-
-        if not data.get('turma_id'):
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM alunos WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE alunos
-            SET escola_id = %s,
-                turma_id = %s,
-                nome = %s,
-                matricula = %s,
-                numero_chamada = %s,
-                data_nascimento = %s,
-                genero = %s,
-                responsavel = %s,
-                telefone = %s,
-                email = %s,
-                observacoes = %s
-            WHERE id = %s
-            RETURNING id
-        """, (
-            data['escola_id'],
-            data['turma_id'],
-            data['nome'],
-            data.get('matricula', ''),
-            data.get('numero_chamada'),
-            data.get('data_nascimento'),
-            data.get('genero', 'Masculino'),
-            data.get('responsavel', ''),
-            data.get('telefone', ''),
-            data.get('email', ''),
-            data.get('observacoes', ''),
-            id
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result['id'],
-            'mensagem': 'Aluno atualizado com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao editar aluno: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/alunos/<int:id>', methods=['DELETE'])
-def excluir_aluno(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome FROM alunos WHERE id = %s", (id,))
-        aluno = cur.fetchone()
-        if not aluno:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        aluno_nome = aluno[1]
-
-        cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Aluno "{aluno_nome}" excluído com sucesso!'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao excluir aluno: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS E NÍVEIS)
-# ============================================
-
-@app.route('/api/provas', methods=['GET'])
-def listar_provas():
-    # Ignora qualquer parâmetro escola_id – provas não estão vinculadas a escolas
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT
-                p.id,
-                p.titulo,
-                p.serie,
-                p.disciplina,
-                p.bimestre,
-                p.data_prova,
-                p.valor_nota,
-                p.tipo_questoes,
-                p.quantidade_questoes,
-                p.gabarito,
-                p.bncc,
-                p.textos_questoes,
-                p.niveis,
-                p.created_at
-            FROM provas p
-            ORDER BY p.created_at DESC
-        """)
-        provas = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(provas)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar provas: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-@app.route('/api/provas', methods=['POST'])
-def criar_prova():
-    try:
-        data = request.json
-        titulo = data.get('titulo')
-        serie = data.get('serie')
-
-        if not titulo:
-            return jsonify({'erro': 'Título é obrigatório'}), 400
-        if not serie:
-            return jsonify({'erro': 'Série é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Verifica duplicata
-        cur.execute("""
-            SELECT id FROM provas
-            WHERE titulo = %s AND serie = %s
-        """, (titulo, serie))
-        if cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Já existe uma prova com este título para esta série'}), 400
-
-        bncc = data.get('bncc', [])
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-
-        textos_questoes = data.get('textos_questoes', [])
-        textos_validos = [str(t).strip() for t in textos_questoes if t]
-        niveis = data.get('niveis', [])
-        niveis_validos = [str(n).strip() for n in niveis if n]
-
-        cur.execute("""
-            INSERT INTO provas
-                (titulo, serie, disciplina, bimestre, data_prova,
-                 valor_nota, tipo_questoes, quantidade_questoes, gabarito,
-                 bncc, textos_questoes, niveis)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            titulo,
-            serie,
-            data.get('disciplina', ''),
-            data.get('bimestre', ''),
-            data.get('data_prova'),
-            data.get('nota_maxima', 10),
-            data.get('tipo_questoes', '4'),
-            data.get('quantidade_questoes', 20),
-            data.get('gabarito', []),
-            bncc_validos,
-            textos_validos,
-            niveis_validos
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'id': result['id'],
-            'mensagem': f'Prova "{titulo}" criada com sucesso para a série {serie}!',
-            'serie': serie
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao criar prova: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/provas/<int:id>', methods=['GET'])
-def buscar_prova(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT
-                id,
-                titulo,
-                serie,
-                disciplina,
-                bimestre,
-                data_prova,
-                valor_nota,
-                tipo_questoes,
-                quantidade_questoes,
-                gabarito,
-                bncc,
-                textos_questoes,
-                niveis,
-                created_at
-            FROM provas
-            WHERE id = %s
-        """, (id,))
-        prova = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not prova:
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        return jsonify(prova)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar prova: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/provas/<int:id>', methods=['PUT'])
-def editar_prova(id):
-    try:
-        data = request.json
-        titulo = data.get('titulo')
-        serie = data.get('serie')
-
-        if not titulo:
-            return jsonify({'erro': 'Título é obrigatório'}), 400
-
-        if not serie:
-            return jsonify({'erro': 'Série é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM provas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        bncc = data.get('bncc', [])
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-
-        textos_questoes = data.get('textos_questoes', [])
-        textos_validos = [str(t).strip() for t in textos_questoes if t]
-        niveis = data.get('niveis', [])
-        niveis_validos = [str(n).strip() for n in niveis if n]
-
-        cur.execute("""
-            UPDATE provas
-            SET titulo = %s,
-                serie = %s,
-                disciplina = %s,
-                bimestre = %s,
-                data_prova = %s,
-                valor_nota = %s,
-                tipo_questoes = %s,
-                quantidade_questoes = %s,
-                gabarito = %s,
-                bncc = %s,
-                textos_questoes = %s,
-                niveis = %s
-            WHERE id = %s
-            RETURNING id
-        """, (titulo, serie, data.get('disciplina', ''),
-              data.get('bimestre', ''), data.get('data_prova'),
-              data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
-              data.get('quantidade_questoes', 20), data.get('gabarito', []),
-              bncc_validos, textos_validos, niveis_validos, id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result['id'],
-            'mensagem': 'Prova atualizada com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao editar prova: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/provas/<int:id>', methods=['DELETE'])
-def excluir_prova(id):
-    """
-    Exclui uma prova específica (apenas quando o usuário seleciona para excluir).
-    """
-    logging.info(f"🔴 Tentativa de excluir prova ID {id} de {request.remote_addr}")
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (id,))
-        prova = cur.fetchone()
-        if not prova:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        prova_titulo = prova[1]
-
-        # Remove registros associados (histórico e correções de texto)
-        cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
-        cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
-        cur.execute("DELETE FROM provas WHERE id = %s", (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        logging.info(f"✅ Prova '{prova_titulo}' (ID {id}) excluída com sucesso.")
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Prova "{prova_titulo}" excluída com sucesso!'
-        })
-
-    except Exception as e:
-        conn.rollback()
-        logging.error(f"❌ Erro ao excluir prova ID {id}: {str(e)}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE USUÁRIOS (CRUD COMPLETO) - CORRIGIDO
-# ============================================
-
-@app.route('/api/usuarios', methods=['GET'])
-def listar_usuarios():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT id, nome, username, email, perfil, ativo, criado_em FROM usuarios ORDER BY id")
-            usuarios = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(usuarios)
-        except Exception as e:
-            print(f"Erro ao listar usuários: {e}")
-
-    resultado = []
-    for username, dados in USUARIOS_FIXOS.items():
-        resultado.append({
-            'id': 0,
-            'nome': dados['nome'],
-            'username': username,
-            'email': '',
-            'perfil': dados['perfil'],
-            'ativo': True,
-            'criado_em': datetime.now().isoformat()
-        })
-    return jsonify(resultado)
-
-@app.route('/api/usuarios', methods=['POST'])
-def criar_usuario():
-    try:
-        data = request.json
-        nome = data.get('nome')
-        username = data.get('username')
-        senha = data.get('senha')
-        email = data.get('email', '')
-        perfil = data.get('perfil', 'usuario')
-        ativo = data.get('ativo', True)
-
-        if not nome or not username or not senha:
-            return jsonify({'erro': 'Nome, usuário e senha são obrigatórios'}), 400
-
-        if len(senha) < 4:
-            return jsonify({'erro': 'Senha deve ter pelo menos 4 caracteres'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM usuarios WHERE username = %s", (username,))
-        if cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Usuário já existe'}), 400
-
-        cur.execute("""
-            INSERT INTO usuarios (nome, username, senha_hash, email, perfil, ativo)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (nome, username, senha, email, perfil, ativo))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'id': result['id'],
-            'mensagem': 'Usuário criado com sucesso'
-        })
-
-    except Exception as e:
-        print(f"Erro ao criar usuário: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTAS ADICIONAIS PARA USUÁRIOS (GET, PUT, DELETE)
-# ============================================
-
-@app.route('/api/usuarios/<int:id>', methods=['GET'])
-def buscar_usuario(id):
-    """Busca um usuário específico pelo ID."""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT id, nome, username, email, perfil, ativo, criado_em
-            FROM usuarios
-            WHERE id = %s
-        """, (id,))
-        usuario = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not usuario:
-            return jsonify({'erro': 'Usuário não encontrado'}), 404
-
-        return jsonify(usuario)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar usuário: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/usuarios/<int:id>', methods=['PUT'])
-def atualizar_usuario(id):
-    """Atualiza os dados de um usuário existente."""
-    try:
-        data = request.json
-        nome = data.get('nome')
-        username = data.get('username')
-        senha = data.get('senha')          # pode vir vazio
-        email = data.get('email', '')
-        perfil = data.get('perfil', 'usuario')
-        ativo = data.get('ativo', True)
-
-        if not nome or not username:
-            return jsonify({'erro': 'Nome e usuário são obrigatórios'}), 400
-
-        if len(username) < 3:
-            return jsonify({'erro': 'Usuário deve ter pelo menos 3 caracteres'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Verifica se o usuário existe
-        cur.execute("SELECT id FROM usuarios WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Usuário não encontrado'}), 404
-
-        # Verifica se o novo username já está em uso por outro usuário
-        cur.execute("SELECT id FROM usuarios WHERE username = %s AND id != %s", (username, id))
-        if cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Este nome de usuário já está em uso'}), 400
-
-        # Monta a query de atualização dinamicamente
-        update_fields = []
-        params = []
-
-        update_fields.append("nome = %s")
-        params.append(nome)
-
-        update_fields.append("username = %s")
-        params.append(username)
-
-        update_fields.append("email = %s")
-        params.append(email)
-
-        update_fields.append("perfil = %s")
-        params.append(perfil)
-
-        update_fields.append("ativo = %s")
-        params.append(ativo)
-
-        # Se a senha foi fornecida (não vazia), atualiza
-        if senha and len(senha) >= 4:
-            update_fields.append("senha_hash = %s")
-            params.append(senha)
-
-        params.append(id)  # para o WHERE
-
-        query = f"""
-            UPDATE usuarios
-            SET {', '.join(update_fields)}
-            WHERE id = %s
-            RETURNING id
-        """
-
-        cur.execute(query, params)
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result['id'],
-            'mensagem': 'Usuário atualizado com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao atualizar usuário: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/usuarios/<int:id>', methods=['DELETE'])
-def excluir_usuario(id):
-    """Exclui um usuário (apenas se não for o admin principal)."""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Busca o usuário
-        cur.execute("SELECT username FROM usuarios WHERE id = %s", (id,))
-        usuario = cur.fetchone()
-        if not usuario:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Usuário não encontrado'}), 404
-
-        username = usuario['username']
-
-        # Impede exclusão do admin principal
-        if username == 'admin':
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Não é possível excluir o usuário administrador principal'}), 400
-
-        # Exclui o usuário
-        cur.execute("DELETE FROM usuarios WHERE id = %s", (id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Usuário "{username}" excluído com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao excluir usuário: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE DASHBOARD
-# ============================================
-
-@app.route('/api/dashboard', methods=['GET'])
-def dashboard():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT COUNT(*) as total FROM escolas")
-            total_escolas = cur.fetchone()['total']
-            cur.execute("SELECT COUNT(*) as total FROM turmas")
-            total_turmas = cur.fetchone()['total']
-            cur.execute("SELECT COUNT(*) as total FROM alunos")
-            total_alunos = cur.fetchone()['total']
-            cur.execute("SELECT COUNT(*) as total FROM provas")
-            total_provas = cur.fetchone()['total']
-            cur.close()
-            conn.close()
-            return jsonify({
-                'total_escolas': total_escolas,
-                'total_turmas': total_turmas,
-                'total_alunos': total_alunos,
-                'total_provas': total_provas
-            })
-        except Exception as e:
-            print(f"Erro no dashboard: {e}")
-            traceback.print_exc()
-    return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
-
-@app.route('/api/dashboard/Conceito', methods=['GET'])
-def dashboard_conceito():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Agrupa por turma, calcula média de acertos e total de correções
-        cur.execute("""
-            SELECT
-                t.id as turma_id,
-                t.nome as turma_nome,
-                t.serie,
-                COUNT(DISTINCT a.id) as total_alunos,
-                COALESCE(AVG(h.acertos * 1.0 / NULLIF(h.total, 0)), 0) as media_porcentagem,
-                COALESCE(SUM(CASE WHEN h.id IS NOT NULL THEN 1 ELSE 0 END), 0) as total_correcoes
-            FROM turmas t
-            LEFT JOIN alunos a ON a.turma_id = t.id
-            LEFT JOIN historico h ON h.aluno_id = a.id
-            GROUP BY t.id, t.nome, t.serie
-            HAVING COUNT(DISTINCT a.id) > 0
-            ORDER BY t.nome
-        """)
-
-        turmas = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        resultado = []
-        for turma in turmas:
-            media_porcentagem = float(turma['media_porcentagem'] or 0)
-            total_correcoes = int(turma['total_correcoes'] or 0)
-
-            # Converte média de acertos para porcentagem (0-100)
-            porcentagem = round(media_porcentagem * 100) if media_porcentagem > 0 else 0
-
-            # Calcula conceito (opcional)
-            conceito = calcular_conceito(porcentagem)
-
-            resultado.append({
-                'id': turma['turma_id'],
-                'nome': turma['turma_nome'] or f"Turma {turma['turma_id']}",
-                'serie': turma['serie'],
-                'total_alunos': turma['total_alunos'],
-                'porcentagem': porcentagem,
-                'total_correcoes': total_correcoes,
-                'conceito': conceito
-            })
-
-        return jsonify(resultado)
-
-    except Exception as e:
-        print(f"❌ Erro em /api/dashboard/Conceito: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
-# ============================================
-
-@app.route('/api/gerar_gabarito', methods=['POST'])
-def gerar_gabarito():
-    try:
-        data = request.json
-        escola_id = data.get('escola_id')
-        turma_id = data.get('turma_id')
-        aluno_id = data.get('aluno_id')
-        prova_id = data.get('prova_id')
-        quantidade_questoes = data.get('quantidade_questoes', 20)
-
-        if not escola_id or not turma_id or not aluno_id or not prova_id:
-            return jsonify({'erro': 'Dados incompletos'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("""
-            SELECT a.nome, e.nome as escola_nome, t.nome as turma_nome, t.serie
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE a.id = %s
-        """, (aluno_id,))
-        aluno = cur.fetchone()
-
-        cur.execute("""
-            SELECT p.*
-            FROM provas p
-            WHERE p.id = %s
-        """, (prova_id,))
-        prova = cur.fetchone()
-
-        cur.close()
-        conn.close()
-
-        if not aluno or not prova:
-            return jsonify({'erro': 'Dados não encontrados'}), 404
-
-        nome_aluno = aluno['nome']
-        escola_nome = aluno['escola_nome'] or ''
-        turma_nome = aluno['turma_nome'] or ''
-        serie = prova.get('serie', '')
-        titulo_prova = prova.get('titulo', 'Prova')
-
-        tipo_questoes = int(prova.get('tipo_questoes', 4))
-        alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Cartão Resposta</title>
-            <style>
-                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-                body {{
-                    font-family: Arial, sans-serif;
-                    background: #f0f2f5;
-                    display: flex;
-                    justify-content: center;
-                    padding: 40px 20px;
-                }}
-                .container {{
-                    max-width: 900px;
-                    width: 100%;
-                    background: white;
-                    padding: 40px;
-                    border-radius: 16px;
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-                    border: 1px solid #e5e7eb;
-                }}
-                .header {{
-                    text-align: center;
-                    border-bottom: 2px solid #2563eb;
-                    padding-bottom: 20px;
-                    margin-bottom: 30px;
-                }}
-                .header h1 {{ font-size: 24px; color: #1e293b; }}
-                .header h2 {{ font-size: 18px; color: #475569; margin-top: 8px; }}
-                .header .sub {{ font-size: 14px; color: #64748b; margin-top: 8px; }}
-                .info-grid {{
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 12px;
-                    background: #f8fafc;
-                    padding: 16px 20px;
-                    border-radius: 10px;
-                    margin-bottom: 30px;
-                    border: 1px solid #e2e8f0;
-                }}
-                .info-grid .item {{ font-size: 14px; }}
-                .info-grid .label {{ color: #64748b; font-weight: 600; }}
-                .info-grid .value {{ color: #0f172a; font-weight: 700; }}
-                .questoes {{
-                    display: grid;
-                    grid-template-columns: repeat(5, 1fr);
-                    gap: 10px;
-                    margin: 20px 0 30px;
-                }}
-                .questao {{
-                    border: 2px solid #e2e8f0;
-                    border-radius: 10px;
-                    padding: 12px 8px;
-                    text-align: center;
-                    background: #fafafa;
-                    transition: all 0.2s;
-                }}
-                .questao:hover {{ border-color: #2563eb; background: #f0f7ff; }}
-                .questao .num {{
-                    font-size: 12px;
-                    font-weight: 700;
-                    color: #64748b;
-                    margin-bottom: 8px;
-                }}
-                .questao .opcoes {{
-                    display: flex;
-                    justify-content: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }}
-                .questao .opcao {{
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #1e293b;
-                }}
-                .questao .opcao input {{
-                    width: 18px;
-                    height: 18px;
-                    cursor: pointer;
-                    accent-color: #2563eb;
-                }}
-                .footer {{
-                    margin-top: 30px;
-                    padding-top: 20px;
-                    border-top: 1px solid #e2e8f0;
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 13px;
-                    color: #64748b;
-                }}
-                .btn-print {{
-                    background: #2563eb;
-                    color: white;
-                    border: none;
-                    padding: 12px 30px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: background 0.2s;
-                    margin-top: 20px;
-                    width: 100%;
-                }}
-                .btn-print:hover {{ background: #1d4ed8; }}
-                @media print {{
-                    body {{ background: white; padding: 0; }}
-                    .container {{ box-shadow: none; border: none; padding: 20px; }}
-                    .btn-print {{ display: none; }}
-                    .questao:hover {{ border-color: #e2e8f0; background: #fafafa; }}
-                }}
-                @media (max-width: 600px) {{
-                    .questoes {{ grid-template-columns: repeat(3, 1fr); }}
-                    .info-grid {{ grid-template-columns: 1fr; }}
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>📄 CARTÃO RESPOSTA</h1>
-                    <h2>{titulo_prova}</h2>
-                    <div class="sub">Leia atentamente e marque apenas uma alternativa por questão</div>
-                </div>
-
-                <div class="info-grid">
-                    <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
-                    <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
-                    <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
-                    <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
-                    <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
-                </div>
-
-                <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
-                    Marque com um X a alternativa correta
-                </div>
-
-                <div class="questoes">
-        """
-
-        for i in range(quantidade_questoes):
-            html += f"""
-                <div class="questao">
-                    <div class="num">Q{i+1}</div>
-                    <div class="opcoes">
-            """
-            for alt in alternativas:
-                html += f"""
-                        <label class="opcao">
-                            <input type="radio" name="q{i+1}" value="{alt}">
-                            {alt}
-                        </label>
-                """
-            html += """
-                    </div>
-                </div>
-            """
-
-        html += f"""
-                </div>
-
-                <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR CARTÃO</button>
-
-                <div class="footer">
-                    <span>Gerado pelo sistema CorrigePro</span>
-                    <span>{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+.correcao-manual-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 4px;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.correcao-manual-item .q-num {
+    font-size: 8px;
+    color: var(--text3);
+    font-weight: 700;
+}
+
+.correcao-manual-item .q-resposta {
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 0 4px;
+    min-height: 22px;
+    line-height: 22px;
+    width: 100%;
+}
+
+.correcao-manual-item .q-select {
+    width: 90%;
+    padding: 2px;
+    background: var(--bg);
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.correcao-manual-item .q-select:focus {
+    border-color: var(--blue);
+}
+
+.correcao-manual-item .q-select.correta {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green);
+}
+
+.correcao-manual-item .q-select.errada {
+    border-color: var(--red);
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red);
+}
+
+.correcao-manual-item .q-status {
+    font-size: 9px;
+    font-weight: 700;
+    min-height: 16px;
+}
+
+.correcao-manual-item .q-status.correta {
+    color: var(--green);
+}
+
+.correcao-manual-item .q-status.errada {
+    color: var(--red);
+}
+
+.correcao-manual-item .q-resposta-texto {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 4px;
+    font-size: 12px;
+}
+.correcao-manual-item .q-gabarito {
+    font-size: 10px;
+    color: var(--text3);
+}
+
+/* ============================================
+   CORREÇÃO MANUAL STANDALONE - DUAS LINHAS
+   ============================================ */
+.cm-grid-standalone {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    padding: 8px 4px 12px;
+    margin: 12px 0;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.cm-item-standalone {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 3px;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.cm-item-standalone .q-num {
+    font-size: 7px;
+    color: var(--text3);
+    font-weight: 700;
+}
+
+.cm-item-standalone .q-gabarito {
+    font-size: 7px;
+    color: var(--text3);
+    margin-bottom: 1px;
+}
+
+.cm-item-standalone .q-select-manual {
+    width: 92%;
+    padding: 2px;
+    background: var(--bg);
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.cm-item-standalone .q-select-manual:focus {
+    border-color: var(--blue);
+}
+
+.cm-item-standalone .q-select-manual.correta {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green);
+}
+
+.cm-item-standalone .q-select-manual.errada {
+    border-color: var(--red);
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red);
+}
+
+.cm-item-standalone .q-status-icon {
+    font-size: 11px;
+    min-height: 16px;
+}
+
+.cm-item-standalone .q-resposta-texto {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 4px;
+    font-size: 11px;
+}
+.cm-item-standalone .q-gabarito-texto {
+    font-size: 7px;
+    color: var(--text3);
+}
+
+.resumo-correcao { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:12px 0; }
+.resumo-correcao .item { text-align:center; background:var(--bg2); border-radius:8px; padding:8px; }
+.resumo-correcao .item .valor { font-size:24px; font-weight:800; }
+.resumo-correcao .item .valor.acertos { color:var(--green); }
+.resumo-correcao .item .valor.erros { color:var(--red); }
+.resumo-correcao .item .valor.nota { color:var(--blue); }
+.resumo-correcao .item .label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.3px; }
+
+.correcao-aluno-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+}
+.correcao-aluno-info .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.correcao-aluno-info .info-item .label {
+    font-size: 9px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+.correcao-aluno-info .info-item strong {
+    font-size: 14px;
+    color: var(--text);
+}
+
+.ai-criteria-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
+.ai-crit { background:var(--bg2); border-radius:8px; padding:10px 14px; }
+.ai-crit-name { font-size:11px; color:var(--text2); font-weight:600; }
+.ai-crit-val { font-size:20px; font-weight:800; color:var(--purple); }
+.ai-feedback-box { background:var(--bg2); border-radius:10px; padding:14px 18px; font-size:13px; line-height:1.6; border-left:3px solid var(--purple); }
+
+.progress { width:100%; height:6px; background:var(--bg2); border-radius:10px; overflow:hidden; margin-top:4px; }
+.progress-fill { height:100%; border-radius:10px; transition:width .8s ease; }
+.pf-green { background:linear-gradient(90deg,var(--green),#059669); }
+.pf-orange { background:linear-gradient(90deg,var(--orange),#d97706); }
+.pf-purple { background:linear-gradient(90deg,var(--purple),#7c3aed); }
+.pf-blue { background:linear-gradient(90deg,var(--blue),#2563eb); }
+.pf-pink { background:linear-gradient(90deg,var(--pink),#be185d); }
+.pf-teal { background:linear-gradient(90deg,var(--teal),#0d9488); }
+
+.del-modal { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; }
+.del-modal.show { display:flex; }
+.del-box { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px 36px; max-width:400px; width:100%; text-align:center; }
+.del-icon { font-size:52px; margin-bottom:10px; }
+.del-box h3 { font-size:20px; margin-bottom:8px; }
+.del-box p { color:var(--text2); font-size:14px; line-height:1.7; }
+.del-name { color:var(--red); font-weight:700; }
+.del-actions { display:flex; gap:12px; justify-content:center; margin-top:20px; }
+
+.toast-container { position:fixed; bottom:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:8px; max-width:360px; width:100%; }
+.toast { padding:12px 18px; border-radius:12px; font-size:14px; font-weight:500; animation:slideIn .4s ease; display:flex; align-items:center; gap:10px; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+.toast-info { background:var(--blue); color:#fff; }
+.toast-success { background:var(--green); color:#fff; }
+.toast-error { background:var(--red); color:#fff; }
+.toast-ai { background:var(--purple); color:#fff; }
+.toast-warning { background:var(--orange); color:#fff; }
+@keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+
+.spinner { width:40px; height:40px; border:4px solid var(--border); border-top:4px solid var(--purple); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ============================================
+   ESTILOS PARA A TABELA DE RESULTADOS
+   ============================================ */
+.disciplina-cell {
+    padding: 3px 4px;
+    text-align: center;
+    border-radius: 4px;
+    min-width: 60px;
+}
+.disciplina-cell .disciplina-tag {
+    font-size: 7px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    display: block;
+    margin-bottom: 2px;
+}
+.disciplina-cell .acertos-erros {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.disciplina-cell .acertos-erros .acertos {
+    color: var(--green);
+}
+.disciplina-cell .acertos-erros .erros {
+    color: var(--red);
+}
+.disciplina-cell .acertos-erros .separador {
+    color: var(--text3);
+    font-weight: 300;
+}
+.disciplina-cell .conceito {
+    display: block;
+    margin-top: 2px;
+    font-size: 8px;
+    font-weight: 700;
+}
+.tag-portugues { color: #3b82f6; }
+.tag-matematica { color: #10b981; }
+.tag-producao { color: #8b5cf6; }
+.tag-ch { color: #f59e0b; }
+.tag-cn { color: #14b8a6; }
+
+.col-disciplina {
+    min-width: 75px;
+    padding: 4px 2px;
+}
+.col-escola, .col-turma {
+    min-width: 80px;
+    font-size: 10px;
+}
+
+/* ============================================
+   ESTILOS PARA O HISTÓRICO DO ALUNO
+   ============================================ */
+.historico-disciplina {
+    min-width: 70px;
+    padding: 3px 4px;
+}
+.historico-disciplina .disciplina-tag-sm {
+    font-size: 7px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    display: block;
+    margin-bottom: 2px;
+}
+.historico-disciplina .acertos-erros-sm {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+}
+.historico-disciplina .acertos-erros-sm .acertos {
+    color: var(--green);
+}
+.historico-disciplina .acertos-erros-sm .erros {
+    color: var(--red);
+}
+.historico-disciplina .acertos-erros-sm .separador {
+    color: var(--text3);
+    font-weight: 300;
+}
+.historico-disciplina .conceito-sm {
+    display: block;
+    margin-top: 2px;
+    font-size: 7px;
+    font-weight: 700;
+}
+.tag-portugues-sm { color: #3b82f6; }
+.tag-matematica-sm { color: #10b981; }
+.tag-producao-sm { color: #8b5cf6; }
+.tag-ch-sm { color: #f59e0b; }
+.tag-cn-sm { color: #14b8a6; }
+
+/* ============================================
+   ESTILOS PARA O CARD DESEMPENHO POR HABILIDADES
+   ============================================ */
+.habilidades-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-top: 12px;
+}
+.habilidade-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: all 0.3s;
+    max-height: 450px;
+    overflow-y: auto;
+}
+.habilidade-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+}
+.habilidade-card .disciplina-titulo {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.habilidade-card .disciplina-titulo .icone {
+    font-size: 20px;
+}
+.habilidade-card .questao-item {
+    display: grid;
+    grid-template-columns: 30px 28px 28px 1fr;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 11px;
+}
+.habilidade-card .questao-item:last-child {
+    border-bottom: none;
+}
+.habilidade-card .questao-item .q-num {
+    font-weight: 600;
+    color: var(--text2);
+    text-align: center;
+}
+.habilidade-card .questao-item .q-resposta {
+    font-weight: 700;
+    text-align: center;
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
+}
+.habilidade-card .questao-item .q-gabarito {
+    font-weight: 700;
+    text-align: center;
+    color: var(--text3);
+    font-size: 10px;
+}
+.habilidade-card .questao-item .q-status {
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-align: center;
+}
+.habilidade-card .questao-item .q-status.acertou {
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.15);
+}
+.habilidade-card .questao-item .q-status.errou {
+    color: var(--red);
+    background: rgba(239, 68, 68, 0.15);
+}
+.habilidade-card .resumo-habilidade {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text2);
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.habilidade-card .resumo-habilidade .acertos {
+    color: var(--green);
+    font-weight: 700;
+}
+.habilidade-card .resumo-habilidade .erros {
+    color: var(--red);
+    font-weight: 700;
+}
+.habilidade-card .resumo-habilidade .nota {
+    color: var(--blue);
+    font-weight: 700;
+}
+
+/* ============================================
+   ESTILOS PARA O DESEMPENHO DO ALUNO (NOVA ABA) - ATUALIZADO
+   ============================================ */
+.desempenho-resumo {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.desempenho-resumo .item {
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+.desempenho-resumo .item .valor {
+    font-size: 28px;
+    font-weight: 800;
+}
+.desempenho-resumo .item .label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.desempenho-resumo .item .valor.green { color: var(--green); }
+.desempenho-resumo .item .valor.red { color: var(--red); }
+.desempenho-resumo .item .valor.blue { color: var(--blue); }
+.desempenho-resumo .item .valor.purple { color: var(--purple); }
+
+/* Estilos para o card único de disciplina */
+.questao-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 2px;
+    text-align: center;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    transition: border-color 0.2s;
+}
+.questao-item .q-num {
+    font-size: 7px;
+    color: var(--text3);
+    font-weight: 700;
+}
+.questao-item .q-resp {
+    font-weight: 700;
+    font-size: 12px;
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 0 4px;
+    line-height: 20px;
+    width: 100%;
+}
+.questao-item .q-gab {
+    font-size: 7px;
+    color: var(--text3);
+}
+.questao-item .q-status-text {
+    font-size: 7px;
+    font-weight: 700;
+    display: block;
+    line-height: 1.2;
+    margin-top: 1px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    width: 100%;
+}
+.questao-item.acertou {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.08);
+}
+.questao-item.acertou .q-resp {
+    color: var(--green);
+}
+.questao-item.acertou .q-status-text {
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.12);
+}
+.questao-item.errou {
+    border-color: var(--red);
+    background: rgba(239, 68, 68, 0.08);
+}
+.questao-item.errou .q-resp {
+    color: var(--red);
+}
+.questao-item.errou .q-status-text {
+    color: var(--red);
+    background: rgba(239, 68, 68, 0.12);
+}
+.questao-item .q-status-text:empty {
+    display: none;
+}
+
+.desempenho-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+}
+.desempenho-info strong { color: var(--text); }
+
+/* ============================================
+   RESPONSIVIDADE
+   ============================================ */
+@media (max-width:900px) {
+    .menu-toggle { display:flex; align-items:center; justify-content:center; }
+    .sidebar { transform:translateX(-100%); width:280px; }
+    .content { margin-left:0; padding:16px; padding-top:70px; }
+    .stats-grid { grid-template-columns:1fr 1fr; }
+    .g2 { grid-template-columns:1fr; }
+    .form-row { grid-template-columns:1fr; }
+    .form-row.c3 { grid-template-columns:1fr; }
+    .form-row.c4 { grid-template-columns:1fr; }
+    .form-row.c5 { grid-template-columns:1fr; }
+    .conceito-graficos { grid-template-columns:1fr; }
+    .ai-hero { flex-direction:column; text-align:center; }
+    .ai-hero-actions { justify-content:center; }
+    .correcao-aluno-info { grid-template-columns:1fr 1fr; }
+    .ai-criteria-grid { grid-template-columns:1fr; }
+    .page-header { flex-direction:column; align-items:stretch; }
+    .page-actions { flex-wrap:wrap; }
+    .search-wrap input { width:100%; }
+    .search-wrap { flex:1; }
+    .modal { padding:20px; }
+    .resumo-correcao { grid-template-columns:1fr; }
+    .correcao-manual-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    .cm-grid-standalone {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    .disciplina-cell {
+        min-width: 50px;
+        padding: 2px 3px;
+    }
+    .disciplina-cell .acertos-erros {
+        font-size: 10px;
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+    .col-disciplina {
+        min-width: 60px;
+    }
+    .col-escola, .col-turma {
+        min-width: 60px;
+        font-size: 9px;
+    }
+    .historico-disciplina {
+        min-width: 55px;
+        padding: 2px 3px;
+    }
+    .historico-disciplina .acertos-erros-sm {
+        font-size: 9px;
+        gap: 2px;
+        flex-wrap: wrap;
+    }
+    .habilidades-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .habilidade-card {
+        max-height: 350px;
+    }
+    .desempenho-resumo {
+        grid-template-columns: 1fr 1fr;
+    }
+    .desempenho-info {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+@media (max-width:480px) {
+    .stats-grid { grid-template-columns:1fr; }
+    .login-card { padding:24px 18px; margin:10px; }
+    .cam-container { padding:14px; }
+    .gab-grid { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); }
+    .modal { padding:16px; }
+    .correcao-aluno-info { grid-template-columns:1fr; }
+    .correcao-manual-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    .cm-grid-standalone {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    .disciplina-cell {
+        min-width: 40px;
+        padding: 2px 2px;
+    }
+    .disciplina-cell .acertos-erros {
+        font-size: 9px;
+        gap: 2px;
+        flex-direction: column;
+        align-items: center;
+    }
+    .disciplina-cell .conceito {
+        font-size: 7px;
+    }
+    .col-disciplina {
+        min-width: 50px;
+    }
+    .col-escola, .col-turma {
+        min-width: 50px;
+        font-size: 8px;
+    }
+    .historico-disciplina {
+        min-width: 45px;
+        padding: 2px 2px;
+    }
+    .historico-disciplina .acertos-erros-sm {
+        font-size: 8px;
+        gap: 2px;
+        flex-direction: column;
+        align-items: center;
+    }
+    .historico-disciplina .conceito-sm {
+        font-size: 6px;
+    }
+    .habilidades-grid {
+        grid-template-columns: 1fr;
+    }
+    .habilidade-card {
+        max-height: 300px;
+    }
+    .habilidade-card .questao-item {
+        grid-template-columns: 25px 22px 22px 1fr;
+        font-size: 10px;
+    }
+    .desempenho-resumo {
+        grid-template-columns: 1fr;
+    }
+    .desempenho-info {
+        grid-template-columns: 1fr;
+    }
+    .questao-item .q-resp {
+        font-size: 10px;
+    }
+    .questao-item .q-status-text {
+        font-size: 6px;
+    }
+}
+
+/* ============================================
+   ══ REGRAS PARA IMPRESSÃO ══
+   ============================================ */
+@media print {
+    .no-print,
+    .menu-toggle,
+    .menu-overlay,
+    .sidebar,
+    .sb-nav,
+    .sb-footer,
+    .sb-brand,
+    .sb-user,
+    .sb-logout,
+    .page-actions .btn,
+    .page-actions .btn-outline,
+    .page-actions .btn-green,
+    .search-wrap,
+    .form-row:not(.print-row),
+    .form-row .btn,
+    .btn-group .btn:not(.no-print),
+    .card-header .btn-group,
+    .card-header .btn,
+    .modal-overlay,
+    .del-modal,
+    .toast-container,
+    .cam-modal,
+    .upload-zone,
+    .tab-nav,
+    .tab-c .btn,
+    .btn-full,
+    .btn-lg,
+    .ai-feature-btn,
+    .ai-hero-actions,
+    .afb-blue,
+    .afb-green,
+    .afb-purple,
+    .afb-red,
+    #menuToggle,
+    #menuOverlay,
+    .login-screen {
+        display: none !important;
+    }
+    .page { display: none !important; }
+    .page.active { display: block !important; animation: none !important; padding: 0 !important; margin: 0 !important; }
+    body { background: #ffffff !important; color: #000000 !important; margin: 0 !important; padding: 0 !important; font-size: 10pt !important; line-height: 1.4 !important; }
+    #app { display: block !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }
+    .content { padding: 12px !important; margin: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; width: 100% !important; box-sizing: border-box !important; }
+    .card { background: #ffffff !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 10px 12px !important; margin-bottom: 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .card-header { border-bottom: 1px solid #dddddd !important; padding-bottom: 6px !important; margin-bottom: 8px !important; }
+    .card-title { color: #000000 !important; font-size: 12pt !important; }
+    .stats-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .stat-card { background: #f9f9f9 !important; border: 1px solid #dddddd !important; border-radius: 4px !important; box-shadow: none !important; padding: 8px 10px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .stat-val { font-size: 18pt !important; color: #000000 !important; }
+    .stat-label { color: #555555 !important; font-size: 8pt !important; }
+    .stat-icon { display: none !important; }
+    .table-wrap { border: 1px solid #dddddd !important; border-radius: 4px !important; overflow: visible !important; margin-bottom: 8px !important; }
+    table { border-collapse: collapse !important; width: 100% !important; font-size: 8pt !important; color: #000000 !important; }
+    thead { background: #f5f5f5 !important; }
+    th { background: #f0f0f0 !important; color: #000000 !important; font-weight: 700 !important; border: 1px solid #cccccc !important; padding: 3px 3px !important; text-align: center !important; font-size: 6pt !important; text-transform: uppercase !important; letter-spacing: 0.2px !important; }
+    td { border: 1px solid #cccccc !important; padding: 3px 3px !important; color: #000000 !important; background: #ffffff !important; text-align: center !important; font-size: 7pt !important; }
+    tbody tr:hover td { background: #ffffff !important; }
+    tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .badge { border: 1px solid #999999 !important; background: #f0f0f0 !important; color: #000000 !important; padding: 1px 6px !important; font-size: 6pt !important; border-radius: 10px !important; font-weight: 700 !important; text-transform: uppercase !important; }
+    .badge-green { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+    .badge-red { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+    .badge-orange { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+    .badge-purple { border-color: #6f42c1 !important; background: #e8d4ff !important; color: #4a148c !important; }
+    .badge-blue { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+    .badge-gray { border-color: #6c757d !important; background: #e9ecef !important; color: #495057 !important; }
+    .badge-pink { border-color: #ec4899 !important; background: #fce4ec !important; color: #880e4f !important; }
+    .badge-teal { border-color: #14b8a6 !important; background: #d4f4f0 !important; color: #0d6e5a !important; }
+    .badge-conceito-inicial { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; }
+    .badge-conceito-basico { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; }
+    .badge-conceito-proficiente { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; }
+    .badge-conceito-avancado { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+    .badge-conceito-inicial-sm { border-color: #dc3545 !important; background: #f8d7da !important; color: #721c24 !important; font-size: 6pt !important; }
+    .badge-conceito-basico-sm { border-color: #fd7e14 !important; background: #fff3cd !important; color: #856404 !important; font-size: 6pt !important; }
+    .badge-conceito-proficiente-sm { border-color: #007bff !important; background: #cce5ff !important; color: #004085 !important; font-size: 6pt !important; }
+    .badge-conceito-avancado-sm { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; font-size: 6pt !important; }
+    .progress { background: #e9ecef !important; border: 1px solid #cccccc !important; border-radius: 4px !important; height: 10px !important; overflow: hidden !important; }
+    .progress-fill { border-radius: 4px !important; background: #007bff !important; }
+    .pf-green { background: #28a745 !important; }
+    .pf-orange { background: #fd7e14 !important; }
+    .pf-purple { background: #6f42c1 !important; }
+    .pf-blue { background: #007bff !important; }
+    .pf-pink { background: #ec4899 !important; }
+    .pf-teal { background: #14b8a6 !important; }
+    .chart-bars { height: 80px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .chart-bar-val { font-size: 7pt !important; color: #000000 !important; }
+    .chart-bar-lbl { font-size: 6pt !important; color: #555555 !important; }
+    .conceito-graficos { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+    #conceito-barras .progress { height: 12px !important; }
+    #conceito-barras .progress-fill { height: 12px !important; border-radius: 4px !important; }
+    #donut-container { transform: scale(0.8) !important; }
+    #donut-container canvas { max-width: 140px !important; max-height: 140px !important; }
+    .page-header { margin-bottom: 12px !important; padding-bottom: 8px !important; border-bottom: 2px solid #333333 !important; }
+    .page-title { font-size: 14pt !important; color: #000000 !important; }
+    .page-sub { color: #555555 !important; font-size: 9pt !important; }
+    @page { size: A4 landscape !important; margin: 10mm 8mm !important; }
+    .card { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .card.allow-break { page-break-inside: auto !important; break-inside: auto !important; }
+    .page-break { page-break-after: always !important; break-after: page !important; }
+    img { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .toast-container { display: none !important; }
+    .print-header { display: block !important; text-align: center !important; margin-bottom: 15px !important; padding-bottom: 10px !important; border-bottom: 2px solid #333333 !important; }
+    .print-header h2 { font-size: 14pt !important; margin: 0 !important; color: #000000 !important; }
+    .print-header p { font-size: 9pt !important; color: #555555 !important; margin: 3px 0 0 0 !important; }
+    .questao-item { background: #f8fafc !important; border-color: #ccc !important; }
+    .questao-item.acertou { border-color: #28a745 !important; background: #d4edda !important; }
+    .questao-item.acertou .q-resp { color: #155724 !important; }
+    .questao-item.acertou .q-status-text { color: #155724 !important; background: #d4edda !important; }
+    .questao-item.errou { border-color: #dc3545 !important; background: #f8d7da !important; }
+    .questao-item.errou .q-resp { color: #721c24 !important; }
+    .questao-item.errou .q-status-text { color: #721c24 !important; background: #f8d7da !important; }
+    .desempenho-resumo .item { background: #f1f5f9 !important; border-color: #ccc !important; }
+    .desempenho-resumo .item .valor.green { color: #155724 !important; }
+    .desempenho-resumo .item .valor.red { color: #721c24 !important; }
+    .desempenho-resumo .item .valor.blue { color: #004085 !important; }
+    .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
+    .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+}
+.print-only { display: none !important; }
+@media print { .print-only { display: block !important; } }
+    </style>
+</head>
+<body>
+
+    <!-- ══════════ BOTÃO MENU HAMBÚRGUER ══════════ -->
+    <button class="menu-toggle no-print" id="menuToggle" onclick="toggleMenu()">☰</button>
+    <div class="menu-overlay no-print" id="menuOverlay" onclick="toggleMenu()"></div>
+
+    <!-- ══════════ LOGIN ══════════ -->
+    <div id="login-screen">
+        <div class="login-bg">
+            <div class="login-blob lb1"></div>
+            <div class="login-blob lb2"></div>
+            <div class="login-blob lb3"></div>
+        </div>
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="l-icon">
+  <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="width: 240px; height: 100px;">
+</div>
+                <h1>CorrigePro</h1>
+                <p>Sistema Inteligente de Correção de Provas</p>
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+                    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Prefeitura Municipal de</div>
+                    <div style="font-size:15px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.3px;">São Sebastião da Boa Vista</div>
+                    <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin:4px 0 2px;">Secretaria Municipal de Educação</div>
+                    <div style="font-size:13px;font-weight:800;background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;margin-top:4px;">SISAM 2026</div>
                 </div>
             </div>
-        </body>
-        </html>
-        """
+            <div class="login-tabs no-print">
+                <button class="login-tab active" onclick="setLTab('admin')">🛠️ Administrador</button>
+                <button class="login-tab" onclick="setLTab('user')">👤 Usuário</button>
+            </div>
+            <div class="lf-group"><label>Usuário</label><input id="lu" class="lf-input" type="text" placeholder="Digite seu usuário" autocomplete="off"></div>
+            <div class="lf-group"><label>Senha</label><input id="lp" class="lf-input" type="password" placeholder="••••••••"></div>
+            <button class="btn-login" onclick="doLogin()">Entrar no Sistema →</button>
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;">Desenvolvido por</div>
+                <div style="font-size:14px;font-weight:800;background:var(--grad-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;">Professor Nixo Auli & Jorge Antonio</div>
+            </div>
+        </div>
+    </div>
 
-        return html, 200, {'Content-Type': 'text/html'}
+    <!-- ══════════ APP ══════════ -->
+    <div id="app">
+        <div class="sidebar no-print" id="sidebar">
+            <div class="sb-brand">
+                <div class="sb-logo">🎓</div>
+                <div class="sb-brand-name">Corrige<span>Pro</span></div>
+            </div>
+            <div class="sb-nav">
+                <!-- Menu para ADMIN e USUÁRIO (compartilhado) -->
+                <div id="adm-sb">
+                    <div class="sb-section">Principal</div>
+                    <div class="sb-item active" onclick="go('dashboard')" data-p="dashboard"><span class="sb-ico">🏠</span> Dashboard</div>
+                    <div class="sb-section">Cadastros</div>
+                    <div class="sb-item" onclick="go('escola')" data-p="escola"><span class="sb-ico">🏫</span> Escolas</div>
+                    <div class="sb-item" onclick="go('turmas')" data-p="turmas"><span class="sb-ico">👥</span> Turmas</div>
+                    <div class="sb-item" onclick="go('alunos')" data-p="alunos"><span class="sb-ico">🎒</span> Alunos</div>
+                    <div class="sb-item" onclick="go('lista-turma')" data-p="lista-turma"><span class="sb-ico">📋</span> Lista por Turma</div>
+                    <div class="sb-section">Avaliações</div>
+                    <div class="sb-item" onclick="go('prova-upload')" data-p="prova-upload"><span class="sb-ico">📤</span> Cadastrar Prova</div>
+                    <div class="sb-item" onclick="go('provas')" data-p="provas"><span class="sb-ico">📑</span> Provas</div>
+                    <div class="sb-item" onclick="go('gabarito')" data-p="gabarito"><span class="sb-ico">✅</span> Gabarito</div>
+                    <div class="sb-item" onclick="go('gabaritos')" data-p="gabaritos"><span class="sb-ico">📋</span> Gabaritos</div>
+                    <div class="sb-section">IA & Correção</div>
+                    <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia">
+                        <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
+                    </div>
+                    <div class="sb-item" onclick="go('correcao-texto')" data-p="correcao-texto">
+                        <span class="sb-ico">📝</span> Texto com IA <span class="sb-badge">IA</span>
+                    </div>
+                    <div class="sb-item" onclick="abrirCamera()">
+                        <span class="sb-ico">📱</span> Câmera do Celular
+                    </div>
+                    <div class="sb-item" onclick="abrirArquivo()">
+                        <span class="sb-ico">📂</span> Escolher Arquivo
+                    </div>
+                    <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
+                        <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
+                    </div>
+                    <div class="sb-section">Resultados</div>
+                    <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
+                    <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
+                    <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
+                        <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
+                    </div>
+                    <div class="sb-section">Sistema</div>
+                    <!-- Item Configurações com ID único para ocultar quando usuário -->
+                    <div class="sb-item" id="menu-config" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
+                </div>
+                <!-- Menu específico para usuário (oculto, pois usaremos o mesmo menu acima) -->
+                <div id="usr-sb" style="display:none;">
+                    <!-- este bloco permanece vazio ou pode ser removido, pois não será usado -->
+                </div>
+            </div>
+            <div class="sb-footer">
+                <div class="sb-user">
+                    <div class="sb-avatar" id="sb-avatar">A</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="sb-uname" id="sb-uname">Administrador</div>
+                        <div class="sb-urole" id="sb-urole">Administrador do Sistema</div>
+                    </div>
+                </div>
+                <button class="sb-logout" onclick="doLogout()">🚪 Sair do Sistema</button>
+            </div>
+        </div>
 
-    except Exception as e:
-        print(f"❌ Erro ao gerar cartão: {e}")
-        return jsonify({'erro': str(e)}), 500
+        <div class="content">
+            <!-- ========== DASHBOARD ========== -->
+            <div class="page active" id="page-dashboard">
+                <div class="page-header">
+                    <div><div class="page-title">🏠 Dashboard</div><p class="page-sub">Visão geral do sistema</p></div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="abrirCamera()">📱 Câmera</button>
+                        <button class="btn btn-primary" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+                    </div>
+                </div>
 
-# ============================================
-# ══ ROTA DE BACKUP DO BANCO DE DADOS ══
-# ============================================
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Conceito</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-dash"></span></p>
+                </div>
 
-@app.route('/api/backup', methods=['GET'])
-def backup_database():
-    """
-    Exporta todas as tabelas do banco para um arquivo ZIP contendo um JSON.
-    Requer uma chave de segurança (BACKUP_KEY) para evitar acesso indevido.
-    """
-    # Verifica a chave de segurança (pode ser passada como query string ou cabeçalho)
-    backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
-    expected_key = os.getenv('BACKUP_KEY', 'backup123')
+                <div class="stats-grid">
+                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
+                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
+                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
+                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
+                </div>
 
-    if not backup_key or backup_key != expected_key:
-        logging.warning(f"⚠️ Tentativa de backup com chave inválida: {backup_key}")
-        return jsonify({'erro': 'Não autorizado. Chave de backup inválida.'}), 403
+                <div class="ai-hero no-print">
+                    <div class="ai-hero-icon">🤖</div>
+                    <div class="ai-hero-text"><h3>Ferramentas de Inteligência Artificial</h3><p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p></div>
+                    <div class="ai-hero-actions">
+                        <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+                        <button class="btn btn-outline" onclick="go('correcao-texto')">📝 Correção de Texto</button>
+                    </div>
+                </div>
 
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;" class="no-print">
+                    <div class="ai-feature-btn afb-purple" onclick="go('corrigir-ia')"><div class="af-ico">🤖</div><div class="af-title">Corrigir com IA</div><div class="af-sub">Detecção automática</div></div>
+                    <div class="ai-feature-btn afb-blue" onclick="abrirCamera()"><div class="af-ico">📱</div><div class="af-title">Câmera do Celular</div><div class="af-sub">Scan em tempo real</div></div>
+                    <div class="ai-feature-btn afb-green" onclick="abrirArquivo()"><div class="af-ico">📂</div><div class="af-title">Escolher Arquivo</div><div class="af-sub">Imagem do cartão</div></div>
+                    <div class="ai-feature-btn afb-red" onclick="go('correcao-texto')"><div class="af-ico">📝</div><div class="af-title">Correção de Texto</div><div class="af-sub">Coesão e coerência</div></div>
+                </div>
 
-        # Lista de tabelas a serem exportadas (ordem respeita dependências)
-        tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto']
-        data = {}
+                <!-- Card Últimas Correções -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">⚡ Últimas Correções</div><span class="badge badge-green">● Ao Vivo</span></div>
+                    <div class="table-wrap"><table><thead><tr><th>Aluno</th><th>Prova</th><th>Porcentagem</th><th>Conceito</th></tr></thead><tbody id="ultimas-correcoes"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div>
+                </div>
+            </div>
 
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+            <!-- ========== ESCOLA ========== -->
+            <div class="page" id="page-escola">
+                <div class="page-header">
+                    <div><div class="page-title">🏫 Escolas</div><p class="page-sub">Gerencie as unidades de ensino cadastradas</p></div>
+                    <div class="page-actions no-print">
+                        <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar escola..." oninput="filtrarTabela(this,'tb-escola')"></div>
+                        <button class="btn btn-primary" onclick="openM('m-escola')">+ Nova Escola</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>#</th><th>Nome da Escola</th><th>Município</th><th>INEP</th><th>Diretor(a)</th><th>Turmas</th><th>Alunos</th><th>Ações</th></tr></thead>
+                        <tbody id="tb-escola"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
+                    </table></div>
+                </div>
+            </div>
 
-        for table in tables:
-            try:
-                cur.execute(f"SELECT * FROM {table}")
-                rows = cur.fetchall()
-                data[table] = rows
-                logging.info(f"📦 Tabela '{table}': {len(rows)} registros exportados.")
-            except Exception as e:
-                logging.warning(f"⚠️ Tabela '{table}' não encontrada ou erro: {e}")
-                data[table] = []
+            <!-- ========== TURMAS ========== -->
+            <div class="page" id="page-turmas">
+                <div class="page-header">
+                    <div><div class="page-title">👥 Turmas</div><p class="page-sub">1º Ano ao 9º Ano do Ensino Fundamental</p></div>
+                    <div class="page-actions no-print">
+                        <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar turma..." oninput="filtrarTabela(this,'tb-turmas')"></div>
+                        <select class="form-control" id="filtro-escola-turmas" style="width:160px;padding:8px 11px;font-size:12px;" onchange="aplicarFiltrosTurmas()">
+                            <option value="">Todas as escolas</option>
+                        </select>
+                        <select class="form-control" id="filtro-serie-turmas" style="width:120px;padding:8px 11px;font-size:12px;" onchange="aplicarFiltrosTurmas()">
+                            <option value="">Todas as séries</option>
+                            <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+                            <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+                            <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="aplicarFiltrosTurmas()">🔍 Filtrar</button>
+                        <button class="btn btn-outline" onclick="limparFiltrosTurmas()">✕ Limpar</button>
+                        <button class="btn btn-primary" onclick="openM('m-turma')">+ Nova Turma</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>#</th><th>Turma</th><th>Série</th><th>Turno</th><th>Escola</th><th>Professor(a)</th><th>Alunos</th><th>Ações</th></tr></thead>
+                        <tbody id="tb-turmas"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
+                    </table></div>
+                </div>
+            </div>
 
-        cur.close()
-        conn.close()
+            <!-- ========== LISTA POR TURMA ========== -->
+            <div class="page" id="page-lista-turma">
+                <div class="page-header">
+                    <div><div class="page-title">📋 Lista de Alunos por Turma</div><p class="page-sub">Emissão oficial da lista de chamada</p></div>
+                    <div class="page-actions no-print"><button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button><button class="btn btn-green">📥 Exportar PDF</button></div>
+                </div>
+                <div class="card no-print">
+                    <div class="form-row c3">
+                        <div class="form-group"><label class="form-label">Escola</label><select class="form-control" id="lista-escola" onchange="carregarTurmasLista(this.value)"><option value="">Selecione a escola</option></select></div>
+                        <div class="form-group"><label class="form-label">Série</label><select class="form-control" id="lista-serie"><option value="">Todas</option><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div>
+                        <div class="form-group"><label class="form-label">Turma</label><select class="form-control" id="lista-turma"><option value="">Selecione a turma</option></select></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="gerarListaTurma()">🔍 Gerar Lista</button>
+                </div>
+                <div class="card" id="lista-resultado"><div style="text-align:center;padding:20px;color:var(--text3);">Selecione os filtros e clique em "Gerar Lista"</div></div>
+            </div>
 
-        # Converte para JSON com tratamento de datas (default=str)
-        json_str = json.dumps(data, default=str, indent=2, ensure_ascii=False)
+            <!-- ========== ALUNOS ========== -->
+            <div class="page" id="page-alunos">
+                <div class="page-header">
+                    <div><div class="page-title">🎒 Alunos</div><p class="page-sub">1º ao 9º Ano — Filtrar por escola, turma e série</p></div>
+                    <div class="page-actions no-print">
+                        <select class="form-control" style="width:160px;padding:8px 11px;font-size:12px;" id="filtro-escola-alunos" onchange="filtrarAlunosPorEscola(this.value)">
+                            <option value="">Todas as escolas</option>
+                        </select>
+                        <select class="form-control" style="width:140px;padding:8px 11px;font-size:12px;" id="filtro-turma-alunos" onchange="carregarAlunos(document.getElementById('filtro-escola-alunos').value)">
+                            <option value="">Todas as turmas</option>
+                        </select>
+                        <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" placeholder="Buscar aluno..." oninput="filtrarTabela(this,'tb-alunos')"></div>
+                        <select class="form-control" style="width:120px;padding:8px 11px;font-size:12px;" id="filtro-serie-alunos" onchange="filtrarAlunosPorSerie(this.value)">
+                            <option value="">Todas séries</option>
+                            <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+                            <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+                            <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+                        </select>
+                        <button class="btn btn-green" onclick="go('lista-turma')">📋 Lista</button>
+                        <button class="btn btn-outline no-print" onclick="imprimirAlunos()">🖨️ Imprimir</button>
+                        <button class="btn btn-primary" onclick="openM('m-aluno')">+ Novo Aluno</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>Nº</th><th>Matrícula</th><th>Nome Completo</th><th>Série</th><th>Turma</th><th>Escola</th><th>Data Nasc.</th><th>Ações</th></tr></thead>
+                        <tbody id="tb-alunos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody>
+                    </table></div>
+                </div>
+            </div>
 
-        # Cria um arquivo ZIP em memória
-        memory_file = io.BytesIO()
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        json_filename = f"backup_{timestamp}.json"
-        zip_filename = f"backup_{timestamp}.zip"
+            <!-- ========== CADASTRAR PROVA ========== -->
+            <div class="page" id="page-prova-upload">
+                <div class="page-header"><div><div class="page-title">📤 Cadastrar Prova</div><p class="page-sub">Configure os parâmetros da avaliação</p></div></div>
+                <div class="g2 no-print">
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">📝 Informações</div></div>
+                        <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
+                        <div class="form-row"><div class="form-group"><label class="form-label">Disciplina <span class="req">*</span></label>
+                            <select class="form-control" id="prova-disciplina" onchange="atualizarInfoAlts()">
+                                <option value="Matemática">Matemática</option>
+                                <option value="Português">Português</option>
+                                <option value="Produção de Texto">Produção de Texto</option>
+                                <option value="Ciências Humanas">Ciências Humanas</option>
+                                <option value="Ciências Naturais">Ciências Naturais</option>
+                                <option value="História">História</option>
+                                <option value="Geografia">Geografia</option>
+                                <option value="Inglês">Inglês</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label">Bimestre</label>
+                            <select class="form-control" id="prova-bimestre">
+                                <option value="1º e 2º bimestre" selected>1º e 2º bimestre</option>
+                                <option value="3º e 4º bimestre">3º e 4º bimestre</option>
+                            </select>
+                        </div></div>
+                        <div class="form-row">
+                            <div class="form-group"><label class="form-label">Série <span class="req">*</span></label>
+                                <select class="form-control" id="prova-serie" onchange="atualizarInfoAlts()">
+                                    <option value="1º Ano">1º Ano</option>
+                                    <option value="2º Ano">2º Ano</option>
+                                    <option value="3º Ano">3º Ano</option>
+                                    <option value="4º Ano">4º Ano</option>
+                                    <option value="5º Ano">5º Ano</option>
+                                    <option value="6º Ano">6º Ano</option>
+                                    <option value="7º Ano">7º Ano</option>
+                                    <option value="8º Ano">8º Ano</option>
+                                    <option value="9º Ano">9º Ano</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label class="form-label">Data</label><input class="form-control" id="prova-data" type="date"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label class="form-label">Nº de Questões</label>
+                                <select class="form-control" id="prova-questoes"></select>
+                            </div>
+                            <div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="prova-nota" type="number" value="10"></div>
+                        </div>
+                        <div id="info-alts" style="padding:10px 14px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:8px;font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:6px;">ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">📁 Arquivo</div></div>
+                        <div class="upload-zone" onclick="simUpload()" style="margin-bottom:14px;"><div class="uz-ico">📤</div><p><strong>Clique para enviar</strong> ou arraste aqui</p><p class="uz-hint">PDF, DOCX, PNG — máx. 50MB</p></div>
+                        <div id="up-ok" style="display:none;padding:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;margin-bottom:14px;font-size:13px;color:var(--green);">✅ <strong>arquivo_enviado.pdf</strong> — enviado!</div>
+                        <div class="btn-group"><button class="btn btn-green btn-full" onclick="salvarProva()">💾 Salvar</button><button class="btn btn-primary btn-full" onclick="go('gabarito')">➡️ Gabarito</button></div>
+                    </div>
+                </div>
+            </div>
 
-        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(json_filename, json_str.encode('utf-8'))
+            <!-- ========== GABARITO (COM CAMPOS BNCC) ========== -->
+            <div class="page" id="page-gabarito">
+                <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas e os códigos BNCC (opcional)</p></div></div>
+                <div class="card no-print">
+                    <div class="form-row c3">
+                        <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
+                        <div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="gab-serie" onchange="buildGabGrid()"><option value="1">1º Ano — A, B, C</option><option value="2" selected>2º Ano — A, B, C, D</option><option value="3">3º Ano — A, B, C, D</option><option value="4">4º Ano — A, B, C, D</option><option value="5">5º Ano — A, B, C, D</option><option value="6">6º Ano — A, B, C, D</option><option value="7">7º Ano — A, B, C, D</option><option value="8">8º Ano — A, B, C, D</option><option value="9">9º Ano — A, B, C, D</option></select></div>
+                        <div class="form-group"><label class="form-label">Nº de Questões</label>
+                            <select class="form-control" id="gab-total" onchange="buildGabGrid()"></select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div><div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📝 Gabarito das Questões</div>
+                        <div class="btn-group no-print">
+                            <button class="btn btn-outline btn-sm" onclick="fillGabRand()">🎲 Teste</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
+                        </div>
+                    </div>
+                    <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
+                    <div class="gab-grid" id="gab-grid"></div>
+                    <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
+                    <div class="btn-group no-print"><button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button><button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button></div>
+                </div>
+            </div>
 
-        memory_file.seek(0)
+            <!-- ========== CORRIGIR COM IA ========== -->
+            <div class="page" id="page-corrigir-ia">
+                <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção e correção automática de cartões resposta</p></div></div>
+                <div class="g2 no-print" style="margin-bottom:18px;">
+                    <div class="card card-glow-blue" style="border-color:rgba(6,182,212,.3);">
+                        <div class="card-header"><div class="card-title" style="color:var(--cyan);">📱 Câmera do Celular</div><span class="badge badge-cyan">Real-time</span></div>
+                        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Aponte a câmera para o cartão resposta. O sistema detecta as marcações com IA automaticamente.</p>
+                        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;transition:all .25s;" onclick="abrirCamera()"><div style="font-size:50px;margin-bottom:8px;">📱</div><p style="color:var(--text2);font-size:13px;">Clique para abrir a câmera</p></div>
+                        <button class="btn btn-lg btn-full" style="margin-top:12px;background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.3);" onclick="abrirCamera()">📱 Abrir Câmera do Celular</button>
+                    </div>
+                    <div class="card card-glow-green">
+                        <div class="card-header"><div class="card-title" style="color:var(--green);">📂 Escolher Arquivo</div><span class="badge badge-green">JPG / PNG</span></div>
+                        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Selecione uma foto do cartão resposta. A IA detecta e corrige as respostas automaticamente.</p>
+                        <div class="upload-zone" onclick="abrirArquivo()" style="margin-bottom:10px;"><div class="uz-ico">📂</div><p><strong>Clique para escolher a imagem</strong></p><p class="uz-hint">JPG, PNG — máx. 20MB</p></div>
+                        <div id="arq-preview" style="display:none;text-align:center;margin:8px 0;"><img id="img-prev" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);" src="" alt=""></div>
+                        <button class="btn btn-lg btn-full btn-green" onclick="abrirArquivo()">📂 Escolher Arquivo</button>
+                        <input type="file" id="inp-arq" accept="image/*" style="display:none" onchange="processarArq(this)">
+                    </div>
+                </div>
+                <div class="card no-print">
+                    <div class="card-header"><div class="card-title">⚙️ Configurações da Correção</div></div>
+                    <div class="form-row c2">
+                        <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-prova" onchange="carregarAlunosPorProva(this.value)">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label">Aluno <span class="req">*</span></label>
+                            <select class="form-control" id="corrigir-aluno">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;">
+                        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Detecção automática</label>
+                        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> OCR para nome/matrícula</label>
+                        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Calcular nota automaticamente</label>
+                    </div>
+                </div>
+                <div id="ia-result" style="display:none;">
+                    <div class="card card-glow-green">
+                        <div class="card-header"><div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div><div class="btn-group"><span class="badge badge-green">✅ Processado</span><span class="badge badge-gray" id="confianca-badge">0% conf.</span></div></div>
+                        <div class="g2" style="margin-bottom:14px;">
+                            <div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;"><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">ALUNO</div><div style="font-weight:700;" id="ia-aluno">—</div></div><div style="background:var(--surface2);border-radius:8px;padding:9px;"><div style="color:var(--text3);font-size:9px;font-weight:700;margin-bottom:3px;">PROVA</div><div style="font-weight:700;" id="ia-turma">—</div></div></div>
+                                <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px;">Respostas detectadas:</div>
+                                <div style="display:flex;flex-wrap:wrap;gap:4px;" id="ia-resp"></div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);border-radius:12px;padding:22px;text-align:center;">
+                                <div style="font-size:68px;font-weight:900;color:var(--green);line-height:1;" id="ia-nota">0</div>
+                                <div style="font-size:13px;color:var(--text2);margin-top:4px;">Nota Final</div>
+                                <span class="badge badge-green" style="margin-top:10px;font-size:12px;padding:5px 16px;" id="ia-status">AGUARDANDO</span>
+                                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center;">
+                                    <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManual()">✏️ Correção Manual</button>
+                                    <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecao()">💾 Salvar</button>
+                                    <button class="btn btn-primary btn-sm no-print" onclick="go('resultados')">📊 Resultados</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:14px;" id="ia-comp"></div>
+                        <div class="btn-group no-print">
+                            <button class="btn btn-purple btn-sm" onclick="processarComIA(document.getElementById('ia-ultima-imagem')?.value)">🔄 Próximo</button>
+                        </div>
+                        <input type="hidden" id="ia-ultima-imagem">
+                    </div>
+                </div>
+            </div>
 
-        logging.info(f"✅ Backup gerado com sucesso: {zip_filename}")
+            <!-- ========== CORREÇÃO DE TEXTO IA ========== -->
+            <div class="page" id="page-correcao-texto">
+                <div class="page-header"><div><div class="page-title">📝 Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
+                <div class="g2 no-print">
+                    <div>
+                        <div class="card">
+                            <div class="card-header"><div class="card-title">📥 Enviar Texto</div></div>
+                            <div class="tab-nav" style="display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:10px;margin-bottom:14px;">
+                                <button class="tab-btn active" onclick="switchTab(0,this)" style="flex:1;padding:8px;border:none;border-radius:8px;background:transparent;color:var(--text2);font-weight:600;font-size:12px;cursor:pointer;transition:all .3s;">📱 Câmera</button>
+                                <button class="tab-btn" onclick="switchTab(1,this)" style="flex:1;padding:8px;border:none;border-radius:8px;background:transparent;color:var(--text2);font-weight:600;font-size:12px;cursor:pointer;transition:all .3s;">📂 Arquivo</button>
+                                <button class="tab-btn" onclick="switchTab(2,this)" style="flex:1;padding:8px;border:none;border-radius:8px;background:transparent;color:var(--text2);font-weight:600;font-size:12px;cursor:pointer;transition:all .3s;">⌨️ Digitar</button>
+                            </div>
+                            <div class="tab-c" id="tabc-0"><div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:12px;" onclick="abrirCamera()"><div style="font-size:46px;margin-bottom:8px;">📱</div><p style="color:var(--text2);font-size:13px;">Fotografe a redação do aluno</p></div><button class="btn btn-full btn-lg" style="background:linear-gradient(135deg,var(--cyan),#0e7490);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.3);" onclick="abrirCamera()">📱 Abrir Câmera</button></div>
+                            <div class="tab-c" id="tabc-1" style="display:none;"><div class="upload-zone" onclick="document.getElementById('inp-txt').click()" style="margin-bottom:12px;"><div class="uz-ico">📸</div><p><strong>Escolher foto da redação</strong></p><p class="uz-hint">JPG, PNG, PDF</p></div><input type="file" id="inp-txt" accept="image/*,application/pdf" style="display:none" onchange="prevTexto(this)"><div id="txt-img-prev" style="display:none;text-align:center;margin-bottom:12px;"><img id="txt-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" src="" alt=""></div><button class="btn btn-full btn-green" onclick="document.getElementById('inp-txt').click()">📂 Escolher Arquivo</button></div>
+                            <div class="tab-c" id="tabc-2" style="display:none;"><div class="form-group" style="margin-bottom:12px;"><label class="form-label">Texto do Aluno</label><textarea class="form-control" id="txt-aluno" rows="8" placeholder="Cole ou digite o texto aqui..."></textarea></div></div>
+                            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                                <div class="form-row">
+                                    <div class="form-group"><label class="form-label">Prova</label><select class="form-control" id="txt-prova"><option value="">Selecione...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="txt-escola" onchange="carregarTurmasTexto(this.value)"><option value="">Selecione a escola...</option></select></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="txt-turma" onchange="carregarAlunosPorTurmaTexto(this.value)"><option value="">Selecione a turma...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
+                                </div>
+                                <div style="margin-bottom:14px;"><label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label><div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Coerência e Coesão</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Adequação ao Tema</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Ortografia e Gramática</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked> Riqueza Vocabular</label></div></div>
+                                <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div><h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3><p style="font-size:13px;color:var(--text2);">Envie a foto ou cole o texto e clique em <strong>"Avaliar com Gemini AI"</strong></p></div>
+                        <div id="txt-loading" style="display:none;" class="card"><div style="text-align:center;padding:32px;"><div class="spinner" style="margin-bottom:14px;"></div><p style="font-size:14px;font-weight:700;">Gemini AI processando...</p><p style="font-size:12px;color:var(--text2);margin-top:5px;">Analisando critérios textuais</p><div class="progress" style="margin-top:14px;height:4px;"><div class="progress-fill pf-purple" id="txt-pb" style="width:0%;transition:width .15s;"></div></div></div></div>
+                        <div id="txt-res" style="display:none;" class="card card-glow-purple">
+                            <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação Gemini AI</div><span class="badge badge-purple">IA</span></div>
+                            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;"><div><div style="font-size:60px;font-weight:900;line-height:1;color:#a78bfa;" id="txt-nota">0</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Nota Final</div></div><div style="flex:1;"><div style="font-weight:700;font-size:15px;margin-bottom:8px;" id="txt-aluno-nome">—</div><span class="badge badge-green" id="txt-status">AGUARDANDO</span></div></div>
+                            <div class="ai-criteria-grid"><div class="ai-crit"><div class="ai-crit-name">Coerência e Coesão</div><div class="ai-crit-val" id="c-coe">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-coe" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Adequação ao Tema</div><div class="ai-crit-val" id="c-tema">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-tema" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Ortografia e Gramática</div><div class="ai-crit-val" id="c-ort">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-ort" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Riqueza Vocabular</div><div class="ai-crit-val" id="c-voc">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-voc" style="width:0%;"></div></div></div></div>
+                            <div class="ai-feedback-box"><strong style="color:#a78bfa;">📝 Feedback:</strong><br><br><span id="txt-fb">Aguardando avaliação...</span></div>
+                            <div class="btn-group no-print" style="margin-top:14px;"><button class="btn btn-green btn-sm" onclick="salvarAvaliacaoTexto()">💾 Salvar</button><button class="btn btn-outline btn-sm" onclick="window.print()">🖨️</button><button class="btn btn-purple btn-sm" onclick="avaliarTexto()">🔄 Reavaliar</button></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        return send_file(
-            memory_file,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name=zip_filename
-        )
+            <!-- ========== GABARITOS LIST ========== -->
+            <div class="page" id="page-gabaritos">
+                <div class="page-header"><div><div class="page-title">📋 Gabaritos</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('gabarito')">+ Novo Gabarito</button></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Prova</th><th>Série</th><th>Questões</th><th>Alternativas</th><th>BNCC</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="tb-gabaritos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+            </div>
 
-    except Exception as e:
-        logging.error(f"❌ Erro ao gerar backup: {str(e)}")
-        traceback.print_exc()
-        return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
+            <!-- ========== PROVAS ========== -->
+            <div class="page" id="page-provas">
+                <div class="page-header"><div><div class="page-title">📑 Provas</div></div><div class="page-actions no-print"><button class="btn btn-primary" onclick="go('prova-upload')">+ Nova Prova</button></div></div>
+                <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+            </div>
 
-# ============================================
-# ROTA PRINCIPAL
-# ============================================
+            <!-- ========== RESULTADOS (MODIFICADO) ========== -->
+            <div class="page" id="page-resultados">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🏆 Resultados</div>
+                        <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
+                    </div>
+                </div>
 
-@app.route('/')
-def index():
-    try:
-        return send_from_directory('.', 'index.html')
-    except:
-        return jsonify({
-            'mensagem': 'CorrigePro API',
-            'status': 'online',
-            'endpoints': [
-                '/health',
-                '/api/login',
-                '/api/corrigir',
-                '/api/corrigir_manual',
-                '/api/corrigir_redacao',
-                '/api/salvar_correcao_texto',
-                '/api/correcoes_texto',
-                '/api/escolas',
-                '/api/turmas',
-                '/api/turmas/<id>/alunos',
-                '/api/turmas/estatisticas',
-                '/api/alunos',
-                '/api/provas',
-                '/api/gabaritos',
-                '/api/historico',
-                '/api/historico/agrupado',
-                '/api/dashboard',
-                '/api/dashboard/Conceito',
-                '/api/dashboard/turmas_alunos',
-                '/api/gerar_gabarito',
-                '/api/backup'
-            ]
-        })
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Resultados</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-resultados"></span></p>
+                </div>
 
-@app.route('/<path:path>')
-def serve_static(path):
-    try:
-        return send_from_directory('.', path)
-    except:
-        return jsonify({'erro': 'Arquivo não encontrado'}), 404
+                <div class="card no-print" style="margin-bottom:16px;">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Escola</label>
+                            <select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)">
+                                <option value="">Todas as escolas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série</label>
+                            <select class="form-control" id="filtro-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('filtro-turma')); carregarResultadosComFiltros();">
+                                <option value="">Todas as séries</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="filtro-turma" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as turmas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova</label>
+                            <select class="form-control" id="filtro-prova" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as provas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
 
-# ============================================
-# ROTA DE SAÚDE
-# ============================================
+                <!-- CARDS: Total de Alunos Provas Corrigidas + Nº DE ALUNOS NA TURMA + Alunos sem correção -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-filtrado">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Total de Alunos Provas Corrigidas</div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(245,158,11,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--orange);" id="res-total-alunos-turma">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Nº DE ALUNOS NA TURMA</div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(239,68,68,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--red);" id="res-diferenca">0</div>
+                        <div style="font-size:12px; color:var(--text2);">Alunos sem correção</div>
+                    </div>
+                </div>
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    status = {
-        'status': 'online',
-        'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível',
-        'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
-        'database': 'conectado' if get_db_connection() else 'desconectado'
+                <!-- Distribuição por Conceito (barras) – agora com totalizador -->
+                <div class="conceito-graficos" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 Distribuição por Conceito</div>
+                            <span class="badge badge-blue no-print">Barras</span>
+                        </div>
+                        <div id="conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px; transition:width 0.8s ease;" id="conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px; transition:width 0.8s ease;" id="conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px; transition:width 0.8s ease;" id="conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px; transition:width 0.8s ease;" id="conceito-avancado-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Totalizador adicionado -->
+                        <div style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+                            Total de alunos avaliados: <span id="total-conceitos-label">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Lista de Alunos</div>
+                        <span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
+                                    <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
+                                    <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
+                                </tr>
+                                <tr>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-resultados-filtrado">
+                                <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ============================================================ -->
+            <div class="page" id="page-rel-turma">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Relatório por Turma</div>
+                        <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
+                    </div>
+                </div>
+
+                <div class="print-header print-only">
+                    <h2>📊 Relatório por Turma</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card no-print" style="margin-bottom:16px;">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Escola</label>
+                            <select class="form-control" id="rel-turma-escola" onchange="carregarTurmasRelTurma(this.value)">
+                                <option value="">Todas as escolas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série</label>
+                            <select class="form-control" id="rel-turma-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('rel-turma-turma')); carregarRelatorioTurmaFiltrado();">
+                                <option value="">Todas as séries</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="rel-turma-turma" onchange="carregarRelatorioTurmaFiltrado()">
+                                <option value="">Todas as turmas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova</label>
+                            <select class="form-control" id="rel-turma-prova" onchange="carregarRelatorioTurmaFiltrado()">
+                                <option value="">Todas as provas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="carregarRelatorioTurmaFiltrado()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosRelTurma()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
+
+                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 Porcentagem e Conceitos</div>
+                        <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <!-- Lado esquerdo: porcentagem -->
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
+                            <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
+                            <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
+                        </div>
+                        <!-- Lado direito: conceitos -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 Inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="rel-conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#ef4444,#dc2626);" id="rel-conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 Básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="rel-conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#f59e0b,#d97706);" id="rel-conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 Proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="rel-conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#3b82f6,#2563eb);" id="rel-conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 Avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="rel-conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:16px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#10b981,#059669);" id="rel-conceito-avancado-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== CARD ADICIONADO: LISTA DE ALUNOS ========== -->
+                <div class="card" id="rel-tabela-alunos">
+                    <div class="card-header">
+                        <div class="card-title">📋 Lista de Alunos</div>
+                        <span class="badge badge-gray" id="rel-total-alunos-tabela">0 alunos</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
+                                    <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
+                                    <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
+                                </tr>
+                                <tr>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-rel-alunos">
+                                <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
+                <div class="card" id="rel-distribuicao-unica">
+                    <div class="card-header">
+                        <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
+                        <span class="badge badge-blue" id="rel-total-correcoes">0 correções</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr; gap:12px;">
+                        <div style="background:var(--bg2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--border);">
+                            <div style="display:flex; justify-content:center; gap:32px; font-size:16px; font-weight:600; flex-wrap:wrap;">
+                                <span style="color:var(--green);">✅ Acertos: <span id="rel-disc-acertos">0</span></span>
+                                <span style="color:var(--red);">❌ Erros: <span id="rel-disc-erros">0</span></span>
+                                <span style="color:var(--blue);">⭐ Média: <span id="rel-disc-media">0.0</span></span>
+                                <span style="color:var(--purple);">📊 Conceito: <span id="rel-disc-conceito">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== CONFIG ========== -->
+            <div class="page" id="page-config">
+                <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
+                <div class="g2 no-print">
+                    <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">🤖 IA & Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div><div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div><div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">👥 Usuários</div><button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo</button></div><div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tb-usuarios"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                </div>
+            </div>
+
+            <!-- ========== USER PAGES (não utilizadas, mantidas apenas para compatibilidade) ========== -->
+            <div class="page" id="page-u-dashboard" style="display:none;"></div>
+            <div class="page" id="page-u-escola" style="display:none;"></div>
+            <div class="page" id="page-u-turmas" style="display:none;"></div>
+            <div class="page" id="page-u-alunos" style="display:none;"></div>
+            <div class="page" id="page-u-resultados" style="display:none;"></div>
+            <div class="page" id="page-u-relatorios" style="display:none;"></div>
+
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
+            <div class="page" id="page-desempenho">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Desempenho do Aluno</div>
+                        <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Desempenho do Aluno</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
+                </div>
+
+                <div class="card no-print">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
+                                <option value="">Carregando escolas...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">👥 TURMA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-aluno-desempenho">
+                                <option value="">Selecione o aluno...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📄 PROVA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-prova-desempenho">
+                                <option value="">Carregando provas...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
+                        <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
+                        <button class="btn btn-green no-print" id="btnGerarDocumento" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
+                        <button class="btn btn-orange no-print" onclick="editarGabaritoDesempenho()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
+                        <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
+                    </div>
+                </div>
+
+                <div id="resultado-desempenho" style="display:none;">
+
+                    <div class="desempenho-resumo">
+                        <div class="item">
+                            <div class="valor blue" id="resumo-nota">0%</div>
+                            <div class="label">Porcentagem de Acertos</div>
+                        </div>
+                        <div class="item"><div class="valor green" id="resumo-acertos">0</div><div class="label">Acertos</div></div>
+                        <div class="item"><div class="valor red" id="resumo-erros">0</div><div class="label">Erros</div></div>
+                        <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
+                    </div>
+
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
+                    <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title" id="disciplina-unica-titulo">📖 Disciplina</div>
+                                <span class="badge" id="disciplina-unica-status">—</span>
+                            </div>
+                            <div class="questoes-grid" id="disciplina-unica-questoes" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div class="stats" style="display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13px;">
+                                <span>✅ Acertos: <span class="acertos" id="disciplina-unica-acertos">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
+                                <span>⭐ Aproveitamento: <span class="nota" id="disciplina-unica-nota">0%</span></span>
+                                <span>📊 Conceito: <span id="disciplina-unica-conceito">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
+                    <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title" id="gabarito-oficial-titulo">📋 Gabarito Oficial da Prova</div>
+                                <span class="badge badge-blue">Oficial</span>
+                            </div>
+                            <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); text-align:center;">
+                                Respostas corretas da prova
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="desempenho-info no-print">
+                        <div><strong>🏫 Escola</strong><br><span id="info-escola">—</span></div>
+                        <div><strong>👥 Turma</strong><br><span id="info-turma">—</span></div>
+                        <div><strong>🎒 Aluno</strong><br><span id="info-aluno">—</span></div>
+                        <div><strong>📄 Prova</strong><br><span id="info-prova">—</span></div>
+                        <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
+                    </div>
+
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
+                        <span style="color:var(--text3);">|</span>
+                        <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
+                        <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
+                        <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
+                        <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
+                    </div>
+                </div>
+            </div>
+            <!-- ===== FIM DA ABA DESEMPENHO ===== -->
+
+        </div>
+
+        <!-- ========== CÂMERA MODAL ========== -->
+        <div class="cam-modal no-print" id="cam-modal">
+            <div class="cam-container">
+                <div class="cam-header"><h3>📱 Scanner — Câmera do Celular</h3><button class="modal-close" onclick="fecharCamera()">×</button></div>
+                <div class="cam-video-wrap"><video id="cam-video" autoplay playsinline></video><div class="cam-frame"><div class="cam-corner cc-tl"></div><div class="cam-corner cc-tr"></div><div class="cam-corner cc-bl"></div><div class="cam-corner cc-br"></div></div><div class="cam-scan-line"></div></div>
+                <div class="cam-controls"><button class="btn btn-red" onclick="fecharCamera()">✕ Cancelar</button><button class="btn btn-outline" onclick="trocarCamera()" style="color:var(--cyan);border-color:var(--cyan);">🔄 Virar</button><button class="btn btn-green btn-lg" onclick="capturarFoto()">📸 Capturar</button></div>
+                <p class="cam-hint">Enquadre o cartão resposta na moldura verde</p>
+            </div>
+            <canvas id="cam-canvas" style="display:none;"></canvas>
+        </div>
+
+        <!-- ========== MODAL CORREÇÃO MANUAL (DENTRO DA IA) ========== -->
+        <div class="modal-overlay no-print" id="m-correcao-manual">
+            <div class="modal" style="max-width:800px;width:95vw;">
+                <div class="modal-header"><h3>✏️ Correção Manual — <span id="cm-aluno-nome">Aluno</span></h3><button class="modal-close" onclick="closeM('m-correcao-manual')">×</button></div>
+                <div class="correcao-aluno-info">
+                    <div class="info-item"><span class="label">Prova</span><strong id="cm-prova-titulo">—</strong></div>
+                    <div class="info-item"><span class="label">Série / Turma</span><strong id="cm-turma-info">—</strong></div>
+                    <div class="info-item"><span class="label">Data da Correção</span><strong id="cm-data-correcao">—</strong></div>
+                    <div class="info-item"><span class="label">Status</span><strong id="cm-status-atual">—</strong></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                    <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Respostas do Aluno</span>
+                    <div class="btn-group no-print">
+                        <button class="btn btn-outline btn-sm" onclick="preencherGabaritoCM()">📋 Preencher com Gabarito</button>
+                        <button class="btn btn-ghost btn-sm" onclick="limparRespostasCM()">🗑️ Limpar</button>
+                    </div>
+                </div>
+                <div id="cm-grid" class="correcao-manual-grid"></div>
+                <div class="resumo-correcao">
+                    <div class="item"><div class="valor acertos" id="cm-acertos">0</div><div class="label">Acertos</div></div>
+                    <div class="item"><div class="valor erros" id="cm-erros">0</div><div class="label">Erros</div></div>
+                    <div class="item"><div class="valor nota" id="cm-nota">0,0</div><div class="label">Nota Final</div></div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
+                    <span id="cm-status-badge" class="badge badge-gray">AGUARDANDO</span>
+                    <span id="cm-porcentagem" style="font-size:12px;color:var(--text2);">0% de aproveitamento</span>
+                </div>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-correcao-manual')">✕ Fechar</button>
+                    <button class="btn btn-green" onclick="salvarCorrecaoManual()">💾 Salvar Correção</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL CORREÇÃO MANUAL STANDALONE (MENU) - COM CONTAINER DE SELECTS ========== -->
+        <div class="modal-overlay no-print" id="m-correcao-manual-standalone">
+            <div class="modal" style="max-width:800px;width:95vw;">
+                <div class="modal-header">
+                    <h3>✏️ Correção Manual</h3>
+                    <button class="modal-close" onclick="closeM('m-correcao-manual-standalone')">×</button>
+                </div>
+
+                <!-- Área de seleção (ocultada ao editar direto) -->
+                <div id="cm-selects-container">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Escola <span class="req">*</span></label>
+                        <select class="form-control" id="cm-escola-select" onchange="carregarTurmasParaCorrecaoManual(this.value)">
+                            <option value="">Selecione a escola...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Turma <span class="req">*</span></label>
+                        <select class="form-control" id="cm-turma-select" onchange="carregarAlunosParaCorrecaoManual(this.value); carregarProvasParaCorrecaoManualPorTurma(this.value);">
+                            <option value="">Selecione a turma...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Prova <span class="req">*</span></label>
+                        <select class="form-control" id="cm-prova-select" onchange="carregarGabaritoParaCorrecaoManual()">
+                            <option value="">Selecione a prova...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Aluno <span class="req">*</span></label>
+                        <select class="form-control" id="cm-aluno-select">
+                            <option value="">Selecione o aluno...</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-full" onclick="iniciarCorrecaoManualStandalone()" style="margin-top:8px;">
+                        📝 Iniciar Correção
+                    </button>
+                </div>
+
+                <div id="cm-info-standalone" style="display:none;" class="correcao-aluno-info" style="margin-top:16px;">
+                    <div class="info-item"><span class="label">Aluno</span><strong id="cm-sa-aluno">—</strong></div>
+                    <div class="info-item"><span class="label">Turma / Série</span><strong id="cm-sa-turma">—</strong></div>
+                    <div class="info-item"><span class="label">Prova</span><strong id="cm-sa-prova">—</strong></div>
+                    <div class="info-item"><span class="label">Data</span><strong id="cm-sa-data">—</strong></div>
+                </div>
+
+                <div id="cm-grid-standalone-container" style="display:none;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;margin-top:16px;">
+                        <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Marque as respostas do aluno</span>
+                        <div class="btn-group no-print">
+                            <button class="btn btn-outline btn-sm" onclick="preencherGabaritoManualSA()">📋 Preencher com Gabarito</button>
+                            <button class="btn btn-ghost btn-sm" onclick="limparRespostasManualSA()">🗑️ Limpar</button>
+                        </div>
+                    </div>
+                    <div id="cm-grid-standalone" class="cm-grid-standalone"></div>
+
+                    <div class="resumo-correcao">
+                        <div class="item"><div class="valor acertos" id="cm-sa-acertos">0</div><div class="label">Acertos</div></div>
+                        <div class="item"><div class="valor erros" id="cm-sa-erros">0</div><div class="label">Erros</div></div>
+                        <div class="item"><div class="valor nota" id="cm-sa-nota">0,0</div><div class="label">Nota Final</div></div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 0;">
+                        <span id="cm-sa-status-badge" class="badge badge-gray">AGUARDANDO</span>
+                        <span id="cm-sa-porcentagem" style="font-size:12px;color:var(--text2);">0% de aproveitamento</span>
+                    </div>
+                </div>
+
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-correcao-manual-standalone')">✕ Fechar</button>
+                    <button class="btn btn-green" id="btn-salvar-correcao-manual" style="display:none;" onclick="salvarCorrecaoManualStandalone()">💾 Salvar Correção</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL EDITAR ESCOLA ========== -->
+        <div class="modal-overlay no-print" id="m-editar-escola">
+            <div class="modal">
+                <div class="modal-header"><h3>✏️ Editar Escola</h3><button class="modal-close" onclick="closeM('m-editar-escola')">×</button></div>
+                <input type="hidden" id="editar-escola-id">
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="editar-escola-nome" placeholder="Ex: E.E. Prof. João Ribeiro"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">INEP</label><input class="form-control" id="editar-escola-inep" placeholder="8 dígitos"></div><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="editar-escola-municipio" placeholder="Cidade"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Estado</label><select class="form-control" id="editar-escola-estado"><option>PA</option></select></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="editar-escola-telefone" placeholder="(00) 0000-0000"></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Diretor(a)</label><input class="form-control" id="editar-escola-diretor" placeholder="Nome completo"></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-escola')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoEscola()">💾 Salvar Alterações</button></div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL EDITAR TURMA ========== -->
+        <div class="modal-overlay no-print" id="m-editar-turma">
+            <div class="modal">
+                <div class="modal-header"><h3>✏️ Editar Turma</h3><button class="modal-close" onclick="closeM('m-editar-turma')">×</button></div>
+                <input type="hidden" id="editar-turma-id">
+                <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="editar-turma-escola"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Ano Letivo</label><input class="form-control" id="editar-turma-ano" value="2025" type="number"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="editar-turma-nome" placeholder="Ex: 3ºA"></div><div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="editar-turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="editar-turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div><div class="form-group"><label class="form-label">Capacidade</label><input class="form-control" id="editar-turma-capacidade" type="number" placeholder="35"></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Professor(a)</label><input class="form-control" id="editar-turma-professor" placeholder="Nome do professor"></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-turma')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoTurma()">💾 Salvar Alterações</button></div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL EDITAR ALUNO ========== -->
+        <div class="modal-overlay no-print" id="m-editar-aluno">
+            <div class="modal">
+                <div class="modal-header"><h3>✏️ Editar Aluno</h3><button class="modal-close" onclick="closeM('m-editar-aluno')">×</button></div>
+                <input type="hidden" id="editar-aluno-id">
+                <div class="form-row"><div class="form-group"><label class="form-label">Número na Turma</label><input class="form-control" id="editar-aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60"></div><div class="form-group"><label class="form-label">Matrícula</label><input class="form-control" id="editar-aluno-matricula" placeholder="Ex: 2025001"></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Nome Completo <span class="req">*</span></label><input class="form-control" id="editar-aluno-nome" placeholder="Nome completo do aluno"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="editar-aluno-nascimento" type="date"></div><div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="editar-aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Escola <span class="req">*</span></label>
+                        <select class="form-control" id="editar-aluno-escola" onchange="carregarTurmasPorEscolaParaAluno(this.value, 'editar-aluno-turma')">
+                            <option value="">Selecione a escola</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Turma <span class="req">*</span></label>
+                        <select class="form-control" id="editar-aluno-turma">
+                            <option value="">Selecione a turma</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="editar-aluno-responsavel" placeholder="Pai, mãe ou responsável"></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="editar-aluno-telefone" placeholder="(00) 99999-9999"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="editar-aluno-email" type="email" placeholder="email@exemplo.com"></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="editar-aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-editar-aluno')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoAluno()">💾 Salvar Alterações</button></div>
+            </div>
+        </div>
+
+        <!-- ========== DELETE CONFIRM MODAL ========== -->
+        <div class="del-modal no-print" id="del-modal">
+            <div class="del-box"><div class="del-icon">🗑️</div><h3>Confirmar Exclusão</h3><p>Tem certeza que deseja excluir<br><span class="del-nome-txt" id="del-nome-txt">este item</span>?<br><br>Esta ação não pode ser desfeita.</p><div class="del-actions"><button class="btn btn-outline" onclick="cancelarDel()">Cancelar</button><button class="btn btn-red" onclick="confirmarDel()">🗑️ Excluir</button></div></div>
+        </div>
+
+        <!-- ========== MODALS ========== -->
+        <!-- Modal Escola -->
+        <div class="modal-overlay no-print" id="m-escola">
+            <div class="modal"><div class="modal-header"><h3>🏫 Cadastrar Escola</h3><button class="modal-close" onclick="closeM('m-escola')">×</button></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="escola-nome" placeholder="Ex: E.E. Prof. João Ribeiro"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">INEP</label><input class="form-control" id="escola-inep" placeholder="8 dígitos"></div><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="escola-municipio" placeholder="Cidade"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Estado</label><select class="form-control" id="escola-estado"><option>PA</option></select></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="escola-telefone" placeholder="(00) 0000-0000"></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Diretor(a)</label><input class="form-control" id="escola-diretor" placeholder="Nome completo"></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-escola')">Cancelar</button><button class="btn btn-green" onclick="salvarEscola()">💾 Salvar</button></div>
+            </div>
+        </div>
+
+        <!-- Modal Turma -->
+        <div class="modal-overlay no-print" id="m-turma">
+            <div class="modal"><div class="modal-header"><h3>👥 Cadastrar Turma</h3><button class="modal-close" onclick="closeM('m-turma')">×</button></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Escola <span class="req">*</span></label><select class="form-control" id="turma-escola"><option value="">Selecione a escola</option></select></div><div class="form-group"><label class="form-label">Ano Letivo</label><input class="form-control" id="turma-ano" value="2025" type="number"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="turma-nome" placeholder="Ex: 3ºA"></div><div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="turma-serie"><option>1º Ano</option><option>2º Ano</option><option>3º Ano</option><option>4º Ano</option><option>5º Ano</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Turno</label><select class="form-control" id="turma-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div><div class="form-group"><label class="form-label">Capacidade</label><input class="form-control" id="turma-capacidade" type="number" placeholder="35"></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Professor(a)</label><input class="form-control" id="turma-professor" placeholder="Nome do professor"></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-turma')">Cancelar</button><button class="btn btn-green" onclick="salvarTurma()">💾 Salvar</button></div>
+            </div>
+        </div>
+
+        <!-- Modal Aluno -->
+        <div class="modal-overlay no-print" id="m-aluno">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>🎒 Cadastrar Aluno</h3>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button class="btn btn-green btn-sm" onclick="fecharAbaMulti()">📋 Lista</button>
+                        <button class="modal-close" onclick="closeM('m-aluno')">×</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Número na Turma</label>
+                        <input class="form-control" id="aluno-numero" type="number" placeholder="Ex: 01" min="1" max="60">
+                        <div class="form-hint">Número sequencial na lista de chamada</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Matrícula</label>
+                        <input class="form-control" id="aluno-matricula" placeholder="Ex: 2025001">
+                    </div>
+                </div>
+                <div class="form-row c1">
+                    <div class="form-group">
+                        <label class="form-label">Nome Completo <span class="req">*</span></label>
+                        <input class="form-control" id="aluno-nome" placeholder="Nome completo do aluno">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-control" id="aluno-nascimento" type="date"></div>
+                    <div class="form-group"><label class="form-label">Gênero</label><select class="form-control" id="aluno-genero"><option>Masculino</option><option>Feminino</option><option>Outro</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Escola <span class="req">*</span></label>
+                        <select class="form-control" id="aluno-escola" onchange="carregarTurmasPorEscolaParaAluno(this.value, 'aluno-turma')">
+                            <option value="">Selecione a escola</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Turma <span class="req">*</span></label>
+                        <select class="form-control" id="aluno-turma">
+                            <option value="">Selecione a turma</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Responsável</label><input class="form-control" id="aluno-responsavel" placeholder="Pai, mãe ou responsável"></div>
+                    <div class="form-group"><label class="form-label">Telefone</label><input class="form-control" id="aluno-telefone" placeholder="(00) 99999-9999"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="aluno-email" type="email" placeholder="email@exemplo.com"></div>
+                </div>
+                <div class="form-row c1">
+                    <div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" id="aluno-observacoes" rows="2" placeholder="Necessidades especiais..."></textarea></div>
+                </div>
+
+                <div class="multi-import-area no-print">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+                        <span style="font-size:12px;font-weight:700;color:var(--text2);">📋 Cadastro Múltiplo</span>
+                        <button class="btn btn-primary btn-sm" onclick="processarListaAlunos()">➕ Adicionar Múltiplos</button>
+                    </div>
+                    <textarea id="multi-alunos-input" placeholder="Cole a lista de alunos aqui.&#10;Exemplos de formatos:&#10;João Silva, 2025001, 01&#10;Maria Santos - 2025002 - 02&#10;Pedro Costa (2025003)&#10;Ana Lima" rows="3"></textarea>
+                    <div class="multi-import-hint">
+                        💡 <strong>Formatos aceitos:</strong>
+                        <code>Nome, Matrícula, Número</code> ou
+                        <code>Nome - Matrícula - Número</code> ou
+                        <code>Nome (Matrícula)</code> ou
+                        apenas <code>Nome</code> (matrícula e número serão gerados automaticamente)
+                    </div>
+                    <div id="multi-status" class="multi-status info" style="display:none;">
+                        <span id="multi-status-text">Pronto para importar</span>
+                    </div>
+                </div>
+
+                <div class="modal-footer no-print">
+                    <button class="btn btn-green btn-sm" onclick="closeM('m-aluno');go('lista-turma');" style="margin-right:auto;">📋 Ver Lista</button>
+                    <button class="btn btn-outline" onclick="closeM('m-aluno')">Cancelar</button>
+                    <button class="btn btn-green" onclick="salvarAluno()">💾 Salvar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Prova -->
+        <div class="modal-overlay no-print" id="m-prova">
+            <div class="modal"><div class="modal-header"><h3>📝 Cadastrar Prova</h3><button class="modal-close" onclick="closeM('m-prova')">×</button></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Título <span class="req">*</span></label><input class="form-control" id="modal-prova-titulo" placeholder="Ex: 3º Bimestre — Matemática"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Disciplina</label><select class="form-control" id="modal-prova-disciplina"><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option><option>Geografia</option><option>Inglês</option></select></div><div class="form-group"><label class="form-label">Bimestre</label><select class="form-control" id="modal-prova-bimestre"><option>1º Bimestre</option><option>2º Bimestre</option><option>3º Bimestre</option><option>4º Bimestre</option></select></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Turma <span class="req">*</span></label><select class="form-control" id="modal-prova-turma"><option value="">Selecione a turma</option></select></div><div class="form-group"><label class="form-label">Data <span class="req">*</span></label><input class="form-control" id="modal-prova-data" type="date"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Valor Nota</label><input class="form-control" id="modal-prova-valor" type="number" value="10"></div><div class="form-group"><label class="form-label">Tipo</label><select class="form-control" id="modal-prova-tipo"><option value="4">4 Opções (A,B,C,D)</option><option value="3">3 Opções (A,B,C)</option></select></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Gabarito</label><div style="display:flex;flex-wrap:wrap;gap:6px;" id="modal-gabarito-grid"></div></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-prova')">Cancelar</button><button class="btn btn-green" onclick="salvarProvaModal()">💾 Salvar</button></div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL USUÁRIO ========== -->
+        <div class="modal-overlay no-print" id="m-usuario">
+            <div class="modal">
+                <div class="modal-header"><h3>👤 Cadastrar Usuário</h3><button class="modal-close" onclick="closeM('m-usuario')">×</button></div>
+                <input type="hidden" id="editar-usuario-id" value="">
+                <div class="form-row c1"><div class="form-group"><label class="form-label">Nome <span class="req">*</span></label><input class="form-control" id="usuario-nome" placeholder="Nome completo"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Usuário (Login) <span class="req">*</span></label><input class="form-control" id="usuario-username" placeholder="Ex: professor1"></div><div class="form-group"><label class="form-label">Senha <span class="req">*</span></label><input class="form-control" id="usuario-senha" type="password" placeholder="Mínimo 4 caracteres"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="usuario-email" type="email" placeholder="email@exemplo.com"></div><div class="form-group"><label class="form-label">Perfil <span class="req">*</span></label><select class="form-control" id="usuario-perfil"><option value="usuario">Usuário</option><option value="admin">Administrador</option></select></div></div>
+                <div class="form-row c1"><div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="usuario-ativo" checked style="width:16px;height:16px;"> Usuário ativo</label></div></div>
+                <div class="modal-footer no-print"><button class="btn btn-outline" onclick="closeM('m-usuario')">Cancelar</button><button class="btn btn-green" onclick="salvarUsuario()">💾 Salvar Usuário</button></div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL VISUALIZAR PROVA ========== -->
+        <div class="modal-overlay no-print" id="m-visualizar-prova">
+            <div class="modal" style="max-width:750px;width:95vw;">
+                <div class="modal-header"><h3>📋 Visualizar Prova</h3><button class="modal-close" onclick="closeM('m-visualizar-prova')">×</button></div>
+                <div id="visualizar-prova-conteudo">
+                    <div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-visualizar-prova')">Fechar</button>
+                    <button class="btn btn-primary" onclick="editarProvaDireto()">✏️ Editar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST -->
+        <div class="toast-container no-print" id="toast-c"></div>
+
+        <script>
+            // ============================================
+            // CONFIGURAÇÃO DA API
+            // ============================================
+            const API_URL = 'https://adabee-sistema-3.onrender.com';
+            let loginType = 'admin';
+            let camStream = null;
+            let camFacing = 'environment';
+            let delTarget = null;
+            let ultimaImagem = null;
+            let gerandoDocumento = false;
+
+            // Dados para correção manual (dentro da IA)
+            let correcaoManualData = {
+                alunoId: null,
+                alunoNome: '',
+                provaId: null,
+                provaTitulo: '',
+                gabarito: [],
+                respostasAluno: [],
+                quantidade: 20,
+                alternativas: ['A', 'B', 'C', 'D'],
+                notaMaxima: 10,
+                notaMinima: 5,
+                valorPorQuestao: 0.5,
+                serie: '1º Ano',
+                disciplina: ''
+            };
+
+            // Dados para correção manual standalone (menu)
+            let cmStandaloneData = {
+                escolaId: null,
+                turmaId: null,
+                provaId: null,
+                alunoId: null,
+                alunoNome: '',
+                turmaNome: '',
+                serie: '',
+                escolaNome: '',
+                gabarito: [],
+                respostas: [],
+                quantidade: 20,
+                alternativas: ['A', 'B', 'C', 'D'],
+                notaMaxima: 10,
+                notaMinima: 5,
+                valorPorQuestao: 0.5,
+                provaTitulo: '',
+                provaData: '',
+                disciplina: ''
+            };
+
+            // Dados para a aba Desempenho do Aluno
+            let desempenhoData = {
+                alunoSelecionado: null,
+                respostas: [],
+                gabarito: [],
+                questoes: [],
+                disciplinas: []
+            };
+
+            // Variável para edição de usuário
+            let usuarioEditandoId = null;
+
+            // ============================================
+            // FUNÇÃO PARA PROCESSAR RESPOSTAS DA API
+            // ============================================
+            async function processarRespostaAPI(response) {
+                let result;
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        result = await response.json();
+                    } catch (e) {
+                        result = { erro: 'Erro ao processar JSON' };
+                    }
+                } else {
+                    const text = await response.text();
+                    try {
+                        result = JSON.parse(text);
+                    } catch (e) {
+                        if (response.ok) {
+                            result = { sucesso: true, mensagem: 'Operação realizada com sucesso' };
+                        } else {
+                            result = { sucesso: false, erro: 'Erro ' + response.status + ': ' + text.substring(0, 100) };
+                        }
+                    }
+                }
+
+                return {
+                    ok: response.ok || result.sucesso === true,
+                    data: result,
+                    status: response.status
+                };
+            }
+
+            // ============================================
+            // FUNÇÃO PARA ATUALIZAR DATAS NOS CABEÇALHOS DE IMPRESSÃO
+            // ============================================
+            function atualizarDatasImpressao() {
+                const agora = new Date();
+                const dataFormatada = agora.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const elementosData = [
+                    'print-data-dash',
+                    'print-data-resultados',
+                    'print-data-rel-turma',
+                    'print-data-rel-escola',
+                    'print-data-u-dash',
+                    'print-data-u-rel',
+                    'print-data-desempenho'
+                ];
+
+                elementosData.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = dataFormatada;
+                });
+            }
+
+            // ============================================
+            // POPULAR SELECT DE QUESTÕES (1 a 30)
+            // ============================================
+            function popularSelectQuestoes() {
+                const select = document.getElementById('prova-questoes');
+                if (!select) return;
+                select.innerHTML = '';
+                for (let i = 1; i <= 30; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    if (i === 20) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            }
+
+            // ============================================
+            // POPULAR SELECT DE GAB-TOTAL (1 a 30)
+            // ============================================
+            function popularSelectGabTotal() {
+                const select = document.getElementById('gab-total');
+                if (!select) return;
+                select.innerHTML = '';
+                for (let i = 1; i <= 30; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    if (i === 20) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            }
+
+            // ============================================
+            // MENU TOGGLE
+            // ============================================
+            function toggleMenu() {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('menuOverlay');
+                const toggle = document.getElementById('menuToggle');
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('show');
+                toggle.classList.toggle('active');
+                toggle.innerHTML = sidebar.classList.contains('open') ? '✕' : '☰';
+            }
+
+            // ============================================
+            // LOGIN
+            // ============================================
+            function setLTab(t) {
+                loginType = t;
+                document.querySelectorAll('.login-tab').forEach((el, i) => {
+                    el.classList.toggle('active', (i === 0 && t === 'admin') || (i === 1 && t === 'user'));
+                });
+            }
+
+            async function doLogin() {
+                const u = document.getElementById('lu').value.trim();
+                const p = document.getElementById('lp').value.trim();
+                try {
+                    const response = await fetch(`${API_URL}/api/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: u, senha: p })
+                    });
+                    const data = await response.json();
+                    if (data.sucesso) {
+                        startApp(data.perfil, data.usuario);
+                    } else {
+                        showToast('❌ Usuário ou senha incorretos!', 'error');
+                        shakeCard();
+                    }
+                } catch (erro) {
+                    if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
+                        (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
+                        startApp(loginType, u);
+                    } else {
+                        showToast('❌ Usuário ou senha incorretos!', 'error');
+                        shakeCard();
+                    }
+                }
+            }
+
+            function shakeCard() {
+                const c = document.querySelector('.login-card');
+                c.style.animation = 'none';
+                setTimeout(() => c.style.animation = 'shake .4s ease', 10);
+            }
+
+            document.getElementById('lp').addEventListener('keydown', e => {
+                if (e.key === 'Enter') doLogin();
+            });
+
+            function startApp(role, uname) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'flex';
+                document.getElementById('sb-avatar').textContent = uname[0].toUpperCase();
+                document.getElementById('sb-uname').textContent = uname;
+                document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
+
+                // Define se é administrador
+                const isAdmin = role === 'admin';
+
+                // Sempre exibe o menu principal (adm-sb) e oculta o menu do usuário (usr-sb)
+                document.getElementById('adm-sb').style.display = 'block';
+                document.getElementById('usr-sb').style.display = 'none';
+
+                // Oculta ou exibe o item "Configurações" com base no perfil
+                const menuConfig = document.getElementById('menu-config');
+                if (menuConfig) {
+                    menuConfig.style.display = isAdmin ? 'block' : 'none';
+                }
+
+                // Navega para a página inicial correspondente
+                go(isAdmin ? 'dashboard' : 'dashboard'); // ambos vão para o mesmo dashboard
+
+                // Carrega os dados e inicializa
+                buildGabGrid();
+                carregarDados();
+                atualizarDatasImpressao();
+                carregarEscolasParaCorrecaoManual();
+                carregarFiltrosRelTurma();
+                carregarEscolasDesempenho();
+                popularSelectQuestoes();
+                popularSelectGabTotal();
+            }
+
+            function doLogout() {
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app').style.display = 'none';
+                document.getElementById('lu').value = '';
+                document.getElementById('lp').value = '';
+                fecharCamera();
+            }
+
+            // ============================================
+            // NAVEGAÇÃO
+            // ============================================
+            function go(page) {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                const el = document.getElementById('page-' + page);
+                if (el) el.classList.add('active');
+                document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
+
+                if (page === 'escola') carregarEscolas();
+                if (page === 'turmas') { carregarFiltroEscolaTurmas(); carregarTurmas(); }
+                if (page === 'alunos') {
+                    const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                    carregarAlunos(escolaId);
+                }
+                if (page === 'provas') carregarProvas();
+                if (page === 'dashboard') carregarDashboard();
+                if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
+                if (page === 'gabaritos') carregarGabaritos();
+                if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
+                if (page === 'desempenho') { carregarEscolasDesempenho(); }
+
+                atualizarDatasImpressao();
+
+                if (window.innerWidth <= 900) {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.getElementById('menuOverlay');
+                    const toggle = document.getElementById('menuToggle');
+                    if (sidebar.classList.contains('open')) {
+                        sidebar.classList.remove('open');
+                        overlay.classList.remove('show');
+                        toggle.classList.remove('active');
+                        toggle.innerHTML = '☰';
+                    }
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO PARA CALCULAR CONCEITO
+            // ============================================
+            function calcularConceito(porcentagem) {
+                if (porcentagem <= 40) return 'inicial';
+                if (porcentagem <= 60) return 'basico';
+                if (porcentagem <= 80) return 'proficiente';
+                return 'avancado';
+            }
+
+            // ============================================
+            // FUNÇÃO PARA FILTRAR TURMAS POR SÉRIE
+            // ============================================
+            function filtrarTurmasPorSerie(selectSerie, selectTurma) {
+                const serieSelecionada = selectSerie.value;
+                let firstVisible = false;
+
+                for (let option of selectTurma.options) {
+                    if (option.value === '') {
+                        option.style.display = '';
+                        continue;
+                    }
+                    const serieDaTurma = option.dataset.serie || '';
+                    if (serieSelecionada === '' || serieDaTurma === serieSelecionada) {
+                        option.style.display = '';
+                        if (!firstVisible) {
+                            selectTurma.value = option.value;
+                            firstVisible = true;
+                        }
+                    } else {
+                        option.style.display = 'none';
+                    }
+                }
+
+                if (!firstVisible) selectTurma.value = '';
+                selectTurma.dispatchEvent(new Event('change'));
+            }
+
+            // ============================================
+            // CARREGAR ALUNOS POR PROVA
+            // ============================================
+            async function carregarAlunosPorProva(provaId) {
+                const selectAluno = document.getElementById('corrigir-aluno');
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
+                if (!provaId) return;
+                try {
+                    const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                    const prova = await provaResp.json();
+                    if (!prova || prova.erro) {
+                        showToast('❌ Erro ao carregar dados da prova', 'error');
+                        return;
+                    }
+                    const serie = prova.serie || '';
+                    const alunosResp = await fetch(API_URL + '/api/alunos?serie=' + encodeURIComponent(serie));
+                    const alunos = await alunosResp.json();
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            const turmaInfo = a.turma_nome ? ' - ' + a.turma_nome : '';
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')' + turmaInfo;
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar alunos:', e);
+                }
+            }
+
+            // ============================================
+            // CARREGAR ESCOLAS
+            // ============================================
+            async function carregarEscolas() {
+                try {
+                    const response = await fetch(`${API_URL}/api/escolas`);
+                    const escolas = await response.json();
+                    const tbody = document.getElementById('tb-escola');
+                    if (!tbody) return;
+
+                    if (!escolas || escolas.length === 0 || escolas.erro) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+                    } else {
+                        const turmasResp = await fetch(`${API_URL}/api/turmas`);
+                        const turmas = await turmasResp.json();
+                        const alunosResp = await fetch(`${API_URL}/api/alunos`);
+                        const alunos = await alunosResp.json();
+
+                        tbody.innerHTML = escolas.map((e, i) => {
+                            const turmasCount = turmas.filter(t => t.escola_id === e.id).length;
+                            const alunosCount = alunos.filter(a => a.escola_id === e.id).length;
+                            return '<tr data-id="' + e.id + '" data-nome="' + e.nome + '">' +
+                                '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                                '<td><strong>' + e.nome + '</strong></td>' +
+                                '<td>' + (e.municipio || '—') + (e.estado ? ' — ' + e.estado : '') + '</td>' +
+                                '<td><span class="chip">' + (e.inep || '—') + '</span></td>' +
+                                '<td>' + (e.diretor || '—') + '</td>' +
+                                '<td>' + turmasCount + '</td>' +
+                                '<td>' + alunosCount + '</td>' +
+                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarEscola(' + e.id + ')">✏️ Editar</button><button class="btn-del" onclick="excluirEscola(' + e.id + ', \'' + e.nome + '\')" title="Excluir">🗑️</button></div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas:', erro);
+                }
+            }
+
+            // ============================================
+            // CARREGAR TURMAS
+            // ============================================
+            async function carregarTurmas() {
+                try {
+                    const response = await fetch(API_URL + '/api/turmas');
+                    const turmas = await response.json();
+                    const tbody = document.getElementById('tb-turmas');
+                    if (!tbody) return;
+
+                    if (!turmas || turmas.length === 0 || turmas.erro) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
+                    } else {
+                        const corMap = { '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+                            '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+                            '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
+
+                        tbody.innerHTML = turmas.map((t, i) => {
+                            const totalAlunos = t.total_alunos || 0;
+                            return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '" data-escola="' + (t.escola_id || '') + '">' +
+                                '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
+                                '<td><strong>' + t.nome + '</strong></td>' +
+                                '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
+                                '<td>' + (t.turno || 'Manhã') + '</td>' +
+                                '<td>' + (t.escola_nome || '—') + '</td>' +
+                                '<td>' + (t.professor || '—') + '</td>' +
+                                '<td><span class="badge badge-blue">' + totalAlunos + '</span></td>' +
+                                '<td><div class="btn-group">' +
+                                '<button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button>' +
+                                '<button class="btn btn-green btn-sm" onclick="verAlunosDaTurma(' + t.id + ')" title="Lista de Alunos">📋</button>' +
+                                '<button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button>' +
+                                '</div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar turmas:', erro);
+                    const tbody = document.getElementById('tb-turmas');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar turmas</td></tr>';
+                    }
+                }
+            }
+
+            // ============================================
+            // CARREGAR FILTRO DE ESCOLA PARA TURMAS
+            // ============================================
+            async function carregarFiltroEscolaTurmas() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('filtro-escola-turmas');
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Todas as escolas</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) select.value = current;
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar filtro de escola para turmas:', erro);
+                }
+            }
+
+            // ============================================
+            // APLICAR FILTROS NAS TURMAS
+            // ============================================
+            function aplicarFiltrosTurmas() {
+                const escolaId = document.getElementById('filtro-escola-turmas').value;
+                const serie = document.getElementById('filtro-serie-turmas').value;
+
+                document.querySelectorAll('#tb-turmas tr').forEach(row => {
+                    let mostrar = true;
+                    if (escolaId) {
+                        const escolaRow = row.dataset.escola;
+                        if (escolaRow !== escolaId) mostrar = false;
+                    }
+                    if (serie) {
+                        const serieRow = row.dataset.serie;
+                        if (serieRow !== serie) mostrar = false;
+                    }
+                    row.style.display = mostrar ? '' : 'none';
+                });
+
+                const totalVisiveis = document.querySelectorAll('#tb-turmas tr:not([style*="display: none"])').length;
+                showToast(`🔍 ${totalVisiveis} turmas encontradas com os filtros aplicados.`, 'info');
+            }
+
+            // ============================================
+            // LIMPAR FILTROS DAS TURMAS
+            // ============================================
+            function limparFiltrosTurmas() {
+                document.getElementById('filtro-escola-turmas').value = '';
+                document.getElementById('filtro-serie-turmas').value = '';
+                document.querySelectorAll('#tb-turmas tr').forEach(row => row.style.display = '');
+                showToast('✕ Filtros limpos!', 'info');
+            }
+
+            // ============================================
+            // CARREGAR ALUNOS
+            // ============================================
+            async function carregarAlunos(escolaId = null) {
+                try {
+                    let url = API_URL + '/api/alunos';
+                    const params = new URLSearchParams();
+                    if (escolaId && escolaId !== '' && escolaId !== 'null' && escolaId !== 'undefined') {
+                        params.append('escola_id', escolaId);
+                    }
+                    const selectTurma = document.getElementById('filtro-turma-alunos');
+                    if (selectTurma && selectTurma.value && selectTurma.value !== '') {
+                        params.append('turma_id', selectTurma.value);
+                    }
+                    const selectSerie = document.getElementById('filtro-serie-alunos');
+                    if (selectSerie && selectSerie.value && selectSerie.value !== '') {
+                        params.append('serie', selectSerie.value);
+                    }
+                    const queryString = params.toString();
+                    if (queryString) url += '?' + queryString;
+                    const response = await fetch(url);
+                    const alunos = await response.json();
+                    const tbody = document.getElementById('tb-alunos');
+                    if (!tbody) return;
+                    if (!alunos || alunos.length === 0 || alunos.erro) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado com os filtros selecionados</td></tr>';
+                    } else {
+                        const corMap = {
+                            '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+                            '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+                            '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
+                        };
+                        tbody.innerHTML = alunos.map((a, i) => {
+                            return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
+                                '<td><span class="badge badge-blue">' + String(a.numero_chamada || i + 1).padStart(2, '0') + '</span></td>' +
+                                '<td><span class="chip">' + (a.matricula || '—') + '</span></td>' +
+                                '<td><strong>' + a.nome + '</strong></td>' +
+                                '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td>' +
+                                '<td>' + (a.turma_nome || '—') + '</td>' +
+                                '<td><span class="badge badge-gray">' + (a.escola_nome || '—') + '</span></td>' +
+                                '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
+                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar alunos:', erro);
+                    const tbody = document.getElementById('tb-alunos');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar alunos</td></tr>';
+                    }
+                }
+            }
+
+            // ============================================
+            // CARREGAR ESCOLAS PARA FILTRO DE ALUNOS
+            // ============================================
+            async function carregarEscolasFiltroAlunos() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('filtro-escola-alunos');
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Todas as escolas</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) {
+                            select.value = current;
+                            carregarAlunos(current);
+                        }
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas para filtro de alunos:', erro);
+                }
+            }
+
+            // ============================================
+            // FILTRAR ALUNOS POR ESCOLA
+            // ============================================
+            function filtrarAlunosPorEscola(escolaId) {
+                const selectTurma = document.getElementById('filtro-turma-alunos');
+                if (selectTurma) {
+                    selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                    if (escolaId && escolaId !== '') {
+                        fetch(API_URL + '/api/turmas?escola_id=' + escolaId)
+                            .then(r => r.json())
+                            .then(turmas => {
+                                if (turmas && !turmas.erro) {
+                                    turmas.forEach(t => {
+                                        const opt = document.createElement('option');
+                                        opt.value = t.id;
+                                        opt.textContent = t.nome + ' - ' + (t.serie || '');
+                                        selectTurma.appendChild(opt);
+                                    });
+                                }
+                            })
+                            .catch(e => console.error('Erro ao carregar turmas:', e));
+                    }
+                }
+                carregarAlunos(escolaId);
+            }
+
+            // ============================================
+            // FILTRAR ALUNOS POR SÉRIE
+            // ============================================
+            function filtrarAlunosPorSerie(serie) {
+                const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                carregarAlunos(escolaId);
+            }
+
+            // ============================================
+            // CARREGAR PROVAS
+            // ============================================
+            async function carregarProvas() {
+                try {
+                    const response = await fetch(API_URL + '/api/provas');
+                    const provas = await response.json();
+                    const tbody = document.getElementById('tb-provas');
+                    if (!tbody) return;
+
+                    if (!provas || provas.length === 0 || provas.erro) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
+                    } else {
+                        tbody.innerHTML = provas.map((p, i) => {
+                            return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                                '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                                '<td><strong>' + p.titulo + '</strong></td>' +
+                                '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                                '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
+                                '<td>' + (p.data_prova || '—') + '</td>' +
+                                '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
+                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="visualizarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar provas:', erro);
+                }
+            }
+
+            // ============================================
+            // VISUALIZAR PROVA (CORREÇÃO DO ÍCONE 👁️)
+            // ============================================
+            let visualizarProvaId = null;
+            let visualizarProvaData = null;
+
+            async function visualizarProva(id) {
+                showToast('👁️ Carregando dados da prova...', 'info');
+                try {
+                    const response = await fetch(`${API_URL}/api/provas/${id}`);
+                    const prova = await response.json();
+                    if (!prova || prova.erro) {
+                        showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
+                        return;
+                    }
+
+                    visualizarProvaId = id;
+                    visualizarProvaData = prova;
+
+                    const conteudo = document.getElementById('visualizar-prova-conteudo');
+                    if (!conteudo) return;
+
+                    const gabarito = prova.gabarito || [];
+                    const bncc = prova.bncc || [];
+                    const total = prova.quantidade_questoes || 20;
+                    const isProducao = (prova.disciplina === 'Produção de Texto');
+
+                    let gabHtml = '';
+                    if (gabarito.length > 0) {
+                        gabHtml = '<div style="margin-top:12px;"><strong style="color:var(--text2);">📋 Gabarito:</strong><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:6px;">';
+                        for (let i = 0; i < Math.min(gabarito.length, total); i++) {
+                            const texto = gabarito[i] || '—';
+                            const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
+                            gabHtml += `<div style="background:var(--bg2);border-radius:6px;padding:4px 6px;text-align:center;border:1px solid var(--border);">
+                                <div style="font-size:8px;color:var(--text3);font-weight:700;">Q${i+1}</div>
+                                <div style="font-weight:700;font-size:12px;color:var(--green);">${texto}</div>
+                                ${codigo ? `<div style="font-size:7px;color:var(--purple);margin-top:2px;">BNCC: ${codigo}</div>` : ''}
+                            </div>`;
+                        }
+                        gabHtml += '</div></div>';
+                    } else {
+                        gabHtml = '<div style="margin-top:12px;color:var(--text3);font-size:13px;">⚠️ Nenhum gabarito cadastrado para esta prova.</div>';
+                    }
+
+                    conteudo.innerHTML = `
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                            <div><strong style="color:var(--text2);">📝 Título</strong><br>${prova.titulo || '—'}</div>
+                            <div><strong style="color:var(--text2);">📚 Disciplina</strong><br>${prova.disciplina || '—'}</div>
+                            <div><strong style="color:var(--text2);">🎓 Série</strong><br>${prova.serie || '—'}</div>
+                            <div><strong style="color:var(--text2);">📅 Data</strong><br>${prova.data_prova || '—'}</div>
+                            <div><strong style="color:var(--text2);">📊 Bimestre</strong><br>${prova.bimestre || '—'}</div>
+                            <div><strong style="color:var(--text2);">🔢 Questões</strong><br>${prova.quantidade_questoes || 20}</div>
+                            <div><strong style="color:var(--text2);">📈 Nota Máxima</strong><br>${prova.nota_maxima || 10}</div>
+                            <div><strong style="color:var(--text2);">📋 Tipo</strong><br>${isProducao ? '📝 Produção de Texto' : (prova.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D')}</div>
+                        </div>
+                        ${gabHtml}
+                    `;
+
+                    openM('m-visualizar-prova');
+                } catch (erro) {
+                    console.error('Erro ao visualizar prova:', erro);
+                    showToast('❌ Erro ao carregar prova: ' + erro.message, 'error');
+                }
+            }
+
+            function editarProvaDireto() {
+                if (visualizarProvaId) {
+                    closeM('m-visualizar-prova');
+                    editarGabarito(visualizarProvaId);
+                } else {
+                    showToast('❌ Nenhuma prova selecionada para editar.', 'error');
+                }
+            }
+
+            // ============================================
+            // CARREGAR DASHBOARD
+            // ============================================
+            async function carregarDashboard() {
+    try {
+        const response = await fetch(API_URL + '/api/dashboard');
+        const dados = await response.json();
+        const setText = (id, valor) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = valor;
+        };
+        setText('totalEscolas', dados.total_escolas || 0);
+        setText('totalTurmas', dados.total_turmas || 0);
+        setText('totalAlunos', dados.total_alunos || 0);
+        setText('totalProvas', dados.total_provas || 0);
+        setText('u-total-escolas', dados.total_escolas || 0);
+        setText('u-total-turmas', dados.total_turmas || 0);
+        setText('u-total-alunos', dados.total_alunos || 0);
+    } catch (erro) {
+        console.error('Erro ao carregar dashboard:', erro);
     }
-    return jsonify(status)
+}
 
-# ============================================
-# INICIALIZAÇÃO DO BANCO
-# ============================================
+            // ============================================
+            // CARREGAR GABARITOS (COM INDICADOR BNCC)
+            // ============================================
+            async function carregarGabaritos() {
+                try {
+                    const response = await fetch(API_URL + '/api/provas');
+                    const provas = await response.json();
+                    const tbody = document.getElementById('tb-gabaritos');
+                    if (!tbody) return;
+                    const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
+                    if (!comGabarito || comGabarito.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum gabarito cadastrado</td></tr>';
+                    } else {
+                        tbody.innerHTML = comGabarito.map((p, i) => {
+                            let bnccText = '—';
+                            if (p.bncc && p.bncc.length > 0) {
+                                const codigos = p.bncc.filter(c => c && c.trim() !== '');
+                                if (codigos.length > 0) bnccText = codigos.join(', ');
+                            }
+                            const tipoTexto = p.disciplina === 'Produção de Texto' ? 'Texto' : (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D');
+                            return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                                '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
+                                '<td>' + p.titulo + '</td>' +
+                                '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                                '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
+                                '<td><span class="badge ' + (tipoTexto === 'Texto' ? 'badge-purple' : (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue')) + '">' + tipoTexto + '</span></td>' +
+                                '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
+                                '<td>' + (p.data_prova || '—') + '</td>' +
+                                '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar gabaritos:', erro);
+                }
+            }
 
-def init_db():
-    conn = get_db_connection()
-    if not conn:
-        print("⚠️ Banco não disponível, usando dados em memória")
-        return
+            // ============================================
+            // CARREGAR RESULTADOS COM FILTROS (CORRIGIDO)
+            // ============================================
+            async function carregarResultadosComFiltros() {
+                try {
+                    const escolaId = document.getElementById('filtro-escola').value;
+                    const serie = document.getElementById('filtro-serie').value;
+                    const turmaId = document.getElementById('filtro-turma').value;
+                    const provaId = document.getElementById('filtro-prova').value;
 
-    try:
-        cur = conn.cursor()
+                    // ---- BUSCAR TOTAL DE ALUNOS DA TURMA/ESCOLA ----
+                    let totalAlunosTurma = 0;
+                    let alunosDaTurma = [];
 
-        # Verifica se a tabela escolas existe (para saber se o banco já foi criado)
-        cur.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables
-                WHERE table_name = 'escolas'
-            )
-        """)
-        tabela_existe = cur.fetchone()[0]
+                    // Monta parâmetros para buscar alunos
+                    const paramsAlunos = new URLSearchParams();
+                    if (turmaId && turmaId !== '') paramsAlunos.append('turma_id', turmaId);
+                    else if (escolaId && escolaId !== '') paramsAlunos.append('escola_id', escolaId);
+                    if (serie && serie !== '') paramsAlunos.append('serie', serie);
 
-        if not tabela_existe:
-            print("🔧 Criando tabelas do banco de dados...")
+                    if (paramsAlunos.toString()) {
+                        try {
+                            const respAlunos = await fetch(`${API_URL}/api/alunos?${paramsAlunos.toString()}`);
+                            const alunosData = await respAlunos.json();
+                            if (alunosData && !alunosData.erro && Array.isArray(alunosData)) {
+                                alunosDaTurma = alunosData;
+                                totalAlunosTurma = alunosData.length;
+                            }
+                        } catch (e) {
+                            console.warn('Erro ao buscar total de alunos da turma:', e);
+                        }
+                    }
 
-            cur.execute("""
-                CREATE TABLE escolas (
-                    id SERIAL PRIMARY KEY,
-                    nome TEXT NOT NULL,
-                    inep TEXT,
-                    municipio TEXT,
-                    estado TEXT DEFAULT 'PA',
-                    telefone TEXT,
-                    diretor TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    // ---- BUSCAR RESULTADOS CORRIGIDOS (histórico agrupado) ----
+                    let url = API_URL + '/api/historico/agrupado';
+                    const paramsHist = new URLSearchParams();
+                    if (escolaId && escolaId !== '') paramsHist.append('escola', escolaId);
+                    if (serie && serie !== '') paramsHist.append('serie', serie);
+                    if (turmaId && turmaId !== '') paramsHist.append('turma', turmaId);
+                    if (provaId && provaId !== '') paramsHist.append('prova', provaId);
+                    if (paramsHist.toString()) url += '?' + paramsHist.toString();
 
-            cur.execute("""
-                CREATE TABLE turmas (
-                    id SERIAL PRIMARY KEY,
-                    escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-                    nome TEXT NOT NULL,
-                    serie TEXT,
-                    turno TEXT DEFAULT 'Manhã',
-                    professor TEXT,
-                    capacidade INTEGER DEFAULT 35,
-                    ano_letivo INTEGER DEFAULT 2025,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    const response = await fetch(url);
+                    const alunos = await response.json();
 
-            cur.execute("""
-                CREATE TABLE alunos (
-                    id SERIAL PRIMARY KEY,
-                    escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
-                    turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
-                    nome TEXT NOT NULL,
-                    matricula TEXT,
-                    numero_chamada INTEGER,
-                    data_nascimento DATE,
-                    genero TEXT,
-                    responsavel TEXT,
-                    telefone TEXT,
-                    email TEXT,
-                    observacoes TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    const tbody = document.getElementById('tb-resultados-filtrado');
+                    if (!tbody) return;
 
-            cur.execute("""
-                CREATE TABLE provas (
-                    id SERIAL PRIMARY KEY,
-                    titulo TEXT NOT NULL,
-                    serie TEXT NOT NULL,
-                    disciplina TEXT,
-                    bimestre TEXT,
-                    data_prova DATE,
-                    valor_nota DECIMAL(5,2) DEFAULT 10,
-                    tipo_questoes TEXT DEFAULT '4',
-                    quantidade_questoes INTEGER DEFAULT 20,
-                    gabarito TEXT[],
-                    bncc TEXT[],
-                    textos_questoes TEXT[],
-                    niveis TEXT[],
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    // ---- ATUALIZAR CARDS ----
+                    const totalCorrigidos = (alunos && !alunos.erro && Array.isArray(alunos)) ? alunos.length : 0;
+                    const diff = Math.max(0, totalAlunosTurma - totalCorrigidos);
 
-            cur.execute("""
-                CREATE TABLE historico (
-                    id SERIAL PRIMARY KEY,
-                    prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-                    aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-                    respostas TEXT[],
-                    acertos INTEGER,
-                    nota DECIMAL(5,2),
-                    total INTEGER,
-                    tipo_correcao TEXT DEFAULT 'ia',
-                    disciplina TEXT,
-                    tipo_avaliacao TEXT,
-                    questoes_status JSONB DEFAULT '[]',
-                    data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    document.getElementById('res-total-filtrado').textContent = totalCorrigidos;
+                    document.getElementById('res-total-alunos-turma').textContent = totalAlunosTurma;
+                    document.getElementById('res-diferenca').textContent = diff;
 
-            cur.execute("""
-                CREATE TABLE usuarios (
-                    id SERIAL PRIMARY KEY,
-                    nome TEXT,
-                    username TEXT UNIQUE NOT NULL,
-                    senha_hash TEXT NOT NULL,
-                    email TEXT,
-                    perfil TEXT DEFAULT 'usuario',
-                    ativo BOOLEAN DEFAULT TRUE,
-                    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    if (!alunos || alunos.length === 0 || alunos.erro) {
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+                        document.getElementById('total-alunos-tabela').textContent = '0 alunos';
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`conceito-${c}-bar`).style.width = '2%';
+                        });
+                        document.getElementById('total-conceitos-label').textContent = '0';
+                        return;
+                    }
 
-            cur.execute("""
-                CREATE TABLE correcoes_texto (
-                    id SERIAL PRIMARY KEY,
-                    aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
-                    prova_id INTEGER REFERENCES provas(id) ON DELETE SET NULL,
-                    texto TEXT NOT NULL,
-                    nota DECIMAL(5,2),
-                    metrica_coerencia DECIMAL(5,2),
-                    metrica_estrutura DECIMAL(5,2),
-                    metrica_gramatica DECIMAL(5,2),
-                    metrica_vocabulario DECIMAL(5,2),
-                    feedback TEXT,
-                    tipo_correcao TEXT DEFAULT 'ia',
-                    data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+                    const dadosAlunos = Array.isArray(alunos) ? alunos : [];
 
-            print("✅ Tabelas criadas com sucesso!")
-        else:
-            print("📌 Tabelas já existem, verificando colunas...")
+                    if (dadosAlunos.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
+                        document.getElementById('total-alunos-tabela').textContent = '0 alunos';
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`conceito-${c}-bar`).style.width = '2%';
+                        });
+                        document.getElementById('total-conceitos-label').textContent = '0';
+                        return;
+                    }
 
-            # Verificar se a coluna bncc existe na tabela provas
-            cur.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'provas' AND column_name = 'bncc'
-            """)
-            if not cur.fetchone():
-                print("🔧 Adicionando coluna bncc à tabela provas...")
-                try:
-                    cur.execute("ALTER TABLE provas ADD COLUMN bncc TEXT[]")
-                    print("✅ Coluna bncc adicionada com sucesso!")
-                except Exception as e:
-                    print(f"⚠️ Erro ao adicionar coluna bncc: {e}")
+                    // ---- IDENTIFICAR A DISCIPLINA DA PROVA (se houver) ----
+                    let disciplinaAlvo = null;
+                    if (provaId && provaId !== '') {
+                        try {
+                            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                            const prova = await provaResp.json();
+                            if (prova && !prova.erro && prova.disciplina) {
+                                disciplinaAlvo = mapearDisciplina(prova.disciplina);
+                            }
+                        } catch (e) {
+                            console.warn('Não foi possível obter a disciplina da prova:', e);
+                        }
+                    }
 
-            # Verificar e adicionar colunas textos_questoes e niveis
-            for col in ['textos_questoes', 'niveis']:
-                cur.execute("""
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = 'provas' AND column_name = %s
-                """, (col,))
-                if not cur.fetchone():
-                    print(f"🔧 Adicionando coluna {col} à tabela provas...")
-                    try:
-                        cur.execute(f"ALTER TABLE provas ADD COLUMN {col} TEXT[]")
-                        print(f"✅ Coluna {col} adicionada com sucesso!")
-                    except Exception as e:
-                        print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
+                    function mapearDisciplina(nome) {
+                        const mapa = {
+                            'Português': 'portugues',
+                            'Matemática': 'matematica',
+                            'Produção de Texto': 'producao',
+                            'Ciências Humanas': 'ch',
+                            'Ciências Naturais': 'cn',
+                            'História': 'ch',
+                            'Geografia': 'ch',
+                            'Inglês': 'portugues'
+                        };
+                        return mapa[nome] || null;
+                    }
 
-            # Verificar se a coluna questoes_status existe
-            cur.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'historico' AND column_name = 'questoes_status'
-            """)
-            if not cur.fetchone():
-                print("🔧 Adicionando coluna questoes_status à tabela historico...")
-                try:
-                    cur.execute("""
-                        ALTER TABLE historico ADD COLUMN questoes_status JSONB DEFAULT '[]'
-                    """)
-                    print("✅ Coluna questoes_status adicionada com sucesso!")
-                except Exception as e:
-                    print(f"⚠️ Erro ao adicionar coluna questoes_status: {e}")
+                    // ---- CÁLCULO DOS CONCEITOS (APENAS UMA DISCIPLINA OU TODAS) ----
+                    const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
 
-        # Inserir usuários fixos se não existirem
-        for username, dados in USUARIOS_FIXOS.items():
-            cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
-            if not cur.fetchone():
-                cur.execute("""
-                    INSERT INTO usuarios (nome, username, senha_hash, perfil, ativo)
-                    VALUES (%s, %s, %s, %s, TRUE)
-                """, (dados['nome'], username, dados['senha'], dados['perfil']))
-                print(f"✅ Usuário {username} criado com sucesso!")
+                    if (disciplinaAlvo) {
+                        dadosAlunos.forEach(aluno => {
+                            const discData = aluno[disciplinaAlvo];
+                            if (discData && typeof discData === 'object') {
+                                const acertos = discData.acertos || 0;
+                                const totalDisc = discData.total || 0;
+                                const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                                const conceito = calcularConceito(pct);
+                                contagemConceitos[conceito]++;
+                            } else {
+                                contagemConceitos.inicial++;
+                            }
+                        });
+                    } else {
+                        const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
+                        dadosAlunos.forEach(aluno => {
+                            disciplinas.forEach(chave => {
+                                const discData = aluno[chave];
+                                if (discData && typeof discData === 'object') {
+                                    const acertos = discData.acertos || 0;
+                                    const totalDisc = discData.total || 0;
+                                    const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                                    const conceito = calcularConceito(pct);
+                                    contagemConceitos[conceito]++;
+                                } else {
+                                    contagemConceitos.inicial++;
+                                }
+                            });
+                        });
+                    }
 
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("✅ Banco de dados inicializado com sucesso!")
-    except Exception as e:
-        print(f"❌ Erro ao inicializar banco: {e}")
-        traceback.print_exc()
+                    atualizarGraficosConceitos(contagemConceitos);
 
-# ============================================
-# INICIALIZAÇÃO DO SERVIDOR
-# ============================================
+                    const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico +
+                                           contagemConceitos.proficiente + contagemConceitos.avancado;
+                    document.getElementById('total-conceitos-label').textContent = totalConceitos;
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
-    print("=" * 60)
-    print(f"📌 Porta: {port}")
-    print(f"🤖 Gemini: {'✅ Disponível' if GEMINI_AVAILABLE else '❌ Indisponível'}")
-    if GEMINI_AVAILABLE:
-        print(f"📌 Modelo: {GEMINI_MODEL}")
-    print(f"🤖 RelayFreeLLM: {'✅ Disponível' if RELAY_AVAILABLE else '❌ Indisponível'}")
-    if RELAY_AVAILABLE:
-        print(f"📌 URL: {RELAY_API_URL}")
-        print(f"📌 Modelo: {RELAY_MODEL}")
-    print("=" * 60)
-    print("📋 Disciplinas suportadas:")
-    print("   - Português")
-    print("   - Matemática")
-    print("   - Produção de Texto")
-    print("   - Ciências Humanas (CH)")
-    print("   - Ciências Naturais (CN)")
-    print("=" * 60)
-    print("📋 Endpoints disponíveis:")
-    print("   - /health")
-    print("   - /api/login")
-    print("   - /api/corrigir")
-    print("   - /api/corrigir_manual")
-    print("   - /api/corrigir_redacao")
-    print("   - /api/salvar_correcao_texto")
-    print("   - /api/correcoes_texto")
-    print("   - /api/escolas")
-    print("   - /api/turmas")
-    print("   - /api/alunos")
-    print("   - /api/provas")
-    print("   - /api/gabaritos")
-    print("   - /api/historico")
-    print("   - /api/historico/agrupado")
-    print("   - /api/dashboard")
-    print("   - /api/dashboard/Conceito")
-    print("   - /api/gerar_gabarito")
-    print("   - /api/backup")
-    print("   - /api/usuarios (GET, POST)")
-    print("   - /api/usuarios/<id> (GET, PUT, DELETE)  ✅ NOVO")
-    print("=" * 60)
+                    // ---- MONTAGEM DA TABELA ----
+                    dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
+                    const total = dadosAlunos.length;
+                    const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
-    # Inicializar banco
-    init_db()
+                    document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
 
-    app.run(host='0.0.0.0', port=port, debug=False)
+                    function getDadosDisciplina(disciplinaData, totalQuestoes) {
+                        if (!disciplinaData || typeof disciplinaData !== 'object') {
+                            return { acertos: 0, erros: 0, conceito: 'inicial' };
+                        }
+                        const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                        let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                        const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                        if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+                        const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        const conceito = calcularConceito(porcentagem);
+                        return { acertos, erros, conceito };
+                    }
+
+                    function badgeConceito(c) {
+                        return `badge-conceito-${c}-sm`;
+                    }
+
+                    tbody.innerHTML = dadosAlunos.map((aluno, index) => {
+                        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+
+                        const portugues = getDadosDisciplina(aluno.portugues, 20);
+                        const matematica = getDadosDisciplina(aluno.matematica, 20);
+                        const producao = getDadosDisciplina(aluno.producao, 20);
+                        const ch = getDadosDisciplina(aluno.ch, 20);
+                        const cn = getDadosDisciplina(aluno.cn, 20);
+
+                        const nomeEscola = aluno.escola || '';
+                        const nomeTurma = aluno.turma || '';
+
+                        return '<tr>' +
+                            '<td>' + medalha + '</td>' +
+                            '<td>' + (index + 1) + '</td>' +
+                            '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                            '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                            '</tr>';
+                    }).join('');
+
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar resultados com filtros:', erro);
+                    const tbody = document.getElementById('tb-resultados-filtrado');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
+                    }
+                }
+            }
+
+            // ============================================
+            // ATUALIZAR GRÁFICOS DE CONCEITOS
+            // ============================================
+            function atualizarGraficosConceitos(contagem) {
+                const total = contagem.inicial + contagem.basico + contagem.proficiente + contagem.avancado || 1;
+
+                const cores = {
+                    inicial: '#ef4444',
+                    basico: '#f59e0b',
+                    proficiente: '#3b82f6',
+                    avancado: '#10b981'
+                };
+
+                ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
+                    const count = contagem[conceito] || 0;
+                    let pct = total > 0 ? (count / total) * 100 : 0;
+                    pct = Math.max(pct, 2);
+
+                    const countEl = document.getElementById(`conceito-${conceito}-count`);
+                    const barEl = document.getElementById(`conceito-${conceito}-bar`);
+
+                    if (countEl) countEl.textContent = count;
+                    if (barEl) {
+                        barEl.style.width = pct + '%';
+                        barEl.style.background = `linear-gradient(90deg, ${cores[conceito]}, ${cores[conceito]}dd)`;
+                    }
+                });
+            }
+
+            // ============================================
+            // CARREGAR FILTROS RESULTADOS
+            // ============================================
+            async function carregarFiltrosResultados() {
+                try {
+                    const respEscolas = await fetch(API_URL + '/api/escolas');
+                    const escolas = await respEscolas.json();
+                    const selectEscola = document.getElementById('filtro-escola');
+                    if (selectEscola && escolas && !escolas.erro) {
+                        const current = selectEscola.value;
+                        selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+                        escolas.forEach(e => { const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectEscola.appendChild(opt); });
+                        if (current) selectEscola.value = current;
+                    }
+
+                    const respTurmas = await fetch(API_URL + '/api/turmas');
+                    const turmas = await respTurmas.json();
+                    const selectTurma = document.getElementById('filtro-turma');
+                    if (selectTurma && turmas && !turmas.erro) {
+                        const current = selectTurma.value;
+                        selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                        if (current) selectTurma.value = current;
+                    }
+
+                    const respProvas = await fetch(API_URL + '/api/provas');
+                    const provas = await respProvas.json();
+                    const selectProva = document.getElementById('filtro-prova');
+                    if (selectProva && provas && !provas.erro) {
+                        const current = selectProva.value;
+                        selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                            selectProva.appendChild(opt);
+                        });
+                        if (current) selectProva.value = current;
+                    }
+                } catch (erro) { console.error('Erro ao carregar filtros:', erro); }
+            }
+
+            // ============================================
+            // CARREGAR TURMAS POR ESCOLA
+            // ============================================
+            async function carregarTurmasPorEscola(escolaId) {
+                const selectTurma = document.getElementById('filtro-turma');
+                const selectSerie = document.getElementById('filtro-serie');
+                if (!selectTurma) return;
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                try {
+                    const respTurmas = await fetch(API_URL + '/api/turmas');
+                    const turmas = await respTurmas.json();
+                    if (turmas && !turmas.erro) {
+                        const turmasFiltradas = escolaId && escolaId !== '' ? turmas.filter(t => t.escola_id == escolaId) : turmas;
+                        turmasFiltradas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                        if (selectSerie) filtrarTurmasPorSerie(selectSerie, selectTurma);
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar turmas:', erro);
+                }
+                carregarResultadosComFiltros();
+            }
+
+            // ============================================
+            // LIMPAR FILTROS RESULTADOS
+            // ============================================
+            function limparFiltrosResultados() {
+                document.getElementById('filtro-escola').value = '';
+                document.getElementById('filtro-serie').value = '';
+                document.getElementById('filtro-prova').value = '';
+
+                const selectTurma = document.getElementById('filtro-turma');
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                        carregarResultadosComFiltros();
+                    }
+                }).catch(e => console.error('Erro ao recarregar turmas:', e));
+
+                const selectProva = document.getElementById('filtro-prova');
+                fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
+                    if (provas && !provas.erro) {
+                        selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                            selectProva.appendChild(opt);
+                        });
+                    }
+                    carregarResultadosComFiltros();
+                }).catch(e => console.error('Erro ao recarregar provas:', e));
+            }
+
+            // ============================================
+            // CORREÇÃO MANUAL (DENTRO DA IA)
+            // ============================================
+            function abrirCorrecaoManual() {
+                if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
+                    showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
+                    return;
+                }
+                if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData.gabarito.length === 0) {
+                    showToast('❌ Gabarito não disponível para esta prova!', 'error');
+                    return;
+                }
+                const temGabaritoValido = correcaoManualData.gabarito.some(g => g && g.trim() !== '');
+                if (!temGabaritoValido) {
+                    showToast('❌ Gabarito vazio ou inválido para esta prova!', 'error');
+                    return;
+                }
+                document.getElementById('cm-aluno-nome').textContent = correcaoManualData.alunoNome || 'Aluno';
+                document.getElementById('cm-prova-titulo').textContent = correcaoManualData.provaTitulo || 'Prova';
+                document.getElementById('cm-turma-info').textContent = correcaoManualData.serie + ' | Turma: —';
+                document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
+                gerarGridCorrecaoManual();
+                atualizarResumoCorrecaoManual();
+                openM('m-correcao-manual');
+            }
+
+            function gerarGridCorrecaoManual() {
+                const grid = document.getElementById('cm-grid');
+                if (!grid) return;
+                const qtd = correcaoManualData.quantidade || 20;
+                const alternativas = correcaoManualData.alternativas || ['A', 'B', 'C', 'D'];
+                const respostas = correcaoManualData.respostasAluno || [];
+                const gabarito = correcaoManualData.gabarito || [];
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+
+                grid.innerHTML = '';
+                for (let i = 0; i < qtd; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'correcao-manual-item';
+                    const respostaAluno = (i < respostas.length) ? respostas[i] : '';
+                    const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
+
+                    if (isProducao) {
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-gabarito">Gabarito: ${respostaGabarito || '—'}</div>
+                            <input class="q-resposta-texto" type="text" placeholder="Resposta do aluno..." value="${respostaAluno}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px;" />
+                            <div class="q-status" style="font-size:10px;"></div>
+                        `;
+                        const input = div.querySelector('.q-resposta-texto');
+                        input.dataset.questao = i;
+                        input.addEventListener('input', function() {
+                            correcaoManualData.respostasAluno[i] = this.value;
+                            atualizarResumoCorrecaoManual();
+                        });
+                    } else {
+                        let options = '<option value="">—</option>';
+                        alternativas.forEach(alt => {
+                            const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
+                            options += `<option value="${alt}" ${selected}>${alt}</option>`;
+                        });
+                        let statusClass = '';
+                        let statusText = '';
+                        if (respostaAluno) {
+                            const isCorreto = respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+                            if (isCorreto) { statusClass = 'correta'; statusText = '✅'; } else { statusClass = 'errada'; statusText = '❌'; }
+                        }
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div>
+                            <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
+                            <div class="q-status ${statusClass}">${statusText}</div>
+                        `;
+                        const select = div.querySelector('.q-select');
+                        if (select) {
+                            if (respostaAluno && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase()) { select.className = 'q-select correta'; } else if (respostaAluno) { select.className = 'q-select errada'; }
+                        }
+                    }
+                    grid.appendChild(div);
+                }
+            }
+
+            function atualizarRespostaManual(select) {
+                const questaoIndex = parseInt(select.dataset.questao);
+                const novaResposta = select.value;
+                if (novaResposta) { correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase(); } else { correcaoManualData.respostasAluno[questaoIndex] = ''; }
+                const item = select.closest('.correcao-manual-item');
+                const qResposta = item.querySelector('.q-resposta');
+                const qStatus = item.querySelector('.q-status');
+                const gabarito = correcaoManualData.gabarito[questaoIndex] || '';
+                const resposta = correcaoManualData.respostasAluno[questaoIndex] || '';
+                const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+                qResposta.textContent = resposta || '—';
+                qResposta.style.color = isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)');
+                if (resposta) {
+                    if (isCorreto) { qStatus.textContent = '✅';
+                        qStatus.className = 'q-status correta';
+                        select.className = 'q-select correta'; } else { qStatus.textContent = '❌';
+                        qStatus.className = 'q-status errada';
+                        select.className = 'q-select errada'; }
+                } else { qStatus.textContent = '';
+                    qStatus.className = 'q-status';
+                    select.className = 'q-select'; }
+                atualizarResumoCorrecaoManual();
+            }
+
+            function atualizarResumoCorrecaoManual() {
+                const qtd = correcaoManualData.quantidade || 20;
+                const respostas = correcaoManualData.respostasAluno || [];
+                const gabarito = correcaoManualData.gabarito || [];
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+
+                let acertos = 0,
+                    respondidas = 0;
+                for (let i = 0; i < qtd; i++) {
+                    const resp = i < respostas.length ? respostas[i] : '';
+                    const gab = i < gabarito.length ? gabarito[i] : '';
+                    if (resp) {
+                        respondidas++;
+                        if (isProducao) {
+                            if (resp.trim().toLowerCase() === gab.trim().toLowerCase()) acertos++;
+                        } else {
+                            if (resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                        }
+                    }
+                }
+                const erros = respondidas - acertos;
+                const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
+                const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
+                const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+
+                document.getElementById('cm-acertos').textContent = acertos;
+                document.getElementById('cm-erros').textContent = erros;
+                document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
+
+                const statusBadge = document.getElementById('cm-status-badge');
+                const statusAtual = document.getElementById('cm-status-atual');
+                if (notaFinal >= (correcaoManualData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
+                    statusBadge.className = 'badge badge-green';
+                    statusAtual.textContent = 'Aprovado';
+                    statusAtual.style.color = 'var(--green)'; } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
+                    statusBadge.className = 'badge badge-orange';
+                    statusAtual.textContent = 'Recuperação';
+                    statusAtual.style.color = 'var(--orange)'; } else { statusBadge.textContent = '❌ REPROVADO';
+                    statusBadge.className = 'badge badge-red';
+                    statusAtual.textContent = 'Reprovado';
+                    statusAtual.style.color = 'var(--red)'; }
+                document.getElementById('cm-porcentagem').textContent = porcentagem + '% de aproveitamento';
+            }
+
+            function preencherGabaritoCM() {
+                const qtd = correcaoManualData.quantidade || 20;
+                const gabarito = correcaoManualData.gabarito || [];
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        if (i < gabarito.length) {
+                            input.value = gabarito[i] || '';
+                            correcaoManualData.respostasAluno[i] = gabarito[i] || '';
+                        }
+                    });
+                } else {
+                    for (let i = 0; i < qtd; i++) {
+                        if (i < gabarito.length && gabarito[i]) {
+                            correcaoManualData.respostasAluno[i] = gabarito[i];
+                        }
+                    }
+                    gerarGridCorrecaoManual();
+                }
+                atualizarResumoCorrecaoManual();
+                showToast('📋 Respostas preenchidas com o gabarito!', 'success');
+            }
+
+            function limparRespostasCM() {
+                const qtd = correcaoManualData.quantidade || 20;
+                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        input.value = '';
+                        correcaoManualData.respostasAluno[i] = '';
+                    });
+                } else {
+                    for (let i = 0; i < qtd; i++) {
+                        correcaoManualData.respostasAluno[i] = '';
+                    }
+                    gerarGridCorrecaoManual();
+                }
+                atualizarResumoCorrecaoManual();
+                showToast('🗑️ Respostas limpas!', 'info');
+            }
+
+            function salvarCorrecaoManual() {
+                const qtd = correcaoManualData.quantidade || 20;
+                const respostas = correcaoManualData.respostasAluno || [];
+                const gabarito = correcaoManualData.gabarito || [];
+                let acertos = 0;
+                for (let i = 0; i < qtd; i++) {
+                    const resp = i < respostas.length ? respostas[i] : '';
+                    const gab = i < gabarito.length ? gabarito[i] : '';
+                    if (resp && resp.toUpperCase() === gab.toUpperCase()) { acertos++; }
+                }
+                const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
+                showToast('💾 Salvando correção manual...', 'info');
+                const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acertos: acertos, nota: nota, total: qtd };
+                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.sucesso) {
+                            showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
+                            closeM('m-correcao-manual');
+                            const notaEl = document.getElementById('ia-nota'); if (notaEl) { notaEl.textContent = nota.toFixed(1);
+                                notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)'; }
+                            const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ? 'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
+                                statusEl.textContent = status;
+                                statusEl.className = 'badge ' + badgeClass; }
+                            setTimeout(() => { carregarResultadosComFiltros();
+                                carregarDashboard();
+                                carregarUltimasCorrecoes(); }, 500);
+                        } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
+                    })
+                    .catch(erro => { showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+                        console.error('Erro ao salvar correção manual:', erro); });
+            }
+
+            // ============================================
+            // CORREÇÃO MANUAL STANDALONE (MENU)
+            // ============================================
+            function abrirCorrecaoManualStandalone() {
+                carregarEscolasParaCorrecaoManual();
+                document.getElementById('cm-turma-select').innerHTML = '<option value="">Selecione a turma...</option>';
+                document.getElementById('cm-prova-select').innerHTML = '<option value="">Selecione a prova...</option>';
+                document.getElementById('cm-aluno-select').innerHTML = '<option value="">Selecione o aluno...</option>';
+                document.getElementById('cm-info-standalone').style.display = 'none';
+                document.getElementById('cm-grid-standalone-container').style.display = 'none';
+                document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
+                document.getElementById('cm-grid-standalone').innerHTML = '';
+                document.getElementById('cm-sa-acertos').textContent = '0';
+                document.getElementById('cm-sa-erros').textContent = '0';
+                document.getElementById('cm-sa-nota').textContent = '0,0';
+                document.getElementById('cm-sa-status-badge').textContent = 'AGUARDANDO';
+                document.getElementById('cm-sa-status-badge').className = 'badge badge-gray';
+                document.getElementById('cm-sa-porcentagem').textContent = '0% de aproveitamento';
+                openM('m-correcao-manual-standalone');
+            }
+
+            async function carregarEscolasParaCorrecaoManual() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('cm-escola-select');
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Selecione a escola...</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) select.value = current;
+                        if (current) carregarTurmasParaCorrecaoManual(current);
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas para correção manual:', erro);
+                }
+            }
+
+            async function carregarTurmasParaCorrecaoManual(escolaId) {
+                const selectTurma = document.getElementById('cm-turma-select');
+                const selectProva = document.getElementById('cm-prova-select');
+                const selectAluno = document.getElementById('cm-aluno-select');
+
+                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+                selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+
+                if (!escolaId) return;
+
+                cmStandaloneData.escolaId = parseInt(escolaId);
+
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas:', e);
+                }
+            }
+
+            async function carregarAlunosParaCorrecaoManual(turmaId) {
+                const selectAluno = document.getElementById('cm-aluno-select');
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+                if (!turmaId) return;
+                cmStandaloneData.turmaId = parseInt(turmaId);
+                const selectTurma = document.getElementById('cm-turma-select');
+                const turmaOption = selectTurma.options[selectTurma.selectedIndex];
+                if (turmaOption) {
+                    cmStandaloneData.turmaNome = turmaOption.text || '';
+                    cmStandaloneData.serie = turmaOption.dataset.serie || '';
+                }
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                    const alunos = await response.json();
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar alunos:', e);
+                }
+            }
+
+            async function carregarProvasParaCorrecaoManualPorTurma(turmaId) {
+                const selectProva = document.getElementById('cm-prova-select');
+                selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                if (!turmaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
+                    const provas = await response.json();
+                    if (provas && !provas.erro) {
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            const serie = p.serie || '';
+                            opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
+                            opt.dataset.serie = serie;
+                            opt.dataset.turma = p.turma_nome || '';
+                            opt.dataset.quantidade = p.quantidade_questoes || 20;
+                            opt.dataset.tipo = p.tipo_questoes || '4';
+                            opt.dataset.data = p.data_prova || '';
+                            opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                            opt.dataset.bncc = JSON.stringify(p.bncc || []);
+                            opt.dataset.disciplina = p.disciplina || '';
+                            selectProva.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar provas:', e);
+                }
+            }
+
+            function carregarGabaritoParaCorrecaoManual() {
+                const select = document.getElementById('cm-prova-select');
+                const option = select.options[select.selectedIndex];
+                if (!option || !option.value) {
+                    cmStandaloneData.provaId = null;
+                    cmStandaloneData.provaTitulo = '';
+                    cmStandaloneData.provaData = '';
+                    cmStandaloneData.gabarito = [];
+                    cmStandaloneData.quantidade = 20;
+                    cmStandaloneData.alternativas = ['A', 'B', 'C', 'D'];
+                    cmStandaloneData.disciplina = '';
+                    return;
+                }
+                try {
+                    const gabarito = JSON.parse(option.dataset.gabarito || '[]');
+                    const quantidade = parseInt(option.dataset.quantidade) || 20;
+                    const tipo = option.dataset.tipo || '4';
+                    const alternativas = tipo === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+
+                    cmStandaloneData.provaId = parseInt(option.value);
+                    cmStandaloneData.provaTitulo = option.text.split(' - ')[0] || 'Prova';
+                    cmStandaloneData.provaData = option.dataset.data || '';
+                    cmStandaloneData.gabarito = gabarito;
+                    cmStandaloneData.quantidade = quantidade;
+                    cmStandaloneData.alternativas = alternativas;
+                    cmStandaloneData.disciplina = option.dataset.disciplina || '';
+                    cmStandaloneData.valorPorQuestao = 10 / quantidade;
+                    cmStandaloneData.respostas = new Array(quantidade).fill('');
+
+                    if (!cmStandaloneData.serie) cmStandaloneData.serie = option.dataset.serie || '';
+
+                    showToast('✅ Gabarito carregado! Selecione o aluno e clique em "Iniciar Correção"', 'success');
+                } catch (e) {
+                    console.error('Erro ao carregar gabarito:', e);
+                    showToast('❌ Erro ao carregar gabarito da prova', 'error');
+                }
+            }
+
+            function iniciarCorrecaoManualStandalone() {
+                const escolaSelect = document.getElementById('cm-escola-select');
+                const turmaSelect = document.getElementById('cm-turma-select');
+                const provaSelect = document.getElementById('cm-prova-select');
+                const alunoSelect = document.getElementById('cm-aluno-select');
+
+                if (!escolaSelect.value) { showToast('❌ Selecione uma escola!', 'error'); return; }
+                if (!turmaSelect.value) { showToast('❌ Selecione uma turma!', 'error'); return; }
+                if (!provaSelect.value) { showToast('❌ Selecione uma prova!', 'error'); return; }
+                if (!alunoSelect.value) { showToast('❌ Selecione um aluno!', 'error'); return; }
+
+                const alunoOption = alunoSelect.options[alunoSelect.selectedIndex];
+                cmStandaloneData.alunoId = parseInt(alunoSelect.value);
+                cmStandaloneData.alunoNome = alunoOption.text.split(' (')[0] || 'Aluno';
+
+                const escolaOption = escolaSelect.options[escolaSelect.selectedIndex];
+                cmStandaloneData.escolaNome = escolaOption.text || '';
+                cmStandaloneData.escolaId = parseInt(escolaSelect.value);
+
+                if (!cmStandaloneData.gabarito || cmStandaloneData.gabarito.length === 0) {
+                    const provaOption = provaSelect.options[provaSelect.selectedIndex];
+                    try {
+                        const gabarito = JSON.parse(provaOption.dataset.gabarito || '[]');
+                        cmStandaloneData.gabarito = gabarito;
+                        cmStandaloneData.quantidade = parseInt(provaOption.dataset.quantidade) || 20;
+                        const tipo = provaOption.dataset.tipo || '4';
+                        cmStandaloneData.alternativas = tipo === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                        cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
+                        cmStandaloneData.respostas = new Array(cmStandaloneData.quantidade).fill('');
+                        cmStandaloneData.disciplina = provaOption.dataset.disciplina || '';
+                    } catch (e) {
+                        showToast('❌ Erro ao carregar gabarito da prova', 'error');
+                        return;
+                    }
+                }
+
+                const temGabarito = cmStandaloneData.gabarito.some(g => g && g.trim() !== '');
+                if (!temGabarito) {
+                    showToast('⚠️ Esta prova não tem gabarito cadastrado!', 'warning');
+                    return;
+                }
+
+                document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
+                document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
+                document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
+                document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+
+                document.getElementById('cm-info-standalone').style.display = 'grid';
+                document.getElementById('cm-grid-standalone-container').style.display = 'block';
+                document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
+
+                gerarGridCorrecaoManualSA();
+                atualizarResumoCorrecaoManualSA();
+
+                showToast('📝 Correção manual iniciada para ' + cmStandaloneData.alunoNome, 'success');
+            }
+
+            function gerarGridCorrecaoManualSA() {
+                const grid = document.getElementById('cm-grid-standalone');
+                if (!grid) return;
+
+                const qtd = cmStandaloneData.quantidade || 20;
+                const alternativas = cmStandaloneData.alternativas || ['A', 'B', 'C', 'D'];
+                const gabarito = cmStandaloneData.gabarito || [];
+                const respostas = cmStandaloneData.respostas || [];
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+
+                grid.innerHTML = '';
+
+                for (let i = 0; i < qtd; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'cm-item-standalone';
+
+                    const gab = (i < gabarito.length) ? gabarito[i] : '';
+                    const resp = (i < respostas.length) ? respostas[i] : '';
+
+                    if (isProducao) {
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-gabarito-texto">Gabarito: ${gab || '—'}</div>
+                            <input class="q-resposta-texto" type="text" placeholder="Resposta do aluno..." value="${resp}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px;" />
+                            <div class="q-status-icon"></div>
+                        `;
+                        const input = div.querySelector('.q-resposta-texto');
+                        input.dataset.questao = i;
+                        input.addEventListener('input', function() {
+                            cmStandaloneData.respostas[i] = this.value;
+                            atualizarResumoCorrecaoManualSA();
+                        });
+                    } else {
+                        let options = '<option value="">—</option>';
+                        alternativas.forEach(alt => {
+                            const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
+                            options += `<option value="${alt}" ${selected}>${alt}</option>`;
+                        });
+
+                        const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
+                        let statusIcon = '';
+                        if (resp) statusIcon = isCorreto ? '✅' : '❌';
+
+                        let selectClass = 'q-select-manual';
+                        if (resp) selectClass += isCorreto ? ' correta' : ' errada';
+
+                        div.innerHTML = `
+                            <div class="q-num">Q${i+1}</div>
+                            <div class="q-gabarito">${gab || '—'}</div>
+                            <select class="${selectClass}" data-questao="${i}" onchange="atualizarRespostaManualSA(this)">
+                                ${options}
+                            </select>
+                            <div class="q-status-icon">${statusIcon}</div>
+                        `;
+                    }
+                    grid.appendChild(div);
+                }
+            }
+
+            function atualizarRespostaManualSA(select) {
+                const questaoIndex = parseInt(select.dataset.questao);
+                const novaResposta = select.value;
+                if (novaResposta) cmStandaloneData.respostas[questaoIndex] = novaResposta.toUpperCase();
+                else cmStandaloneData.respostas[questaoIndex] = '';
+                const item = select.closest('.cm-item-standalone');
+                const statusIcon = item.querySelector('.q-status-icon');
+                const gabarito = cmStandaloneData.gabarito[questaoIndex] || '';
+                const resposta = cmStandaloneData.respostas[questaoIndex] || '';
+                const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+
+                select.className = 'q-select-manual';
+                if (resposta) select.className += isCorreto ? ' correta' : ' errada';
+                if (resposta) statusIcon.textContent = isCorreto ? '✅' : '❌';
+                else statusIcon.textContent = '';
+                atualizarResumoCorrecaoManualSA();
+            }
+
+            function atualizarResumoCorrecaoManualSA() {
+                const qtd = cmStandaloneData.quantidade || 20;
+                const respostas = cmStandaloneData.respostas || [];
+                const gabarito = cmStandaloneData.gabarito || [];
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+
+                let acertos = 0,
+                    respondidas = 0;
+                for (let i = 0; i < qtd; i++) {
+                    const resp = i < respostas.length ? respostas[i] : '';
+                    const gab = i < gabarito.length ? gabarito[i] : '';
+                    if (resp) {
+                        respondidas++;
+                        if (isProducao) {
+                            if (resp.trim().toLowerCase() === gab.trim().toLowerCase()) acertos++;
+                        } else {
+                            if (resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                        }
+                    }
+                }
+                const erros = respondidas - acertos;
+                const nota = (acertos * cmStandaloneData.valorPorQuestao) || 0;
+                const notaFinal = Math.min(nota, cmStandaloneData.notaMaxima || 10);
+                const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
+
+                document.getElementById('cm-sa-acertos').textContent = acertos;
+                document.getElementById('cm-sa-erros').textContent = erros;
+                document.getElementById('cm-sa-nota').textContent = notaFinal.toFixed(1);
+
+                const statusBadge = document.getElementById('cm-sa-status-badge');
+                if (notaFinal >= (cmStandaloneData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
+                    statusBadge.className = 'badge badge-green'; } else if (notaFinal >= (cmStandaloneData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
+                    statusBadge.className = 'badge badge-orange'; } else { statusBadge.textContent = '❌ REPROVADO';
+                    statusBadge.className = 'badge badge-red'; }
+                document.getElementById('cm-sa-porcentagem').textContent = porcentagem + '% de aproveitamento';
+            }
+
+            function preencherGabaritoManualSA() {
+                const qtd = cmStandaloneData.quantidade || 20;
+                const gabarito = cmStandaloneData.gabarito || [];
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid-standalone .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        if (i < gabarito.length) {
+                            input.value = gabarito[i] || '';
+                            cmStandaloneData.respostas[i] = gabarito[i] || '';
+                        }
+                    });
+                } else {
+                    const selects = document.querySelectorAll('#cm-grid-standalone .q-select-manual');
+                    selects.forEach((select, i) => {
+                        if (i < gabarito.length && gabarito[i]) {
+                            select.value = gabarito[i];
+                            cmStandaloneData.respostas[i] = gabarito[i];
+                        }
+                    });
+                }
+                atualizarResumoCorrecaoManualSA();
+                showToast('📋 Respostas preenchidas com o gabarito!', 'success');
+            }
+
+            function limparRespostasManualSA() {
+                const qtd = cmStandaloneData.quantidade || 20;
+                const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    const inputs = document.querySelectorAll('#cm-grid-standalone .q-resposta-texto');
+                    inputs.forEach((input, i) => {
+                        input.value = '';
+                        cmStandaloneData.respostas[i] = '';
+                    });
+                } else {
+                    const selects = document.querySelectorAll('#cm-grid-standalone .q-select-manual');
+                    selects.forEach((select, i) => {
+                        select.value = '';
+                        cmStandaloneData.respostas[i] = '';
+                    });
+                }
+                atualizarResumoCorrecaoManualSA();
+                showToast('🗑️ Respostas limpas!', 'info');
+            }
+
+            function salvarCorrecaoManualStandalone() {
+                const qtd = cmStandaloneData.quantidade || 20;
+                const respostas = cmStandaloneData.respostas || [];
+                const gabarito = cmStandaloneData.gabarito || [];
+
+                const temResposta = respostas.some(r => r && r.trim() !== '');
+                if (!temResposta) { showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); return; }
+
+                let acertos = 0;
+                for (let i = 0; i < qtd; i++) {
+                    const resp = i < respostas.length ? respostas[i] : '';
+                    const gab = i < gabarito.length ? gabarito[i] : '';
+                    if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                }
+                const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
+
+                showToast('💾 Salvando correção manual...', 'info');
+
+                const dadosCorrecao = {
+                    prova_id: cmStandaloneData.provaId,
+                    aluno_id: cmStandaloneData.alunoId,
+                    respostas: respostas,
+                    acertos: acertos,
+                    nota: nota,
+                    total: qtd
+                };
+
+                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.sucesso) {
+                            showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
+                            closeM('m-correcao-manual-standalone');
+                            setTimeout(() => { carregarResultadosComFiltros();
+                                carregarDashboard();
+                                carregarUltimasCorrecoes(); }, 500);
+                        } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
+                    })
+                    .catch(erro => { showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+                        console.error('Erro ao salvar correção manual:', erro); });
+            }
+
+            // ============================================
+            // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE (SEM SELECTS)
+            // ============================================
+            async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
+                try {
+                    showToast('🔄 Carregando dados...', 'info');
+
+                    const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                    const prova = await provaResp.json();
+                    if (!prova || prova.erro) {
+                        showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
+                        return;
+                    }
+
+                    const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
+                    const aluno = await alunoResp.json();
+                    if (!aluno || aluno.erro) {
+                        showToast('❌ Erro ao carregar aluno: ' + (aluno.erro || 'Desconhecido'), 'error');
+                        return;
+                    }
+
+                    const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
+                    const historico = await historicoResp.json();
+                    let respostas = [];
+                    if (historico && historico.length > 0 && !historico.erro) {
+                        respostas = historico[0].respostas || [];
+                    }
+
+                    cmStandaloneData.escolaId = parseInt(escolaId);
+                    cmStandaloneData.turmaId = parseInt(turmaId);
+                    cmStandaloneData.provaId = parseInt(provaId);
+                    cmStandaloneData.alunoId = parseInt(alunoId);
+                    cmStandaloneData.alunoNome = aluno.nome || 'Aluno';
+                    cmStandaloneData.turmaNome = '';
+                    cmStandaloneData.serie = prova.serie || '';
+                    cmStandaloneData.gabarito = prova.gabarito || [];
+                    cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
+                    cmStandaloneData.alternativas = prova.tipo_questoes == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                    cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
+                    cmStandaloneData.respostas = respostas.slice(0, cmStandaloneData.quantidade);
+                    while (cmStandaloneData.respostas.length < cmStandaloneData.quantidade) {
+                        cmStandaloneData.respostas.push('');
+                    }
+                    cmStandaloneData.provaTitulo = prova.titulo || 'Prova';
+                    cmStandaloneData.provaData = prova.data_prova || '';
+                    cmStandaloneData.disciplina = prova.disciplina || '';
+
+                    openM('m-correcao-manual-standalone');
+
+                    const selectsContainer = document.getElementById('cm-selects-container');
+                    if (selectsContainer) selectsContainer.style.display = 'none';
+
+                    document.getElementById('cm-grid-standalone-container').style.display = 'block';
+                    document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
+
+                    document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
+                    document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
+                    document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
+                    document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+
+                    gerarGridCorrecaoManualSA();
+                    atualizarResumoCorrecaoManualSA();
+
+                    showToast('📝 Correção manual carregada para ' + cmStandaloneData.alunoNome, 'success');
+                } catch (erro) {
+                    console.error('❌ Erro ao abrir correção manual direta:', erro);
+                    showToast('❌ Erro ao carregar dados: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO CHAMADA PELO BOTÃO "✏️ Editar Gabarito" NA ABA DESEMPENHO
+            // ============================================
+            async function editarGabaritoDesempenho() {
+                const escolaId = document.getElementById('filtro-escola-desempenho').value;
+                const turmaId = document.getElementById('filtro-turma-desempenho').value;
+                const alunoId = document.getElementById('filtro-aluno-desempenho').value;
+                const provaId = document.getElementById('filtro-prova-desempenho').value;
+
+                if (!escolaId || !turmaId || !alunoId || !provaId) {
+                    showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
+                    return;
+                }
+
+                await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
+            }
+
+            // ============================================
+            // FUNÇÕES DE USUÁRIO (COM CORREÇÃO DO ÍCONE ✏️)
+            // ============================================
+            function abrirModalUsuario() {
+                usuarioEditandoId = null;
+                document.getElementById('editar-usuario-id').value = '';
+                document.getElementById('usuario-nome').value = '';
+                document.getElementById('usuario-username').value = '';
+                document.getElementById('usuario-senha').value = '';
+                document.getElementById('usuario-email').value = '';
+                document.getElementById('usuario-perfil').value = 'usuario';
+                document.getElementById('usuario-ativo').checked = true;
+                document.querySelector('#m-usuario .modal-header h3').textContent = '👤 Cadastrar Usuário';
+                openM('m-usuario');
+            }
+
+            function editarUsuario(id) {
+                showToast('✏️ Carregando dados do usuário...', 'info');
+                fetch(API_URL + '/api/usuarios/' + id)
+                    .then(r => r.json())
+                    .then(usuario => {
+                        if (usuario.erro) { showToast('❌ ' + usuario.erro, 'error'); return; }
+                        usuarioEditandoId = id;
+                        document.getElementById('editar-usuario-id').value = id;
+                        document.getElementById('usuario-nome').value = usuario.nome || '';
+                        document.getElementById('usuario-username').value = usuario.username || '';
+                        document.getElementById('usuario-senha').value = ''; // não preenchemos a senha
+                        document.getElementById('usuario-email').value = usuario.email || '';
+                        document.getElementById('usuario-perfil').value = usuario.perfil || 'usuario';
+                        document.getElementById('usuario-ativo').checked = usuario.ativo !== false;
+                        document.querySelector('#m-usuario .modal-header h3').textContent = '✏️ Editar Usuário';
+                        openM('m-usuario');
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar usuário: ' + e.message, 'error');
+                        console.error('Erro ao carregar usuário:', e); });
+            }
+
+            async function salvarUsuario() {
+                const nome = document.getElementById('usuario-nome').value.trim();
+                const username = document.getElementById('usuario-username').value.trim();
+                const senha = document.getElementById('usuario-senha').value.trim();
+                const email = document.getElementById('usuario-email').value.trim();
+                const perfil = document.getElementById('usuario-perfil').value;
+                const ativo = document.getElementById('usuario-ativo').checked;
+                const id = document.getElementById('editar-usuario-id').value;
+
+                if (!nome) { showToast('❌ Nome do usuário é obrigatório!', 'error'); return; }
+                if (!username) { showToast('❌ Usuário (login) é obrigatório!', 'error'); return; }
+                if (username.length < 3) { showToast('❌ Usuário deve ter pelo menos 3 caracteres!', 'error'); return; }
+                if (!id && !senha) { showToast('❌ Senha é obrigatória para novos usuários!', 'error'); return; }
+                if (senha && senha.length < 4) { showToast('❌ Senha deve ter pelo menos 4 caracteres!', 'error'); return; }
+                if (email && !email.includes('@')) { showToast('❌ E-mail inválido!', 'error'); return; }
+
+                const dados = { nome, username, email, perfil, ativo };
+                if (senha) dados.senha = senha;
+
+                try {
+                    let url = API_URL + '/api/usuarios';
+                    let method = 'POST';
+                    if (id) { url += '/' + id;
+                        method = 'PUT'; }
+
+                    showToast('💾 Salvando usuário...', 'info');
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('✅ Usuário "' + username + '" salvo com sucesso!', 'success');
+                        closeM('m-usuario');
+                        carregarUsuarios();
+                        carregarDados();
+                    } else {
+                        showToast('❌ Erro ao salvar usuário: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar: ' + erro.message, 'error');
+                    console.error('Erro ao salvar usuário:', erro);
+                }
+            }
+
+            async function excluirUsuario(id, username) {
+                if (username === 'admin') { showToast('⚠️ Não é possível excluir o usuário administrador principal!', 'error'); return; }
+                if (!confirm('Excluir o usuário "' + username + '"? Esta ação não pode ser desfeita.')) return;
+                try {
+                    const response = await fetch(API_URL + '/api/usuarios/' + id, { method: 'DELETE' });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) { showToast('🗑️ Usuário "' + username + '" excluído!', 'error');
+                        carregarUsuarios(); } else { showToast('Erro: ' + (result.data.erro || 'Erro desconhecido'), 'error'); }
+                } catch (erro) { showToast('Erro ao excluir: ' + erro.message, 'error'); }
+            }
+
+            // ============================================
+            // FUNÇÕES DE TEXTO IA (simplificadas)
+            // ============================================
+            function prevTexto(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = e => { document.getElementById('txt-img-prev').style.display = 'block';
+                    document.getElementById('txt-img').src = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+
+            async function avaliarTexto() {
+                const texto = document.getElementById('txt-aluno').value;
+                const alunoId = document.getElementById('txt-aluno-select').value;
+                if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error'); return; }
+                document.getElementById('txt-waiting').style.display = 'none';
+                document.getElementById('txt-loading').style.display = 'block';
+                document.getElementById('txt-res').style.display = 'none';
+                const pb = document.getElementById('txt-pb');
+                let p = 0;
+                const iv = setInterval(() => {
+                    p += Math.random() * 12;
+                    if (p > 100) p = 100;
+                    if (pb) pb.style.width = p + '%';
+                    if (p >= 100) { clearInterval(iv);
+                        processarAvaliacaoTexto(texto, alunoId); }
+                }, 120);
+            }
+
+            async function processarAvaliacaoTexto(texto, alunoId) {
+                try {
+                    const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: texto, aluno_id: alunoId || null }) });
+                    const dados = await response.json();
+                    document.getElementById('txt-loading').style.display = 'none';
+                    document.getElementById('txt-res').style.display = 'block';
+                    if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
+                    document.getElementById('txt-nota').textContent = dados.nota || 0;
+                    document.getElementById('txt-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+                    document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                    if (dados.metricas) {
+                        document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
+                        document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
+                        document.getElementById('c-ort').textContent = dados.metricas.nota_gramatica || 0;
+                        document.getElementById('c-voc').textContent = dados.metricas.nota_vocabulario || 0;
+                        document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
+                        document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
+                        document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
+                        document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
+                    }
+                    const fb = document.getElementById('txt-fb');
+                    if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
+                    if (alunoId) {
+                        try {
+                            const respAlunos = await fetch(API_URL + '/api/alunos');
+                            const alunos = await respAlunos.json();
+                            const aluno = alunos.find(a => a.id == alunoId);
+                            document.getElementById('txt-aluno-nome').textContent = aluno ? aluno.nome : '—';
+                        } catch (e) {}
+                    }
+                    showToast('✅ Avaliação concluída!', 'success');
+                } catch (erro) { document.getElementById('txt-loading').style.display = 'none';
+                    showToast('❌ Erro: ' + erro.message, 'error'); }
+            }
+
+            function salvarAvaliacaoTexto() { showToast('💾 Avaliação salva com sucesso!', 'success'); }
+
+            // ============================================
+            // FUNÇÕES DE CÂMERA
+            // ============================================
+            async function abrirCamera() {
+                document.getElementById('cam-modal').classList.add('show');
+                try {
+                    if (camStream) camStream.getTracks().forEach(t => t.stop());
+                    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } } });
+                    document.getElementById('cam-video').srcObject = camStream;
+                } catch (e) { showToast('❌ Câmera não disponível: ' + e.message, 'error');
+                    fecharCamera(); }
+            }
+
+            function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';
+                abrirCamera(); }
+
+            function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop());
+                    camStream = null; } }
+
+            function capturarFoto() {
+                const vid = document.getElementById('cam-video');
+                const canvas = document.getElementById('cam-canvas');
+                canvas.width = vid.videoWidth || 640;
+                canvas.height = vid.videoHeight || 480;
+                canvas.getContext('2d').drawImage(vid, 0, 0);
+                const foto = canvas.toDataURL('image/jpeg', 0.9);
+                fecharCamera();
+                showToast('📸 Foto capturada!', 'ai');
+                ultimaImagem = foto;
+                processarComIA(foto);
+                go('corrigir-ia');
+            }
+
+            function abrirArquivo() { document.getElementById('inp-arq').click(); }
+
+            function processarArq(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    showToast('📂 Arquivo carregado!', 'ai');
+                    ultimaImagem = e.target.result;
+                    processarComIA(e.target.result);
+                    go('corrigir-ia');
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // ============================================
+            // FUNÇÃO DE CORREÇÃO COM IA (mantida)
+            // ============================================
+            async function processarComIA(imagemBase64) {
+                showToast('🤖 Processando...', 'ai');
+                const box = document.getElementById('ia-result');
+                if (box) box.style.display = 'none';
+                const provaId = document.getElementById('corrigir-prova').value;
+                const alunoId = document.getElementById('corrigir-aluno').value;
+
+                if (!provaId || !alunoId) {
+                    showToast('❌ Selecione uma prova e um aluno primeiro!', 'error');
+                    return;
+                }
+                if (!imagemBase64) { showToast('❌ Nenhuma imagem!', 'error'); return; }
+
+                document.getElementById('ia-ultima-imagem').value = imagemBase64;
+
+                try {
+                    let imagemEnvio = imagemBase64;
+                    if (imagemBase64.startsWith('data:image')) {
+                        const partes = imagemBase64.split(',');
+                        if (partes.length > 1) imagemEnvio = partes[1];
+                    }
+
+                    const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                    const prova = await provaResp.json();
+                    if (!prova || prova.erro) { showToast('❌ Erro ao carregar dados da prova', 'error'); return; }
+
+                    const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
+                    const aluno = await alunoResp.json();
+                    if (!aluno || aluno.erro) { showToast('❌ Erro ao carregar dados do aluno', 'error'); return; }
+
+                    const response = await fetch(`${API_URL}/api/corrigir`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imagem: imagemEnvio, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        showToast(`❌ Erro ${response.status}: ${errorText.substring(0, 100)}`, 'error');
+                        return;
+                    }
+
+                    const dados = await response.json();
+
+                    if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
+
+                    const rd = document.getElementById('ia-resp');
+                    if (rd && dados.respostas_detectadas) {
+                        rd.innerHTML = dados.respostas_detectadas.map((a, i) => {
+                            const gab = dados.gabarito && dados.gabarito[i] ? dados.gabarito[i] : '';
+                            const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
+                            return '<span style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">Q' + (i + 1) + ':' + (a || '—') + '</span>';
+                        }).join('');
+                    }
+
+                    const cd = document.getElementById('ia-comp');
+                    if (cd && dados.respostas_detectadas) {
+                        cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
+                            const gab = dados.gabarito && dados.gabarito[i] ? dados.gabarito[i] : '';
+                            const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
+                            return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + (a || '—') + '</div></div>';
+                        }).join('');
+                    }
+
+                    document.getElementById('ia-nota').textContent = dados.nota || 0;
+                    document.getElementById('ia-aluno').textContent = dados.aluno || aluno.nome || 'Aluno';
+                    document.getElementById('ia-turma').textContent = dados.prova || prova.titulo || 'Prova';
+                    document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
+                    document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+                    document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+
+                    correcaoManualData.alunoId = parseInt(alunoId);
+                    correcaoManualData.alunoNome = dados.aluno || aluno.nome || 'Aluno';
+                    correcaoManualData.provaId = parseInt(provaId);
+                    correcaoManualData.provaTitulo = dados.prova || prova.titulo || 'Prova';
+                    correcaoManualData.gabarito = dados.gabarito || prova.gabarito || [];
+                    correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
+                    correcaoManualData.quantidade = dados.total || prova.quantidade_questoes || 20;
+                    correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                    correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+                    correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+                    correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+                    correcaoManualData.serie = prova.serie || '1º Ano';
+                    correcaoManualData.disciplina = prova.disciplina || '';
+
+                    if (box) box.style.display = 'block';
+                    showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
+                    carregarDashboard();
+                    carregarResultadosComFiltros();
+                } catch (erro) {
+                    console.error('❌ Erro na correção:', erro);
+                    showToast('❌ Erro ao processar correção: ' + erro.message, 'error');
+                }
+            }
+
+            function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
+
+            // ============================================
+            // FUNÇÕES DE CRUD CORRIGIDAS (mantidas)
+            // ============================================
+
+            // ===== ESCOLA =====
+            async function salvarEscola() {
+                const nome = document.getElementById('escola-nome').value.trim();
+                if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
+
+                const dados = {
+                    nome: nome,
+                    inep: document.getElementById('escola-inep').value.trim() || null,
+                    municipio: document.getElementById('escola-municipio').value.trim() || null,
+                    estado: document.getElementById('escola-estado').value || 'PA',
+                    telefone: document.getElementById('escola-telefone').value.trim() || null,
+                    diretor: document.getElementById('escola-diretor').value.trim() || null
+                };
+
+                try {
+                    showToast('💾 Salvando escola...', 'info');
+                    const response = await fetch(API_URL + '/api/escolas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok && result.data.id) {
+                        showToast('✅ Escola "' + nome + '" salva com sucesso!', 'success');
+                        closeM('m-escola');
+                        carregarEscolas();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao salvar escola: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar escola: ' + erro.message, 'error');
+                    console.error('Erro ao salvar escola:', erro);
+                }
+            }
+
+            function editarEscola(id) {
+                showToast('✏️ Carregando dados da escola...', 'info');
+                fetch(API_URL + '/api/escolas/' + id)
+                    .then(r => r.json())
+                    .then(escola => {
+                        if (escola.erro) { showToast('❌ ' + escola.erro, 'error'); return; }
+                        document.getElementById('editar-escola-id').value = escola.id;
+                        document.getElementById('editar-escola-nome').value = escola.nome || '';
+                        document.getElementById('editar-escola-inep').value = escola.inep || '';
+                        document.getElementById('editar-escola-municipio').value = escola.municipio || '';
+                        document.getElementById('editar-escola-estado').value = escola.estado || 'PA';
+                        document.getElementById('editar-escola-telefone').value = escola.telefone || '';
+                        document.getElementById('editar-escola-diretor').value = escola.diretor || '';
+                        openM('m-editar-escola');
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar escola: ' + e.message, 'error');
+                        console.error('Erro ao carregar escola:', e); });
+            }
+
+            async function salvarEdicaoEscola() {
+                const id = document.getElementById('editar-escola-id').value;
+                const nome = document.getElementById('editar-escola-nome').value.trim();
+                if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
+
+                const dados = {
+                    nome: nome,
+                    inep: document.getElementById('editar-escola-inep').value.trim() || null,
+                    municipio: document.getElementById('editar-escola-municipio').value.trim() || null,
+                    estado: document.getElementById('editar-escola-estado').value || 'PA',
+                    telefone: document.getElementById('editar-escola-telefone').value.trim() || null,
+                    diretor: document.getElementById('editar-escola-diretor').value.trim() || null
+                };
+
+                try {
+                    showToast('💾 Atualizando escola...', 'info');
+                    const response = await fetch(API_URL + '/api/escolas/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('✅ Escola "' + nome + '" atualizada com sucesso!', 'success');
+                        closeM('m-editar-escola');
+                        carregarEscolas();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao atualizar escola: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao atualizar escola: ' + erro.message, 'error');
+                    console.error('Erro ao atualizar escola:', erro);
+                }
+            }
+
+            async function excluirEscola(id, nome) {
+                if (!confirm('🗑️ EXCLUIR COMPLETAMENTE a escola "' + nome + '"\n\nIsso irá excluir TODOS os dados vinculados:\n• Turmas\n• Alunos\n\nAs provas NÃO serão afetadas.\n\nEsta ação NÃO pode ser desfeita!')) return;
+
+                try {
+                    showToast('⏳ Excluindo escola...', 'info');
+                    const response = await fetch(`${API_URL}/api/escolas/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast(`✅ Escola "${nome}" excluída com sucesso!`, 'success');
+                    } else {
+                        showToast(`❌ Erro ao excluir escola: ${result.data.erro || 'Erro desconhecido'}`, 'error');
+                        return;
+                    }
+                    setTimeout(() => {
+                        carregarEscolas();
+                        carregarTurmas();
+                        carregarAlunos();
+                        carregarProvas();
+                        carregarDashboard();
+                        carregarResultadosComFiltros();
+                        carregarGabaritos();
+                        carregarCombos();
+                        carregarRelatorios();
+                        carregarUltimasCorrecoes();
+                        carregarConceitoReal();
+                        carregarUsuarios();
+                        carregarEscolasFiltroAlunos();
+                        carregarEscolasCorrigir();
+                        carregarEscolasTexto();
+                        carregarEscolasParaCorrecaoManual();
+                        carregarFiltrosRelTurma();
+                        carregarFiltroEscolaTurmas();
+                        carregarEscolasDesempenho();
+                    }, 1000);
+                } catch (erro) {
+                    console.error('Erro ao excluir escola:', erro);
+                    showToast('❌ Erro ao excluir escola: ' + erro.message, 'error');
+                }
+            }
+
+            // ===== TURMA =====
+            async function salvarTurma() {
+                const nome = document.getElementById('turma-nome').value.trim();
+                if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
+                const escolaId = document.getElementById('turma-escola').value;
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+
+                const dados = {
+                    nome: nome,
+                    escola_id: parseInt(escolaId),
+                    serie: document.getElementById('turma-serie').value || '1º Ano',
+                    turno: document.getElementById('turma-turno').value || 'Manhã',
+                    ano_letivo: parseInt(document.getElementById('turma-ano').value) || 2025,
+                    capacidade: parseInt(document.getElementById('turma-capacidade').value) || 35,
+                    professor: document.getElementById('turma-professor').value.trim() || null
+                };
+
+                try {
+                    showToast('💾 Salvando turma...', 'info');
+                    const response = await fetch(API_URL + '/api/turmas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok && result.data.id) {
+                        showToast('✅ Turma "' + nome + '" salva com sucesso!', 'success');
+                        closeM('m-turma');
+                        carregarTurmas();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao salvar turma: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar turma: ' + erro.message, 'error');
+                    console.error('Erro ao salvar turma:', erro);
+                }
+            }
+
+            function editarTurma(id) {
+                showToast('✏️ Carregando dados da turma...', 'info');
+                fetch(API_URL + '/api/turmas/' + id)
+                    .then(r => r.json())
+                    .then(turma => {
+                        if (turma.erro) { showToast('❌ ' + turma.erro, 'error'); return; }
+                        document.getElementById('editar-turma-id').value = turma.id;
+                        document.getElementById('editar-turma-nome').value = turma.nome || '';
+                        document.getElementById('editar-turma-serie').value = turma.serie || '1º Ano';
+                        document.getElementById('editar-turma-turno').value = turma.turno || 'Manhã';
+                        document.getElementById('editar-turma-ano').value = turma.ano_letivo || 2025;
+                        document.getElementById('editar-turma-capacidade').value = turma.capacidade || 35;
+                        document.getElementById('editar-turma-professor').value = turma.professor || '';
+
+                        fetch(API_URL + '/api/escolas')
+                            .then(r => r.json())
+                            .then(escolas => {
+                                const select = document.getElementById('editar-turma-escola');
+                                select.innerHTML = '<option value="">Selecione a escola</option>';
+                                if (escolas && !escolas.erro) {
+                                    escolas.forEach(e => {
+                                        const opt = document.createElement('option');
+                                        opt.value = e.id;
+                                        opt.textContent = e.nome;
+                                        if (e.id == turma.escola_id) opt.selected = true;
+                                        select.appendChild(opt);
+                                    });
+                                }
+                                openM('m-editar-turma');
+                            })
+                            .catch(e => console.error('Erro ao carregar escolas:', e));
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar turma: ' + e.message, 'error');
+                        console.error('Erro ao carregar turma:', e); });
+            }
+
+            async function salvarEdicaoTurma() {
+                const id = document.getElementById('editar-turma-id').value;
+                const nome = document.getElementById('editar-turma-nome').value.trim();
+                if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
+                const escolaId = document.getElementById('editar-turma-escola').value;
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+
+                const dados = {
+                    nome: nome,
+                    escola_id: parseInt(escolaId),
+                    serie: document.getElementById('editar-turma-serie').value || '1º Ano',
+                    turno: document.getElementById('editar-turma-turno').value || 'Manhã',
+                    ano_letivo: parseInt(document.getElementById('editar-turma-ano').value) || 2025,
+                    capacidade: parseInt(document.getElementById('editar-turma-capacidade').value) || 35,
+                    professor: document.getElementById('editar-turma-professor').value.trim() || null
+                };
+
+                try {
+                    showToast('💾 Atualizando turma...', 'info');
+                    const response = await fetch(API_URL + '/api/turmas/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('✅ Turma "' + nome + '" atualizada com sucesso!', 'success');
+                        closeM('m-editar-turma');
+                        carregarTurmas();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao atualizar turma: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao atualizar turma: ' + erro.message, 'error');
+                    console.error('Erro ao atualizar turma:', erro);
+                }
+            }
+
+            async function excluirTurma(id, nome) {
+                if (!confirm('Excluir a turma "' + nome + '" e todos os seus dados?')) return;
+                try {
+                    showToast('🗑️ Excluindo turma...', 'error');
+                    const response = await fetch(API_URL + '/api/turmas/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('🗑️ Turma "' + nome + '" excluída com sucesso!', 'success');
+                        carregarTurmas();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao excluir turma: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao excluir turma:', erro);
+                    showToast('❌ Erro ao excluir turma: ' + erro.message, 'error');
+                }
+            }
+
+            // ===== ALUNO =====
+            async function salvarAluno() {
+                const nome = document.getElementById('aluno-nome').value.trim();
+                if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
+                const escolaId = document.getElementById('aluno-escola').value;
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+                const turmaId = document.getElementById('aluno-turma').value;
+                if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+
+                const dados = {
+                    nome: nome,
+                    escola_id: parseInt(escolaId),
+                    turma_id: parseInt(turmaId),
+                    matricula: document.getElementById('aluno-matricula').value.trim() || null,
+                    numero_chamada: parseInt(document.getElementById('aluno-numero').value) || null,
+                    data_nascimento: document.getElementById('aluno-nascimento').value || null,
+                    genero: document.getElementById('aluno-genero').value || null,
+                    responsavel: document.getElementById('aluno-responsavel').value.trim() || null,
+                    telefone: document.getElementById('aluno-telefone').value.trim() || null,
+                    email: document.getElementById('aluno-email').value.trim() || null,
+                    observacoes: document.getElementById('aluno-observacoes').value.trim() || null
+                };
+
+                try {
+                    showToast('💾 Salvando aluno...', 'info');
+                    const response = await fetch(API_URL + '/api/alunos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok && result.data.id) {
+                        showToast('✅ Aluno "' + nome + '" salvo com sucesso!', 'success');
+                        closeM('m-aluno');
+                        document.getElementById('aluno-nome').value = '';
+                        document.getElementById('aluno-matricula').value = '';
+                        document.getElementById('aluno-numero').value = '';
+                        document.getElementById('aluno-nascimento').value = '';
+                        document.getElementById('aluno-responsavel').value = '';
+                        document.getElementById('aluno-telefone').value = '';
+                        document.getElementById('aluno-email').value = '';
+                        document.getElementById('aluno-observacoes').value = '';
+                        document.getElementById('multi-alunos-input').value = '';
+                        document.getElementById('multi-status').style.display = 'none';
+                        carregarAlunos();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao salvar aluno: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar aluno: ' + erro.message, 'error');
+                    console.error('Erro ao salvar aluno:', erro);
+                }
+            }
+
+            function editarAluno(id) {
+                showToast('✏️ Carregando dados do aluno...', 'info');
+                fetch(API_URL + '/api/alunos/' + id)
+                    .then(r => r.json())
+                    .then(aluno => {
+                        if (aluno.erro) { showToast('❌ ' + aluno.erro, 'error'); return; }
+                        document.getElementById('editar-aluno-id').value = aluno.id;
+                        document.getElementById('editar-aluno-nome').value = aluno.nome || '';
+                        document.getElementById('editar-aluno-matricula').value = aluno.matricula || '';
+                        document.getElementById('editar-aluno-numero').value = aluno.numero_chamada || '';
+                        document.getElementById('editar-aluno-nascimento').value = aluno.data_nascimento || '';
+                        document.getElementById('editar-aluno-genero').value = aluno.genero || 'Masculino';
+                        document.getElementById('editar-aluno-responsavel').value = aluno.responsavel || '';
+                        document.getElementById('editar-aluno-telefone').value = aluno.telefone || '';
+                        document.getElementById('editar-aluno-email').value = aluno.email || '';
+                        document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
+
+                        fetch(API_URL + '/api/escolas')
+                            .then(r => r.json())
+                            .then(escolas => {
+                                const selectEscola = document.getElementById('editar-aluno-escola');
+                                selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
+                                if (escolas && !escolas.erro) {
+                                    escolas.forEach(e => {
+                                        const opt = document.createElement('option');
+                                        opt.value = e.id;
+                                        opt.textContent = e.nome;
+                                        if (e.id == aluno.escola_id) opt.selected = true;
+                                        selectEscola.appendChild(opt);
+                                    });
+                                }
+                                if (aluno.escola_id) {
+                                    carregarTurmasPorEscolaParaAluno(aluno.escola_id, 'editar-aluno-turma')
+                                        .then(() => {
+                                            const selectTurma = document.getElementById('editar-aluno-turma');
+                                            if (selectTurma) selectTurma.value = aluno.turma_id;
+                                        });
+                                }
+                                openM('m-editar-aluno');
+                            })
+                            .catch(e => console.error('Erro ao carregar escolas:', e));
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
+                        console.error('Erro ao carregar aluno:', e); });
+            }
+
+            async function salvarEdicaoAluno() {
+                const id = document.getElementById('editar-aluno-id').value;
+                const nome = document.getElementById('editar-aluno-nome').value.trim();
+                if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
+                const escolaId = document.getElementById('editar-aluno-escola').value;
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+                const turmaId = document.getElementById('editar-aluno-turma').value;
+                if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+
+                const dados = {
+                    nome: nome,
+                    escola_id: parseInt(escolaId),
+                    turma_id: parseInt(turmaId),
+                    matricula: document.getElementById('editar-aluno-matricula').value.trim() || null,
+                    numero_chamada: parseInt(document.getElementById('editar-aluno-numero').value) || null,
+                    data_nascimento: document.getElementById('editar-aluno-nascimento').value || null,
+                    genero: document.getElementById('editar-aluno-genero').value || null,
+                    responsavel: document.getElementById('editar-aluno-responsavel').value.trim() || null,
+                    telefone: document.getElementById('editar-aluno-telefone').value.trim() || null,
+                    email: document.getElementById('editar-aluno-email').value.trim() || null,
+                    observacoes: document.getElementById('editar-aluno-observacoes').value.trim() || null
+                };
+
+                try {
+                    showToast('💾 Atualizando aluno...', 'info');
+                    const response = await fetch(API_URL + '/api/alunos/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('✅ Aluno "' + nome + '" atualizado com sucesso!', 'success');
+                        closeM('m-editar-aluno');
+                        carregarAlunos();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao atualizar aluno: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao atualizar aluno: ' + erro.message, 'error');
+                    console.error('Erro ao atualizar aluno:', erro);
+                }
+            }
+
+            async function excluirAluno(id, nome) {
+                if (!confirm('Excluir o aluno "' + nome + '" e todos os seus dados?')) return;
+                try {
+                    showToast('🗑️ Excluindo aluno...', 'error');
+                    const response = await fetch(API_URL + '/api/alunos/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('🗑️ Aluno "' + nome + '" excluído com sucesso!', 'success');
+                        carregarAlunos();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao excluir aluno: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao excluir aluno:', erro);
+                    showToast('❌ Erro ao excluir aluno: ' + erro.message, 'error');
+                }
+            }
+
+            // ===== PROVA =====
+            async function salvarProva() {
+                const titulo = document.getElementById('prova-titulo').value.trim();
+                if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
+                const serie = document.getElementById('prova-serie').value;
+                if (!serie) { showToast('❌ Selecione a série!', 'error'); return; }
+
+                const dados = {
+                    titulo: titulo,
+                    serie: serie,
+                    disciplina: document.getElementById('prova-disciplina').value || 'Matemática',
+                    bimestre: document.getElementById('prova-bimestre').value || '1º e 2º bimestre',
+                    data_prova: document.getElementById('prova-data').value || null,
+                    quantidade_questoes: parseInt(document.getElementById('prova-questoes').value) || 20,
+                    nota_maxima: parseFloat(document.getElementById('prova-nota').value) || 10,
+                    tipo_questoes: serie.startsWith('1º') ? '3' : '4'
+                };
+
+                try {
+                    showToast('💾 Salvando prova...', 'info');
+                    const response = await fetch(API_URL + '/api/provas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok && result.data.id) {
+                        showToast('✅ Prova "' + titulo + '" salva com sucesso para a série ' + serie + '!', 'success');
+                        document.getElementById('prova-titulo').value = '';
+                        document.getElementById('up-ok').style.display = 'block';
+                        setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
+                        carregarProvas();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao salvar prova: ' + (result.data.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar prova: ' + erro.message, 'error');
+                    console.error('Erro ao salvar prova:', erro);
+                }
+            }
+
+            function editarProva(id) { showToast('👁️ Visualizando prova ID ' + id + '...', 'info'); }
+
+            async function excluirProva(id, nome) {
+                if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
+                try {
+                    showToast('🗑️ Excluindo prova...', 'error');
+                    const response = await fetch(API_URL + '/api/provas/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('🗑️ Prova "' + nome + '" excluída com sucesso!', 'success');
+                        carregarProvas();
+                        carregarDashboard();
+                        carregarCombos();
+                    } else {
+                        showToast('❌ Erro ao excluir prova: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao excluir prova:', erro);
+                    showToast('❌ Erro ao excluir prova: ' + erro.message, 'error');
+                }
+            }
+
+            function salvarProvaModal() {
+                const titulo = document.getElementById('modal-prova-titulo').value.trim();
+                if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
+                showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
+                closeM('m-prova');
+                carregarProvas();
+            }
+
+            // ============================================
+            // FUNÇÕES ADICIONAIS
+            // ============================================
+            function verAlunosDaTurma(id) {
+                showToast('📋 Visualizando alunos da turma ID ' + id + '...', 'info');
+                const selectTurma = document.getElementById('filtro-turma-alunos');
+                if (selectTurma) { selectTurma.value = id;
+                    const event = new Event('change');
+                    selectTurma.dispatchEvent(event); }
+                go('alunos');
+            }
+
+            function processarListaAlunos() {
+                const textarea = document.getElementById('multi-alunos-input');
+                const linhas = textarea.value.split('\n').filter(l => l.trim() !== '');
+                if (linhas.length === 0) { showToast('⚠️ Cole a lista de alunos primeiro!', 'warning'); return; }
+
+                const statusDiv = document.getElementById('multi-status');
+                const statusText = document.getElementById('multi-status-text');
+
+                let adicionados = 0,
+                    erros = 0;
+
+                linhas.forEach(linha => {
+                    let nome = linha.trim();
+                    let matricula = '';
+                    let numero = '';
+
+                    const matchVirgula = linha.match(/^([^,]+),\s*([^,]+),\s*(\d+)?/);
+                    const matchTraco = linha.match(/^([^-]+)\s*-\s*([^-]+)\s*-\s*(\d+)?/);
+                    const matchParenteses = linha.match(/^([^(]+)\s*\(([^)]+)\)/);
+
+                    if (matchVirgula) {
+                        nome = matchVirgula[1].trim();
+                        matricula = matchVirgula[2].trim();
+                        numero = matchVirgula[3] ? matchVirgula[3].trim() : '';
+                    } else if (matchTraco) {
+                        nome = matchTraco[1].trim();
+                        matricula = matchTraco[2].trim();
+                        numero = matchTraco[3] ? matchTraco[3].trim() : '';
+                    } else if (matchParenteses) {
+                        nome = matchParenteses[1].trim();
+                        matricula = matchParenteses[2].trim();
+                    }
+
+                    if (nome) {
+                        document.getElementById('aluno-nome').value = nome;
+                        if (matricula) document.getElementById('aluno-matricula').value = matricula;
+                        if (numero) document.getElementById('aluno-numero').value = numero;
+                        salvarAluno();
+                        adicionados++;
+                    } else erros++;
+                });
+
+                if (adicionados > 0) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.className = 'multi-status success';
+                    statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
+                    textarea.value = '';
+                } else {
+                    statusDiv.style.display = 'block';
+                    statusDiv.className = 'multi-status error';
+                    statusText.textContent = '❌ Nenhum aluno válido encontrado. Verifique o formato.';
+                }
+
+                setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+            }
+
+            function fecharAbaMulti() {
+                showToast('📋 Lista de alunos gerada!', 'success');
+                const modal = document.getElementById('m-aluno');
+                if (modal) modal.classList.remove('show');
+                go('lista-turma');
+            }
+
+            // ============================================
+            // FUNÇÕES PARA CORREÇÃO (IA)
+            // ============================================
+            async function carregarEscolasCorrigir() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('corrigir-escola');
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Selecione a escola...</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) select.value = current;
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas para correção:', erro);
+                }
+            }
+
+            async function carregarEscolasTexto() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('txt-escola');
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Selecione a escola...</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) select.value = current;
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas para texto:', erro);
+                }
+            }
+
+            // ============================================
+            // CARREGAR FILTROS DO RELATÓRIO POR TURMA
+            // ============================================
+            async function carregarFiltrosRelTurma() {
+                try {
+                    const respEscolas = await fetch(API_URL + '/api/escolas');
+                    const escolas = await respEscolas.json();
+                    const selectEscola = document.getElementById('rel-turma-escola');
+                    if (selectEscola && escolas && !escolas.erro) {
+                        const current = selectEscola.value;
+                        selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectEscola.appendChild(opt);
+                        });
+                        if (current) {
+                            selectEscola.value = current;
+                            if (current && current !== '') carregarTurmasRelTurma(current);
+                        }
+                    }
+
+                    const respProvas = await fetch(API_URL + '/api/provas');
+                    const provas = await respProvas.json();
+                    const selectProva = document.getElementById('rel-turma-prova');
+                    if (selectProva && provas && !provas.erro) {
+                        const current = selectProva.value;
+                        selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.disciplina = p.disciplina || '';
+                            selectProva.appendChild(opt);
+                        });
+                        if (current) selectProva.value = current;
+                    }
+                } catch (erro) {
+                    console.error('Erro ao carregar filtros do relatório por turma:', erro);
+                }
+            }
+
+            async function carregarTurmasRelTurma(escolaId) {
+                const selectTurma = document.getElementById('rel-turma-turma');
+                const selectSerie = document.getElementById('rel-turma-serie');
+                if (!selectTurma) return;
+
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+
+                if (!escolaId || escolaId === '') {
+                    try {
+                        const respTurmas = await fetch(API_URL + '/api/turmas');
+                        const turmas = await respTurmas.json();
+                        if (turmas && !turmas.erro) {
+                            turmas.forEach(t => {
+                                const opt = document.createElement('option');
+                                opt.value = t.id;
+                                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                                opt.dataset.serie = t.serie || '';
+                                selectTurma.appendChild(opt);
+                            });
+                            if (selectSerie) filtrarTurmasPorSerie(selectSerie, selectTurma);
+                        }
+                    } catch (erro) {
+                        console.error('Erro ao carregar turmas:', erro);
+                    }
+                    carregarRelatorioTurmaFiltrado();
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+
+                    if (turmas && !turmas.erro && turmas.length > 0) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    } else {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Nenhuma turma encontrada';
+                        opt.disabled = true;
+                        selectTurma.appendChild(opt);
+                    }
+
+                    if (selectSerie) filtrarTurmasPorSerie(selectSerie, selectTurma);
+                } catch (erro) {
+                    console.error('Erro ao carregar turmas da escola:', erro);
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Erro ao carregar turmas';
+                    opt.disabled = true;
+                    selectTurma.appendChild(opt);
+                }
+
+                carregarRelatorioTurmaFiltrado();
+            }
+
+            // ============================================
+            // CARREGAR RELATÓRIO POR TURMA FILTRADO (MODIFICADO)
+            // ============================================
+            async function carregarRelatorioTurmaFiltrado() {
+                try {
+                    const escolaId = document.getElementById('rel-turma-escola').value;
+                    const serie = document.getElementById('rel-turma-serie').value;
+                    const turmaId = document.getElementById('rel-turma-turma').value;
+                    const provaId = document.getElementById('rel-turma-prova').value;
+
+                    let disciplinaSelecionada = '';
+                    const selectProva = document.getElementById('rel-turma-prova');
+                    const optionProva = selectProva.options[selectProva.selectedIndex];
+                    if (optionProva && optionProva.dataset.disciplina) {
+                        disciplinaSelecionada = optionProva.dataset.disciplina;
+                    }
+                    if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
+
+                    let url = API_URL + '/api/historico/agrupado';
+                    const params = new URLSearchParams();
+                    if (escolaId && escolaId !== '') params.append('escola', escolaId);
+                    if (serie && serie !== '') params.append('serie', serie);
+                    if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                    if (provaId && provaId !== '') params.append('prova', provaId);
+                    if (params.toString()) url += '?' + params.toString();
+
+                    const response = await fetch(url);
+                    const alunos = await response.json();
+
+                    if (!alunos || alunos.length === 0 || alunos.erro) {
+                        document.getElementById('rel-media').textContent = '0%';
+                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
+                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
+                        });
+                        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
+                        document.getElementById('rel-disc-acertos').textContent = '0';
+                        document.getElementById('rel-disc-erros').textContent = '0';
+                        document.getElementById('rel-disc-media').textContent = '0.0';
+                        document.getElementById('rel-disc-conceito').textContent = '—';
+                        document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
+                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
+                        return;
+                    }
+
+                    const dadosAlunos = Array.isArray(alunos) ? alunos : [];
+
+                    if (dadosAlunos.length === 0) {
+                        document.getElementById('rel-media').textContent = '0%';
+                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
+                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
+                            document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
+                        });
+                        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
+                        document.getElementById('rel-disc-acertos').textContent = '0';
+                        document.getElementById('rel-disc-erros').textContent = '0';
+                        document.getElementById('rel-disc-media').textContent = '0.0';
+                        document.getElementById('rel-disc-conceito').textContent = '—';
+                        document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
+                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
+                        return;
+                    }
+
+                    const totalAlunos = dadosAlunos.length;
+                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+
+                    const disciplinaMap = {
+                        'Português': 'portugues',
+                        'Matemática': 'matematica',
+                        'Produção de Texto': 'producao',
+                        'Ciências Humanas': 'ch',
+                        'Ciências Naturais': 'cn',
+                        'História': 'ch',
+                        'Geografia': 'ch',
+                        'Inglês': 'portugues'
+                    };
+                    const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
+
+                    let somaNotas = 0;
+                    dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
+                    const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
+                    const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
+                    document.getElementById('rel-media').textContent = porcentagemMedia.toFixed(1) + '%';
+                    document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
+                    document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
+
+                    let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
+                    dadosAlunos.forEach(aluno => {
+                        const discData = aluno[chave] || {};
+                        const acertos = discData.acertos || 0;
+                        const total = discData.total || 20;
+                        const pct = (acertos / total) * 100;
+                        const conceito = calcularConceito(pct);
+                        conceitos[conceito] = (conceitos[conceito] || 0) + 1;
+                    });
+
+                    const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
+                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                        const count = conceitos[c] || 0;
+                        const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
+                        document.getElementById(`rel-conceito-${c}-count`).textContent = count;
+                        const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                        if (bar) {
+                            bar.style.width = Math.max(pct, 2) + '%';
+                            bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
+                        }
+                    });
+
+                    let totalAcertos = 0,
+                        totalErros = 0,
+                        totalQuestoes = 0;
+                    let alunosComDados = 0;
+
+                    dadosAlunos.forEach(aluno => {
+                        const disciplinaData = aluno[chave];
+                        if (disciplinaData) {
+                            let acertos = 0,
+                                erros = 0,
+                                total = 0;
+                            if (typeof disciplinaData === 'object') {
+                                acertos = parseInt(disciplinaData.acertos) || 0;
+                                total = parseInt(disciplinaData.total) || 0;
+                                erros = total - acertos;
+                            } else {
+                                acertos = parseInt(disciplinaData) || 0;
+                                total = 20;
+                                erros = total - acertos;
+                            }
+                            totalAcertos += acertos;
+                            totalErros += erros;
+                            totalQuestoes += total;
+                            alunosComDados++;
+                        }
+                    });
+
+                    const mediaDisc = alunosComDados > 0 ? (totalAcertos / alunosComDados) : 0;
+                    const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
+                    const conceitoDisc = calcularConceito(pctDisc);
+
+                    document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
+                    document.getElementById('rel-disc-acertos').textContent = totalAcertos;
+                    document.getElementById('rel-disc-erros').textContent = totalErros;
+                    document.getElementById('rel-disc-media').textContent = mediaDisc.toFixed(1);
+
+                    const badgeMap = {
+                        'inicial': 'badge-conceito-inicial',
+                        'basico': 'badge-conceito-basico',
+                        'proficiente': 'badge-conceito-proficiente',
+                        'avancado': 'badge-conceito-avancado'
+                    };
+                    const labelMap = {
+                        'inicial': '🔴 Inicial',
+                        'basico': '🟠 Básico',
+                        'proficiente': '🔵 Proficiente',
+                        'avancado': '🟢 Avançado'
+                    };
+                    const conceitoSpan = document.getElementById('rel-disc-conceito');
+                    if (conceitoSpan) {
+                        conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
+                        conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
+                    }
+
+                    function getDadosDisciplina(disciplinaData, totalQuestoes) {
+                        if (!disciplinaData || typeof disciplinaData !== 'object') {
+                            return { acertos: 0, erros: 0, conceito: 'inicial' };
+                        }
+                        const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                        let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                        const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                        if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+                        const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        const conceito = calcularConceito(porcentagem);
+                        return { acertos, erros, conceito };
+                    }
+
+                    function badgeConceito(c) {
+                        return `badge-conceito-${c}-sm`;
+                    }
+
+                    const tbody = document.getElementById('tb-rel-alunos');
+                    if (!tbody) return;
+
+                    const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
+
+                    tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
+                        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+
+                        const portugues = getDadosDisciplina(aluno.portugues, 20);
+                        const matematica = getDadosDisciplina(aluno.matematica, 20);
+                        const producao = getDadosDisciplina(aluno.producao, 20);
+                        const ch = getDadosDisciplina(aluno.ch, 20);
+                        const cn = getDadosDisciplina(aluno.cn, 20);
+
+                        const nomeEscola = aluno.escola || '';
+                        const nomeTurma = aluno.turma || '';
+
+                        return '<tr>' +
+                            '<td>' + medalha + '</td>' +
+                            '<td>' + (index + 1) + '</td>' +
+                            '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                            '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                            '</tr>';
+                    }).join('');
+
+                    document.getElementById('rel-total-alunos-tabela').textContent = totalAlunos + ' alunos';
+
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar relatório por turma:', erro);
+                    showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
+                }
+            }
+
+            function limparFiltrosRelTurma() {
+                document.getElementById('rel-turma-escola').value = '';
+                document.getElementById('rel-turma-serie').value = '';
+                document.getElementById('rel-turma-prova').value = '';
+
+                const selectTurma = document.getElementById('rel-turma-turma');
+                selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
+                fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                    carregarRelatorioTurmaFiltrado();
+                }).catch(e => console.error('Erro ao recarregar turmas:', e));
+
+                const selectProva = document.getElementById('rel-turma-prova');
+                fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
+                    if (provas && !provas.erro) {
+                        selectProva.innerHTML = '<option value="">Todas as provas</option>';
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                            opt.dataset.disciplina = p.disciplina || '';
+                            selectProva.appendChild(opt);
+                        });
+                    }
+                    carregarRelatorioTurmaFiltrado();
+                }).catch(e => console.error('Erro ao recarregar provas:', e));
+            }
+
+            // ============================================
+            // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
+            // ============================================
+
+            async function carregarEscolasDesempenho() {
+                try {
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+                    const select = document.getElementById('filtro-escola-desempenho');
+
+                    if (select && escolas && !escolas.erro) {
+                        const current = select.value;
+                        select.innerHTML = '<option value="">Selecione a escola...</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            select.appendChild(opt);
+                        });
+                        if (current) select.value = current;
+                    }
+
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const selectProva = document.getElementById('filtro-prova-desempenho');
+
+                    if (selectProva && provas && !provas.erro) {
+                        const current = selectProva.value;
+                        selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
+                        provas.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            const serie = p.serie || 'Série não definida';
+                            opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
+                            opt.dataset.serie = serie;
+                            opt.dataset.quantidade = p.quantidade_questoes || 20;
+                            opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                            opt.dataset.bncc = JSON.stringify(p.bncc || []);
+                            opt.dataset.disciplina = p.disciplina || '';
+                            selectProva.appendChild(opt);
+                        });
+                        if (current) selectProva.value = current;
+                    }
+
+                    document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
+                    document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
+
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas para desempenho:', erro);
+                    showToast('❌ Erro ao carregar dados: ' + erro.message, 'error');
+                }
+            }
+
+            async function carregarTurmasDesempenho(escolaId) {
+                const selectTurma = document.getElementById('filtro-turma-desempenho');
+                const selectAluno = document.getElementById('filtro-aluno-desempenho');
+
+                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+
+                if (!escolaId) return;
+
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas:', e);
+                    showToast('❌ Erro ao carregar turmas', 'error');
+                }
+            }
+
+            async function carregarAlunosDesempenho(turmaId) {
+                const selectAluno = document.getElementById('filtro-aluno-desempenho');
+                selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+
+                if (!turmaId) return;
+
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                    const alunos = await response.json();
+
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar alunos:', e);
+                    showToast('❌ Erro ao carregar alunos', 'error');
+                }
+            }
+
+            // ===== FUNÇÃO GERAR DESEMPENHO =====
+            async function gerarDesempenho() {
+                const escolaId = document.getElementById('filtro-escola-desempenho').value;
+                const turmaId = document.getElementById('filtro-turma-desempenho').value;
+                const alunoId = document.getElementById('filtro-aluno-desempenho').value;
+                const provaId = document.getElementById('filtro-prova-desempenho').value;
+
+                if (!escolaId || !turmaId || !alunoId || !provaId) {
+                    showToast('⚠️ Preencha todos os campos: ESCOLA, TURMA, ALUNO e PROVA!', 'error');
+                    return;
+                }
+
+                showToast('🔍 Buscando dados do aluno...', 'info');
+
+                try {
+                    const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
+                    const escola = await escolaResp.json();
+
+                    const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
+                    const turma = await turmaResp.json();
+
+                    const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
+                    const aluno = await alunoResp.json();
+
+                    const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                    const prova = await provaResp.json();
+
+                    if (!escola || escola.erro || !turma || turma.erro || !aluno || aluno.erro || !prova || prova.erro) {
+                        showToast('❌ Erro ao carregar dados. Verifique os filtros selecionados.', 'error');
+                        return;
+                    }
+
+                    const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
+                    const historico = await historicoResp.json();
+
+                    const gabarito = prova.gabarito || [];
+                    const bncc = prova.bncc || [];
+                    const totalQuestoes = prova.quantidade_questoes || 20;
+
+                    let respostasAluno = [];
+                    let disciplina = prova.disciplina || 'Português';
+
+                    if (historico && historico.length > 0 && !historico.erro) {
+                        const correcao = historico[0];
+                        respostasAluno = correcao.respostas || [];
+                        if (correcao.disciplina) disciplina = correcao.disciplina;
+                    } else {
+                        try {
+                            const respostasResp = await fetch(`${API_URL}/api/respostas?aluno_id=${alunoId}&prova_id=${provaId}`);
+                            const respostasData = await respostasResp.json();
+                            if (respostasData && !respostasData.erro) {
+                                respostasAluno = respostasData.respostas || [];
+                            }
+                        } catch (e) {
+                            console.warn('Nenhuma resposta encontrada:', e);
+                        }
+                    }
+
+                    while (respostasAluno.length < totalQuestoes) respostasAluno.push('');
+
+                    let acertos = 0,
+                        erros = 0;
+                    const resultadoQuestoes = [];
+
+                    for (let i = 0; i < totalQuestoes; i++) {
+                        const resp = (i < respostasAluno.length) ? (respostasAluno[i] || '') : '';
+                        const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
+                        const codigoBncc = (i < bncc.length) ? (bncc[i] || '') : '';
+                        const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
+
+                        if (resp) { if (isCorreto) acertos++;
+                            else erros++; }
+
+                        resultadoQuestoes.push({
+                            numero: i + 1,
+                            resposta: resp || '—',
+                            gabarito: gab || '—',
+                            bncc: codigoBncc,
+                            acertou: isCorreto,
+                            respondida: !!resp
+                        });
+                    }
+
+                    const pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+
+                    let conceito = 'Inicial';
+                    let conceitoCor = 'badge-red';
+                    if (pct > 80) { conceito = 'Avançado';
+                        conceitoCor = 'badge-green'; } else if (pct > 60) { conceito = 'Proficiente';
+                        conceitoCor = 'badge-blue'; } else if (pct > 40) { conceito = 'Básico';
+                        conceitoCor = 'badge-orange'; }
+
+                    desempenhoData.alunoSelecionado = {
+                        escola,
+                        turma,
+                        aluno,
+                        prova,
+                        respostas: respostasAluno,
+                        gabarito: gabarito,
+                        bncc: bncc,
+                        resultadoQuestoes: resultadoQuestoes,
+                        acertos: acertos,
+                        erros: erros,
+                        porcentagem: pct,
+                        conceito: conceito,
+                        disciplina: disciplina,
+                        totalQuestoes: totalQuestoes
+                    };
+
+                    document.getElementById('resultado-desempenho').style.display = 'block';
+
+                    document.getElementById('resumo-nota').textContent = pct + '%';
+                    document.getElementById('resumo-acertos').textContent = acertos;
+                    document.getElementById('resumo-erros').textContent = erros;
+                    document.getElementById('resumo-conceito').textContent = conceito;
+
+                    document.getElementById('info-escola').textContent = escola.nome || '—';
+                    document.getElementById('info-turma').textContent = (turma.nome || '') + ' - ' + (turma.serie || '');
+                    document.getElementById('info-aluno').textContent = aluno.nome || '—';
+                    document.getElementById('info-prova').textContent = prova.titulo || '—';
+                    document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
+
+                    const card = document.getElementById('desempenho-disciplina-unica');
+                    card.style.display = 'block';
+
+                    document.getElementById('disciplina-unica-titulo').textContent = `📖 ${disciplina}`;
+
+                    const grid = document.getElementById('disciplina-unica-questoes');
+                    grid.innerHTML = '';
+                    resultadoQuestoes.forEach(q => {
+                        const div = document.createElement('div');
+                        div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
+                        let bnccHtml = '';
+                        if (q.bncc && q.bncc.trim() !== '') {
+                            bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                        }
+                        div.innerHTML = `
+                            <div class="q-num">Q${q.numero}</div>
+                            <div class="q-resp">${q.resposta}</div>
+                            <div class="q-gab">${q.gabarito}</div>
+                            <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
+                                ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}
+                            </span>
+                            ${bnccHtml}
+                        `;
+                        grid.appendChild(div);
+                    });
+
+                    document.getElementById('disciplina-unica-acertos').textContent = acertos;
+                    document.getElementById('disciplina-unica-erros').textContent = erros;
+                    document.getElementById('disciplina-unica-nota').textContent = pct + '%';
+
+                    const statusBadge = document.getElementById('disciplina-unica-status');
+                    statusBadge.textContent = conceito;
+                    statusBadge.className = `badge ${conceitoCor}`;
+
+                    document.getElementById('disciplina-unica-conceito').textContent = conceito;
+
+                    const gabCard = document.getElementById('gabarito-oficial-card');
+                    gabCard.style.display = 'block';
+
+                    const gabCardTitle = document.querySelector('#gabarito-oficial-card .card-title');
+                    if (gabCardTitle) {
+                        gabCardTitle.textContent = disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova';
+                    }
+
+                    const gabGrid = document.getElementById('gabarito-oficial-grid');
+                    gabGrid.innerHTML = '';
+                    gabarito.forEach((gab, idx) => {
+                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                        const div = document.createElement('div');
+                        div.className = 'questao-item';
+                        div.innerHTML = `
+                            <div class="q-num">Q${idx+1}</div>
+                            <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
+                            <div class="q-gab">Oficial</div>
+                            ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${codigoBncc}</div>` : ''}
+                        `;
+                        gabGrid.appendChild(div);
+                    });
+
+                    showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
+
+                } catch (erro) {
+                    console.error('❌ Erro ao gerar desempenho:', erro);
+                    showToast('❌ Erro ao gerar desempenho: ' + erro.message, 'error');
+                }
+            }
+
+            // ===== FUNÇÃO GERAR DOCUMENTO =====
+            function gerarDocumentoDesempenho() {
+                if (gerandoDocumento) {
+                    showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
+                    return;
+                }
+
+                const data = desempenhoData.alunoSelecionado;
+                if (!data) {
+                    showToast('⚠️ Gere o desempenho primeiro!', 'error');
+                    return;
+                }
+
+                const btn = document.getElementById('btnGerarDocumento');
+                gerandoDocumento = true;
+                btn.disabled = true;
+                btn.textContent = '⏳ Gerando...';
+
+                try {
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        showToast('⚠️ Permita pop-ups para gerar o documento!', 'error');
+                        gerandoDocumento = false;
+                        btn.disabled = false;
+                        btn.textContent = '📄 GERAR DOCUMENTO';
+                        return;
+                    }
+
+                    const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
+
+                    let questoesHTML = '';
+                    resultadoQuestoes.forEach(q => {
+                        const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                        const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                        let bnccHTML = '';
+                        if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                        questoesHTML += `
+                            <div class="questao-item ${classe}">
+                                <div class="q-num">Q${q.numero}</div>
+                                <div class="q-resp">${q.resposta}</div>
+                                <div class="q-gab">${q.gabarito}</div>
+                                <span class="q-status-text ${classe}">${statusText}</span>
+                                ${bnccHTML}
+                            </div>
+                        `;
+                    });
+
+                    let gabOficialHTML = '';
+                    gabarito.forEach((gab, idx) => {
+                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                        gabOficialHTML += `
+                            <div class="questao-item" style="border-color: #86efac;">
+                                <div class="q-num">Q${idx+1}</div>
+                                <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
+                                <div class="q-gab">Oficial</div>
+                                ${codigoBncc ? `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${codigoBncc}</div>` : ''}
+                            </div>
+                        `;
+                    });
+
+                    const html = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Desempenho do Aluno - ${aluno.nome}</title>
+                        <style>
+                            * { margin:0; padding:0; box-sizing:border-box; }
+                            body { font-family: 'Segoe UI', Arial, sans-serif; background:#fff; color:#0f172a; padding:30px; }
+                            .header { text-align:center; margin-bottom:25px; padding-bottom:15px; border-bottom:2px solid #1e293b; }
+                            .header h1 { font-size:22px; color:#1e293b; }
+                            .header p { color:#475569; font-size:13px; margin-top:4px; }
+                            .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; background:#f1f5f9; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:13px; }
+                            .info-grid strong { color:#0f172a; }
+                            .resumo { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+                            .resumo-item { background:#f1f5f9; border-radius:8px; padding:12px; text-align:center; }
+                            .resumo-item .valor { font-size:24px; font-weight:800; }
+                            .resumo-item .label { font-size:11px; color:#475569; text-transform:uppercase; }
+                            .resumo-item .valor.green { color:#16a34a; }
+                            .resumo-item .valor.red { color:#dc2626; }
+                            .resumo-item .valor.blue { color:#2563eb; }
+                            .resumo-item .valor.purple { color:#7c3aed; }
+                            .footer { margin-top:25px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:12px; color:#64748b; }
+                            .questao-item { background:#f8fafc; border-radius:4px; padding:4px 2px; text-align:center; font-size:10px; border:1px solid #e2e8f0; }
+                            .questao-item .q-num { font-size:7px; color:#94a3b8; }
+                            .questao-item .q-resp { font-weight:700; font-size:12px; }
+                            .questao-item .q-gab { font-size:7px; color:#94a3b8; }
+                            .questao-item .q-status-text { font-size:7px; font-weight:700; display:block; margin-top:2px; }
+                            .questao-item.acertou { border-color:#16a34a; background:#dcfce7; }
+                            .questao-item.acertou .q-resp { color:#16a34a; }
+                            .questao-item.acertou .q-status-text { color:#16a34a; }
+                            .questao-item.errou { border-color:#dc2626; background:#fee2e2; }
+                            .questao-item.errou .q-resp { color:#dc2626; }
+                            .questao-item.errou .q-status-text { color:#dc2626; }
+                            .disciplina-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:12px; page-break-inside:avoid; }
+                            .disciplina-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+                            .disciplina-card .header strong { font-size:15px; color:#0f172a; }
+                            .disciplina-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
+                            .disciplina-card .stats { display:flex; gap:16px; font-size:13px; color:#475569; border-top:1px solid #e2e8f0; padding-top:8px; }
+                            .disciplina-card .stats strong { color:#0f172a; }
+                            .gabarito-oficial-card { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:16px; page-break-inside:avoid; }
+                            .gabarito-oficial-card .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+                            .gabarito-oficial-card .header strong { font-size:15px; color:#0f172a; }
+                            .gabarito-oficial-card .questoes-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:3px; margin-bottom:8px; }
+                            @media print {
+                                .no-print { display:none !important; }
+                                body { padding:20px; }
+                                .info-grid { background:#f1f5f9 !important; }
+                                .resumo-item { background:#f1f5f9 !important; }
+                            }
+                            @media (max-width:768px) {
+                                .info-grid { grid-template-columns:1fr 1fr; }
+                                .resumo { grid-template-columns:1fr 1fr; }
+                                .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>📊 Relatório de Desempenho do Aluno</h1>
+                            <p>Sistema de Correção de Provas — São Sebastião da Boa Vista — SISAM 2026</p>
+                        </div>
+
+                        <div class="info-grid">
+                            <div><strong>🏫 Escola</strong><br>${escola.nome || '—'}</div>
+                            <div><strong>👥 Turma</strong><br>${turma.nome || ''} - ${turma.serie || ''}</div>
+                            <div><strong>🎒 Aluno</strong><br>${aluno.nome || '—'}</div>
+                            <div><strong>📄 Prova</strong><br>${prova.titulo || '—'}</div>
+                            <div><strong>📅 Data</strong><br>${new Date().toLocaleDateString('pt-BR')}</div>
+                        </div>
+
+                        <div class="resumo">
+                            <div class="resumo-item"><div class="valor blue">${porcentagem}%</div><div class="label">Porcentagem de Acertos</div></div>
+                            <div class="resumo-item"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
+                            <div class="resumo-item"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
+                            <div class="resumo-item"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
+                        </div>
+
+                        <div style="margin-bottom:20px;">
+                            <h3 style="font-size:16px; margin-bottom:12px; color:#1e293b;">📋 Desempenho por Disciplina</h3>
+                            <div class="disciplina-card">
+                                <div class="header">
+                                    <strong>${disciplina}</strong>
+                                    <span style="background:${conceito === 'Avançado' ? '#d4edda' : conceito === 'Proficiente' ? '#cce5ff' : conceito === 'Básico' ? '#fff3cd' : '#f8d7da'}; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:${conceito === 'Avançado' ? '#155724' : conceito === 'Proficiente' ? '#004085' : conceito === 'Básico' ? '#856404' : '#721c24'};">
+                                        ${conceito}
+                                    </span>
+                                </div>
+                                <div class="questoes-grid">
+                                    ${questoesHTML}
+                                </div>
+                                <div class="stats">
+                                    <span>✅ Acertos: <strong style="color:#16a34a;">${acertos}</strong></span>
+                                    <span>❌ Erros: <strong style="color:#dc2626;">${erros}</strong></span>
+                                    <span>⭐ Aproveitamento: <strong style="color:#2563eb;">${porcentagem}%</strong></span>
+                                    <span>📊 Total: <strong>${totalQuestoes}</strong></span>
+                                </div>
+                                <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569; text-align:center;">
+                                    <span style="color:#16a34a;">✅ ACERTOU: ADQUIRIU HABILIDADE</span> |
+                                    <span style="color:#dc2626;">❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="gabarito-oficial-card">
+                            <div class="header">
+                                <strong>${disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova'}</strong>
+                                <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
+                            </div>
+                            <div class="questoes-grid">
+                                ${gabOficialHTML}
+                            </div>
+                            <div style="margin-top:8px; padding-top:8px; border-top:1px solid #86efac; font-size:11px; color:#475569; text-align:center;">
+                                Respostas corretas da prova
+                            </div>
+                        </div>
+
+                        <div class="footer">
+                            <span>Documento gerado em ${new Date().toLocaleString('pt-BR')}</span>
+                            <span>© ${new Date().getFullYear()} CorrigePro — Secretaria Municipal de Educação</span>
+                        </div>
+
+                        <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0;">
+                            <p style="font-size:11px; color:#94a3b8;">
+                                <strong>Legenda:</strong>
+                                <span style="color:#16a34a;">✅ Acertou</span> |
+                                <span style="color:#dc2626;">❌ Errou</span> |
+                                <span style="color:#94a3b8;">— Não respondeu</span>
+                            </p>
+                            <div style="display:flex; justify-content:center; gap:20px; font-size:10px; color:#94a3b8; margin-top:6px;">
+                                <span>🔴 Inicial (até 40%)</span>
+                                <span>🟠 Básico (41% a 60%)</span>
+                                <span>🔵 Proficiente (61% a 80%)</span>
+                                <span>🟢 Avançado (acima de 80%)</span>
+                            </div>
+                        </div>
+
+                        <div style="text-align:center; margin-top:15px; font-size:11px; color:#94a3b8;">
+                            <p>Imprima ou salve este documento como PDF para registro oficial.</p>
+                        </div>
+
+                        <script>
+                            window.onload = function() {
+                                setTimeout(() => {
+                                    window.print();
+                                }, 500);
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                    `;
+
+                    win.document.write(html);
+                    win.document.close();
+                    setTimeout(() => win.print(), 600);
+
+                    showToast('📄 Documento gerado!', 'success');
+                } catch (erro) {
+                    console.error('Erro ao gerar documento:', erro);
+                    showToast('❌ Erro ao gerar documento: ' + erro.message, 'error');
+                } finally {
+                    setTimeout(() => {
+                        gerandoDocumento = false;
+                        btn.disabled = false;
+                        btn.textContent = '📄 GERAR DOCUMENTO';
+                    }, 1000);
+                }
+            }
+
+            function limparFiltrosDesempenho() {
+                document.getElementById('filtro-escola-desempenho').value = '';
+                document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
+                document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
+                document.getElementById('filtro-prova-desempenho').value = '';
+                document.getElementById('resultado-desempenho').style.display = 'none';
+                document.getElementById('desempenho-disciplina-unica').style.display = 'none';
+                document.getElementById('gabarito-oficial-card').style.display = 'none';
+                desempenhoData.alunoSelecionado = null;
+                showToast('✕ Filtros limpos!', 'info');
+            }
+
+            // ============================================
+            // FUNÇÕES DE TURMA PARA TEXTO IA (mantidas)
+            // ============================================
+            async function carregarTurmasTexto(escolaId) {
+                const selectTurma = document.getElementById('txt-turma');
+                const selectAluno = document.getElementById('txt-aluno-select');
+                selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
+                if (!escolaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            selectTurma.appendChild(opt);
+                        });
+                    }
+                } catch (e) { console.error('Erro ao carregar turmas:', e); }
+            }
+
+            async function carregarAlunosPorTurmaTexto(turmaId) {
+                const selectAluno = document.getElementById('txt-aluno-select');
+                selectAluno.innerHTML = '<option value="">Selecione...</option>';
+                if (!turmaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
+                    const alunos = await response.json();
+                    if (alunos && !alunos.erro) {
+                        alunos.forEach(a => {
+                            const opt = document.createElement('option');
+                            opt.value = a.id;
+                            opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                            selectAluno.appendChild(opt);
+                        });
+                    }
+                } catch (e) { console.error('Erro ao carregar alunos:', e); }
+            }
+
+            // ============================================
+            // CARREGAR DADOS - FUNÇÃO PRINCIPAL
+            // ============================================
+            async function carregarDados() {
+                console.log('🔄 Carregando dados do sistema...');
+                try {
+                    await Promise.all([
+                        carregarEscolas(),
+                        carregarTurmas(),
+                        carregarAlunos(),
+                        carregarProvas(),
+                        carregarDashboard(),
+                        carregarResultadosComFiltros(),
+                        carregarGabaritos(),
+                        carregarCombos(),
+                        carregarRelatorios(),
+                        carregarUltimasCorrecoes(),
+                        carregarUserData(),
+                        carregarConceitoReal(),
+                        carregarUsuarios(),
+                        carregarEscolasFiltroAlunos(),
+                        carregarEscolasCorrigir(),
+                        carregarEscolasTexto(),
+                        carregarEscolasParaCorrecaoManual(),
+                        carregarFiltrosRelTurma(),
+                        carregarFiltroEscolaTurmas(),
+                        carregarEscolasDesempenho()
+                    ]);
+                    console.log('✅ Todos os dados carregados com sucesso!');
+                    atualizarDatasImpressao();
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar dados:', erro);
+                    showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+                }
+            }
+
+            // ============================================
+            // CARREGAR CONCEITO REAL
+            // ============================================
+            async function carregarConceitoReal() {
+                try {
+                    const [conceitoResp, turmasResp] = await Promise.all([
+                        fetch(`${API_URL}/api/dashboard/Conceito`),
+                        fetch(`${API_URL}/api/turmas`)
+                    ]);
+
+                    const dados = await conceitoResp.json();
+                    const turmasLista = await turmasResp.json();
+
+                    const container = document.getElementById('grafico-Conceito');
+                    const badge = document.getElementById('total-turmas-badge');
+                    if (!container) return;
+
+                    if (!dados || dados.erro || (Array.isArray(dados) && dados.length === 0)) {
+                        container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">📭</div>
+                            <p>Nenhuma turma com correções ainda.</p>
+                            <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
+                        </div>`;
+                        if (badge) badge.textContent = '0 turmas';
+                        return;
+                    }
+
+                    let dadosArray = Array.isArray(dados) ? dados : Object.values(dados);
+
+                    const turmasMap = new Map();
+                    if (turmasLista && !turmasLista.erro && Array.isArray(turmasLista)) {
+                        turmasLista.forEach(t => { turmasMap.set(t.id, t.nome || `Turma ${t.id}`); });
+                    }
+
+                    const agrupado = new Map();
+                    dadosArray.forEach(item => {
+                        let turmaId = item.turma_id || item.id || item.turmaId;
+                        if (!turmaId) {
+                            if (item.nome) turmaId = 'nome_' + item.nome;
+                            else return;
+                        }
+
+                        let nomeReal = turmasMap.get(turmaId);
+                        if (!nomeReal && item.nome && item.nome !== 'Turma sem nome') nomeReal = item.nome;
+                        if (!nomeReal) nomeReal = `Turma ${turmaId}`;
+
+                        if (!agrupado.has(turmaId)) {
+                            agrupado.set(turmaId, {
+                                id: turmaId,
+                                nome: nomeReal,
+                                somaPorcentagem: 0,
+                                totalCorrecoes: 0,
+                                contagem: 0
+                            });
+                        }
+                        const turma = agrupado.get(turmaId);
+                        if (item.porcentagem !== undefined) { turma.somaPorcentagem += item.porcentagem;
+                            turma.contagem++; }
+                        if (item.total_correcoes !== undefined) turma.totalCorrecoes += item.total_correcoes;
+                        else if (item.correcoes !== undefined) turma.totalCorrecoes += item.correcoes;
+                        else turma.totalCorrecoes += 1;
+                        if (item.nome && item.nome !== 'Turma sem nome' && item.nome.trim() !== '') turma.nome = item.nome;
+                    });
+
+                    let turmasAgrupadas;
+                    if (agrupado.size === 0) {
+                        turmasAgrupadas = dadosArray.map((item, index) => ({
+                            id: index,
+                            nome: item.nome || `Turma ${index+1}`,
+                            porcentagem: item.porcentagem || 0,
+                            total_correcoes: item.total_correcoes || 0,
+                            media: item.media || item.porcentagem || 0
+                        }));
+                    } else {
+                        turmasAgrupadas = Array.from(agrupado.values()).map(t => ({
+                            id: t.id,
+                            nome: t.nome,
+                            porcentagem: t.contagem > 0 ? Math.round(t.somaPorcentagem / t.contagem) : 0,
+                            total_correcoes: t.totalCorrecoes,
+                            media: t.contagem > 0 ? (t.somaPorcentagem / t.contagem) : 0
+                        }));
+                    }
+
+                    if (badge) badge.textContent = turmasAgrupadas.length + ' turmas';
+
+                    const maxBarras = 5;
+                    let dadosFiltrados = turmasAgrupadas.sort((a, b) => b.porcentagem - a.porcentagem);
+                    if (dadosFiltrados.length > maxBarras) dadosFiltrados = dadosFiltrados.slice(0, maxBarras);
+
+                    let html = '<div class="chart-bars">';
+                    const cores = ['linear-gradient(180deg,#3b82f6,#1d4ed8)', 'linear-gradient(180deg,#06b6d4,#0e7490)', 'linear-gradient(180deg,#8b5cf6,#6d28d9)', 'linear-gradient(180deg,#10b981,#047857)', 'linear-gradient(180deg,#f59e0b,#b45309)'];
+
+                    dadosFiltrados.forEach((turma, index) => {
+                        const nome = turma.nome || `Turma ${turma.id}`;
+                        const porcentagem = turma.porcentagem || 0;
+                        const altura = Math.max(20, (porcentagem / 100) * 130);
+                        const cor = cores[index % cores.length];
+                        html += `<div class="chart-bar-item" title="${nome} - Média: ${turma.media || 0}">
+                            <div class="chart-bar-val">${porcentagem}%</div>
+                            <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
+                            <div class="chart-bar-lbl">${nome}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+
+                    container.innerHTML = html;
+
+                } catch (erro) {
+                    console.error('Erro ao carregar Conceito:', erro);
+                    const container = document.getElementById('grafico-Conceito');
+                    if (container) {
+                        container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
+                            <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
+                            <p>Erro ao carregar dados de Conceito.</p>
+                        </div>`;
+                    }
+                }
+            }
+
+            // ============================================
+            // CARREGAR ÚLTIMAS CORREÇÕES
+            // ============================================
+            async function carregarUltimasCorrecoes() {
+                try {
+                    const response = await fetch(API_URL + '/api/historico');
+                    const historico = await response.json();
+                    const tbody = document.getElementById('ultimas-correcoes');
+                    if (!tbody) return;
+                    if (!historico || historico.length === 0 || historico.erro) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+                    } else {
+                        const recentes = historico.slice(0, 4);
+                        tbody.innerHTML = recentes.map(item => {
+                            const acertos = item.acertos || 0;
+                            const total = item.total || 20;
+                            const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
+                            const conceito = calcularConceito(porcentagem);
+                            const badgeMap = { 'inicial': 'badge-conceito-inicial', 'basico': 'badge-conceito-basico', 'proficiente': 'badge-conceito-proficiente', 'avancado': 'badge-conceito-avancado' };
+                            const nomeConceito = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' };
+                            const badge = badgeMap[conceito] || 'badge-gray';
+                            const label = nomeConceito[conceito] || 'Indefinido';
+                            return `<tr>
+                                <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
+                                <td>${item.prova_titulo || 'Prova'}</td>
+                                <td><strong>${porcentagem}%</strong></td>
+                                <td><span class="badge ${badge}">${label}</span></td>
+                            </tr>`;
+                        }).join('');
+                    }
+                } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
+            }
+
+            // ============================================
+            // CARREGAR USUÁRIOS
+            // ============================================
+            async function carregarUsuarios() {
+                try {
+                    const response = await fetch(API_URL + '/api/usuarios');
+                    const usuarios = await response.json();
+                    const tbody = document.getElementById('tb-usuarios');
+                    if (!tbody) return;
+                    if (!usuarios || usuarios.length === 0 || usuarios.erro) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário cadastrado</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = usuarios.map(u => {
+                        const perfilBadge = u.perfil === 'admin' ? 'badge-orange' : 'badge-blue';
+                        const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
+                        const statusText = u.ativo ? 'Ativo' : 'Inativo';
+                        const isAdmin = u.username === 'admin';
+                        return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
+                            '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
+                            '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
+                            '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
+                            '<td>' +
+                            '<div class="btn-group">' +
+                            (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
+                            '</div>' +
+                            '</td></tr>';
+                    }).join('');
+                } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
+            }
+
+            // ============================================
+            // EXPORTAR FUNCTIONS
+            // ============================================
+            function exportarResultadosFiltrados() {
+                showToast('📥 Exportando resultados filtrados...', 'info');
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (!tbody) return;
+                let csv = 'Posição,Número,Nome,Série,Português_Acertos,Português_Erros,Português_Conceito,Matemática_Acertos,Matemática_Erros,Matemática_Conceito,Produção_Acertos,Produção_Erros,Produção_Conceito,CH_Acertos,CH_Erros,CH_Conceito,CN_Acertos,CN_Erros,CN_Conceito,Escola,Turma\n';
+                tbody.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 20) {
+                        csv += cells[0].textContent.trim() + ',' +
+                            cells[1].textContent.trim() + ',' +
+                            cells[2].textContent.trim() + ',' +
+                            cells[3].textContent.trim() + ',' +
+                            cells[4].textContent.trim() + ',' +
+                            cells[5].textContent.trim() + ',' +
+                            cells[6].textContent.trim() + ',' +
+                            cells[7].textContent.trim() + ',' +
+                            cells[8].textContent.trim() + ',' +
+                            cells[9].textContent.trim() + ',' +
+                            cells[10].textContent.trim() + ',' +
+                            cells[11].textContent.trim() + ',' +
+                            cells[12].textContent.trim() + ',' +
+                            cells[13].textContent.trim() + ',' +
+                            cells[14].textContent.trim() + ',' +
+                            cells[15].textContent.trim() + ',' +
+                            cells[16].textContent.trim() + ',' +
+                            cells[17].textContent.trim() + ',' +
+                            cells[18].textContent.trim() + ',' +
+                            cells[19].textContent.trim() + '\n';
+                    }
+                });
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'resultados_filtrados.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Resultados exportados!', 'success');
+            }
+
+            function imprimirAlunos() {
+                const tbody = document.getElementById('tb-alunos');
+                const rows = tbody.querySelectorAll('tr');
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+                    showToast('⚠️ Nenhum aluno para imprimir.', 'error');
+                    return;
+                }
+                const escolaSelect = document.getElementById('filtro-escola-alunos');
+                const turmaSelect = document.getElementById('filtro-turma-alunos');
+                const serieSelect = document.getElementById('filtro-serie-alunos');
+                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
+                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
+                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Lista de Alunos</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; margin: 30px; background: #fff; }
+                        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+                        .filtros { text-align: center; color: #555; margin-bottom: 20px; font-size: 14px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                        th { background: #f2f2f2; font-weight: 700; }
+                        tr:nth-child(even) { background: #fafafa; }
+                        .footer { text-align: center; margin-top: 20px; color: #999; font-size: 12px; }
+                        @media print {
+                            body { margin: 10px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📋 Lista de Alunos</h1>
+                    <div class="filtros">
+                        <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
+                        <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
+                        <strong>Série:</strong> ${serieNome}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Matrícula</th>
+                                <th>Nome Completo</th>
+                                <th>Série</th>
+                                <th>Turma</th>
+                                <th>Escola</th>
+                                <th>Data Nasc.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        const numero = cells[0].textContent.trim();
+                        const matricula = cells[1].textContent.trim();
+                        const nome = cells[2].textContent.trim();
+                        const serie = cells[3].textContent.trim();
+                        const turma = cells[4].textContent.trim();
+                        const escola = cells[5].textContent.trim();
+                        const dataNasc = cells[6].textContent.trim();
+                        html += `
+                            <tr>
+                                <td>${numero}</td>
+                                <td>${matricula}</td>
+                                <td>${nome}</td>
+                                <td>${serie}</td>
+                                <td>${turma}</td>
+                                <td>${escola}</td>
+                                <td>${dataNasc}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                html += `
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        Gerado em ${new Date().toLocaleString('pt-BR')}
+                    </div>
+                </body>
+                </html>
+                `;
+
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+                win.document.write(html);
+                win.document.close();
+                win.focus();
+                win.print();
+            }
+
+            function exportarRelatorio() { showToast('📥 Exportando relatório...', 'info');
+                window.print(); }
+
+            function exportarRelatorioEscola() {
+                showToast('📥 Exportando relatório por escola...', 'info');
+                const tbody = document.getElementById('tb-rel-escola');
+                if (!tbody) return;
+                let csv = 'Escola,Turmas,Alunos,Média,Aprovação\n';
+                tbody.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 5) { csv += cells[0].textContent.trim() + ',' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + ',' + cells[3].textContent.trim() + ',' + cells[4].textContent.trim() + '\n'; }
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'relatorio_escolas.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ Relatório exportado!', 'success');
+            }
+
+            // ============================================
+            // GABARITO - BUILD GRID (COM BNCC)
+            // ============================================
+            function buildGabGrid() {
+                const grid = document.getElementById('gab-grid');
+                if (!grid) return;
+                const serieEl = document.getElementById('gab-serie');
+                const totalEl = document.getElementById('gab-total');
+                const provaSelect = document.getElementById('gab-prova');
+                if (!serieEl || !totalEl || !provaSelect) return;
+
+                const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                const isProducao = (disciplina === 'Produção de Texto');
+
+                const is1 = (parseInt(serieEl.value) || 1) === 1;
+                const total = parseInt(totalEl.value) || 20;
+                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                const lbl = document.getElementById('gab-label');
+                if (lbl) {
+                    if (isProducao) {
+                        lbl.textContent = '📝 Produção de Texto — Resposta descritiva e nível BNCC';
+                    } else {
+                        lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D';
+                    }
+                }
+                grid.innerHTML = '';
+                for (let i = 1; i <= total; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'gab-item';
+                    if (isProducao) {
+                        div.innerHTML = `
+                            <div class="gab-num">Q${i}</div>
+                            <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;"></textarea>
+                            <select class="gab-nivel" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
+                                <option value="">Nível BNCC</option>
+                                <option value="Inicial">Inicial</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Proficiente">Proficiente</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                        `;
+                    } else {
+                        let opts = '<option value="">—</option>';
+                        alts.forEach(a => { opts += '<option>' + a + '</option>'; });
+                        div.innerHTML = `
+                            <div class="gab-num">Q${i}</div>
+                            <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
+                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                        `;
+                    }
+                    grid.appendChild(div);
+                }
+            }
+
+            function fillGabRand() {
+                const provaSelect = document.getElementById('gab-prova');
+                const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                if (disciplina === 'Produção de Texto') {
+                    showToast('🎲 Preenchimento automático não disponível para produção de texto.', 'warning');
+                    return;
+                }
+                const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
+                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)]; s.classList.add('filled'); });
+                showToast('🎲 Gabarito de teste preenchido!');
+            }
+
+            function clearGab() {
+                const provaSelect = document.getElementById('gab-prova');
+                const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                const isProducao = (disciplina === 'Produção de Texto');
+                if (isProducao) {
+                    document.querySelectorAll('.gab-texto').forEach(ta => ta.value = '');
+                    document.querySelectorAll('.gab-nivel').forEach(sel => sel.value = '');
+                } else {
+                    document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
+                    document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
+                }
+            }
+
+            // ============================================
+            // SALVAR GABARITO (COM BNCC)
+            // ============================================
+            async function saveGab() {
+                try {
+                    const provaSelect = document.getElementById('gab-prova');
+                    const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                    const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+                    const isProducao = (disciplina === 'Produção de Texto');
+
+                    const respostas = [];
+                    const bncc = [];
+
+                    if (isProducao) {
+                        const textareas = document.querySelectorAll('.gab-texto');
+                        const niveis = document.querySelectorAll('.gab-nivel');
+                        textareas.forEach((ta, idx) => {
+                            respostas.push(ta.value.trim() || '');
+                            if (niveis[idx]) bncc.push(niveis[idx].value.trim() || '');
+                        });
+                    } else {
+                        const selects = document.querySelectorAll('.gab-select');
+                        const bnccInputs = document.querySelectorAll('.gab-bncc');
+                        selects.forEach((s, idx) => {
+                            respostas.push(s.value || '');
+                            if (bnccInputs[idx]) bncc.push(bnccInputs[idx].value.trim() || '');
+                        });
+                    }
+
+                    const respostasValidas = respostas.filter(r => r !== '');
+                    if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
+
+                    const provaId = provaSelect.value;
+                    if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
+
+                    showToast('💾 Salvando gabarito...', 'info');
+                    const payload = { prova_id: parseInt(provaId), respostas: respostas, bncc: bncc };
+                    const response = await fetch(`${API_URL}/api/gabaritos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (response.ok && result.id) {
+                        showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
+                        carregarGabaritos();
+                        carregarCombos();
+                        carregarProvas();
+                    } else {
+                        showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
+                    }
+                } catch (erro) {
+                    showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // EDITAR GABARITO (COM BNCC)
+            // ============================================
+            function editarGabarito(id) {
+                showToast('✏️ Carregando gabarito...', 'info');
+                fetch(API_URL + '/api/provas/' + id)
+                    .then(r => r.json())
+                    .then(prova => {
+                        if (prova.erro) { showToast('❌ ' + prova.erro, 'error'); return; }
+                        if (prova.gabarito && prova.gabarito.length > 0) {
+                            const gabarito = prova.gabarito;
+                            const bncc = prova.bncc || [];
+                            const disciplina = prova.disciplina || '';
+
+                            go('gabarito');
+
+                            setTimeout(() => {
+                                const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
+                                const serieVal = serieMap[prova.serie] || '2';
+                                document.getElementById('gab-serie').value = serieVal;
+                                document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
+
+                                const selectProva = document.getElementById('gab-prova');
+                                if (selectProva) selectProva.value = id;
+
+                                buildGabGrid();
+
+                                setTimeout(() => {
+                                    const isProducao = (disciplina === 'Produção de Texto');
+                                    if (isProducao) {
+                                        const textareas = document.querySelectorAll('.gab-texto');
+                                        const niveis = document.querySelectorAll('.gab-nivel');
+                                        textareas.forEach((ta, i) => {
+                                            if (i < gabarito.length) ta.value = gabarito[i] || '';
+                                        });
+                                        niveis.forEach((sel, i) => {
+                                            if (i < bncc.length && bncc[i]) sel.value = bncc[i];
+                                        });
+                                    } else {
+                                        const selects = document.querySelectorAll('.gab-select');
+                                        const bnccInputs = document.querySelectorAll('.gab-bncc');
+                                        selects.forEach((s, i) => {
+                                            if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i]; s.classList.add('filled'); }
+                                        });
+                                        bnccInputs.forEach((inp, i) => {
+                                            if (i < bncc.length && bncc[i]) inp.value = bncc[i];
+                                        });
+                                    }
+                                    showToast('📋 Gabarito carregado para edição!', 'success');
+                                }, 100);
+                            }, 150);
+                        } else {
+                            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
+                            go('gabarito');
+                        }
+                    })
+                    .catch(e => { showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error'); console.error('Erro ao carregar gabarito:', e); });
+            }
+
+            // ============================================
+            // EXCLUIR GABARITO
+            // ============================================
+            async function excluirGabarito(id, nome) {
+                if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
+                try {
+                    showToast('🗑️ Excluindo gabarito...', 'error');
+                    const response = await fetch(API_URL + '/api/gabaritos/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await processarRespostaAPI(response);
+                    if (result.ok) {
+                        showToast('🗑️ Gabarito excluído com sucesso!', 'success');
+                        carregarGabaritos();
+                        carregarProvas();
+                    } else {
+                        showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao excluir gabarito:', erro);
+                    showToast('❌ Erro ao excluir gabarito: ' + erro.message, 'error');
+                }
+            }
+
+            // ============================================
+            // LISTA POR TURMA
+            // ============================================
+            async function carregarTurmasLista(escolaId) {
+                const select = document.getElementById('lista-turma');
+                select.innerHTML = '<option value="">Selecione a turma</option>';
+                if (!escolaId) return;
+                try {
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    if (turmas && !turmas.erro) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            select.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar turmas:', e);
+                }
+            }
+
+            async function gerarListaTurma() {
+                const escolaId = document.getElementById('lista-escola').value;
+                const turmaId = document.getElementById('lista-turma').value;
+                if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
+                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
+                try {
+                    const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
+                    const alunos = await alunosResp.json();
+                    const turmaResp = await fetch(API_URL + '/api/turmas');
+                    const turmas = await turmaResp.json();
+                    const turma = turmas.find(t => t.id == turmaId);
+                    const container = document.getElementById('lista-resultado');
+                    if (!container) return;
+                    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+                        showToast('❌ Nenhum aluno na turma!', 'error'); return; }
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const prova = provas.find(p => p.turma_id == turmaId);
+                    if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
+                        showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
+                    const escolaResp = await fetch(API_URL + '/api/escolas');
+                    const escolas = await escolaResp.json();
+                    const escola = escolas.find(e => e.id == turma?.escola_id);
+                    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
+                    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+                    alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
+                    html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
+                    container.innerHTML = html;
+                    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
+                } catch (erro) { console.error('Erro ao gerar lista:', erro);
+                    showToast('❌ Erro: ' + erro.message, 'error'); }
+            }
+
+            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+                try {
+                    const provasResp = await fetch(API_URL + '/api/provas');
+                    const provas = await provasResp.json();
+                    const prova = provas.find(p => p.id == provaId);
+                    const qtdQuestoes = prova?.quantidade_questoes || 20;
+                    const response = await fetch(API_URL + '/api/gerar_gabarito', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
+                    });
+                    if (response.ok) {
+                        const html = await response.text();
+                        const novaAba = window.open('', '_blank');
+                        novaAba.document.write(html);
+                        novaAba.document.close();
+                        document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
+                        showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
+                    } else {
+                        const erro = await response.json();
+                        showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
+                    }
+                } catch (erro) { console.error('Erro ao gerar cartão:', erro);
+                    showToast('❌ Erro: ' + erro.message, 'error'); }
+            }
+
+            // ============================================
+            // FUNÇÕES AUXILIARES
+            // ============================================
+            function switchTab(idx, btn) {
+                const parent = btn.closest('.tab-nav');
+                if (parent) { parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active'); }
+                const card = btn.closest('.card');
+                if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
+            }
+
+            function openM(id) {
+                document.getElementById(id).classList.add('show');
+                if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
+                if (id === 'm-prova') { carregarCombos();
+                    const tipo = document.getElementById('modal-prova-tipo').value;
+                    gerarGabaritoModal(tipo); }
+            }
+
+            function closeM(id) { document.getElementById(id).classList.remove('show'); }
+
+            document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
+
+            function gerarGabaritoModal(tipo) {
+                const grid = document.getElementById('modal-gabarito-grid');
+                if (!grid) return;
+                const numQuestoes = 20;
+                const alts = tipo == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                grid.innerHTML = '';
+                for (let i = 1; i <= numQuestoes; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.style.width = '40px';
+                    input.style.height = '35px';
+                    input.style.textAlign = 'center';
+                    input.style.background = 'var(--bg2)';
+                    input.style.border = '1.5px solid var(--border2)';
+                    input.style.borderRadius = '6px';
+                    input.style.color = 'var(--text)';
+                    input.style.fontWeight = 'bold';
+                    input.style.fontSize = '14px';
+                    input.style.textTransform = 'uppercase';
+                    input.placeholder = i;
+                    input.title = 'Questão ' + i;
+                    input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
+                    grid.appendChild(input);
+                }
+            }
+
+            function excluir(btn, tipo, nome) {
+                const row = btn.closest('tr');
+                delTarget = { row, tipo, nome };
+                document.getElementById('del-nome-txt').textContent = '"' + nome + '"';
+                document.getElementById('del-modal').classList.add('show');
+            }
+
+            function cancelarDel() { document.getElementById('del-modal').classList.remove('show');
+                delTarget = null; }
+
+            function confirmarDel() {
+                document.getElementById('del-modal').classList.remove('show');
+                if (!delTarget) return;
+                const { row, tipo, nome } = delTarget;
+                row.classList.add('deleting');
+                setTimeout(() => { row.remove();
+                    showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
+                    delTarget = null;
+                    renumerarTabela(row.closest('tbody')); }, 350);
+            }
+
+            function renumerarTabela(tbody) {
+                if (!tbody) return;
+                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                    const badge = tr.querySelector('.badge-blue, .badge-gray');
+                    if (badge) {
+                        const num = String(i + 1).padStart(2, '0');
+                        if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
+                    }
+                });
+            }
+
+            function filtrarTabela(input, tbodyId) {
+                const val = input.value.toLowerCase();
+                document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none'; });
+            }
+
+            function filtrarSerie(sel) {
+                const val = sel.value;
+                document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
+            }
+
+            function showToast(msg, type) {
+                type = type || 'info';
+                const c = document.getElementById('toast-c');
+                const t = document.createElement('div');
+                t.className = 'toast toast-' + type;
+                const icons = { info: 'ℹ️', success: '✅', error: '❌', ai: '🤖', warning: '⚠️' };
+                t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + msg + '</span>';
+                c.appendChild(t);
+                setTimeout(() => { t.style.opacity = '0';
+                    t.style.transition = 'opacity .3s';
+                    setTimeout(() => t.remove(), 300); }, 3200);
+            }
+
+            function simUpload() { setTimeout(() => { document.getElementById('up-ok').style.display = 'block';
+                    showToast('✅ Arquivo enviado!', 'success'); }, 600); }
+
+            function atualizarInfoAlts() {
+                const s = document.getElementById('prova-serie');
+                const disciplina = document.getElementById('prova-disciplina').value;
+                const info = document.getElementById('info-alts');
+                if (!s || !info) return;
+                const is1 = s.value.startsWith('1');
+                if (disciplina === 'Produção de Texto') {
+                    info.textContent = '📝 Produção de Texto — Gabarito com resposta descritiva e níveis BNCC';
+                    info.style.color = '#a78bfa';
+                    info.style.borderColor = 'rgba(139,92,246,.25)';
+                    info.style.background = 'rgba(139,92,246,.07)';
+                } else {
+                    info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
+                    info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
+                    info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
+                    info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+                }
+            }
+
+            function carregarTurmasProva() {
+                const escolaId = document.getElementById('prova-escola').value;
+                if (!escolaId) return;
+                const select = document.getElementById('prova-turma');
+                select.innerHTML = '<option value="">Selecione a turma</option>';
+                fetch(API_URL + '/api/turmas?escola_id=' + escolaId).then(r => r.json()).then(turmas => {
+                    if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '—');
+                            select.appendChild(opt); }); }
+                }).catch(e => console.error(e));
+            }
+
+            function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
+
+            function carregarUserData() {
+                console.log('🔄 Carregando dados do usuário...');
+                try {
+                    const tbody = document.getElementById('u-tb-turmas');
+                    if (tbody) {
+                        fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                            if (turmas && turmas.length > 0) {
+                                tbody.innerHTML = turmas.map(t => {
+                                    const totalAlunos = t.total_alunos || 0;
+                                    return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                                }).join('');
+                            }
+                        }).catch(e => console.error(e));
+                    }
+                } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
+            }
+
+            // ============================================
+            // CARREGAR COMBOS (COM ESCOLAS PARA ALUNO)
+            // ============================================
+            async function carregarCombos() {
+                try {
+                    const respEscolas = await fetch(API_URL + '/api/escolas');
+                    const escolas = await respEscolas.json();
+
+                    ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) {
+                                escolas.forEach(e => {
+                                    const opt = document.createElement('option');
+                                    opt.value = e.id;
+                                    opt.textContent = e.nome;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+
+                    await carregarEscolasParaAluno();
+
+                    const respTurmas = await fetch(API_URL + '/api/turmas');
+                    const turmas = await respTurmas.json();
+                    ['aluno-turma', 'modal-prova-turma', 'lista-turma', 'editar-aluno-turma'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a turma</option>';
+                            if (turmas && !turmas.erro) {
+                                turmas.forEach(t => {
+                                    const opt = document.createElement('option');
+                                    opt.value = t.id;
+                                    opt.textContent = t.nome + ' - ' + (t.serie || '—');
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+
+                    const respProvas = await fetch(API_URL + '/api/provas');
+                    const provas = await respProvas.json();
+                    ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione a prova</option>';
+                            if (provas && !provas.erro) {
+                                provas.forEach(p => {
+                                    const opt = document.createElement('option');
+                                    opt.value = p.id;
+                                    const serie = p.serie || 'Série não definida';
+                                    opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
+                                    opt.dataset.serie = serie;
+                                    opt.dataset.quantidade = p.quantidade_questoes || 20;
+                                    opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                                    opt.dataset.tipo = p.tipo_questoes || '4';
+                                    opt.dataset.disciplina = p.disciplina || '';
+                                    opt.dataset.bncc = JSON.stringify(p.bncc || []);
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+
+                    const respAlunos = await fetch(API_URL + '/api/alunos');
+                    const alunos = await respAlunos.json();
+                    ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) {
+                            const current = select.value;
+                            select.innerHTML = '<option value="">Selecione o aluno</option>';
+                            if (alunos && !alunos.erro) {
+                                alunos.forEach(a => {
+                                    const opt = document.createElement('option');
+                                    opt.value = a.id;
+                                    opt.textContent = a.nome;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            if (current) select.value = current;
+                        }
+                    });
+                } catch (erro) {
+                    console.error('Erro ao carregar combos:', erro);
+                }
+            }
+
+            // ============================================
+            // CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
+            // ============================================
+            async function carregarEscolasParaAluno() {
+                try {
+                    console.log('🔄 Carregando escolas para o select de aluno...');
+
+                    const response = await fetch(API_URL + '/api/escolas');
+                    const escolas = await response.json();
+
+                    console.log('📥 Escolas recebidas:', escolas);
+
+                    if (!escolas || escolas.length === 0 || escolas.erro) {
+                        console.warn('⚠️ Nenhuma escola encontrada ou erro na API');
+                        return;
+                    }
+
+                    const selectCadastro = document.getElementById('aluno-escola');
+                    if (selectCadastro) {
+                        const current = selectCadastro.value;
+                        selectCadastro.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectCadastro.appendChild(opt);
+                        });
+                        if (current && escolas.some(e => e.id == current)) {
+                            selectCadastro.value = current;
+                            carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
+                        } else {
+                            const selectTurma = document.getElementById('aluno-turma');
+                            if (selectTurma) selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+                        }
+                        console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
+                    } else {
+                        console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
+                    }
+
+                    const selectEdicao = document.getElementById('editar-aluno-escola');
+                    if (selectEdicao) {
+                        const current = selectEdicao.value;
+                        selectEdicao.innerHTML = '<option value="">Selecione a escola</option>';
+                        escolas.forEach(e => {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = e.nome;
+                            selectEdicao.appendChild(opt);
+                        });
+                        if (current && escolas.some(e => e.id == current)) {
+                            selectEdicao.value = current;
+                            carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
+                        }
+                        console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
+                    }
+
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar escolas para o select de aluno:', erro);
+                }
+            }
+
+            // ============================================
+            // FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
+            // ============================================
+            async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
+                console.log('🔄 Carregando turmas para escola:', escolaId);
+                const selectTurma = document.getElementById(selectTurmaId);
+                if (!selectTurma) {
+                    console.warn('⚠️ Select de turma não encontrado:', selectTurmaId);
+                    return;
+                }
+
+                selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+
+                if (!escolaId || escolaId === '') {
+                    console.log('ℹ️ Nenhuma escola selecionada');
+                    return;
+                }
+
+                try {
+                    showToast('🔄 Carregando turmas...', 'info');
+                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
+                    const turmas = await response.json();
+                    console.log('📥 Turmas recebidas:', turmas);
+
+                    if (turmas && !turmas.erro && turmas.length > 0) {
+                        turmas.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id;
+                            opt.textContent = t.nome + ' - ' + (t.serie || '');
+                            opt.dataset.serie = t.serie || '';
+                            selectTurma.appendChild(opt);
+                        });
+                        console.log(`✅ ${turmas.length} turmas carregadas para a escola`);
+                        showToast(`✅ ${turmas.length} turmas encontradas`, 'success');
+                    } else {
+                        console.log('ℹ️ Nenhuma turma encontrada para esta escola');
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Nenhuma turma cadastrada';
+                        opt.disabled = true;
+                        selectTurma.appendChild(opt);
+                        showToast('ℹ️ Esta escola não possui turmas cadastradas', 'info');
+                    }
+                } catch (e) {
+                    console.error('❌ Erro ao carregar turmas:', e);
+                    showToast('❌ Erro ao carregar turmas: ' + e.message, 'error');
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Erro ao carregar turmas';
+                    opt.disabled = true;
+                    selectTurma.appendChild(opt);
+                }
+            }
+
+            // ============================================
+            // CARREGAR RELATÓRIOS (por escola)
+            // ============================================
+            async function carregarRelatorios() {
+                try {
+                    const alunosResp = await fetch(API_URL + '/api/alunos');
+                    const alunos = await alunosResp.json();
+                    const correcoesResp = await fetch(API_URL + '/api/historico');
+                    const correcoes = await correcoesResp.json();
+                    const totalAlunos = alunos.length || 0,
+                        Habilidades = correcoes.filter(c => c.nota >= 6).length || 0,
+                        recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0,
+                        media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+                    document.getElementById('rel-total-alunos').textContent = totalAlunos;
+                    document.getElementById('rel-Habilidades').textContent = Habilidades;
+                    document.getElementById('rel-recuperacao').textContent = recuperacao;
+                    document.getElementById('rel-media').textContent = media.toFixed(1);
+
+                    const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+                    correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
+                        else if (c.nota < 4) faixas['2-4']++;
+                        else if (c.nota < 6) faixas['4-6']++;
+                        else if (c.nota < 8) faixas['6-8']++;
+                        else faixas['8-10']++; });
+                    const maxVal = Math.max(...Object.values(faixas), 1);
+                    document.getElementById('d0-2').textContent = faixas['0-2'];
+                    document.getElementById('d2-4').textContent = faixas['2-4'];
+                    document.getElementById('d4-6').textContent = faixas['4-6'];
+                    document.getElementById('d6-8').textContent = faixas['6-8'];
+                    document.getElementById('d8-10').textContent = faixas['8-10'];
+
+                    const bars = document.querySelectorAll('#dist-notas .chart-bar');
+                    const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
+                    vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
+
+                    let totalPtAcertos = 0,
+                        totalPtErros = 0,
+                        totalPtQuestoes = 0;
+                    let totalMatAcertos = 0,
+                        totalMatErros = 0,
+                        totalMatQuestoes = 0;
+                    let totalProdAcertos = 0,
+                        totalProdErros = 0,
+                        totalProdQuestoes = 0;
+                    let totalCHAcertos = 0,
+                        totalCHErros = 0,
+                        totalCHQuestoes = 0;
+                    let totalCNAcertos = 0,
+                        totalCNErros = 0,
+                        totalCNQuestoes = 0;
+
+                    if (correcoes && correcoes.length > 0) {
+                        correcoes.forEach(c => {
+                            const disciplina = c.disciplina || '';
+                            const acertos = c.acertos || 0;
+                            const total = c.total || 20;
+                            const erros = total - acertos;
+
+                            const discLower = disciplina.toLowerCase();
+                            if (discLower.includes('português') || discLower.includes('portugues')) {
+                                totalPtAcertos += acertos;
+                                totalPtErros += erros;
+                                totalPtQuestoes += total;
+                            } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
+                                totalMatAcertos += acertos;
+                                totalMatErros += erros;
+                                totalMatQuestoes += total;
+                            } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                                totalProdAcertos += acertos;
+                                totalProdErros += erros;
+                                totalProdQuestoes += total;
+                            } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                                totalCHAcertos += acertos;
+                                totalCHErros += erros;
+                                totalCHQuestoes += total;
+                            } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                                totalCNAcertos += acertos;
+                                totalCNErros += erros;
+                                totalCNQuestoes += total;
+                            }
+                        });
+                    }
+
+                    const totalCorrecoes = correcoes.length || 1;
+                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
+                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
+                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
+
+                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
+                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
+                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
+
+                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
+                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
+                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
+
+                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
+                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
+                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
+
+                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
+                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
+                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
+
+                    await carregarRelatorioEscola();
+                    atualizarDatasImpressao();
+                } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
+            }
+
+            async function carregarRelatorioEscola() {
+                try {
+                    const escolasResp = await fetch(API_URL + '/api/escolas');
+                    const escolas = await escolasResp.json();
+                    const turmasResp = await fetch(API_URL + '/api/turmas');
+                    const turmas = await turmasResp.json();
+                    const alunosResp = await fetch(API_URL + '/api/alunos');
+                    const alunos = await alunosResp.json();
+                    const correcoesResp = await fetch(API_URL + '/api/historico');
+                    const correcoes = await correcoesResp.json();
+                    const tbody = document.getElementById('tb-rel-escola');
+                    if (!tbody) return;
+                    if (!escolas || escolas.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+                    } else {
+                        tbody.innerHTML = escolas.map(e => {
+                            const turmasEscola = turmas.filter(t => t.escola_id === e.id);
+                            const alunosEscola = alunos.filter(a => a.escola_id === e.id);
+                            const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
+                            const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
+                            const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
+                            const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
+                            return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+                        }).join('');
+                    }
+                } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
+            }
+
+            // ============================================
+            // DOM READY
+            // ============================================
+            document.addEventListener('DOMContentLoaded', function() {
+                const tipoSelect = document.getElementById('modal-prova-tipo');
+                if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
+                buildGabGrid();
+                carregarCombos();
+                carregarDados();
+                carregarFiltrosResultados();
+                carregarResultadosComFiltros();
+                carregarConceitoReal();
+                carregarEscolasFiltroAlunos();
+                const tipoProva = document.getElementById('modal-prova-tipo');
+                if (tipoProva) gerarGabaritoModal(tipoProva.value);
+                atualizarDatasImpressao();
+                carregarEscolasParaCorrecaoManual();
+                carregarFiltrosRelTurma();
+                carregarFiltroEscolaTurmas();
+                carregarEscolasParaAluno();
+                carregarEscolasDesempenho();
+                popularSelectQuestoes();
+                popularSelectGabTotal();
+
+                const disciplinaSelect = document.getElementById('prova-disciplina');
+                if (disciplinaSelect) {
+                    disciplinaSelect.addEventListener('change', atualizarInfoAlts);
+                }
+
+                const gabProvaSelect = document.getElementById('gab-prova');
+                if (gabProvaSelect) {0
+                    gabProvaSelect.addEventListener('change', buildGabGrid);
+                }
+            });
+
+            document.getElementById('del-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) cancelarDel(); });
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 900) {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.getElementById('menuOverlay');
+                    const toggle = document.getElementById('menuToggle');
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    toggle.classList.remove('active');
+                    toggle.innerHTML = '☰';
+                }
+            });
+        </script>
+    </body>
+</html>
