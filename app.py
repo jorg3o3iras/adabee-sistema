@@ -1666,7 +1666,7 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE GABARITOS (COM BNCC, TEXTOS E NÍVEIS)
+# ROTA DE GABARITOS (COM BNCC, TEXTOS, NÍVEIS, TÍTULOS E OBSERVAÇÕES)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -1676,8 +1676,8 @@ def salvar_gabarito():
         prova_id = data.get('prova_id')
         respostas = data.get('respostas', [])
         bncc = data.get('bncc', [])
-        textos_questoes = data.get('textos_questoes', [])
-        niveis = data.get('niveis', [])
+        titulos = data.get('titulos', [])          # NOVO
+        observacoes = data.get('observacoes', [])  # NOVO
 
         if not prova_id:
             return jsonify({'erro': 'Prova ID é obrigatório'}), 400
@@ -1690,12 +1690,12 @@ def salvar_gabarito():
         if not respostas_validas:
             return jsonify({'erro': 'Nenhuma resposta válida'}), 400
 
-        # Normaliza BNCC (mantém apenas strings não vazias)
+        # Normaliza BNCC
         bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
 
-        # Normaliza textos e níveis (mantém vazios para alinhamento)
-        textos_validos = [str(t).strip() for t in textos_questoes]
-        niveis_validos = [str(n).strip() for n in niveis]
+        # Normaliza títulos e observações
+        titulos_validos = [str(t).strip() for t in titulos]
+        observacoes_validas = [str(o).strip() for o in observacoes]
 
         conn = get_db_connection()
         if not conn:
@@ -1708,18 +1708,18 @@ def salvar_gabarito():
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
 
-        # Atualiza gabarito, bncc, textos e níveis
+        # Atualiza gabarito, bncc, textos, níveis, títulos e observações
         cur.execute("""
             UPDATE provas
             SET gabarito = %s::text[],
                 quantidade_questoes = %s,
                 bncc = %s::text[],
-                textos_questoes = %s::text[],
-                niveis = %s::text[]
+                titulos_questoes = %s::text[],
+                observacoes_questoes = %s::text[]
             WHERE id = %s
             RETURNING id
         """, (respostas_validas, len(respostas_validas), bncc_validos,
-              textos_validos, niveis_validos, prova_id))
+              titulos_validos, observacoes_validas, prova_id))
 
         result = cur.fetchone()
         conn.commit()
@@ -1762,8 +1762,8 @@ def excluir_gabarito(id):
             SET gabarito = NULL,
                 quantidade_questoes = 0,
                 bncc = NULL,
-                textos_questoes = NULL,
-                niveis = NULL
+                titulos_questoes = NULL,
+                observacoes_questoes = NULL
             WHERE id = %s
         """, (id,))
 
@@ -2468,7 +2468,7 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS E NÍVEIS)
+# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS, NÍVEIS, TÍTULOS E OBSERVAÇÕES)
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -2495,6 +2495,8 @@ def listar_provas():
                 p.bncc,
                 p.textos_questoes,
                 p.niveis,
+                p.titulos_questoes,
+                p.observacoes_questoes,
                 p.created_at
             FROM provas p
             ORDER BY p.created_at DESC
@@ -2546,12 +2548,15 @@ def criar_prova():
         niveis = data.get('niveis', [])
         niveis_validos = [str(n).strip() for n in niveis if n]
 
+        titulos_questoes = data.get('titulos_questoes', [])
+        observacoes_questoes = data.get('observacoes_questoes', [])
+
         cur.execute("""
             INSERT INTO provas
                 (titulo, serie, disciplina, bimestre, data_prova,
                  valor_nota, tipo_questoes, quantidade_questoes, gabarito,
-                 bncc, textos_questoes, niveis)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 bncc, textos_questoes, niveis, titulos_questoes, observacoes_questoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """, (
             titulo,
@@ -2565,7 +2570,9 @@ def criar_prova():
             data.get('gabarito', []),
             bncc_validos,
             textos_validos,
-            niveis_validos
+            niveis_validos,
+            titulos_questoes,
+            observacoes_questoes
         ))
 
         result = cur.fetchone()
@@ -2607,6 +2614,8 @@ def buscar_prova(id):
                 bncc,
                 textos_questoes,
                 niveis,
+                titulos_questoes,
+                observacoes_questoes,
                 created_at
             FROM provas
             WHERE id = %s
@@ -2657,6 +2666,9 @@ def editar_prova(id):
         niveis = data.get('niveis', [])
         niveis_validos = [str(n).strip() for n in niveis if n]
 
+        titulos_questoes = data.get('titulos_questoes', [])
+        observacoes_questoes = data.get('observacoes_questoes', [])
+
         cur.execute("""
             UPDATE provas
             SET titulo = %s,
@@ -2670,14 +2682,17 @@ def editar_prova(id):
                 gabarito = %s,
                 bncc = %s,
                 textos_questoes = %s,
-                niveis = %s
+                niveis = %s,
+                titulos_questoes = %s,
+                observacoes_questoes = %s
             WHERE id = %s
             RETURNING id
         """, (titulo, serie, data.get('disciplina', ''),
               data.get('bimestre', ''), data.get('data_prova'),
               data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
               data.get('quantidade_questoes', 20), data.get('gabarito', []),
-              bncc_validos, textos_validos, niveis_validos, id))
+              bncc_validos, textos_validos, niveis_validos,
+              titulos_questoes, observacoes_questoes, id))
 
         result = cur.fetchone()
         conn.commit()
@@ -3519,6 +3534,8 @@ def init_db():
                     bncc TEXT[],
                     textos_questoes TEXT[],
                     niveis TEXT[],
+                    titulos_questoes TEXT[],
+                    observacoes_questoes TEXT[],
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -3590,6 +3607,21 @@ def init_db():
 
             # Verificar e adicionar colunas textos_questoes e niveis
             for col in ['textos_questoes', 'niveis']:
+                cur.execute("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'provas' AND column_name = %s
+                """, (col,))
+                if not cur.fetchone():
+                    print(f"🔧 Adicionando coluna {col} à tabela provas...")
+                    try:
+                        cur.execute(f"ALTER TABLE provas ADD COLUMN {col} TEXT[]")
+                        print(f"✅ Coluna {col} adicionada com sucesso!")
+                    except Exception as e:
+                        print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
+
+            # Verificar e adicionar novas colunas titulos_questoes e observacoes_questoes
+            for col in ['titulos_questoes', 'observacoes_questoes']:
                 cur.execute("""
                     SELECT column_name
                     FROM information_schema.columns
