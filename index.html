@@ -1246,10 +1246,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
 
                 <div class="stats-grid">
-                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div>
-                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div>
-                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div>
-                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div>
+                    <div class="stat-card blue"><div class="stat-top"><div class="stat-icon blue">🏫</div></div><div><div><div class="stat-val" id="totalEscolas">0</div><div class="stat-label">Escolas</div></div></div></div>
+                    <div class="stat-card green"><div class="stat-top"><div class="stat-icon green">👥</div></div><div><div><div class="stat-val" id="totalTurmas">0</div><div class="stat-label">Turmas</div></div></div></div>
+                    <div class="stat-card orange"><div class="stat-top"><div class="stat-icon orange">🎒</div></div><div><div><div class="stat-val" id="totalAlunos">0</div><div class="stat-label">Alunos</div></div></div></div>
+                    <div class="stat-card purple"><div class="stat-top"><div class="stat-icon purple">📄</div></div><div><div><div class="stat-val" id="totalProvas">0</div><div class="stat-label">Provas</div></div></div></div>
                 </div>
 
                 <div class="ai-hero no-print">
@@ -2412,6 +2412,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             let ultimaImagem = null;
             let gerandoDocumento = false;
 
+            // ============================================
+            // FUNÇÕES AUXILIARES SEGURAS PARA DOM
+            // ============================================
+            function setText(id, valor) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = valor;
+            }
+
+            function setHTML(id, html) {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = html;
+            }
+
             // Dados para correção manual (dentro da IA)
             let correcaoManualData = {
                 alunoId: null,
@@ -3047,7 +3060,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // VISUALIZAR PROVA (CORREÇÃO DO ÍCONE 👁️)
+            // VISUALIZAR PROVA
             // ============================================
             let visualizarProvaId = null;
             let visualizarProvaData = null;
@@ -3121,19 +3134,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR DASHBOARD
+            // CARREGAR DASHBOARD (CORRIGIDO)
             // ============================================
             async function carregarDashboard() {
                 try {
                     const response = await fetch(API_URL + '/api/dashboard');
                     const dados = await response.json();
-                    document.getElementById('totalEscolas').textContent = dados.total_escolas || 0;
-                    document.getElementById('totalTurmas').textContent = dados.total_turmas || 0;
-                    document.getElementById('totalAlunos').textContent = dados.total_alunos || 0;
-                    document.getElementById('totalProvas').textContent = dados.total_provas || 0;
-                    document.getElementById('u-total-escolas').textContent = dados.total_escolas || 0;
-                    document.getElementById('u-total-turmas').textContent = dados.total_turmas || 0;
-                    document.getElementById('u-total-alunos').textContent = dados.total_alunos || 0;
+
+                    setText('totalEscolas', dados.total_escolas || 0);
+                    setText('totalTurmas', dados.total_turmas || 0);
+                    setText('totalAlunos', dados.total_alunos || 0);
+                    setText('totalProvas', dados.total_provas || 0);
+                    setText('u-total-escolas', dados.total_escolas || 0);
+                    setText('u-total-turmas', dados.total_turmas || 0);
+                    setText('u-total-alunos', dados.total_alunos || 0);
                 } catch (erro) {
                     console.error('Erro ao carregar dashboard:', erro);
                 }
@@ -3227,18 +3241,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const totalCorrigidos = (alunos && !alunos.erro && Array.isArray(alunos)) ? alunos.length : 0;
                     const diff = Math.max(0, totalAlunosTurma - totalCorrigidos);
 
-                    document.getElementById('res-total-filtrado').textContent = totalCorrigidos;
-                    document.getElementById('res-total-alunos-turma').textContent = totalAlunosTurma;
-                    document.getElementById('res-diferenca').textContent = diff;
+                    setText('res-total-filtrado', totalCorrigidos);
+                    setText('res-total-alunos-turma', totalAlunosTurma);
+                    setText('res-diferenca', diff);
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
                         tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
-                        document.getElementById('total-alunos-tabela').textContent = '0 alunos';
+                        setText('total-alunos-tabela', '0 alunos');
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                            document.getElementById(`conceito-${c}-count`).textContent = '0';
-                            document.getElementById(`conceito-${c}-bar`).style.width = '2%';
+                            setText(`conceito-${c}-count`, '0');
+                            const bar = document.getElementById(`conceito-${c}-bar`);
+                            if (bar) bar.style.width = '2%';
                         });
-                        document.getElementById('total-conceitos-label').textContent = '0';
+                        setText('total-conceitos-label', '0');
                         return;
                     }
 
@@ -3246,12 +3261,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     if (dadosAlunos.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
-                        document.getElementById('total-alunos-tabela').textContent = '0 alunos';
+                        setText('total-alunos-tabela', '0 alunos');
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                            document.getElementById(`conceito-${c}-count`).textContent = '0';
-                            document.getElementById(`conceito-${c}-bar`).style.width = '2%';
+                            setText(`conceito-${c}-count`, '0');
+                            const bar = document.getElementById(`conceito-${c}-bar`);
+                            if (bar) bar.style.width = '2%';
                         });
-                        document.getElementById('total-conceitos-label').textContent = '0';
+                        setText('total-conceitos-label', '0');
                         return;
                     }
 
@@ -3321,14 +3337,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico +
                                            contagemConceitos.proficiente + contagemConceitos.avancado;
-                    document.getElementById('total-conceitos-label').textContent = totalConceitos;
+                    setText('total-conceitos-label', totalConceitos);
 
                     // ---- MONTAGEM DA TABELA ----
                     dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
                     const total = dadosAlunos.length;
                     const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
-                    document.getElementById('total-alunos-tabela').textContent = total + ' alunos';
+                    setText('total-alunos-tabela', total + ' alunos');
 
                     function getDadosDisciplina(disciplinaData, totalQuestoes) {
                         if (!disciplinaData || typeof disciplinaData !== 'object') {
@@ -3540,7 +3556,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CORREÇÃO MANUAL (DENTRO DA IA)
+            // CORREÇÃO MANUAL (DENTRO DA IA) - MANTIDA
             // ============================================
             function abrirCorrecaoManual() {
                 if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
@@ -3556,10 +3572,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     showToast('❌ Gabarito vazio ou inválido para esta prova!', 'error');
                     return;
                 }
-                document.getElementById('cm-aluno-nome').textContent = correcaoManualData.alunoNome || 'Aluno';
-                document.getElementById('cm-prova-titulo').textContent = correcaoManualData.provaTitulo || 'Prova';
-                document.getElementById('cm-turma-info').textContent = correcaoManualData.serie + ' | Turma: —';
-                document.getElementById('cm-data-correcao').textContent = new Date().toLocaleDateString('pt-BR');
+                setText('cm-aluno-nome', correcaoManualData.alunoNome || 'Aluno');
+                setText('cm-prova-titulo', correcaoManualData.provaTitulo || 'Prova');
+                setText('cm-turma-info', correcaoManualData.serie + ' | Turma: —');
+                setText('cm-data-correcao', new Date().toLocaleDateString('pt-BR'));
                 gerarGridCorrecaoManual();
                 atualizarResumoCorrecaoManual();
                 openM('m-correcao-manual');
@@ -3670,9 +3686,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
                 const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
 
-                document.getElementById('cm-acertos').textContent = acertos;
-                document.getElementById('cm-erros').textContent = erros;
-                document.getElementById('cm-nota').textContent = notaFinal.toFixed(1);
+                setText('cm-acertos', acertos);
+                setText('cm-erros', erros);
+                setText('cm-nota', notaFinal.toFixed(1));
 
                 const statusBadge = document.getElementById('cm-status-badge');
                 const statusAtual = document.getElementById('cm-status-atual');
@@ -3686,7 +3702,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     statusBadge.className = 'badge badge-red';
                     statusAtual.textContent = 'Reprovado';
                     statusAtual.style.color = 'var(--red)'; }
-                document.getElementById('cm-porcentagem').textContent = porcentagem + '% de aproveitamento';
+                setText('cm-porcentagem', porcentagem + '% de aproveitamento');
             }
 
             function preencherGabaritoCM() {
@@ -3766,7 +3782,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CORREÇÃO MANUAL STANDALONE (MENU)
+            // CORREÇÃO MANUAL STANDALONE (MENU) - MANTIDA
             // ============================================
             function abrirCorrecaoManualStandalone() {
                 carregarEscolasParaCorrecaoManual();
@@ -3777,12 +3793,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 document.getElementById('cm-grid-standalone-container').style.display = 'none';
                 document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
                 document.getElementById('cm-grid-standalone').innerHTML = '';
-                document.getElementById('cm-sa-acertos').textContent = '0';
-                document.getElementById('cm-sa-erros').textContent = '0';
-                document.getElementById('cm-sa-nota').textContent = '0,0';
-                document.getElementById('cm-sa-status-badge').textContent = 'AGUARDANDO';
-                document.getElementById('cm-sa-status-badge').className = 'badge badge-gray';
-                document.getElementById('cm-sa-porcentagem').textContent = '0% de aproveitamento';
+                setText('cm-sa-acertos', '0');
+                setText('cm-sa-erros', '0');
+                setText('cm-sa-nota', '0,0');
+                const statusBadge = document.getElementById('cm-sa-status-badge');
+                if (statusBadge) { statusBadge.textContent = 'AGUARDANDO';
+                    statusBadge.className = 'badge badge-gray'; }
+                setText('cm-sa-porcentagem', '0% de aproveitamento');
                 openM('m-correcao-manual-standalone');
             }
 
@@ -3974,10 +3991,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     return;
                 }
 
-                document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
-                document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
-                document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
-                document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+                setText('cm-sa-aluno', cmStandaloneData.alunoNome);
+                setText('cm-sa-turma', cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome);
+                setText('cm-sa-prova', cmStandaloneData.provaTitulo);
+                setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
 
                 document.getElementById('cm-info-standalone').style.display = 'grid';
                 document.getElementById('cm-grid-standalone-container').style.display = 'block';
@@ -4091,16 +4108,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const notaFinal = Math.min(nota, cmStandaloneData.notaMaxima || 10);
                 const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
 
-                document.getElementById('cm-sa-acertos').textContent = acertos;
-                document.getElementById('cm-sa-erros').textContent = erros;
-                document.getElementById('cm-sa-nota').textContent = notaFinal.toFixed(1);
+                setText('cm-sa-acertos', acertos);
+                setText('cm-sa-erros', erros);
+                setText('cm-sa-nota', notaFinal.toFixed(1));
 
                 const statusBadge = document.getElementById('cm-sa-status-badge');
                 if (notaFinal >= (cmStandaloneData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
                     statusBadge.className = 'badge badge-green'; } else if (notaFinal >= (cmStandaloneData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
                     statusBadge.className = 'badge badge-orange'; } else { statusBadge.textContent = '❌ REPROVADO';
                     statusBadge.className = 'badge badge-red'; }
-                document.getElementById('cm-sa-porcentagem').textContent = porcentagem + '% de aproveitamento';
+                setText('cm-sa-porcentagem', porcentagem + '% de aproveitamento');
             }
 
             function preencherGabaritoManualSA() {
@@ -4245,10 +4262,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     document.getElementById('cm-grid-standalone-container').style.display = 'block';
                     document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
-                    document.getElementById('cm-sa-aluno').textContent = cmStandaloneData.alunoNome;
-                    document.getElementById('cm-sa-turma').textContent = cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome;
-                    document.getElementById('cm-sa-prova').textContent = cmStandaloneData.provaTitulo;
-                    document.getElementById('cm-sa-data').textContent = cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR');
+                    setText('cm-sa-aluno', cmStandaloneData.alunoNome);
+                    setText('cm-sa-turma', cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome);
+                    setText('cm-sa-prova', cmStandaloneData.provaTitulo);
+                    setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
 
                     gerarGridCorrecaoManualSA();
                     atualizarResumoCorrecaoManualSA();
@@ -4408,18 +4425,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     document.getElementById('txt-loading').style.display = 'none';
                     document.getElementById('txt-res').style.display = 'block';
                     if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
-                    document.getElementById('txt-nota').textContent = dados.nota || 0;
-                    document.getElementById('txt-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                    document.getElementById('txt-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                    setText('txt-nota', dados.nota || 0);
+                    const statusEl = document.getElementById('txt-status');
+                    if (statusEl) { statusEl.textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+                        statusEl.className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red'); }
                     if (dados.metricas) {
-                        document.getElementById('c-coe').textContent = dados.metricas.nota_coerencia || 0;
-                        document.getElementById('c-tema').textContent = dados.metricas.nota_estrutura || 0;
-                        document.getElementById('c-ort').textContent = dados.metricas.nota_gramatica || 0;
-                        document.getElementById('c-voc').textContent = dados.metricas.nota_vocabulario || 0;
-                        document.getElementById('b-coe').style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
-                        document.getElementById('b-tema').style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
-                        document.getElementById('b-ort').style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
-                        document.getElementById('b-voc').style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
+                        setText('c-coe', dados.metricas.nota_coerencia || 0);
+                        setText('c-tema', dados.metricas.nota_estrutura || 0);
+                        setText('c-ort', dados.metricas.nota_gramatica || 0);
+                        setText('c-voc', dados.metricas.nota_vocabulario || 0);
+                        const bCoe = document.getElementById('b-coe'); if (bCoe) bCoe.style.width = ((dados.metricas.nota_coerencia || 0) / 10 * 100) + '%';
+                        const bTema = document.getElementById('b-tema'); if (bTema) bTema.style.width = ((dados.metricas.nota_estrutura || 0) / 10 * 100) + '%';
+                        const bOrt = document.getElementById('b-ort'); if (bOrt) bOrt.style.width = ((dados.metricas.nota_gramatica || 0) / 10 * 100) + '%';
+                        const bVoc = document.getElementById('b-voc'); if (bVoc) bVoc.style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
                     }
                     const fb = document.getElementById('txt-fb');
                     if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
@@ -4428,7 +4446,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             const respAlunos = await fetch(API_URL + '/api/alunos');
                             const alunos = await respAlunos.json();
                             const aluno = alunos.find(a => a.id == alunoId);
-                            document.getElementById('txt-aluno-nome').textContent = aluno ? aluno.nome : '—';
+                            setText('txt-aluno-nome', aluno ? aluno.nome : '—');
                         } catch (e) {}
                     }
                     showToast('✅ Avaliação concluída!', 'success');
@@ -4553,12 +4571,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }).join('');
                     }
 
-                    document.getElementById('ia-nota').textContent = dados.nota || 0;
-                    document.getElementById('ia-aluno').textContent = dados.aluno || aluno.nome || 'Aluno';
-                    document.getElementById('ia-turma').textContent = dados.prova || prova.titulo || 'Prova';
-                    document.getElementById('confianca-badge').textContent = (dados.confianca || 0) + '% conf.';
-                    document.getElementById('ia-status').textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                    document.getElementById('ia-status').className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                    setText('ia-nota', dados.nota || 0);
+                    setText('ia-aluno', dados.aluno || aluno.nome || 'Aluno');
+                    setText('ia-turma', dados.prova || prova.titulo || 'Prova');
+                    setText('confianca-badge', (dados.confianca || 0) + '% conf.');
+                    const statusEl = document.getElementById('ia-status');
+                    if (statusEl) { statusEl.textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+                        statusEl.className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red'); }
 
                     correcaoManualData.alunoId = parseInt(alunoId);
                     correcaoManualData.alunoNome = dados.aluno || aluno.nome || 'Aluno';
@@ -5363,40 +5382,44 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const alunos = await response.json();
 
                     if (!alunos || alunos.length === 0 || alunos.erro) {
-                        document.getElementById('rel-media').textContent = '0%';
-                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
-                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                        setText('rel-media', '0%');
+                        setText('rel-total-alunos-conceitos', '0 alunos');
+                        setText('rel-total-correcoes', '0 correções');
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                            document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
-                            document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
+                            setText(`rel-conceito-${c}-count`, '0');
+                            const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                            if (bar) bar.style.width = '0%';
                         });
-                        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
-                        document.getElementById('rel-disc-acertos').textContent = '0';
-                        document.getElementById('rel-disc-erros').textContent = '0';
-                        document.getElementById('rel-disc-media').textContent = '0.0';
-                        document.getElementById('rel-disc-conceito').textContent = '—';
-                        document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
-                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
+                        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-disc-acertos', '0');
+                        setText('rel-disc-erros', '0');
+                        setText('rel-disc-media', '0.0');
+                        setText('rel-disc-conceito', '—');
+                        const tbody = document.getElementById('tb-rel-alunos');
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
+                        setText('rel-total-alunos-tabela', '0 alunos');
                         return;
                     }
 
                     const dadosAlunos = Array.isArray(alunos) ? alunos : [];
 
                     if (dadosAlunos.length === 0) {
-                        document.getElementById('rel-media').textContent = '0%';
-                        document.getElementById('rel-total-alunos-conceitos').textContent = '0 alunos';
-                        document.getElementById('rel-total-correcoes').textContent = '0 correções';
+                        setText('rel-media', '0%');
+                        setText('rel-total-alunos-conceitos', '0 alunos');
+                        setText('rel-total-correcoes', '0 correções');
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                            document.getElementById(`rel-conceito-${c}-count`).textContent = '0';
-                            document.getElementById(`rel-conceito-${c}-bar`).style.width = '0%';
+                            setText(`rel-conceito-${c}-count`, '0');
+                            const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                            if (bar) bar.style.width = '0%';
                         });
-                        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
-                        document.getElementById('rel-disc-acertos').textContent = '0';
-                        document.getElementById('rel-disc-erros').textContent = '0';
-                        document.getElementById('rel-disc-media').textContent = '0.0';
-                        document.getElementById('rel-disc-conceito').textContent = '—';
-                        document.getElementById('tb-rel-alunos').innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
-                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
+                        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-disc-acertos', '0');
+                        setText('rel-disc-erros', '0');
+                        setText('rel-disc-media', '0.0');
+                        setText('rel-disc-conceito', '—');
+                        const tbody = document.getElementById('tb-rel-alunos');
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
+                        setText('rel-total-alunos-tabela', '0 alunos');
                         return;
                     }
 
@@ -5419,9 +5442,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
                     const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
                     const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
-                    document.getElementById('rel-media').textContent = porcentagemMedia.toFixed(1) + '%';
-                    document.getElementById('rel-total-alunos-conceitos').textContent = totalAlunos + ' alunos';
-                    document.getElementById('rel-total-correcoes').textContent = totalAlunos + ' correções';
+                    setText('rel-media', porcentagemMedia.toFixed(1) + '%');
+                    setText('rel-total-alunos-conceitos', totalAlunos + ' alunos');
+                    setText('rel-total-correcoes', totalAlunos + ' correções');
 
                     let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                     dadosAlunos.forEach(aluno => {
@@ -5437,7 +5460,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                         const count = conceitos[c] || 0;
                         const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
-                        document.getElementById(`rel-conceito-${c}-count`).textContent = count;
+                        setText(`rel-conceito-${c}-count`, count);
                         const bar = document.getElementById(`rel-conceito-${c}-bar`);
                         if (bar) {
                             bar.style.width = Math.max(pct, 2) + '%';
@@ -5476,10 +5499,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
                     const conceitoDisc = calcularConceito(pctDisc);
 
-                    document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada || 'Disciplina';
-                    document.getElementById('rel-disc-acertos').textContent = totalAcertos;
-                    document.getElementById('rel-disc-erros').textContent = totalErros;
-                    document.getElementById('rel-disc-media').textContent = mediaDisc.toFixed(1);
+                    setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+                    setText('rel-disc-acertos', totalAcertos);
+                    setText('rel-disc-erros', totalErros);
+                    setText('rel-disc-media', mediaDisc.toFixed(1));
 
                     const badgeMap = {
                         'inicial': 'badge-conceito-inicial',
@@ -5558,7 +5581,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             '</tr>';
                     }).join('');
 
-                    document.getElementById('rel-total-alunos-tabela').textContent = totalAlunos + ' alunos';
+                    setText('rel-total-alunos-tabela', totalAlunos + ' alunos');
 
                 } catch (erro) {
                     console.error('❌ Erro ao carregar relatório por turma:', erro);
@@ -5818,21 +5841,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     document.getElementById('resultado-desempenho').style.display = 'block';
 
-                    document.getElementById('resumo-nota').textContent = pct + '%';
-                    document.getElementById('resumo-acertos').textContent = acertos;
-                    document.getElementById('resumo-erros').textContent = erros;
-                    document.getElementById('resumo-conceito').textContent = conceito;
+                    setText('resumo-nota', pct + '%');
+                    setText('resumo-acertos', acertos);
+                    setText('resumo-erros', erros);
+                    setText('resumo-conceito', conceito);
 
-                    document.getElementById('info-escola').textContent = escola.nome || '—';
-                    document.getElementById('info-turma').textContent = (turma.nome || '') + ' - ' + (turma.serie || '');
-                    document.getElementById('info-aluno').textContent = aluno.nome || '—';
-                    document.getElementById('info-prova').textContent = prova.titulo || '—';
-                    document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
+                    setText('info-escola', escola.nome || '—');
+                    setText('info-turma', (turma.nome || '') + ' - ' + (turma.serie || ''));
+                    setText('info-aluno', aluno.nome || '—');
+                    setText('info-prova', prova.titulo || '—');
+                    setText('info-data', new Date().toLocaleDateString('pt-BR'));
 
                     const card = document.getElementById('desempenho-disciplina-unica');
                     card.style.display = 'block';
 
-                    document.getElementById('disciplina-unica-titulo').textContent = `📖 ${disciplina}`;
+                    setText('disciplina-unica-titulo', `📖 ${disciplina}`);
 
                     const grid = document.getElementById('disciplina-unica-questoes');
                     grid.innerHTML = '';
@@ -5855,15 +5878,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         grid.appendChild(div);
                     });
 
-                    document.getElementById('disciplina-unica-acertos').textContent = acertos;
-                    document.getElementById('disciplina-unica-erros').textContent = erros;
-                    document.getElementById('disciplina-unica-nota').textContent = pct + '%';
+                    setText('disciplina-unica-acertos', acertos);
+                    setText('disciplina-unica-erros', erros);
+                    setText('disciplina-unica-nota', pct + '%');
 
                     const statusBadge = document.getElementById('disciplina-unica-status');
                     statusBadge.textContent = conceito;
                     statusBadge.className = `badge ${conceitoCor}`;
 
-                    document.getElementById('disciplina-unica-conceito').textContent = conceito;
+                    setText('disciplina-unica-conceito', conceito);
 
                     const gabCard = document.getElementById('gabarito-oficial-card');
                     gabCard.style.display = 'block';
@@ -7237,7 +7260,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RELATÓRIOS (por escola)
+            // CARREGAR RELATÓRIOS (CORRIGIDO)
             // ============================================
             async function carregarRelatorios() {
                 try {
@@ -7245,14 +7268,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const alunos = await alunosResp.json();
                     const correcoesResp = await fetch(API_URL + '/api/historico');
                     const correcoes = await correcoesResp.json();
-                    const totalAlunos = alunos.length || 0,
-                        Habilidades = correcoes.filter(c => c.nota >= 6).length || 0,
-                        recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0,
-                        media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
-                    document.getElementById('rel-total-alunos').textContent = totalAlunos;
-                    document.getElementById('rel-Habilidades').textContent = Habilidades;
-                    document.getElementById('rel-recuperacao').textContent = recuperacao;
-                    document.getElementById('rel-media').textContent = media.toFixed(1);
+                    const totalAlunos = alunos.length || 0;
+                    const Habilidades = correcoes.filter(c => c.nota >= 6).length || 0;
+                    const recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0;
+                    const media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+
+                    setText('rel-total-alunos', totalAlunos);
+                    setText('rel-Habilidades', Habilidades);
+                    setText('rel-recuperacao', recuperacao);
+                    setText('rel-media', media.toFixed(1));
 
                     const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
                     correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
@@ -7261,11 +7285,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         else if (c.nota < 8) faixas['6-8']++;
                         else faixas['8-10']++; });
                     const maxVal = Math.max(...Object.values(faixas), 1);
-                    document.getElementById('d0-2').textContent = faixas['0-2'];
-                    document.getElementById('d2-4').textContent = faixas['2-4'];
-                    document.getElementById('d4-6').textContent = faixas['4-6'];
-                    document.getElementById('d6-8').textContent = faixas['6-8'];
-                    document.getElementById('d8-10').textContent = faixas['8-10'];
+                    setText('d0-2', faixas['0-2']);
+                    setText('d2-4', faixas['2-4']);
+                    setText('d4-6', faixas['4-6']);
+                    setText('d6-8', faixas['6-8']);
+                    setText('d8-10', faixas['8-10']);
 
                     const bars = document.querySelectorAll('#dist-notas .chart-bar');
                     const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
@@ -7320,25 +7344,25 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     }
 
                     const totalCorrecoes = correcoes.length || 1;
-                    document.getElementById('rel-pt-acertos').textContent = totalPtAcertos;
-                    document.getElementById('rel-pt-erros').textContent = totalPtErros;
-                    document.getElementById('rel-pt-media').textContent = totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    setText('rel-pt-acertos', totalPtAcertos);
+                    setText('rel-pt-erros', totalPtErros);
+                    setText('rel-pt-media', totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0');
 
-                    document.getElementById('rel-mat-acertos').textContent = totalMatAcertos;
-                    document.getElementById('rel-mat-erros').textContent = totalMatErros;
-                    document.getElementById('rel-mat-media').textContent = totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    setText('rel-mat-acertos', totalMatAcertos);
+                    setText('rel-mat-erros', totalMatErros);
+                    setText('rel-mat-media', totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0');
 
-                    document.getElementById('rel-prod-acertos').textContent = totalProdAcertos;
-                    document.getElementById('rel-prod-erros').textContent = totalProdErros;
-                    document.getElementById('rel-prod-media').textContent = totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    setText('rel-prod-acertos', totalProdAcertos);
+                    setText('rel-prod-erros', totalProdErros);
+                    setText('rel-prod-media', totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0');
 
-                    document.getElementById('rel-ch-acertos').textContent = totalCHAcertos;
-                    document.getElementById('rel-ch-erros').textContent = totalCHErros;
-                    document.getElementById('rel-ch-media').textContent = totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    setText('rel-ch-acertos', totalCHAcertos);
+                    setText('rel-ch-erros', totalCHErros);
+                    setText('rel-ch-media', totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0');
 
-                    document.getElementById('rel-cn-acertos').textContent = totalCNAcertos;
-                    document.getElementById('rel-cn-erros').textContent = totalCNErros;
-                    document.getElementById('rel-cn-media').textContent = totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0';
+                    setText('rel-cn-acertos', totalCNAcertos);
+                    setText('rel-cn-erros', totalCNErros);
+                    setText('rel-cn-media', totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0');
 
                     await carregarRelatorioEscola();
                     atualizarDatasImpressao();
