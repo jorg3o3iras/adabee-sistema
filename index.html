@@ -1437,7 +1437,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             <select class="form-control" id="gab-total" onchange="buildGabGrid()"></select>
                         </div>
                     </div>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">🔵 1º Ano — A, B, C</div><div style="padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--blue);">🟦 2º ao 9º Ano — A, B, C, D</div></div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">📝 Gabarito com 4 alternativas: A, B, C, D</div></div>
                 </div>
                 <div class="card">
                     <div class="card-header">
@@ -3060,7 +3060,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // VISUALIZAR PROVA
+            // VISUALIZAR PROVA (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO)
             // ============================================
             let visualizarProvaId = null;
             let visualizarProvaData = null;
@@ -3088,17 +3088,37 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     let gabHtml = '';
                     if (gabarito.length > 0) {
-                        gabHtml = '<div style="margin-top:12px;"><strong style="color:var(--text2);">📋 Gabarito:</strong><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:6px;">';
-                        for (let i = 0; i < Math.min(gabarito.length, total); i++) {
-                            const texto = gabarito[i] || '—';
-                            const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
-                            gabHtml += `<div style="background:var(--bg2);border-radius:6px;padding:4px 6px;text-align:center;border:1px solid var(--border);">
-                                <div style="font-size:8px;color:var(--text3);font-weight:700;">Q${i+1}</div>
-                                <div style="font-weight:700;font-size:12px;color:var(--green);">${texto}</div>
-                                ${codigo ? `<div style="font-size:7px;color:var(--purple);margin-top:2px;">BNCC: ${codigo}</div>` : ''}
-                            </div>`;
+                        gabHtml = '<div style="margin-top:12px;"><strong style="color:var(--text2);">📋 Gabarito:</strong>';
+
+                        if (isProducao) {
+                            gabHtml += '<div style="display:flex; flex-direction:column; gap:12px; margin-top:6px;">';
+                            for (let i = 0; i < Math.min(gabarito.length, total); i++) {
+                                const texto = gabarito[i] || '—';
+                                const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
+                                gabHtml += `
+                                    <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
+                                        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;">Q${i+1}</div>
+                                        <div style="font-weight:700;font-size:14px;color:var(--green);">${texto}</div>
+                                        ${codigo ? `<div style="font-size:10px;color:var(--purple);margin-top:4px;">BNCC: ${codigo}</div>` : ''}
+                                        <div style="font-size:9px;color:var(--text3);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">Nível BNCC: ${codigo || 'Não definido'}</div>
+                                    </div>
+                                `;
+                            }
+                            gabHtml += '</div>';
+                        } else {
+                            gabHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-top:6px;">';
+                            for (let i = 0; i < Math.min(gabarito.length, total); i++) {
+                                const texto = gabarito[i] || '—';
+                                const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
+                                gabHtml += `<div style="background:var(--bg2);border-radius:6px;padding:4px 6px;text-align:center;border:1px solid var(--border);">
+                                    <div style="font-size:8px;color:var(--text3);font-weight:700;">Q${i+1}</div>
+                                    <div style="font-weight:700;font-size:12px;color:var(--green);">${texto}</div>
+                                    ${codigo ? `<div style="font-size:7px;color:var(--purple);margin-top:2px;">BNCC: ${codigo}</div>` : ''}
+                                </div>`;
+                            }
+                            gabHtml += '</div>';
                         }
-                        gabHtml += '</div></div>';
+                        gabHtml += '</div>';
                     } else {
                         gabHtml = '<div style="margin-top:12px;color:var(--text3);font-size:13px;">⚠️ Nenhum gabarito cadastrado para esta prova.</div>';
                     }
@@ -3581,6 +3601,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 openM('m-correcao-manual');
             }
 
+            // ===== GERAR GRID CORREÇÃO MANUAL (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO) =====
             function gerarGridCorrecaoManual() {
                 const grid = document.getElementById('cm-grid');
                 if (!grid) return;
@@ -3590,6 +3611,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const gabarito = correcaoManualData.gabarito || [];
                 const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
 
+                // Aplicar estilo: se produção de texto, vertical; senão, grid horizontal
+                if (isProducao) {
+                    grid.style.display = 'flex';
+                    grid.style.flexDirection = 'column';
+                    grid.style.gap = '12px';
+                    grid.style.maxHeight = 'none';
+                    grid.style.overflowY = 'visible';
+                } else {
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+                    grid.style.gap = '6px';
+                    grid.style.maxHeight = '280px';
+                    grid.style.overflowY = 'auto';
+                }
+
                 grid.innerHTML = '';
                 for (let i = 0; i < qtd; i++) {
                     const div = document.createElement('div');
@@ -3598,19 +3634,37 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
                     if (isProducao) {
+                        // Layout vertical com campos editáveis
+                        div.style.background = 'var(--bg2)';
+                        div.style.border = '1px solid var(--border)';
+                        div.style.borderRadius = '8px';
+                        div.style.padding = '10px 14px';
+                        div.style.textAlign = 'left';
+                        div.style.display = 'flex';
+                        div.style.flexDirection = 'column';
+                        div.style.gap = '6px';
+
                         div.innerHTML = `
-                            <div class="q-num">Q${i+1}</div>
-                            <div class="q-gabarito">Gabarito: ${respostaGabarito || '—'}</div>
-                            <input class="q-resposta-texto" type="text" placeholder="Resposta do aluno..." value="${respostaAluno}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px;" />
-                            <div class="q-status" style="font-size:10px;"></div>
+                            <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
+                            <div style="font-size:10px;color:var(--text3);">Gabarito: ${respostaGabarito || '—'}</div>
+                            <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${respostaAluno}</textarea>
+                            <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
+                                <option value="">Nível BNCC</option>
+                                <option value="Inicial">Inicial</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Proficiente">Proficiente</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical;"></textarea>
                         `;
-                        const input = div.querySelector('.q-resposta-texto');
-                        input.dataset.questao = i;
-                        input.addEventListener('input', function() {
+                        const textarea = div.querySelector('.q-resposta-texto');
+                        textarea.dataset.questao = i;
+                        textarea.addEventListener('input', function() {
                             correcaoManualData.respostasAluno[i] = this.value;
                             atualizarResumoCorrecaoManual();
                         });
                     } else {
+                        // Layout horizontal para outras disciplinas
                         let options = '<option value="">—</option>';
                         alternativas.forEach(alt => {
                             const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
@@ -4006,6 +4060,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 showToast('📝 Correção manual iniciada para ' + cmStandaloneData.alunoNome, 'success');
             }
 
+            // ===== GERAR GRID CORREÇÃO MANUAL STANDALONE (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO) =====
             function gerarGridCorrecaoManualSA() {
                 const grid = document.getElementById('cm-grid-standalone');
                 if (!grid) return;
@@ -4015,6 +4070,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const gabarito = cmStandaloneData.gabarito || [];
                 const respostas = cmStandaloneData.respostas || [];
                 const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+
+                // Aplicar estilo: se produção de texto, vertical; senão, grid horizontal
+                if (isProducao) {
+                    grid.style.display = 'flex';
+                    grid.style.flexDirection = 'column';
+                    grid.style.gap = '12px';
+                    grid.style.maxHeight = 'none';
+                    grid.style.overflowY = 'visible';
+                } else {
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+                    grid.style.gap = '6px';
+                    grid.style.maxHeight = '280px';
+                    grid.style.overflowY = 'auto';
+                }
 
                 grid.innerHTML = '';
 
@@ -4026,15 +4096,31 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const resp = (i < respostas.length) ? respostas[i] : '';
 
                     if (isProducao) {
+                        div.style.background = 'var(--bg2)';
+                        div.style.border = '1px solid var(--border)';
+                        div.style.borderRadius = '8px';
+                        div.style.padding = '10px 14px';
+                        div.style.textAlign = 'left';
+                        div.style.display = 'flex';
+                        div.style.flexDirection = 'column';
+                        div.style.gap = '6px';
+
                         div.innerHTML = `
-                            <div class="q-num">Q${i+1}</div>
-                            <div class="q-gabarito-texto">Gabarito: ${gab || '—'}</div>
-                            <input class="q-resposta-texto" type="text" placeholder="Resposta do aluno..." value="${resp}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px;" />
-                            <div class="q-status-icon"></div>
+                            <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
+                            <div style="font-size:10px;color:var(--text3);">Gabarito: ${gab || '—'}</div>
+                            <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${resp}</textarea>
+                            <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
+                                <option value="">Nível BNCC</option>
+                                <option value="Inicial">Inicial</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Proficiente">Proficiente</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical;"></textarea>
                         `;
-                        const input = div.querySelector('.q-resposta-texto');
-                        input.dataset.questao = i;
-                        input.addEventListener('input', function() {
+                        const textarea = div.querySelector('.q-resposta-texto');
+                        textarea.dataset.questao = i;
+                        textarea.addEventListener('input', function() {
                             cmStandaloneData.respostas[i] = this.value;
                             atualizarResumoCorrecaoManualSA();
                         });
@@ -5067,7 +5153,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     data_prova: document.getElementById('prova-data').value || null,
                     quantidade_questoes: parseInt(document.getElementById('prova-questoes').value) || 20,
                     nota_maxima: parseFloat(document.getElementById('prova-nota').value) || 10,
-                    tipo_questoes: serie.startsWith('1º') ? '3' : '4'
+                    tipo_questoes: '4'  // sempre 4 opções agora
                 };
 
                 try {
@@ -5730,7 +5816,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
             }
 
-            // ===== FUNÇÃO GERAR DESEMPENHO =====
+            // ===== FUNÇÃO GERAR DESEMPENHO (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO) =====
             async function gerarDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -5859,24 +5945,73 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     const grid = document.getElementById('disciplina-unica-questoes');
                     grid.innerHTML = '';
-                    resultadoQuestoes.forEach(q => {
-                        const div = document.createElement('div');
-                        div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
-                        let bnccHtml = '';
-                        if (q.bncc && q.bncc.trim() !== '') {
-                            bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
-                        }
-                        div.innerHTML = `
-                            <div class="q-num">Q${q.numero}</div>
-                            <div class="q-resp">${q.resposta}</div>
-                            <div class="q-gab">${q.gabarito}</div>
-                            <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
-                                ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}
-                            </span>
-                            ${bnccHtml}
-                        `;
-                        grid.appendChild(div);
-                    });
+
+                    const isProducao = (disciplina === 'Produção de Texto');
+
+                    if (isProducao) {
+                        // Layout vertical para produção de texto
+                        grid.style.display = 'flex';
+                        grid.style.flexDirection = 'column';
+                        grid.style.gap = '12px';
+                        grid.style.padding = '8px 0';
+
+                        resultadoQuestoes.forEach(q => {
+                            const div = document.createElement('div');
+                            div.style.background = 'var(--bg2)';
+                            div.style.border = '1px solid var(--border)';
+                            div.style.borderRadius = '8px';
+                            div.style.padding = '10px 14px';
+                            div.style.display = 'flex';
+                            div.style.flexDirection = 'column';
+                            div.style.gap = '6px';
+
+                            let bnccHtml = '';
+                            if (q.bncc && q.bncc.trim() !== '') {
+                                bnccHtml = `<div style="font-size:9px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:2px 6px; border-radius:4px;">BNCC: ${q.bncc}</div>`;
+                            }
+
+                            div.innerHTML = `
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:12px; font-weight:700; color:var(--text2);">Q${q.numero}</span>
+                                    <span class="q-status-text" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:${q.acertou ? 'rgba(16,185,129,0.15)' : (q.respondida ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)')}; color:${q.acertou ? 'var(--green)' : (q.respondida ? 'var(--red)' : 'var(--text3)')};">
+                                    ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '—')}
+                                </span>
+                                </div>
+                                <div style="font-size:11px; color:var(--text3);">Resposta: <strong>${q.resposta}</strong></div>
+                                <div style="font-size:11px; color:var(--text3);">Gabarito: <strong style="color:var(--green);">${q.gabarito}</strong></div>
+                                ${bnccHtml}
+                                <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">
+                                    Nível BNCC: ${q.bncc || 'Não definido'}
+                                </div>
+                            `;
+                            grid.appendChild(div);
+                        });
+                    } else {
+                        // Layout horizontal para outras disciplinas
+                        grid.style.display = 'grid';
+                        grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+                        grid.style.gap = '6px';
+                        grid.style.padding = '8px 4px';
+
+                        resultadoQuestoes.forEach(q => {
+                            const div = document.createElement('div');
+                            div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
+                            let bnccHtml = '';
+                            if (q.bncc && q.bncc.trim() !== '') {
+                                bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                            }
+                            div.innerHTML = `
+                                <div class="q-num">Q${q.numero}</div>
+                                <div class="q-resp">${q.resposta}</div>
+                                <div class="q-gab">${q.gabarito}</div>
+                                <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
+                                    ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}
+                                </span>
+                                ${bnccHtml}
+                            `;
+                            grid.appendChild(div);
+                        });
+                    }
 
                     setText('disciplina-unica-acertos', acertos);
                     setText('disciplina-unica-erros', erros);
@@ -5893,23 +6028,56 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     const gabCardTitle = document.querySelector('#gabarito-oficial-card .card-title');
                     if (gabCardTitle) {
-                        gabCardTitle.textContent = disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova';
+                        gabCardTitle.textContent = isProducao ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova';
                     }
 
                     const gabGrid = document.getElementById('gabarito-oficial-grid');
                     gabGrid.innerHTML = '';
-                    gabarito.forEach((gab, idx) => {
-                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
-                        const div = document.createElement('div');
-                        div.className = 'questao-item';
-                        div.innerHTML = `
-                            <div class="q-num">Q${idx+1}</div>
-                            <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
-                            <div class="q-gab">Oficial</div>
-                            ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${codigoBncc}</div>` : ''}
-                        `;
-                        gabGrid.appendChild(div);
-                    });
+
+                    if (isProducao) {
+                        gabGrid.style.display = 'flex';
+                        gabGrid.style.flexDirection = 'column';
+                        gabGrid.style.gap = '12px';
+                        gabGrid.style.padding = '8px 0';
+
+                        gabarito.forEach((gab, idx) => {
+                            const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                            const div = document.createElement('div');
+                            div.style.background = 'var(--bg2)';
+                            div.style.border = '1px solid var(--border)';
+                            div.style.borderRadius = '8px';
+                            div.style.padding = '10px 14px';
+                            div.style.display = 'flex';
+                            div.style.flexDirection = 'column';
+                            div.style.gap = '6px';
+
+                            div.innerHTML = `
+                                <div style="font-weight:700; color:var(--text2);">Q${idx+1}</div>
+                                <div style="font-size:13px; font-weight:700; color:var(--green);">${gab || '—'}</div>
+                                ${codigoBncc ? `<div style="font-size:9px; color:var(--purple);">BNCC: ${codigoBncc}</div>` : ''}
+                                <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${codigoBncc || 'Não definido'}</div>
+                            `;
+                            gabGrid.appendChild(div);
+                        });
+                    } else {
+                        gabGrid.style.display = 'grid';
+                        gabGrid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+                        gabGrid.style.gap = '6px';
+                        gabGrid.style.padding = '8px 4px';
+
+                        gabarito.forEach((gab, idx) => {
+                            const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                            const div = document.createElement('div');
+                            div.className = 'questao-item';
+                            div.innerHTML = `
+                                <div class="q-num">Q${idx+1}</div>
+                                <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
+                                <div class="q-gab">Oficial</div>
+                                ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${codigoBncc}</div>` : ''}
+                            `;
+                            gabGrid.appendChild(div);
+                        });
+                    }
 
                     showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
 
@@ -5950,34 +6118,69 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
 
                     let questoesHTML = '';
-                    resultadoQuestoes.forEach(q => {
-                        const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
-                        const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
-                        let bnccHTML = '';
-                        if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
-                        questoesHTML += `
-                            <div class="questao-item ${classe}">
-                                <div class="q-num">Q${q.numero}</div>
-                                <div class="q-resp">${q.resposta}</div>
-                                <div class="q-gab">${q.gabarito}</div>
-                                <span class="q-status-text ${classe}">${statusText}</span>
-                                ${bnccHTML}
-                            </div>
-                        `;
-                    });
+                    const isProducao = (disciplina === 'Produção de Texto');
+
+                    if (isProducao) {
+                        resultadoQuestoes.forEach(q => {
+                            const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                            const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                            let bnccHTML = '';
+                            if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                            questoesHTML += `
+                                <div class="questao-item ${classe}" style="flex-direction:column; align-items:stretch; gap:4px; padding:8px 10px;">
+                                    <div style="font-weight:700; color:var(--text2);">Q${q.numero}</div>
+                                    <div style="font-size:12px; color:var(--text3);">Resposta: <strong>${q.resposta}</strong></div>
+                                    <div style="font-size:12px; color:var(--text3);">Gabarito: <strong style="color:#16a34a;">${q.gabarito}</strong></div>
+                                    <span class="q-status-text ${classe}" style="font-size:9px;">${statusText}</span>
+                                    ${bnccHTML}
+                                    <div style="font-size:8px; color:var(--text3); border-top:1px solid #e2e8f0; padding-top:4px;">Nível BNCC: ${q.bncc || 'Não definido'}</div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        resultadoQuestoes.forEach(q => {
+                            const classe = q.acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                            const statusText = q.acertou ? '✅ ADQUIRIU HABILIDADE' : (q.respondida ? '❌ RECOMPOSIÇÃO DE APRENDIZAGEM' : '');
+                            let bnccHTML = '';
+                            if (q.bncc && q.bncc.trim() !== '') bnccHTML = `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                            questoesHTML += `
+                                <div class="questao-item ${classe}">
+                                    <div class="q-num">Q${q.numero}</div>
+                                    <div class="q-resp">${q.resposta}</div>
+                                    <div class="q-gab">${q.gabarito}</div>
+                                    <span class="q-status-text ${classe}">${statusText}</span>
+                                    ${bnccHTML}
+                                </div>
+                            `;
+                        });
+                    }
 
                     let gabOficialHTML = '';
-                    gabarito.forEach((gab, idx) => {
-                        const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
-                        gabOficialHTML += `
-                            <div class="questao-item" style="border-color: #86efac;">
-                                <div class="q-num">Q${idx+1}</div>
-                                <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
-                                <div class="q-gab">Oficial</div>
-                                ${codigoBncc ? `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${codigoBncc}</div>` : ''}
-                            </div>
-                        `;
-                    });
+                    if (isProducao) {
+                        gabarito.forEach((gab, idx) => {
+                            const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                            gabOficialHTML += `
+                                <div class="questao-item" style="flex-direction:column; align-items:stretch; gap:4px; padding:8px 10px; border-color: #86efac;">
+                                    <div style="font-weight:700; color:var(--text2);">Q${idx+1}</div>
+                                    <div style="font-size:13px; font-weight:700; color:#16a34a;">${gab || '—'}</div>
+                                    ${codigoBncc ? `<div style="font-size:8px; color:#7c3aed;">BNCC: ${codigoBncc}</div>` : ''}
+                                    <div style="font-size:8px; color:var(--text3); border-top:1px solid #e2e8f0; padding-top:4px;">Nível BNCC: ${codigoBncc || 'Não definido'}</div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        gabarito.forEach((gab, idx) => {
+                            const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                            gabOficialHTML += `
+                                <div class="questao-item" style="border-color: #86efac;">
+                                    <div class="q-num">Q${idx+1}</div>
+                                    <div class="q-resp" style="color:#16a34a;">${gab || '—'}</div>
+                                    <div class="q-gab">Oficial</div>
+                                    ${codigoBncc ? `<div style="font-size:6px; color:#7c3aed; margin-top:2px;">BNCC: ${codigoBncc}</div>` : ''}
+                                </div>
+                            `;
+                        });
+                    }
 
                     const html = `
                     <!DOCTYPE html>
@@ -6034,6 +6237,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 .resumo { grid-template-columns:1fr 1fr; }
                                 .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
                             }
+                            /* Estilos para produção de texto (vertical) */
+                            .questao-item.vertical {
+                                flex-direction: column;
+                                align-items: stretch;
+                                gap: 4px;
+                                padding: 8px 10px;
+                            }
                         </style>
                     </head>
                     <body>
@@ -6066,7 +6276,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                         ${conceito}
                                     </span>
                                 </div>
-                                <div class="questoes-grid">
+                                <div class="questoes-grid" style="grid-template-columns: ${isProducao ? '1fr' : 'repeat(10,1fr)'};">
                                     ${questoesHTML}
                                 </div>
                                 <div class="stats">
@@ -6087,7 +6297,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 <strong>${disciplina === 'Produção de Texto' ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova'}</strong>
                                 <span style="background:#dbeafe; padding:2px 12px; border-radius:12px; font-size:11px; font-weight:700; color:#1e40af;">Oficial</span>
                             </div>
-                            <div class="questoes-grid">
+                            <div class="questoes-grid" style="grid-template-columns: ${isProducao ? '1fr' : 'repeat(10,1fr)'};">
                                 ${gabOficialHTML}
                             </div>
                             <div style="margin-top:8px; padding-top:8px; border-top:1px solid #86efac; font-size:11px; color:#475569; text-align:center;">
@@ -6586,7 +6796,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // GABARITO - BUILD GRID (COM BNCC)
+            // GABARITO - BUILD GRID (COM BNCC E LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO)
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
@@ -6600,24 +6810,37 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
                 const isProducao = (disciplina === 'Produção de Texto');
 
-                const is1 = (parseInt(serieEl.value) || 1) === 1;
+                // Sempre usar 4 alternativas (A, B, C, D)
+                const alts = ['A', 'B', 'C', 'D'];
                 const total = parseInt(totalEl.value) || 20;
-                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
                 const lbl = document.getElementById('gab-label');
                 if (lbl) {
                     if (isProducao) {
                         lbl.textContent = '📝 Produção de Texto — Resposta descritiva e nível BNCC';
                     } else {
-                        lbl.textContent = is1 ? '🔵 1º Ano — 3 alternativas: A, B, C' : '🟦 2º ao 9º Ano — 4 alternativas: A, B, C, D';
+                        lbl.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
                     }
                 }
+
+                // Aplicar estilo: se produção de texto, layout vertical; senão, grid horizontal
+                if (isProducao) {
+                    grid.style.display = 'flex';
+                    grid.style.flexDirection = 'column';
+                    grid.style.gap = '16px';
+                } else {
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(90px, 1fr))';
+                    grid.style.gap = '6px';
+                }
+
                 grid.innerHTML = '';
                 for (let i = 1; i <= total; i++) {
                     const div = document.createElement('div');
                     div.className = 'gab-item';
                     if (isProducao) {
+                        // Layout vertical com campos editáveis: título, resposta, nível, observação
                         div.innerHTML = `
-                            <div class="gab-num">Q${i}</div>
+                            <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold; text-align:center;" />
                             <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;"></textarea>
                             <select class="gab-nivel" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
                                 <option value="">Nível BNCC</option>
@@ -6626,8 +6849,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 <option value="Proficiente">Proficiente</option>
                                 <option value="Avançado">Avançado</option>
                             </select>
+                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical; margin-top:4px;"></textarea>
                         `;
                     } else {
+                        // Layout horizontal (padrão) para outras disciplinas
                         let opts = '<option value="">—</option>';
                         alts.forEach(a => { opts += '<option>' + a + '</option>'; });
                         div.innerHTML = `
@@ -6648,8 +6873,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     showToast('🎲 Preenchimento automático não disponível para produção de texto.', 'warning');
                     return;
                 }
-                const is1 = (parseInt(document.getElementById('gab-serie').value) || 1) === 1;
-                const alts = is1 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                const alts = ['A', 'B', 'C', 'D'];
                 document.querySelectorAll('.gab-select').forEach(s => { s.value = alts[Math.floor(Math.random() * alts.length)]; s.classList.add('filled'); });
                 showToast('🎲 Gabarito de teste preenchido!');
             }
@@ -6660,8 +6884,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
                 const isProducao = (disciplina === 'Produção de Texto');
                 if (isProducao) {
+                    document.querySelectorAll('.gab-titulo').forEach(inp => inp.value = 'Q' + (Array.from(document.querySelectorAll('.gab-titulo')).indexOf(inp) + 1));
                     document.querySelectorAll('.gab-texto').forEach(ta => ta.value = '');
                     document.querySelectorAll('.gab-nivel').forEach(sel => sel.value = '');
+                    document.querySelectorAll('.gab-observacao').forEach(ta => ta.value = '');
                 } else {
                     document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
                     document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
@@ -6754,14 +6980,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 setTimeout(() => {
                                     const isProducao = (disciplina === 'Produção de Texto');
                                     if (isProducao) {
+                                        const titulos = document.querySelectorAll('.gab-titulo');
                                         const textareas = document.querySelectorAll('.gab-texto');
                                         const niveis = document.querySelectorAll('.gab-nivel');
+                                        const observacoes = document.querySelectorAll('.gab-observacao');
+
+                                        titulos.forEach((inp, i) => {
+                                            if (i < gabarito.length) inp.value = 'Q' + (i+1);
+                                        });
                                         textareas.forEach((ta, i) => {
                                             if (i < gabarito.length) ta.value = gabarito[i] || '';
                                         });
                                         niveis.forEach((sel, i) => {
                                             if (i < bncc.length && bncc[i]) sel.value = bncc[i];
                                         });
+                                        // observações não são salvas, mas mantemos vazio
                                     } else {
                                         const selects = document.querySelectorAll('.gab-select');
                                         const bnccInputs = document.querySelectorAll('.gab-bncc');
@@ -7003,17 +7236,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const disciplina = document.getElementById('prova-disciplina').value;
                 const info = document.getElementById('info-alts');
                 if (!s || !info) return;
-                const is1 = s.value.startsWith('1');
                 if (disciplina === 'Produção de Texto') {
                     info.textContent = '📝 Produção de Texto — Gabarito com resposta descritiva e níveis BNCC';
                     info.style.color = '#a78bfa';
                     info.style.borderColor = 'rgba(139,92,246,.25)';
                     info.style.background = 'rgba(139,92,246,.07)';
                 } else {
-                    info.textContent = is1 ? 'ℹ️ 1º Ano — Gabarito com 3 alternativas: A, B, C' : 'ℹ️ ' + s.value + ' — Gabarito com 4 alternativas: A, B, C, D';
-                    info.style.color = is1 ? '#a78bfa' : 'var(--blue)';
-                    info.style.borderColor = is1 ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)';
-                    info.style.background = is1 ? 'rgba(139,92,246,.07)' : 'rgba(59,130,246,.07)';
+                    // Sempre 4 alternativas agora
+                    info.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
+                    info.style.color = 'var(--blue)';
+                    info.style.borderColor = 'rgba(59,130,246,.25)';
+                    info.style.background = 'rgba(59,130,246,.07)';
                 }
             }
 
