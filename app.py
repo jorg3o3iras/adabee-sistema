@@ -97,7 +97,7 @@ except Exception as e:
     RELAY_AVAILABLE = False
 
 # ============================================
-# CONFIGURAÇÃO DO BANCO DE DADOS - POOL DE CONEXÕES (OTIMIZAÇÃO)
+# CONFIGURAÇÃO DO BANCO DE DADOS - POOL DE CONEXÕES
 # ============================================
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
@@ -109,7 +109,6 @@ if not SUPABASE_URL:
     print("⚠️ Configure a variável SUPABASE_URL no arquivo .env")
 else:
     try:
-        # Extrair parâmetros da URL do Supabase
         result = urlparse.urlparse(SUPABASE_URL)
         dbname = result.path[1:]
         user = result.username
@@ -117,7 +116,6 @@ else:
         host = result.hostname
         port = result.port
 
-        # Criar pool de conexões
         db_pool = psycopg2.pool.SimpleConnectionPool(
             2, 20,
             dbname=dbname,
@@ -135,6 +133,7 @@ else:
 def get_db_connection():
     """Obtém uma conexão do pool de conexões"""
     if not db_pool:
+        print("⚠️ db_pool não está disponível")
         return None
     try:
         return db_pool.getconn()
@@ -863,8 +862,7 @@ def corrigir_com_ia():
                 return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
 
             cur.execute("""
-                SELECT a.id, a.nome, a.turma_id, t.serie, e.nome as escola_nome, e.id as escola_id
-                FROM alunos a
+                SELECT a.id, a.nome, a.turma_id, t.serie, e.nome as escola_nome, e.id as escola_id                FROM alunos a
                 LEFT JOIN turmas t ON a.turma_id = t.id
                 LEFT JOIN escolas e ON a.escola_id = e.id
                 WHERE a.id = %s
@@ -914,7 +912,6 @@ def corrigir_com_ia():
             tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
             print(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
 
-            # Salvar no banco
             try:
                 conn = get_db_connection()
                 if conn:
@@ -1214,7 +1211,6 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
 
-        # FALLBACK: ANÁLISE LOCAL
         import re
         from collections import Counter
 
@@ -1792,7 +1788,7 @@ def excluir_gabarito(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ESCOLAS (CRUD COMPLETO)
+# ROTA DE ESCOLAS
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -1958,7 +1954,7 @@ def excluir_escola(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO)
+# ROTA DE TURMAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2170,7 +2166,7 @@ def excluir_turma(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ALUNOS (CRUD COMPLETO)
+# ROTA DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -2465,7 +2461,7 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE PROVAS (CRUD COMPLETO)
+# ROTA DE PROVAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -2731,7 +2727,7 @@ def excluir_prova(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE USUÁRIOS (CRUD COMPLETO)
+# ROTA DE USUÁRIOS
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -3283,7 +3279,7 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE BACKUP DO BANCO DE DADOS
+# ROTA DE BACKUP
 # ============================================
 
 @app.route('/api/backup', methods=['GET'])
@@ -3625,28 +3621,6 @@ if __name__ == '__main__':
     print("   - Produção de Texto")
     print("   - Ciências Humanas (CH)")
     print("   - Ciências Naturais (CN)")
-    print("=" * 60)
-    print("📋 Endpoints disponíveis:")
-    print("   - /health")
-    print("   - /api/login")
-    print("   - /api/corrigir")
-    print("   - /api/corrigir_manual")
-    print("   - /api/corrigir_redacao")
-    print("   - /api/salvar_correcao_texto")
-    print("   - /api/correcoes_texto")
-    print("   - /api/escolas")
-    print("   - /api/turmas")
-    print("   - /api/alunos")
-    print("   - /api/provas")
-    print("   - /api/gabaritos")
-    print("   - /api/historico")
-    print("   - /api/historico/agrupado")
-    print("   - /api/dashboard")
-    print("   - /api/dashboard/Conceito")
-    print("   - /api/gerar_gabarito")
-    print("   - /api/backup")
-    print("   - /api/usuarios (GET, POST)")
-    print("   - /api/usuarios/<id> (GET, PUT, DELETE)")
     print("=" * 60)
 
     init_db()
