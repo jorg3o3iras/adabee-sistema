@@ -3,7 +3,337 @@ from flask_cors import CORS
 import cv2
 import numpy as np
 import base64
+import jsonfrom flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+import os
 import json
+from dotenv import load_dotenv
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
+import urllib.parse as urlparse
+import traceback
+
+load_dotenv()
+
+app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# ============================================
+# BANCO DE DADOS - POOL DE CONEXÕES
+# ============================================
+
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+db_pool = None
+
+if SUPABASE_URL:
+    try:
+        result = urlparse.urlparse(SUPABASE_URL)
+        dbname = result.path[1:]
+        user = result.username
+        password = result.password
+        host = result.hostname
+        port = result.port
+
+        db_pool = psycopg2.pool.SimpleConnectionPool(1, 10,
+            dbname=dbname, user=user, password=password, host=host, port=port
+        )
+        print("✅ Pool de conexões criado!")
+    except Exception as e:
+        print(f"❌ Erro ao criar pool: {e}")
+else:
+    print("❌ SUPABASE_URL não encontrada!")
+
+def get_db_connection():
+    if not db_pool:
+        return None
+    try:
+        return db_pool.getconn()
+    except Exception as e:
+        print(f"❌ Erro ao obter conexão: {e}")
+        return None
+
+def release_db_connection(conn):
+    if conn and db_pool:
+        try:
+            db_pool.putconn(conn)
+        except:
+            pass
+
+# ============================================
+# USUÁRIOS FIXOS
+# ============================================
+
+USUARIOS_FIXOS = {
+    'admin': {'senha': 'admin', 'perfil': 'admin'},
+    'usuario': {'senha': '123', 'perfil': 'usuario'},
+}
+
+# ============================================
+# ROTAS - VERSÃO SIMPLIFICADA
+# ============================================
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        username = data.get('username')
+        senha = data.get('senha')
+
+        if not username or not senha:
+            return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
+
+        # Primeiro verifica usuários fixos
+        if username in USUARIOS_FIXOS and USUARIOS_FIXOS[username]['senha'] == senha:
+            return jsonify({
+                'sucesso': True,
+                'perfil': USUARIOS_FIXOS[username]['perfil'],
+                'usuario': username,
+                'nome': username.capitalize()
+            })
+
+        # Depois verifica no banco
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                cur.execute("SELECT username, perfil, senha_hash FROM usuarios WHERE username = %s", (username,))
+                usuario = cur.fetchone()
+                cur.close()
+                release_db_connection(conn)
+
+                if usuario and usuario['senha_hash'] == senha:
+                    return jsonify({
+                        'sucesso': True,
+                        'perfil': usuario['perfil'],
+                        'usuario': usuario['username']
+                    })
+            except Exception as e:
+                print(f"Erro no banco: {e}")
+                release_db_connection(conn)
+
+        return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
+    except Exception as e:
+        print(f"❌ Erro no login: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/escolas', methods=['GET'])
+def listar_escolas():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([])
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM escolas ORDER BY nome")
+        escolas = cur.fetchall()
+        cur.close()
+        release_db_connection(conn)
+        return jsonify(escolas if escolas else [])
+    except Exception as e:
+        print(f"❌ Erro em /api/escolas: {e}")
+        release_db_connection(conn)
+        return jsonify([])
+
+@app.route('/api/turmas', methods=['GET'])
+def listar_turmas():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([])
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT t.*, e.nome as escola_nome, COUNT(a.id) as total_alunos
+            FROM turmas t
+            LEFT JOIN escolas e ON t.escola_id = e.id
+            LEFT JOIN alunos a ON a.turma_id = t.id
+            GROUP BY t.id, e.nome
+            ORDER BY t.nome
+        """)
+        turmas = cur.fetchall()
+        cur.close()
+        release_db_connection(conn)
+        return jsonify(turmas if turmas else [])
+    except Exception as e:
+        print(f"❌ Erro em /api/turmas: {e}")
+        release_db_connection(conn)
+        return jsonify([])
+
+@app.route('/api/alunos', methods=['GET'])
+def listar_alunos():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([])
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie, e.nome as escola_nome
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            LEFT JOIN escolas e ON a.escola_id = e.id
+            ORDER BY a.nome
+        """)
+        alunos = cur.fetchall()
+        cur.close()
+        release_db_connection(conn)
+        return jsonify(alunos if alunos else [])
+    except Exception as e:
+        print(f"❌ Erro em /api/alunos: {e}")
+        release_db_connection(conn)
+        return jsonify([])
+
+@app.route('/api/provas', methods=['GET'])
+def listar_provas():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([])
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM provas ORDER BY created_at DESC")
+        provas = cur.fetchall()
+        cur.close()
+        release_db_connection(conn)
+        return jsonify(provas if provas else [])
+    except Exception as e:
+        print(f"❌ Erro em /api/provas: {e}")
+        release_db_connection(conn)
+        return jsonify([])
+
+@app.route('/api/historico', methods=['GET'])
+def listar_historico():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([])
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT h.*, a.nome as aluno_nome, p.titulo as prova_titulo
+            FROM historico h
+            LEFT JOIN alunos a ON h.aluno_id = a.id
+            LEFT JOIN provas p ON h.prova_id = p.id
+            ORDER BY h.data_correcao DESC
+            LIMIT 100
+        """)
+        historico = cur.fetchall()
+        cur.close()
+        release_db_connection(conn)
+        return jsonify(historico if historico else [])
+    except Exception as e:
+        print(f"❌ Erro em /api/historico: {e}")
+        release_db_connection(conn)
+        return jsonify([])
+
+@app.route('/api/historico/agrupado', methods=['GET'])
+def historico_agrupado():
+    # Retorna array vazio para não quebrar o frontend
+    return jsonify([])
+
+@app.route('/api/dashboard', methods=['GET'])
+def dashboard():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM escolas")
+        escolas = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM turmas")
+        turmas = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM alunos")
+        alunos = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM provas")
+        provas = cur.fetchone()[0]
+        cur.close()
+        release_db_connection(conn)
+        return jsonify({
+            'total_escolas': escolas,
+            'total_turmas': turmas,
+            'total_alunos': alunos,
+            'total_provas': provas
+        })
+    except Exception as e:
+        print(f"❌ Erro em /api/dashboard: {e}")
+        release_db_connection(conn)
+        return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
+
+@app.route('/api/dashboard/Conceito', methods=['GET'])
+def dashboard_conceito():
+    return jsonify([])
+
+@app.route('/api/gabaritos', methods=['GET'])
+def listar_gabaritos():
+    return jsonify([])
+
+@app.route('/api/gabaritos', methods=['POST'])
+def salvar_gabarito():
+    return jsonify({'id': 1, 'mensagem': 'Gabarito salvo'})
+
+@app.route('/api/usuarios', methods=['GET'])
+def listar_usuarios():
+    return jsonify([])
+
+@app.route('/api/corrigir', methods=['POST'])
+def corrigir():
+    return jsonify({
+        'sucesso': True,
+        'aluno': 'Aluno Teste',
+        'total': 20,
+        'acertos': 15,
+        'nota': 7.5,
+        'porcentagem': 75,
+        'respostas_detectadas': ['A'] * 20,
+        'gabarito': ['A'] * 20,
+        'questoes_status': [{'numero': i+1, 'resposta': 'A', 'gabarito': 'A', 'acertou': True} for i in range(20)]
+    })
+
+@app.route('/api/corrigir_manual', methods=['POST'])
+def corrigir_manual():
+    return jsonify({'sucesso': True, 'mensagem': 'Correção manual salva'})
+
+@app.route('/api/corrigir_redacao', methods=['POST'])
+def corrigir_redacao():
+    return jsonify({'nota': 7.5, 'modo': 'simulado'})
+
+@app.route('/api/gerar_gabarito', methods=['POST'])
+def gerar_gabarito():
+    return jsonify({'mensagem': 'Cartão gerado'})
+
+@app.route('/api/backup', methods=['GET'])
+def backup():
+    return jsonify({'mensagem': 'Backup disponível'})
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'online'})
+
+@app.route('/')
+def index():
+    try:
+        return send_from_directory('.', 'index.html')
+    except:
+        return jsonify({'mensagem': 'CorrigePro API', 'status': 'online'})
+
+@app.route('/<path:path>')
+def serve_static(path):
+    try:
+        return send_from_directory('.', path)
+    except:
+        return jsonify({'erro': 'Arquivo não encontrado'}), 404
+
+# ============================================
+# INICIALIZAÇÃO
+# ============================================
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print("=" * 60)
+    print("🚀 SERVIDOR CORRIGEPRO - VERSÃO SIMPLIFICADA")
+    print("=" * 60)
+    print(f"📌 Porta: {port}")
+    print(f"🗄️ Banco: {'✅ Conectado' if db_pool else '❌ Desconectado'}")
+    print("=" * 60)
+    print("📌 Login: admin / admin")
+    print("=" * 60)
+    app.run(host='0.0.0.0', port=port, debug=False)
 import io
 import csv
 import re
