@@ -1208,13 +1208,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
                     <div class="sb-section">Sistema</div>
-                    <!-- Item Configurações com ID único para ocultar quando usuário -->
                     <div class="sb-item" id="menu-config" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
                 </div>
-                <!-- Menu específico para usuário (oculto, pois usaremos o mesmo menu acima) -->
-                <div id="usr-sb" style="display:none;">
-                    <!-- este bloco permanece vazio ou pode ser removido, pois não será usado -->
-                </div>
+                <div id="usr-sb" style="display:none;"></div>
             </div>
             <div class="sb-footer">
                 <div class="sb-user">
@@ -1699,7 +1695,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 </div>
                             </div>
                         </div>
-                        <!-- Totalizador adicionado -->
                         <div style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
                             Total de alunos avaliados: <span id="total-conceitos-label">0</span>
                         </div>
@@ -2413,6 +2408,117 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             let gerandoDocumento = false;
 
             // ============================================
+            // SISTEMA DE CACHE PARA REDUZIR REQUISIÇÕES
+            // ============================================
+
+            const cache = {
+                escolas: null,
+                turmas: {},
+                alunos: {},
+                provas: null,
+                ultima_atualizacao: {}
+            };
+
+            const TEMPO_CACHE = 30000; // 30 segundos
+
+            function isCacheValido(chave) {
+                if (!cache.ultima_atualizacao[chave]) return false;
+                return (Date.now() - cache.ultima_atualizacao[chave]) < TEMPO_CACHE;
+            }
+
+            async function carregarEscolasComCache(forceRefresh = false) {
+                if (!forceRefresh && cache.escolas && isCacheValido('escolas')) {
+                    return cache.escolas;
+                }
+
+                try {
+                    const response = await fetch(`${API_URL}/api/escolas`);
+                    const escolas = await response.json();
+                    cache.escolas = escolas;
+                    cache.ultima_atualizacao['escolas'] = Date.now();
+                    return escolas;
+                } catch (erro) {
+                    console.error('Erro ao carregar escolas:', erro);
+                    return cache.escolas || [];
+                }
+            }
+
+            async function carregarTurmasComCache(escolaId, forceRefresh = false) {
+                const chave = `turmas_${escolaId}`;
+                if (!forceRefresh && cache.turmas[chave] && isCacheValido(chave)) {
+                    return cache.turmas[chave];
+                }
+
+                try {
+                    let url = `${API_URL}/api/turmas`;
+                    if (escolaId && escolaId !== '') {
+                        url += `?escola_id=${escolaId}`;
+                    }
+                    const response = await fetch(url);
+                    const turmas = await response.json();
+                    cache.turmas[chave] = turmas;
+                    cache.ultima_atualizacao[chave] = Date.now();
+                    return turmas;
+                } catch (erro) {
+                    console.error('Erro ao carregar turmas:', erro);
+                    return cache.turmas[chave] || [];
+                }
+            }
+
+            async function carregarAlunosComCache(filtros = {}, forceRefresh = false) {
+                const chave = JSON.stringify(filtros);
+                if (!forceRefresh && cache.alunos[chave] && isCacheValido(chave)) {
+                    return cache.alunos[chave];
+                }
+
+                try {
+                    const params = new URLSearchParams();
+                    if (filtros.escola_id) params.append('escola_id', filtros.escola_id);
+                    if (filtros.turma_id) params.append('turma_id', filtros.turma_id);
+                    if (filtros.serie) params.append('serie', filtros.serie);
+
+                    let url = `${API_URL}/api/alunos`;
+                    if (params.toString()) url += '?' + params.toString();
+
+                    const response = await fetch(url);
+                    const alunos = await response.json();
+                    cache.alunos[chave] = alunos;
+                    cache.ultima_atualizacao[chave] = Date.now();
+                    return alunos;
+                } catch (erro) {
+                    console.error('Erro ao carregar alunos:', erro);
+                    return cache.alunos[chave] || [];
+                }
+            }
+
+            async function carregarProvasComCache(forceRefresh = false) {
+                if (!forceRefresh && cache.provas && isCacheValido('provas')) {
+                    return cache.provas;
+                }
+
+                try {
+                    const response = await fetch(`${API_URL}/api/provas`);
+                    const provas = await response.json();
+                    cache.provas = provas;
+                    cache.ultima_atualizacao['provas'] = Date.now();
+                    return provas;
+                } catch (erro) {
+                    console.error('Erro ao carregar provas:', erro);
+                    return cache.provas || [];
+                }
+            }
+
+            // Função para limpar o cache (útil após salvar/editar/excluir)
+            function limparCache() {
+                cache.escolas = null;
+                cache.turmas = {};
+                cache.alunos = {};
+                cache.provas = null;
+                cache.ultima_atualizacao = {};
+                console.log('🧹 Cache limpo!');
+            }
+
+            // ============================================
             // FUNÇÕES AUXILIARES SEGURAS PARA DOM
             // ============================================
             function setText(id, valor) {
@@ -2637,23 +2743,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 document.getElementById('sb-uname').textContent = uname;
                 document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
 
-                // Define se é administrador
                 const isAdmin = role === 'admin';
 
-                // Sempre exibe o menu principal (adm-sb) e oculta o menu do usuário (usr-sb)
                 document.getElementById('adm-sb').style.display = 'block';
                 document.getElementById('usr-sb').style.display = 'none';
 
-                // Oculta ou exibe o item "Configurações" com base no perfil
                 const menuConfig = document.getElementById('menu-config');
                 if (menuConfig) {
                     menuConfig.style.display = isAdmin ? 'block' : 'none';
                 }
 
-                // Navega para a página inicial correspondente
-                go(isAdmin ? 'dashboard' : 'dashboard'); // ambos vão para o mesmo dashboard
+                go(isAdmin ? 'dashboard' : 'dashboard');
 
-                // Carrega os dados e inicializa
                 buildGabGrid();
                 carregarDados();
                 atualizarDatasImpressao();
@@ -2762,8 +2863,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         return;
                     }
                     const serie = prova.serie || '';
-                    const alunosResp = await fetch(API_URL + '/api/alunos?serie=' + encodeURIComponent(serie));
-                    const alunos = await alunosResp.json();
+                    const alunos = await carregarAlunosComCache({ serie: serie });
                     if (alunos && !alunos.erro) {
                         alunos.forEach(a => {
                             const opt = document.createElement('option');
@@ -2779,22 +2879,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR ESCOLAS
+            // CARREGAR ESCOLAS (COM CACHE)
             // ============================================
             async function carregarEscolas() {
                 try {
-                    const response = await fetch(`${API_URL}/api/escolas`);
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const tbody = document.getElementById('tb-escola');
                     if (!tbody) return;
 
                     if (!escolas || escolas.length === 0 || escolas.erro) {
                         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
                     } else {
-                        const turmasResp = await fetch(`${API_URL}/api/turmas`);
-                        const turmas = await turmasResp.json();
-                        const alunosResp = await fetch(`${API_URL}/api/alunos`);
-                        const alunos = await alunosResp.json();
+                        const turmas = await carregarTurmasComCache();
+                        const alunos = await carregarAlunosComCache();
 
                         tbody.innerHTML = escolas.map((e, i) => {
                             const turmasCount = turmas.filter(t => t.escola_id === e.id).length;
@@ -2816,12 +2913,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR TURMAS
+            // CARREGAR TURMAS (COM CACHE)
             // ============================================
             async function carregarTurmas() {
                 try {
-                    const response = await fetch(API_URL + '/api/turmas');
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache();
                     const tbody = document.getElementById('tb-turmas');
                     if (!tbody) return;
 
@@ -2863,8 +2959,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             async function carregarFiltroEscolaTurmas() {
                 try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const select = document.getElementById('filtro-escola-turmas');
                     if (select && escolas && !escolas.erro) {
                         const current = select.value;
@@ -2917,29 +3012,27 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR ALUNOS
+            // CARREGAR ALUNOS (COM CACHE)
             // ============================================
             async function carregarAlunos(escolaId = null) {
                 try {
-                    let url = API_URL + '/api/alunos';
-                    const params = new URLSearchParams();
+                    const filtros = {};
                     if (escolaId && escolaId !== '' && escolaId !== 'null' && escolaId !== 'undefined') {
-                        params.append('escola_id', escolaId);
+                        filtros.escola_id = escolaId;
                     }
                     const selectTurma = document.getElementById('filtro-turma-alunos');
                     if (selectTurma && selectTurma.value && selectTurma.value !== '') {
-                        params.append('turma_id', selectTurma.value);
+                        filtros.turma_id = selectTurma.value;
                     }
                     const selectSerie = document.getElementById('filtro-serie-alunos');
                     if (selectSerie && selectSerie.value && selectSerie.value !== '') {
-                        params.append('serie', selectSerie.value);
+                        filtros.serie = selectSerie.value;
                     }
-                    const queryString = params.toString();
-                    if (queryString) url += '?' + queryString;
-                    const response = await fetch(url);
-                    const alunos = await response.json();
+
+                    const alunos = await carregarAlunosComCache(filtros);
                     const tbody = document.getElementById('tb-alunos');
                     if (!tbody) return;
+
                     if (!alunos || alunos.length === 0 || alunos.erro) {
                         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno cadastrado com os filtros selecionados</td></tr>';
                     } else {
@@ -2974,8 +3067,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             async function carregarEscolasFiltroAlunos() {
                 try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const select = document.getElementById('filtro-escola-alunos');
                     if (select && escolas && !escolas.erro) {
                         const current = select.value;
@@ -2999,24 +3091,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             // FILTRAR ALUNOS POR ESCOLA
             // ============================================
-            function filtrarAlunosPorEscola(escolaId) {
+            async function filtrarAlunosPorEscola(escolaId) {
                 const selectTurma = document.getElementById('filtro-turma-alunos');
                 if (selectTurma) {
                     selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
                     if (escolaId && escolaId !== '') {
-                        fetch(API_URL + '/api/turmas?escola_id=' + escolaId)
-                            .then(r => r.json())
-                            .then(turmas => {
-                                if (turmas && !turmas.erro) {
-                                    turmas.forEach(t => {
-                                        const opt = document.createElement('option');
-                                        opt.value = t.id;
-                                        opt.textContent = t.nome + ' - ' + (t.serie || '');
-                                        selectTurma.appendChild(opt);
-                                    });
-                                }
-                            })
-                            .catch(e => console.error('Erro ao carregar turmas:', e));
+                        const turmas = await carregarTurmasComCache(escolaId);
+                        if (turmas && !turmas.erro) {
+                            turmas.forEach(t => {
+                                const opt = document.createElement('option');
+                                opt.value = t.id;
+                                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                                selectTurma.appendChild(opt);
+                            });
+                        }
                     }
                 }
                 carregarAlunos(escolaId);
@@ -3031,12 +3119,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR PROVAS
+            // CARREGAR PROVAS (COM CACHE)
             // ============================================
             async function carregarProvas() {
                 try {
-                    const response = await fetch(API_URL + '/api/provas');
-                    const provas = await response.json();
+                    const provas = await carregarProvasComCache();
                     const tbody = document.getElementById('tb-provas');
                     if (!tbody) return;
 
@@ -3060,7 +3147,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // VISUALIZAR PROVA (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO)
+            // VISUALIZAR PROVA
             // ============================================
             let visualizarProvaId = null;
             let visualizarProvaData = null;
@@ -3154,11 +3241,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR DASHBOARD (CORRIGIDO)
+            // CARREGAR DASHBOARD
             // ============================================
             async function carregarDashboard() {
                 try {
-                    const response = await fetch(API_URL + '/api/dashboard');
+                    const response = await fetch(`${API_URL}/api/dashboard`);
                     const dados = await response.json();
 
                     setText('totalEscolas', dados.total_escolas || 0);
@@ -3174,12 +3261,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR GABARITOS (COM INDICADOR BNCC)
+            // CARREGAR GABARITOS
             // ============================================
             async function carregarGabaritos() {
                 try {
-                    const response = await fetch(API_URL + '/api/provas');
-                    const provas = await response.json();
+                    const provas = await carregarProvasComCache();
                     const tbody = document.getElementById('tb-gabaritos');
                     if (!tbody) return;
                     const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
@@ -3210,7 +3296,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RESULTADOS COM FILTROS (CORRIGIDO)
+            // CARREGAR RESULTADOS COM FILTROS
             // ============================================
             async function carregarResultadosComFiltros() {
                 try {
@@ -3219,11 +3305,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const turmaId = document.getElementById('filtro-turma').value;
                     const provaId = document.getElementById('filtro-prova').value;
 
-                    // ---- BUSCAR TOTAL DE ALUNOS DA TURMA/ESCOLA ----
                     let totalAlunosTurma = 0;
                     let alunosDaTurma = [];
 
-                    // Monta parâmetros para buscar alunos
                     const paramsAlunos = new URLSearchParams();
                     if (turmaId && turmaId !== '') paramsAlunos.append('turma_id', turmaId);
                     else if (escolaId && escolaId !== '') paramsAlunos.append('escola_id', escolaId);
@@ -3231,8 +3315,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     if (paramsAlunos.toString()) {
                         try {
-                            const respAlunos = await fetch(`${API_URL}/api/alunos?${paramsAlunos.toString()}`);
-                            const alunosData = await respAlunos.json();
+                            const alunosData = await carregarAlunosComCache({
+                                turma_id: turmaId || undefined,
+                                escola_id: escolaId || undefined,
+                                serie: serie || undefined
+                            });
                             if (alunosData && !alunosData.erro && Array.isArray(alunosData)) {
                                 alunosDaTurma = alunosData;
                                 totalAlunosTurma = alunosData.length;
@@ -3242,7 +3329,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     }
 
-                    // ---- BUSCAR RESULTADOS CORRIGIDOS (histórico agrupado) ----
                     let url = API_URL + '/api/historico/agrupado';
                     const paramsHist = new URLSearchParams();
                     if (escolaId && escolaId !== '') paramsHist.append('escola', escolaId);
@@ -3257,7 +3343,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const tbody = document.getElementById('tb-resultados-filtrado');
                     if (!tbody) return;
 
-                    // ---- ATUALIZAR CARDS ----
                     const totalCorrigidos = (alunos && !alunos.erro && Array.isArray(alunos)) ? alunos.length : 0;
                     const diff = Math.max(0, totalAlunosTurma - totalCorrigidos);
 
@@ -3291,13 +3376,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         return;
                     }
 
-                    // ---- IDENTIFICAR A DISCIPLINA DA PROVA (se houver) ----
                     let disciplinaAlvo = null;
                     if (provaId && provaId !== '') {
                         try {
-                            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
-                            const prova = await provaResp.json();
-                            if (prova && !prova.erro && prova.disciplina) {
+                            const provas = await carregarProvasComCache();
+                            const prova = provas.find(p => p.id == provaId);
+                            if (prova && prova.disciplina) {
                                 disciplinaAlvo = mapearDisciplina(prova.disciplina);
                             }
                         } catch (e) {
@@ -3319,7 +3403,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         return mapa[nome] || null;
                     }
 
-                    // ---- CÁLCULO DOS CONCEITOS (APENAS UMA DISCIPLINA OU TODAS) ----
                     const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
 
                     if (disciplinaAlvo) {
@@ -3359,10 +3442,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                            contagemConceitos.proficiente + contagemConceitos.avancado;
                     setText('total-conceitos-label', totalConceitos);
 
-                    // ---- MONTAGEM DA TABELA ----
                     dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
                     const total = dadosAlunos.length;
-                    const mediaGeral = total > 0 ? dadosAlunos.reduce((s, a) => s + (a.media || 0), 0) / total : 0;
 
                     setText('total-alunos-tabela', total + ' alunos');
 
@@ -3463,8 +3544,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             async function carregarFiltrosResultados() {
                 try {
-                    const respEscolas = await fetch(API_URL + '/api/escolas');
-                    const escolas = await respEscolas.json();
+                    const escolas = await carregarEscolasComCache();
                     const selectEscola = document.getElementById('filtro-escola');
                     if (selectEscola && escolas && !escolas.erro) {
                         const current = selectEscola.value;
@@ -3476,8 +3556,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (current) selectEscola.value = current;
                     }
 
-                    const respTurmas = await fetch(API_URL + '/api/turmas');
-                    const turmas = await respTurmas.json();
+                    const turmas = await carregarTurmasComCache();
                     const selectTurma = document.getElementById('filtro-turma');
                     if (selectTurma && turmas && !turmas.erro) {
                         const current = selectTurma.value;
@@ -3492,8 +3571,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (current) selectTurma.value = current;
                     }
 
-                    const respProvas = await fetch(API_URL + '/api/provas');
-                    const provas = await respProvas.json();
+                    const provas = await carregarProvasComCache();
                     const selectProva = document.getElementById('filtro-prova');
                     if (selectProva && provas && !provas.erro) {
                         const current = selectProva.value;
@@ -3518,11 +3596,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 if (!selectTurma) return;
                 selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
                 try {
-                    const respTurmas = await fetch(API_URL + '/api/turmas');
-                    const turmas = await respTurmas.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
                     if (turmas && !turmas.erro) {
-                        const turmasFiltradas = escolaId && escolaId !== '' ? turmas.filter(t => t.escola_id == escolaId) : turmas;
-                        turmasFiltradas.forEach(t => {
+                        turmas.forEach(t => {
                             const opt = document.createElement('option');
                             opt.value = t.id;
                             opt.textContent = t.nome + ' - ' + (t.serie || '');
@@ -3547,7 +3623,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 const selectTurma = document.getElementById('filtro-turma');
                 selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-                fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                carregarTurmasComCache().then(turmas => {
                     if (turmas && !turmas.erro) {
                         turmas.forEach(t => {
                             const opt = document.createElement('option');
@@ -3561,7 +3637,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }).catch(e => console.error('Erro ao recarregar turmas:', e));
 
                 const selectProva = document.getElementById('filtro-prova');
-                fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
+                carregarProvasComCache(true).then(provas => {
                     if (provas && !provas.erro) {
                         selectProva.innerHTML = '<option value="">Todas as provas</option>';
                         provas.forEach(p => {
@@ -3570,13 +3646,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             opt.textContent = p.titulo + ' - ' + (p.serie || '');
                             selectProva.appendChild(opt);
                         });
+                        carregarResultadosComFiltros();
                     }
-                    carregarResultadosComFiltros();
                 }).catch(e => console.error('Erro ao recarregar provas:', e));
             }
 
             // ============================================
-            // CORREÇÃO MANUAL (DENTRO DA IA) - MANTIDA
+            // CORREÇÃO MANUAL (DENTRO DA IA)
             // ============================================
             function abrirCorrecaoManual() {
                 if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
@@ -3601,7 +3677,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 openM('m-correcao-manual');
             }
 
-            // ===== GERAR GRID CORREÇÃO MANUAL (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO) =====
+            // ===== GERAR GRID CORREÇÃO MANUAL =====
             function gerarGridCorrecaoManual() {
                 const grid = document.getElementById('cm-grid');
                 if (!grid) return;
@@ -3611,7 +3687,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const gabarito = correcaoManualData.gabarito || [];
                 const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
 
-                // Aplicar estilo: se produção de texto, vertical; senão, grid horizontal
                 if (isProducao) {
                     grid.style.display = 'flex';
                     grid.style.flexDirection = 'column';
@@ -3634,7 +3709,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
                     if (isProducao) {
-                        // Layout vertical com campos editáveis
                         div.style.background = 'var(--bg2)';
                         div.style.border = '1px solid var(--border)';
                         div.style.borderRadius = '8px';
@@ -3664,7 +3738,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             atualizarResumoCorrecaoManual();
                         });
                     } else {
-                        // Layout horizontal para outras disciplinas
                         let options = '<option value="">—</option>';
                         alternativas.forEach(alt => {
                             const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
@@ -3821,6 +3894,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (data.sucesso) {
                             showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
                             closeM('m-correcao-manual');
+                            limparCache();
                             const notaEl = document.getElementById('ia-nota'); if (notaEl) { notaEl.textContent = nota.toFixed(1);
                                 notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)'; }
                             const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ? 'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
@@ -3836,7 +3910,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CORREÇÃO MANUAL STANDALONE (MENU) - MANTIDA
+            // CORREÇÃO MANUAL STANDALONE (MENU)
             // ============================================
             function abrirCorrecaoManualStandalone() {
                 carregarEscolasParaCorrecaoManual();
@@ -3859,8 +3933,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             async function carregarEscolasParaCorrecaoManual() {
                 try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const select = document.getElementById('cm-escola-select');
                     if (select && escolas && !escolas.erro) {
                         const current = select.value;
@@ -3893,8 +3966,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 cmStandaloneData.escolaId = parseInt(escolaId);
 
                 try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
                     if (turmas && !turmas.erro) {
                         turmas.forEach(t => {
                             const opt = document.createElement('option');
@@ -3921,8 +3993,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     cmStandaloneData.serie = turmaOption.dataset.serie || '';
                 }
                 try {
-                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                    const alunos = await response.json();
+                    const alunos = await carregarAlunosComCache({ turma_id: turmaId });
                     if (alunos && !alunos.erro) {
                         alunos.forEach(a => {
                             const opt = document.createElement('option');
@@ -3941,8 +4012,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
                 if (!turmaId) return;
                 try {
-                    const response = await fetch(`${API_URL}/api/provas?turma_id=${turmaId}`);
-                    const provas = await response.json();
+                    const provas = await carregarProvasComCache();
                     if (provas && !provas.erro) {
                         provas.forEach(p => {
                             const opt = document.createElement('option');
@@ -4060,7 +4130,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 showToast('📝 Correção manual iniciada para ' + cmStandaloneData.alunoNome, 'success');
             }
 
-            // ===== GERAR GRID CORREÇÃO MANUAL STANDALONE (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO) =====
+            // ===== GERAR GRID CORREÇÃO MANUAL STANDALONE =====
             function gerarGridCorrecaoManualSA() {
                 const grid = document.getElementById('cm-grid-standalone');
                 if (!grid) return;
@@ -4071,7 +4141,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const respostas = cmStandaloneData.respostas || [];
                 const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
 
-                // Aplicar estilo: se produção de texto, vertical; senão, grid horizontal
                 if (isProducao) {
                     grid.style.display = 'flex';
                     grid.style.flexDirection = 'column';
@@ -4283,6 +4352,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     .then(data => {
                         if (data.sucesso) {
                             showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
+                            limparCache();
                             closeM('m-correcao-manual-standalone');
                             setTimeout(() => { carregarResultadosComFiltros();
                                 carregarDashboard();
@@ -4294,7 +4364,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE (SEM SELECTS)
+            // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE
             // ============================================
             async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
                 try {
@@ -4381,7 +4451,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÕES DE USUÁRIO (COM CORREÇÃO DO ÍCONE ✏️)
+            // FUNÇÕES DE USUÁRIO
             // ============================================
             function abrirModalUsuario() {
                 usuarioEditandoId = null;
@@ -4406,7 +4476,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('editar-usuario-id').value = id;
                         document.getElementById('usuario-nome').value = usuario.nome || '';
                         document.getElementById('usuario-username').value = usuario.username || '';
-                        document.getElementById('usuario-senha').value = ''; // não preenchemos a senha
+                        document.getElementById('usuario-senha').value = '';
                         document.getElementById('usuario-email').value = usuario.email || '';
                         document.getElementById('usuario-perfil').value = usuario.perfil || 'usuario';
                         document.getElementById('usuario-ativo').checked = usuario.ativo !== false;
@@ -4451,6 +4521,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('✅ Usuário "' + username + '" salvo com sucesso!', 'success');
+                        limparCache();
                         closeM('m-usuario');
                         carregarUsuarios();
                         carregarDados();
@@ -4475,7 +4546,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÕES DE TEXTO IA (simplificadas)
+            // FUNÇÕES DE TEXTO IA
             // ============================================
             function prevTexto(input) {
                 const file = input.files[0];
@@ -4529,8 +4600,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
                     if (alunoId) {
                         try {
-                            const respAlunos = await fetch(API_URL + '/api/alunos');
-                            const alunos = await respAlunos.json();
+                            const alunos = await carregarAlunosComCache();
                             const aluno = alunos.find(a => a.id == alunoId);
                             setText('txt-aluno-nome', aluno ? aluno.nome : '—');
                         } catch (e) {}
@@ -4591,7 +4661,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÃO DE CORREÇÃO COM IA (mantida)
+            // FUNÇÃO DE CORREÇÃO COM IA
             // ============================================
             async function processarComIA(imagemBase64) {
                 showToast('🤖 Processando...', 'ai');
@@ -4615,13 +4685,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (partes.length > 1) imagemEnvio = partes[1];
                     }
 
-                    const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
-                    const prova = await provaResp.json();
-                    if (!prova || prova.erro) { showToast('❌ Erro ao carregar dados da prova', 'error'); return; }
+                    const provas = await carregarProvasComCache();
+                    const prova = provas.find(p => p.id == provaId);
+                    if (!prova) { showToast('❌ Erro ao carregar dados da prova', 'error'); return; }
 
-                    const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
-                    const aluno = await alunoResp.json();
-                    if (!aluno || aluno.erro) { showToast('❌ Erro ao carregar dados do aluno', 'error'); return; }
+                    const alunos = await carregarAlunosComCache();
+                    const aluno = alunos.find(a => a.id == alunoId);
+                    if (!aluno) { showToast('❌ Erro ao carregar dados do aluno', 'error'); return; }
 
                     const response = await fetch(`${API_URL}/api/corrigir`, {
                         method: 'POST',
@@ -4692,7 +4762,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
             // ============================================
-            // FUNÇÕES DE CRUD CORRIGIDAS (mantidas)
+            // FUNÇÕES DE CRUD CORRIGIDAS
             // ============================================
 
             // ===== ESCOLA =====
@@ -4719,6 +4789,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok && result.data.id) {
                         showToast('✅ Escola "' + nome + '" salva com sucesso!', 'success');
+                        limparCache();
                         closeM('m-escola');
                         carregarEscolas();
                         carregarDashboard();
@@ -4775,6 +4846,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('✅ Escola "' + nome + '" atualizada com sucesso!', 'success');
+                        limparCache();
                         closeM('m-editar-escola');
                         carregarEscolas();
                         carregarCombos();
@@ -4799,6 +4871,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast(`✅ Escola "${nome}" excluída com sucesso!`, 'success');
+                        limparCache();
                     } else {
                         showToast(`❌ Erro ao excluir escola: ${result.data.erro || 'Erro desconhecido'}`, 'error');
                         return;
@@ -4857,6 +4930,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok && result.data.id) {
                         showToast('✅ Turma "' + nome + '" salva com sucesso!', 'success');
+                        limparCache();
                         closeM('m-turma');
                         carregarTurmas();
                         carregarDashboard();
@@ -4884,23 +4958,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('editar-turma-capacidade').value = turma.capacidade || 35;
                         document.getElementById('editar-turma-professor').value = turma.professor || '';
 
-                        fetch(API_URL + '/api/escolas')
-                            .then(r => r.json())
-                            .then(escolas => {
-                                const select = document.getElementById('editar-turma-escola');
-                                select.innerHTML = '<option value="">Selecione a escola</option>';
-                                if (escolas && !escolas.erro) {
-                                    escolas.forEach(e => {
-                                        const opt = document.createElement('option');
-                                        opt.value = e.id;
-                                        opt.textContent = e.nome;
-                                        if (e.id == turma.escola_id) opt.selected = true;
-                                        select.appendChild(opt);
-                                    });
-                                }
-                                openM('m-editar-turma');
-                            })
-                            .catch(e => console.error('Erro ao carregar escolas:', e));
+                        carregarEscolasComCache().then(escolas => {
+                            const select = document.getElementById('editar-turma-escola');
+                            select.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) {
+                                escolas.forEach(e => {
+                                    const opt = document.createElement('option');
+                                    opt.value = e.id;
+                                    opt.textContent = e.nome;
+                                    if (e.id == turma.escola_id) opt.selected = true;
+                                    select.appendChild(opt);
+                                });
+                            }
+                            openM('m-editar-turma');
+                        }).catch(e => console.error('Erro ao carregar escolas:', e));
                     })
                     .catch(e => { showToast('❌ Erro ao carregar turma: ' + e.message, 'error');
                         console.error('Erro ao carregar turma:', e); });
@@ -4933,6 +5004,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('✅ Turma "' + nome + '" atualizada com sucesso!', 'success');
+                        limparCache();
                         closeM('m-editar-turma');
                         carregarTurmas();
                         carregarCombos();
@@ -4956,6 +5028,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('🗑️ Turma "' + nome + '" excluída com sucesso!', 'success');
+                        limparCache();
                         carregarTurmas();
                         carregarDashboard();
                         carregarCombos();
@@ -5001,6 +5074,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok && result.data.id) {
                         showToast('✅ Aluno "' + nome + '" salvo com sucesso!', 'success');
+                        limparCache();
                         closeM('m-aluno');
                         document.getElementById('aluno-nome').value = '';
                         document.getElementById('aluno-matricula').value = '';
@@ -5041,30 +5115,27 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('editar-aluno-email').value = aluno.email || '';
                         document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
 
-                        fetch(API_URL + '/api/escolas')
-                            .then(r => r.json())
-                            .then(escolas => {
-                                const selectEscola = document.getElementById('editar-aluno-escola');
-                                selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
-                                if (escolas && !escolas.erro) {
-                                    escolas.forEach(e => {
-                                        const opt = document.createElement('option');
-                                        opt.value = e.id;
-                                        opt.textContent = e.nome;
-                                        if (e.id == aluno.escola_id) opt.selected = true;
-                                        selectEscola.appendChild(opt);
+                        carregarEscolasComCache().then(escolas => {
+                            const selectEscola = document.getElementById('editar-aluno-escola');
+                            selectEscola.innerHTML = '<option value="">Selecione a escola</option>';
+                            if (escolas && !escolas.erro) {
+                                escolas.forEach(e => {
+                                    const opt = document.createElement('option');
+                                    opt.value = e.id;
+                                    opt.textContent = e.nome;
+                                    if (e.id == aluno.escola_id) opt.selected = true;
+                                    selectEscola.appendChild(opt);
+                                });
+                            }
+                            if (aluno.escola_id) {
+                                carregarTurmasPorEscolaParaAluno(aluno.escola_id, 'editar-aluno-turma')
+                                    .then(() => {
+                                        const selectTurma = document.getElementById('editar-aluno-turma');
+                                        if (selectTurma) selectTurma.value = aluno.turma_id;
                                     });
-                                }
-                                if (aluno.escola_id) {
-                                    carregarTurmasPorEscolaParaAluno(aluno.escola_id, 'editar-aluno-turma')
-                                        .then(() => {
-                                            const selectTurma = document.getElementById('editar-aluno-turma');
-                                            if (selectTurma) selectTurma.value = aluno.turma_id;
-                                        });
-                                }
-                                openM('m-editar-aluno');
-                            })
-                            .catch(e => console.error('Erro ao carregar escolas:', e));
+                            }
+                            openM('m-editar-aluno');
+                        }).catch(e => console.error('Erro ao carregar escolas:', e));
                     })
                     .catch(e => { showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
                         console.error('Erro ao carregar aluno:', e); });
@@ -5103,6 +5174,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('✅ Aluno "' + nome + '" atualizado com sucesso!', 'success');
+                        limparCache();
                         closeM('m-editar-aluno');
                         carregarAlunos();
                         carregarCombos();
@@ -5126,6 +5198,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('🗑️ Aluno "' + nome + '" excluído com sucesso!', 'success');
+                        limparCache();
                         carregarAlunos();
                         carregarDashboard();
                         carregarCombos();
@@ -5153,7 +5226,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     data_prova: document.getElementById('prova-data').value || null,
                     quantidade_questoes: parseInt(document.getElementById('prova-questoes').value) || 20,
                     nota_maxima: parseFloat(document.getElementById('prova-nota').value) || 10,
-                    tipo_questoes: '4'  // sempre 4 opções agora
+                    tipo_questoes: '4'
                 };
 
                 try {
@@ -5166,6 +5239,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok && result.data.id) {
                         showToast('✅ Prova "' + titulo + '" salva com sucesso para a série ' + serie + '!', 'success');
+                        limparCache();
                         document.getElementById('prova-titulo').value = '';
                         document.getElementById('up-ok').style.display = 'block';
                         setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
@@ -5194,6 +5268,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('🗑️ Prova "' + nome + '" excluída com sucesso!', 'success');
+                        limparCache();
                         carregarProvas();
                         carregarDashboard();
                         carregarCombos();
@@ -5294,8 +5369,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             async function carregarEscolasCorrigir() {
                 try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const select = document.getElementById('corrigir-escola');
                     if (select && escolas && !escolas.erro) {
                         const current = select.value;
@@ -5315,8 +5389,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             async function carregarEscolasTexto() {
                 try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const select = document.getElementById('txt-escola');
                     if (select && escolas && !escolas.erro) {
                         const current = select.value;
@@ -5339,8 +5412,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             async function carregarFiltrosRelTurma() {
                 try {
-                    const respEscolas = await fetch(API_URL + '/api/escolas');
-                    const escolas = await respEscolas.json();
+                    const escolas = await carregarEscolasComCache();
                     const selectEscola = document.getElementById('rel-turma-escola');
                     if (selectEscola && escolas && !escolas.erro) {
                         const current = selectEscola.value;
@@ -5357,8 +5429,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     }
 
-                    const respProvas = await fetch(API_URL + '/api/provas');
-                    const provas = await respProvas.json();
+                    const provas = await carregarProvasComCache();
                     const selectProva = document.getElementById('rel-turma-prova');
                     if (selectProva && provas && !provas.erro) {
                         const current = selectProva.value;
@@ -5386,8 +5457,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 if (!escolaId || escolaId === '') {
                     try {
-                        const respTurmas = await fetch(API_URL + '/api/turmas');
-                        const turmas = await respTurmas.json();
+                        const turmas = await carregarTurmasComCache();
                         if (turmas && !turmas.erro) {
                             turmas.forEach(t => {
                                 const opt = document.createElement('option');
@@ -5406,8 +5476,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
 
                 try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
 
                     if (turmas && !turmas.erro && turmas.length > 0) {
                         turmas.forEach(t => {
@@ -5439,7 +5508,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RELATÓRIO POR TURMA FILTRADO (MODIFICADO)
+            // CARREGAR RELATÓRIO POR TURMA FILTRADO
             // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
@@ -5682,7 +5751,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 const selectTurma = document.getElementById('rel-turma-turma');
                 selectTurma.innerHTML = '<option value="">Todas as turmas</option>';
-                fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                carregarTurmasComCache().then(turmas => {
                     if (turmas && !turmas.erro) {
                         turmas.forEach(t => {
                             const opt = document.createElement('option');
@@ -5696,7 +5765,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }).catch(e => console.error('Erro ao recarregar turmas:', e));
 
                 const selectProva = document.getElementById('rel-turma-prova');
-                fetch(API_URL + '/api/provas').then(r => r.json()).then(provas => {
+                carregarProvasComCache(true).then(provas => {
                     if (provas && !provas.erro) {
                         selectProva.innerHTML = '<option value="">Todas as provas</option>';
                         provas.forEach(p => {
@@ -5717,8 +5786,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             async function carregarEscolasDesempenho() {
                 try {
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
                     const select = document.getElementById('filtro-escola-desempenho');
 
                     if (select && escolas && !escolas.erro) {
@@ -5733,8 +5801,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (current) select.value = current;
                     }
 
-                    const provasResp = await fetch(API_URL + '/api/provas');
-                    const provas = await provasResp.json();
+                    const provas = await carregarProvasComCache();
                     const selectProva = document.getElementById('filtro-prova-desempenho');
 
                     if (selectProva && provas && !provas.erro) {
@@ -5774,8 +5841,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 if (!escolaId) return;
 
                 try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
 
                     if (turmas && !turmas.erro) {
                         turmas.forEach(t => {
@@ -5799,8 +5865,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 if (!turmaId) return;
 
                 try {
-                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                    const alunos = await response.json();
+                    const alunos = await carregarAlunosComCache({ turma_id: turmaId });
 
                     if (alunos && !alunos.erro) {
                         alunos.forEach(a => {
@@ -5816,7 +5881,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
             }
 
-            // ===== FUNÇÃO GERAR DESEMPENHO (COM LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO) =====
+            // ===== FUNÇÃO GERAR DESEMPENHO =====
             async function gerarDesempenho() {
                 const escolaId = document.getElementById('filtro-escola-desempenho').value;
                 const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -5949,7 +6014,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const isProducao = (disciplina === 'Produção de Texto');
 
                     if (isProducao) {
-                        // Layout vertical para produção de texto
                         grid.style.display = 'flex';
                         grid.style.flexDirection = 'column';
                         grid.style.gap = '12px';
@@ -5987,7 +6051,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             grid.appendChild(div);
                         });
                     } else {
-                        // Layout horizontal para outras disciplinas
                         grid.style.display = 'grid';
                         grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
                         grid.style.gap = '6px';
@@ -6237,7 +6300,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 .resumo { grid-template-columns:1fr 1fr; }
                                 .disciplina-card .questoes-grid, .gabarito-oficial-card .questoes-grid { grid-template-columns:repeat(5,1fr); }
                             }
-                            /* Estilos para produção de texto (vertical) */
                             .questao-item.vertical {
                                 flex-direction: column;
                                 align-items: stretch;
@@ -6370,7 +6432,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÕES DE TURMA PARA TEXTO IA (mantidas)
+            // FUNÇÕES DE TURMA PARA TEXTO IA
             // ============================================
             async function carregarTurmasTexto(escolaId) {
                 const selectTurma = document.getElementById('txt-turma');
@@ -6379,8 +6441,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 selectAluno.innerHTML = '<option value="">Selecione...</option>';
                 if (!escolaId) return;
                 try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
                     if (turmas && !turmas.erro) {
                         turmas.forEach(t => {
                             const opt = document.createElement('option');
@@ -6397,8 +6458,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 selectAluno.innerHTML = '<option value="">Selecione...</option>';
                 if (!turmaId) return;
                 try {
-                    const response = await fetch(`${API_URL}/api/alunos?turma_id=${turmaId}`);
-                    const alunos = await response.json();
+                    const alunos = await carregarAlunosComCache({ turma_id: turmaId });
                     if (alunos && !alunos.erro) {
                         alunos.forEach(a => {
                             const opt = document.createElement('option');
@@ -6796,7 +6856,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // GABARITO - BUILD GRID (COM BNCC E LAYOUT VERTICAL PARA PRODUÇÃO DE TEXTO)
+            // GABARITO - BUILD GRID
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
@@ -6810,7 +6870,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
                 const isProducao = (disciplina === 'Produção de Texto');
 
-                // Sempre usar 4 alternativas (A, B, C, D)
                 const alts = ['A', 'B', 'C', 'D'];
                 const total = parseInt(totalEl.value) || 20;
                 const lbl = document.getElementById('gab-label');
@@ -6822,7 +6881,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     }
                 }
 
-                // Aplicar estilo: se produção de texto, layout vertical; senão, grid horizontal
                 if (isProducao) {
                     grid.style.display = 'flex';
                     grid.style.flexDirection = 'column';
@@ -6838,7 +6896,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const div = document.createElement('div');
                     div.className = 'gab-item';
                     if (isProducao) {
-                        // Layout vertical com campos editáveis: título, resposta, nível, observação
                         div.innerHTML = `
                             <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold; text-align:center;" />
                             <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;"></textarea>
@@ -6852,7 +6909,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical; margin-top:4px;"></textarea>
                         `;
                     } else {
-                        // Layout horizontal (padrão) para outras disciplinas
                         let opts = '<option value="">—</option>';
                         alts.forEach(a => { opts += '<option>' + a + '</option>'; });
                         div.innerHTML = `
@@ -6895,7 +6951,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // SALVAR GABARITO (COM BNCC)
+            // SALVAR GABARITO
             // ============================================
             async function saveGab() {
                 try {
@@ -6939,6 +6995,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await response.json();
                     if (response.ok && result.id) {
                         showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
+                        limparCache();
                         carregarGabaritos();
                         carregarCombos();
                         carregarProvas();
@@ -6951,7 +7008,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // EDITAR GABARITO (COM BNCC)
+            // EDITAR GABARITO
             // ============================================
             function editarGabarito(id) {
                 showToast('✏️ Carregando gabarito...', 'info');
@@ -6994,7 +7051,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                         niveis.forEach((sel, i) => {
                                             if (i < bncc.length && bncc[i]) sel.value = bncc[i];
                                         });
-                                        // observações não são salvas, mas mantemos vazio
                                     } else {
                                         const selects = document.querySelectorAll('.gab-select');
                                         const bnccInputs = document.querySelectorAll('.gab-bncc');
@@ -7030,6 +7086,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const result = await processarRespostaAPI(response);
                     if (result.ok) {
                         showToast('🗑️ Gabarito excluído com sucesso!', 'success');
+                        limparCache();
                         carregarGabaritos();
                         carregarProvas();
                     } else {
@@ -7049,8 +7106,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 select.innerHTML = '<option value="">Selecione a turma</option>';
                 if (!escolaId) return;
                 try {
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
                     if (turmas && !turmas.erro) {
                         turmas.forEach(t => {
                             const opt = document.createElement('option');
@@ -7070,22 +7126,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
                 if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
                 try {
-                    const alunosResp = await fetch(API_URL + '/api/alunos?turma_id=' + turmaId);
-                    const alunos = await alunosResp.json();
-                    const turmaResp = await fetch(API_URL + '/api/turmas');
-                    const turmas = await turmaResp.json();
+                    const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+                    const turmas = await carregarTurmasComCache();
                     const turma = turmas.find(t => t.id == turmaId);
                     const container = document.getElementById('lista-resultado');
                     if (!container) return;
                     if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
                         showToast('❌ Nenhum aluno na turma!', 'error'); return; }
-                    const provasResp = await fetch(API_URL + '/api/provas');
-                    const provas = await provasResp.json();
+                    const provas = await carregarProvasComCache();
                     const prova = provas.find(p => p.turma_id == turmaId);
                     if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
                         showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
-                    const escolaResp = await fetch(API_URL + '/api/escolas');
-                    const escolas = await escolaResp.json();
+                    const escolas = await carregarEscolasComCache();
                     const escola = escolas.find(e => e.id == turma?.escola_id);
                     let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
                     html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
@@ -7099,8 +7151,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 try {
-                    const provasResp = await fetch(API_URL + '/api/provas');
-                    const provas = await provasResp.json();
+                    const provas = await carregarProvasComCache();
                     const prova = provas.find(p => p.id == provaId);
                     const qtdQuestoes = prova?.quantidade_questoes || 20;
                     const response = await fetch(API_URL + '/api/gerar_gabarito', {
@@ -7191,6 +7242,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 setTimeout(() => { row.remove();
                     showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
                     delTarget = null;
+                    limparCache();
                     renumerarTabela(row.closest('tbody')); }, 350);
             }
 
@@ -7242,7 +7294,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     info.style.borderColor = 'rgba(139,92,246,.25)';
                     info.style.background = 'rgba(139,92,246,.07)';
                 } else {
-                    // Sempre 4 alternativas agora
                     info.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
                     info.style.color = 'var(--blue)';
                     info.style.borderColor = 'rgba(59,130,246,.25)';
@@ -7255,7 +7306,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 if (!escolaId) return;
                 const select = document.getElementById('prova-turma');
                 select.innerHTML = '<option value="">Selecione a turma</option>';
-                fetch(API_URL + '/api/turmas?escola_id=' + escolaId).then(r => r.json()).then(turmas => {
+                carregarTurmasComCache(escolaId).then(turmas => {
                     if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option');
                             opt.value = t.id;
                             opt.textContent = t.nome + ' - ' + (t.serie || '—');
@@ -7270,7 +7321,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 try {
                     const tbody = document.getElementById('u-tb-turmas');
                     if (tbody) {
-                        fetch(API_URL + '/api/turmas').then(r => r.json()).then(turmas => {
+                        carregarTurmasComCache().then(turmas => {
                             if (turmas && turmas.length > 0) {
                                 tbody.innerHTML = turmas.map(t => {
                                     const totalAlunos = t.total_alunos || 0;
@@ -7283,12 +7334,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR COMBOS (COM ESCOLAS PARA ALUNO)
+            // CARREGAR COMBOS (COM CACHE)
             // ============================================
             async function carregarCombos() {
                 try {
-                    const respEscolas = await fetch(API_URL + '/api/escolas');
-                    const escolas = await respEscolas.json();
+                    const escolas = await carregarEscolasComCache();
 
                     ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
                         const select = document.getElementById(id);
@@ -7309,8 +7359,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     await carregarEscolasParaAluno();
 
-                    const respTurmas = await fetch(API_URL + '/api/turmas');
-                    const turmas = await respTurmas.json();
+                    const turmas = await carregarTurmasComCache();
                     ['aluno-turma', 'modal-prova-turma', 'lista-turma', 'editar-aluno-turma'].forEach(id => {
                         const select = document.getElementById(id);
                         if (select) {
@@ -7328,8 +7377,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     });
 
-                    const respProvas = await fetch(API_URL + '/api/provas');
-                    const provas = await respProvas.json();
+                    const provas = await carregarProvasComCache();
                     ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
                         const select = document.getElementById(id);
                         if (select) {
@@ -7354,8 +7402,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     });
 
-                    const respAlunos = await fetch(API_URL + '/api/alunos');
-                    const alunos = await respAlunos.json();
+                    const alunos = await carregarAlunosComCache();
                     ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
                         const select = document.getElementById(id);
                         if (select) {
@@ -7384,8 +7431,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 try {
                     console.log('🔄 Carregando escolas para o select de aluno...');
 
-                    const response = await fetch(API_URL + '/api/escolas');
-                    const escolas = await response.json();
+                    const escolas = await carregarEscolasComCache();
 
                     console.log('📥 Escolas recebidas:', escolas);
 
@@ -7458,8 +7504,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 try {
                     showToast('🔄 Carregando turmas...', 'info');
-                    const response = await fetch(`${API_URL}/api/turmas?escola_id=${escolaId}`);
-                    const turmas = await response.json();
+                    const turmas = await carregarTurmasComCache(escolaId);
                     console.log('📥 Turmas recebidas:', turmas);
 
                     if (turmas && !turmas.erro && turmas.length > 0) {
@@ -7493,12 +7538,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR RELATÓRIOS (CORRIGIDO)
+            // CARREGAR RELATÓRIOS
             // ============================================
             async function carregarRelatorios() {
                 try {
-                    const alunosResp = await fetch(API_URL + '/api/alunos');
-                    const alunos = await alunosResp.json();
+                    const alunos = await carregarAlunosComCache();
                     const correcoesResp = await fetch(API_URL + '/api/historico');
                     const correcoes = await correcoesResp.json();
                     const totalAlunos = alunos.length || 0;
@@ -7604,12 +7648,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             async function carregarRelatorioEscola() {
                 try {
-                    const escolasResp = await fetch(API_URL + '/api/escolas');
-                    const escolas = await escolasResp.json();
-                    const turmasResp = await fetch(API_URL + '/api/turmas');
-                    const turmas = await turmasResp.json();
-                    const alunosResp = await fetch(API_URL + '/api/alunos');
-                    const alunos = await alunosResp.json();
+                    const escolas = await carregarEscolasComCache();
+                    const turmas = await carregarTurmasComCache();
+                    const alunos = await carregarAlunosComCache();
                     const correcoesResp = await fetch(API_URL + '/api/historico');
                     const correcoes = await correcoesResp.json();
                     const tbody = document.getElementById('tb-rel-escola');
