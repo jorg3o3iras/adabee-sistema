@@ -94,13 +94,14 @@ except Exception as e:
     RELAY_AVAILABLE = False
 
 # ============================================
-# CONFIGURAÇÃO DO BANCO DE DADOS
+# CONFIGURAÇÃO DO BANCO DE DADOS (OTIMIZADO)
 # ============================================
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 DB_POOL = None
-DB_POOL_MIN = int(os.getenv('DB_POOL_MIN', '1'))
-DB_POOL_MAX = int(os.getenv('DB_POOL_MAX', '10'))
+# 🔧 ALTERAÇÃO 1: Aumentar pool de conexões para 5-30
+DB_POOL_MIN = int(os.getenv('DB_POOL_MIN', '5'))
+DB_POOL_MAX = int(os.getenv('DB_POOL_MAX', '30'))
 
 if not SUPABASE_URL:
     print("❌ ERRO: SUPABASE_URL não definida no .env")
@@ -1472,7 +1473,8 @@ def listar_historico():
             except ValueError:
                 pass
 
-        query += " ORDER BY h.data_correcao DESC"
+        # 🔧 ALTERAÇÃO 3: Adicionar LIMIT 500
+        query += " ORDER BY h.data_correcao DESC LIMIT 500"
 
         cur.execute(query, params)
         historico = cur.fetchall()
@@ -3028,7 +3030,8 @@ def dashboard():
     # dashboard é redesenhado/carregado por várias partes do frontend.
     now = datetime.now().timestamp()
     cached = app.config.get('_dashboard_cache')
-    if cached and now - cached[0] < 3:
+    # 🔧 ALTERAÇÃO 2: Aumentar cache para 30 segundos (antes era 3)
+    if cached and now - cached[0] < 30:
         return jsonify(cached[1])
 
     conn = get_db_connection()
@@ -3727,6 +3730,7 @@ if __name__ == '__main__':
     print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
+    print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
     print(f"🤖 Gemini: {'✅ Disponível' if GEMINI_AVAILABLE else '❌ Indisponível'}")
     if GEMINI_AVAILABLE:
         print(f"📌 Modelo: {GEMINI_MODEL}")
@@ -3762,7 +3766,7 @@ if __name__ == '__main__':
     print("   - /api/gerar_gabarito")
     print("   - /api/backup")
     print("   - /api/usuarios (GET, POST)")
-    print("   - /api/usuarios/<id> (GET, PUT, DELETE)  ✅ NOVO")
+    print("   - /api/usuarios/<id> (GET, PUT, DELETE)")
     print("=" * 60)
 
     # Inicializar banco
