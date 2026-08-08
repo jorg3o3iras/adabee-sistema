@@ -5573,9 +5573,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-// FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA (ATUALIZADA COM ACERTOS POR QUESTÃO)
+// FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA (CORRIGIDA COM AWAIT)
 // ============================================
-function imprimirRelatorioTurma() {
+async function imprimirRelatorioTurma() {
     // Buscar dados atuais da tela
     const escolaId = document.getElementById('rel-turma-escola').value;
     const serie = document.getElementById('rel-turma-serie').value;
@@ -5589,9 +5589,9 @@ function imprimirRelatorioTurma() {
         return;
     }
 
-    // Buscar informações da escola, turma e prova
+    // ===== BUSCAR INFORMAÇÕES DA ESCOLA, TURMA E PROVA (AGORA COM AWAIT) =====
     let nomeEscola = 'Não informado';
-    let municipio = 'São Sebastião da Boa Vista';
+    let municipio = 'Não informado';
     let estado = 'PA';
     let inep = 'Não informado';
     let diretor = 'Não informado';
@@ -5601,45 +5601,50 @@ function imprimirRelatorioTurma() {
     let bimestre = 'Não informado';
     let dataAtual = new Date().toLocaleDateString('pt-BR');
 
-    // Buscar dados da escola
-    if (escolaId) {
-        fetch(`${API_URL}/api/escolas/${escolaId}`)
-            .then(r => r.json())
-            .then(escolaData => {
-                if (escolaData && !escolaData.erro) {
-                    nomeEscola = escolaData.nome || 'Não informado';
-                    municipio = escolaData.municipio || 'São Sebastião da Boa Vista';
-                    estado = escolaData.estado || 'PA';
-                    inep = escolaData.inep || 'Não informado';
-                    diretor = escolaData.diretor || 'Não informado';
-                }
-            })
-            .catch(e => console.warn('Erro ao buscar escola:', e));
+    try {
+        // Buscar dados da escola
+        if (escolaId && escolaId !== '') {
+            const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
+            const escolaData = await escolaResp.json();
+            if (escolaData && !escolaData.erro) {
+                nomeEscola = escolaData.nome || 'Não informado';
+                municipio = escolaData.municipio || 'Não informado';
+                estado = escolaData.estado || 'PA';
+                inep = escolaData.inep || 'Não informado';
+                diretor = escolaData.diretor || 'Não informado';
+            }
+        }
+    } catch (e) {
+        console.warn('Erro ao buscar escola:', e);
     }
 
-    if (turmaId) {
-        fetch(`${API_URL}/api/turmas/${turmaId}`)
-            .then(r => r.json())
-            .then(turmaData => {
-                if (turmaData && !turmaData.erro) {
-                    turmaNome = turmaData.nome || 'Não informado';
-                    professor = turmaData.professor || 'Não informado';
-                    turno = turmaData.turno || 'Manhã';
-                }
-            })
-            .catch(e => console.warn('Erro ao buscar turma:', e));
+    try {
+        // Buscar dados da turma
+        if (turmaId && turmaId !== '') {
+            const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
+            const turmaData = await turmaResp.json();
+            if (turmaData && !turmaData.erro) {
+                turmaNome = turmaData.nome || 'Não informado';
+                professor = turmaData.professor || 'Não informado';
+                turno = turmaData.turno || 'Manhã';
+            }
+        }
+    } catch (e) {
+        console.warn('Erro ao buscar turma:', e);
     }
 
-    if (provaId) {
-        fetch(`${API_URL}/api/provas/${provaId}`)
-            .then(r => r.json())
-            .then(provaData => {
-                if (provaData && !provaData.erro) {
-                    bimestre = provaData.bimestre || 'Não informado';
-                    dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
-                }
-            })
-            .catch(e => console.warn('Erro ao buscar prova:', e));
+    try {
+        // Buscar dados da prova
+        if (provaId && provaId !== '') {
+            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+            const provaData = await provaResp.json();
+            if (provaData && !provaData.erro) {
+                bimestre = provaData.bimestre || 'Não informado';
+                dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
+            }
+        }
+    } catch (e) {
+        console.warn('Erro ao buscar prova:', e);
     }
 
     // Buscar disciplina selecionada
@@ -5669,7 +5674,8 @@ function imprimirRelatorioTurma() {
                 const qNum = item.querySelector('.q-num')?.textContent?.replace('Q', '') || '';
                 const qAcertos = item.querySelector('.q-acertos')?.textContent || '0';
                 const qErros = item.querySelector('.q-erros')?.textContent || '0';
-                const total = item.querySelector('div[style*="font-size:8px"]')?.textContent?.replace('Total: ', '') || '0';
+                const totalEl = item.querySelector('div[style*="font-size:8px"]');
+                const total = totalEl ? totalEl.textContent.replace('Total: ', '') : '0';
                 if (qNum) {
                     acertosPorQuestao[parseInt(qNum)] = {
                         acertos: parseInt(qAcertos) || 0,
@@ -5688,7 +5694,6 @@ function imprimirRelatorioTurma() {
 
     // Se não encontrou dados no grid, tentar buscar do relatório
     if (Object.keys(acertosPorQuestao).length === 0) {
-        // Tentar pegar do relatório já carregado
         const relTotalAcertos = document.getElementById('rel-total-acertos-disciplina')?.textContent || '0';
         const relTotalErros = document.getElementById('rel-total-erros-disciplina')?.textContent || '0';
         const relMedia = document.getElementById('rel-media-disciplina')?.textContent || '0%';
@@ -5699,10 +5704,8 @@ function imprimirRelatorioTurma() {
         totalQuestoesDisciplina = parseInt(relQuestoes) || 15;
         mediaDisciplina = parseFloat(relMedia) || 0;
         
-        // Se não tem dados, criar dados de exemplo para 15 questões
         if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 15;
         
-        // Distribuir acertos uniformemente se não houver dados por questão
         for (let i = 1; i <= totalQuestoesDisciplina; i++) {
             if (!acertosPorQuestao[i]) {
                 acertosPorQuestao[i] = {
