@@ -1120,6 +1120,54 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 }
 .print-only { display: none !important; }
 @media print { .print-only { display: block !important; } }
+
+/* ============================================
+   NOVO ESTILO PARA O CARD DE ACERTOS POR QUESTÃO
+   ============================================ */
+.acertos-por-questao-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    padding: 12px 4px;
+}
+.acertos-por-questao-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 4px;
+    text-align: center;
+    transition: all 0.3s;
+}
+.acertos-por-questao-item:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+}
+.acertos-por-questao-item .q-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text2);
+    margin-bottom: 4px;
+}
+.acertos-por-questao-item .q-acertos {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--green);
+}
+.acertos-por-questao-item .q-erros {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--red);
+}
+.acertos-por-questao-item .q-label {
+    font-size: 9px;
+    color: var(--text3);
+    margin-top: 2px;
+}
+.acertos-por-questao-item .q-divider {
+    color: var(--text3);
+    font-size: 12px;
+    margin: 0 2px;
+}
     </style>
 </head>
 <body>
@@ -1138,8 +1186,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <div class="login-card">
             <div class="login-logo">
                 <div class="l-icon">
-  <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="width: 240px; height: 100px;">
-</div>
+                    <img src="https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/semed.png" alt="Logo" style="width: 240px; height: 100px;">
+                </div>
                 <h1>CorrigePro</h1>
                 <p>Sistema Inteligente de Correção de Provas</p>
                 <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
@@ -1910,6 +1958,22 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- ========== NOVO CARD: ACERTOS POR QUESTÃO ========== -->
+                <div class="card" id="rel-acertos-por-questao">
+                    <div class="card-header">
+                        <div class="card-title" id="rel-acertos-por-questao-titulo">📊 Acertos por Questão — <span id="rel-acertos-disciplina">Disciplina</span></div>
+                        <span class="badge badge-green" id="rel-total-questoes">0 questões</span>
+                    </div>
+                    <div id="rel-acertos-grid" class="acertos-por-questao-grid">
+                        <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>
+                    </div>
+                    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px;flex-wrap:wrap;gap:8px;">
+                        <span>✅ Total de Acertos: <strong style="color:var(--green);" id="rel-total-acertos-disciplina">0</strong></span>
+                        <span>❌ Total de Erros: <strong style="color:var(--red);" id="rel-total-erros-disciplina">0</strong></span>
+                        <span>📊 Média da Turma: <strong style="color:var(--blue);" id="rel-media-disciplina">0%</strong></span>
                     </div>
                 </div>
 
@@ -5540,6 +5604,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         setText('rel-media', '0%');
                         setText('rel-total-alunos-conceitos', '0 alunos');
                         setText('rel-total-correcoes', '0 correções');
+                        setText('rel-total-questoes', '0 questões');
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             setText(`rel-conceito-${c}-count`, '0');
                             const bar = document.getElementById(`rel-conceito-${c}-bar`);
@@ -5550,6 +5615,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         setText('rel-disc-erros', '0');
                         setText('rel-disc-media', '0.0');
                         setText('rel-disc-conceito', '—');
+                        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-total-acertos-disciplina', '0');
+                        setText('rel-total-erros-disciplina', '0');
+                        setText('rel-media-disciplina', '0%');
+                        document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
                         const tbody = document.getElementById('tb-rel-alunos');
                         if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
                         setText('rel-total-alunos-tabela', '0 alunos');
@@ -5562,6 +5632,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         setText('rel-media', '0%');
                         setText('rel-total-alunos-conceitos', '0 alunos');
                         setText('rel-total-correcoes', '0 correções');
+                        setText('rel-total-questoes', '0 questões');
                         ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                             setText(`rel-conceito-${c}-count`, '0');
                             const bar = document.getElementById(`rel-conceito-${c}-bar`);
@@ -5572,6 +5643,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         setText('rel-disc-erros', '0');
                         setText('rel-disc-media', '0.0');
                         setText('rel-disc-conceito', '—');
+                        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-total-acertos-disciplina', '0');
+                        setText('rel-total-erros-disciplina', '0');
+                        setText('rel-media-disciplina', '0%');
+                        document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
                         const tbody = document.getElementById('tb-rel-alunos');
                         if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
                         setText('rel-total-alunos-tabela', '0 alunos');
@@ -5628,6 +5704,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         totalQuestoes = 0;
                     let alunosComDados = 0;
 
+                    // NOVO: Dicionário para acertos por questão
+                    let acertosPorQuestao = {};
+                    let totalQuestoesDisciplina = 0;
+
                     dadosAlunos.forEach(aluno => {
                         const disciplinaData = aluno[chave];
                         if (disciplinaData) {
@@ -5638,10 +5718,58 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 acertos = parseInt(disciplinaData.acertos) || 0;
                                 total = parseInt(disciplinaData.total) || 0;
                                 erros = total - acertos;
+                                
+                                // Processar acertos por questão
+                                if (disciplinaData.questoes && Array.isArray(disciplinaData.questoes)) {
+                                    disciplinaData.questoes.forEach((q, idx) => {
+                                        const numQuestao = idx + 1;
+                                        if (!acertosPorQuestao[numQuestao]) {
+                                            acertosPorQuestao[numQuestao] = { acertos: 0, erros: 0, total: 0 };
+                                        }
+                                        if (q.acertou === true) {
+                                            acertosPorQuestao[numQuestao].acertos++;
+                                        } else if (q.acertou === false) {
+                                            acertosPorQuestao[numQuestao].erros++;
+                                        }
+                                        acertosPorQuestao[numQuestao].total++;
+                                    });
+                                    totalQuestoesDisciplina = disciplinaData.questoes.length;
+                                } else {
+                                    // Fallback: distribuir acertos uniformemente
+                                    const questoes = total || 20;
+                                    for (let i = 0; i < questoes; i++) {
+                                        const numQuestao = i + 1;
+                                        if (!acertosPorQuestao[numQuestao]) {
+                                            acertosPorQuestao[numQuestao] = { acertos: 0, erros: 0, total: 0 };
+                                        }
+                                        // Estimativa: se acertos > 0, distribuir proporcionalmente
+                                        if (acertos > 0 && i < acertos) {
+                                            acertosPorQuestao[numQuestao].acertos++;
+                                        } else {
+                                            acertosPorQuestao[numQuestao].erros++;
+                                        }
+                                        acertosPorQuestao[numQuestao].total++;
+                                    }
+                                    totalQuestoesDisciplina = total || 20;
+                                }
                             } else {
                                 acertos = parseInt(disciplinaData) || 0;
                                 total = 20;
                                 erros = total - acertos;
+                                // Fallback para dados simples
+                                for (let i = 0; i < total; i++) {
+                                    const numQuestao = i + 1;
+                                    if (!acertosPorQuestao[numQuestao]) {
+                                        acertosPorQuestao[numQuestao] = { acertos: 0, erros: 0, total: 0 };
+                                    }
+                                    if (i < acertos) {
+                                        acertosPorQuestao[numQuestao].acertos++;
+                                    } else {
+                                        acertosPorQuestao[numQuestao].erros++;
+                                    }
+                                    acertosPorQuestao[numQuestao].total++;
+                                }
+                                totalQuestoesDisciplina = total;
                             }
                             totalAcertos += acertos;
                             totalErros += erros;
@@ -5649,6 +5777,45 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             alunosComDados++;
                         }
                     });
+
+                    // Se não houver dados por questão, usar totalQuestoesDisciplina
+                    if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 20;
+                    
+                    // Garantir que todas as questões apareçam
+                    for (let i = 1; i <= totalQuestoesDisciplina; i++) {
+                        if (!acertosPorQuestao[i]) {
+                            acertosPorQuestao[i] = { acertos: 0, erros: 0, total: 0 };
+                        }
+                    }
+
+                    setText('rel-total-questoes', totalQuestoesDisciplina + ' questões');
+
+                    // Gerar grid de acertos por questão
+                    const gridContainer = document.getElementById('rel-acertos-grid');
+                    gridContainer.innerHTML = '';
+                    
+                    const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
+                    
+                    if (questoesOrdenadas.length === 0) {
+                        gridContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado de questões disponível.</div>';
+                    } else {
+                        questoesOrdenadas.forEach(num => {
+                            const dados = acertosPorQuestao[num];
+                            const div = document.createElement('div');
+                            div.className = 'acertos-por-questao-item';
+                            div.innerHTML = `
+                                <div class="q-num">Q${num}</div>
+                                <div>
+                                    <span class="q-acertos">${dados.acertos}</span>
+                                    <span class="q-divider">/</span>
+                                    <span class="q-erros">${dados.erros}</span>
+                                </div>
+                                <div class="q-label">Acertos / Erros</div>
+                                <div style="font-size:8px;color:var(--text3);margin-top:2px;">Total: ${dados.total}</div>
+                            `;
+                            gridContainer.appendChild(div);
+                        });
+                    }
 
                     const mediaDisc = alunosComDados > 0 ? (totalAcertos / alunosComDados) : 0;
                     const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
@@ -5658,6 +5825,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     setText('rel-disc-acertos', totalAcertos);
                     setText('rel-disc-erros', totalErros);
                     setText('rel-disc-media', mediaDisc.toFixed(1));
+                    setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+                    setText('rel-total-acertos-disciplina', totalAcertos);
+                    setText('rel-total-erros-disciplina', totalErros);
+                    setText('rel-media-disciplina', pctDisc.toFixed(1) + '%');
 
                     const badgeMap = {
                         'inicial': 'badge-conceito-inicial',
