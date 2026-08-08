@@ -12,6 +12,8 @@ import os
 from PIL import Image
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2.pool import ThreadedConnectionPool
+from psycopg2 import extensions
 import pytesseract
 import random
 import traceback
@@ -48,17 +50,14 @@ try:
         try:
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel(GEMINI_MODEL)
-
-            test_response = model.generate_content("Teste de conexão - responda apenas OK")
-            if test_response and test_response.text:
-                GEMINI_AVAILABLE = True
-                print("=" * 60)
-                print("✅ Gemini AI configurado com sucesso!")
-                print(f"📌 Modelo: {GEMINI_MODEL}")
-                print("=" * 60)
-            else:
-                print("⚠️ Falha no teste da chave")
-                GEMINI_AVAILABLE = False
+            # Não fazemos uma chamada à API durante a inicialização.
+            # A chamada de teste deixava o servidor lento para iniciar e
+            # consumia uma requisição desnecessária da API.
+            GEMINI_AVAILABLE = True
+            print("=" * 60)
+            print("✅ Gemini AI configurado!")
+            print(f"📌 Modelo: {GEMINI_MODEL}")
+            print("=" * 60)
 
         except Exception as e:
             print(f"⚠️ Erro ao configurar Gemini: {e}")
@@ -99,20 +98,86 @@ except Exception as e:
 # ============================================
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
+DB_POOL = None
+DB_POOL_MIN = int(os.getenv('DB_POOL_MIN', '1'))
+DB_POOL_MAX = int(os.getenv('DB_POOL_MAX', '10'))
+
 if not SUPABASE_URL:
     print("❌ ERRO: SUPABASE_URL não definida no .env")
     print("⚠️ O servidor não conseguirá conectar ao banco de dados!")
-    print("⚠️ Configure a variável SUPABASE_URL no arquivo .env")
+
+class PooledConnection:
+    """Wrapper para devolver automaticamente a conexão ao pool."""
+    __slots__ = ('_conn', '_pool', '_closed')
+
+    def __init__(self, conn, pool):
+        self._conn = conn
+        self._pool = pool
+        self._closed = False
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            # Nunca devolve ao pool uma conexão em transação/estado quebrado.
+            if self._conn.status != extensions.STATUS_READY:
+                try:
+                    self._conn.rollback()
+                except Exception:
+                    pass
+        finally:
+            try:
+                self._pool.putconn(self._conn)
+            except Exception:
+                try:
+                    self._conn.close()
+                except Exception:
+                    pass
+
+def _get_pool():
+    global DB_POOL
+    if DB_POOL is not None:
+        return DB_POOL
+
+    if not SUPABASE_URL:
+        return None
+
+    try:
+        DB_POOL = ThreadedConnectionPool(
+            minconn=DB_POOL_MIN,
+            maxconn=DB_POOL_MAX,
+            dsn=SUPABASE_URL,
+            connect_timeout=8,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3
+        )
+        logging.info("✅ Pool PostgreSQL criado: %s-%s conexões", DB_POOL_MIN, DB_POOL_MAX)
+        return DB_POOL
+    except Exception as e:
+        logging.error("❌ Erro ao criar pool PostgreSQL: %s", e)
+        DB_POOL = None
+        return None
 
 def get_db_connection():
-    if not SUPABASE_URL:
-        print("❌ SUPABASE_URL não configurada")
+    """Obtém conexão reutilizável do pool, evitando abrir TCP/TLS a cada requisição."""
+    pool = _get_pool()
+    if not pool:
         return None
+
     try:
-        conn = psycopg2.connect(SUPABASE_URL)
-        return conn
+        conn = pool.getconn()
+        if conn.closed:
+            pool.putconn(conn, close=True)
+            conn = pool.getconn()
+        return PooledConnection(conn, pool)
     except Exception as e:
-        print(f"❌ Erro ao conectar ao banco: {e}")
+        logging.error("❌ Erro ao obter conexão do pool: %s", e)
         return None
 
 # ============================================
@@ -823,55 +888,44 @@ def corrigir_com_ia():
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
 
+            # Busca prova + aluno + turma em uma única conexão.
             cur.execute("""
-                SELECT p.*
+                SELECT
+                    p.*,
+                    a.nome AS aluno_nome,
+                    a.turma_id,
+                    a.escola_id,
+                    t.serie AS turma_serie,
+                    e.nome AS escola_nome
                 FROM provas p
+                LEFT JOIN alunos a ON a.id = %s
+                LEFT JOIN turmas t ON a.turma_id = t.id
+                LEFT JOIN escolas e ON a.escola_id = e.id
                 WHERE p.id = %s
-            """, (prova_id,))
-            prova = cur.fetchone()
+            """, (aluno_id, prova_id))
+            dados = cur.fetchone()
 
-            if not prova:
+            if not dados:
                 cur.close()
                 conn.close()
                 return jsonify({'erro': 'Prova não encontrada'}), 404
 
+            prova = dados
             gabarito = prova.get('gabarito', [])
-            if not gabarito or len(gabarito) == 0:
+            if not gabarito:
                 cur.close()
                 conn.close()
                 return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
 
-            cur.execute("""
-                SELECT a.id, a.nome, a.turma_id, t.serie, e.nome as escola_nome, e.id as escola_id
-                FROM alunos a
-                LEFT JOIN turmas t ON a.turma_id = t.id
-                LEFT JOIN escolas e ON a.escola_id = e.id
-                WHERE a.id = %s
-            """, (aluno_id,))
-            aluno = cur.fetchone()
+            aluno = dados
+            nome_aluno = aluno.get('aluno_nome') or 'Aluno'
+            turma_id = aluno.get('turma_id')
+            escola_id = aluno.get('escola_id')
+            serie = aluno.get('turma_serie') or prova.get('serie') or '1º Ano'
+
             cur.close()
             conn.close()
 
-            nome_aluno = aluno['nome'] if aluno else 'Aluno'
-            turma_id = aluno['turma_id'] if aluno else None
-            escola_id = aluno['escola_id'] if aluno else None
-
-            serie = '1º Ano'
-            if turma_id:
-                try:
-                    conn2 = get_db_connection()
-                    if conn2:
-                        cur2 = conn2.cursor(cursor_factory=RealDictCursor)
-                        cur2.execute("SELECT serie FROM turmas WHERE id = %s", (turma_id,))
-                        turma = cur2.fetchone()
-                        if turma:
-                            serie = turma['serie']
-                        cur2.close()
-                        conn2.close()
-                except Exception as e:
-                    print(f"⚠️ Erro ao buscar série: {e}")
-
-            # CORREÇÃO: usar or 4 para tratar None
             tipo_questoes = prova.get('tipo_questoes') or 4
             if isinstance(tipo_questoes, str):
                 try:
@@ -985,10 +1039,7 @@ def corrigir_com_ia():
 def corrigir_manual():
     try:
         data = request.json
-        print("=" * 60)
-        print("📥 DADOS RECEBIDOS NA CORREÇÃO MANUAL:")
-        print(json.dumps(data, indent=2, default=str))
-        print("=" * 60)
+        logging.debug("📥 Dados recebidos na correção manual")
 
         prova_id = data.get('prova_id')
         aluno_id = data.get('aluno_id')
@@ -997,12 +1048,6 @@ def corrigir_manual():
         nota = data.get('nota', 0)
         total = data.get('total', 0)
 
-        print(f"📌 prova_id: {prova_id} (tipo: {type(prova_id)})")
-        print(f"📌 aluno_id: {aluno_id} (tipo: {type(aluno_id)})")
-        print(f"📌 respostas: {respostas} (tipo: {type(respostas)})")
-        print(f"📌 acertos: {acertos} (tipo: {type(acertos)})")
-        print(f"📌 nota: {nota} (tipo: {type(nota)})")
-        print(f"📌 total: {total} (tipo: {type(total)})")
 
         if not prova_id or not aluno_id:
             return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
@@ -1015,13 +1060,11 @@ def corrigir_manual():
 
         cur.execute("SELECT disciplina, titulo, serie, gabarito FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
-        print(f"📌 Prova encontrada: {prova}")
 
         disciplina = prova[0] if prova else ''
         prova_titulo = prova[1] if prova else ''
         serie_prova = prova[2] if prova else ''
         gabarito = prova[3] if prova else []
-        print(f"📌 Gabarito: {gabarito} (tipo: {type(gabarito)})")
 
         cur.execute("""
             SELECT t.serie FROM alunos a
@@ -1057,11 +1100,9 @@ def corrigir_manual():
                 'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
             })
 
-        print(f"📌 questoes_status gerado: {questoes_status}")
 
         try:
             questoes_status_json = json.dumps(questoes_status)
-            print(f"📌 JSON gerado: {questoes_status_json[:100]}...")
         except Exception as e:
             print(f"❌ ERRO AO GERAR JSON: {e}")
             return jsonify({'erro': f'Erro ao converter para JSON: {str(e)}'}), 500
@@ -1071,10 +1112,8 @@ def corrigir_manual():
             WHERE prova_id = %s AND aluno_id = %s
         """, (prova_id, aluno_id))
         existe = cur.fetchone()
-        print(f"📌 Registro existe? {existe}")
 
         if existe:
-            print("📌 Atualizando registro existente...")
             cur.execute("""
                 UPDATE historico
                 SET respostas = %s::text[],
@@ -1091,7 +1130,6 @@ def corrigir_manual():
             result_id = existe[0] if isinstance(existe, tuple) else existe
             print(f"✅ Atualizado! ID: {result_id}")
         else:
-            print("📌 Criando novo registro...")
             cur.execute("""
                 INSERT INTO historico
                 (prova_id, aluno_id, respostas, acertos, nota, total,
@@ -2986,30 +3024,45 @@ def excluir_usuario(id):
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
+    # Cache muito curto evita 4 consultas ao PostgreSQL toda vez que o
+    # dashboard é redesenhado/carregado por várias partes do frontend.
+    now = datetime.now().timestamp()
+    cached = app.config.get('_dashboard_cache')
+    if cached and now - cached[0] < 3:
+        return jsonify(cached[1])
+
     conn = get_db_connection()
-    if conn:
+    if not conn:
+        return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
+
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT
+                (SELECT COUNT(*) FROM escolas) AS total_escolas,
+                (SELECT COUNT(*) FROM turmas) AS total_turmas,
+                (SELECT COUNT(*) FROM alunos) AS total_alunos,
+                (SELECT COUNT(*) FROM provas) AS total_provas
+        """)
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        resultado = {
+            'total_escolas': int(row['total_escolas'] or 0),
+            'total_turmas': int(row['total_turmas'] or 0),
+            'total_alunos': int(row['total_alunos'] or 0),
+            'total_provas': int(row['total_provas'] or 0)
+        }
+        app.config['_dashboard_cache'] = (now, resultado)
+        return jsonify(resultado)
+    except Exception as e:
+        logging.error("Erro no dashboard: %s", e)
         try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT COUNT(*) as total FROM escolas")
-            total_escolas = cur.fetchone()['total']
-            cur.execute("SELECT COUNT(*) as total FROM turmas")
-            total_turmas = cur.fetchone()['total']
-            cur.execute("SELECT COUNT(*) as total FROM alunos")
-            total_alunos = cur.fetchone()['total']
-            cur.execute("SELECT COUNT(*) as total FROM provas")
-            total_provas = cur.fetchone()['total']
-            cur.close()
             conn.close()
-            return jsonify({
-                'total_escolas': total_escolas,
-                'total_turmas': total_turmas,
-                'total_alunos': total_alunos,
-                'total_provas': total_provas
-            })
-        except Exception as e:
-            print(f"Erro no dashboard: {e}")
-            traceback.print_exc()
-    return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
+        except Exception:
+            pass
+        return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
 
 @app.route('/api/dashboard/Conceito', methods=['GET'])
 def dashboard_conceito():
@@ -3426,13 +3479,20 @@ def serve_static(path):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    status = {
+    conn = get_db_connection()
+    db_ok = conn is not None
+    if conn:
+        conn.close()
+    return jsonify({
         'status': 'online',
         'gemini': 'disponível' if GEMINI_AVAILABLE else 'indisponível',
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
-        'database': 'conectado' if get_db_connection() else 'desconectado'
-    }
-    return jsonify(status)
+        'database': 'conectado' if db_ok else 'desconectado',
+        'pool': {
+            'min': DB_POOL_MIN,
+            'max': DB_POOL_MAX
+        }
+    })
 
 # ============================================
 # INICIALIZAÇÃO DO BANCO
@@ -3628,6 +3688,26 @@ def init_db():
                     VALUES (%s, %s, %s, %s, TRUE)
                 """, (dados['nome'], username, dados['senha'], dados['perfil']))
                 print(f"✅ Usuário {username} criado com sucesso!")
+
+        # Índices para acelerar filtros, joins e ordenações mais usados.
+        # CREATE INDEX IF NOT EXISTS não apaga nem altera nenhum registro.
+        indices = [
+            "CREATE INDEX IF NOT EXISTS idx_alunos_escola_id ON alunos(escola_id)",
+            "CREATE INDEX IF NOT EXISTS idx_alunos_turma_id ON alunos(turma_id)",
+            "CREATE INDEX IF NOT EXISTS idx_turmas_escola_id ON turmas(escola_id)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_aluno_id ON historico(aluno_id)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_prova_id ON historico(prova_id)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_data_correcao ON historico(data_correcao DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_aluno_data ON historico(aluno_id, data_correcao DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_correcoes_texto_data ON correcoes_texto(data_correcao DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_provas_created_at ON provas(created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)"
+        ]
+        for sql in indices:
+            try:
+                cur.execute(sql)
+            except Exception as e:
+                logging.warning("⚠️ Índice não criado: %s", e)
 
         conn.commit()
         cur.close()
