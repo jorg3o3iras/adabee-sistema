@@ -5578,6 +5578,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
+// ============================================
 // FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA (CORRIGIDA COM AWAIT)
 // ============================================
 async function imprimirRelatorioTurma() {
@@ -5646,7 +5647,6 @@ async function imprimirRelatorioTurma() {
             if (provaData && !provaData.erro) {
                 bimestre = provaData.bimestre || 'Não informado';
                 dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
-                // Buscar disciplina da prova
                 if (provaData.disciplina) {
                     disciplinaSelecionada = provaData.disciplina;
                 }
@@ -5685,9 +5685,16 @@ async function imprimirRelatorioTurma() {
                 const qErros = item.querySelector('.q-erros')?.textContent || '0';
                 const totalEl = item.querySelector('div[style*="font-size:8px"]');
                 const total = totalEl ? totalEl.textContent.replace('Total: ', '') : '0';
-                // Buscar BNCC
-                const bnccEl = item.querySelector('div[style*="font-size:7px;color:var(--purple)"]');
-                const bnccText = bnccEl ? bnccEl.textContent.replace('BNCC: ', '') : '';
+                // Buscar BNCC - removendo a palavra "BNCC:" do texto
+                const bnccEl = item.querySelector('div[style*="font-size:10px;color:var(--purple)"]');
+                let bnccText = '';
+                if (bnccEl) {
+                    bnccText = bnccEl.textContent.replace('BNCC:', '').replace('BNCC ', '').trim();
+                }
+                // Tentar buscar também no atributo title
+                if (!bnccText && bnccEl && bnccEl.title) {
+                    bnccText = bnccEl.title.replace('BNCC:', '').replace('BNCC ', '').trim();
+                }
                 if (qNum) {
                     acertosPorQuestao[parseInt(qNum)] = {
                         acertos: parseInt(qAcertos) || 0,
@@ -5737,13 +5744,13 @@ async function imprimirRelatorioTurma() {
                     acertos: Math.round(totalAcertosDisciplina / totalQuestoesDisciplina) || 0,
                     erros: Math.round(totalErrosDisciplina / totalQuestoesDisciplina) || 0,
                     total: totalAlunosDisciplina || 15,
-                    bncc: (i-1 < bnccData.length) ? bnccData[i-1] : ''
+                    bncc: (i-1 < bnccData.length && bnccData[i-1]) ? bnccData[i-1] : ''
                 };
             }
         }
     }
 
-    // Construir HTML dos acertos por questão com BNCC
+    // Construir HTML dos acertos por questão com BNCC (SOMENTE O CÓDIGO)
     let acertosPorQuestaoHTML = '';
     const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
     
@@ -5752,6 +5759,7 @@ async function imprimirRelatorioTurma() {
             <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 12px 0;">
                 ${questoesOrdenadas.map(num => {
                     const dados = acertosPorQuestao[num];
+                    // Exibe apenas o código BNCC, sem a palavra "BNCC:"
                     const bnccDisplay = dados.bncc && dados.bncc !== '' ? dados.bncc : '—';
                     return `
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 4px; text-align: center;">
@@ -5763,7 +5771,9 @@ async function imprimirRelatorioTurma() {
                             </div>
                             <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Acertos / Erros</div>
                             <div style="font-size: 8px; color: #64748b; margin-top: 2px;">Total: ${dados.total}</div>
-                            <div style="font-size: 7px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 1px 6px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bnccDisplay}">BNCC: ${bnccDisplay}</div>
+                            <div style="font-size: 10px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 2px 8px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${bnccDisplay}">
+                                ${bnccDisplay}
+                            </div>
                         </div>
                     `;
                 }).join('')}
@@ -6008,7 +6018,7 @@ async function imprimirRelatorioTurma() {
             <div class="municipio">PREFEITURA DE ${municipio.toUpperCase()}</div>
             <div class="estado">${estado}</div>
             <div class="secretaria">SECRETARIA MUNICIPAL DE EDUCAÇÃO</div>
-			<div class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICCA - DGP</div>
+            <div class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICA - DGP</div>
             <div class="divider"></div>
             <div class="sisam">SISAM 2026</div>
             <div class="ano-letivo">Ano Letivo ${new Date().getFullYear()}</div>
