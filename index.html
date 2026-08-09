@@ -174,6 +174,110 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 .btn-del { background:transparent; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; transition:all .2s; }
 .btn-del:hover { background:rgba(239,68,68,0.15); }
 
+/* ============================================
+   ESTILOS PARA FEEDBACK VISUAL
+   ============================================ */
+
+/* Animação de destaque na tabela */
+@keyframes highlightRow {
+    0% { 
+        background: rgba(16, 185, 129, 0.2);
+        transform: scale(1.02);
+    }
+    50% {
+        background: rgba(16, 185, 129, 0.3);
+        transform: scale(1.01);
+    }
+    100% {
+        background: rgba(16, 185, 129, 0.1);
+        transform: scale(1);
+    }
+}
+
+tr.saving {
+    animation: highlightRow 0.8s ease;
+}
+
+/* Badge de "salvo" animado */
+.save-badge {
+    display: inline-block;
+    animation: badgePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Botão com indicador de loading */
+.btn.loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Progresso dentro do modal */
+#progress-modal .progress {
+    position: relative;
+    overflow: hidden;
+}
+
+#progress-modal .progress-fill {
+    background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+    position: relative;
+}
+
+#progress-modal .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255,255,255,0.2) 50%, 
+        transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Etapas do progresso */
+#progress-etapas .etapa-concluida {
+    color: var(--green);
+}
+
+#progress-etapas .etapa-em-andamento {
+    background: rgba(139, 92, 246, 0.1);
+    border-left: 3px solid var(--purple);
+}
+
+#progress-etapas .etapa-erro {
+    color: var(--red);
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--red);
+}
+
 .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
 .badge-blue { background:rgba(59,130,246,0.15); color:var(--blue); }
 .badge-green { background:rgba(16,185,129,0.15); color:var(--green); }
@@ -2465,6 +2569,37 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <!-- TOAST -->
         <div class="toast-container no-print" id="toast-c"></div>
 
+        <!-- ========== MODAL DE PROGRESSO (NOVO) ========== -->
+        <div class="modal-overlay no-print" id="progress-modal" style="display:none; z-index: 10000;">
+            <div class="modal" style="max-width: 500px; text-align: center;">
+                <div class="modal-header">
+                    <h3 id="progress-titulo">⏳ Processando...</h3>
+                    <button class="modal-close" onclick="progressManager.fechar()" id="progress-fechar" style="display:none;">×</button>
+                </div>
+                <div style="padding: 10px 0;">
+                    <div style="font-size: 48px; margin-bottom: 10px;" id="progress-icone">🤖</div>
+                    <p id="progress-status" style="font-size: 14px; color: var(--text2); margin-bottom: 15px;">
+                        Iniciando processamento...
+                    </p>
+                    <div class="progress" style="height: 12px; background: var(--bg2); border-radius: 10px; overflow: hidden; margin: 10px 0;">
+                        <div class="progress-fill pf-purple" id="progress-barra" style="width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3); margin-top: 4px;">
+                        <span id="progress-porcentagem">0%</span>
+                        <span id="progress-tempo">⏱️ estimado: --</span>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: var(--bg2); border-radius: 8px; text-align: left; font-size: 12px; color: var(--text2);">
+                        <div id="progress-etapas" style="display: flex; flex-direction: column; gap: 4px;">
+                            <!-- Etapas serão inseridas aqui -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="justify-content: center; border-top: none; padding-top: 5px;">
+                    <button class="btn btn-outline btn-sm" onclick="progressManager.fechar()" id="progress-cancelar" style="display:none;">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
         <script>
             // ============================================
             // CONFIGURAÇÃO DA API
@@ -2478,6 +2613,287 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             let gerandoDocumento = false;
 
             // ============================================
+            // SISTEMA DE PROGRESSO VISUAL
+            // ============================================
+
+            class ProgressManager {
+                constructor() {
+                    this.modal = null;
+                    this.barra = null;
+                    this.textoEtapa = null;
+                    this.textoTempo = null;
+                    this.etapas = [];
+                    this.etapaAtual = 0;
+                    this.tempoInicio = null;
+                    this.timer = null;
+                    this.criarModal();
+                }
+
+                criarModal() {
+                    // O modal já existe no HTML, apenas referenciar
+                    this.modal = document.getElementById('progress-modal');
+                    this.barra = document.getElementById('progress-barra');
+                    this.textoEtapa = document.getElementById('progress-status');
+                    this.textoTempo = document.getElementById('progress-tempo');
+                    this.porcentagem = document.getElementById('progress-porcentagem');
+                    this.containerEtapas = document.getElementById('progress-etapas');
+                    this.titulo = document.getElementById('progress-titulo');
+                    this.icone = document.getElementById('progress-icone');
+                    this.fecharBtn = document.getElementById('progress-fechar');
+                    this.cancelarBtn = document.getElementById('progress-cancelar');
+                }
+
+                iniciar(titulo, etapas, icone = '🤖') {
+                    this.etapas = etapas.map(e => ({ ...e, concluida: false }));
+                    this.etapaAtual = 0;
+                    this.tempoInicio = Date.now();
+                    this.timer = null;
+
+                    // Configurar UI
+                    this.titulo.textContent = titulo;
+                    this.icone.textContent = icone;
+                    this.barra.style.width = '0%';
+                    this.barra.style.background = 'linear-gradient(90deg, #8b5cf6, #6d28d9)';
+                    this.porcentagem.textContent = '0%';
+                    this.textoTempo.textContent = '⏱️ estimando...';
+                    this.fecharBtn.style.display = 'none';
+                    this.cancelarBtn.style.display = 'inline-flex';
+
+                    // Renderizar etapas
+                    this.containerEtapas.innerHTML = '';
+                    this.etapas.forEach((etapa, index) => {
+                        const div = document.createElement('div');
+                        div.id = `progress-etapa-${index}`;
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.style.gap = '8px';
+                        div.style.padding = '4px 8px';
+                        div.style.borderRadius = '4px';
+                        div.style.opacity = index === 0 ? '1' : '0.5';
+                        div.innerHTML = `
+                            <span style="font-size: 14px;" id="progress-icon-${index}">${index === 0 ? '⏳' : '○'}</span>
+                            <span>${etapa.nome}</span>
+                            <span style="margin-left: auto; font-size: 11px; color: var(--text3);" id="progress-status-${index}">
+                                ${index === 0 ? '⏳ em andamento...' : '⏳ aguardando'}
+                            </span>
+                        `;
+                        this.containerEtapas.appendChild(div);
+                    });
+
+                    // Mostrar modal
+                    this.modal.style.display = 'flex';
+                    this.modal.classList.add('show');
+
+                    // Atualizar primeira etapa
+                    this.atualizarEtapa(0);
+                }
+
+                atualizarEtapa(index) {
+                    this.etapaAtual = index;
+                    const progresso = (index / this.etapas.length) * 100;
+                    this.barra.style.width = progresso + '%';
+                    this.porcentagem.textContent = Math.round(progresso) + '%';
+
+                    // Atualizar texto da etapa atual
+                    if (index < this.etapas.length) {
+                        this.textoEtapa.textContent = this.etapas[index].descricao || this.etapas[index].nome;
+                        
+                        // Marcar etapa anterior como concluída
+                        if (index > 0) {
+                            const etapaAnterior = document.getElementById(`progress-etapa-${index-1}`);
+                            if (etapaAnterior) {
+                                etapaAnterior.style.opacity = '0.7';
+                                const icon = document.getElementById(`progress-icon-${index-1}`);
+                                if (icon) icon.textContent = '✅';
+                                const status = document.getElementById(`progress-status-${index-1}`);
+                                if (status) status.textContent = '✅ concluído';
+                            }
+                        }
+
+                        // Marcar etapa atual como em andamento
+                        const etapaAtualEl = document.getElementById(`progress-etapa-${index}`);
+                        if (etapaAtualEl) {
+                            etapaAtualEl.style.opacity = '1';
+                            etapaAtualEl.style.background = 'rgba(139, 92, 246, 0.1)';
+                            const icon = document.getElementById(`progress-icon-${index}`);
+                            if (icon) icon.textContent = '⏳';
+                            const status = document.getElementById(`progress-status-${index}`);
+                            if (status) status.textContent = '⏳ em andamento...';
+                        }
+                    }
+
+                    // Atualizar tempo estimado
+                    this.atualizarTempoEstimado();
+                }
+
+                atualizarTempoEstimado() {
+                    if (this.tempoInicio) {
+                        const elapsed = (Date.now() - this.tempoInicio) / 1000;
+                        const total = this.etapas.length;
+                        const atual = this.etapaAtual + 1;
+                        
+                        if (atual > 0 && atual <= total) {
+                            const mediaPorEtapa = elapsed / atual;
+                            const restante = (total - atual) * mediaPorEtapa;
+                            
+                            if (restante > 0) {
+                                const minutos = Math.floor(restante / 60);
+                                const segundos = Math.floor(restante % 60);
+                                this.textoTempo.textContent = `⏱️ ~${minutos > 0 ? minutos + 'm ' : ''}${segundos}s restantes`;
+                            }
+                        }
+                    }
+                }
+
+                concluirEtapa(index) {
+                    if (index < this.etapas.length) {
+                        const etapaEl = document.getElementById(`progress-etapa-${index}`);
+                        if (etapaEl) {
+                            etapaEl.style.opacity = '0.7';
+                            const icon = document.getElementById(`progress-icon-${index}`);
+                            if (icon) icon.textContent = '✅';
+                            const status = document.getElementById(`progress-status-${index}`);
+                            if (status) status.textContent = '✅ concluído';
+                        }
+                    }
+                }
+
+                proximaEtapa() {
+                    const proxima = this.etapaAtual + 1;
+                    if (proxima < this.etapas.length) {
+                        this.atualizarEtapa(proxima);
+                    }
+                    return proxima;
+                }
+
+                finalizar(mensagem = '✅ Processamento concluído com sucesso!') {
+                    this.barra.style.width = '100%';
+                    this.porcentagem.textContent = '100%';
+                    this.textoEtapa.textContent = mensagem;
+                    this.textoTempo.textContent = '✅ concluído!';
+                    this.fecharBtn.style.display = 'inline-flex';
+                    this.cancelarBtn.style.display = 'none';
+
+                    // Marcar todas as etapas como concluídas
+                    this.etapas.forEach((_, index) => {
+                        this.concluirEtapa(index);
+                    });
+
+                    // Fechar automaticamente após 2 segundos
+                    setTimeout(() => {
+                        this.fechar();
+                    }, 2000);
+                }
+
+                fechar() {
+                    if (this.timer) {
+                        clearInterval(this.timer);
+                        this.timer = null;
+                    }
+                    this.modal.style.display = 'none';
+                    this.modal.classList.remove('show');
+                }
+
+                erro(mensagem) {
+                    this.barra.style.width = '100%';
+                    this.barra.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+                    this.porcentagem.textContent = '❌ ERRO';
+                    this.textoEtapa.textContent = '❌ ' + mensagem;
+                    this.icone.textContent = '❌';
+                    this.textoTempo.textContent = '❌ falhou';
+                    this.fecharBtn.style.display = 'inline-flex';
+                    this.cancelarBtn.style.display = 'none';
+                    
+                    // Marcar etapa atual como erro
+                    const etapaAtualEl = document.getElementById(`progress-etapa-${this.etapaAtual}`);
+                    if (etapaAtualEl) {
+                        const icon = document.getElementById(`progress-icon-${this.etapaAtual}`);
+                        if (icon) icon.textContent = '❌';
+                        const status = document.getElementById(`progress-status-${this.etapaAtual}`);
+                        if (status) {
+                            status.textContent = '❌ erro';
+                            status.style.color = 'var(--red)';
+                        }
+                    }
+                }
+            }
+
+            // Instância global do gerenciador de progresso
+            const progressManager = new ProgressManager();
+
+            // ============================================
+            // SISTEMA DE FEEDBACK VISUAL PARA TABELAS
+            // ============================================
+
+            class TableFeedback {
+                constructor() {
+                    this.animations = new Map();
+                }
+
+                destacarLinha(tableId, rowId, message = '✅ Salvo!') {
+                    const table = document.getElementById(tableId);
+                    if (!table) return;
+
+                    const row = table.querySelector(`tr[data-id="${rowId}"]`);
+                    if (!row) return;
+
+                    if (this.animations.has(rowId)) {
+                        clearTimeout(this.animations.get(rowId));
+                        this.animations.delete(rowId);
+                    }
+
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.background = 'rgba(16, 185, 129, 0.15)';
+                    row.style.borderLeft = '4px solid var(--green)';
+                    row.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.1)';
+
+                    const firstCell = row.querySelector('td:first-child');
+                    if (firstCell && !firstCell.querySelector('.save-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'save-badge badge badge-green';
+                        badge.textContent = message;
+                        badge.style.marginLeft = '8px';
+                        badge.style.fontSize = '8px';
+                        firstCell.appendChild(badge);
+                    }
+
+                    const timeout = setTimeout(() => {
+                        row.style.background = '';
+                        row.style.borderLeft = '';
+                        row.style.boxShadow = '';
+                        
+                        const badge = firstCell?.querySelector('.save-badge');
+                        if (badge) {
+                            badge.style.transition = 'opacity 0.5s ease';
+                            badge.style.opacity = '0';
+                            setTimeout(() => badge.remove(), 500);
+                        }
+                        
+                        this.animations.delete(rowId);
+                    }, 3000);
+
+                    this.animations.set(rowId, timeout);
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                mostrarSucesso(tableId, rowId, nome, acao = 'salvo') {
+                    showToast(`✅ ${nome} ${acao} com sucesso!`, 'success');
+                    setTimeout(() => {
+                        this.destacarLinha(tableId, rowId, `✅ ${acao}!`);
+                    }, 300);
+                }
+            }
+
+            const tableFeedback = new TableFeedback();
+
+            // ============================================
+            // FUNÇÃO AUXILIAR SLEEP
+            // ============================================
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            // ============================================
             // SISTEMA DE CACHE PARA REDUZIR REQUISIÇÕES
             // ============================================
 
@@ -2489,7 +2905,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 ultima_atualizacao: {}
             };
 
-            const TEMPO_CACHE = 30000; // 30 segundos
+            const TEMPO_CACHE = 30000;
 
             function isCacheValido(chave) {
                 if (!cache.ultima_atualizacao[chave]) return false;
@@ -2578,7 +2994,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
             }
 
-            // Função para limpar o cache (útil após salvar/editar/excluir)
             function limparCache() {
                 cache.escolas = null;
                 cache.turmas = {};
@@ -3945,38 +4360,86 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 showToast('🗑️ Respostas limpas!', 'info');
             }
 
+            // ============================================
+            // SALVAR CORREÇÃO MANUAL (COM FEEDBACK VISUAL)
+            // ============================================
             function salvarCorrecaoManual() {
                 const qtd = correcaoManualData.quantidade || 20;
                 const respostas = correcaoManualData.respostasAluno || [];
                 const gabarito = correcaoManualData.gabarito || [];
                 let acertos = 0;
+
                 for (let i = 0; i < qtd; i++) {
                     const resp = i < respostas.length ? respostas[i] : '';
                     const gab = i < gabarito.length ? gabarito[i] : '';
-                    if (resp && resp.toUpperCase() === gab.toUpperCase()) { acertos++; }
+                    if (resp && resp.toUpperCase() === gab.toUpperCase()) {
+                        acertos++;
+                    }
                 }
+
                 const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
-                showToast('💾 Salvando correção manual...', 'info');
-                const dadosCorrecao = { prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId, respostas: respostas, acertos: acertos, nota: nota, total: qtd };
-                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.sucesso) {
-                            showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
-                            closeM('m-correcao-manual');
-                            limparCache();
-                            const notaEl = document.getElementById('ia-nota'); if (notaEl) { notaEl.textContent = nota.toFixed(1);
-                                notaEl.style.color = nota >= 5 ? 'var(--green)' : 'var(--red)'; }
-                            const statusEl = document.getElementById('ia-status'); if (statusEl) { const status = nota >= 5 ? 'APROVADO' : 'REPROVADO'; const badgeClass = nota >= 5 ? 'badge-green' : 'badge-red';
-                                statusEl.textContent = status;
-                                statusEl.className = 'badge ' + badgeClass; }
-                            setTimeout(() => { carregarResultadosComFiltros();
-                                carregarDashboard();
-                                carregarUltimasCorrecoes(); }, 500);
-                        } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
-                    })
-                    .catch(erro => { showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
-                        console.error('Erro ao salvar correção manual:', erro); });
+
+                // Iniciar progresso
+                const etapas = [
+                    { nome: '📝 Processando respostas', descricao: 'Validando respostas do aluno...' },
+                    { nome: '📊 Calculando nota', descricao: 'Calculando aproveitamento...' },
+                    { nome: '💾 Salvando no sistema', descricao: 'Persistindo correção...' }
+                ];
+
+                progressManager.iniciar('💾 Salvando Correção Manual', etapas, '✏️');
+
+                const dadosCorrecao = {
+                    prova_id: correcaoManualData.provaId,
+                    aluno_id: correcaoManualData.alunoId,
+                    respostas: respostas,
+                    acertos: acertos,
+                    nota: nota,
+                    total: qtd
+                };
+
+                fetch(API_URL + '/api/corrigir_manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosCorrecao)
+                })
+                .then(response => {
+                    progressManager.concluirEtapa(0);
+                    progressManager.proximaEtapa();
+                    return response.json();
+                })
+                .then(data => {
+                    progressManager.concluirEtapa(1);
+                    progressManager.proximaEtapa();
+
+                    if (data.sucesso) {
+                        progressManager.concluirEtapa(2);
+                        progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
+
+                        limparCache();
+                        closeM('m-correcao-manual');
+
+                        setTimeout(() => {
+                            carregarResultadosComFiltros();
+                            carregarDashboard();
+                            carregarUltimasCorrecoes();
+                        }, 500);
+
+                        const alunoId = correcaoManualData.alunoId;
+                        if (alunoId) {
+                            setTimeout(() => {
+                                tableFeedback.destacarLinha('tb-resultados-filtrado', alunoId, '✅ Corrigido!');
+                            }, 800);
+                        }
+                    } else {
+                        progressManager.erro(data.erro || 'Erro ao salvar');
+                        showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
+                    }
+                })
+                .catch(erro => {
+                    progressManager.erro(erro.message);
+                    showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+                    console.error('Erro ao salvar correção manual:', erro);
+                });
             }
 
             // ============================================
@@ -4390,6 +4853,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 showToast('🗑️ Respostas limpas!', 'info');
             }
 
+            // ============================================
+            // SALVAR CORREÇÃO MANUAL STANDALONE (COM FEEDBACK VISUAL)
+            // ============================================
             function salvarCorrecaoManualStandalone() {
                 const qtd = cmStandaloneData.quantidade || 20;
                 const respostas = cmStandaloneData.respostas || [];
@@ -4406,7 +4872,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
                 const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
 
-                showToast('💾 Salvando correção manual...', 'info');
+                // Iniciar progresso
+                const etapas = [
+                    { nome: '📝 Processando respostas', descricao: 'Validando respostas do aluno...' },
+                    { nome: '📊 Calculando nota', descricao: 'Calculando aproveitamento...' },
+                    { nome: '💾 Salvando no sistema', descricao: 'Persistindo correção...' }
+                ];
+
+                progressManager.iniciar('💾 Salvando Correção Manual', etapas, '✏️');
 
                 const dadosCorrecao = {
                     prova_id: cmStandaloneData.provaId,
@@ -4417,20 +4890,42 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     total: qtd
                 };
 
-                fetch(API_URL + '/api/corrigir_manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCorrecao) })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.sucesso) {
-                            showToast('✅ Correção manual salva! Nota: ' + nota.toFixed(1), 'success');
-                            limparCache();
-                            closeM('m-correcao-manual-standalone');
-                            setTimeout(() => { carregarResultadosComFiltros();
-                                carregarDashboard();
-                                carregarUltimasCorrecoes(); }, 500);
-                        } else { showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error'); }
-                    })
-                    .catch(erro => { showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
-                        console.error('Erro ao salvar correção manual:', erro); });
+                fetch(API_URL + '/api/corrigir_manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosCorrecao)
+                })
+                .then(response => {
+                    progressManager.concluirEtapa(0);
+                    progressManager.proximaEtapa();
+                    return response.json();
+                })
+                .then(data => {
+                    progressManager.concluirEtapa(1);
+                    progressManager.proximaEtapa();
+
+                    if (data.sucesso) {
+                        progressManager.concluirEtapa(2);
+                        progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
+
+                        limparCache();
+                        closeM('m-correcao-manual-standalone');
+
+                        setTimeout(() => {
+                            carregarResultadosComFiltros();
+                            carregarDashboard();
+                            carregarUltimasCorrecoes();
+                        }, 500);
+                    } else {
+                        progressManager.erro(data.erro || 'Erro ao salvar');
+                        showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
+                    }
+                })
+                .catch(erro => {
+                    progressManager.erro(erro.message);
+                    showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+                    console.error('Erro ao salvar correção manual:', erro);
+                });
             }
 
             // ============================================
@@ -4582,6 +5077,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     if (id) { url += '/' + id;
                         method = 'PUT'; }
 
+                    // Adicionar loading no botão
+                    const btn = document.querySelector('#m-usuario .btn-green');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Salvando usuário...', 'info');
                     const response = await fetch(url, {
                         method: method,
@@ -4589,6 +5090,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok) {
                         showToast('✅ Usuário "' + username + '" salvo com sucesso!', 'success');
                         limparCache();
@@ -4601,6 +5106,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao salvar: ' + erro.message, 'error');
                     console.error('Erro ao salvar usuário:', erro);
+                    const btn = document.querySelector('#m-usuario .btn-green');
+                    if (btn) { btn.textContent = '💾 Salvar Usuário';
+                        btn.disabled = false; }
                 }
             }
 
@@ -4631,27 +5139,46 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const texto = document.getElementById('txt-aluno').value;
                 const alunoId = document.getElementById('txt-aluno-select').value;
                 if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error'); return; }
+
+                // Iniciar progresso
+                const etapas = [
+                    { nome: '📝 Preparando texto', descricao: 'Validando e preparando o texto para análise...' },
+                    { nome: '🤖 Analisando com IA', descricao: 'Gemini AI avaliando critérios textuais...' },
+                    { nome: '📊 Gerando resultados', descricao: 'Calculando nota e gerando feedback...' }
+                ];
+
+                progressManager.iniciar('📝 Avaliando Texto com IA', etapas, '🤖');
+
                 document.getElementById('txt-waiting').style.display = 'none';
                 document.getElementById('txt-loading').style.display = 'block';
                 document.getElementById('txt-res').style.display = 'none';
-                const pb = document.getElementById('txt-pb');
-                let p = 0;
-                const iv = setInterval(() => {
-                    p += Math.random() * 12;
-                    if (p > 100) p = 100;
-                    if (pb) pb.style.width = p + '%';
-                    if (p >= 100) { clearInterval(iv);
-                        processarAvaliacaoTexto(texto, alunoId); }
-                }, 120);
-            }
 
-            async function processarAvaliacaoTexto(texto, alunoId) {
                 try {
-                    const response = await fetch(API_URL + '/api/corrigir_redacao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: texto, aluno_id: alunoId || null }) });
+                    progressManager.concluirEtapa(0);
+                    progressManager.proximaEtapa();
+
+                    const response = await fetch(API_URL + '/api/corrigir_redacao', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ texto: texto, aluno_id: alunoId || null })
+                    });
+
+                    progressManager.concluirEtapa(1);
+                    progressManager.proximaEtapa();
+
                     const dados = await response.json();
                     document.getElementById('txt-loading').style.display = 'none';
                     document.getElementById('txt-res').style.display = 'block';
-                    if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
+
+                    if (dados.erro) {
+                        progressManager.erro(dados.erro);
+                        showToast('❌ ' + dados.erro, 'error');
+                        return;
+                    }
+
+                    progressManager.concluirEtapa(2);
+                    progressManager.finalizar('✅ Avaliação concluída com sucesso!');
+
                     setText('txt-nota', dados.nota || 0);
                     const statusEl = document.getElementById('txt-status');
                     if (statusEl) { statusEl.textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
@@ -4676,8 +5203,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         } catch (e) {}
                     }
                     showToast('✅ Avaliação concluída!', 'success');
-                } catch (erro) { document.getElementById('txt-loading').style.display = 'none';
-                    showToast('❌ Erro: ' + erro.message, 'error'); }
+                } catch (erro) {
+                    document.getElementById('txt-loading').style.display = 'none';
+                    progressManager.erro(erro.message);
+                    showToast('❌ Erro: ' + erro.message, 'error');
+                }
             }
 
             function salvarAvaliacaoTexto() { showToast('💾 Avaliação salva com sucesso!', 'success'); }
@@ -4731,12 +5261,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // FUNÇÃO DE CORREÇÃO COM IA
+            // FUNÇÃO DE CORREÇÃO COM IA (COM PROGRESSO)
             // ============================================
             async function processarComIA(imagemBase64) {
-                showToast('🤖 Processando...', 'ai');
-                const box = document.getElementById('ia-result');
-                if (box) box.style.display = 'none';
                 const provaId = document.getElementById('corrigir-prova').value;
                 const alunoId = document.getElementById('corrigir-aluno').value;
 
@@ -4744,41 +5271,82 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     showToast('❌ Selecione uma prova e um aluno primeiro!', 'error');
                     return;
                 }
-                if (!imagemBase64) { showToast('❌ Nenhuma imagem!', 'error'); return; }
+                if (!imagemBase64) {
+                    showToast('❌ Nenhuma imagem!', 'error');
+                    return;
+                }
 
-                document.getElementById('ia-ultima-imagem').value = imagemBase64;
+                // Iniciar progresso
+                const etapas = [
+                    { nome: '📸 Carregando imagem', descricao: 'Preparando a imagem para análise...' },
+                    { nome: '🔍 Detectando respostas', descricao: 'IA analisando o cartão resposta...' },
+                    { nome: '📊 Corrigindo com gabarito', descricao: 'Comparando com o gabarito da prova...' },
+                    { nome: '📝 Gerando resultados', descricao: 'Calculando nota e salvando...' }
+                ];
+
+                progressManager.iniciar('🤖 Corrigindo com IA', etapas, '🤖');
 
                 try {
+                    // Etapa 1: Preparar imagem
+                    await sleep(300);
                     let imagemEnvio = imagemBase64;
                     if (imagemBase64.startsWith('data:image')) {
                         const partes = imagemBase64.split(',');
                         if (partes.length > 1) imagemEnvio = partes[1];
                     }
+                    progressManager.concluirEtapa(0);
+                    progressManager.proximaEtapa();
 
+                    // Etapa 2: Buscar dados da prova
+                    await sleep(300);
                     const provas = await carregarProvasComCache();
                     const prova = provas.find(p => p.id == provaId);
-                    if (!prova) { showToast('❌ Erro ao carregar dados da prova', 'error'); return; }
+                    if (!prova) {
+                        throw new Error('Prova não encontrada');
+                    }
 
                     const alunos = await carregarAlunosComCache();
                     const aluno = alunos.find(a => a.id == alunoId);
-                    if (!aluno) { showToast('❌ Erro ao carregar dados do aluno', 'error'); return; }
+                    if (!aluno) {
+                        throw new Error('Aluno não encontrado');
+                    }
+                    progressManager.concluirEtapa(1);
+                    progressManager.proximaEtapa();
+
+                    // Etapa 3: Enviar para correção
+                    await sleep(300);
+                    progressManager.textoEtapa.textContent = '⏳ Enviando para processamento... (pode levar alguns segundos)';
 
                     const response = await fetch(`${API_URL}/api/corrigir`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imagem: imagemEnvio, prova_id: parseInt(provaId), aluno_id: parseInt(alunoId) })
+                        body: JSON.stringify({
+                            imagem: imagemEnvio,
+                            prova_id: parseInt(provaId),
+                            aluno_id: parseInt(alunoId)
+                        })
                     });
 
                     if (!response.ok) {
                         const errorText = await response.text();
-                        showToast(`❌ Erro ${response.status}: ${errorText.substring(0, 100)}`, 'error');
-                        return;
+                        throw new Error(`Erro ${response.status}: ${errorText.substring(0, 100)}`);
                     }
 
                     const dados = await response.json();
+                    progressManager.concluirEtapa(2);
+                    progressManager.proximaEtapa();
 
-                    if (dados.erro) { showToast('❌ ' + dados.erro, 'error'); return; }
+                    // Etapa 4: Processar resultados
+                    await sleep(200);
+                    if (dados.erro) {
+                        throw new Error(dados.erro);
+                    }
 
+                    // Mostrar resultados
+                    const box = document.getElementById('ia-result');
+                    if (box) box.style.display = 'block';
+
+                    // Atualizar UI com os resultados
                     const rd = document.getElementById('ia-resp');
                     if (rd && dados.respostas_detectadas) {
                         rd.innerHTML = dados.respostas_detectadas.map((a, i) => {
@@ -4788,23 +5356,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }).join('');
                     }
 
-                    const cd = document.getElementById('ia-comp');
-                    if (cd && dados.respostas_detectadas) {
-                        cd.innerHTML = dados.respostas_detectadas.map((a, i) => {
-                            const gab = dados.gabarito && dados.gabarito[i] ? dados.gabarito[i] : '';
-                            const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
-                            return '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Q' + (i + 1) + '</div><div style="background:' + (ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)') + ';border:1px solid ' + (ok ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)') + ';border-radius:6px;padding:4px 2px;font-size:11px;font-weight:800;color:' + (ok ? 'var(--green)' : 'var(--red)') + ';">' + (a || '—') + '</div></div>';
-                        }).join('');
-                    }
-
                     setText('ia-nota', dados.nota || 0);
                     setText('ia-aluno', dados.aluno || aluno.nome || 'Aluno');
                     setText('ia-turma', dados.prova || prova.titulo || 'Prova');
                     setText('confianca-badge', (dados.confianca || 0) + '% conf.');
-                    const statusEl = document.getElementById('ia-status');
-                    if (statusEl) { statusEl.textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                        statusEl.className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red'); }
 
+                    const statusEl = document.getElementById('ia-status');
+                    if (statusEl) {
+                        statusEl.textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+                        statusEl.className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+                    }
+
+                    // Salvar dados para correção manual
                     correcaoManualData.alunoId = parseInt(alunoId);
                     correcaoManualData.alunoNome = dados.aluno || aluno.nome || 'Aluno';
                     correcaoManualData.provaId = parseInt(provaId);
@@ -4819,12 +5382,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     correcaoManualData.serie = prova.serie || '1º Ano';
                     correcaoManualData.disciplina = prova.disciplina || '';
 
-                    if (box) box.style.display = 'block';
-                    showToast('✅ ' + (dados.acertos || 0) + '/' + (dados.total || 0) + ' acertos — Nota: ' + (dados.nota || 0).toFixed(1), 'success');
+                    progressManager.concluirEtapa(3);
+                    progressManager.finalizar(`✅ ${dados.acertos || 0}/${dados.total || 0} acertos — Nota: ${(dados.nota || 0).toFixed(1)}`);
+
                     carregarDashboard();
                     carregarResultadosComFiltros();
+
                 } catch (erro) {
                     console.error('❌ Erro na correção:', erro);
+                    progressManager.erro(erro.message || 'Erro ao processar correção');
                     showToast('❌ Erro ao processar correção: ' + erro.message, 'error');
                 }
             }
@@ -4850,6 +5416,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#m-escola .btn-green');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Salvando escola...', 'info');
                     const response = await fetch(API_URL + '/api/escolas', {
                         method: 'POST',
@@ -4857,11 +5428,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok && result.data.id) {
                         showToast('✅ Escola "' + nome + '" salva com sucesso!', 'success');
                         limparCache();
                         closeM('m-escola');
-                        carregarEscolas();
+
+                        await carregarEscolas();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-escola', result.data.id, '✅ Nova!');
+                        }, 300);
+
                         carregarDashboard();
                         carregarCombos();
                     } else {
@@ -4870,6 +5451,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao salvar escola: ' + erro.message, 'error');
                     console.error('Erro ao salvar escola:', erro);
+                    const btn = document.querySelector('#m-escola .btn-green');
+                    if (btn) { btn.textContent = '💾 Salvar';
+                        btn.disabled = false; }
                 }
             }
 
@@ -4907,6 +5491,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#m-editar-escola .btn-primary');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Atualizando escola...', 'info');
                     const response = await fetch(API_URL + '/api/escolas/' + id, {
                         method: 'PUT',
@@ -4914,11 +5503,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok) {
                         showToast('✅ Escola "' + nome + '" atualizada com sucesso!', 'success');
                         limparCache();
                         closeM('m-editar-escola');
                         carregarEscolas();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-escola', id, '✅ Atualizada!');
+                        }, 300);
+
                         carregarCombos();
                     } else {
                         showToast('❌ Erro ao atualizar escola: ' + (result.data.erro || 'Erro desconhecido'), 'error');
@@ -4926,6 +5524,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao atualizar escola: ' + erro.message, 'error');
                     console.error('Erro ao atualizar escola:', erro);
+                    const btn = document.querySelector('#m-editar-escola .btn-primary');
+                    if (btn) { btn.textContent = '💾 Salvar Alterações';
+                        btn.disabled = false; }
                 }
             }
 
@@ -4991,6 +5592,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#m-turma .btn-green');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Salvando turma...', 'info');
                     const response = await fetch(API_URL + '/api/turmas', {
                         method: 'POST',
@@ -4998,11 +5604,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok && result.data.id) {
                         showToast('✅ Turma "' + nome + '" salva com sucesso!', 'success');
                         limparCache();
                         closeM('m-turma');
                         carregarTurmas();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-turmas', result.data.id, '✅ Nova!');
+                        }, 300);
+
                         carregarDashboard();
                         carregarCombos();
                     } else {
@@ -5011,6 +5626,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao salvar turma: ' + erro.message, 'error');
                     console.error('Erro ao salvar turma:', erro);
+                    const btn = document.querySelector('#m-turma .btn-green');
+                    if (btn) { btn.textContent = '💾 Salvar';
+                        btn.disabled = false; }
                 }
             }
 
@@ -5065,6 +5683,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#m-editar-turma .btn-primary');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Atualizando turma...', 'info');
                     const response = await fetch(API_URL + '/api/turmas/' + id, {
                         method: 'PUT',
@@ -5072,11 +5695,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok) {
                         showToast('✅ Turma "' + nome + '" atualizada com sucesso!', 'success');
                         limparCache();
                         closeM('m-editar-turma');
                         carregarTurmas();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-turmas', id, '✅ Atualizada!');
+                        }, 300);
+
                         carregarCombos();
                     } else {
                         showToast('❌ Erro ao atualizar turma: ' + (result.data.erro || 'Erro desconhecido'), 'error');
@@ -5084,6 +5716,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao atualizar turma: ' + erro.message, 'error');
                     console.error('Erro ao atualizar turma:', erro);
+                    const btn = document.querySelector('#m-editar-turma .btn-primary');
+                    if (btn) { btn.textContent = '💾 Salvar Alterações';
+                        btn.disabled = false; }
                 }
             }
 
@@ -5135,6 +5770,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#m-aluno .btn-green');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Salvando aluno...', 'info');
                     const response = await fetch(API_URL + '/api/alunos', {
                         method: 'POST',
@@ -5142,6 +5782,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok && result.data.id) {
                         showToast('✅ Aluno "' + nome + '" salvo com sucesso!', 'success');
                         limparCache();
@@ -5156,7 +5800,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('aluno-observacoes').value = '';
                         document.getElementById('multi-alunos-input').value = '';
                         document.getElementById('multi-status').style.display = 'none';
-                        carregarAlunos();
+
+                        await carregarAlunos();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-alunos', result.data.id, '✅ Novo!');
+                        }, 300);
+
                         carregarDashboard();
                         carregarCombos();
                     } else {
@@ -5165,6 +5815,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao salvar aluno: ' + erro.message, 'error');
                     console.error('Erro ao salvar aluno:', erro);
+                    const btn = document.querySelector('#m-aluno .btn-green');
+                    if (btn) { btn.textContent = '💾 Salvar';
+                        btn.disabled = false; }
                 }
             }
 
@@ -5235,6 +5888,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#m-editar-aluno .btn-primary');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Atualizando aluno...', 'info');
                     const response = await fetch(API_URL + '/api/alunos/' + id, {
                         method: 'PUT',
@@ -5242,11 +5900,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok) {
                         showToast('✅ Aluno "' + nome + '" atualizado com sucesso!', 'success');
                         limparCache();
                         closeM('m-editar-aluno');
                         carregarAlunos();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-alunos', id, '✅ Atualizado!');
+                        }, 300);
+
                         carregarCombos();
                     } else {
                         showToast('❌ Erro ao atualizar aluno: ' + (result.data.erro || 'Erro desconhecido'), 'error');
@@ -5254,6 +5921,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao atualizar aluno: ' + erro.message, 'error');
                     console.error('Erro ao atualizar aluno:', erro);
+                    const btn = document.querySelector('#m-editar-aluno .btn-primary');
+                    if (btn) { btn.textContent = '💾 Salvar Alterações';
+                        btn.disabled = false; }
                 }
             }
 
@@ -5300,6 +5970,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 };
 
                 try {
+                    const btn = document.querySelector('#page-prova-upload .btn-green');
+                    const originalText = btn.textContent;
+                    btn.textContent = '⏳ Salvando...';
+                    btn.disabled = true;
+
                     showToast('💾 Salvando prova...', 'info');
                     const response = await fetch(API_URL + '/api/provas', {
                         method: 'POST',
@@ -5307,6 +5982,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         body: JSON.stringify(dados)
                     });
                     const result = await processarRespostaAPI(response);
+
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+
                     if (result.ok && result.data.id) {
                         showToast('✅ Prova "' + titulo + '" salva com sucesso para a série ' + serie + '!', 'success');
                         limparCache();
@@ -5314,6 +5993,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         document.getElementById('up-ok').style.display = 'block';
                         setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
                         carregarProvas();
+
+                        setTimeout(() => {
+                            tableFeedback.destacarLinha('tb-provas', result.data.id, '✅ Nova!');
+                        }, 300);
+
                         carregarDashboard();
                         carregarCombos();
                     } else {
@@ -5322,6 +6006,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 } catch (erro) {
                     showToast('❌ Erro ao salvar prova: ' + erro.message, 'error');
                     console.error('Erro ao salvar prova:', erro);
+                    const btn = document.querySelector('#page-prova-upload .btn-green');
+                    if (btn) { btn.textContent = '💾 Salvar';
+                        btn.disabled = false; }
                 }
             }
 
@@ -5578,1043 +6265,1040 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-// ============================================
-// FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA (CORRIGIDA - APENAS A DISCIPLINA FILTRADA)
-// ============================================
-async function imprimirRelatorioTurma() {
-    // Buscar dados atuais da tela
-    const escolaId = document.getElementById('rel-turma-escola').value;
-    const serie = document.getElementById('rel-turma-serie').value;
-    const turmaId = document.getElementById('rel-turma-turma').value;
-    const provaId = document.getElementById('rel-turma-prova').value;
+            // FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA
+            // ============================================
+            async function imprimirRelatorioTurma() {
+                // Buscar dados atuais da tela
+                const escolaId = document.getElementById('rel-turma-escola').value;
+                const serie = document.getElementById('rel-turma-serie').value;
+                const turmaId = document.getElementById('rel-turma-turma').value;
+                const provaId = document.getElementById('rel-turma-prova').value;
 
-    // Buscar dados da tabela
-    const tbody = document.getElementById('tb-rel-alunos');
-    if (!tbody) {
-        showToast('⚠️ Nenhum dado para imprimir.', 'error');
-        return;
-    }
-
-    // ===== BUSCAR A DISCIPLINA SELECIONADA NO FILTRO =====
-    let disciplinaSelecionada = 'Português';
-    let chaveDisciplina = 'portugues';
-    const selectProva = document.getElementById('rel-turma-prova');
-    if (selectProva) {
-        const option = selectProva.options[selectProva.selectedIndex];
-        if (option && option.dataset.disciplina) {
-            disciplinaSelecionada = option.dataset.disciplina;
-        }
-    }
-
-    // Mapear disciplina para chave usada no banco
-    const disciplinaMap = {
-        'Português': 'portugues',
-        'Matemática': 'matematica',
-        'Produção de Texto': 'producao',
-        'Ciências Humanas': 'ch',
-        'Ciências Naturais': 'cn',
-        'História': 'ch',
-        'Geografia': 'ch',
-        'Inglês': 'portugues'
-    };
-    chaveDisciplina = disciplinaMap[disciplinaSelecionada] || 'portugues';
-
-    // ===== BUSCAR INFORMAÇÕES DA ESCOLA, TURMA E PROVA =====
-    let nomeEscola = 'Não informado';
-    let municipio = 'Não informado';
-    let estado = 'PA';
-    let inep = 'Não informado';
-    let diretor = 'Não informado';
-    let turmaNome = 'Não informado';
-    let professor = 'Não informado';
-    let turno = 'Manhã';
-    let bimestre = 'Não informado';
-    let dataAtual = new Date().toLocaleDateString('pt-BR');
-
-    try {
-        if (escolaId && escolaId !== '') {
-            const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
-            const escolaData = await escolaResp.json();
-            if (escolaData && !escolaData.erro) {
-                nomeEscola = escolaData.nome || 'Não informado';
-                municipio = escolaData.municipio || 'Não informado';
-                estado = escolaData.estado || 'PA';
-                inep = escolaData.inep || 'Não informado';
-                diretor = escolaData.diretor || 'Não informado';
-            }
-        }
-    } catch (e) { console.warn('Erro ao buscar escola:', e); }
-
-    try {
-        if (turmaId && turmaId !== '') {
-            const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
-            const turmaData = await turmaResp.json();
-            if (turmaData && !turmaData.erro) {
-                turmaNome = turmaData.nome || 'Não informado';
-                professor = turmaData.professor || 'Não informado';
-                turno = turmaData.turno || 'Manhã';
-            }
-        }
-    } catch (e) { console.warn('Erro ao buscar turma:', e); }
-
-    try {
-        if (provaId && provaId !== '') {
-            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
-            const provaData = await provaResp.json();
-            if (provaData && !provaData.erro) {
-                bimestre = provaData.bimestre || 'Não informado';
-                dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
-            }
-        }
-    } catch (e) { console.warn('Erro ao buscar prova:', e); }
-
-    // ===== BUSCAR DADOS DE ACERTOS POR QUESTÃO COM BNCC =====
-    let acertosPorQuestao = {};
-    let totalQuestoesDisciplina = 0;
-    let totalAcertosDisciplina = 0;
-    let totalErrosDisciplina = 0;
-    let totalAlunosDisciplina = 0;
-    let mediaDisciplina = 0;
-
-    const gridContainer = document.getElementById('rel-acertos-grid');
-    if (gridContainer) {
-        const items = gridContainer.querySelectorAll('.acertos-por-questao-item');
-        if (items.length > 0) {
-            items.forEach(item => {
-                const qNum = item.querySelector('.q-num')?.textContent?.replace('Q', '') || '';
-                const qAcertos = item.querySelector('.q-acertos')?.textContent || '0';
-                const qErros = item.querySelector('.q-erros')?.textContent || '0';
-                const totalEl = item.querySelector('div[style*="font-size:8px"]');
-                const total = totalEl ? totalEl.textContent.replace('Total: ', '') : '0';
-                const bnccEl = item.querySelector('div[style*="font-size:10px;color:var(--purple)"]');
-                let bnccText = '';
-                if (bnccEl) {
-                    bnccText = bnccEl.textContent.replace('BNCC:', '').replace('BNCC ', '').trim();
+                // Buscar dados da tabela
+                const tbody = document.getElementById('tb-rel-alunos');
+                if (!tbody) {
+                    showToast('⚠️ Nenhum dado para imprimir.', 'error');
+                    return;
                 }
-                if (!bnccText && bnccEl && bnccEl.title) {
-                    bnccText = bnccEl.title.replace('BNCC:', '').replace('BNCC ', '').trim();
-                }
-                if (qNum) {
-                    acertosPorQuestao[parseInt(qNum)] = {
-                        acertos: parseInt(qAcertos) || 0,
-                        erros: parseInt(qErros) || 0,
-                        total: parseInt(total) || 0,
-                        bncc: bnccText || ''
-                    };
-                    totalAcertosDisciplina += parseInt(qAcertos) || 0;
-                    totalErrosDisciplina += parseInt(qErros) || 0;
-                    totalQuestoesDisciplina = Math.max(totalQuestoesDisciplina, parseInt(qNum));
-                    totalAlunosDisciplina = Math.max(totalAlunosDisciplina, parseInt(total) || 0);
-                }
-            });
-            mediaDisciplina = totalAlunosDisciplina > 0 ? Math.round((totalAcertosDisciplina / (totalQuestoesDisciplina * totalAlunosDisciplina)) * 100) : 0;
-        }
-    }
 
-    if (Object.keys(acertosPorQuestao).length === 0) {
-        const relTotalAcertos = document.getElementById('rel-total-acertos-disciplina')?.textContent || '0';
-        const relTotalErros = document.getElementById('rel-total-erros-disciplina')?.textContent || '0';
-        const relMedia = document.getElementById('rel-media-disciplina')?.textContent || '0%';
-        const relQuestoes = document.getElementById('rel-total-questoes')?.textContent || '0 questões';
-        
-        totalAcertosDisciplina = parseInt(relTotalAcertos) || 0;
-        totalErrosDisciplina = parseInt(relTotalErros) || 0;
-        totalQuestoesDisciplina = parseInt(relQuestoes) || 15;
-        mediaDisciplina = parseFloat(relMedia) || 0;
-        
-        if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 15;
-        
-        let bnccData = [];
-        if (provaId && provaId !== '') {
-            try {
-                const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
-                const prova = await provaResp.json();
-                if (prova && !prova.erro && prova.bncc) {
-                    bnccData = prova.bncc;
+                // ===== BUSCAR A DISCIPLINA SELECIONADA NO FILTRO =====
+                let disciplinaSelecionada = 'Português';
+                let chaveDisciplina = 'portugues';
+                const selectProva = document.getElementById('rel-turma-prova');
+                if (selectProva) {
+                    const option = selectProva.options[selectProva.selectedIndex];
+                    if (option && option.dataset.disciplina) {
+                        disciplinaSelecionada = option.dataset.disciplina;
+                    }
                 }
-            } catch (e) {}
-        }
-        
-        for (let i = 1; i <= totalQuestoesDisciplina; i++) {
-            if (!acertosPorQuestao[i]) {
-                acertosPorQuestao[i] = {
-                    acertos: Math.round(totalAcertosDisciplina / totalQuestoesDisciplina) || 0,
-                    erros: Math.round(totalErrosDisciplina / totalQuestoesDisciplina) || 0,
-                    total: totalAlunosDisciplina || 15,
-                    bncc: (i-1 < bnccData.length && bnccData[i-1]) ? bnccData[i-1] : ''
+
+                // Mapear disciplina para chave usada no banco
+                const disciplinaMap = {
+                    'Português': 'portugues',
+                    'Matemática': 'matematica',
+                    'Produção de Texto': 'producao',
+                    'Ciências Humanas': 'ch',
+                    'Ciências Naturais': 'cn',
+                    'História': 'ch',
+                    'Geografia': 'ch',
+                    'Inglês': 'portugues'
                 };
-            }
-        }
-    }
+                chaveDisciplina = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
-    // ===== CONSTRUIR HTML DOS ACERTOS POR QUESTÃO =====
-    let acertosPorQuestaoHTML = '';
-    const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
-    
-    if (questoesOrdenadas.length > 0) {
-        acertosPorQuestaoHTML = `
-            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 12px 0;">
-                ${questoesOrdenadas.map(num => {
-                    const dados = acertosPorQuestao[num];
-                    const bnccDisplay = dados.bncc && dados.bncc !== '' ? dados.bncc : '—';
-                    return `
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 4px; text-align: center;">
-                            <div style="font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 4px;">Q${num}</div>
-                            <div>
-                                <span style="font-size: 18px; font-weight: 800; color: #10b981;">${dados.acertos}</span>
-                                <span style="color: #64748b; font-size: 12px; margin: 0 2px;">/</span>
-                                <span style="font-size: 18px; font-weight: 800; color: #ef4444;">${dados.erros}</span>
-                            </div>
-                            <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Acertos / Erros</div>
-                            <div style="font-size: 8px; color: #64748b; margin-top: 2px;">Total: ${dados.total}</div>
-                            <div style="font-size: 12px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 2px 8px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${bnccDisplay}">
-                                ${bnccDisplay}
-                            </div>
+                // ===== BUSCAR INFORMAÇÕES DA ESCOLA, TURMA E PROVA =====
+                let nomeEscola = 'Não informado';
+                let municipio = 'Não informado';
+                let estado = 'PA';
+                let inep = 'Não informado';
+                let diretor = 'Não informado';
+                let turmaNome = 'Não informado';
+                let professor = 'Não informado';
+                let turno = 'Manhã';
+                let bimestre = 'Não informado';
+                let dataAtual = new Date().toLocaleDateString('pt-BR');
+
+                try {
+                    if (escolaId && escolaId !== '') {
+                        const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
+                        const escolaData = await escolaResp.json();
+                        if (escolaData && !escolaData.erro) {
+                            nomeEscola = escolaData.nome || 'Não informado';
+                            municipio = escolaData.municipio || 'Não informado';
+                            estado = escolaData.estado || 'PA';
+                            inep = escolaData.inep || 'Não informado';
+                            diretor = escolaData.diretor || 'Não informado';
+                        }
+                    }
+                } catch (e) { console.warn('Erro ao buscar escola:', e); }
+
+                try {
+                    if (turmaId && turmaId !== '') {
+                        const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
+                        const turmaData = await turmaResp.json();
+                        if (turmaData && !turmaData.erro) {
+                            turmaNome = turmaData.nome || 'Não informado';
+                            professor = turmaData.professor || 'Não informado';
+                            turno = turmaData.turno || 'Manhã';
+                        }
+                    }
+                } catch (e) { console.warn('Erro ao buscar turma:', e); }
+
+                try {
+                    if (provaId && provaId !== '') {
+                        const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                        const provaData = await provaResp.json();
+                        if (provaData && !provaData.erro) {
+                            bimestre = provaData.bimestre || 'Não informado';
+                            dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
+                        }
+                    }
+                } catch (e) { console.warn('Erro ao buscar prova:', e); }
+
+                // ===== BUSCAR DADOS DE ACERTOS POR QUESTÃO COM BNCC =====
+                let acertosPorQuestao = {};
+                let totalQuestoesDisciplina = 0;
+                let totalAcertosDisciplina = 0;
+                let totalErrosDisciplina = 0;
+                let totalAlunosDisciplina = 0;
+                let mediaDisciplina = 0;
+
+                const gridContainer = document.getElementById('rel-acertos-grid');
+                if (gridContainer) {
+                    const items = gridContainer.querySelectorAll('.acertos-por-questao-item');
+                    if (items.length > 0) {
+                        items.forEach(item => {
+                            const qNum = item.querySelector('.q-num')?.textContent?.replace('Q', '') || '';
+                            const qAcertos = item.querySelector('.q-acertos')?.textContent || '0';
+                            const qErros = item.querySelector('.q-erros')?.textContent || '0';
+                            const totalEl = item.querySelector('div[style*="font-size:8px"]');
+                            const total = totalEl ? totalEl.textContent.replace('Total: ', '') : '0';
+                            const bnccEl = item.querySelector('div[style*="font-size:10px;color:var(--purple)"]');
+                            let bnccText = '';
+                            if (bnccEl) {
+                                bnccText = bnccEl.textContent.replace('BNCC:', '').replace('BNCC ', '').trim();
+                            }
+                            if (!bnccText && bnccEl && bnccEl.title) {
+                                bnccText = bnccEl.title.replace('BNCC:', '').replace('BNCC ', '').trim();
+                            }
+                            if (qNum) {
+                                acertosPorQuestao[parseInt(qNum)] = {
+                                    acertos: parseInt(qAcertos) || 0,
+                                    erros: parseInt(qErros) || 0,
+                                    total: parseInt(total) || 0,
+                                    bncc: bnccText || ''
+                                };
+                                totalAcertosDisciplina += parseInt(qAcertos) || 0;
+                                totalErrosDisciplina += parseInt(qErros) || 0;
+                                totalQuestoesDisciplina = Math.max(totalQuestoesDisciplina, parseInt(qNum));
+                                totalAlunosDisciplina = Math.max(totalAlunosDisciplina, parseInt(total) || 0);
+                            }
+                        });
+                        mediaDisciplina = totalAlunosDisciplina > 0 ? Math.round((totalAcertosDisciplina / (totalQuestoesDisciplina * totalAlunosDisciplina)) * 100) : 0;
+                    }
+                }
+
+                if (Object.keys(acertosPorQuestao).length === 0) {
+                    const relTotalAcertos = document.getElementById('rel-total-acertos-disciplina')?.textContent || '0';
+                    const relTotalErros = document.getElementById('rel-total-erros-disciplina')?.textContent || '0';
+                    const relMedia = document.getElementById('rel-media-disciplina')?.textContent || '0%';
+                    const relQuestoes = document.getElementById('rel-total-questoes')?.textContent || '0 questões';
+                    
+                    totalAcertosDisciplina = parseInt(relTotalAcertos) || 0;
+                    totalErrosDisciplina = parseInt(relTotalErros) || 0;
+                    totalQuestoesDisciplina = parseInt(relQuestoes) || 15;
+                    mediaDisciplina = parseFloat(relMedia) || 0;
+                    
+                    if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 15;
+                    
+                    let bnccData = [];
+                    if (provaId && provaId !== '') {
+                        try {
+                            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                            const prova = await provaResp.json();
+                            if (prova && !prova.erro && prova.bncc) {
+                                bnccData = prova.bncc;
+                            }
+                        } catch (e) {}
+                    }
+                    
+                    for (let i = 1; i <= totalQuestoesDisciplina; i++) {
+                        if (!acertosPorQuestao[i]) {
+                            acertosPorQuestao[i] = {
+                                acertos: Math.round(totalAcertosDisciplina / totalQuestoesDisciplina) || 0,
+                                erros: Math.round(totalErrosDisciplina / totalQuestoesDisciplina) || 0,
+                                total: totalAlunosDisciplina || 15,
+                                bncc: (i-1 < bnccData.length && bnccData[i-1]) ? bnccData[i-1] : ''
+                            };
+                        }
+                    }
+                }
+
+                // ===== CONSTRUIR HTML DOS ACERTOS POR QUESTÃO =====
+                let acertosPorQuestaoHTML = '';
+                const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
+                
+                if (questoesOrdenadas.length > 0) {
+                    acertosPorQuestaoHTML = `
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 12px 0;">
+                            ${questoesOrdenadas.map(num => {
+                                const dados = acertosPorQuestao[num];
+                                const bnccDisplay = dados.bncc && dados.bncc !== '' ? dados.bncc : '—';
+                                return `
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 4px; text-align: center;">
+                                        <div style="font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 4px;">Q${num}</div>
+                                        <div>
+                                            <span style="font-size: 18px; font-weight: 800; color: #10b981;">${dados.acertos}</span>
+                                            <span style="color: #64748b; font-size: 12px; margin: 0 2px;">/</span>
+                                            <span style="font-size: 18px; font-weight: 800; color: #ef4444;">${dados.erros}</span>
+                                        </div>
+                                        <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Acertos / Erros</div>
+                                        <div style="font-size: 8px; color: #64748b; margin-top: 2px;">Total: ${dados.total}</div>
+                                        <div style="font-size: 12px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 2px 8px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${bnccDisplay}">
+                                            ${bnccDisplay}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:13px; flex-wrap:wrap; gap:8px; margin-top:8px; padding-top:12px; border-top:1px solid #e2e8f0;">
+                            <span>✅ Total de Acertos: <strong style="color:#10b981;">${totalAcertosDisciplina}</strong></span>
+                            <span>❌ Total de Erros: <strong style="color:#ef4444;">${totalErrosDisciplina}</strong></span>
+                            <span>📊 Média da Turma: <strong style="color:#2563eb;">${mediaDisciplina}%</strong></span>
                         </div>
                     `;
-                }).join('')}
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:13px; flex-wrap:wrap; gap:8px; margin-top:8px; padding-top:12px; border-top:1px solid #e2e8f0;">
-                <span>✅ Total de Acertos: <strong style="color:#10b981;">${totalAcertosDisciplina}</strong></span>
-                <span>❌ Total de Erros: <strong style="color:#ef4444;">${totalErrosDisciplina}</strong></span>
-                <span>📊 Média da Turma: <strong style="color:#2563eb;">${mediaDisciplina}%</strong></span>
-            </div>
-        `;
-    } else {
-        acertosPorQuestaoHTML = '<p style="text-align:center;padding:20px;color:#64748b;">Nenhum dado de acertos por questão disponível.</p>';
-    }
-
-    // ===== CONSTRUIR TABELA HTML - APENAS A DISCIPLINA SELECIONADA =====
-    let tabelaHTML = '';
-    const rows = tbody.querySelectorAll('tr');
-    
-    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
-        tabelaHTML = '<p style="text-align:center;padding:20px;">Nenhum dado encontrado para imprimir.</p>';
-    } else {
-        // Cabeçalho da tabela com apenas a disciplina selecionada
-        tabelaHTML = `
-            <table>
-                <thead>
-                    <tr>
-                        <th rowspan="2">Pos.</th>
-                        <th rowspan="2">Nº</th>
-                        <th rowspan="2">Nome</th>
-                        <th rowspan="2">Série</th>
-                        <th colspan="3" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;">${disciplinaSelecionada}</th>
-                        <th rowspan="2">Escola</th>
-                        <th rowspan="2">Turma</th>
-                    </tr>
-                    <tr>
-                        <th style="font-size:7px;padding:2px 2px;">Acertos</th>
-                        <th style="font-size:7px;padding:2px 2px;">Erros</th>
-                        <th style="font-size:7px;padding:2px 2px;">Conceito</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        // Função para obter dados da disciplina específica
-        function getDadosDisciplina(disciplinaData) {
-            if (!disciplinaData || typeof disciplinaData !== 'object') {
-                return { acertos: 0, erros: 0, conceito: 'inicial' };
-            }
-            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-            const totalDisc = disciplinaData.total || 0;
-            if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
-            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-            const conceito = calcularConceito(porcentagem);
-            return { acertos, erros, conceito };
-        }
-
-        function badgeConceito(c) {
-            const map = {
-                'inicial': 'badge-conceito-inicial',
-                'basico': 'badge-conceito-basico',
-                'proficiente': 'badge-conceito-proficiente',
-                'avancado': 'badge-conceito-avancado'
-            };
-            return map[c] || 'badge-gray';
-        }
-
-        // Processar cada linha da tabela
-        const alunosData = [];
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length >= 20) {
-                const aluno = {
-                    pos: cells[0]?.textContent || '',
-                    numero: cells[1]?.textContent || '',
-                    nome: cells[2]?.textContent || '',
-                    serie: cells[3]?.textContent || '',
-                    escola: cells[19]?.textContent || '',
-                    turma: cells[20]?.textContent || ''
-                };
-
-                // Buscar dados da disciplina específica
-                // Os índices variam conforme a disciplina
-                // Português: 4,5,6 | Matemática: 7,8,9 | Produção: 10,11,12 | CH: 13,14,15 | CN: 16,17,18
-                const discIndex = {
-                    'portugues': { acertos: 4, erros: 5, conceito: 6 },
-                    'matematica': { acertos: 7, erros: 8, conceito: 9 },
-                    'producao': { acertos: 10, erros: 11, conceito: 12 },
-                    'ch': { acertos: 13, erros: 14, conceito: 15 },
-                    'cn': { acertos: 16, erros: 17, conceito: 18 }
-                };
-
-                const idx = discIndex[chaveDisciplina] || discIndex['portugues'];
-                aluno.acertos = cells[idx.acertos]?.textContent || '0';
-                aluno.erros = cells[idx.erros]?.textContent || '0';
-                aluno.conceito = cells[idx.conceito]?.textContent || 'inicial';
-
-                alunosData.push(aluno);
-            }
-        });
-
-        // Montar linhas da tabela
-        alunosData.forEach((aluno, index) => {
-            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-            const badgeClass = badgeConceito(aluno.conceito.toLowerCase());
-            
-            tabelaHTML += `
-                <tr>
-                    <td>${medalha}</td>
-                    <td>${index + 1}</td>
-                    <td style="text-align:left;"><strong>${aluno.nome}</strong></td>
-                    <td><span class="badge badge-purple">${aluno.serie}</span></td>
-                    <td style="text-align:center;"><span class="badge badge-blue">${aluno.acertos}</span></td>
-                    <td style="text-align:center;"><span class="badge badge-red">${aluno.erros}</span></td>
-                    <td style="text-align:center;"><span class="badge ${badgeClass}">${aluno.conceito}</span></td>
-                    <td style="font-size:10px;color:#64748b;">${aluno.escola}</td>
-                    <td style="font-size:10px;color:#64748b;">${aluno.turma}</td>
-                </tr>
-            `;
-        });
-
-        tabelaHTML += `
-                </tbody>
-            </table>
-        `;
-    }
-
-    // ===== CONSTRUIR HTML COMPLETO PARA IMPRESSÃO =====
-    const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Relatório por Turma - ${disciplinaSelecionada}</title>
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #0f172a; padding: 20px; }
-            @media print { body { padding: 10px; } }
-            
-            .header-institucional {
-                text-align: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 3px solid #1e293b;
-            }
-            .header-institucional .brasao { font-size: 36px; margin-bottom: 4px; }
-            .header-institucional .municipio { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: 1px; }
-            .header-institucional .estado { font-size: 13px; color: #475569; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
-            .header-institucional .secretaria { font-size: 14px; color: #2563eb; font-weight: 700; margin-top: 2px; }
-            .header-institucional .divider { width: 80px; height: 3px; background: linear-gradient(90deg, #2563eb, #3b82f6); margin: 6px auto; border-radius: 2px; }
-            .header-institucional .sisam { font-size: 16px; font-weight: 800; color: #1e293b; letter-spacing: 3px; }
-            .header-institucional .ano-letivo { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px; }
-            
-            .info-escola {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 10px;
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 14px 18px;
-                margin-bottom: 20px;
-                font-size: 12px;
-            }
-            .info-escola .item { display: flex; flex-direction: column; gap: 2px; }
-            .info-escola .item .label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-            .info-escola .item .value { font-weight: 600; color: #0f172a; }
-            
-            .titulo-relatorio {
-                text-align: center;
-                margin-bottom: 15px;
-            }
-            .titulo-relatorio h2 { font-size: 18px; color: #0f172a; }
-            .titulo-relatorio p { font-size: 12px; color: #64748b; }
-            
-            table { width: 100%; border-collapse: collapse; font-size: 9px; }
-            th, td { border: 1px solid #ccc; padding: 3px 4px; text-align: center; }
-            th { background: #f0f0f0; font-weight: 700; font-size: 7px; text-transform: uppercase; }
-            td { font-size: 8px; }
-            
-            .badge { 
-                display: inline-block; 
-                padding: 1px 6px; 
-                border-radius: 10px; 
-                font-size: 7px; 
-                font-weight: 700; 
-            }
-            .badge-purple { background: #e8d4ff; color: #4a148c; }
-            .badge-blue { background: #cce5ff; color: #004085; }
-            .badge-red { background: #f8d7da; color: #721c24; }
-            .badge-conceito-inicial { background: #f8d7da; color: #721c24; }
-            .badge-conceito-basico { background: #fff3cd; color: #856404; }
-            .badge-conceito-proficiente { background: #cce5ff; color: #004085; }
-            .badge-conceito-avancado { background: #d4edda; color: #155724; }
-            .badge-gray { background: #e9ecef; color: #495057; }
-            
-            .card-acertos-por-questao {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 16px 18px;
-                margin: 16px 0;
-            }
-            .card-acertos-por-questao .card-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-bottom: 12px;
-            }
-            .card-acertos-por-questao .card-header .titulo {
-                font-size: 15px;
-                font-weight: 700;
-                color: #0f172a;
-            }
-            .card-acertos-por-questao .card-header .badge {
-                background: #dbeafe;
-                color: #1e40af;
-                padding: 2px 12px;
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 700;
-            }
-            
-            .rodape {
-                text-align: center;
-                margin-top: 25px;
-                padding-top: 15px;
-                border-top: 1px solid #e2e8f0;
-                font-size: 11px;
-                color: #94a3b8;
-            }
-            
-            .assinaturas {
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 40px;
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #e2e8f0;
-                text-align: center;
-            }
-            .assinaturas .linha {
-                border-top: 1px solid #94a3b8;
-                padding-top: 8px;
-                font-size: 11px;
-                color: #475569;
-                margin-top: 20px;
-            }
-            .assinaturas .cargo {
-                font-size: 10px;
-                color: #94a3b8;
-                margin-top: 2px;
-            }
-            
-            .card-distribuicao {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 16px 18px;
-                margin: 16px 0;
-                text-align: center;
-            }
-            .card-distribuicao .stats {
-                display: flex;
-                justify-content: center;
-                gap: 32px;
-                font-size: 16px;
-                font-weight: 600;
-                flex-wrap: wrap;
-            }
-            .card-distribuicao .stats .acertos { color: #10b981; }
-            .card-distribuicao .stats .erros { color: #ef4444; }
-            .card-distribuicao .stats .media { color: #2563eb; }
-            .card-distribuicao .stats .conceito { color: #7c3aed; }
-            
-            @media print {
-                .no-print { display: none !important; }
-                .info-escola { background: #f8fafc !important; }
-                .header-institucional { border-bottom-color: #0f172a !important; }
-                .card-acertos-por-questao { background: #f8fafc !important; }
-                .card-distribuicao { background: #f8fafc !important; }
-            }
-            
-            @media (max-width: 768px) {
-                .card-acertos-por-questao div[style*="grid-template-columns"] {
-                    grid-template-columns: repeat(5, 1fr) !important;
+                } else {
+                    acertosPorQuestaoHTML = '<p style="text-align:center;padding:20px;color:#64748b;">Nenhum dado de acertos por questão disponível.</p>';
                 }
-                .info-escola { grid-template-columns: 1fr; }
-                .assinaturas { grid-template-columns: 1fr; gap: 20px; }
+
+                // ===== CONSTRUIR TABELA HTML - APENAS A DISCIPLINA SELECIONADA =====
+                let tabelaHTML = '';
+                const rows = tbody.querySelectorAll('tr');
+                
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
+                    tabelaHTML = '<p style="text-align:center;padding:20px;">Nenhum dado encontrado para imprimir.</p>';
+                } else {
+                    // Cabeçalho da tabela com apenas a disciplina selecionada
+                    tabelaHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="3" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;">${disciplinaSelecionada}</th>
+                                    <th rowspan="2">Escola</th>
+                                    <th rowspan="2">Turma</th>
+                                </tr>
+                                <tr>
+                                    <th style="font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="font-size:7px;padding:2px 2px;">Conceito</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    // Função para obter dados da disciplina específica
+                    function getDadosDisciplina(disciplinaData) {
+                        if (!disciplinaData || typeof disciplinaData !== 'object') {
+                            return { acertos: 0, erros: 0, conceito: 'inicial' };
+                        }
+                        const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                        let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                        const totalDisc = disciplinaData.total || 0;
+                        if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+                        const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        const conceito = calcularConceito(porcentagem);
+                        return { acertos, erros, conceito };
+                    }
+
+                    function badgeConceito(c) {
+                        const map = {
+                            'inicial': 'badge-conceito-inicial',
+                            'basico': 'badge-conceito-basico',
+                            'proficiente': 'badge-conceito-proficiente',
+                            'avancado': 'badge-conceito-avancado'
+                        };
+                        return map[c] || 'badge-gray';
+                    }
+
+                    // Processar cada linha da tabela
+                    const alunosData = [];
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 20) {
+                            const aluno = {
+                                pos: cells[0]?.textContent || '',
+                                numero: cells[1]?.textContent || '',
+                                nome: cells[2]?.textContent || '',
+                                serie: cells[3]?.textContent || '',
+                                escola: cells[19]?.textContent || '',
+                                turma: cells[20]?.textContent || ''
+                            };
+
+                            // Buscar dados da disciplina específica
+                            const discIndex = {
+                                'portugues': { acertos: 4, erros: 5, conceito: 6 },
+                                'matematica': { acertos: 7, erros: 8, conceito: 9 },
+                                'producao': { acertos: 10, erros: 11, conceito: 12 },
+                                'ch': { acertos: 13, erros: 14, conceito: 15 },
+                                'cn': { acertos: 16, erros: 17, conceito: 18 }
+                            };
+
+                            const idx = discIndex[chaveDisciplina] || discIndex['portugues'];
+                            aluno.acertos = cells[idx.acertos]?.textContent || '0';
+                            aluno.erros = cells[idx.erros]?.textContent || '0';
+                            aluno.conceito = cells[idx.conceito]?.textContent || 'inicial';
+
+                            alunosData.push(aluno);
+                        }
+                    });
+
+                    // Montar linhas da tabela
+                    alunosData.forEach((aluno, index) => {
+                        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+                        const badgeClass = badgeConceito(aluno.conceito.toLowerCase());
+                        
+                        tabelaHTML += `
+                            <tr>
+                                <td>${medalha}</td>
+                                <td>${index + 1}</td>
+                                <td style="text-align:left;"><strong>${aluno.nome}</strong></td>
+                                <td><span class="badge badge-purple">${aluno.serie}</span></td>
+                                <td style="text-align:center;"><span class="badge badge-blue">${aluno.acertos}</span></td>
+                                <td style="text-align:center;"><span class="badge badge-red">${aluno.erros}</span></td>
+                                <td style="text-align:center;"><span class="badge ${badgeClass}">${aluno.conceito}</span></td>
+                                <td style="font-size:10px;color:#64748b;">${aluno.escola}</td>
+                                <td style="font-size:10px;color:#64748b;">${aluno.turma}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tabelaHTML += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                // ===== CONSTRUIR HTML COMPLETO PARA IMPRESSÃO =====
+                const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório por Turma - ${disciplinaSelecionada}</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #0f172a; padding: 20px; }
+                        @media print { body { padding: 10px; } }
+                        
+                        .header-institucional {
+                            text-align: center;
+                            margin-bottom: 20px;
+                            padding-bottom: 15px;
+                            border-bottom: 3px solid #1e293b;
+                        }
+                        .header-institucional .brasao { font-size: 36px; margin-bottom: 4px; }
+                        .header-institucional .municipio { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: 1px; }
+                        .header-institucional .estado { font-size: 13px; color: #475569; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+                        .header-institucional .secretaria { font-size: 14px; color: #2563eb; font-weight: 700; margin-top: 2px; }
+                        .header-institucional .divider { width: 80px; height: 3px; background: linear-gradient(90deg, #2563eb, #3b82f6); margin: 6px auto; border-radius: 2px; }
+                        .header-institucional .sisam { font-size: 16px; font-weight: 800; color: #1e293b; letter-spacing: 3px; }
+                        .header-institucional .ano-letivo { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px; }
+                        
+                        .info-escola {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                            gap: 10px;
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 8px;
+                            padding: 14px 18px;
+                            margin-bottom: 20px;
+                            font-size: 12px;
+                        }
+                        .info-escola .item { display: flex; flex-direction: column; gap: 2px; }
+                        .info-escola .item .label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+                        .info-escola .item .value { font-weight: 600; color: #0f172a; }
+                        
+                        .titulo-relatorio {
+                            text-align: center;
+                            margin-bottom: 15px;
+                        }
+                        .titulo-relatorio h2 { font-size: 18px; color: #0f172a; }
+                        .titulo-relatorio p { font-size: 12px; color: #64748b; }
+                        
+                        table { width: 100%; border-collapse: collapse; font-size: 9px; }
+                        th, td { border: 1px solid #ccc; padding: 3px 4px; text-align: center; }
+                        th { background: #f0f0f0; font-weight: 700; font-size: 7px; text-transform: uppercase; }
+                        td { font-size: 8px; }
+                        
+                        .badge { 
+                            display: inline-block; 
+                            padding: 1px 6px; 
+                            border-radius: 10px; 
+                            font-size: 7px; 
+                            font-weight: 700; 
+                        }
+                        .badge-purple { background: #e8d4ff; color: #4a148c; }
+                        .badge-blue { background: #cce5ff; color: #004085; }
+                        .badge-red { background: #f8d7da; color: #721c24; }
+                        .badge-conceito-inicial { background: #f8d7da; color: #721c24; }
+                        .badge-conceito-basico { background: #fff3cd; color: #856404; }
+                        .badge-conceito-proficiente { background: #cce5ff; color: #004085; }
+                        .badge-conceito-avancado { background: #d4edda; color: #155724; }
+                        .badge-gray { background: #e9ecef; color: #495057; }
+                        
+                        .card-acertos-por-questao {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 8px;
+                            padding: 16px 18px;
+                            margin: 16px 0;
+                        }
+                        .card-acertos-por-questao .card-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                            margin-bottom: 12px;
+                        }
+                        .card-acertos-por-questao .card-header .titulo {
+                            font-size: 15px;
+                            font-weight: 700;
+                            color: #0f172a;
+                        }
+                        .card-acertos-por-questao .card-header .badge {
+                            background: #dbeafe;
+                            color: #1e40af;
+                            padding: 2px 12px;
+                            border-radius: 12px;
+                            font-size: 11px;
+                            font-weight: 700;
+                        }
+                        
+                        .rodape {
+                            text-align: center;
+                            margin-top: 25px;
+                            padding-top: 15px;
+                            border-top: 1px solid #e2e8f0;
+                            font-size: 11px;
+                            color: #94a3b8;
+                        }
+                        
+                        .assinaturas {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr 1fr;
+                            gap: 40px;
+                            margin-top: 30px;
+                            padding-top: 20px;
+                            border-top: 1px solid #e2e8f0;
+                            text-align: center;
+                        }
+                        .assinaturas .linha {
+                            border-top: 1px solid #94a3b8;
+                            padding-top: 8px;
+                            font-size: 11px;
+                            color: #475569;
+                            margin-top: 20px;
+                        }
+                        .assinaturas .cargo {
+                            font-size: 10px;
+                            color: #94a3b8;
+                            margin-top: 2px;
+                        }
+                        
+                        .card-distribuicao {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 8px;
+                            padding: 16px 18px;
+                            margin: 16px 0;
+                            text-align: center;
+                        }
+                        .card-distribuicao .stats {
+                            display: flex;
+                            justify-content: center;
+                            gap: 32px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            flex-wrap: wrap;
+                        }
+                        .card-distribuicao .stats .acertos { color: #10b981; }
+                        .card-distribuicao .stats .erros { color: #ef4444; }
+                        .card-distribuicao .stats .media { color: #2563eb; }
+                        .card-distribuicao .stats .conceito { color: #7c3aed; }
+                        
+                        @media print {
+                            .no-print { display: none !important; }
+                            .info-escola { background: #f8fafc !important; }
+                            .header-institucional { border-bottom-color: #0f172a !important; }
+                            .card-acertos-por-questao { background: #f8fafc !important; }
+                            .card-distribuicao { background: #f8fafc !important; }
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .card-acertos-por-questao div[style*="grid-template-columns"] {
+                                grid-template-columns: repeat(5, 1fr) !important;
+                            }
+                            .info-escola { grid-template-columns: 1fr; }
+                            .assinaturas { grid-template-columns: 1fr; gap: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <!-- CABEÇALHO INSTITUCIONAL -->
+                    <div class="header-institucional">
+                        <div class="brasao">🏛️</div>
+                        <div class="municipio">PREFEITURA DE ${municipio.toUpperCase()}</div>
+                        <div class="secretaria">SECRETARIA MUNICIPAL DE EDUCAÇÃO</div>
+                        <div class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICA - DGP</div>
+                        <div class="divider"></div>
+                        <div class="sisam">SISAM 2026</div>
+                        <div class="ano-letivo">Ano Letivo ${new Date().getFullYear()}</div>
+                    </div>
+
+                    <!-- INFORMAÇÕES DA ESCOLA E TURMA -->
+                    <div class="info-escola">
+                        <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
+                        <div class="item"><span class="label">📍 Município</span><span class="value">${municipio} - ${estado}</span></div>
+                        <div class="item"><span class="label">📋 INEP</span><span class="value">${inep}</span></div>
+                        <div class="item"><span class="label">👨‍🏫 Diretor(a)</span><span class="value">${diretor}</span></div>
+                        <div class="item"><span class="label">👥 Turma</span><span class="value">${turmaNome}</span></div>
+                        <div class="item"><span class="label">📚 Série</span><span class="value">${serie || 'Não informado'}</span></div>
+                        <div class="item"><span class="label">👨‍🏫 Professor(a)</span><span class="value">${professor}</span></div>
+                        <div class="item"><span class="label">🕐 Turno</span><span class="value">${turno}</span></div>
+                        <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
+                        <div class="item"><span class="label">📊 Bimestre</span><span class="value">${bimestre}</span></div>
+                        <div class="item"><span class="label">📖 Disciplina</span><span class="value" style="color:#2563eb;font-weight:700;">${disciplinaSelecionada}</span></div>
+                    </div>
+
+                    <!-- TÍTULO -->
+                    <div class="titulo-relatorio">
+                        <h2>📊 RELATÓRIO POR TURMA</h2>
+                        <p>Relatório de desempenho dos alunos - ${disciplinaSelecionada}</p>
+                    </div>
+
+                    <!-- ===== CARD: ACERTOS POR QUESTÃO ===== -->
+                    <div class="card-acertos-por-questao">
+                        <div class="card-header">
+                            <span class="titulo">📊 Acertos por Questão — ${disciplinaSelecionada}</span>
+                            <span class="badge">${totalQuestoesDisciplina} questões</span>
+                        </div>
+                        ${acertosPorQuestaoHTML}
+                    </div>
+
+                    <!-- ===== CARD: DISTRIBUIÇÃO DE NOTAS ===== -->
+                    <div class="card-distribuicao">
+                        <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#0f172a;">
+                            📈 Distribuição de Notas — ${disciplinaSelecionada}
+                        </div>
+                        <div style="font-size:12px; color:#64748b; margin-bottom:12px;">
+                            ${totalAlunosDisciplina || 0} correções
+                        </div>
+                        <div class="stats">
+                            <span class="acertos">✅ Acertos: ${totalAcertosDisciplina}</span>
+                            <span class="erros">❌ Erros: ${totalErrosDisciplina}</span>
+                            <span class="media">⭐ Média: ${(totalAcertosDisciplina / (totalQuestoesDisciplina || 1)).toFixed(1)}</span>
+                            <span class="conceito">📊 Conceito: ${mediaDisciplina > 80 ? '🟢 Avançado' : mediaDisciplina > 60 ? '🔵 Proficiente' : mediaDisciplina > 40 ? '🟠 Básico' : '🔴 Inicial'}</span>
+                        </div>
+                    </div>
+
+                    <!-- ===== TABELA DE ALUNOS (APENAS A DISCIPLINA FILTRADA) ===== -->
+                    ${tabelaHTML}
+
+                    <!-- ASSINATURAS -->
+                    <div class="assinaturas">
+                        <div>
+                            <div class="linha">_________________________________</div>
+                            <div>Professor(a) Responsável</div>
+                            <div class="cargo">${professor}</div>
+                        </div>
+                        <div>
+                            <div class="linha">_________________________________</div>
+                            <div>Diretor(a)</div>
+                            <div class="cargo">${diretor}</div>
+                        </div>
+                        <div>
+                            <div class="linha">_________________________________</div>
+                            <div>Secretário(a) de Educação</div>
+                            <div class="cargo">Secretaria Municipal de Educação</div>
+                        </div>
+                    </div>
+
+                    <!-- RODAPÉ -->
+                    <div class="rodape">
+                        <p>Documento gerado em ${new Date().toLocaleString('pt-BR')}</p>
+                        <p>© ${new Date().getFullYear()} CorrigePro — Secretaria Municipal de Educação</p>
+                    </div>
+
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() {
+                                window.print();
+                            }, 500);
+                        };
+                    <\/script>
+                </body>
+                </html>
+                `;
+
+                // Abrir nova janela para impressão
+                const win = window.open('', '_blank');
+                if (win) {
+                    win.document.write(html);
+                    win.document.close();
+                } else {
+                    showToast('⚠️ Permita pop-ups para imprimir o relatório.', 'error');
+                }
             }
-        </style>
-    </head>
-    <body>
-        <!-- CABEÇALHO INSTITUCIONAL -->
-        <div class="header-institucional">
-            <div class="brasao">🏛️</div>
-            <div class="municipio">PREFEITURA DE ${municipio.toUpperCase()}</div>
-            <div class="secretaria">SECRETARIA MUNICIPAL DE EDUCAÇÃO</div>
-            <div class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICA - DGP</div>
-            <div class="divider"></div>
-            <div class="sisam">SISAM 2026</div>
-            <div class="ano-letivo">Ano Letivo ${new Date().getFullYear()}</div>
-        </div>
-
-        <!-- INFORMAÇÕES DA ESCOLA E TURMA -->
-        <div class="info-escola">
-            <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
-            <div class="item"><span class="label">📍 Município</span><span class="value">${municipio} - ${estado}</span></div>
-            <div class="item"><span class="label">📋 INEP</span><span class="value">${inep}</span></div>
-            <div class="item"><span class="label">👨‍🏫 Diretor(a)</span><span class="value">${diretor}</span></div>
-            <div class="item"><span class="label">👥 Turma</span><span class="value">${turmaNome}</span></div>
-            <div class="item"><span class="label">📚 Série</span><span class="value">${serie || 'Não informado'}</span></div>
-            <div class="item"><span class="label">👨‍🏫 Professor(a)</span><span class="value">${professor}</span></div>
-            <div class="item"><span class="label">🕐 Turno</span><span class="value">${turno}</span></div>
-            <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
-            <div class="item"><span class="label">📊 Bimestre</span><span class="value">${bimestre}</span></div>
-            <div class="item"><span class="label">📖 Disciplina</span><span class="value" style="color:#2563eb;font-weight:700;">${disciplinaSelecionada}</span></div>
-        </div>
-
-        <!-- TÍTULO -->
-        <div class="titulo-relatorio">
-            <h2>📊 RELATÓRIO POR TURMA</h2>
-            <p>Relatório de desempenho dos alunos - ${disciplinaSelecionada}</p>
-        </div>
-
-        <!-- ===== CARD: ACERTOS POR QUESTÃO ===== -->
-        <div class="card-acertos-por-questao">
-            <div class="card-header">
-                <span class="titulo">📊 Acertos por Questão — ${disciplinaSelecionada}</span>
-                <span class="badge">${totalQuestoesDisciplina} questões</span>
-            </div>
-            ${acertosPorQuestaoHTML}
-        </div>
-
-        <!-- ===== CARD: DISTRIBUIÇÃO DE NOTAS ===== -->
-        <div class="card-distribuicao">
-            <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#0f172a;">
-                📈 Distribuição de Notas — ${disciplinaSelecionada}
-            </div>
-            <div style="font-size:12px; color:#64748b; margin-bottom:12px;">
-                ${totalAlunosDisciplina || 0} correções
-            </div>
-            <div class="stats">
-                <span class="acertos">✅ Acertos: ${totalAcertosDisciplina}</span>
-                <span class="erros">❌ Erros: ${totalErrosDisciplina}</span>
-                <span class="media">⭐ Média: ${(totalAcertosDisciplina / (totalQuestoesDisciplina || 1)).toFixed(1)}</span>
-                <span class="conceito">📊 Conceito: ${mediaDisciplina > 80 ? '🟢 Avançado' : mediaDisciplina > 60 ? '🔵 Proficiente' : mediaDisciplina > 40 ? '🟠 Básico' : '🔴 Inicial'}</span>
-            </div>
-        </div>
-
-        <!-- ===== TABELA DE ALUNOS (APENAS A DISCIPLINA FILTRADA) ===== -->
-        ${tabelaHTML}
-
-        <!-- ASSINATURAS -->
-        <div class="assinaturas">
-            <div>
-                <div class="linha">_________________________________</div>
-                <div>Professor(a) Responsável</div>
-                <div class="cargo">${professor}</div>
-            </div>
-            <div>
-                <div class="linha">_________________________________</div>
-                <div>Diretor(a)</div>
-                <div class="cargo">${diretor}</div>
-            </div>
-            <div>
-                <div class="linha">_________________________________</div>
-                <div>Secretário(a) de Educação</div>
-                <div class="cargo">Secretaria Municipal de Educação</div>
-            </div>
-        </div>
-
-        <!-- RODAPÉ -->
-        <div class="rodape">
-            <p>Documento gerado em ${new Date().toLocaleString('pt-BR')}</p>
-            <p>© ${new Date().getFullYear()} CorrigePro — Secretaria Municipal de Educação</p>
-        </div>
-
-        <script>
-            window.onload = function() {
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-            };
-        <\/script>
-    </body>
-    </html>
-    `;
-
-    // Abrir nova janela para impressão
-    const win = window.open('', '_blank');
-    if (win) {
-        win.document.write(html);
-        win.document.close();
-    } else {
-        showToast('⚠️ Permita pop-ups para imprimir o relatório.', 'error');
-    }
-}
 
             // ============================================
-// CARREGAR RELATÓRIO POR TURMA FILTRADO (CORRIGIDO)
-// ============================================
-async function carregarRelatorioTurmaFiltrado() {
-    try {
-        const escolaId = document.getElementById('rel-turma-escola').value;
-        const serie = document.getElementById('rel-turma-serie').value;
-        const turmaId = document.getElementById('rel-turma-turma').value;
-        const provaId = document.getElementById('rel-turma-prova').value;
+            // CARREGAR RELATÓRIO POR TURMA FILTRADO
+            // ============================================
+            async function carregarRelatorioTurmaFiltrado() {
+                try {
+                    const escolaId = document.getElementById('rel-turma-escola').value;
+                    const serie = document.getElementById('rel-turma-serie').value;
+                    const turmaId = document.getElementById('rel-turma-turma').value;
+                    const provaId = document.getElementById('rel-turma-prova').value;
 
-        let disciplinaSelecionada = '';
-        const selectProva = document.getElementById('rel-turma-prova');
-        const optionProva = selectProva.options[selectProva.selectedIndex];
-        if (optionProva && optionProva.dataset.disciplina) {
-            disciplinaSelecionada = optionProva.dataset.disciplina;
-        }
-        if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
-
-        // Mapeamento de disciplina para chave
-        const disciplinaMap = {
-            'Português': 'portugues',
-            'Matemática': 'matematica',
-            'Produção de Texto': 'producao',
-            'Ciências Humanas': 'ch',
-            'Ciências Naturais': 'cn',
-            'História': 'ch',
-            'Geografia': 'ch',
-            'Inglês': 'portugues'
-        };
-        const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
-
-        let url = API_URL + '/api/historico/agrupado';
-        const params = new URLSearchParams();
-        if (escolaId && escolaId !== '') params.append('escola', escolaId);
-        if (serie && serie !== '') params.append('serie', serie);
-        if (turmaId && turmaId !== '') params.append('turma', turmaId);
-        if (provaId && provaId !== '') params.append('prova', provaId);
-        if (params.toString()) url += '?' + params.toString();
-
-        const response = await fetch(url);
-        const alunos = await response.json();
-
-        if (!alunos || alunos.length === 0 || alunos.erro) {
-            setText('rel-media', '0%');
-            setText('rel-total-alunos-conceitos', '0 alunos');
-            setText('rel-total-correcoes', '0 correções');
-            setText('rel-total-questoes', '0 questões');
-            setText('rel-disciplina-nome-card', 'Disciplina: —');
-            
-            // Resetar conceito geral
-            const conceitoGeralEl = document.getElementById('rel-conceito-geral');
-            if (conceitoGeralEl) {
-                conceitoGeralEl.textContent = '—';
-                conceitoGeralEl.className = 'badge badge-gray';
-            }
-            
-            ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                setText(`rel-conceito-${c}-count`, '0');
-                const bar = document.getElementById(`rel-conceito-${c}-bar`);
-                if (bar) bar.style.width = '0%';
-            });
-            setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
-            setText('rel-disc-acertos', '0');
-            setText('rel-disc-erros', '0');
-            setText('rel-disc-media', '0.0');
-            setText('rel-disc-conceito', '—');
-            setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
-            setText('rel-total-acertos-disciplina', '0');
-            setText('rel-total-erros-disciplina', '0');
-            setText('rel-media-disciplina', '0%');
-            document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
-            const tbody = document.getElementById('tb-rel-alunos');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
-            setText('rel-total-alunos-tabela', '0 alunos');
-            return;
-        }
-
-        const dadosAlunos = Array.isArray(alunos) ? alunos : [];
-
-        if (dadosAlunos.length === 0) {
-            setText('rel-media', '0%');
-            setText('rel-total-alunos-conceitos', '0 alunos');
-            setText('rel-total-correcoes', '0 correções');
-            setText('rel-total-questoes', '0 questões');
-            setText('rel-disciplina-nome-card', 'Disciplina: —');
-            
-            // Resetar conceito geral
-            const conceitoGeralEl = document.getElementById('rel-conceito-geral');
-            if (conceitoGeralEl) {
-                conceitoGeralEl.textContent = '—';
-                conceitoGeralEl.className = 'badge badge-gray';
-            }
-            
-            ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                setText(`rel-conceito-${c}-count`, '0');
-                const bar = document.getElementById(`rel-conceito-${c}-bar`);
-                if (bar) bar.style.width = '0%';
-            });
-            setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
-            setText('rel-disc-acertos', '0');
-            setText('rel-disc-erros', '0');
-            setText('rel-disc-media', '0.0');
-            setText('rel-disc-conceito', '—');
-            setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
-            setText('rel-total-acertos-disciplina', '0');
-            setText('rel-total-erros-disciplina', '0');
-            setText('rel-media-disciplina', '0%');
-            document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
-            const tbody = document.getElementById('tb-rel-alunos');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
-            setText('rel-total-alunos-tabela', '0 alunos');
-            return;
-        }
-
-        const totalAlunos = dadosAlunos.length;
-        const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-
-        // === CALCULAR MÉDIA APENAS DA DISCIPLINA SELECIONADA ===
-        let somaNotas = 0;
-        let alunosComDados = 0;
-        dadosAlunos.forEach(a => {
-            const discData = a[chave] || {};
-            const total = discData.total || 0;
-            const acertos = discData.acertos || 0;
-            if (total > 0) {
-                const nota = (acertos / total) * notaMaxima;
-                somaNotas += nota;
-                alunosComDados++;
-            }
-        });
-        
-        const mediaGeral = alunosComDados > 0 ? somaNotas / alunosComDados : 0;
-        const porcentagemMedia = notaMaxima > 0 ? (mediaGeral / notaMaxima) * 100 : 0;
-        
-        setText('rel-media', porcentagemMedia.toFixed(1) + '%');
-        setText('rel-total-alunos-conceitos', totalAlunos + ' alunos');
-        setText('rel-total-correcoes', totalAlunos + ' correções');
-        setText('rel-disciplina-nome-card', 'Disciplina: ' + disciplinaSelecionada);
-
-        // === CALCULAR CONCEITO GERAL DA TURMA ===
-        let conceitoGeral = '—';
-        let badgeConceitoGeral = 'badge-gray';
-
-        if (alunosComDados > 0) {
-            const pctGeral = (mediaGeral / notaMaxima) * 100;
-            const conceito = calcularConceito(pctGeral);
-            
-            const badgeMap = {
-                'inicial': 'badge-conceito-inicial',
-                'basico': 'badge-conceito-basico',
-                'proficiente': 'badge-conceito-proficiente',
-                'avancado': 'badge-conceito-avancado'
-            };
-            const labelMap = {
-                'inicial': '🔴 Inicial',
-                'basico': '🟠 Básico',
-                'proficiente': '🔵 Proficiente',
-                'avancado': '🟢 Avançado'
-            };
-            
-            conceitoGeral = labelMap[conceito] || '—';
-            badgeConceitoGeral = badgeMap[conceito] || 'badge-gray';
-        }
-
-        // Atualizar o elemento HTML com o conceito geral
-        const conceitoGeralEl = document.getElementById('rel-conceito-geral');
-        if (conceitoGeralEl) {
-            conceitoGeralEl.textContent = conceitoGeral;
-            conceitoGeralEl.className = `badge ${badgeConceitoGeral}`;
-        }
-
-        // === CALCULAR CONCEITOS APENAS DA DISCIPLINA SELECIONADA ===
-        let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
-        dadosAlunos.forEach(aluno => {
-            const discData = aluno[chave] || {};
-            const acertos = discData.acertos || 0;
-            const total = discData.total || 20;
-            const pct = total > 0 ? (acertos / total) * 100 : 0;
-            const conceito = calcularConceito(pct);
-            conceitos[conceito] = (conceitos[conceito] || 0) + 1;
-        });
-
-        const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
-        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-            const count = conceitos[c] || 0;
-            const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
-            setText(`rel-conceito-${c}-count`, count);
-            const bar = document.getElementById(`rel-conceito-${c}-bar`);
-            if (bar) {
-                bar.style.width = Math.max(pct, 2) + '%';
-                bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
-            }
-        });
-
-        // === CALCULAR ACERTOS/ERROS APENAS DA DISCIPLINA SELECIONADA ===
-        let totalAcertos = 0,
-            totalErros = 0,
-            totalQuestoes = 0;
-
-        // Dicionário para acertos por questão COM BNCC
-        let acertosPorQuestao = {};
-        let totalQuestoesDisciplina = 0;
-
-        // Buscar dados BNCC da prova selecionada
-        let bnccData = [];
-        if (provaId && provaId !== '') {
-            try {
-                const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
-                const prova = await provaResp.json();
-                if (prova && !prova.erro && prova.bncc) {
-                    bnccData = prova.bncc;
-                }
-            } catch (e) {
-                console.warn('Erro ao buscar BNCC da prova:', e);
-            }
-        }
-
-        dadosAlunos.forEach(aluno => {
-            const disciplinaData = aluno[chave];
-            if (disciplinaData) {
-                let acertos = 0,
-                    erros = 0,
-                    total = 0;
-                if (typeof disciplinaData === 'object') {
-                    acertos = parseInt(disciplinaData.acertos) || 0;
-                    total = parseInt(disciplinaData.total) || 0;
-                    erros = total - acertos;
-                    
-                    // Processar acertos por questão com BNCC
-                    if (disciplinaData.questoes && Array.isArray(disciplinaData.questoes)) {
-                        disciplinaData.questoes.forEach((q, idx) => {
-                            const numQuestao = idx + 1;
-                            if (!acertosPorQuestao[numQuestao]) {
-                                acertosPorQuestao[numQuestao] = { 
-                                    acertos: 0, 
-                                    erros: 0, 
-                                    total: 0,
-                                    bncc: (idx < bnccData.length) ? bnccData[idx] : ''
-                                };
-                            }
-                            if (q.acertou === true) {
-                                acertosPorQuestao[numQuestao].acertos++;
-                            } else if (q.acertou === false) {
-                                acertosPorQuestao[numQuestao].erros++;
-                            }
-                            acertosPorQuestao[numQuestao].total++;
-                        });
-                        totalQuestoesDisciplina = disciplinaData.questoes.length;
-                    } else {
-                        // Fallback: distribuir acertos uniformemente
-                        const questoes = total || 20;
-                        for (let i = 0; i < questoes; i++) {
-                            const numQuestao = i + 1;
-                            if (!acertosPorQuestao[numQuestao]) {
-                                acertosPorQuestao[numQuestao] = { 
-                                    acertos: 0, 
-                                    erros: 0, 
-                                    total: 0,
-                                    bncc: (i < bnccData.length) ? bnccData[i] : ''
-                                };
-                            }
-                            if (acertos > 0 && i < acertos) {
-                                acertosPorQuestao[numQuestao].acertos++;
-                            } else {
-                                acertosPorQuestao[numQuestao].erros++;
-                            }
-                            acertosPorQuestao[numQuestao].total++;
-                        }
-                        totalQuestoesDisciplina = total || 20;
+                    let disciplinaSelecionada = '';
+                    const selectProva = document.getElementById('rel-turma-prova');
+                    const optionProva = selectProva.options[selectProva.selectedIndex];
+                    if (optionProva && optionProva.dataset.disciplina) {
+                        disciplinaSelecionada = optionProva.dataset.disciplina;
                     }
-                } else {
-                    acertos = parseInt(disciplinaData) || 0;
-                    total = 20;
-                    erros = total - acertos;
-                    for (let i = 0; i < total; i++) {
-                        const numQuestao = i + 1;
-                        if (!acertosPorQuestao[numQuestao]) {
-                            acertosPorQuestao[numQuestao] = { 
+                    if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
+
+                    // Mapeamento de disciplina para chave
+                    const disciplinaMap = {
+                        'Português': 'portugues',
+                        'Matemática': 'matematica',
+                        'Produção de Texto': 'producao',
+                        'Ciências Humanas': 'ch',
+                        'Ciências Naturais': 'cn',
+                        'História': 'ch',
+                        'Geografia': 'ch',
+                        'Inglês': 'portugues'
+                    };
+                    const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
+
+                    let url = API_URL + '/api/historico/agrupado';
+                    const params = new URLSearchParams();
+                    if (escolaId && escolaId !== '') params.append('escola', escolaId);
+                    if (serie && serie !== '') params.append('serie', serie);
+                    if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                    if (provaId && provaId !== '') params.append('prova', provaId);
+                    if (params.toString()) url += '?' + params.toString();
+
+                    const response = await fetch(url);
+                    const alunos = await response.json();
+
+                    if (!alunos || alunos.length === 0 || alunos.erro) {
+                        setText('rel-media', '0%');
+                        setText('rel-total-alunos-conceitos', '0 alunos');
+                        setText('rel-total-correcoes', '0 correções');
+                        setText('rel-total-questoes', '0 questões');
+                        setText('rel-disciplina-nome-card', 'Disciplina: —');
+                        
+                        // Resetar conceito geral
+                        const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+                        if (conceitoGeralEl) {
+                            conceitoGeralEl.textContent = '—';
+                            conceitoGeralEl.className = 'badge badge-gray';
+                        }
+                        
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            setText(`rel-conceito-${c}-count`, '0');
+                            const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                            if (bar) bar.style.width = '0%';
+                        });
+                        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-disc-acertos', '0');
+                        setText('rel-disc-erros', '0');
+                        setText('rel-disc-media', '0.0');
+                        setText('rel-disc-conceito', '—');
+                        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-total-acertos-disciplina', '0');
+                        setText('rel-total-erros-disciplina', '0');
+                        setText('rel-media-disciplina', '0%');
+                        document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
+                        const tbody = document.getElementById('tb-rel-alunos');
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
+                        setText('rel-total-alunos-tabela', '0 alunos');
+                        return;
+                    }
+
+                    const dadosAlunos = Array.isArray(alunos) ? alunos : [];
+
+                    if (dadosAlunos.length === 0) {
+                        setText('rel-media', '0%');
+                        setText('rel-total-alunos-conceitos', '0 alunos');
+                        setText('rel-total-correcoes', '0 correções');
+                        setText('rel-total-questoes', '0 questões');
+                        setText('rel-disciplina-nome-card', 'Disciplina: —');
+                        
+                        // Resetar conceito geral
+                        const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+                        if (conceitoGeralEl) {
+                            conceitoGeralEl.textContent = '—';
+                            conceitoGeralEl.className = 'badge badge-gray';
+                        }
+                        
+                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                            setText(`rel-conceito-${c}-count`, '0');
+                            const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                            if (bar) bar.style.width = '0%';
+                        });
+                        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-disc-acertos', '0');
+                        setText('rel-disc-erros', '0');
+                        setText('rel-disc-media', '0.0');
+                        setText('rel-disc-conceito', '—');
+                        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+                        setText('rel-total-acertos-disciplina', '0');
+                        setText('rel-total-erros-disciplina', '0');
+                        setText('rel-media-disciplina', '0%');
+                        document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
+                        const tbody = document.getElementById('tb-rel-alunos');
+                        if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
+                        setText('rel-total-alunos-tabela', '0 alunos');
+                        return;
+                    }
+
+                    const totalAlunos = dadosAlunos.length;
+                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+
+                    // === CALCULAR MÉDIA APENAS DA DISCIPLINA SELECIONADA ===
+                    let somaNotas = 0;
+                    let alunosComDados = 0;
+                    dadosAlunos.forEach(a => {
+                        const discData = a[chave] || {};
+                        const total = discData.total || 0;
+                        const acertos = discData.acertos || 0;
+                        if (total > 0) {
+                            const nota = (acertos / total) * notaMaxima;
+                            somaNotas += nota;
+                            alunosComDados++;
+                        }
+                    });
+                    
+                    const mediaGeral = alunosComDados > 0 ? somaNotas / alunosComDados : 0;
+                    const porcentagemMedia = notaMaxima > 0 ? (mediaGeral / notaMaxima) * 100 : 0;
+                    
+                    setText('rel-media', porcentagemMedia.toFixed(1) + '%');
+                    setText('rel-total-alunos-conceitos', totalAlunos + ' alunos');
+                    setText('rel-total-correcoes', totalAlunos + ' correções');
+                    setText('rel-disciplina-nome-card', 'Disciplina: ' + disciplinaSelecionada);
+
+                    // === CALCULAR CONCEITO GERAL DA TURMA ===
+                    let conceitoGeral = '—';
+                    let badgeConceitoGeral = 'badge-gray';
+
+                    if (alunosComDados > 0) {
+                        const pctGeral = (mediaGeral / notaMaxima) * 100;
+                        const conceito = calcularConceito(pctGeral);
+                        
+                        const badgeMap = {
+                            'inicial': 'badge-conceito-inicial',
+                            'basico': 'badge-conceito-basico',
+                            'proficiente': 'badge-conceito-proficiente',
+                            'avancado': 'badge-conceito-avancado'
+                        };
+                        const labelMap = {
+                            'inicial': '🔴 Inicial',
+                            'basico': '🟠 Básico',
+                            'proficiente': '🔵 Proficiente',
+                            'avancado': '🟢 Avançado'
+                        };
+                        
+                        conceitoGeral = labelMap[conceito] || '—';
+                        badgeConceitoGeral = badgeMap[conceito] || 'badge-gray';
+                    }
+
+                    // Atualizar o elemento HTML com o conceito geral
+                    const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+                    if (conceitoGeralEl) {
+                        conceitoGeralEl.textContent = conceitoGeral;
+                        conceitoGeralEl.className = `badge ${badgeConceitoGeral}`;
+                    }
+
+                    // === CALCULAR CONCEITOS APENAS DA DISCIPLINA SELECIONADA ===
+                    let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
+                    dadosAlunos.forEach(aluno => {
+                        const discData = aluno[chave] || {};
+                        const acertos = discData.acertos || 0;
+                        const total = discData.total || 20;
+                        const pct = total > 0 ? (acertos / total) * 100 : 0;
+                        const conceito = calcularConceito(pct);
+                        conceitos[conceito] = (conceitos[conceito] || 0) + 1;
+                    });
+
+                    const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
+                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                        const count = conceitos[c] || 0;
+                        const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
+                        setText(`rel-conceito-${c}-count`, count);
+                        const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                        if (bar) {
+                            bar.style.width = Math.max(pct, 2) + '%';
+                            bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
+                        }
+                    });
+
+                    // === CALCULAR ACERTOS/ERROS APENAS DA DISCIPLINA SELECIONADA ===
+                    let totalAcertos = 0,
+                        totalErros = 0,
+                        totalQuestoes = 0;
+
+                    // Dicionário para acertos por questão COM BNCC
+                    let acertosPorQuestao = {};
+                    let totalQuestoesDisciplina = 0;
+
+                    // Buscar dados BNCC da prova selecionada
+                    let bnccData = [];
+                    if (provaId && provaId !== '') {
+                        try {
+                            const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                            const prova = await provaResp.json();
+                            if (prova && !prova.erro && prova.bncc) {
+                                bnccData = prova.bncc;
+                            }
+                        } catch (e) {
+                            console.warn('Erro ao buscar BNCC da prova:', e);
+                        }
+                    }
+
+                    dadosAlunos.forEach(aluno => {
+                        const disciplinaData = aluno[chave];
+                        if (disciplinaData) {
+                            let acertos = 0,
+                                erros = 0,
+                                total = 0;
+                            if (typeof disciplinaData === 'object') {
+                                acertos = parseInt(disciplinaData.acertos) || 0;
+                                total = parseInt(disciplinaData.total) || 0;
+                                erros = total - acertos;
+                                
+                                // Processar acertos por questão com BNCC
+                                if (disciplinaData.questoes && Array.isArray(disciplinaData.questoes)) {
+                                    disciplinaData.questoes.forEach((q, idx) => {
+                                        const numQuestao = idx + 1;
+                                        if (!acertosPorQuestao[numQuestao]) {
+                                            acertosPorQuestao[numQuestao] = { 
+                                                acertos: 0, 
+                                                erros: 0, 
+                                                total: 0,
+                                                bncc: (idx < bnccData.length) ? bnccData[idx] : ''
+                                            };
+                                        }
+                                        if (q.acertou === true) {
+                                            acertosPorQuestao[numQuestao].acertos++;
+                                        } else if (q.acertou === false) {
+                                            acertosPorQuestao[numQuestao].erros++;
+                                        }
+                                        acertosPorQuestao[numQuestao].total++;
+                                    });
+                                    totalQuestoesDisciplina = disciplinaData.questoes.length;
+                                } else {
+                                    // Fallback: distribuir acertos uniformemente
+                                    const questoes = total || 20;
+                                    for (let i = 0; i < questoes; i++) {
+                                        const numQuestao = i + 1;
+                                        if (!acertosPorQuestao[numQuestao]) {
+                                            acertosPorQuestao[numQuestao] = { 
+                                                acertos: 0, 
+                                                erros: 0, 
+                                                total: 0,
+                                                bncc: (i < bnccData.length) ? bnccData[i] : ''
+                                            };
+                                        }
+                                        if (acertos > 0 && i < acertos) {
+                                            acertosPorQuestao[numQuestao].acertos++;
+                                        } else {
+                                            acertosPorQuestao[numQuestao].erros++;
+                                        }
+                                        acertosPorQuestao[numQuestao].total++;
+                                    }
+                                    totalQuestoesDisciplina = total || 20;
+                                }
+                            } else {
+                                acertos = parseInt(disciplinaData) || 0;
+                                total = 20;
+                                erros = total - acertos;
+                                for (let i = 0; i < total; i++) {
+                                    const numQuestao = i + 1;
+                                    if (!acertosPorQuestao[numQuestao]) {
+                                        acertosPorQuestao[numQuestao] = { 
+                                            acertos: 0, 
+                                            erros: 0, 
+                                            total: 0,
+                                            bncc: (i < bnccData.length) ? bnccData[i] : ''
+                                        };
+                                    }
+                                    if (i < acertos) {
+                                        acertosPorQuestao[numQuestao].acertos++;
+                                    } else {
+                                        acertosPorQuestao[numQuestao].erros++;
+                                    }
+                                    acertosPorQuestao[numQuestao].total++;
+                                }
+                                totalQuestoesDisciplina = total;
+                            }
+                            totalAcertos += acertos;
+                            totalErros += erros;
+                            totalQuestoes += total;
+                        }
+                    });
+
+                    if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 20;
+                    
+                    // Garantir que todas as questões tenham entrada com BNCC
+                    for (let i = 1; i <= totalQuestoesDisciplina; i++) {
+                        if (!acertosPorQuestao[i]) {
+                            acertosPorQuestao[i] = { 
                                 acertos: 0, 
                                 erros: 0, 
                                 total: 0,
-                                bncc: (i < bnccData.length) ? bnccData[i] : ''
+                                bncc: (i-1 < bnccData.length) ? bnccData[i-1] : ''
                             };
                         }
-                        if (i < acertos) {
-                            acertosPorQuestao[numQuestao].acertos++;
-                        } else {
-                            acertosPorQuestao[numQuestao].erros++;
-                        }
-                        acertosPorQuestao[numQuestao].total++;
                     }
-                    totalQuestoesDisciplina = total;
+
+                    setText('rel-total-questoes', totalQuestoesDisciplina + ' questões');
+
+                    // Gerar grid de acertos por questão COM BNCC
+                    const gridContainer = document.getElementById('rel-acertos-grid');
+                    gridContainer.innerHTML = '';
+                    
+                    const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
+                    
+                    if (questoesOrdenadas.length === 0) {
+                        gridContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado de questões disponível.</div>';
+                    } else {
+                        questoesOrdenadas.forEach(num => {
+                            const dados = acertosPorQuestao[num];
+                            const div = document.createElement('div');
+                            div.className = 'acertos-por-questao-item';
+                            const bnccText = dados.bncc || '—';
+                            // Limitar o texto BNCC para não quebrar o layout
+                            const bnccDisplay = bnccText.length > 15 ? bnccText.substring(0, 12) + '…' : bnccText;
+                            div.innerHTML = `
+                                <div class="q-num">Q${num}</div>
+                                <div>
+                                    <span class="q-acertos">${dados.acertos}</span>
+                                    <span class="q-divider">/</span>
+                                    <span class="q-erros">${dados.erros}</span>
+                                </div>
+                                <div class="q-label">Acertos / Erros</div>
+                                <div style="font-size:8px;color:var(--text3);margin-top:2px;">Total: ${dados.total}</div>
+                                <div style="font-size:10px;color:var(--purple);margin-top:2px;background:rgba(139,92,246,0.1);padding:1px 4px;border-radius:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${bnccText}">${bnccDisplay}</div>
+                            `;
+                            gridContainer.appendChild(div);
+                        });
+                    }
+
+                    const alunosComDadosDisciplina = dadosAlunos.filter(a => a[chave]).length;
+                    const mediaDisc = alunosComDadosDisciplina > 0 ? (totalAcertos / alunosComDadosDisciplina) : 0;
+                    const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
+                    const conceitoDisc = calcularConceito(pctDisc);
+
+                    setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+                    setText('rel-disc-acertos', totalAcertos);
+                    setText('rel-disc-erros', totalErros);
+                    setText('rel-disc-media', mediaDisc.toFixed(1));
+                    setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+                    setText('rel-total-acertos-disciplina', totalAcertos);
+                    setText('rel-total-erros-disciplina', totalErros);
+                    setText('rel-media-disciplina', pctDisc.toFixed(1) + '%');
+
+                    const badgeMap = {
+                        'inicial': 'badge-conceito-inicial',
+                        'basico': 'badge-conceito-basico',
+                        'proficiente': 'badge-conceito-proficiente',
+                        'avancado': 'badge-conceito-avancado'
+                    };
+                    const labelMap = {
+                        'inicial': '🔴 Inicial',
+                        'basico': '🟠 Básico',
+                        'proficiente': '🔵 Proficiente',
+                        'avancado': '🟢 Avançado'
+                    };
+                    const conceitoSpan = document.getElementById('rel-disc-conceito');
+                    if (conceitoSpan) {
+                        conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
+                        conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
+                    }
+
+                    function getDadosDisciplina(disciplinaData, totalQuestoes) {
+                        if (!disciplinaData || typeof disciplinaData !== 'object') {
+                            return { acertos: 0, erros: 0, conceito: 'inicial' };
+                        }
+                        const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+                        let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+                        const totalDisc = disciplinaData.total || totalQuestoes || 0;
+                        if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+                        const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        const conceito = calcularConceito(porcentagem);
+                        return { acertos, erros, conceito };
+                    }
+
+                    function badgeConceito(c) {
+                        return `badge-conceito-${c}-sm`;
+                    }
+
+                    const tbody = document.getElementById('tb-rel-alunos');
+                    if (!tbody) return;
+
+                    const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
+
+                    tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
+                        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+
+                        const portugues = getDadosDisciplina(aluno.portugues, 20);
+                        const matematica = getDadosDisciplina(aluno.matematica, 20);
+                        const producao = getDadosDisciplina(aluno.producao, 20);
+                        const ch = getDadosDisciplina(aluno.ch, 20);
+                        const cn = getDadosDisciplina(aluno.cn, 20);
+
+                        const nomeEscola = aluno.escola || '';
+                        const nomeTurma = aluno.turma || '';
+
+                        return '<tr>' +
+                            '<td>' + medalha + '</td>' +
+                            '<td>' + (index + 1) + '</td>' +
+                            '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                            '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                            '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                            '</tr>';
+                    }).join('');
+
+                    setText('rel-total-alunos-tabela', totalAlunos + ' alunos');
+
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar relatório por turma:', erro);
+                    showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
                 }
-                totalAcertos += acertos;
-                totalErros += erros;
-                totalQuestoes += total;
             }
-        });
-
-        if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 20;
-        
-        // Garantir que todas as questões tenham entrada com BNCC
-        for (let i = 1; i <= totalQuestoesDisciplina; i++) {
-            if (!acertosPorQuestao[i]) {
-                acertosPorQuestao[i] = { 
-                    acertos: 0, 
-                    erros: 0, 
-                    total: 0,
-                    bncc: (i-1 < bnccData.length) ? bnccData[i-1] : ''
-                };
-            }
-        }
-
-        setText('rel-total-questoes', totalQuestoesDisciplina + ' questões');
-
-        // Gerar grid de acertos por questão COM BNCC
-        const gridContainer = document.getElementById('rel-acertos-grid');
-        gridContainer.innerHTML = '';
-        
-        const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
-        
-        if (questoesOrdenadas.length === 0) {
-            gridContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado de questões disponível.</div>';
-        } else {
-            questoesOrdenadas.forEach(num => {
-                const dados = acertosPorQuestao[num];
-                const div = document.createElement('div');
-                div.className = 'acertos-por-questao-item';
-                const bnccText = dados.bncc || '—';
-                // Limitar o texto BNCC para não quebrar o layout
-                const bnccDisplay = bnccText.length > 15 ? bnccText.substring(0, 12) + '…' : bnccText;
-                div.innerHTML = `
-                    <div class="q-num">Q${num}</div>
-                    <div>
-                        <span class="q-acertos">${dados.acertos}</span>
-                        <span class="q-divider">/</span>
-                        <span class="q-erros">${dados.erros}</span>
-                    </div>
-                    <div class="q-label">Acertos / Erros</div>
-                    <div style="font-size:8px;color:var(--text3);margin-top:2px;">Total: ${dados.total}</div>
-                    <div style="font-size:10px;color:var(--purple);margin-top:2px;background:rgba(139,92,246,0.1);padding:1px 4px;border-radius:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${bnccText}">${bnccDisplay}</div>
-                `;
-                gridContainer.appendChild(div);
-            });
-        }
-
-        const alunosComDadosDisciplina = dadosAlunos.filter(a => a[chave]).length;
-        const mediaDisc = alunosComDadosDisciplina > 0 ? (totalAcertos / alunosComDadosDisciplina) : 0;
-        const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
-        const conceitoDisc = calcularConceito(pctDisc);
-
-        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
-        setText('rel-disc-acertos', totalAcertos);
-        setText('rel-disc-erros', totalErros);
-        setText('rel-disc-media', mediaDisc.toFixed(1));
-        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
-        setText('rel-total-acertos-disciplina', totalAcertos);
-        setText('rel-total-erros-disciplina', totalErros);
-        setText('rel-media-disciplina', pctDisc.toFixed(1) + '%');
-
-        const badgeMap = {
-            'inicial': 'badge-conceito-inicial',
-            'basico': 'badge-conceito-basico',
-            'proficiente': 'badge-conceito-proficiente',
-            'avancado': 'badge-conceito-avancado'
-        };
-        const labelMap = {
-            'inicial': '🔴 Inicial',
-            'basico': '🟠 Básico',
-            'proficiente': '🔵 Proficiente',
-            'avancado': '🟢 Avançado'
-        };
-        const conceitoSpan = document.getElementById('rel-disc-conceito');
-        if (conceitoSpan) {
-            conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
-            conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
-        }
-
-        function getDadosDisciplina(disciplinaData, totalQuestoes) {
-            if (!disciplinaData || typeof disciplinaData !== 'object') {
-                return { acertos: 0, erros: 0, conceito: 'inicial' };
-            }
-            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-            const totalDisc = disciplinaData.total || totalQuestoes || 0;
-            if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
-            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-            const conceito = calcularConceito(porcentagem);
-            return { acertos, erros, conceito };
-        }
-
-        function badgeConceito(c) {
-            return `badge-conceito-${c}-sm`;
-        }
-
-        const tbody = document.getElementById('tb-rel-alunos');
-        if (!tbody) return;
-
-        const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
-
-        tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
-            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-
-            const portugues = getDadosDisciplina(aluno.portugues, 20);
-            const matematica = getDadosDisciplina(aluno.matematica, 20);
-            const producao = getDadosDisciplina(aluno.producao, 20);
-            const ch = getDadosDisciplina(aluno.ch, 20);
-            const cn = getDadosDisciplina(aluno.cn, 20);
-
-            const nomeEscola = aluno.escola || '';
-            const nomeTurma = aluno.turma || '';
-
-            return '<tr>' +
-                '<td>' + medalha + '</td>' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
-                '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
-                '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
-                '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
-                '</tr>';
-        }).join('');
-
-        setText('rel-total-alunos-tabela', totalAlunos + ' alunos');
-
-    } catch (erro) {
-        console.error('❌ Erro ao carregar relatório por turma:', erro);
-        showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
-    }
-}
 
             function limparFiltrosRelTurma() {
                 document.getElementById('rel-turma-escola').value = '';
@@ -8695,4 +9379,4 @@ async function carregarRelatorioTurmaFiltrado() {
             });
         </script>
     </body>
-</html>
+    </html>
