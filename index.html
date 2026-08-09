@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1861,59 +1860,65 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
-                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">📊 Porcentagem e Conceitos</div>
-                        <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                        <!-- Lado esquerdo: porcentagem -->
-                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
-                            <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
-                            <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
-                        </div>
-                        <!-- Lado direito: conceitos -->
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                    <span>🔴 Inicial (até 40%)</span>
-                                    <span style="font-weight:700; color:#ef4444;" id="rel-conceito-inicial-count">0</span>
-                                </div>
-                                <div class="progress" style="height:16px; background:var(--bg2);">
-                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#ef4444,#dc2626);" id="rel-conceito-inicial-bar"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                    <span>🟠 Básico (41% – 60%)</span>
-                                    <span style="font-weight:700; color:#f59e0b;" id="rel-conceito-basico-count">0</span>
-                                </div>
-                                <div class="progress" style="height:16px; background:var(--bg2);">
-                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#f59e0b,#d97706);" id="rel-conceito-basico-bar"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                    <span>🔵 Proficiente (61% – 80%)</span>
-                                    <span style="font-weight:700; color:#3b82f6;" id="rel-conceito-proficiente-count">0</span>
-                                </div>
-                                <div class="progress" style="height:16px; background:var(--bg2);">
-                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#3b82f6,#2563eb);" id="rel-conceito-proficiente-bar"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                    <span>🟢 Avançado (acima de 80%)</span>
-                                    <span style="font-weight:700; color:#10b981;" id="rel-conceito-avancado-count">0</span>
-                                </div>
-                                <div class="progress" style="height:16px; background:var(--bg2);">
-                                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#10b981,#059669);" id="rel-conceito-avancado-bar"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS (CORRIGIDO) ===== -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">📊 Porcentagem e Conceitos</div>
+        <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <!-- Lado esquerdo: porcentagem da disciplina filtrada -->
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
+            <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
+            <div style="font-size:14px; color:var(--text2);">Porcentagem de Acertos</div>
+            <div style="font-size:12px; color:var(--text3); margin-top:4px;" id="rel-disciplina-nome-card">Disciplina: —</div>
+            <!-- CONCEITO GERAL DA TURMA ADICIONADO AQUI -->
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); width:100%; text-align:center;">
+                <span style="font-size:13px; font-weight:700; color:var(--text2);">Conceito da Turma:</span>
+                <span id="rel-conceito-geral" class="badge badge-gray" style="font-size:14px; padding:4px 16px; margin-left:6px;">—</span>
+            </div>
+        </div>
+        <!-- Lado direito: conceitos -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                    <span>🔴 Inicial (até 40%)</span>
+                    <span style="font-weight:700; color:#ef4444;" id="rel-conceito-inicial-count">0</span>
                 </div>
+                <div class="progress" style="height:16px; background:var(--bg2);">
+                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#ef4444,#dc2626);" id="rel-conceito-inicial-bar"></div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                    <span>🟠 Básico (41% – 60%)</span>
+                    <span style="font-weight:700; color:#f59e0b;" id="rel-conceito-basico-count">0</span>
+                </div>
+                <div class="progress" style="height:16px; background:var(--bg2);">
+                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#f59e0b,#d97706);" id="rel-conceito-basico-bar"></div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                    <span>🔵 Proficiente (61% – 80%)</span>
+                    <span style="font-weight:700; color:#3b82f6;" id="rel-conceito-proficiente-count">0</span>
+                </div>
+                <div class="progress" style="height:16px; background:var(--bg2);">
+                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#3b82f6,#2563eb);" id="rel-conceito-proficiente-bar"></div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                    <span>🟢 Avançado (acima de 80%)</span>
+                    <span style="font-weight:700; color:#10b981;" id="rel-conceito-avancado-count">0</span>
+                </div>
+                <div class="progress" style="height:16px; background:var(--bg2);">
+                    <div class="progress-fill" style="width:0%; background:linear-gradient(90deg,#10b981,#059669);" id="rel-conceito-avancado-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
                 <!-- ========== CARD ADICIONADO: LISTA DE ALUNOS ========== -->
                 <div class="card" id="rel-tabela-alunos">
@@ -5641,6 +5646,10 @@ async function imprimirRelatorioTurma() {
             if (provaData && !provaData.erro) {
                 bimestre = provaData.bimestre || 'Não informado';
                 dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
+                // Buscar disciplina da prova
+                if (provaData.disciplina) {
+                    disciplinaSelecionada = provaData.disciplina;
+                }
             }
         }
     } catch (e) {
@@ -5999,6 +6008,7 @@ async function imprimirRelatorioTurma() {
             <div class="municipio">PREFEITURA DE ${municipio.toUpperCase()}</div>
             <div class="estado">${estado}</div>
             <div class="secretaria">SECRETARIA MUNICIPAL DE EDUCAÇÃO</div>
+			<div class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICCA - DGP</div>
             <div class="divider"></div>
             <div class="sisam">SISAM 2026</div>
             <div class="ano-letivo">Ano Letivo ${new Date().getFullYear()}</div>
@@ -6099,9 +6109,9 @@ async function imprimirRelatorioTurma() {
 }
 
             // ============================================
-            // CARREGAR RELATÓRIO POR TURMA FILTRADO
-            // ============================================
-            async function carregarRelatorioTurmaFiltrado() {
+// CARREGAR RELATÓRIO POR TURMA FILTRADO (CORRIGIDO)
+// ============================================
+async function carregarRelatorioTurmaFiltrado() {
     try {
         const escolaId = document.getElementById('rel-turma-escola').value;
         const serie = document.getElementById('rel-turma-serie').value;
@@ -6115,6 +6125,19 @@ async function imprimirRelatorioTurma() {
             disciplinaSelecionada = optionProva.dataset.disciplina;
         }
         if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
+
+        // Mapeamento de disciplina para chave
+        const disciplinaMap = {
+            'Português': 'portugues',
+            'Matemática': 'matematica',
+            'Produção de Texto': 'producao',
+            'Ciências Humanas': 'ch',
+            'Ciências Naturais': 'cn',
+            'História': 'ch',
+            'Geografia': 'ch',
+            'Inglês': 'portugues'
+        };
+        const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
         let url = API_URL + '/api/historico/agrupado';
         const params = new URLSearchParams();
@@ -6132,6 +6155,15 @@ async function imprimirRelatorioTurma() {
             setText('rel-total-alunos-conceitos', '0 alunos');
             setText('rel-total-correcoes', '0 correções');
             setText('rel-total-questoes', '0 questões');
+            setText('rel-disciplina-nome-card', 'Disciplina: —');
+            
+            // Resetar conceito geral
+            const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+            if (conceitoGeralEl) {
+                conceitoGeralEl.textContent = '—';
+                conceitoGeralEl.className = 'badge badge-gray';
+            }
+            
             ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                 setText(`rel-conceito-${c}-count`, '0');
                 const bar = document.getElementById(`rel-conceito-${c}-bar`);
@@ -6160,6 +6192,15 @@ async function imprimirRelatorioTurma() {
             setText('rel-total-alunos-conceitos', '0 alunos');
             setText('rel-total-correcoes', '0 correções');
             setText('rel-total-questoes', '0 questões');
+            setText('rel-disciplina-nome-card', 'Disciplina: —');
+            
+            // Resetar conceito geral
+            const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+            if (conceitoGeralEl) {
+                conceitoGeralEl.textContent = '—';
+                conceitoGeralEl.className = 'badge badge-gray';
+            }
+            
             ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                 setText(`rel-conceito-${c}-count`, '0');
                 const bar = document.getElementById(`rel-conceito-${c}-bar`);
@@ -6184,32 +6225,67 @@ async function imprimirRelatorioTurma() {
         const totalAlunos = dadosAlunos.length;
         const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
 
-        const disciplinaMap = {
-            'Português': 'portugues',
-            'Matemática': 'matematica',
-            'Produção de Texto': 'producao',
-            'Ciências Humanas': 'ch',
-            'Ciências Naturais': 'cn',
-            'História': 'ch',
-            'Geografia': 'ch',
-            'Inglês': 'portugues'
-        };
-        const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
-
+        // === CALCULAR MÉDIA APENAS DA DISCIPLINA SELECIONADA ===
         let somaNotas = 0;
-        dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
-        const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
-        const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
+        let alunosComDados = 0;
+        dadosAlunos.forEach(a => {
+            const discData = a[chave] || {};
+            const total = discData.total || 0;
+            const acertos = discData.acertos || 0;
+            if (total > 0) {
+                const nota = (acertos / total) * notaMaxima;
+                somaNotas += nota;
+                alunosComDados++;
+            }
+        });
+        
+        const mediaGeral = alunosComDados > 0 ? somaNotas / alunosComDados : 0;
+        const porcentagemMedia = notaMaxima > 0 ? (mediaGeral / notaMaxima) * 100 : 0;
+        
         setText('rel-media', porcentagemMedia.toFixed(1) + '%');
         setText('rel-total-alunos-conceitos', totalAlunos + ' alunos');
         setText('rel-total-correcoes', totalAlunos + ' correções');
+        setText('rel-disciplina-nome-card', 'Disciplina: ' + disciplinaSelecionada);
 
+        // === CALCULAR CONCEITO GERAL DA TURMA ===
+        let conceitoGeral = '—';
+        let badgeConceitoGeral = 'badge-gray';
+
+        if (alunosComDados > 0) {
+            const pctGeral = (mediaGeral / notaMaxima) * 100;
+            const conceito = calcularConceito(pctGeral);
+            
+            const badgeMap = {
+                'inicial': 'badge-conceito-inicial',
+                'basico': 'badge-conceito-basico',
+                'proficiente': 'badge-conceito-proficiente',
+                'avancado': 'badge-conceito-avancado'
+            };
+            const labelMap = {
+                'inicial': '🔴 Inicial',
+                'basico': '🟠 Básico',
+                'proficiente': '🔵 Proficiente',
+                'avancado': '🟢 Avançado'
+            };
+            
+            conceitoGeral = labelMap[conceito] || '—';
+            badgeConceitoGeral = badgeMap[conceito] || 'badge-gray';
+        }
+
+        // Atualizar o elemento HTML com o conceito geral
+        const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+        if (conceitoGeralEl) {
+            conceitoGeralEl.textContent = conceitoGeral;
+            conceitoGeralEl.className = `badge ${badgeConceitoGeral}`;
+        }
+
+        // === CALCULAR CONCEITOS APENAS DA DISCIPLINA SELECIONADA ===
         let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
         dadosAlunos.forEach(aluno => {
             const discData = aluno[chave] || {};
             const acertos = discData.acertos || 0;
             const total = discData.total || 20;
-            const pct = (acertos / total) * 100;
+            const pct = total > 0 ? (acertos / total) * 100 : 0;
             const conceito = calcularConceito(pct);
             conceitos[conceito] = (conceitos[conceito] || 0) + 1;
         });
@@ -6226,10 +6302,10 @@ async function imprimirRelatorioTurma() {
             }
         });
 
+        // === CALCULAR ACERTOS/ERROS APENAS DA DISCIPLINA SELECIONADA ===
         let totalAcertos = 0,
             totalErros = 0,
             totalQuestoes = 0;
-        let alunosComDados = 0;
 
         // Dicionário para acertos por questão COM BNCC
         let acertosPorQuestao = {};
@@ -6328,7 +6404,6 @@ async function imprimirRelatorioTurma() {
                 totalAcertos += acertos;
                 totalErros += erros;
                 totalQuestoes += total;
-                alunosComDados++;
             }
         });
 
@@ -6379,7 +6454,8 @@ async function imprimirRelatorioTurma() {
             });
         }
 
-        const mediaDisc = alunosComDados > 0 ? (totalAcertos / alunosComDados) : 0;
+        const alunosComDadosDisciplina = dadosAlunos.filter(a => a[chave]).length;
+        const mediaDisc = alunosComDadosDisciplina > 0 ? (totalAcertos / alunosComDadosDisciplina) : 0;
         const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
         const conceitoDisc = calcularConceito(pctDisc);
 
