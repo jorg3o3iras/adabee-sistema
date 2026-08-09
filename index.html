@@ -5579,7 +5579,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             // ============================================
 // ============================================
-// FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA (CORRIGIDA COM AWAIT)
+// FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA (CORRIGIDA - APENAS A DISCIPLINA FILTRADA)
 // ============================================
 async function imprimirRelatorioTurma() {
     // Buscar dados atuais da tela
@@ -5595,7 +5595,31 @@ async function imprimirRelatorioTurma() {
         return;
     }
 
-    // ===== BUSCAR INFORMAÇÕES DA ESCOLA, TURMA E PROVA (AGORA COM AWAIT) =====
+    // ===== BUSCAR A DISCIPLINA SELECIONADA NO FILTRO =====
+    let disciplinaSelecionada = 'Português';
+    let chaveDisciplina = 'portugues';
+    const selectProva = document.getElementById('rel-turma-prova');
+    if (selectProva) {
+        const option = selectProva.options[selectProva.selectedIndex];
+        if (option && option.dataset.disciplina) {
+            disciplinaSelecionada = option.dataset.disciplina;
+        }
+    }
+
+    // Mapear disciplina para chave usada no banco
+    const disciplinaMap = {
+        'Português': 'portugues',
+        'Matemática': 'matematica',
+        'Produção de Texto': 'producao',
+        'Ciências Humanas': 'ch',
+        'Ciências Naturais': 'cn',
+        'História': 'ch',
+        'Geografia': 'ch',
+        'Inglês': 'portugues'
+    };
+    chaveDisciplina = disciplinaMap[disciplinaSelecionada] || 'portugues';
+
+    // ===== BUSCAR INFORMAÇÕES DA ESCOLA, TURMA E PROVA =====
     let nomeEscola = 'Não informado';
     let municipio = 'Não informado';
     let estado = 'PA';
@@ -5608,7 +5632,6 @@ async function imprimirRelatorioTurma() {
     let dataAtual = new Date().toLocaleDateString('pt-BR');
 
     try {
-        // Buscar dados da escola
         if (escolaId && escolaId !== '') {
             const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
             const escolaData = await escolaResp.json();
@@ -5620,12 +5643,9 @@ async function imprimirRelatorioTurma() {
                 diretor = escolaData.diretor || 'Não informado';
             }
         }
-    } catch (e) {
-        console.warn('Erro ao buscar escola:', e);
-    }
+    } catch (e) { console.warn('Erro ao buscar escola:', e); }
 
     try {
-        // Buscar dados da turma
         if (turmaId && turmaId !== '') {
             const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
             const turmaData = await turmaResp.json();
@@ -5635,36 +5655,18 @@ async function imprimirRelatorioTurma() {
                 turno = turmaData.turno || 'Manhã';
             }
         }
-    } catch (e) {
-        console.warn('Erro ao buscar turma:', e);
-    }
+    } catch (e) { console.warn('Erro ao buscar turma:', e); }
 
     try {
-        // Buscar dados da prova
         if (provaId && provaId !== '') {
             const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
             const provaData = await provaResp.json();
             if (provaData && !provaData.erro) {
                 bimestre = provaData.bimestre || 'Não informado';
                 dataAtual = provaData.data_prova || new Date().toLocaleDateString('pt-BR');
-                if (provaData.disciplina) {
-                    disciplinaSelecionada = provaData.disciplina;
-                }
             }
         }
-    } catch (e) {
-        console.warn('Erro ao buscar prova:', e);
-    }
-
-    // Buscar disciplina selecionada
-    let disciplinaSelecionada = 'Português';
-    const selectProva = document.getElementById('rel-turma-prova');
-    if (selectProva) {
-        const option = selectProva.options[selectProva.selectedIndex];
-        if (option && option.dataset.disciplina) {
-            disciplinaSelecionada = option.dataset.disciplina;
-        }
-    }
+    } catch (e) { console.warn('Erro ao buscar prova:', e); }
 
     // ===== BUSCAR DADOS DE ACERTOS POR QUESTÃO COM BNCC =====
     let acertosPorQuestao = {};
@@ -5674,7 +5676,6 @@ async function imprimirRelatorioTurma() {
     let totalAlunosDisciplina = 0;
     let mediaDisciplina = 0;
 
-    // Tentar buscar os dados do card já carregado na tela
     const gridContainer = document.getElementById('rel-acertos-grid');
     if (gridContainer) {
         const items = gridContainer.querySelectorAll('.acertos-por-questao-item');
@@ -5685,13 +5686,11 @@ async function imprimirRelatorioTurma() {
                 const qErros = item.querySelector('.q-erros')?.textContent || '0';
                 const totalEl = item.querySelector('div[style*="font-size:8px"]');
                 const total = totalEl ? totalEl.textContent.replace('Total: ', '') : '0';
-                // Buscar BNCC - removendo a palavra "BNCC:" do texto
                 const bnccEl = item.querySelector('div[style*="font-size:10px;color:var(--purple)"]');
                 let bnccText = '';
                 if (bnccEl) {
                     bnccText = bnccEl.textContent.replace('BNCC:', '').replace('BNCC ', '').trim();
                 }
-                // Tentar buscar também no atributo title
                 if (!bnccText && bnccEl && bnccEl.title) {
                     bnccText = bnccEl.title.replace('BNCC:', '').replace('BNCC ', '').trim();
                 }
@@ -5712,7 +5711,6 @@ async function imprimirRelatorioTurma() {
         }
     }
 
-    // Se não encontrou dados no grid, tentar buscar do relatório
     if (Object.keys(acertosPorQuestao).length === 0) {
         const relTotalAcertos = document.getElementById('rel-total-acertos-disciplina')?.textContent || '0';
         const relTotalErros = document.getElementById('rel-total-erros-disciplina')?.textContent || '0';
@@ -5726,7 +5724,6 @@ async function imprimirRelatorioTurma() {
         
         if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 15;
         
-        // Tentar buscar BNCC da prova
         let bnccData = [];
         if (provaId && provaId !== '') {
             try {
@@ -5750,7 +5747,7 @@ async function imprimirRelatorioTurma() {
         }
     }
 
-    // Construir HTML dos acertos por questão com BNCC (SOMENTE O CÓDIGO)
+    // ===== CONSTRUIR HTML DOS ACERTOS POR QUESTÃO =====
     let acertosPorQuestaoHTML = '';
     const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
     
@@ -5759,7 +5756,6 @@ async function imprimirRelatorioTurma() {
             <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 12px 0;">
                 ${questoesOrdenadas.map(num => {
                     const dados = acertosPorQuestao[num];
-                    // Exibe apenas o código BNCC, sem a palavra "BNCC:"
                     const bnccDisplay = dados.bncc && dados.bncc !== '' ? dados.bncc : '—';
                     return `
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 4px; text-align: center;">
@@ -5771,7 +5767,7 @@ async function imprimirRelatorioTurma() {
                             </div>
                             <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Acertos / Erros</div>
                             <div style="font-size: 8px; color: #64748b; margin-top: 2px;">Total: ${dados.total}</div>
-                            <div style="font-size: 10px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 2px 8px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${bnccDisplay}">
+                            <div style="font-size: 12px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 2px 8px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${bnccDisplay}">
                                 ${bnccDisplay}
                             </div>
                         </div>
@@ -5788,74 +5784,120 @@ async function imprimirRelatorioTurma() {
         acertosPorQuestaoHTML = '<p style="text-align:center;padding:20px;color:#64748b;">Nenhum dado de acertos por questão disponível.</p>';
     }
 
-    // Construir tabela HTML
+    // ===== CONSTRUIR TABELA HTML - APENAS A DISCIPLINA SELECIONADA =====
     let tabelaHTML = '';
     const rows = tbody.querySelectorAll('tr');
+    
     if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
         tabelaHTML = '<p style="text-align:center;padding:20px;">Nenhum dado encontrado para imprimir.</p>';
     } else {
+        // Cabeçalho da tabela com apenas a disciplina selecionada
         tabelaHTML = `
             <table>
                 <thead>
                     <tr>
-                        <th>Pos.</th>
-                        <th>Nº</th>
-                        <th>Nome</th>
-                        <th>Série</th>
-                        <th colspan="3">Português</th>
-                        <th colspan="3">Matemática</th>
-                        <th colspan="3">Produção</th>
-                        <th colspan="3">CH</th>
-                        <th colspan="3">CN</th>
-                        <th>Escola</th>
-                        <th>Turma</th>
+                        <th rowspan="2">Pos.</th>
+                        <th rowspan="2">Nº</th>
+                        <th rowspan="2">Nome</th>
+                        <th rowspan="2">Série</th>
+                        <th colspan="3" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;">${disciplinaSelecionada}</th>
+                        <th rowspan="2">Escola</th>
+                        <th rowspan="2">Turma</th>
                     </tr>
                     <tr>
-                        <th></th><th></th><th></th><th></th>
-                        <th>Acertos</th><th>Erros</th><th>Conceito</th>
-                        <th>Acertos</th><th>Erros</th><th>Conceito</th>
-                        <th>Acertos</th><th>Erros</th><th>Conceito</th>
-                        <th>Acertos</th><th>Erros</th><th>Conceito</th>
-                        <th>Acertos</th><th>Erros</th><th>Conceito</th>
-                        <th></th><th></th>
+                        <th style="font-size:7px;padding:2px 2px;">Acertos</th>
+                        <th style="font-size:7px;padding:2px 2px;">Erros</th>
+                        <th style="font-size:7px;padding:2px 2px;">Conceito</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${Array.from(rows).map(row => {
-                        const cells = row.querySelectorAll('td');
-                        if (cells.length >= 20) {
-                            return `<tr>
-                                <td>${cells[0]?.textContent || ''}</td>
-                                <td>${cells[1]?.textContent || ''}</td>
-                                <td style="text-align:left;">${cells[2]?.textContent || ''}</td>
-                                <td>${cells[3]?.textContent || ''}</td>
-                                <td>${cells[4]?.textContent || '0'}</td>
-                                <td>${cells[5]?.textContent || '0'}</td>
-                                <td>${cells[6]?.textContent || ''}</td>
-                                <td>${cells[7]?.textContent || '0'}</td>
-                                <td>${cells[8]?.textContent || '0'}</td>
-                                <td>${cells[9]?.textContent || ''}</td>
-                                <td>${cells[10]?.textContent || '0'}</td>
-                                <td>${cells[11]?.textContent || '0'}</td>
-                                <td>${cells[12]?.textContent || ''}</td>
-                                <td>${cells[13]?.textContent || '0'}</td>
-                                <td>${cells[14]?.textContent || '0'}</td>
-                                <td>${cells[15]?.textContent || ''}</td>
-                                <td>${cells[16]?.textContent || '0'}</td>
-                                <td>${cells[17]?.textContent || '0'}</td>
-                                <td>${cells[18]?.textContent || ''}</td>
-                                <td>${cells[19]?.textContent || ''}</td>
-                                <td>${cells[20]?.textContent || ''}</td>
-                            </tr>`;
-                        }
-                        return '';
-                    }).join('')}
+        `;
+
+        // Função para obter dados da disciplina específica
+        function getDadosDisciplina(disciplinaData) {
+            if (!disciplinaData || typeof disciplinaData !== 'object') {
+                return { acertos: 0, erros: 0, conceito: 'inicial' };
+            }
+            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+            const totalDisc = disciplinaData.total || 0;
+            if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+            const conceito = calcularConceito(porcentagem);
+            return { acertos, erros, conceito };
+        }
+
+        function badgeConceito(c) {
+            const map = {
+                'inicial': 'badge-conceito-inicial',
+                'basico': 'badge-conceito-basico',
+                'proficiente': 'badge-conceito-proficiente',
+                'avancado': 'badge-conceito-avancado'
+            };
+            return map[c] || 'badge-gray';
+        }
+
+        // Processar cada linha da tabela
+        const alunosData = [];
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 20) {
+                const aluno = {
+                    pos: cells[0]?.textContent || '',
+                    numero: cells[1]?.textContent || '',
+                    nome: cells[2]?.textContent || '',
+                    serie: cells[3]?.textContent || '',
+                    escola: cells[19]?.textContent || '',
+                    turma: cells[20]?.textContent || ''
+                };
+
+                // Buscar dados da disciplina específica
+                // Os índices variam conforme a disciplina
+                // Português: 4,5,6 | Matemática: 7,8,9 | Produção: 10,11,12 | CH: 13,14,15 | CN: 16,17,18
+                const discIndex = {
+                    'portugues': { acertos: 4, erros: 5, conceito: 6 },
+                    'matematica': { acertos: 7, erros: 8, conceito: 9 },
+                    'producao': { acertos: 10, erros: 11, conceito: 12 },
+                    'ch': { acertos: 13, erros: 14, conceito: 15 },
+                    'cn': { acertos: 16, erros: 17, conceito: 18 }
+                };
+
+                const idx = discIndex[chaveDisciplina] || discIndex['portugues'];
+                aluno.acertos = cells[idx.acertos]?.textContent || '0';
+                aluno.erros = cells[idx.erros]?.textContent || '0';
+                aluno.conceito = cells[idx.conceito]?.textContent || 'inicial';
+
+                alunosData.push(aluno);
+            }
+        });
+
+        // Montar linhas da tabela
+        alunosData.forEach((aluno, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            const badgeClass = badgeConceito(aluno.conceito.toLowerCase());
+            
+            tabelaHTML += `
+                <tr>
+                    <td>${medalha}</td>
+                    <td>${index + 1}</td>
+                    <td style="text-align:left;"><strong>${aluno.nome}</strong></td>
+                    <td><span class="badge badge-purple">${aluno.serie}</span></td>
+                    <td style="text-align:center;"><span class="badge badge-blue">${aluno.acertos}</span></td>
+                    <td style="text-align:center;"><span class="badge badge-red">${aluno.erros}</span></td>
+                    <td style="text-align:center;"><span class="badge ${badgeClass}">${aluno.conceito}</span></td>
+                    <td style="font-size:10px;color:#64748b;">${aluno.escola}</td>
+                    <td style="font-size:10px;color:#64748b;">${aluno.turma}</td>
+                </tr>
+            `;
+        });
+
+        tabelaHTML += `
                 </tbody>
             </table>
         `;
     }
 
-    // Construir HTML completo para impressão
+    // ===== CONSTRUIR HTML COMPLETO PARA IMPRESSÃO =====
     const html = `
     <!DOCTYPE html>
     <html>
@@ -5908,10 +5950,21 @@ async function imprimirRelatorioTurma() {
             th { background: #f0f0f0; font-weight: 700; font-size: 7px; text-transform: uppercase; }
             td { font-size: 8px; }
             
-            .badge-conceito-inicial { background: #f8d7da; color: #721c24; padding: 1px 6px; border-radius: 10px; font-size: 7px; font-weight: 700; }
-            .badge-conceito-basico { background: #fff3cd; color: #856404; padding: 1px 6px; border-radius: 10px; font-size: 7px; font-weight: 700; }
-            .badge-conceito-proficiente { background: #cce5ff; color: #004085; padding: 1px 6px; border-radius: 10px; font-size: 7px; font-weight: 700; }
-            .badge-conceito-avancado { background: #d4edda; color: #155724; padding: 1px 6px; border-radius: 10px; font-size: 7px; font-weight: 700; }
+            .badge { 
+                display: inline-block; 
+                padding: 1px 6px; 
+                border-radius: 10px; 
+                font-size: 7px; 
+                font-weight: 700; 
+            }
+            .badge-purple { background: #e8d4ff; color: #4a148c; }
+            .badge-blue { background: #cce5ff; color: #004085; }
+            .badge-red { background: #f8d7da; color: #721c24; }
+            .badge-conceito-inicial { background: #f8d7da; color: #721c24; }
+            .badge-conceito-basico { background: #fff3cd; color: #856404; }
+            .badge-conceito-proficiente { background: #cce5ff; color: #004085; }
+            .badge-conceito-avancado { background: #d4edda; color: #155724; }
+            .badge-gray { background: #e9ecef; color: #495057; }
             
             .card-acertos-por-questao {
                 background: #f8fafc;
@@ -6036,12 +6089,13 @@ async function imprimirRelatorioTurma() {
             <div class="item"><span class="label">🕐 Turno</span><span class="value">${turno}</span></div>
             <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
             <div class="item"><span class="label">📊 Bimestre</span><span class="value">${bimestre}</span></div>
+            <div class="item"><span class="label">📖 Disciplina</span><span class="value" style="color:#2563eb;font-weight:700;">${disciplinaSelecionada}</span></div>
         </div>
 
         <!-- TÍTULO -->
         <div class="titulo-relatorio">
             <h2>📊 RELATÓRIO POR TURMA</h2>
-            <p>Relatório de desempenho dos alunos por disciplina - ${disciplinaSelecionada}</p>
+            <p>Relatório de desempenho dos alunos - ${disciplinaSelecionada}</p>
         </div>
 
         <!-- ===== CARD: ACERTOS POR QUESTÃO ===== -->
@@ -6069,7 +6123,7 @@ async function imprimirRelatorioTurma() {
             </div>
         </div>
 
-        <!-- ===== TABELA DE ALUNOS ===== -->
+        <!-- ===== TABELA DE ALUNOS (APENAS A DISCIPLINA FILTRADA) ===== -->
         ${tabelaHTML}
 
         <!-- ASSINATURAS -->
