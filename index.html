@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -5656,7 +5657,7 @@ async function imprimirRelatorioTurma() {
         }
     }
 
-    // ===== BUSCAR DADOS DE ACERTOS POR QUESTÃO =====
+    // ===== BUSCAR DADOS DE ACERTOS POR QUESTÃO COM BNCC =====
     let acertosPorQuestao = {};
     let totalQuestoesDisciplina = 0;
     let totalAcertosDisciplina = 0;
@@ -5675,11 +5676,15 @@ async function imprimirRelatorioTurma() {
                 const qErros = item.querySelector('.q-erros')?.textContent || '0';
                 const totalEl = item.querySelector('div[style*="font-size:8px"]');
                 const total = totalEl ? totalEl.textContent.replace('Total: ', '') : '0';
+                // Buscar BNCC
+                const bnccEl = item.querySelector('div[style*="font-size:7px;color:var(--purple)"]');
+                const bnccText = bnccEl ? bnccEl.textContent.replace('BNCC: ', '') : '';
                 if (qNum) {
                     acertosPorQuestao[parseInt(qNum)] = {
                         acertos: parseInt(qAcertos) || 0,
                         erros: parseInt(qErros) || 0,
-                        total: parseInt(total) || 0
+                        total: parseInt(total) || 0,
+                        bncc: bnccText || ''
                     };
                     totalAcertosDisciplina += parseInt(qAcertos) || 0;
                     totalErrosDisciplina += parseInt(qErros) || 0;
@@ -5705,26 +5710,40 @@ async function imprimirRelatorioTurma() {
         
         if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 15;
         
+        // Tentar buscar BNCC da prova
+        let bnccData = [];
+        if (provaId && provaId !== '') {
+            try {
+                const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                const prova = await provaResp.json();
+                if (prova && !prova.erro && prova.bncc) {
+                    bnccData = prova.bncc;
+                }
+            } catch (e) {}
+        }
+        
         for (let i = 1; i <= totalQuestoesDisciplina; i++) {
             if (!acertosPorQuestao[i]) {
                 acertosPorQuestao[i] = {
                     acertos: Math.round(totalAcertosDisciplina / totalQuestoesDisciplina) || 0,
                     erros: Math.round(totalErrosDisciplina / totalQuestoesDisciplina) || 0,
-                    total: totalAlunosDisciplina || 15
+                    total: totalAlunosDisciplina || 15,
+                    bncc: (i-1 < bnccData.length) ? bnccData[i-1] : ''
                 };
             }
         }
     }
 
-    // Construir HTML dos acertos por questão
+    // Construir HTML dos acertos por questão com BNCC
     let acertosPorQuestaoHTML = '';
     const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
     
     if (questoesOrdenadas.length > 0) {
         acertosPorQuestaoHTML = `
-            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin: 12px 0;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 12px 0;">
                 ${questoesOrdenadas.map(num => {
                     const dados = acertosPorQuestao[num];
+                    const bnccDisplay = dados.bncc && dados.bncc !== '' ? dados.bncc : '—';
                     return `
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 4px; text-align: center;">
                             <div style="font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 4px;">Q${num}</div>
@@ -5735,6 +5754,7 @@ async function imprimirRelatorioTurma() {
                             </div>
                             <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Acertos / Erros</div>
                             <div style="font-size: 8px; color: #64748b; margin-top: 2px;">Total: ${dados.total}</div>
+                            <div style="font-size: 7px; color: #7c3aed; margin-top: 3px; background: #ede9fe; padding: 1px 6px; border-radius: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bnccDisplay}">BNCC: ${bnccDisplay}</div>
                         </div>
                     `;
                 }).join('')}
@@ -5979,7 +5999,6 @@ async function imprimirRelatorioTurma() {
             <div class="municipio">PREFEITURA DE ${municipio.toUpperCase()}</div>
             <div class="estado">${estado}</div>
             <div class="secretaria">SECRETARIA MUNICIPAL DE EDUCAÇÃO</div>
-			<div class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICA</div>
             <div class="divider"></div>
             <div class="sisam">SISAM 2026</div>
             <div class="ano-letivo">Ano Letivo ${new Date().getFullYear()}</div>
@@ -6083,341 +6102,380 @@ async function imprimirRelatorioTurma() {
             // CARREGAR RELATÓRIO POR TURMA FILTRADO
             // ============================================
             async function carregarRelatorioTurmaFiltrado() {
-                try {
-                    const escolaId = document.getElementById('rel-turma-escola').value;
-                    const serie = document.getElementById('rel-turma-serie').value;
-                    const turmaId = document.getElementById('rel-turma-turma').value;
-                    const provaId = document.getElementById('rel-turma-prova').value;
+    try {
+        const escolaId = document.getElementById('rel-turma-escola').value;
+        const serie = document.getElementById('rel-turma-serie').value;
+        const turmaId = document.getElementById('rel-turma-turma').value;
+        const provaId = document.getElementById('rel-turma-prova').value;
 
-                    let disciplinaSelecionada = '';
-                    const selectProva = document.getElementById('rel-turma-prova');
-                    const optionProva = selectProva.options[selectProva.selectedIndex];
-                    if (optionProva && optionProva.dataset.disciplina) {
-                        disciplinaSelecionada = optionProva.dataset.disciplina;
-                    }
-                    if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
+        let disciplinaSelecionada = '';
+        const selectProva = document.getElementById('rel-turma-prova');
+        const optionProva = selectProva.options[selectProva.selectedIndex];
+        if (optionProva && optionProva.dataset.disciplina) {
+            disciplinaSelecionada = optionProva.dataset.disciplina;
+        }
+        if (!disciplinaSelecionada) disciplinaSelecionada = 'Português';
 
-                    let url = API_URL + '/api/historico/agrupado';
-                    const params = new URLSearchParams();
-                    if (escolaId && escolaId !== '') params.append('escola', escolaId);
-                    if (serie && serie !== '') params.append('serie', serie);
-                    if (turmaId && turmaId !== '') params.append('turma', turmaId);
-                    if (provaId && provaId !== '') params.append('prova', provaId);
-                    if (params.toString()) url += '?' + params.toString();
+        let url = API_URL + '/api/historico/agrupado';
+        const params = new URLSearchParams();
+        if (escolaId && escolaId !== '') params.append('escola', escolaId);
+        if (serie && serie !== '') params.append('serie', serie);
+        if (turmaId && turmaId !== '') params.append('turma', turmaId);
+        if (provaId && provaId !== '') params.append('prova', provaId);
+        if (params.toString()) url += '?' + params.toString();
 
-                    const response = await fetch(url);
-                    const alunos = await response.json();
+        const response = await fetch(url);
+        const alunos = await response.json();
 
-                    if (!alunos || alunos.length === 0 || alunos.erro) {
-                        setText('rel-media', '0%');
-                        setText('rel-total-alunos-conceitos', '0 alunos');
-                        setText('rel-total-correcoes', '0 correções');
-                        setText('rel-total-questoes', '0 questões');
-                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                            setText(`rel-conceito-${c}-count`, '0');
-                            const bar = document.getElementById(`rel-conceito-${c}-bar`);
-                            if (bar) bar.style.width = '0%';
-                        });
-                        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
-                        setText('rel-disc-acertos', '0');
-                        setText('rel-disc-erros', '0');
-                        setText('rel-disc-media', '0.0');
-                        setText('rel-disc-conceito', '—');
-                        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
-                        setText('rel-total-acertos-disciplina', '0');
-                        setText('rel-total-erros-disciplina', '0');
-                        setText('rel-media-disciplina', '0%');
-                        document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
-                        const tbody = document.getElementById('tb-rel-alunos');
-                        if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
-                        setText('rel-total-alunos-tabela', '0 alunos');
-                        return;
-                    }
+        if (!alunos || alunos.length === 0 || alunos.erro) {
+            setText('rel-media', '0%');
+            setText('rel-total-alunos-conceitos', '0 alunos');
+            setText('rel-total-correcoes', '0 correções');
+            setText('rel-total-questoes', '0 questões');
+            ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                setText(`rel-conceito-${c}-count`, '0');
+                const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                if (bar) bar.style.width = '0%';
+            });
+            setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+            setText('rel-disc-acertos', '0');
+            setText('rel-disc-erros', '0');
+            setText('rel-disc-media', '0.0');
+            setText('rel-disc-conceito', '—');
+            setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+            setText('rel-total-acertos-disciplina', '0');
+            setText('rel-total-erros-disciplina', '0');
+            setText('rel-media-disciplina', '0%');
+            document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
+            const tbody = document.getElementById('tb-rel-alunos');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>';
+            setText('rel-total-alunos-tabela', '0 alunos');
+            return;
+        }
 
-                    const dadosAlunos = Array.isArray(alunos) ? alunos : [];
+        const dadosAlunos = Array.isArray(alunos) ? alunos : [];
 
-                    if (dadosAlunos.length === 0) {
-                        setText('rel-media', '0%');
-                        setText('rel-total-alunos-conceitos', '0 alunos');
-                        setText('rel-total-correcoes', '0 correções');
-                        setText('rel-total-questoes', '0 questões');
-                        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                            setText(`rel-conceito-${c}-count`, '0');
-                            const bar = document.getElementById(`rel-conceito-${c}-bar`);
-                            if (bar) bar.style.width = '0%';
-                        });
-                        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
-                        setText('rel-disc-acertos', '0');
-                        setText('rel-disc-erros', '0');
-                        setText('rel-disc-media', '0.0');
-                        setText('rel-disc-conceito', '—');
-                        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
-                        setText('rel-total-acertos-disciplina', '0');
-                        setText('rel-total-erros-disciplina', '0');
-                        setText('rel-media-disciplina', '0%');
-                        document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
-                        const tbody = document.getElementById('tb-rel-alunos');
-                        if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
-                        setText('rel-total-alunos-tabela', '0 alunos');
-                        return;
-                    }
+        if (dadosAlunos.length === 0) {
+            setText('rel-media', '0%');
+            setText('rel-total-alunos-conceitos', '0 alunos');
+            setText('rel-total-correcoes', '0 correções');
+            setText('rel-total-questoes', '0 questões');
+            ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+                setText(`rel-conceito-${c}-count`, '0');
+                const bar = document.getElementById(`rel-conceito-${c}-bar`);
+                if (bar) bar.style.width = '0%';
+            });
+            setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+            setText('rel-disc-acertos', '0');
+            setText('rel-disc-erros', '0');
+            setText('rel-disc-media', '0.0');
+            setText('rel-disc-conceito', '—');
+            setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+            setText('rel-total-acertos-disciplina', '0');
+            setText('rel-total-erros-disciplina', '0');
+            setText('rel-media-disciplina', '0%');
+            document.getElementById('rel-acertos-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>';
+            const tbody = document.getElementById('tb-rel-alunos');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>';
+            setText('rel-total-alunos-tabela', '0 alunos');
+            return;
+        }
 
-                    const totalAlunos = dadosAlunos.length;
-                    const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+        const totalAlunos = dadosAlunos.length;
+        const notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
 
-                    const disciplinaMap = {
-                        'Português': 'portugues',
-                        'Matemática': 'matematica',
-                        'Produção de Texto': 'producao',
-                        'Ciências Humanas': 'ch',
-                        'Ciências Naturais': 'cn',
-                        'História': 'ch',
-                        'Geografia': 'ch',
-                        'Inglês': 'portugues'
-                    };
-                    const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
+        const disciplinaMap = {
+            'Português': 'portugues',
+            'Matemática': 'matematica',
+            'Produção de Texto': 'producao',
+            'Ciências Humanas': 'ch',
+            'Ciências Naturais': 'cn',
+            'História': 'ch',
+            'Geografia': 'ch',
+            'Inglês': 'portugues'
+        };
+        const chave = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
-                    let somaNotas = 0;
-                    dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
-                    const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
-                    const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
-                    setText('rel-media', porcentagemMedia.toFixed(1) + '%');
-                    setText('rel-total-alunos-conceitos', totalAlunos + ' alunos');
-                    setText('rel-total-correcoes', totalAlunos + ' correções');
+        let somaNotas = 0;
+        dadosAlunos.forEach(a => { somaNotas += (a.media || 0); });
+        const mediaGeral = totalAlunos > 0 ? somaNotas / totalAlunos : 0;
+        const porcentagemMedia = (mediaGeral / notaMaxima) * 100;
+        setText('rel-media', porcentagemMedia.toFixed(1) + '%');
+        setText('rel-total-alunos-conceitos', totalAlunos + ' alunos');
+        setText('rel-total-correcoes', totalAlunos + ' correções');
 
-                    let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
-                    dadosAlunos.forEach(aluno => {
-                        const discData = aluno[chave] || {};
-                        const acertos = discData.acertos || 0;
-                        const total = discData.total || 20;
-                        const pct = (acertos / total) * 100;
-                        const conceito = calcularConceito(pct);
-                        conceitos[conceito] = (conceitos[conceito] || 0) + 1;
-                    });
+        let conceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
+        dadosAlunos.forEach(aluno => {
+            const discData = aluno[chave] || {};
+            const acertos = discData.acertos || 0;
+            const total = discData.total || 20;
+            const pct = (acertos / total) * 100;
+            const conceito = calcularConceito(pct);
+            conceitos[conceito] = (conceitos[conceito] || 0) + 1;
+        });
 
-                    const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
-                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                        const count = conceitos[c] || 0;
-                        const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
-                        setText(`rel-conceito-${c}-count`, count);
-                        const bar = document.getElementById(`rel-conceito-${c}-bar`);
-                        if (bar) {
-                            bar.style.width = Math.max(pct, 2) + '%';
-                            bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
-                        }
-                    });
-
-                    let totalAcertos = 0,
-                        totalErros = 0,
-                        totalQuestoes = 0;
-                    let alunosComDados = 0;
-
-                    // Dicionário para acertos por questão
-                    let acertosPorQuestao = {};
-                    let totalQuestoesDisciplina = 0;
-
-                    dadosAlunos.forEach(aluno => {
-                        const disciplinaData = aluno[chave];
-                        if (disciplinaData) {
-                            let acertos = 0,
-                                erros = 0,
-                                total = 0;
-                            if (typeof disciplinaData === 'object') {
-                                acertos = parseInt(disciplinaData.acertos) || 0;
-                                total = parseInt(disciplinaData.total) || 0;
-                                erros = total - acertos;
-                                
-                                // Processar acertos por questão
-                                if (disciplinaData.questoes && Array.isArray(disciplinaData.questoes)) {
-                                    disciplinaData.questoes.forEach((q, idx) => {
-                                        const numQuestao = idx + 1;
-                                        if (!acertosPorQuestao[numQuestao]) {
-                                            acertosPorQuestao[numQuestao] = { acertos: 0, erros: 0, total: 0 };
-                                        }
-                                        if (q.acertou === true) {
-                                            acertosPorQuestao[numQuestao].acertos++;
-                                        } else if (q.acertou === false) {
-                                            acertosPorQuestao[numQuestao].erros++;
-                                        }
-                                        acertosPorQuestao[numQuestao].total++;
-                                    });
-                                    totalQuestoesDisciplina = disciplinaData.questoes.length;
-                                } else {
-                                    // Fallback: distribuir acertos uniformemente
-                                    const questoes = total || 20;
-                                    for (let i = 0; i < questoes; i++) {
-                                        const numQuestao = i + 1;
-                                        if (!acertosPorQuestao[numQuestao]) {
-                                            acertosPorQuestao[numQuestao] = { acertos: 0, erros: 0, total: 0 };
-                                        }
-                                        if (acertos > 0 && i < acertos) {
-                                            acertosPorQuestao[numQuestao].acertos++;
-                                        } else {
-                                            acertosPorQuestao[numQuestao].erros++;
-                                        }
-                                        acertosPorQuestao[numQuestao].total++;
-                                    }
-                                    totalQuestoesDisciplina = total || 20;
-                                }
-                            } else {
-                                acertos = parseInt(disciplinaData) || 0;
-                                total = 20;
-                                erros = total - acertos;
-                                for (let i = 0; i < total; i++) {
-                                    const numQuestao = i + 1;
-                                    if (!acertosPorQuestao[numQuestao]) {
-                                        acertosPorQuestao[numQuestao] = { acertos: 0, erros: 0, total: 0 };
-                                    }
-                                    if (i < acertos) {
-                                        acertosPorQuestao[numQuestao].acertos++;
-                                    } else {
-                                        acertosPorQuestao[numQuestao].erros++;
-                                    }
-                                    acertosPorQuestao[numQuestao].total++;
-                                }
-                                totalQuestoesDisciplina = total;
-                            }
-                            totalAcertos += acertos;
-                            totalErros += erros;
-                            totalQuestoes += total;
-                            alunosComDados++;
-                        }
-                    });
-
-                    if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 20;
-                    
-                    for (let i = 1; i <= totalQuestoesDisciplina; i++) {
-                        if (!acertosPorQuestao[i]) {
-                            acertosPorQuestao[i] = { acertos: 0, erros: 0, total: 0 };
-                        }
-                    }
-
-                    setText('rel-total-questoes', totalQuestoesDisciplina + ' questões');
-
-                    // Gerar grid de acertos por questão
-                    const gridContainer = document.getElementById('rel-acertos-grid');
-                    gridContainer.innerHTML = '';
-                    
-                    const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
-                    
-                    if (questoesOrdenadas.length === 0) {
-                        gridContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado de questões disponível.</div>';
-                    } else {
-                        questoesOrdenadas.forEach(num => {
-                            const dados = acertosPorQuestao[num];
-                            const div = document.createElement('div');
-                            div.className = 'acertos-por-questao-item';
-                            div.innerHTML = `
-                                <div class="q-num">Q${num}</div>
-                                <div>
-                                    <span class="q-acertos">${dados.acertos}</span>
-                                    <span class="q-divider">/</span>
-                                    <span class="q-erros">${dados.erros}</span>
-                                </div>
-                                <div class="q-label">Acertos / Erros</div>
-                                <div style="font-size:8px;color:var(--text3);margin-top:2px;">Total: ${dados.total}</div>
-                            `;
-                            gridContainer.appendChild(div);
-                        });
-                    }
-
-                    const mediaDisc = alunosComDados > 0 ? (totalAcertos / alunosComDados) : 0;
-                    const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
-                    const conceitoDisc = calcularConceito(pctDisc);
-
-                    setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
-                    setText('rel-disc-acertos', totalAcertos);
-                    setText('rel-disc-erros', totalErros);
-                    setText('rel-disc-media', mediaDisc.toFixed(1));
-                    setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
-                    setText('rel-total-acertos-disciplina', totalAcertos);
-                    setText('rel-total-erros-disciplina', totalErros);
-                    setText('rel-media-disciplina', pctDisc.toFixed(1) + '%');
-
-                    const badgeMap = {
-                        'inicial': 'badge-conceito-inicial',
-                        'basico': 'badge-conceito-basico',
-                        'proficiente': 'badge-conceito-proficiente',
-                        'avancado': 'badge-conceito-avancado'
-                    };
-                    const labelMap = {
-                        'inicial': '🔴 Inicial',
-                        'basico': '🟠 Básico',
-                        'proficiente': '🔵 Proficiente',
-                        'avancado': '🟢 Avançado'
-                    };
-                    const conceitoSpan = document.getElementById('rel-disc-conceito');
-                    if (conceitoSpan) {
-                        conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
-                        conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
-                    }
-
-                    function getDadosDisciplina(disciplinaData, totalQuestoes) {
-                        if (!disciplinaData || typeof disciplinaData !== 'object') {
-                            return { acertos: 0, erros: 0, conceito: 'inicial' };
-                        }
-                        const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-                        let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-                        const totalDisc = disciplinaData.total || totalQuestoes || 0;
-                        if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
-                        const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-                        const conceito = calcularConceito(porcentagem);
-                        return { acertos, erros, conceito };
-                    }
-
-                    function badgeConceito(c) {
-                        return `badge-conceito-${c}-sm`;
-                    }
-
-                    const tbody = document.getElementById('tb-rel-alunos');
-                    if (!tbody) return;
-
-                    const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
-
-                    tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
-                        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-
-                        const portugues = getDadosDisciplina(aluno.portugues, 20);
-                        const matematica = getDadosDisciplina(aluno.matematica, 20);
-                        const producao = getDadosDisciplina(aluno.producao, 20);
-                        const ch = getDadosDisciplina(aluno.ch, 20);
-                        const cn = getDadosDisciplina(aluno.cn, 20);
-
-                        const nomeEscola = aluno.escola || '';
-                        const nomeTurma = aluno.turma || '';
-
-                        return '<tr>' +
-                            '<td>' + medalha + '</td>' +
-                            '<td>' + (index + 1) + '</td>' +
-                            '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
-                            '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
-                            '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
-                            '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
-                            '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
-                            '</tr>';
-                    }).join('');
-
-                    setText('rel-total-alunos-tabela', totalAlunos + ' alunos');
-
-                } catch (erro) {
-                    console.error('❌ Erro ao carregar relatório por turma:', erro);
-                    showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
-                }
+        const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
+        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
+            const count = conceitos[c] || 0;
+            const pct = totalAlunos > 0 ? (count / totalAlunos) * 100 : 0;
+            setText(`rel-conceito-${c}-count`, count);
+            const bar = document.getElementById(`rel-conceito-${c}-bar`);
+            if (bar) {
+                bar.style.width = Math.max(pct, 2) + '%';
+                bar.style.background = `linear-gradient(90deg, ${cores[c]}, ${cores[c]}dd)`;
             }
+        });
+
+        let totalAcertos = 0,
+            totalErros = 0,
+            totalQuestoes = 0;
+        let alunosComDados = 0;
+
+        // Dicionário para acertos por questão COM BNCC
+        let acertosPorQuestao = {};
+        let totalQuestoesDisciplina = 0;
+
+        // Buscar dados BNCC da prova selecionada
+        let bnccData = [];
+        if (provaId && provaId !== '') {
+            try {
+                const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+                const prova = await provaResp.json();
+                if (prova && !prova.erro && prova.bncc) {
+                    bnccData = prova.bncc;
+                }
+            } catch (e) {
+                console.warn('Erro ao buscar BNCC da prova:', e);
+            }
+        }
+
+        dadosAlunos.forEach(aluno => {
+            const disciplinaData = aluno[chave];
+            if (disciplinaData) {
+                let acertos = 0,
+                    erros = 0,
+                    total = 0;
+                if (typeof disciplinaData === 'object') {
+                    acertos = parseInt(disciplinaData.acertos) || 0;
+                    total = parseInt(disciplinaData.total) || 0;
+                    erros = total - acertos;
+                    
+                    // Processar acertos por questão com BNCC
+                    if (disciplinaData.questoes && Array.isArray(disciplinaData.questoes)) {
+                        disciplinaData.questoes.forEach((q, idx) => {
+                            const numQuestao = idx + 1;
+                            if (!acertosPorQuestao[numQuestao]) {
+                                acertosPorQuestao[numQuestao] = { 
+                                    acertos: 0, 
+                                    erros: 0, 
+                                    total: 0,
+                                    bncc: (idx < bnccData.length) ? bnccData[idx] : ''
+                                };
+                            }
+                            if (q.acertou === true) {
+                                acertosPorQuestao[numQuestao].acertos++;
+                            } else if (q.acertou === false) {
+                                acertosPorQuestao[numQuestao].erros++;
+                            }
+                            acertosPorQuestao[numQuestao].total++;
+                        });
+                        totalQuestoesDisciplina = disciplinaData.questoes.length;
+                    } else {
+                        // Fallback: distribuir acertos uniformemente
+                        const questoes = total || 20;
+                        for (let i = 0; i < questoes; i++) {
+                            const numQuestao = i + 1;
+                            if (!acertosPorQuestao[numQuestao]) {
+                                acertosPorQuestao[numQuestao] = { 
+                                    acertos: 0, 
+                                    erros: 0, 
+                                    total: 0,
+                                    bncc: (i < bnccData.length) ? bnccData[i] : ''
+                                };
+                            }
+                            if (acertos > 0 && i < acertos) {
+                                acertosPorQuestao[numQuestao].acertos++;
+                            } else {
+                                acertosPorQuestao[numQuestao].erros++;
+                            }
+                            acertosPorQuestao[numQuestao].total++;
+                        }
+                        totalQuestoesDisciplina = total || 20;
+                    }
+                } else {
+                    acertos = parseInt(disciplinaData) || 0;
+                    total = 20;
+                    erros = total - acertos;
+                    for (let i = 0; i < total; i++) {
+                        const numQuestao = i + 1;
+                        if (!acertosPorQuestao[numQuestao]) {
+                            acertosPorQuestao[numQuestao] = { 
+                                acertos: 0, 
+                                erros: 0, 
+                                total: 0,
+                                bncc: (i < bnccData.length) ? bnccData[i] : ''
+                            };
+                        }
+                        if (i < acertos) {
+                            acertosPorQuestao[numQuestao].acertos++;
+                        } else {
+                            acertosPorQuestao[numQuestao].erros++;
+                        }
+                        acertosPorQuestao[numQuestao].total++;
+                    }
+                    totalQuestoesDisciplina = total;
+                }
+                totalAcertos += acertos;
+                totalErros += erros;
+                totalQuestoes += total;
+                alunosComDados++;
+            }
+        });
+
+        if (totalQuestoesDisciplina === 0) totalQuestoesDisciplina = 20;
+        
+        // Garantir que todas as questões tenham entrada com BNCC
+        for (let i = 1; i <= totalQuestoesDisciplina; i++) {
+            if (!acertosPorQuestao[i]) {
+                acertosPorQuestao[i] = { 
+                    acertos: 0, 
+                    erros: 0, 
+                    total: 0,
+                    bncc: (i-1 < bnccData.length) ? bnccData[i-1] : ''
+                };
+            }
+        }
+
+        setText('rel-total-questoes', totalQuestoesDisciplina + ' questões');
+
+        // Gerar grid de acertos por questão COM BNCC
+        const gridContainer = document.getElementById('rel-acertos-grid');
+        gridContainer.innerHTML = '';
+        
+        const questoesOrdenadas = Object.keys(acertosPorQuestao).sort((a, b) => parseInt(a) - parseInt(b));
+        
+        if (questoesOrdenadas.length === 0) {
+            gridContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado de questões disponível.</div>';
+        } else {
+            questoesOrdenadas.forEach(num => {
+                const dados = acertosPorQuestao[num];
+                const div = document.createElement('div');
+                div.className = 'acertos-por-questao-item';
+                const bnccText = dados.bncc || '—';
+                // Limitar o texto BNCC para não quebrar o layout
+                const bnccDisplay = bnccText.length > 15 ? bnccText.substring(0, 12) + '…' : bnccText;
+                div.innerHTML = `
+                    <div class="q-num">Q${num}</div>
+                    <div>
+                        <span class="q-acertos">${dados.acertos}</span>
+                        <span class="q-divider">/</span>
+                        <span class="q-erros">${dados.erros}</span>
+                    </div>
+                    <div class="q-label">Acertos / Erros</div>
+                    <div style="font-size:8px;color:var(--text3);margin-top:2px;">Total: ${dados.total}</div>
+                    <div style="font-size:7px;color:var(--purple);margin-top:2px;background:rgba(139,92,246,0.1);padding:1px 4px;border-radius:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${bnccText}">BNCC: ${bnccDisplay}</div>
+                `;
+                gridContainer.appendChild(div);
+            });
+        }
+
+        const mediaDisc = alunosComDados > 0 ? (totalAcertos / alunosComDados) : 0;
+        const pctDisc = totalQuestoes > 0 ? (totalAcertos / totalQuestoes) * 100 : 0;
+        const conceitoDisc = calcularConceito(pctDisc);
+
+        setText('rel-disciplina-nome', disciplinaSelecionada || 'Disciplina');
+        setText('rel-disc-acertos', totalAcertos);
+        setText('rel-disc-erros', totalErros);
+        setText('rel-disc-media', mediaDisc.toFixed(1));
+        setText('rel-acertos-disciplina', disciplinaSelecionada || 'Disciplina');
+        setText('rel-total-acertos-disciplina', totalAcertos);
+        setText('rel-total-erros-disciplina', totalErros);
+        setText('rel-media-disciplina', pctDisc.toFixed(1) + '%');
+
+        const badgeMap = {
+            'inicial': 'badge-conceito-inicial',
+            'basico': 'badge-conceito-basico',
+            'proficiente': 'badge-conceito-proficiente',
+            'avancado': 'badge-conceito-avancado'
+        };
+        const labelMap = {
+            'inicial': '🔴 Inicial',
+            'basico': '🟠 Básico',
+            'proficiente': '🔵 Proficiente',
+            'avancado': '🟢 Avançado'
+        };
+        const conceitoSpan = document.getElementById('rel-disc-conceito');
+        if (conceitoSpan) {
+            conceitoSpan.textContent = labelMap[conceitoDisc] || '—';
+            conceitoSpan.className = `badge ${badgeMap[conceitoDisc] || 'badge-gray'}`;
+        }
+
+        function getDadosDisciplina(disciplinaData, totalQuestoes) {
+            if (!disciplinaData || typeof disciplinaData !== 'object') {
+                return { acertos: 0, erros: 0, conceito: 'inicial' };
+            }
+            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+            const totalDisc = disciplinaData.total || totalQuestoes || 0;
+            if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+            const conceito = calcularConceito(porcentagem);
+            return { acertos, erros, conceito };
+        }
+
+        function badgeConceito(c) {
+            return `badge-conceito-${c}-sm`;
+        }
+
+        const tbody = document.getElementById('tb-rel-alunos');
+        if (!tbody) return;
+
+        const alunosOrdenados = [...dadosAlunos].sort((a, b) => (b.media || 0) - (a.media || 0));
+
+        tbody.innerHTML = alunosOrdenados.map((aluno, index) => {
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+
+            const portugues = getDadosDisciplina(aluno.portugues, 20);
+            const matematica = getDadosDisciplina(aluno.matematica, 20);
+            const producao = getDadosDisciplina(aluno.producao, 20);
+            const ch = getDadosDisciplina(aluno.ch, 20);
+            const cn = getDadosDisciplina(aluno.cn, 20);
+
+            const nomeEscola = aluno.escola || '';
+            const nomeTurma = aluno.turma || '';
+
+            return '<tr>' +
+                '<td>' + medalha + '</td>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
+                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
+                '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
+                '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
+                '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                '</tr>';
+        }).join('');
+
+        setText('rel-total-alunos-tabela', totalAlunos + ' alunos');
+
+    } catch (erro) {
+        console.error('❌ Erro ao carregar relatório por turma:', erro);
+        showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
+    }
+}
 
             function limparFiltrosRelTurma() {
                 document.getElementById('rel-turma-escola').value = '';
