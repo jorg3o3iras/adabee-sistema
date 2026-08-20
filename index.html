@@ -305,6 +305,23 @@ th { text-align:center; padding:5px 3px; font-weight:600; color:var(--text2); bo
 td { padding:5px 3px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; vertical-align:middle; font-size:11px; }
 tr:hover td { background:rgba(255,255,255,0.02); }
 
+/* 🔥 NOVO: Estilo para scroll na tabela de últimas correções */
+#ultimas-correcoes-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+#ultimas-correcoes-container::-webkit-scrollbar {
+    width: 4px;
+}
+#ultimas-correcoes-container::-webkit-scrollbar-track {
+    background: var(--bg2);
+    border-radius: 4px;
+}
+#ultimas-correcoes-container::-webkit-scrollbar-thumb {
+    background: var(--border2);
+    border-radius: 4px;
+}
+
 .search-wrap { display:flex; align-items:center; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; padding:0 12px; transition:border .3s; }
 .search-wrap:focus-within { border-color:var(--blue); }
 .search-ico { font-size:14px; color:var(--text3); margin-right:8px; }
@@ -8312,34 +8329,47 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // CARREGAR ÚLTIMAS CORREÇÕES
             // ============================================
             async function carregarUltimasCorrecoes() {
-                try {
-                    const response = await fetch(API_URL + '/api/historico');
-                    const historico = await response.json();
-                    const tbody = document.getElementById('ultimas-correcoes');
-                    if (!tbody) return;
-                    if (!historico || historico.length === 0 || historico.erro) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
-                    } else {
-                        const recentes = historico.slice(0, 4);
-                        tbody.innerHTML = recentes.map(item => {
-                            const acertos = item.acertos || 0;
-                            const total = item.total || 20;
-                            const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
-                            const conceito = calcularConceito(porcentagem);
-                            const badgeMap = { 'inicial': 'badge-conceito-inicial', 'basico': 'badge-conceito-basico', 'proficiente': 'badge-conceito-proficiente', 'avancado': 'badge-conceito-avancado' };
-                            const nomeConceito = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' };
-                            const badge = badgeMap[conceito] || 'badge-gray';
-                            const label = nomeConceito[conceito] || 'Indefinido';
-                            return `<tr>
-                                <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
-                                <td>${item.prova_titulo || 'Prova'}</td>
-                                <td><strong>${porcentagem}%</strong></td>
-                                <td><span class="badge ${badge}">${label}</span></td>
-                            </tr>`;
-                        }).join('');
-                    }
-                } catch (erro) { console.error('Erro ao carregar últimas correções:', erro); }
-            }
+    try {
+        const response = await fetch(API_URL + '/api/historico');
+        const historico = await response.json();
+        const tbody = document.getElementById('ultimas-correcoes');
+        if (!tbody) return;
+        if (!historico || historico.length === 0 || historico.erro) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
+        } else {
+            // 🔥 ALTERADO: exibir até 30 últimas correções (antes era 4)
+            const recentes = historico.slice(0, 30);
+            tbody.innerHTML = recentes.map(item => {
+                const acertos = item.acertos || 0;
+                const total = item.total || 20;
+                const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
+                const conceito = calcularConceito(porcentagem);
+                const badgeMap = { 
+                    'inicial': 'badge-conceito-inicial', 
+                    'basico': 'badge-conceito-basico', 
+                    'proficiente': 'badge-conceito-proficiente', 
+                    'avancado': 'badge-conceito-avancado' 
+                };
+                const nomeConceito = { 
+                    'inicial': '🔴 Inicial', 
+                    'basico': '🟠 Básico', 
+                    'proficiente': '🔵 Proficiente', 
+                    'avancado': '🟢 Avançado' 
+                };
+                const badge = badgeMap[conceito] || 'badge-gray';
+                const label = nomeConceito[conceito] || 'Indefinido';
+                return `<tr>
+                    <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
+                    <td>${item.prova_titulo || 'Prova'}</td>
+                    <td><strong>${porcentagem}%</strong></td>
+                    <td><span class="badge ${badge}">${label}</span></td>
+                </tr>`;
+            }).join('');
+        }
+    } catch (erro) { 
+        console.error('Erro ao carregar últimas correções:', erro); 
+    }
+}
 
             // ============================================
             // CARREGAR USUÁRIOS
