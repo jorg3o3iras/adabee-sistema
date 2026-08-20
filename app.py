@@ -1474,7 +1474,7 @@ def listar_historico():
                 pass
 
         # 🔧 ALTERAÇÃO 3: Adicionar LIMIT 500
-        query += " ORDER BY h.data_correcao DESC LIMIT 500"
+        query += " ORDER BY h.data_correcao DESC LIMIT 100"
 
         cur.execute(query, params)
         historico = cur.fetchall()
