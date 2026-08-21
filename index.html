@@ -9301,69 +9301,492 @@ async function processarComIA(imagemBase64) {
                 }
             }
 
-            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
-                try {
-                    const novaAba = window.open('', '_blank');
-                    if (!novaAba) {
-                        showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
-                        return;
-                    }
-                    
-                    novaAba.document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
-                        <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
-                            <div style="text-align:center;">
-                                <div style="font-size:60px;margin-bottom:20px;">⏳</div>
-                                <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
-                                <p style="color:#64748b;">Aguarde um momento</p>
-                            </div>
-                        </body>
-                        </html>
-                    `);
-                    novaAba.document.close();
+            <!-- ========== NOVA FUNÇÃO GERAR CARTAO RESPOSTA (OTIMIZADA PARA IA) ========== -->
+async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+    try {
+        // ABRE A NOVA ABA ANTES DA REQUISIÇÃO
+        const novaAba = window.open('', '_blank');
+        if (!novaAba) {
+            showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
+            return;
+        }
+        
+        // Mostra um loading na nova aba
+        novaAba.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
+            <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
+                <div style="text-align:center;">
+                    <div style="font-size:60px;margin-bottom:20px;">⏳</div>
+                    <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
+                    <p style="color:#64748b;">Aguarde um momento</p>
+                </div>
+            </body>
+            </html>
+        `);
+        novaAba.document.close();
 
-                    const provas = await carregarProvasComCache();
-                    const prova = provas.find(p => p.id == provaId);
-                    const qtdQuestoes = prova?.quantidade_questoes || 20;
+        const provas = await carregarProvasComCache();
+        const prova = provas.find(p => p.id == provaId);
+        const qtdQuestoes = prova?.quantidade_questoes || 20;
+        const tipoQuestoes = prova?.tipo_questoes || 4;
+        const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
-                    const response = await fetch(API_URL + '/api/gerar_gabarito', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            escola_id: parseInt(escolaId),
-                            turma_id: parseInt(turmaId),
-                            aluno_id: parseInt(alunoId),
-                            prova_id: parseInt(provaId),
-                            quantidade_questoes: qtdQuestoes
-                        })
-                    });
+        // Buscar dados do aluno, escola e turma
+        const [alunoResp, escolaResp, turmaResp] = await Promise.all([
+            fetch(`${API_URL}/api/alunos/${alunoId}`),
+            fetch(`${API_URL}/api/escolas/${escolaId}`),
+            fetch(`${API_URL}/api/turmas/${turmaId}`)
+        ]);
+        
+        const aluno = await alunoResp.json();
+        const escola = await escolaResp.json();
+        const turma = await turmaResp.json();
 
-                    if (response.ok) {
-                        const html = await response.text();
-                        novaAba.document.open();
-                        novaAba.document.write(html);
-                        novaAba.document.close();
+        const nomeAluno = aluno.nome || 'Aluno';
+        const nomeEscola = escola.nome || 'Escola';
+        const nomeTurma = turma.nome || 'Turma';
+        const serie = turma.serie || prova?.serie || '';
 
-                        document.getElementById('lista-resultado').innerHTML = `
-                            <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
-                                ✅ Cartão resposta gerado com ${qtdQuestoes} questões!<br>
-                                <small>Uma nova aba foi aberta com a folha de respostas.<br>
-                                Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small>
-                            </div>
-                        `;
-                        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
-                    } else {
-                        novaAba.close();
-                        const erro = await response.json();
-                        showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
-                    }
-                } catch (erro) {
-                    console.error('Erro ao gerar cartão:', erro);
-                    showToast('❌ Erro: ' + erro.message, 'error');
-                }
+        // Gerar HTML do cartão resposta OTIMIZADO
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartão Resposta - ${nomeAluno}</title>
+    <style>
+        /* ============================================
+           ESTILOS OTIMIZADOS PARA IA
+           ============================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border: 1px solid #e5e7eb;
+        }
+        
+        /* ===== CABEÇALHO ===== */
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .header .brasao {
+            font-size: 40px;
+            margin-bottom: 4px;
+        }
+        .header h1 {
+            font-size: 22px;
+            color: #1e293b;
+            letter-spacing: 1px;
+        }
+        .header h2 {
+            font-size: 16px;
+            color: #475569;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .header .sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+        
+        /* ===== INFORMAÇÕES DO ALUNO ===== */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            background: #f8fafc;
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-grid .item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .info-grid .label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-grid .value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        
+        /* ===== INSTRUÇÕES ===== */
+        .instrucoes {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .instrucoes .icone {
+            font-size: 24px;
+        }
+        .instrucoes strong {
+            color: #2563eb;
+        }
+        
+        /* ===== GRID DE QUESTÕES ===== */
+        .questoes-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin: 20px 0 30px;
+        }
+        
+        /* ===== CADA QUESTÃO ===== */
+        .questao {
+            background: #fafbfc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .questao:hover {
+            border-color: #2563eb;
+            background: #f0f7ff;
+        }
+        .questao .numero {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ===== OPÇÕES (GRANDE PARA IA DETECTAR) ===== */
+        .opcoes {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .opcao {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            min-width: 44px;
+        }
+        .opcao:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+        
+        /* 🔥 BOLHA GRANDE PARA MARCAÇÃO (FÁCIL PARA IA) */
+        .opcao .circulo {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid #cbd5e1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #475569;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        /* Estado quando marcado */
+        .opcao input:checked + .circulo {
+            border-color: #2563eb;
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+            transform: scale(1.05);
+        }
+        
+        /* Efeito de hover */
+        .opcao:hover .circulo {
+            border-color: #94a3b8;
+            transform: scale(1.04);
+        }
+        .opcao input:checked:hover .circulo {
+            border-color: #1d4ed8;
+            background: #1d4ed8;
+            transform: scale(1.08);
+        }
+        
+        /* Esconder o input radio padrão */
+        .opcao input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        /* Label da opção */
+        .opcao .label-alt {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        
+        /* ===== RODAPÉ ===== */
+        .footer {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        .btn-print {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-print:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+        }
+        
+        /* ===== RESPONSIVIDADE ===== */
+        @media (max-width: 900px) {
+            .questoes-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
             }
+            .container { padding: 20px; }
+        }
+        
+        @media (max-width: 600px) {
+            .questoes-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            .opcao .circulo {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+            .container { padding: 15px; }
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 12px 14px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .questoes-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .opcao .circulo {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+                border-width: 2px;
+            }
+        }
+        
+        /* ===== IMPRESSÃO ===== */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .container {
+                box-shadow: none;
+                border: none;
+                padding: 20px;
+                border-radius: 0;
+                max-width: 100%;
+            }
+            .btn-print { display: none; }
+            .questao:hover {
+                border-color: #e2e8f0;
+                background: #fafbfc;
+            }
+            .opcao:hover .circulo {
+                border-color: #cbd5e1;
+                transform: none;
+            }
+            .opcao input:checked + .circulo {
+                border-color: #2563eb;
+                background: #2563eb;
+                color: white;
+            }
+            .header { border-bottom-color: #1e293b; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ===== CABEÇALHO INSTITUCIONAL ===== -->
+        <div class="header">
+            <div class="brasao">🏛️</div>
+            <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
+            <h2>SISAM 2026 — CARTÃO RESPOSTA</h2>
+            <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
+        </div>
+
+        <!-- ===== INFORMAÇÕES DO ALUNO ===== -->
+        <div class="info-grid">
+            <div class="item">
+                <span class="label">🎒 Aluno(a)</span>
+                <span class="value">${nomeAluno}</span>
+            </div>
+            <div class="item">
+                <span class="label">🏫 Escola</span>
+                <span class="value">${nomeEscola}</span>
+            </div>
+            <div class="item">
+                <span class="label">👥 Turma</span>
+                <span class="value">${nomeTurma}</span>
+            </div>
+            <div class="item">
+                <span class="label">📚 Série</span>
+                <span class="value">${serie}</span>
+            </div>
+            <div class="item">
+                <span class="label">📅 Data</span>
+                <span class="value">${new Date().toLocaleDateString('pt-BR')}</span>
+            </div>
+        </div>
+
+        <!-- ===== INSTRUÇÕES ===== -->
+        <div class="instrucoes">
+            <span class="icone">✏️</span>
+            <span>
+                <strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo da alternativa escolhida.
+                Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.
+            </span>
+        </div>
+
+        <!-- ===== GRID DE QUESTÕES ===== -->
+        <div class="questoes-grid">
+`;
+
+        // Gerar as questões com círculos grandes
+        for (let i = 0; i < qtdQuestoes; i++) {
+            html += `
+            <div class="questao">
+                <div class="numero">Q${i+1}</div>
+                <div class="opcoes">
+            `;
+            
+            for (let alt of alternativas) {
+                html += `
+                    <label class="opcao">
+                        <input type="radio" name="q${i+1}" value="${alt}">
+                        <span class="circulo">${alt}</span>
+                        <span class="label-alt">${alt}</span>
+                    </label>
+                `;
+            }
+            
+            html += `
+                </div>
+            </div>
+            `;
+        }
+
+        html += `
+        </div>
+
+        <!-- ===== BOTÃO IMPRIMIR ===== -->
+        <button class="btn-print" onclick="window.print()">
+            🖨️ IMPRIMIR CARTÃO RESPOSTA
+        </button>
+
+        <!-- ===== RODAPÉ ===== -->
+        <div class="footer">
+            <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
+            <span>${new Date().toLocaleString('pt-BR')}</span>
+        </div>
+
+        <!-- ===== LEGENDA PARA IMPRESSÃO ===== -->
+        <div style="text-align:center; margin-top:12px; font-size:10px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:10px;">
+            ⚠️ Preencha o círculo completamente. Marcações fora do círculo serão desconsideradas.
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+        // Substitui o conteúdo da nova aba pelo cartão resposta
+        novaAba.document.open();
+        novaAba.document.write(html);
+        novaAba.document.close();
+
+        document.getElementById('lista-resultado').innerHTML = `
+            <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
+                ✅ Cartão resposta gerado com ${qtdQuestoes} questões!<br>
+                <small>Uma nova aba foi aberta com a folha de respostas.<br>
+                Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small>
+            </div>
+        `;
+        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
+
+    } catch (erro) {
+        console.error('Erro ao gerar cartão:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
 
             // ============================================
             // FUNÇÕES AUXILIARES
