@@ -2664,6 +2664,133 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             let gerandoDocumento = false;
 
             // ============================================
+            // CONTROLE DE CARREGAMENTO DE PÁGINAS
+            // ============================================
+            let paginaAtual = 'dashboard';
+            let dadosCarregados = {
+                escolas: false,
+                turmas: false,
+                alunos: false,
+                provas: false,
+                resultados: false,
+                gabaritos: false,
+                relTurma: false,
+                desempenho: false
+            };
+
+            // ============================================
+            // NAVEGAÇÃO - VERSÃO OTIMIZADA (COM CACHE)
+            // ============================================
+            function go(page) {
+                if (paginaAtual === page) return;
+                
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                const el = document.getElementById('page-' + page);
+                if (el) el.classList.add('active');
+                
+                document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
+                
+                // Só carrega se a página não foi carregada antes
+                switch(page) {
+                    case 'escola':
+                        if (!dadosCarregados.escolas) {
+                            carregarEscolas();
+                            dadosCarregados.escolas = true;
+                        }
+                        break;
+                    case 'turmas':
+                        if (!dadosCarregados.turmas) {
+                            carregarFiltroEscolaTurmas();
+                            carregarTurmas();
+                            dadosCarregados.turmas = true;
+                        }
+                        break;
+                    case 'alunos':
+                        if (!dadosCarregados.alunos) {
+                            const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                            carregarAlunos(escolaId);
+                            dadosCarregados.alunos = true;
+                        }
+                        break;
+                    case 'provas':
+                        if (!dadosCarregados.provas) {
+                            carregarProvas();
+                            dadosCarregados.provas = true;
+                        }
+                        break;
+                    case 'resultados':
+                        if (!dadosCarregados.resultados) {
+                            carregarFiltrosResultados();
+                            carregarResultadosComFiltros();
+                            dadosCarregados.resultados = true;
+                        }
+                        break;
+                    case 'gabaritos':
+                        if (!dadosCarregados.gabaritos) {
+                            carregarGabaritos();
+                            dadosCarregados.gabaritos = true;
+                        }
+                        break;
+                    case 'rel-turma':
+                        if (!dadosCarregados.relTurma) {
+                            carregarFiltrosRelTurma();
+                            carregarRelatorioTurmaFiltrado();
+                            dadosCarregados.relTurma = true;
+                        }
+                        break;
+                    case 'desempenho':
+                        if (!dadosCarregados.desempenho) {
+                            carregarEscolasDesempenho();
+                            dadosCarregados.desempenho = true;
+                        }
+                        break;
+                    case 'dashboard':
+                        carregarDashboard();
+                        carregarUltimasCorrecoes();
+                        break;
+                    case 'corrigir-ia':
+                        carregarEscolasCorrigir();
+                        break;
+                    case 'lista-turma':
+                        break;
+                }
+                
+                atualizarDatasImpressao();
+                paginaAtual = page;
+                
+                if (window.innerWidth <= 900) {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.getElementById('menuOverlay');
+                    const toggle = document.getElementById('menuToggle');
+                    if (sidebar.classList.contains('open')) {
+                        sidebar.classList.remove('open');
+                        overlay.classList.remove('show');
+                        toggle.classList.remove('active');
+                        toggle.innerHTML = '☰';
+                    }
+                }
+            }
+
+            // ============================================
+            // RECARREGAR PÁGINA ATUAL
+            // ============================================
+            function recarregarPaginaAtual() {
+                const page = paginaAtual;
+                switch(page) {
+                    case 'escola': dadosCarregados.escolas = false; break;
+                    case 'turmas': dadosCarregados.turmas = false; break;
+                    case 'alunos': dadosCarregados.alunos = false; break;
+                    case 'provas': dadosCarregados.provas = false; break;
+                    case 'resultados': dadosCarregados.resultados = false; break;
+                    case 'gabaritos': dadosCarregados.gabaritos = false; break;
+                    case 'rel-turma': dadosCarregados.relTurma = false; break;
+                    case 'desempenho': dadosCarregados.desempenho = false; break;
+                }
+                go(page);
+                showToast('🔄 Página recarregada!', 'info');
+            }
+
+            // ============================================
             // SISTEMA DE PROGRESSO VISUAL
             // ============================================
 
@@ -3289,43 +3416,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // NAVEGAÇÃO
-            // ============================================
-            function go(page) {
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                const el = document.getElementById('page-' + page);
-                if (el) el.classList.add('active');
-                document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
-
-                if (page === 'escola') carregarEscolas();
-                if (page === 'turmas') { carregarFiltroEscolaTurmas(); carregarTurmas(); }
-                if (page === 'alunos') {
-                    const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
-                    carregarAlunos(escolaId);
-                }
-                if (page === 'provas') carregarProvas();
-                if (page === 'dashboard') carregarDashboard();
-                if (page === 'resultados') { carregarFiltrosResultados(); carregarResultadosComFiltros(); }
-                if (page === 'gabaritos') carregarGabaritos();
-                if (page === 'rel-turma') { carregarFiltrosRelTurma(); carregarRelatorioTurmaFiltrado(); }
-                if (page === 'desempenho') { carregarEscolasDesempenho(); }
-
-                atualizarDatasImpressao();
-
-                if (window.innerWidth <= 900) {
-                    const sidebar = document.getElementById('sidebar');
-                    const overlay = document.getElementById('menuOverlay');
-                    const toggle = document.getElementById('menuToggle');
-                    if (sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                        overlay.classList.remove('show');
-                        toggle.classList.remove('active');
-                        toggle.innerHTML = '☰';
-                    }
-                }
-            }
-
-            // ============================================
             // CALCULAR CONCEITO
             // ============================================
             function calcularConceito(porcentagem) {
@@ -3458,7 +3548,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const serieTurma = turmaData?.serie || '';
 
                     if (provas && !provas.erro) {
-                        // Filtrar provas pela série da turma
                         let provasFiltradas = provas.filter(p => p.serie === serieTurma);
                         if (provasFiltradas.length === 0) {
                             provasFiltradas = provas;
@@ -3501,7 +3590,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     const turmaId = document.getElementById('corrigir-turma').value;
                     if (!turmaId) {
-                        // Se não tiver turma selecionada, busca todos os alunos
                         const alunos = await carregarAlunosComCache({ serie: prova.serie || '' });
                         if (alunos && !alunos.erro) {
                             alunos.forEach(a => {
@@ -3564,7 +3652,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR TURMAS (COM CACHE)
+            // CARREGAR TURMAS (COM CACHE E LIMITE)
             // ============================================
             async function carregarTurmas() {
                 try {
@@ -3579,7 +3667,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
                             '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
 
-                        tbody.innerHTML = turmas.map((t, i) => {
+                        // 🔥 LIMITAR PARA 50 TURMAS
+                        const turmasVisiveis = turmas.slice(0, 50);
+                        
+                        tbody.innerHTML = turmasVisiveis.map((t, i) => {
                             const totalAlunos = t.total_alunos || 0;
                             return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '" data-escola="' + (t.escola_id || '') + '">' +
                                 '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
@@ -3595,6 +3686,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 '<button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button>' +
                                 '</div></td></tr>';
                         }).join('');
+                        
+                        if (turmas.length > 50) {
+                            tbody.innerHTML += `<tr><td colspan="8" style="text-align:center;padding:8px;color:var(--text3);font-size:11px;">⚠️ Mostrando 50 de ${turmas.length} turmas. Use o filtro para buscar mais.</td></tr>`;
+                        }
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar turmas:', erro);
@@ -3663,7 +3758,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR ALUNOS (COM CACHE)
+            // CARREGAR ALUNOS (COM CACHE E LIMITE)
             // ============================================
             async function carregarAlunos(escolaId = null) {
                 try {
@@ -3692,7 +3787,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
                             '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
                         };
-                        tbody.innerHTML = alunos.map((a, i) => {
+                        
+                        // 🔥 LIMITAR PARA 50 ALUNOS
+                        const alunosVisiveis = alunos.slice(0, 50);
+                        
+                        tbody.innerHTML = alunosVisiveis.map((a, i) => {
                             return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
                                 '<td><span class="badge badge-blue">' + String(a.numero_chamada || i + 1).padStart(2, '0') + '</span></td>' +
                                 '<td><span class="chip">' + (a.matricula || '—') + '</span></td>' +
@@ -3703,6 +3802,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
                                 '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
                         }).join('');
+                        
+                        if (alunos.length > 50) {
+                            tbody.innerHTML += `<tr><td colspan="8" style="text-align:center;padding:8px;color:var(--text3);font-size:11px;">⚠️ Mostrando 50 de ${alunos.length} alunos. Use os filtros para buscar mais.</td></tr>`;
+                        }
                     }
                 } catch (erro) {
                     console.error('Erro ao carregar alunos:', erro);
@@ -4327,13 +4430,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 atualizarResumoCorrecaoManual();
                 openM('m-correcao-manual');
 
-                // 🔥 NOVO: Destacar questões com baixa confiança
                 setTimeout(() => {
                     destacarQuestoesDuvidosas();
                 }, 300);
             }
 
-            // 🔥 NOVO: Função para destacar questões com baixa confiança
             function destacarQuestoesDuvidosas() {
                 const confiancas = correcaoManualData.confianca_por_questao || [];
                 const itens = document.querySelectorAll('.correcao-manual-item');
@@ -4341,12 +4442,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 itens.forEach((item, index) => {
                     const confianca = confiancas[index] || 100;
-                    // Remove estilos anteriores
                     item.style.borderColor = '';
                     item.style.borderWidth = '';
                     item.style.boxShadow = '';
                     
-                    // Remove badges antigos
                     const oldBadge = item.querySelector('.confianca-badge');
                     if (oldBadge) oldBadge.remove();
 
@@ -4356,13 +4455,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         item.style.borderWidth = '2px';
                         item.style.boxShadow = '0 0 20px rgba(245,158,11,0.2)';
                         
-                        // Adiciona badge de baixa confiança
                         const badge = document.createElement('div');
                         badge.className = 'confianca-badge confianca-baixa';
                         badge.style.cssText = 'font-size:8px; font-weight:700; margin-top:4px; padding:2px 8px; border-radius:12px; background:rgba(239,68,68,0.15); color:#ef4444;';
                         badge.textContent = `⚠️ Confiança: ${confianca}%`;
                         
-                        // Insere antes do select
                         const select = item.querySelector('.q-select');
                         if (select) {
                             item.insertBefore(badge, select);
@@ -4370,7 +4467,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             item.appendChild(badge);
                         }
                     } else if (confianca < 80) {
-                        // Confiança média
                         item.style.borderColor = 'rgba(245,158,11,0.3)';
                     }
                 });
@@ -4382,7 +4478,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
             }
 
-            // 🔥 NOVO: Função para revisar apenas questões duvidosas
             function revisarApenasDuvidosas() {
                 const confiancas = correcaoManualData.confianca_por_questao || [];
                 const itens = document.querySelectorAll('.correcao-manual-item');
@@ -4442,7 +4537,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const respostaAluno = (i < respostas.length) ? respostas[i] : '';
                     const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
-                    // 🔥 CORREÇÃO: Definir isCorreto NO INÍCIO de cada iteração
                     const isCorreto = respostaAluno && respostaGabarito && 
                                      respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
 
@@ -8507,7 +8601,6 @@ async function processarComIA(imagemBase64) {
                 console.log('🔄 Carregando dados do sistema...');
                 
                 try {
-                    // 🔥 PASSO 1: CARREGAR DADOS CRÍTICOS (O QUE O USUÁRIO VÊ PRIMEIRO)
                     console.log('📌 Carregando dados essenciais...');
                     
                     const [escolas, turmas, alunos, provas, dashboard] = await Promise.all([
@@ -8520,10 +8613,8 @@ async function processarComIA(imagemBase64) {
                     
                     console.log('✅ Dados essenciais carregados!');
                     
-                    // 🔥 PASSO 2: ATUALIZAR DATAS DE IMPRESSÃO
                     atualizarDatasImpressao();
                     
-                    // 🔥 PASSO 3: CARREGAR O RESTO EM SEGUNDO PLANO (SEM BLOQUEAR)
                     console.log('📌 Carregando dados secundários em segundo plano...');
                     
                     setTimeout(() => {
@@ -8545,7 +8636,6 @@ async function processarComIA(imagemBase64) {
                 console.log('🔄 Iniciando carga de dados secundários...');
                 
                 try {
-                    // Grupo 1: Dados de resultados e relatórios
                     await Promise.all([
                         carregarResultadosComFiltros(),
                         carregarGabaritos(),
@@ -8554,14 +8644,12 @@ async function processarComIA(imagemBase64) {
                     ]);
                     console.log('✅ Dados de resultados carregados!');
                     
-                    // Grupo 2: Dados de usuários e configurações
                     await Promise.all([
                         carregarUsuarios(),
                         carregarCombos()
                     ]);
                     console.log('✅ Dados de usuários carregados!');
                     
-                    // Grupo 3: Dados de formulários e filtros
                     await Promise.all([
                         carregarRelatorios(),
                         carregarUserData(),
@@ -8572,7 +8660,6 @@ async function processarComIA(imagemBase64) {
                     ]);
                     console.log('✅ Dados de formulários carregados!');
                     
-                    // Grupo 4: Dados de filtros (menos urgentes)
                     await Promise.all([
                         carregarFiltrosRelTurma(),
                         carregarFiltroEscolaTurmas(),
