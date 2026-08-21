@@ -9301,17 +9301,17 @@ async function processarComIA(imagemBase64) {
                 }
             }
 
-            // ========== FUNÇÃO GERAR CARTAO RESPOSTA (CORRIGIDA) ==========
+            <!-- ===== FUNÇÃO GERAR CARTAO RESPOSTA (LAYOUT PROFISSIONAL) ===== -->
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
-        // ABRE A NOVA ABA ANTES DA REQUISIÇÃO
+        // ABRE A NOVA ABA
         const novaAba = window.open('', '_blank');
         if (!novaAba) {
             showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
             return;
         }
         
-        // Mostra um loading na nova aba
+        // LOADING
         novaAba.document.write(`
             <!DOCTYPE html>
             <html>
@@ -9327,13 +9327,13 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         `);
         novaAba.document.close();
 
+        // BUSCAR DADOS
         const provas = await carregarProvasComCache();
         const prova = provas.find(p => p.id == provaId);
         const qtdQuestoes = prova?.quantidade_questoes || 20;
         const tipoQuestoes = prova?.tipo_questoes || 4;
         const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
-        // Buscar dados do aluno, escola e turma
         const [alunoResp, escolaResp, turmaResp] = await Promise.all([
             fetch(`${API_URL}/api/alunos/${alunoId}`),
             fetch(`${API_URL}/api/escolas/${escolaId}`),
@@ -9348,8 +9348,9 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         const nomeEscola = escola.nome || 'Escola';
         const nomeTurma = turma.nome || 'Turma';
         const serie = turma.serie || prova?.serie || '';
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 🔥 CORREÇÃO: Usar uma variável mutável (let) para construir o HTML
+        // ===== LAYOUT PROFISSIONAL =====
         let html = `
 <!DOCTYPE html>
 <html>
@@ -9359,7 +9360,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     <title>Cartão Resposta - ${nomeAluno}</title>
     <style>
         /* ============================================
-           ESTILOS OTIMIZADOS PARA IA
+           CARTÃO RESPOSTA PROFISSIONAL
            ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -9375,7 +9376,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         .container {
             max-width: 1100px;
             width: 100%;
-            background: white;
+            background: #ffffff;
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
@@ -9390,30 +9391,31 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             margin-bottom: 25px;
         }
         .header .brasao {
-            font-size: 40px;
+            font-size: 48px;
             margin-bottom: 4px;
         }
         .header h1 {
             font-size: 22px;
             color: #1e293b;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
         }
         .header h2 {
-            font-size: 16px;
+            font-size: 18px;
             color: #475569;
             margin-top: 4px;
             font-weight: 600;
         }
         .header .sub {
-            font-size: 12px;
+            font-size: 13px;
             color: #94a3b8;
             margin-top: 6px;
+            font-weight: 500;
         }
         
         /* ===== INFORMAÇÕES DO ALUNO ===== */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 12px;
             background: #f8fafc;
             padding: 16px 20px;
@@ -9443,28 +9445,35 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         .instrucoes {
             background: #eff6ff;
             border-left: 4px solid #2563eb;
-            padding: 12px 18px;
+            padding: 14px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            font-size: 13px;
+            font-size: 14px;
             color: #1e293b;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             flex-wrap: wrap;
         }
         .instrucoes .icone {
-            font-size: 24px;
+            font-size: 28px;
         }
         .instrucoes strong {
             color: #2563eb;
+        }
+        .instrucoes .destaque {
+            background: #dbeafe;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            color: #1d4ed8;
         }
         
         /* ===== GRID DE QUESTÕES ===== */
         .questoes-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
+            gap: 18px;
             margin: 20px 0 30px;
         }
         
@@ -9472,28 +9481,38 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         .questao {
             background: #fafbfc;
             border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 14px 10px;
+            border-radius: 14px;
+            padding: 16px 12px;
             text-align: center;
             transition: all 0.2s;
+            position: relative;
         }
         .questao:hover {
             border-color: #2563eb;
             background: #f0f7ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .questao .numero {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
             color: #94a3b8;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .questao .numero span {
+            background: #f1f5f9;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
         }
         
-        /* ===== OPÇÕES (GRANDE PARA IA DETECTAR) ===== */
+        /* ===== OPÇÕES ===== */
         .opcoes {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         
@@ -9501,44 +9520,60 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             cursor: pointer;
             padding: 4px;
-            border-radius: 8px;
+            border-radius: 10px;
             transition: all 0.2s;
-            min-width: 44px;
+            min-width: 48px;
+            position: relative;
         }
         .opcao:hover {
-            background: rgba(37, 99, 235, 0.05);
+            transform: scale(1.05);
         }
         
-        /* 🔥 BOLHA GRANDE PARA MARCAÇÃO (FÁCIL PARA IA) */
+        /* 🔥 CÍRCULO GRANDE E CLARO PARA IA */
         .opcao .circulo {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             border: 3px solid #cbd5e1;
-            background: white;
+            background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 700;
             color: #475569;
-            transition: all 0.2s;
+            transition: all 0.25s ease;
             position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
         
-        /* Estado quando marcado */
+        /* Sombra interna para dar profundidade */
+        .opcao .circulo::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: 50%;
+            background: transparent;
+            transition: all 0.25s ease;
+        }
+        
+        /* Estado marcado - DESTAQUE VISUAL FORTE */
         .opcao input:checked + .circulo {
             border-color: #2563eb;
             background: #2563eb;
             color: white;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-            transform: scale(1.05);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 4px 12px rgba(37, 99, 235, 0.2);
+            transform: scale(1.06);
         }
         
-        /* Efeito de hover */
+        .opcao input:checked + .circulo::after {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        /* Efeito hover */
         .opcao:hover .circulo {
             border-color: #94a3b8;
             transform: scale(1.04);
@@ -9547,9 +9582,10 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             border-color: #1d4ed8;
             background: #1d4ed8;
             transform: scale(1.08);
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(37, 99, 235, 0.25);
         }
         
-        /* Esconder o input radio padrão */
+        /* Esconder input radio */
         .opcao input[type="radio"] {
             position: absolute;
             opacity: 0;
@@ -9562,14 +9598,19 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             font-size: 11px;
             font-weight: 600;
             color: #64748b;
-            margin-top: 2px;
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+        }
+        
+        .opcao input:checked + .circulo + .label-alt {
+            color: #2563eb;
         }
         
         /* ===== RODAPÉ ===== */
         .footer {
             margin-top: 25px;
             padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
+            border-top: 2px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -9578,48 +9619,87 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             font-size: 12px;
             color: #94a3b8;
         }
+        .footer strong {
+            color: #475569;
+        }
         
         .btn-print {
-            background: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 14px 40px;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 16px 44px;
+            border-radius: 12px;
+            font-size: 17px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.25s;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin-top: 10px;
             width: 100%;
             justify-content: center;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
         }
         .btn-print:hover {
-            background: #1d4ed8;
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.35);
+        }
+        .btn-print:active {
+            transform: translateY(0px);
+        }
+        
+        /* ===== LEGENDA ===== */
+        .legenda {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 11px;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 14px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .legenda span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legenda .dot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+        }
+        .legenda .dot.checked {
+            background: #2563eb;
+            border-color: #2563eb;
         }
         
         /* ===== RESPONSIVIDADE ===== */
         @media (max-width: 900px) {
             .questoes-grid {
                 grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
+                gap: 14px;
             }
             .container { padding: 20px; }
+            .opcao .circulo { width: 34px; height: 34px; font-size: 14px; }
         }
         
-        @media (max-width: 600px) {
+        @media (max-width: 650px) {
             .questoes-grid {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
+                gap: 12px;
             }
             .opcao .circulo {
-                width: 28px;
-                height: 28px;
+                width: 30px;
+                height: 30px;
                 font-size: 12px;
+                border-width: 2.5px;
             }
             .container { padding: 15px; }
             .info-grid {
@@ -9627,19 +9707,23 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 gap: 8px;
                 padding: 12px 14px;
             }
+            .header h1 { font-size: 18px; }
+            .header h2 { font-size: 15px; }
         }
         
         @media (max-width: 400px) {
             .questoes-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
+                gap: 10px;
             }
             .opcao .circulo {
-                width: 24px;
-                height: 24px;
+                width: 26px;
+                height: 26px;
                 font-size: 10px;
                 border-width: 2px;
             }
+            .opcao { min-width: 36px; }
+            .info-grid { grid-template-columns: 1fr; }
         }
         
         /* ===== IMPRESSÃO ===== */
@@ -9660,17 +9744,28 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             .questao:hover {
                 border-color: #e2e8f0;
                 background: #fafbfc;
+                transform: none;
+                box-shadow: none;
             }
             .opcao:hover .circulo {
-                border-color: #cbd5e1;
                 transform: none;
+                border-color: #cbd5e1;
             }
             .opcao input:checked + .circulo {
                 border-color: #2563eb;
                 background: #2563eb;
                 color: white;
+                box-shadow: none;
+            }
+            .opcao input:checked:hover .circulo {
+                transform: none;
+                box-shadow: none;
             }
             .header { border-bottom-color: #1e293b; }
+            .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
+            .footer { border-top-color: #1e293b; }
+            .questao { break-inside: avoid; page-break-inside: avoid; }
+            .questoes-grid { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -9704,7 +9799,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             </div>
             <div class="item">
                 <span class="label">📅 Data</span>
-                <span class="value">${new Date().toLocaleDateString('pt-BR')}</span>
+                <span class="value">${dataAtual}</span>
             </div>
         </div>
 
@@ -9715,17 +9810,18 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 <strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo da alternativa escolhida.
                 Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.
             </span>
+            <span class="destaque">${qtdQuestoes} questões</span>
         </div>
 
         <!-- ===== GRID DE QUESTÕES ===== -->
         <div class="questoes-grid">
 `;
 
-        // 🔥 CORREÇÃO: Usar html += para adicionar as questões, não reatribuir
+        // Gerar questões
         for (let i = 0; i < qtdQuestoes; i++) {
             html += `
             <div class="questao">
-                <div class="numero">Q${i+1}</div>
+                <div class="numero"><span>Q${i+1}</span></div>
                 <div class="opcoes">
             `;
             
@@ -9759,27 +9855,29 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             <span>${new Date().toLocaleString('pt-BR')}</span>
         </div>
 
-        <!-- ===== LEGENDA PARA IMPRESSÃO ===== -->
-        <div style="text-align:center; margin-top:12px; font-size:10px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:10px;">
-            ⚠️ Preencha o círculo completamente. Marcações fora do círculo serão desconsideradas.
+        <!-- ===== LEGENDA ===== -->
+        <div class="legenda">
+            <span><span class="dot"></span> Não preenchido</span>
+            <span><span class="dot checked"></span> Preenchido</span>
+            <span>⚠️ Preencha o círculo completamente</span>
         </div>
     </div>
+
+    <script>
+        // Auto-print após carregar
+        setTimeout(function() {
+            // Não imprimir automaticamente para dar tempo de revisar
+        }, 1000);
+    <\/script>
 </body>
 </html>
 `;
 
-        // Substitui o conteúdo da nova aba pelo cartão resposta
+        // Substituir conteúdo
         novaAba.document.open();
         novaAba.document.write(html);
         novaAba.document.close();
 
-        document.getElementById('lista-resultado').innerHTML = `
-            <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
-                ✅ Cartão resposta gerado com ${qtdQuestoes} questões!<br>
-                <small>Uma nova aba foi aberta com a folha de respostas.<br>
-                Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small>
-            </div>
-        `;
         showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
 
     } catch (erro) {
@@ -9947,6 +10045,37 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
             }
 
+
+// ============================================
+// GERAR TODOS OS CARTOES RESPOSTA DA TURMA
+// ============================================
+async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
+    try {
+        showToast('📄 Gerando cartões para todos os alunos...', 'info');
+        
+        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+        
+        if (!alunos || alunos.length === 0) {
+            showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
+            return;
+        }
+        
+        // Abrir uma nova aba para cada aluno (em lote)
+        for (let i = 0; i < alunos.length; i++) {
+            const aluno = alunos[i];
+            // Abrir com um pequeno delay para não sobrecarregar
+            setTimeout(() => {
+                gerarCartaoResposta(escolaId, turmaId, aluno.id, provaId);
+            }, i * 300); // 300ms entre cada abertura
+        }
+        
+        showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
+        
+    } catch (erro) {
+        console.error('Erro ao gerar cartões:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
             // ============================================
             // CARREGAR COMBOS (COM CACHE)
             // ============================================
