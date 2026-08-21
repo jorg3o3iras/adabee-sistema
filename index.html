@@ -10046,36 +10046,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             }
 
 
-// ============================================
-// GERAR TODOS OS CARTOES RESPOSTA DA TURMA
-// ============================================
-async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
-    try {
-        showToast('📄 Gerando cartões para todos os alunos...', 'info');
-        
-        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-        
-        if (!alunos || alunos.length === 0) {
-            showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
-            return;
-        }
-        
-        // Abrir uma nova aba para cada aluno (em lote)
-        for (let i = 0; i < alunos.length; i++) {
-            const aluno = alunos[i];
-            // Abrir com um pequeno delay para não sobrecarregar
-            setTimeout(() => {
-                gerarCartaoResposta(escolaId, turmaId, aluno.id, provaId);
-            }, i * 300); // 300ms entre cada abertura
-        }
-        
-        showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
-        
-    } catch (erro) {
-        console.error('Erro ao gerar cartões:', erro);
-        showToast('❌ Erro: ' + erro.message, 'error');
-    }
-}
+
             // ============================================
             // CARREGAR COMBOS (COM CACHE)
             // ============================================
