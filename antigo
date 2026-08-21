@@ -1802,7 +1802,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             <!-- ========== RESULTADOS ========== -->
             <div class="page" id="page-resultados">
-                <!-- ... (mesmo conteúdo anterior, mantido) ... -->
                 <div class="page-header">
                     <div>
                         <div class="page-title">🏆 Resultados</div>
@@ -1977,17 +1976,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             </div>
 
             <!-- ============================================================ -->
-            <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ========== RELATÓRIO POR TURMA ========== -->
             <!-- ============================================================ -->
             <div class="page" id="page-rel-turma">
-                <!-- ... (mesmo conteúdo anterior, mantido) ... -->
                 <div class="page-header">
                     <div>
                         <div class="page-title">📊 Relatório por Turma</div>
                         <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
                     </div>
                     <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="imprimirRelatorioTurma()">🖨️ Imprimir</button>
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
                         <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
                     </div>
                 </div>
@@ -2182,7 +2180,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             <!-- ========== CONFIG ========== -->
             <div class="page" id="page-config">
-                <!-- ... (mesmo conteúdo anterior, mantido) ... -->
                 <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
                 <div class="g2 no-print">
                     <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
@@ -2202,7 +2199,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
             <!-- ========== DESEMPENHO DO ALUNO ========== -->
             <div class="page" id="page-desempenho">
-                <!-- ... (mesmo conteúdo anterior, mantido) ... -->
                 <div class="page-header">
                     <div>
                         <div class="page-title">📊 Desempenho do Aluno</div>
@@ -2337,7 +2333,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     <h3>✏️ Correção Manual — <span id="cm-aluno-nome">Aluno</span></h3>
                     <button class="modal-close" onclick="closeM('m-correcao-manual')">×</button>
                 </div>
-                <!-- 🔥 NOVO: Botão "Revisar Apenas Duvidosas" -->
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
                     <span style="font-size:13px;font-weight:700;color:var(--text2);">📝 Respostas do Aluno</span>
                     <div class="btn-group no-print">
@@ -8506,38 +8501,89 @@ async function processarComIA(imagemBase64) {
             }
 
             // ============================================
-            // CARREGAR DADOS - FUNÇÃO PRINCIPAL
+            // CARREGAR DADOS - FUNÇÃO PRINCIPAL (OTIMIZADA)
             // ============================================
             async function carregarDados() {
                 console.log('🔄 Carregando dados do sistema...');
+                
                 try {
-                    await Promise.all([
+                    // 🔥 PASSO 1: CARREGAR DADOS CRÍTICOS (O QUE O USUÁRIO VÊ PRIMEIRO)
+                    console.log('📌 Carregando dados essenciais...');
+                    
+                    const [escolas, turmas, alunos, provas, dashboard] = await Promise.all([
                         carregarEscolas(),
                         carregarTurmas(),
                         carregarAlunos(),
                         carregarProvas(),
-                        carregarDashboard(),
+                        carregarDashboard()
+                    ]);
+                    
+                    console.log('✅ Dados essenciais carregados!');
+                    
+                    // 🔥 PASSO 2: ATUALIZAR DATAS DE IMPRESSÃO
+                    atualizarDatasImpressao();
+                    
+                    // 🔥 PASSO 3: CARREGAR O RESTO EM SEGUNDO PLANO (SEM BLOQUEAR)
+                    console.log('📌 Carregando dados secundários em segundo plano...');
+                    
+                    setTimeout(() => {
+                        carregarDadosSecundarios();
+                    }, 300);
+                    
+                    console.log('✅ Interface principal carregada!');
+                    
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar dados essenciais:', erro);
+                    showToast('⚠️ Erro ao carregar dados essenciais. Recarregue a página.', 'error');
+                }
+            }
+
+            // ============================================
+            // DADOS SECUNDÁRIOS (CARREGAR EM SEGUNDO PLANO)
+            // ============================================
+            async function carregarDadosSecundarios() {
+                console.log('🔄 Iniciando carga de dados secundários...');
+                
+                try {
+                    // Grupo 1: Dados de resultados e relatórios
+                    await Promise.all([
                         carregarResultadosComFiltros(),
                         carregarGabaritos(),
-                        carregarCombos(),
-                        carregarRelatorios(),
                         carregarUltimasCorrecoes(),
-                        carregarUserData(),
-                        carregarConceitoReal(),
+                        carregarConceitoReal()
+                    ]);
+                    console.log('✅ Dados de resultados carregados!');
+                    
+                    // Grupo 2: Dados de usuários e configurações
+                    await Promise.all([
                         carregarUsuarios(),
+                        carregarCombos()
+                    ]);
+                    console.log('✅ Dados de usuários carregados!');
+                    
+                    // Grupo 3: Dados de formulários e filtros
+                    await Promise.all([
+                        carregarRelatorios(),
+                        carregarUserData(),
                         carregarEscolasFiltroAlunos(),
                         carregarEscolasCorrigir(),
                         carregarEscolasTexto(),
-                        carregarEscolasParaCorrecaoManual(),
+                        carregarEscolasParaCorrecaoManual()
+                    ]);
+                    console.log('✅ Dados de formulários carregados!');
+                    
+                    // Grupo 4: Dados de filtros (menos urgentes)
+                    await Promise.all([
                         carregarFiltrosRelTurma(),
                         carregarFiltroEscolaTurmas(),
                         carregarEscolasDesempenho()
                     ]);
-                    console.log('✅ Todos os dados carregados com sucesso!');
-                    atualizarDatasImpressao();
+                    console.log('✅ Dados de filtros carregados!');
+                    
+                    console.log('✅ TODOS OS DADOS CARREGADOS COM SUCESSO!');
+                    
                 } catch (erro) {
-                    console.error('❌ Erro ao carregar dados:', erro);
-                    showToast('⚠️ Erro ao carregar alguns dados. Verifique a conexão com o servidor.', 'error');
+                    console.warn('⚠️ Erro ao carregar dados secundários:', erro);
                 }
             }
 
@@ -8665,14 +8711,14 @@ async function processarComIA(imagemBase64) {
             // ============================================
             async function carregarUltimasCorrecoes() {
                 try {
-                    const response = await fetch(API_URL + '/api/historico');
+                    const response = await fetch(API_URL + '/api/historico?limit=10');
                     const historico = await response.json();
                     const tbody = document.getElementById('ultimas-correcoes');
                     if (!tbody) return;
                     if (!historico || historico.length === 0 || historico.erro) {
                         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhuma correção recente</td></tr>';
                     } else {
-                        const recentes = historico.slice(0, 30);
+                        const recentes = historico.slice(0, 10);
                         tbody.innerHTML = recentes.map(item => {
                             const acertos = item.acertos || 0;
                             const total = item.total || 20;
@@ -9306,14 +9352,12 @@ async function processarComIA(imagemBase64) {
 // ============================================
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
-        // ABRE A NOVA ABA
         const novaAba = window.open('', '_blank');
         if (!novaAba) {
             showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
             return;
         }
         
-        // LOADING
         novaAba.document.write(`
             <!DOCTYPE html>
             <html>
@@ -9329,7 +9373,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         `);
         novaAba.document.close();
 
-        // BUSCAR DADOS
         const provas = await carregarProvasComCache();
         const prova = provas.find(p => p.id == provaId);
         const qtdQuestoes = prova?.quantidade_questoes || 20;
@@ -9352,38 +9395,33 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         const serie = turma.serie || prova?.serie || '';
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 🔥 CALCULAR QUANTAS COLUNAS USAR BASEADO NO NÚMERO DE QUESTÕES
-        let colunas = 5; // padrão
-        if (qtdQuestoes <= 10) colunas = 5;
-        else if (qtdQuestoes <= 15) colunas = 5;
-        else if (qtdQuestoes <= 20) colunas = 5;
-        else if (qtdQuestoes <= 25) colunas = 5;
-        else colunas = 6;
-
-        // 🔥 TAMANHO DOS CÍRCULOS BASEADO NA QUANTIDADE
+        // 🔥 CALCULAR CONFIGURAÇÕES BASEADO NA QUANTIDADE DE QUESTÕES
+        let colunas = 5;
         let circuloTamanho = 38;
         let circuloFontSize = 16;
         let gapQuestoes = 18;
         let paddingQuestao = '16px 12px';
         
         if (qtdQuestoes >= 25) {
+            colunas = 6;
+            circuloTamanho = 28;
+            circuloFontSize = 11;
+            gapQuestoes = 8;
+            paddingQuestao = '8px 4px';
+        } else if (qtdQuestoes >= 20) {
+            colunas = 5;
             circuloTamanho = 30;
             circuloFontSize = 12;
             gapQuestoes = 10;
             paddingQuestao = '10px 6px';
-        } else if (qtdQuestoes >= 20) {
-            circuloTamanho = 32;
-            circuloFontSize = 13;
-            gapQuestoes = 12;
-            paddingQuestao = '12px 8px';
         } else if (qtdQuestoes >= 15) {
+            colunas = 5;
             circuloTamanho = 34;
             circuloFontSize = 14;
             gapQuestoes = 14;
-            paddingQuestao = '14px 10px';
+            paddingQuestao = '12px 8px';
         }
 
-        // ===== LAYOUT PROFISSIONAL 1 PÁGINA =====
         let html = `
 <!DOCTYPE html>
 <html>
@@ -9392,9 +9430,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartão Resposta - ${nomeAluno}</title>
     <style>
-        /* ============================================
-           CARTÃO RESPOSTA - 1 PÁGINA APENAS
-           ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
@@ -9416,36 +9451,17 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             border: 1px solid #e5e7eb;
         }
         
-        /* ===== CABEÇALHO COMPACTO ===== */
         .header {
             text-align: center;
             border-bottom: 2px solid #2563eb;
             padding-bottom: 10px;
             margin-bottom: 12px;
         }
-        .header .brasao {
-            font-size: 32px;
-            margin-bottom: 2px;
-        }
-        .header h1 {
-            font-size: 16px;
-            color: #1e293b;
-            letter-spacing: 1px;
-        }
-        .header h2 {
-            font-size: 14px;
-            color: #475569;
-            margin-top: 2px;
-            font-weight: 600;
-        }
-        .header .sub {
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 2px;
-            font-weight: 500;
-        }
+        .header .brasao { font-size: 32px; margin-bottom: 2px; }
+        .header h1 { font-size: 16px; color: #1e293b; letter-spacing: 1px; }
+        .header h2 { font-size: 14px; color: #475569; margin-top: 2px; font-weight: 600; }
+        .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
         
-        /* ===== INFORMAÇÕES DO ALUNO COMPACTAS ===== */
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -9456,25 +9472,10 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             margin-bottom: 12px;
             border: 1px solid #e2e8f0;
         }
-        .info-grid .item {
-            display: flex;
-            flex-direction: column;
-            gap: 1px;
-        }
-        .info-grid .label {
-            font-size: 8px;
-            font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .info-grid .value {
-            font-size: 12px;
-            font-weight: 700;
-            color: #0f172a;
-        }
+        .info-grid .item { display: flex; flex-direction: column; gap: 1px; }
+        .info-grid .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+        .info-grid .value { font-size: 12px; font-weight: 700; color: #0f172a; }
         
-        /* ===== INSTRUÇÕES COMPACTAS ===== */
         .instrucoes {
             background: #eff6ff;
             border-left: 3px solid #2563eb;
@@ -9499,7 +9500,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             font-size: 10px;
         }
         
-        /* ===== GRID DE QUESTÕES - AJUSTÁVEL ===== */
         .questoes-grid {
             display: grid;
             grid-template-columns: repeat(${colunas}, 1fr);
@@ -9507,7 +9507,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             margin: 8px 0 12px;
         }
         
-        /* ===== CADA QUESTÃO ===== */
         .questao {
             background: #fafbfc;
             border: 1.5px solid #e2e8f0;
@@ -9535,7 +9534,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             font-size: 8px;
         }
         
-        /* ===== OPÇÕES ===== */
         .opcoes {
             display: flex;
             justify-content: center;
@@ -9556,7 +9554,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         }
         .opcao:hover { transform: scale(1.04); }
         
-        /* 🔥 CÍRCULO - TAMANHO AJUSTÁVEL */
         .opcao .circulo {
             width: ${circuloTamanho}px;
             height: ${circuloTamanho}px;
@@ -9573,7 +9570,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
         
-        /* Estado marcado */
         .opcao input:checked + .circulo {
             border-color: #2563eb;
             background: #2563eb;
@@ -9593,7 +9589,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10), 0 2px 12px rgba(37, 99, 235, 0.20);
         }
         
-        /* Esconder input radio */
         .opcao input[type="radio"] {
             position: absolute;
             opacity: 0;
@@ -9601,7 +9596,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             height: 0;
         }
         
-        /* Label da opção */
         .opcao .label-alt {
             font-size: 8px;
             font-weight: 600;
@@ -9614,7 +9608,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             color: #2563eb;
         }
         
-        /* ===== RODAPÉ COMPACTO ===== */
         .footer {
             margin-top: 10px;
             padding-top: 10px;
@@ -9653,7 +9646,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             box-shadow: 0 4px 20px rgba(37, 99, 235, 0.30);
         }
         
-        /* ===== LEGENDA ===== */
         .legenda {
             text-align: center;
             margin-top: 8px;
@@ -9666,11 +9658,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             gap: 16px;
             flex-wrap: wrap;
         }
-        .legenda span {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
+        .legenda span { display: inline-flex; align-items: center; gap: 4px; }
         .legenda .dot {
             display: inline-block;
             width: 12px;
@@ -9683,40 +9671,19 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             border-color: #2563eb;
         }
         
-        /* ===== IMPRESSÃO - UMA PÁGINA ===== */
         @media print {
-            body {
-                background: white;
-                padding: 0;
-                margin: 0;
-            }
-            .container {
-                box-shadow: none;
-                border: none;
-                padding: 12px 16px;
-                border-radius: 0;
-                max-width: 100%;
-            }
+            body { background: white; padding: 0; margin: 0; }
+            .container { box-shadow: none; border: none; padding: 12px 16px; border-radius: 0; max-width: 100%; }
             .btn-print { display: none; }
-            .questao:hover {
-                border-color: #e2e8f0;
-                background: #fafbfc;
-                transform: none;
-            }
-            .opcao:hover .circulo {
-                transform: none;
-                border-color: #cbd5e1;
-            }
+            .questao:hover { border-color: #e2e8f0; background: #fafbfc; transform: none; }
+            .opcao:hover .circulo { transform: none; border-color: #cbd5e1; }
             .opcao input:checked + .circulo {
                 border-color: #2563eb;
                 background: #2563eb;
                 color: white;
                 box-shadow: none;
             }
-            .opcao input:checked:hover .circulo {
-                transform: none;
-                box-shadow: none;
-            }
+            .opcao input:checked:hover .circulo { transform: none; box-shadow: none; }
             .header { border-bottom-color: #1e293b; }
             .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
             .footer { border-top-color: #1e293b; }
@@ -9724,7 +9691,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             .questoes-grid { page-break-inside: avoid; }
         }
         
-        /* ===== RESPONSIVIDADE ===== */
         @media (max-width: 768px) {
             .questoes-grid {
                 grid-template-columns: repeat(${Math.min(colunas, 4)}, 1fr);
@@ -9736,11 +9702,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 height: ${Math.max(circuloTamanho - 6, 26)}px;
                 font-size: ${Math.max(circuloFontSize - 2, 10)}px;
             }
-            .info-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 4px;
-                padding: 8px 12px;
-            }
+            .info-grid { grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; }
             .header h1 { font-size: 14px; }
             .header h2 { font-size: 12px; }
         }
@@ -9770,7 +9732,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
 </head>
 <body>
     <div class="container">
-        <!-- ===== CABEÇALHO INSTITUCIONAL COMPACTO ===== -->
         <div class="header">
             <div class="brasao">🏛️</div>
             <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
@@ -9778,49 +9739,24 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
         </div>
 
-        <!-- ===== INFORMAÇÕES DO ALUNO COMPACTAS ===== -->
         <div class="info-grid">
-            <div class="item">
-                <span class="label">🎒 Aluno(a)</span>
-                <span class="value">${nomeAluno}</span>
-            </div>
-            <div class="item">
-                <span class="label">🏫 Escola</span>
-                <span class="value">${nomeEscola}</span>
-            </div>
-            <div class="item">
-                <span class="label">👥 Turma</span>
-                <span class="value">${nomeTurma}</span>
-            </div>
-            <div class="item">
-                <span class="label">📚 Série</span>
-                <span class="value">${serie}</span>
-            </div>
-            <div class="item">
-                <span class="label">📅 Data</span>
-                <span class="value">${dataAtual}</span>
-            </div>
-            <div class="item">
-                <span class="label">📝 Questões</span>
-                <span class="value">${qtdQuestoes}</span>
-            </div>
+            <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">${nomeAluno}</span></div>
+            <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
+            <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
+            <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
+            <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
+            <div class="item"><span class="label">📝 Questões</span><span class="value">${qtdQuestoes}</span></div>
         </div>
 
-        <!-- ===== INSTRUÇÕES COMPACTAS ===== -->
         <div class="instrucoes">
             <span class="icone">✏️</span>
-            <span>
-                <strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo.
-                Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.
-            </span>
+            <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
             <span class="destaque">${qtdQuestoes} questões</span>
         </div>
 
-        <!-- ===== GRID DE QUESTÕES ===== -->
         <div class="questoes-grid">
 `;
 
-        // Gerar questões
         for (let i = 0; i < qtdQuestoes; i++) {
             html += `
             <div class="questao">
@@ -9847,36 +9783,26 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         html += `
         </div>
 
-        <!-- ===== BOTÃO IMPRIMIR ===== -->
         <button class="btn-print" onclick="window.print()">
             🖨️ IMPRIMIR CARTÃO RESPOSTA
         </button>
 
-        <!-- ===== RODAPÉ ===== -->
         <div class="footer">
             <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
             <span>${new Date().toLocaleString('pt-BR')}</span>
         </div>
 
-        <!-- ===== LEGENDA ===== -->
         <div class="legenda">
             <span><span class="dot"></span> Não preenchido</span>
             <span><span class="dot checked"></span> Preenchido</span>
             <span>⚠️ Preencha o círculo completamente</span>
         </div>
     </div>
-
-    <script>
-        // Auto-print após carregar
-        setTimeout(function() {
-            // Não imprimir automaticamente para dar tempo de revisar
-        }, 1000);
-    <\/script>
+    <script>setTimeout(function(){}, 1000);<\/script>
 </body>
 </html>
 `;
 
-        // Substituir conteúdo
         novaAba.document.open();
         novaAba.document.write(html);
         novaAba.document.close();
@@ -10063,13 +9989,11 @@ async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
             return;
         }
         
-        // Abrir uma nova aba para cada aluno (em lote)
         for (let i = 0; i < alunos.length; i++) {
             const aluno = alunos[i];
-            // Abrir com um pequeno delay para não sobrecarregar
             setTimeout(() => {
                 gerarCartaoResposta(escolaId, turmaId, aluno.id, provaId);
-            }, i * 300); // 300ms entre cada abertura
+            }, i * 400);
         }
         
         showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
