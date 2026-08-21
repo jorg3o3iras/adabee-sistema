@@ -8862,30 +8862,73 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     showToast('❌ Erro: ' + erro.message, 'error'); }
             }
 
-            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
-                try {
-                    const provas = await carregarProvasComCache();
-                    const prova = provas.find(p => p.id == provaId);
-                    const qtdQuestoes = prova?.quantidade_questoes || 20;
-                    const response = await fetch(API_URL + '/api/gerar_gabarito', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ escola_id: parseInt(escolaId), turma_id: parseInt(turmaId), aluno_id: parseInt(alunoId), prova_id: parseInt(provaId), quantidade_questoes: qtdQuestoes })
-                    });
-                    if (response.ok) {
-                        const html = await response.text();
-                        const novaAba = window.open('', '_blank');
-                        novaAba.document.write(html);
-                        novaAba.document.close();
-                        document.getElementById('lista-resultado').innerHTML = '<div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">✅ Cartão resposta gerado com ' + qtdQuestoes + ' questões!<br><small>Uma nova aba foi aberta com a folha de respostas.<br>Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small></div>';
-                        showToast('✅ Cartão resposta com ' + qtdQuestoes + ' questões gerado!', 'success');
-                    } else {
-                        const erro = await response.json();
-                        showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
-                    }
-                } catch (erro) { console.error('Erro ao gerar cartão:', erro);
-                    showToast('❌ Erro: ' + erro.message, 'error'); }
-            }
+            aasync function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+    try {
+        // ABRE A NOVA ABA ANTES DA REQUISIÇÃO (para evitar bloqueio de pop-up)
+        const novaAba = window.open('', '_blank');
+        if (!novaAba) {
+            showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
+            return;
+        }
+        
+        // Mostra um loading na nova aba
+        novaAba.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
+            <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
+                <div style="text-align:center;">
+                    <div style="font-size:60px;margin-bottom:20px;">⏳</div>
+                    <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
+                    <p style="color:#64748b;">Aguarde um momento</p>
+                </div>
+            </body>
+            </html>
+        `);
+        novaAba.document.close();
+
+        const provas = await carregarProvasComCache();
+        const prova = provas.find(p => p.id == provaId);
+        const qtdQuestoes = prova?.quantidade_questoes || 20;
+
+        const response = await fetch(API_URL + '/api/gerar_gabarito', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                escola_id: parseInt(escolaId),
+                turma_id: parseInt(turmaId),
+                aluno_id: parseInt(alunoId),
+                prova_id: parseInt(provaId),
+                quantidade_questoes: qtdQuestoes
+            })
+        });
+
+        if (response.ok) {
+            const html = await response.text();
+            // Substitui o conteúdo da nova aba pelo cartão resposta
+            novaAba.document.open();
+            novaAba.document.write(html);
+            novaAba.document.close();
+
+            document.getElementById('lista-resultado').innerHTML = `
+                <div style="background:#d4edda;color:#155724;padding:15px;border-radius:8px;text-align:center;">
+                    ✅ Cartão resposta gerado com ${qtdQuestoes} questões!<br>
+                    <small>Uma nova aba foi aberta com a folha de respostas.<br>
+                    Clique em <strong>🖨️ IMPRIMIR</strong> ou pressione <strong>Ctrl+P</strong>.</small>
+                </div>
+            `;
+            showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
+        } else {
+            // Fecha a nova aba em caso de erro
+            novaAba.close();
+            const erro = await response.json();
+            showToast('❌ Erro ao gerar cartão: ' + (erro.erro || 'Erro desconhecido'), 'error');
+        }
+    } catch (erro) {
+        console.error('Erro ao gerar cartão:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
 
             // ============================================
             // FUNÇÕES AUXILIARES
