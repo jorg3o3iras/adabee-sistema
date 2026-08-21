@@ -4210,6 +4210,10 @@ function gerarGridCorrecaoManual() {
         const respostaAluno = (i < respostas.length) ? respostas[i] : '';
         const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
+        // 🔥 CORREÇÃO: Definir isCorreto NO INÍCIO de cada iteração, antes de qualquer uso
+        const isCorreto = respostaAluno && respostaGabarito && 
+                         respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+
         if (isProducao) {
             div.style.background = 'var(--bg2)';
             div.style.border = '1px solid var(--border)';
@@ -4240,10 +4244,7 @@ function gerarGridCorrecaoManual() {
                 atualizarResumoCorrecaoManual();
             });
         } else {
-            // 🔥 CORREÇÃO: Definir isCorreto ANTES de usar no innerHTML
-            const isCorreto = respostaAluno && respostaGabarito && 
-                             respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
-
+            // 🔥 CORREÇÃO: Usar isCorreto (já definido no início do loop)
             let options = '<option value="">—</option>';
             alternativas.forEach(alt => {
                 const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
@@ -4262,7 +4263,6 @@ function gerarGridCorrecaoManual() {
                 }
             }
 
-            // 🔥 CORREÇÃO: Usar isCorreto definido acima
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
                 <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div>
