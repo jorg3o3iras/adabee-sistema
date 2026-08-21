@@ -337,26 +337,44 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
 
                 prompt = f"""
-                Você é um assistente especializado em correção de provas escolares.
+Você é um especialista em correção de provas escolares da disciplina de {disciplina}.
 
-                Analise a imagem do cartão resposta e identifique as respostas marcadas.
+### ANÁLISE DA IMAGEM:
+- A imagem é um cartão resposta preenchido por um aluno
+- Identifique CADA marcação feita pelo aluno (A, B, C, D)
+- Se a marcação estiver BORRADA ou ILEGÍVEL, informe "INDEFINIDO"
+- Se houver DUAS marcações na mesma questão, considere a mais FORTE/ESCURA
+- Se NENHUMA marcação for detectada, informe "NÃO_RESPONDEU"
 
-                INFORMAÇÕES DA PROVA:
-                - Total de questões: {len(gabarito)}
-                - Alternativas disponíveis: {alternativas}
-                - Gabarito correto: {gabarito}
+### INFORMAÇÕES DA PROVA:
+- Total de questões: {len(gabarito)}
+- Alternativas disponíveis: {alternativas}
+- Gabarito oficial: {gabarito}
+- Disciplina: {disciplina}
+- Série: {serie}
 
-                INSTRUÇÕES:
-                1. Analise cada questão e identifique qual alternativa foi marcada
-                2. Se a marcação não estiver clara, faça a melhor estimativa
-                3. Compare com o gabarito e determine se está correta
+### INSTRUÇÕES IMPORTANTES:
+1. Analise cada questão minuciosamente
+2. Identifique a alternativa marcada
+3. Se não tiver certeza, atribua um nível de confiança mais baixo
+4. Se a imagem estiver muito escura ou desfocada, informe no campo "observacoes"
 
-                Responda APENAS em formato JSON válido:
-                {{
-                    "respostas": ["A", "B", "C", ...],
-                    "confianca": 85
-                }}
-                """
+### FORMATO DE RESPOSTA (APENAS JSON VÁLIDO):
+{{
+    "respostas": ["A", "B", "C", "D", "INDEFINIDO", ...],
+    "confianca_por_questao": [95, 90, 85, 70, 60, ...],
+    "observacoes": "Questão 3 está borrada. Questão 5 parece ter duas marcações.",
+    "qualidade_imagem": "Boa" | "Regular" | "Ruim"
+}}
+
+### NÍVEIS DE CONFIANÇA:
+- 90-100%: Marcação muito clara e nítida
+- 70-89%: Marcação razoavelmente clara
+- 50-69%: Marcação duvidosa ou borrada
+- Abaixo de 50%: Marcação ilegível - recomenda-se correção manual
+
+⚠️ Responda APENAS o JSON, sem texto adicional.
+"""
 
                 response = model.generate_content([
                     prompt,
