@@ -5584,313 +5584,204 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             // FUNÇÃO DE CORREÇÃO COM IA (COM MÚLTIPLAS VERIFICAÇÕES)
             // ============================================
-            async function processarComIA(imagemBase64) {
-                const escolaId = document.getElementById('corrigir-escola').value;
-                const turmaId = document.getElementById('corrigir-turma').value;
-                const provaId = document.getElementById('corrigir-prova').value;
-                const alunoId = document.getElementById('corrigir-aluno').value;
+            // ============================================
+// FUNÇÃO DE CORREÇÃO COM IA (VERSÃO SIMPLIFICADA - UMA CORREÇÃO)
+// ============================================
+async function processarComIA(imagemBase64) {
+    const escolaId = document.getElementById('corrigir-escola').value;
+    const turmaId = document.getElementById('corrigir-turma').value;
+    const provaId = document.getElementById('corrigir-prova').value;
+    const alunoId = document.getElementById('corrigir-aluno').value;
 
-                if (!escolaId || !turmaId || !provaId || !alunoId) {
-                    showToast('❌ Selecione escola, turma, prova e aluno!', 'error');
-                    return;
+    if (!escolaId || !turmaId || !provaId || !alunoId) {
+        showToast('❌ Selecione escola, turma, prova e aluno!', 'error');
+        return;
+    }
+    if (!imagemBase64) {
+        showToast('❌ Nenhuma imagem!', 'error');
+        return;
+    }
+
+    const etapas = [
+        { nome: '📸 Preparando imagem', descricao: 'Processando e melhorando a imagem...' },
+        { nome: '🤖 Analisando com IA', descricao: 'Detectando respostas no cartão...' },
+        { nome: '📊 Gerando resultados', descricao: 'Calculando nota e salvando...' }
+    ];
+
+    progressManager.iniciar('🤖 Corrigindo com IA', etapas, '🤖');
+
+    try {
+        await sleep(300);
+        let imagemEnvio = imagemBase64;
+        if (imagemBase64.startsWith('data:image')) {
+            const partes = imagemBase64.split(',');
+            if (partes.length > 1) imagemEnvio = partes[1];
+        }
+        progressManager.concluirEtapa(0);
+        progressManager.proximaEtapa();
+
+        await sleep(300);
+        const provas = await carregarProvasComCache();
+        const prova = provas.find(p => p.id == provaId);
+        if (!prova) throw new Error('Prova não encontrada');
+
+        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+        const aluno = alunos.find(a => a.id == alunoId);
+        if (!aluno) throw new Error('Aluno não encontrado');
+
+        progressManager.concluirEtapa(1);
+        progressManager.proximaEtapa();
+
+        await sleep(300);
+        progressManager.textoEtapa.textContent = '⏳ Processando... (pode levar alguns segundos)';
+
+        const response = await fetch(`${API_URL}/api/corrigir`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                imagem: imagemEnvio,
+                prova_id: parseInt(provaId),
+                aluno_id: parseInt(alunoId)
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erro ${response.status}: ${errorText.substring(0, 100)}`);
+        }
+
+        const dados = await response.json();
+        if (dados.erro) throw new Error(dados.erro);
+
+        progressManager.concluirEtapa(2);
+        progressManager.finalizar(`✅ ${dados.acertos || 0}/${dados.total || 0} acertos — Nota: ${(dados.nota || 0).toFixed(1)}`);
+
+        // Mostrar resultados
+        const box = document.getElementById('ia-result');
+        if (box) box.style.display = 'block';
+
+        // Atualizar UI
+        const rd = document.getElementById('ia-resp');
+        if (rd && dados.respostas_detectadas) {
+            rd.innerHTML = dados.respostas_detectadas.map((a, i) => {
+                const gab = dados.gabarito && dados.gabarito[i] ? dados.gabarito[i] : '';
+                const conf = dados.confianca_por_questao && dados.confianca_por_questao[i] ? dados.confianca_por_questao[i] : 0;
+                const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
+                let cor = ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)';
+                let corTexto = ok ? 'var(--green)' : 'var(--red)';
+                
+                if (!ok && conf < 70) {
+                    cor = 'rgba(245,158,11,.2)';
+                    corTexto = 'var(--orange)';
                 }
-                if (!imagemBase64) {
-                    showToast('❌ Nenhuma imagem!', 'error');
-                    return;
+                
+                return `<span style="background:${cor};border:1px solid ${ok ? 'rgba(16,185,129,.4)' : conf < 70 ? 'rgba(245,158,11,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">
+                    Q${i+1}:${a || '—'} 
+                    <span style="font-size:8px;opacity:0.7;">${conf}%</span>
+                </span>`;
+            }).join('');
+        }
+
+        setText('ia-nota', dados.nota || 0);
+        setText('ia-aluno', dados.aluno || aluno.nome || 'Aluno');
+        setText('ia-turma', dados.prova || prova.titulo || 'Prova');
+        setText('confianca-badge', `${dados.confianca || 0}% conf.`);
+
+        const statusEl = document.getElementById('ia-status');
+        if (statusEl) {
+            statusEl.textContent = dados.nota >= 6 ? 'APROVADO' : 'REPROVADO';
+            statusEl.className = 'badge ' + (dados.nota >= 6 ? 'badge-green' : 'badge-red');
+        }
+
+        // Resumo de confiança
+        const resumoConfianca = document.getElementById('ia-resumo-confianca');
+        if (resumoConfianca) {
+            const confiancas = dados.confianca_por_questao || [];
+            const totalDuvidosas = confiancas.filter(c => c < 70).length;
+            const confiancaMedia = dados.confianca || 0;
+            const corMedia = confiancaMedia >= 80 ? 'var(--green)' : confiancaMedia >= 60 ? 'var(--orange)' : 'var(--red)';
+            resumoConfianca.style.display = 'flex';
+            resumoConfianca.innerHTML = `
+                <span>📊 Confiança média: <strong style="color:${corMedia};">${confiancaMedia}%</strong></span>
+                <span>${totalDuvidosas > 0 ? `⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)` : '✅ Todas as questões têm alta confiança!'}</span>
+                <span>🔍 Clique em "✏️ Correção Manual" para revisar</span>
+            `;
+        }
+
+        // Grid de questões
+        const grid = document.getElementById('ia-comp');
+        if (grid && dados.questoes_status) {
+            grid.innerHTML = '';
+            dados.questoes_status.forEach((q, index) => {
+                const confianca = dados.confianca_por_questao?.[index] || 0;
+                const div = document.createElement('div');
+                
+                let corBg, corTexto, icone, classe;
+                if (confianca >= 80) {
+                    corBg = 'rgba(16,185,129,0.15)';
+                    corTexto = 'var(--green)';
+                    icone = '🟢';
+                    classe = 'questao-confianca-alta';
+                } else if (confianca >= 60) {
+                    corBg = 'rgba(245,158,11,0.15)';
+                    corTexto = 'var(--orange)';
+                    icone = '🟡';
+                    classe = 'questao-confianca-media';
+                } else {
+                    corBg = 'rgba(239,68,68,0.15)';
+                    corTexto = 'var(--red)';
+                    icone = '🔴';
+                    classe = 'questao-confianca-baixa';
                 }
+                
+                div.className = classe;
+                div.style.cssText = `
+                    background: ${corBg};
+                    border-radius: 8px;
+                    padding: 6px 4px;
+                    text-align: center;
+                    border: 1px solid ${corTexto}40;
+                `;
+                
+                div.innerHTML = `
+                    <div style="font-size:10px;font-weight:700;color:var(--text3);">Q${index+1}</div>
+                    <div style="font-size:14px;font-weight:800;color:${corTexto};">${q.resposta || '—'}</div>
+                    <div style="font-size:8px;color:${corTexto};">
+                        ${icone} ${confianca}%
+                    </div>
+                    <div style="font-size:7px;color:var(--text3);margin-top:2px;">
+                        ${q.acertou ? '✅' : '❌'}
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
 
-                // 🔥 NOVO: Múltiplas verificações
-                const etapas = [
-                    { nome: '📸 Carregando imagem', descricao: 'Preparando a imagem para análise...' },
-                    { nome: '🔍 Primeira verificação', descricao: 'IA analisando o cartão resposta...' },
-                    { nome: '🔍 Segunda verificação', descricao: 'Confirmando respostas...' },
-                    { nome: '🔍 Terceira verificação', descricao: 'Validando consistência...' },
-                    { nome: '📊 Gerando resultados', descricao: 'Calculando nota e salvando...' }
-                ];
+        // Salvar dados para correção manual
+        correcaoManualData.alunoId = parseInt(alunoId);
+        correcaoManualData.alunoNome = dados.aluno || aluno.nome || 'Aluno';
+        correcaoManualData.provaId = parseInt(provaId);
+        correcaoManualData.provaTitulo = dados.prova || prova.titulo || 'Prova';
+        correcaoManualData.gabarito = dados.gabarito || prova.gabarito || [];
+        correcaoManualData.respostasAluno = dados.respostas_detectadas || [];
+        correcaoManualData.quantidade = dados.total || prova.quantidade_questoes || 20;
+        correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+        correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
+        correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
+        correcaoManualData.valorPorQuestao = dados.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
+        correcaoManualData.serie = prova.serie || '1º Ano';
+        correcaoManualData.disciplina = prova.disciplina || '';
+        correcaoManualData.confianca_por_questao = dados.confianca_por_questao || [];
 
-                progressManager.iniciar('🤖 Corrigindo com IA (Múltiplas Verificações)', etapas, '🤖');
+        carregarDashboard();
+        carregarResultadosComFiltros();
 
-                try {
-                    await sleep(300);
-                    let imagemEnvio = imagemBase64;
-                    if (imagemBase64.startsWith('data:image')) {
-                        const partes = imagemBase64.split(',');
-                        if (partes.length > 1) imagemEnvio = partes[1];
-                    }
-                    progressManager.concluirEtapa(0);
-                    progressManager.proximaEtapa();
-
-                    await sleep(300);
-                    const provas = await carregarProvasComCache();
-                    const prova = provas.find(p => p.id == provaId);
-                    if (!prova) throw new Error('Prova não encontrada');
-
-                    const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-                    const aluno = alunos.find(a => a.id == alunoId);
-                    if (!aluno) throw new Error('Aluno não encontrado');
-
-                    progressManager.concluirEtapa(1);
-                    progressManager.proximaEtapa();
-
-                    // 🔥 NOVO: Realizar múltiplas verificações (3 vezes)
-                    let todasRespostas = [];
-                    let todasConfiancas = [];
-                    let todosStatus = [];
-
-                    for (let tentativa = 1; tentativa <= 3; tentativa++) {
-                        progressManager.textoEtapa.textContent = `⏳ Verificação ${tentativa}/3...`;
-
-                        const response = await fetch(`${API_URL}/api/corrigir`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                imagem: imagemEnvio,
-                                prova_id: parseInt(provaId),
-                                aluno_id: parseInt(alunoId)
-                            })
-                        });
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            throw new Error(`Erro ${response.status}: ${errorText.substring(0, 100)}`);
-                        }
-
-                        const dados = await response.json();
-                        if (dados.erro) throw new Error(dados.erro);
-
-                        todasRespostas.push(dados.respostas_detectadas || []);
-                        todasConfiancas.push(dados.confianca_por_questao || []);
-                        todosStatus.push(dados.questoes_status || []);
-
-                        if (tentativa < 3) {
-                            await sleep(500);
-                        }
-                    }
-
-                    progressManager.concluirEtapa(2);
-                    progressManager.proximaEtapa();
-
-                    // 🔥 CONSOLIDAR RESULTADOS COM VOTAÇÃO
-                    const qtd = prova.quantidade_questoes || 20;
-                    const gabarito = prova.gabarito || [];
-                    const respostasFinais = [];
-                    const confiancasFinais = [];
-                    const questoesStatusFinal = [];
-
-                    for (let i = 0; i < qtd; i++) {
-                        const respostas = todasRespostas.map(r => r[i] || '');
-                        const confiancas = todasConfiancas.map(c => c[i] || 0);
-
-                        // Votação: escolher a resposta mais frequente
-                        const frequencia = {};
-                        respostas.forEach(r => {
-                            if (r && r.trim()) {
-                                frequencia[r] = (frequencia[r] || 0) + 1;
-                            }
-                        });
-
-                        let respostaFinal = '';
-                        let confiancaFinal = 0;
-
-                        if (Object.keys(frequencia).length === 0) {
-                            respostaFinal = '';
-                            confiancaFinal = 0;
-                        } else if (Object.values(frequencia).some(f => f >= 3)) {
-                            // 3 respostas iguais
-                            const maisFrequente = Object.keys(frequencia).find(k => frequencia[k] >= 3);
-                            respostaFinal = maisFrequente || respostas[0];
-                            confiancaFinal = Math.min(100, Math.round((confiancas.reduce((a, b) => a + b, 0) / 3) * 1.1));
-                        } else if (Object.values(frequencia).some(f => f >= 2)) {
-                            // 2 respostas iguais
-                            const maisFrequente = Object.keys(frequencia).find(k => frequencia[k] >= 2);
-                            respostaFinal = maisFrequente || respostas[0];
-                            confiancaFinal = Math.round((confiancas.reduce((a, b) => a + b, 0) / 3) * 0.85);
-                        } else {
-                            // Todas diferentes: pega a de maior confiança
-                            const maxConfianca = Math.max(...confiancas);
-                            const idxMax = confiancas.indexOf(maxConfianca);
-                            respostaFinal = respostas[idxMax] || '';
-                            confiancaFinal = Math.round(maxConfianca * 0.7);
-                        }
-
-                        const gab = gabarito[i] || '';
-                        const isCorreto = respostaFinal && gab && respostaFinal.toUpperCase() === gab.toUpperCase();
-
-                        let statusMsg = 'NÃO RESPONDEU';
-                        if (isCorreto) statusMsg = 'ADQUIRIU HABILIDADE';
-                        else if (respostaFinal) statusMsg = 'RECOMPOSIÇÃO DE APRENDIZAGEM';
-
-                        respostasFinais.push(respostaFinal);
-                        confiancasFinais.push(confiancaFinal);
-
-                        questoesStatusFinal.push({
-                            numero: i + 1,
-                            resposta: respostaFinal || '—',
-                            gabarito: gab || '—',
-                            acertou: isCorreto,
-                            status: statusMsg,
-                            status_texto: `${isCorreto ? '✅ ACERTOU' : '❌ ERROU'}: ${statusMsg}`,
-                            confianca: confiancaFinal
-                        });
-                    }
-
-                    progressManager.concluirEtapa(3);
-                    progressManager.proximaEtapa();
-
-                    // Calcular resultados finais
-                    const acertos = questoesStatusFinal.filter(q => q.acertou).length;
-                    const confiancaMedia = Math.round(confiancasFinais.reduce((a, b) => a + b, 0) / qtd);
-                    const porcentagem = Math.round((acertos / qtd) * 100);
-                    const nota = (acertos * (10 / qtd));
-                    const conceito = calcularConceito(porcentagem);
-
-                    const resultado = {
-                        aluno: aluno.nome || 'Aluno',
-                        serie: prova.serie || '1º Ano',
-                        disciplina: prova.disciplina || '',
-                        total: qtd,
-                        acertos: acertos,
-                        nota: Math.round(nota * 10) / 10,
-                        porcentagem: porcentagem,
-                        conceito: conceito,
-                        respostas_detectadas: respostasFinais,
-                        gabarito: gabarito,
-                        questoes_status: questoesStatusFinal,
-                        confianca: confiancaMedia,
-                        confianca_por_questao: confiancasFinais,
-                        tipo_questoes: prova.tipo_questoes || '4',
-                        valor_por_questao: Math.round((10 / qtd) * 100) / 100,
-                        modo: 'multi_verificacao'
-                    };
-
-                    progressManager.concluirEtapa(4);
-                    progressManager.finalizar(`✅ ${acertos}/${qtd} acertos — Nota: ${resultado.nota.toFixed(1)} (${confiancaMedia}% conf.)`);
-
-                    // Mostrar resultados
-                    const box = document.getElementById('ia-result');
-                    if (box) box.style.display = 'block';
-
-                    // Atualizar UI
-                    const rd = document.getElementById('ia-resp');
-                    if (rd && resultado.respostas_detectadas) {
-                        rd.innerHTML = resultado.respostas_detectadas.map((a, i) => {
-                            const gab = resultado.gabarito && resultado.gabarito[i] ? resultado.gabarito[i] : '';
-                            const conf = resultado.confianca_por_questao && resultado.confianca_por_questao[i] ? resultado.confianca_por_questao[i] : 0;
-                            const ok = a && gab && a.toUpperCase() === gab.toUpperCase();
-                            let cor = ok ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)';
-                            let corTexto = ok ? 'var(--green)' : 'var(--red)';
-                            
-                            // 🔥 NOVO: Indicador de confiança
-                            if (!ok && conf < 70) {
-                                cor = 'rgba(245,158,11,.2)';
-                                corTexto = 'var(--orange)';
-                            }
-                            
-                            return `<span style="background:${cor};border:1px solid ${ok ? 'rgba(16,185,129,.4)' : conf < 70 ? 'rgba(245,158,11,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">
-                                Q${i+1}:${a || '—'} 
-                                <span style="font-size:8px;opacity:0.7;">${conf}%</span>
-                            </span>`;
-                        }).join('');
-                    }
-
-                    setText('ia-nota', resultado.nota || 0);
-                    setText('ia-aluno', resultado.aluno || 'Aluno');
-                    setText('ia-turma', resultado.prova || prova.titulo || 'Prova');
-                    setText('confianca-badge', `${confiancaMedia}% conf.`);
-
-                    const statusEl = document.getElementById('ia-status');
-                    if (statusEl) {
-                        statusEl.textContent = resultado.nota >= 6 ? 'APROVADO' : 'REPROVADO';
-                        statusEl.className = 'badge ' + (resultado.nota >= 6 ? 'badge-green' : 'badge-red');
-                    }
-
-                    // 🔥 NOVO: Mostrar resumo de confiança
-                    const resumoConfianca = document.getElementById('ia-resumo-confianca');
-                    if (resumoConfianca) {
-                        const totalDuvidosas = confiancasFinais.filter(c => c < 70).length;
-                        const corMedia = confiancaMedia >= 80 ? 'var(--green)' : confiancaMedia >= 60 ? 'var(--orange)' : 'var(--red)';
-                        resumoConfianca.style.display = 'flex';
-                        resumoConfianca.innerHTML = `
-                            <span>📊 Confiança média: <strong style="color:${corMedia};">${confiancaMedia}%</strong></span>
-                            <span>${totalDuvidosas > 0 ? `⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)` : '✅ Todas as questões têm alta confiança!'}</span>
-                            <span>🔍 Clique em "✏️ Correção Manual" para revisar</span>
-                        `;
-                    }
-
-                    // Grid de questões com indicadores de confiança
-                    const grid = document.getElementById('ia-comp');
-                    if (grid && resultado.questoes_status) {
-                        grid.innerHTML = '';
-                        resultado.questoes_status.forEach((q, index) => {
-                            const confianca = resultado.confianca_por_questao?.[index] || 0;
-                            const div = document.createElement('div');
-                            
-                            let corBg, corTexto, icone, classe;
-                            if (confianca >= 80) {
-                                corBg = 'rgba(16,185,129,0.15)';
-                                corTexto = 'var(--green)';
-                                icone = '🟢';
-                                classe = 'questao-confianca-alta';
-                            } else if (confianca >= 60) {
-                                corBg = 'rgba(245,158,11,0.15)';
-                                corTexto = 'var(--orange)';
-                                icone = '🟡';
-                                classe = 'questao-confianca-media';
-                            } else {
-                                corBg = 'rgba(239,68,68,0.15)';
-                                corTexto = 'var(--red)';
-                                icone = '🔴';
-                                classe = 'questao-confianca-baixa';
-                            }
-                            
-                            div.className = classe;
-                            div.style.cssText = `
-                                background: ${corBg};
-                                border-radius: 8px;
-                                padding: 6px 4px;
-                                text-align: center;
-                                border: 1px solid ${corTexto}40;
-                            `;
-                            
-                            div.innerHTML = `
-                                <div style="font-size:10px;font-weight:700;color:var(--text3);">Q${index+1}</div>
-                                <div style="font-size:14px;font-weight:800;color:${corTexto};">${q.resposta || '—'}</div>
-                                <div style="font-size:8px;color:${corTexto};">
-                                    ${icone} ${confianca}%
-                                </div>
-                                <div style="font-size:7px;color:var(--text3);margin-top:2px;">
-                                    ${q.acertou ? '✅' : '❌'}
-                                </div>
-                            `;
-                            grid.appendChild(div);
-                        });
-                    }
-
-                    // Salvar dados para correção manual
-                    correcaoManualData.alunoId = parseInt(alunoId);
-                    correcaoManualData.alunoNome = resultado.aluno || aluno.nome || 'Aluno';
-                    correcaoManualData.provaId = parseInt(provaId);
-                    correcaoManualData.provaTitulo = resultado.prova || prova.titulo || 'Prova';
-                    correcaoManualData.gabarito = resultado.gabarito || prova.gabarito || [];
-                    correcaoManualData.respostasAluno = resultado.respostas_detectadas || [];
-                    correcaoManualData.quantidade = resultado.total || prova.quantidade_questoes || 20;
-                    correcaoManualData.alternativas = prova.tipo_questoes === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-                    correcaoManualData.notaMaxima = parseFloat(document.getElementById('config-nota-max').value) || 10;
-                    correcaoManualData.notaMinima = parseFloat(document.getElementById('config-nota-min').value) || 5;
-                    correcaoManualData.valorPorQuestao = resultado.valor_por_questao || (correcaoManualData.notaMaxima / correcaoManualData.quantidade);
-                    correcaoManualData.serie = prova.serie || '1º Ano';
-                    correcaoManualData.disciplina = prova.disciplina || '';
-                    correcaoManualData.confianca_por_questao = resultado.confianca_por_questao || [];
-
-                    carregarDashboard();
-                    carregarResultadosComFiltros();
-
-                } catch (erro) {
-                    console.error('❌ Erro na correção:', erro);
-                    progressManager.erro(erro.message || 'Erro ao processar correção');
-                    showToast('❌ Erro ao processar correção: ' + erro.message, 'error');
-                }
-            }
+    } catch (erro) {
+        console.error('❌ Erro na correção:', erro);
+        progressManager.erro(erro.message || 'Erro ao processar correção');
+        showToast('❌ Erro ao processar correção: ' + erro.message, 'error');
+    }
+}
 
             function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
