@@ -50,9 +50,6 @@ try:
         try:
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel(GEMINI_MODEL)
-            # Não fazemos uma chamada à API durante a inicialização.
-            # A chamada de teste deixava o servidor lento para iniciar e
-            # consumia uma requisição desnecessária da API.
             GEMINI_AVAILABLE = True
             print("=" * 60)
             print("✅ Gemini AI configurado!")
@@ -99,7 +96,6 @@ except Exception as e:
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 DB_POOL = None
-# 🔧 ALTERAÇÃO 1: Aumentar pool de conexões para 5-30
 DB_POOL_MIN = int(os.getenv('DB_POOL_MIN', '5'))
 DB_POOL_MAX = int(os.getenv('DB_POOL_MAX', '30'))
 
@@ -108,7 +104,6 @@ if not SUPABASE_URL:
     print("⚠️ O servidor não conseguirá conectar ao banco de dados!")
 
 class PooledConnection:
-    """Wrapper para devolver automaticamente a conexão ao pool."""
     __slots__ = ('_conn', '_pool', '_closed')
 
     def __init__(self, conn, pool):
@@ -124,7 +119,6 @@ class PooledConnection:
             return
         self._closed = True
         try:
-            # Nunca devolve ao pool uma conexão em transação/estado quebrado.
             if self._conn.status != extensions.STATUS_READY:
                 try:
                     self._conn.rollback()
@@ -166,7 +160,6 @@ def _get_pool():
         return None
 
 def get_db_connection():
-    """Obtém conexão reutilizável do pool, evitando abrir TCP/TLS a cada requisição."""
     pool = _get_pool()
     if not pool:
         return None
@@ -231,19 +224,12 @@ def calcular_conceito(porcentagem):
         }
 
 # ============================================
-# FUNÇÃO PARA IDENTIFICAR DISCIPLINA (CORRIGIDA COM \b)
+# FUNÇÃO PARA IDENTIFICAR DISCIPLINA
 # ============================================
 
 def identificar_disciplina(prova_titulo, disciplina, serie):
-    """
-    Identifica o tipo de avaliação com base no título, disciplina e série
-    Retorna: 'Portugues', 'Matematica', 'Producao', 'CH', 'CN' ou 'Geral'
-    Usa \b (word boundary) para evitar falsos positivos
-    """
-    # PRIMEIRO: verificar a disciplina informada (mais confiável)
     disciplina_lower = (disciplina or '').lower().strip()
 
-    # Usa word boundaries para evitar falsos positivos
     if re.search(r'\bportugu[êe]s\b', disciplina_lower) or 'língua' in disciplina_lower:
         return 'Portugues'
     if re.search(r'\bmatem[áa]tica\b', disciplina_lower):
@@ -255,7 +241,6 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
     if re.search(r'\bcn\b', disciplina_lower) or 'ciencias naturais' in disciplina_lower:
         return 'CN'
 
-    # SEGUNDO: verificar o título da prova
     texto = f"{prova_titulo or ''}".lower()
 
     if re.search(r'\bportugu[êe]s\b', texto) or 'língua' in texto:
@@ -269,7 +254,6 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
     if re.search(r'\bcn\b', texto) or 'ciencias naturais' in texto:
         return 'CN'
 
-    # TERCEIRO: fallback baseado na série
     if serie:
         serie_num = re.search(r'(\d+)', serie)
         if serie_num:
@@ -286,7 +270,6 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
 # ============================================
 
 def extrair_mimetype(imagem_base64):
-    """Extrai o mimetype real do prefixo data:image/...;base64"""
     if not imagem_base64:
         return 'image/jpeg'
 
@@ -298,12 +281,61 @@ def extrair_mimetype(imagem_base64):
     return 'image/jpeg'
 
 # ============================================
-# FUNÇÃO DE CORREÇÃO COM GEMINI (COM QUESTÕES_STATUS)
+# 🔥 NOVO: FUNÇÃO PARA PRÉ-PROCESSAR IMAGEM
+# ============================================
+
+def preprocessar_imagem(imagem_base64):
+    """
+    Pré-processa a imagem para melhorar a detecção das marcações.
+    Aumenta contraste, nitidez e remove ruídos.
+    """
+    try:
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        image_data = base64.b64decode(imagem_base64)
+        np_array = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return imagem_base64
+        
+        # 1. Converter para escala de cinza
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # 2. Aumentar contraste (CLAHE)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        enhanced = clahe.apply(gray)
+        
+        # 3. Nitidez (sharpening)
+        kernel = np.array([[-1,-1,-1],
+                           [-1, 9,-1],
+                           [-1,-1,-1]])
+        sharpened = cv2.filter2D(enhanced, -1, kernel)
+        
+        # 4. Reduzir ruído (bilateral filter)
+        denoised = cv2.bilateralFilter(sharpened, 9, 75, 75)
+        
+        # 5. Aumentar contraste novamente
+        final = cv2.equalizeHist(denoised)
+        
+        # Converter de volta para base64
+        _, buffer = cv2.imencode('.jpg', final)
+        img_base64 = base64.b64encode(buffer).decode('utf-8')
+        
+        return f"data:image/jpeg;base64,{img_base64}"
+        
+    except Exception as e:
+        print(f"⚠️ Erro no pré-processamento: {e}")
+        return imagem_base64
+
+# ============================================
+# 🔥 FUNÇÃO DE CORREÇÃO COM GEMINI (MELHORADA)
 # ============================================
 
 def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando Gemini ou simulação"""
-
+    """Corrige a prova usando Gemini com imagem pré-processada"""
+    
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
         return {
@@ -322,29 +354,40 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
             'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
+            'confianca_por_questao': [],
             'modo': 'erro',
             'valor_por_questao': 0
         }
 
     try:
-        imagem_limpa = imagem_base64
-        if ',' in imagem_base64:
-            imagem_limpa = imagem_base64.split(',')[1]
+        # 🔥 NOVO: Pré-processar a imagem
+        imagem_processada = preprocessar_imagem(imagem_base64)
+        
+        imagem_limpa = imagem_processada
+        if ',' in imagem_processada:
+            imagem_limpa = imagem_processada.split(',')[1]
 
         if GEMINI_AVAILABLE and model is not None:
             try:
                 image_data = base64.b64decode(imagem_limpa)
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
 
+                # 🔥 PROMPT MELHORADO E MAIS DETALHADO
                 prompt = f"""
 Você é um especialista em correção de provas escolares da disciplina de {disciplina}.
 
 ### ANÁLISE DA IMAGEM:
 - A imagem é um cartão resposta preenchido por um aluno
+- As marcações são circulos pintados ou preenchidos com caneta/lápis
 - Identifique CADA marcação feita pelo aluno (A, B, C, D)
-- Se a marcação estiver BORRADA ou ILEGÍVEL, informe "INDEFINIDO"
-- Se houver DUAS marcações na mesma questão, considere a mais FORTE/ESCURA
-- Se NENHUMA marcação for detectada, informe "NÃO_RESPONDEU"
+
+### REGRAS DE DETECÇÃO (IMPORTANTE):
+1. Se a marcação estiver CLARA e NÍTIDA → Confiança 90-100%
+2. Se a marcação estiver LEVEMENTE BORRADA → Confiança 70-89%
+3. Se a marcação estiver MUITO BORRADA → Confiança 50-69%
+4. Se a marcação estiver ILEGÍVEL → Confiança abaixo de 50% (marque como "INDEFINIDO")
+5. Se houver DUAS marcações na mesma questão → Considere a MAIS FORTE/ESCURA
+6. Se a questão estiver em BRANCO (sem marcação) → "NÃO_RESPONDEU"
 
 ### INFORMAÇÕES DA PROVA:
 - Total de questões: {len(gabarito)}
@@ -355,23 +398,19 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
 
 ### INSTRUÇÕES IMPORTANTES:
 1. Analise cada questão minuciosamente
-2. Identifique a alternativa marcada
+2. Para CADA questão, identifique a alternativa marcada
 3. Se não tiver certeza, atribua um nível de confiança mais baixo
-4. Se a imagem estiver muito escura ou desfocada, informe no campo "observacoes"
+4. IMPORTANTE: Se a marcação estiver muito borrada, marque "INDEFINIDO"
+5. IMPORTANTE: Se não houver marcação, marque "NÃO_RESPONDEU"
+6. A confiança é a certeza que você tem sobre a detecção
 
 ### FORMATO DE RESPOSTA (APENAS JSON VÁLIDO):
 {{
-    "respostas": ["A", "B", "C", "D", "INDEFINIDO", ...],
+    "respostas": ["A", "B", "C", "D", ...],
     "confianca_por_questao": [95, 90, 85, 70, 60, ...],
-    "observacoes": "Questão 3 está borrada. Questão 5 parece ter duas marcações.",
+    "observacoes": "Questão 3 está borrada. Questão 5 parece não ter resposta.",
     "qualidade_imagem": "Boa" | "Regular" | "Ruim"
 }}
-
-### NÍVEIS DE CONFIANÇA:
-- 90-100%: Marcação muito clara e nítida
-- 70-89%: Marcação razoavelmente clara
-- 50-69%: Marcação duvidosa ou borrada
-- Abaixo de 50%: Marcação ilegível - recomenda-se correção manual
 
 ⚠️ Responda APENAS o JSON, sem texto adicional.
 """
@@ -390,13 +429,16 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                     try:
                         dados = json.loads(json_match.group())
                         respostas_detectadas = dados.get('respostas', [])
-                        confianca = dados.get('confianca', 70)
+                        confianca_por_questao = dados.get('confianca_por_questao', [])
+                        confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 70
                     except:
                         respostas_detectadas = []
-                        confianca = 50
+                        confianca_por_questao = []
+                        confianca_media = 50
                 else:
                     respostas_detectadas = []
-                    confianca = 50
+                    confianca_por_questao = []
+                    confianca_media = 50
 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
                     print("⚠️ Nenhuma resposta detectada, tentando Relay...")
@@ -405,10 +447,15 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
                 while len(respostas_detectadas) < len(gabarito):
-                    respostas_detectadas.append(random.choice(alternativas_lista))
+                    respostas_detectadas.append('NÃO_RESPONDEU')
+                    confianca_por_questao.append(0)
+
+                while len(confianca_por_questao) < len(gabarito):
+                    confianca_por_questao.append(50)
 
                 respostas_detectadas = respostas_detectadas[:len(gabarito)]
-                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
+                confianca_por_questao = confianca_por_questao[:len(gabarito)]
+                respostas_detectadas = [str(r).strip().upper() if r else 'NÃO_RESPONDEU' for r in respostas_detectadas]
 
                 acertos = 0
                 correcoes = []
@@ -421,23 +468,23 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                     if is_correto:
                         acertos += 1
                         status_msg = 'ADQUIRIU HABILIDADE'
-                    elif resp:
+                    elif resp and resp != 'NÃO_RESPONDEU' and resp != 'INDEFINIDO':
                         status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
                     else:
                         status_msg = 'NÃO RESPONDEU'
 
                     correcoes.append({
                         'questao': i+1,
-                        'resposta': resp,
-                        'gabarito': gab_normalizado,
+                        'resposta': resp if resp else '—',
+                        'gabarito': gab_normalizado if gab_normalizado else '—',
                         'correto': is_correto,
                         'status': status_msg
                     })
 
                     questoes_status.append({
                         'numero': i+1,
-                        'resposta': resp or '—',
-                        'gabarito': gab_normalizado or '—',
+                        'resposta': resp if resp else '—',
+                        'gabarito': gab_normalizado if gab_normalizado else '—',
                         'acertou': is_correto,
                         'status': status_msg,
                         'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
@@ -462,7 +509,8 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                     'correcoes': correcoes,
                     'questoes_status': questoes_status,
                     'tipo_questoes': str(tipo_questoes),
-                    'confianca': confianca,
+                    'confianca': round(confianca_media, 1),
+                    'confianca_por_questao': confianca_por_questao,
                     'modo': 'gemini',
                     'valor_por_questao': round(valor_por_questao, 2)
                 }
@@ -479,9 +527,11 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
         print(f"❌ Erro geral: {e}")
         return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando RelayFreeLLM ou simulação"""
+# ============================================
+# FUNÇÃO DE CORREÇÃO COM RELAY (FALLBACK)
+# ============================================
 
+def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
         return {
@@ -500,6 +550,7 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
+            'confianca_por_questao': [],
             'modo': 'erro',
             'valor_por_questao': 0
         }
@@ -509,7 +560,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             try:
                 import openai
 
-                # Extrair o mimetype real da imagem
                 mimetype = extrair_mimetype(imagem_base64)
 
                 imagem_limpa = imagem_base64
@@ -518,32 +568,29 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
 
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
 
-                # Montar mensagem com imagem no formato multimodal
                 prompt = f"""
-                Você é um assistente especializado em correção de provas escolares.
+Você é um assistente especializado em correção de provas escolares.
 
-                Analise a imagem do cartão resposta e identifique as respostas marcadas.
+Analise a imagem do cartão resposta e identifique as respostas marcadas.
 
-                INFORMAÇÕES DA PROVA:
-                - Total de questões: {len(gabarito)}
-                - Alternativas disponíveis: {alternativas}
-                - Gabarito correto: {gabarito}
+INFORMAÇÕES DA PROVA:
+- Total de questões: {len(gabarito)}
+- Alternativas disponíveis: {alternativas}
+- Gabarito correto: {gabarito}
 
-                INSTRUÇÕES:
-                1. Analise cada questão e identifique qual alternativa foi marcada
-                2. Se a marcação não estiver clara, faça a melhor estimativa
-                3. Compare com o gabarito e determine se está correta
+INSTRUÇÕES:
+1. Analise cada questão e identifique qual alternativa foi marcada
+2. Se a marcação não estiver clara, faça a melhor estimativa
+3. Compare com o gabarito e determine se está correta
 
-                Responda APENAS em formato JSON válido:
-                {{
-                    "respostas": ["A", "B", "C", ...],
-                    "confianca": 85
-                }}
-                """
+Responda APENAS em formato JSON válido:
+{{
+    "respostas": ["A", "B", "C", ...],
+    "confianca_por_questao": [95, 90, 85, ...]
+}}
+"""
 
-                # Usar a API OpenAI com suporte a multimodal
                 try:
-                    # Tentar usar a API com suporte a imagens
                     if hasattr(openai, 'ChatCompletion') and hasattr(openai.ChatCompletion, 'create'):
                         response = openai.ChatCompletion.create(
                             model=RELAY_MODEL,
@@ -562,7 +609,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                         )
                         resposta_texto = response.choices[0].message.content
                     else:
-                        # Fallback: enviar apenas texto
                         print("⚠️ API não suporta multimodal, enviando apenas texto")
                         response = openai.ChatCompletion.create(
                             model=RELAY_MODEL,
@@ -576,7 +622,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                         resposta_texto = response.choices[0].message.content
                 except Exception as e:
                     print(f"⚠️ Erro na API multimodal: {e}")
-                    # Tentar fallback sem imagem
                     response = openai.ChatCompletion.create(
                         model=RELAY_MODEL,
                         messages=[
@@ -596,13 +641,16 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                     try:
                         dados = json.loads(json_match.group())
                         respostas_detectadas = dados.get('respostas', [])
-                        confianca = dados.get('confianca', 70)
+                        confianca_por_questao = dados.get('confianca_por_questao', [])
+                        confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 70
                     except:
                         respostas_detectadas = []
-                        confianca = 50
+                        confianca_por_questao = []
+                        confianca_media = 50
                 else:
                     respostas_detectadas = []
-                    confianca = 50
+                    confianca_por_questao = []
+                    confianca_media = 50
 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
                     return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
@@ -610,10 +658,15 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
                 while len(respostas_detectadas) < len(gabarito):
-                    respostas_detectadas.append(random.choice(alternativas_lista))
+                    respostas_detectadas.append('NÃO_RESPONDEU')
+                    confianca_por_questao.append(0)
+
+                while len(confianca_por_questao) < len(gabarito):
+                    confianca_por_questao.append(50)
 
                 respostas_detectadas = respostas_detectadas[:len(gabarito)]
-                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
+                confianca_por_questao = confianca_por_questao[:len(gabarito)]
+                respostas_detectadas = [str(r).strip().upper() if r else 'NÃO_RESPONDEU' for r in respostas_detectadas]
 
                 acertos = 0
                 correcoes = []
@@ -626,23 +679,23 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                     if is_correto:
                         acertos += 1
                         status_msg = 'ADQUIRIU HABILIDADE'
-                    elif resp:
+                    elif resp and resp != 'NÃO_RESPONDEU' and resp != 'INDEFINIDO':
                         status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
                     else:
                         status_msg = 'NÃO RESPONDEU'
 
                     correcoes.append({
                         'questao': i+1,
-                        'resposta': resp,
-                        'gabarito': gab_normalizado,
+                        'resposta': resp if resp else '—',
+                        'gabarito': gab_normalizado if gab_normalizado else '—',
                         'correto': is_correto,
                         'status': status_msg
                     })
 
                     questoes_status.append({
                         'numero': i+1,
-                        'resposta': resp or '—',
-                        'gabarito': gab_normalizado or '—',
+                        'resposta': resp if resp else '—',
+                        'gabarito': gab_normalizado if gab_normalizado else '—',
                         'acertou': is_correto,
                         'status': status_msg,
                         'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
@@ -667,7 +720,8 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                     'correcoes': correcoes,
                     'questoes_status': questoes_status,
                     'tipo_questoes': str(tipo_questoes),
-                    'confianca': confianca,
+                    'confianca': round(confianca_media, 1),
+                    'confianca_por_questao': confianca_por_questao,
                     'modo': 'relay',
                     'valor_por_questao': round(valor_por_questao, 2)
                 }
@@ -683,8 +737,11 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
         print(f"❌ Erro geral: {e}")
         return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
+# ============================================
+# FUNÇÃO DE CORREÇÃO SIMULADA (FALLBACK)
+# ============================================
+
 def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Correção simulada quando nenhuma IA está disponível"""
     try:
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         respostas_detectadas = []
@@ -707,9 +764,12 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
         acertos = 0
         correcoes = []
         questoes_status = []
+        confianca_por_questao = []
 
         for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
             is_correto = resp == gab if resp else False
+            confianca = random.randint(60, 95)
+            confianca_por_questao.append(confianca)
 
             if is_correto:
                 acertos += 1
@@ -755,7 +815,8 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'correcoes': correcoes,
             'questoes_status': questoes_status,
             'tipo_questoes': str(tipo_questoes),
-            'confianca': 70,
+            'confianca': round(sum(confianca_por_questao) / len(confianca_por_questao), 1) if confianca_por_questao else 70,
+            'confianca_por_questao': confianca_por_questao,
             'modo': 'simulado',
             'valor_por_questao': round(valor_por_questao, 2)
         }
@@ -777,6 +838,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
+            'confianca_por_questao': [],
             'modo': 'erro',
             'valor_por_questao': 0,
             'erro': 'Erro na correção simulada'
@@ -788,12 +850,9 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
 
 @app.after_request
 def after_request(response):
-    """Garante que todas as respostas da API sejam JSON"""
     if request.path.startswith('/api/') and response.status_code != 200:
-        # Se não for JSON, converte para JSON
         if not response.headers.get('Content-Type', '').startswith('application/json'):
             try:
-                # Se for HTML, converte para JSON de erro
                 if 'text/html' in response.headers.get('Content-Type', ''):
                     response = jsonify({
                         'erro': 'Erro interno do servidor',
@@ -806,7 +865,7 @@ def after_request(response):
     return response
 
 # ============================================
-# ROTA DE LOGIN (COM hmac.compare_digest)
+# ROTA DE LOGIN
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -838,7 +897,6 @@ def login():
                     print(f"📌 Usuário encontrado no banco: {usuario['username']}")
                     print(f"📌 Ativo: {usuario['ativo']}")
 
-                    # Usar hmac.compare_digest para comparação segura
                     if hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)) and usuario['ativo'] == True:
                         print(f"✅ Login via banco: {username}")
                         return jsonify({
@@ -856,7 +914,6 @@ def login():
                 print(f"❌ Erro no banco: {e}")
                 traceback.print_exc()
 
-        # Verificar usuários fixos com comparação segura
         if username in USUARIOS_FIXOS:
             dados = USUARIOS_FIXOS[username]
             if hmac.compare_digest(str(dados['senha']), str(senha)):
@@ -907,7 +964,6 @@ def corrigir_com_ia():
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
 
-            # Busca prova + aluno + turma em uma única conexão.
             cur.execute("""
                 SELECT
                     p.*,
@@ -967,7 +1023,12 @@ def corrigir_com_ia():
             tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
             print(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
 
-            # Salvar no banco com questoes_status
+            # 🔥 GARANTIR QUE confianca_por_questao SEMPRE EXISTA
+            if 'confianca_por_questao' not in resultado or not resultado['confianca_por_questao']:
+                total = resultado.get('total', 20)
+                resultado['confianca_por_questao'] = [70] * total
+                resultado['confianca'] = 70
+
             try:
                 conn = get_db_connection()
                 if conn:
@@ -992,6 +1053,8 @@ def corrigir_com_ia():
                                 disciplina = %s,
                                 tipo_avaliacao = %s,
                                 questoes_status = %s::jsonb,
+                                confianca = %s,
+                                confianca_por_questao = %s::jsonb,
                                 data_correcao = CURRENT_TIMESTAMP
                             WHERE prova_id = %s AND aluno_id = %s
                         """, (
@@ -1003,6 +1066,8 @@ def corrigir_com_ia():
                             disciplina,
                             tipo_avaliacao,
                             questoes_status_json,
+                            resultado.get('confianca', 70),
+                            json.dumps(resultado.get('confianca_por_questao', [])),
                             prova_id,
                             aluno_id
                         ))
@@ -1011,8 +1076,10 @@ def corrigir_com_ia():
                         cur.execute("""
                             INSERT INTO historico
                             (prova_id, aluno_id, respostas, acertos, nota, total,
-                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
-                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb)
+                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
+                             confianca, confianca_por_questao)
+                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
+                                    %s, %s::jsonb)
                         """, (
                             prova_id,
                             aluno_id,
@@ -1023,7 +1090,9 @@ def corrigir_com_ia():
                             resultado.get('modo', 'ia'),
                             disciplina,
                             tipo_avaliacao,
-                            questoes_status_json
+                            questoes_status_json,
+                            resultado.get('confianca', 70),
+                            json.dumps(resultado.get('confianca_por_questao', []))
                         ))
                         print("✅ Histórico salvo com sucesso")
 
@@ -1051,7 +1120,7 @@ def corrigir_com_ia():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO MANUAL (COM str() ANTES DE .upper())
+# ROTA DE CORREÇÃO MANUAL
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
@@ -1066,7 +1135,6 @@ def corrigir_manual():
         acertos = data.get('acertos', 0)
         nota = data.get('nota', 0)
         total = data.get('total', 0)
-
 
         if not prova_id or not aluno_id:
             return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
@@ -1096,7 +1164,6 @@ def corrigir_manual():
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
         print(f"📌 Tipo avaliação: {tipo_avaliacao}")
 
-        # Gerar questoes_status - NORMALIZAÇÃO COM str() ANTES DE .upper()
         questoes_status = []
         for i in range(total):
             resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
@@ -1118,7 +1185,6 @@ def corrigir_manual():
                 'status': status_msg,
                 'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
             })
-
 
         try:
             questoes_status_json = json.dumps(questoes_status)
@@ -1419,7 +1485,7 @@ def listar_correcoes_texto():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE HISTÓRICO - VERSÃO COM 5 AVALIAÇÕES (INCLUINDO CH E CN)
+# ROTA DE HISTÓRICO
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -1491,7 +1557,6 @@ def listar_historico():
             except ValueError:
                 pass
 
-        # 🔧 ALTERAÇÃO 3: Adicionar LIMIT 500
         query += " ORDER BY h.data_correcao DESC LIMIT 100"
 
         cur.execute(query, params)
@@ -1527,7 +1592,7 @@ def listar_historico():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (5 AVALIAÇÕES - COM CH E CN)
+# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
@@ -1628,7 +1693,6 @@ def historico_agrupado():
             serie_aluno = item.get('serie', '')
             tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
 
-            # Extrair questoes_status
             questoes_status = item.get('questoes_status', [])
             if isinstance(questoes_status, str):
                 try:
@@ -1636,12 +1700,10 @@ def historico_agrupado():
                 except:
                     questoes_status = []
 
-            # CORREÇÃO: só adiciona se ainda não existir (mantém a mais recente)
             if tipo not in alunos_map[aluno_key]['avaliacoes']:
                 alunos_map[aluno_key]['avaliacoes'][tipo] = {
                     'nota': float(item.get('nota', 0)),
                     'acertos': int(item.get('acertos', 0)),
-                    # 🔥 USAR O TOTAL DO HISTÓRICO, NÃO DA PROVA
                     'total': int(item.get('total', 20)),
                     'prova': prova_titulo,
                     'data': item.get('data_correcao', ''),
@@ -1653,7 +1715,6 @@ def historico_agrupado():
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
 
-            # Agora com 5 disciplinas: Portugues, Matematica, Producao, CH, CN
             default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}
             portugues = dict(avaliacoes.get('Portugues', default))
             matematica = dict(avaliacoes.get('Matematica', default))
@@ -1661,7 +1722,6 @@ def historico_agrupado():
             ch = dict(avaliacoes.get('CH', default))
             cn = dict(avaliacoes.get('CN', default))
 
-            # Cálculo da média (soma as notas das 5 disciplinas)
             notas = [
                 portugues.get('nota', 0),
                 matematica.get('nota', 0),
@@ -1724,7 +1784,7 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE GABARITOS (COM BNCC, TEXTOS E NÍVEIS)
+# ROTA DE GABARITOS
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -1743,15 +1803,11 @@ def salvar_gabarito():
         if not respostas or len(respostas) == 0:
             return jsonify({'erro': 'Respostas são obrigatórias'}), 400
 
-        # Normaliza respostas
         respostas_validas = [str(r).strip().upper() for r in respostas if r]
         if not respostas_validas:
             return jsonify({'erro': 'Nenhuma resposta válida'}), 400
 
-        # Normaliza BNCC (mantém apenas strings não vazias)
         bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-
-        # Normaliza textos e níveis (mantém vazios para alinhamento)
         textos_validos = [str(t).strip() for t in textos_questoes]
         niveis_validos = [str(n).strip() for n in niveis]
 
@@ -1766,7 +1822,6 @@ def salvar_gabarito():
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
 
-        # Atualiza gabarito, bncc, textos e níveis
         cur.execute("""
             UPDATE provas
             SET gabarito = %s::text[],
@@ -1839,7 +1894,7 @@ def excluir_gabarito(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ESCOLAS (CRUD COMPLETO) - CORRIGIDA
+# ROTA DE ESCOLAS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -1955,10 +2010,6 @@ def editar_escola(id):
 
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
-    """
-    Exclui a escola, suas turmas e alunos (em cascata via banco).
-    NÃO EXCLUI PROVAS em hipótese alguma.
-    """
     logging.info(f"🔴 Tentativa de excluir escola ID {id} de {request.remote_addr}")
 
     conn = get_db_connection()
@@ -1968,7 +2019,6 @@ def excluir_escola(id):
     try:
         cur = conn.cursor()
 
-        # Verifica se a escola existe
         cur.execute("SELECT id, nome FROM escolas WHERE id = %s", (id,))
         escola = cur.fetchone()
         if not escola:
@@ -1978,16 +2028,12 @@ def excluir_escola(id):
 
         escola_id, escola_nome = escola[0], escola[1]
 
-        # Conta turmas e alunos para estatísticas (opcional)
         cur.execute("SELECT COUNT(*) FROM turmas WHERE escola_id = %s", (escola_id,))
         total_turmas = cur.fetchone()[0]
 
         cur.execute("SELECT COUNT(*) FROM alunos WHERE escola_id = %s", (escola_id,))
         total_alunos = cur.fetchone()[0]
 
-        # NÃO EXCLUIMOS PROVAS - NENHUMA CONSULTA OU DELETE NA TABELA provas!
-
-        # Exclui a escola (em cascata, turmas e alunos serão excluídos automaticamente)
         cur.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
 
         conn.commit()
@@ -2012,7 +2058,7 @@ def excluir_escola(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE TURMAS (CRUD COMPLETO) - CORRIGIDA
+# ROTA DE TURMAS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2179,10 +2225,6 @@ def editar_turma(id):
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
-    """
-    Exclui a turma e seus alunos (em cascata via banco).
-    NÃO EXCLUI PROVAS.
-    """
     logging.info(f"🔴 Tentativa de excluir turma ID {id} de {request.remote_addr}")
 
     conn = get_db_connection()
@@ -2201,13 +2243,9 @@ def excluir_turma(id):
 
         turma_id, turma_nome, turma_serie = turma[0], turma[1], turma[2]
 
-        # Contar alunos para estatísticas
         cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
 
-        # NÃO EXCLUIMOS PROVAS - NENHUMA CONSULTA OU DELETE NA TABELA provas!
-
-        # Excluir turma (em cascata, alunos serão excluídos automaticamente)
         cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
 
         conn.commit()
@@ -2526,12 +2564,11 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE PROVAS (CRUD COMPLETO COM BNCC, TEXTOS E NÍVEIS)
+# ROTA DE PROVAS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
-    # Ignora qualquer parâmetro escola_id – provas não estão vinculadas a escolas
     try:
         conn = get_db_connection()
         if not conn:
@@ -2586,7 +2623,6 @@ def criar_prova():
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Verifica duplicata
         cur.execute("""
             SELECT id FROM provas
             WHERE titulo = %s AND serie = %s
@@ -2754,9 +2790,6 @@ def editar_prova(id):
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
-    """
-    Exclui uma prova específica (apenas quando o usuário seleciona para excluir).
-    """
     logging.info(f"🔴 Tentativa de excluir prova ID {id} de {request.remote_addr}")
 
     conn = get_db_connection()
@@ -2775,7 +2808,6 @@ def excluir_prova(id):
 
         prova_titulo = prova[1]
 
-        # Remove registros associados (histórico e correções de texto)
         cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM provas WHERE id = %s", (id,))
@@ -2798,7 +2830,7 @@ def excluir_prova(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE USUÁRIOS (CRUD COMPLETO) - CORRIGIDO
+# ROTA DE USUÁRIOS (CRUD COMPLETO)
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -2876,13 +2908,8 @@ def criar_usuario():
         print(f"Erro ao criar usuário: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTAS ADICIONAIS PARA USUÁRIOS (GET, PUT, DELETE)
-# ============================================
-
 @app.route('/api/usuarios/<int:id>', methods=['GET'])
 def buscar_usuario(id):
-    """Busca um usuário específico pelo ID."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -2910,12 +2937,11 @@ def buscar_usuario(id):
 
 @app.route('/api/usuarios/<int:id>', methods=['PUT'])
 def atualizar_usuario(id):
-    """Atualiza os dados de um usuário existente."""
     try:
         data = request.json
         nome = data.get('nome')
         username = data.get('username')
-        senha = data.get('senha')          # pode vir vazio
+        senha = data.get('senha')
         email = data.get('email', '')
         perfil = data.get('perfil', 'usuario')
         ativo = data.get('ativo', True)
@@ -2932,21 +2958,18 @@ def atualizar_usuario(id):
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Verifica se o usuário existe
         cur.execute("SELECT id FROM usuarios WHERE id = %s", (id,))
         if not cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Usuário não encontrado'}), 404
 
-        # Verifica se o novo username já está em uso por outro usuário
         cur.execute("SELECT id FROM usuarios WHERE username = %s AND id != %s", (username, id))
         if cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({'erro': 'Este nome de usuário já está em uso'}), 400
 
-        # Monta a query de atualização dinamicamente
         update_fields = []
         params = []
 
@@ -2965,12 +2988,11 @@ def atualizar_usuario(id):
         update_fields.append("ativo = %s")
         params.append(ativo)
 
-        # Se a senha foi fornecida (não vazia), atualiza
         if senha and len(senha) >= 4:
             update_fields.append("senha_hash = %s")
             params.append(senha)
 
-        params.append(id)  # para o WHERE
+        params.append(id)
 
         query = f"""
             UPDATE usuarios
@@ -2998,7 +3020,6 @@ def atualizar_usuario(id):
 
 @app.route('/api/usuarios/<int:id>', methods=['DELETE'])
 def excluir_usuario(id):
-    """Exclui um usuário (apenas se não for o admin principal)."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -3006,7 +3027,6 @@ def excluir_usuario(id):
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Busca o usuário
         cur.execute("SELECT username FROM usuarios WHERE id = %s", (id,))
         usuario = cur.fetchone()
         if not usuario:
@@ -3016,13 +3036,11 @@ def excluir_usuario(id):
 
         username = usuario['username']
 
-        # Impede exclusão do admin principal
         if username == 'admin':
             cur.close()
             conn.close()
             return jsonify({'erro': 'Não é possível excluir o usuário administrador principal'}), 400
 
-        # Exclui o usuário
         cur.execute("DELETE FROM usuarios WHERE id = %s", (id,))
         conn.commit()
         cur.close()
@@ -3044,11 +3062,8 @@ def excluir_usuario(id):
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
-    # Cache muito curto evita 4 consultas ao PostgreSQL toda vez que o
-    # dashboard é redesenhado/carregado por várias partes do frontend.
     now = datetime.now().timestamp()
     cached = app.config.get('_dashboard_cache')
-    # 🔧 ALTERAÇÃO 2: Aumentar cache para 30 segundos (antes era 3)
     if cached and now - cached[0] < 30:
         return jsonify(cached[1])
 
@@ -3094,7 +3109,6 @@ def dashboard_conceito():
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Agrupa por turma, calcula média de acertos e total de correções
         cur.execute("""
             SELECT
                 t.id as turma_id,
@@ -3120,10 +3134,7 @@ def dashboard_conceito():
             media_porcentagem = float(turma['media_porcentagem'] or 0)
             total_correcoes = int(turma['total_correcoes'] or 0)
 
-            # Converte média de acertos para porcentagem (0-100)
             porcentagem = round(media_porcentagem * 100) if media_porcentagem > 0 else 0
-
-            # Calcula conceito (opcional)
             conceito = calcular_conceito(porcentagem)
 
             resultado.append({
@@ -3198,149 +3209,149 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
         html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Cartão Resposta</title>
-            <style>
-                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-                body {{
-                    font-family: Arial, sans-serif;
-                    background: #f0f2f5;
-                    display: flex;
-                    justify-content: center;
-                    padding: 40px 20px;
-                }}
-                .container {{
-                    max-width: 900px;
-                    width: 100%;
-                    background: white;
-                    padding: 40px;
-                    border-radius: 16px;
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-                    border: 1px solid #e5e7eb;
-                }}
-                .header {{
-                    text-align: center;
-                    border-bottom: 2px solid #2563eb;
-                    padding-bottom: 20px;
-                    margin-bottom: 30px;
-                }}
-                .header h1 {{ font-size: 24px; color: #1e293b; }}
-                .header h2 {{ font-size: 18px; color: #475569; margin-top: 8px; }}
-                .header .sub {{ font-size: 14px; color: #64748b; margin-top: 8px; }}
-                .info-grid {{
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 12px;
-                    background: #f8fafc;
-                    padding: 16px 20px;
-                    border-radius: 10px;
-                    margin-bottom: 30px;
-                    border: 1px solid #e2e8f0;
-                }}
-                .info-grid .item {{ font-size: 14px; }}
-                .info-grid .label {{ color: #64748b; font-weight: 600; }}
-                .info-grid .value {{ color: #0f172a; font-weight: 700; }}
-                .questoes {{
-                    display: grid;
-                    grid-template-columns: repeat(5, 1fr);
-                    gap: 10px;
-                    margin: 20px 0 30px;
-                }}
-                .questao {{
-                    border: 2px solid #e2e8f0;
-                    border-radius: 10px;
-                    padding: 12px 8px;
-                    text-align: center;
-                    background: #fafafa;
-                    transition: all 0.2s;
-                }}
-                .questao:hover {{ border-color: #2563eb; background: #f0f7ff; }}
-                .questao .num {{
-                    font-size: 12px;
-                    font-weight: 700;
-                    color: #64748b;
-                    margin-bottom: 8px;
-                }}
-                .questao .opcoes {{
-                    display: flex;
-                    justify-content: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }}
-                .questao .opcao {{
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #1e293b;
-                }}
-                .questao .opcao input {{
-                    width: 18px;
-                    height: 18px;
-                    cursor: pointer;
-                    accent-color: #2563eb;
-                }}
-                .footer {{
-                    margin-top: 30px;
-                    padding-top: 20px;
-                    border-top: 1px solid #e2e8f0;
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 13px;
-                    color: #64748b;
-                }}
-                .btn-print {{
-                    background: #2563eb;
-                    color: white;
-                    border: none;
-                    padding: 12px 30px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: background 0.2s;
-                    margin-top: 20px;
-                    width: 100%;
-                }}
-                .btn-print:hover {{ background: #1d4ed8; }}
-                @media print {{
-                    body {{ background: white; padding: 0; }}
-                    .container {{ box-shadow: none; border: none; padding: 20px; }}
-                    .btn-print {{ display: none; }}
-                    .questao:hover {{ border-color: #e2e8f0; background: #fafafa; }}
-                }}
-                @media (max-width: 600px) {{
-                    .questoes {{ grid-template-columns: repeat(3, 1fr); }}
-                    .info-grid {{ grid-template-columns: 1fr; }}
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>📄 CARTÃO RESPOSTA</h1>
-                    <h2>{titulo_prova}</h2>
-                    <div class="sub">Leia atentamente e marque apenas uma alternativa por questão</div>
-                </div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cartão Resposta</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }}
+        .container {{
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border: 1px solid #e5e7eb;
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{ font-size: 24px; color: #1e293b; }}
+        .header h2 {{ font-size: 18px; color: #475569; margin-top: 8px; }}
+        .header .sub {{ font-size: 14px; color: #64748b; margin-top: 8px; }}
+        .info-grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }}
+        .info-grid .item {{ font-size: 14px; }}
+        .info-grid .label {{ color: #64748b; font-weight: 600; }}
+        .info-grid .value {{ color: #0f172a; font-weight: 700; }}
+        .questoes {{
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0 30px;
+        }}
+        .questao {{
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 8px;
+            text-align: center;
+            background: #fafafa;
+            transition: all 0.2s;
+        }}
+        .questao:hover {{ border-color: #2563eb; background: #f0f7ff; }}
+        .questao .num {{
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 8px;
+        }}
+        .questao .opcoes {{
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }}
+        .questao .opcao {{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }}
+        .questao .opcao input {{
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #2563eb;
+        }}
+        .footer {{
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #64748b;
+        }}
+        .btn-print {{
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 20px;
+            width: 100%;
+        }}
+        .btn-print:hover {{ background: #1d4ed8; }}
+        @media print {{
+            body {{ background: white; padding: 0; }}
+            .container {{ box-shadow: none; border: none; padding: 20px; }}
+            .btn-print {{ display: none; }}
+            .questao:hover {{ border-color: #e2e8f0; background: #fafafa; }}
+        }}
+        @media (max-width: 600px) {{
+            .questoes {{ grid-template-columns: repeat(3, 1fr); }}
+            .info-grid {{ grid-template-columns: 1fr; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 CARTÃO RESPOSTA</h1>
+            <h2>{titulo_prova}</h2>
+            <div class="sub">Leia atentamente e marque apenas uma alternativa por questão</div>
+        </div>
 
-                <div class="info-grid">
-                    <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
-                    <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
-                    <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
-                    <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
-                    <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
-                </div>
+        <div class="info-grid">
+            <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
+            <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
+            <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
+            <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
+            <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
+        </div>
 
-                <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
-                    Pinte por inteiro o circulo que corresponde sua resposta
-                </div>
+        <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
+            Pinte por inteiro o circulo que corresponde sua resposta
+        </div>
 
-                <div class="questoes">
-        """
+        <div class="questoes">
+"""
 
         for i in range(quantidade_questoes):
             html += f"""
@@ -3381,16 +3392,11 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ══ ROTA DE BACKUP DO BANCO DE DADOS ══
+# ROTA DE BACKUP DO BANCO DE DADOS
 # ============================================
 
 @app.route('/api/backup', methods=['GET'])
 def backup_database():
-    """
-    Exporta todas as tabelas do banco para um arquivo ZIP contendo um JSON.
-    Requer uma chave de segurança (BACKUP_KEY) para evitar acesso indevido.
-    """
-    # Verifica a chave de segurança (pode ser passada como query string ou cabeçalho)
     backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
     expected_key = os.getenv('BACKUP_KEY', 'backup123')
 
@@ -3403,7 +3409,6 @@ def backup_database():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
 
-        # Lista de tabelas a serem exportadas (ordem respeita dependências)
         tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto']
         data = {}
 
@@ -3422,10 +3427,8 @@ def backup_database():
         cur.close()
         conn.close()
 
-        # Converte para JSON com tratamento de datas (default=str)
         json_str = json.dumps(data, default=str, indent=2, ensure_ascii=False)
 
-        # Cria um arquivo ZIP em memória
         memory_file = io.BytesIO()
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         json_filename = f"backup_{timestamp}.json"
@@ -3472,8 +3475,6 @@ def index():
                 '/api/correcoes_texto',
                 '/api/escolas',
                 '/api/turmas',
-                '/api/turmas/<id>/alunos',
-                '/api/turmas/estatisticas',
                 '/api/alunos',
                 '/api/provas',
                 '/api/gabaritos',
@@ -3481,9 +3482,9 @@ def index():
                 '/api/historico/agrupado',
                 '/api/dashboard',
                 '/api/dashboard/Conceito',
-                '/api/dashboard/turmas_alunos',
                 '/api/gerar_gabarito',
-                '/api/backup'
+                '/api/backup',
+                '/api/usuarios'
             ]
         })
 
@@ -3528,7 +3529,6 @@ def init_db():
     try:
         cur = conn.cursor()
 
-        # Verifica se a tabela escolas existe (para saber se o banco já foi criado)
         cur.execute("""
             SELECT EXISTS (
                 SELECT FROM information_schema.tables
@@ -3617,6 +3617,8 @@ def init_db():
                     disciplina TEXT,
                     tipo_avaliacao TEXT,
                     questoes_status JSONB DEFAULT '[]',
+                    confianca DECIMAL(5,2),
+                    confianca_por_questao JSONB DEFAULT '[]',
                     data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -3655,7 +3657,7 @@ def init_db():
         else:
             print("📌 Tabelas já existem, verificando colunas...")
 
-            # Verificar se a coluna bncc existe na tabela provas
+            # Verificar coluna bncc
             cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
@@ -3669,7 +3671,7 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna bncc: {e}")
 
-            # Verificar e adicionar colunas textos_questoes e niveis
+            # Verificar colunas textos_questoes e niveis
             for col in ['textos_questoes', 'niveis']:
                 cur.execute("""
                     SELECT column_name
@@ -3684,7 +3686,7 @@ def init_db():
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
 
-            # Verificar se a coluna questoes_status existe
+            # Verificar coluna questoes_status
             cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
@@ -3700,7 +3702,25 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna questoes_status: {e}")
 
-        # Inserir usuários fixos se não existirem
+            # Verificar colunas confianca e confianca_por_questao
+            for col in ['confianca', 'confianca_por_questao']:
+                cur.execute("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'historico' AND column_name = %s
+                """, (col,))
+                if not cur.fetchone():
+                    print(f"🔧 Adicionando coluna {col} à tabela historico...")
+                    try:
+                        if col == 'confianca':
+                            cur.execute("ALTER TABLE historico ADD COLUMN confianca DECIMAL(5,2)")
+                        else:
+                            cur.execute("ALTER TABLE historico ADD COLUMN confianca_por_questao JSONB DEFAULT '[]'")
+                        print(f"✅ Coluna {col} adicionada com sucesso!")
+                    except Exception as e:
+                        print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
+
+        # Inserir usuários fixos
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
@@ -3710,8 +3730,7 @@ def init_db():
                 """, (dados['nome'], username, dados['senha'], dados['perfil']))
                 print(f"✅ Usuário {username} criado com sucesso!")
 
-        # Índices para acelerar filtros, joins e ordenações mais usados.
-        # CREATE INDEX IF NOT EXISTS não apaga nem altera nenhum registro.
+        # Índices
         indices = [
             "CREATE INDEX IF NOT EXISTS idx_alunos_escola_id ON alunos(escola_id)",
             "CREATE INDEX IF NOT EXISTS idx_alunos_turma_id ON alunos(turma_id)",
@@ -3787,7 +3806,6 @@ if __name__ == '__main__':
     print("   - /api/usuarios/<id> (GET, PUT, DELETE)")
     print("=" * 60)
 
-    # Inicializar banco
     init_db()
 
     app.run(host='0.0.0.0', port=port, debug=False)
