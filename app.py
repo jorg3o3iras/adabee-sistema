@@ -3336,7 +3336,7 @@ def gerar_gabarito():
                 </div>
 
                 <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
-                    Marque com um X a alternativa correta
+                    Pinte por inteiro o circulo que corresponde sua resposta
                 </div>
 
                 <div class="questoes">
