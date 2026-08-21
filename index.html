@@ -9301,7 +9301,7 @@ async function processarComIA(imagemBase64) {
                 }
             }
 
-            <!-- ========== NOVA FUNÇÃO GERAR CARTAO RESPOSTA (OTIMIZADA PARA IA) ========== -->
+            // ========== FUNÇÃO GERAR CARTAO RESPOSTA (CORRIGIDA) ==========
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
         // ABRE A NOVA ABA ANTES DA REQUISIÇÃO
@@ -9349,8 +9349,8 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         const nomeTurma = turma.nome || 'Turma';
         const serie = turma.serie || prova?.serie || '';
 
-        // Gerar HTML do cartão resposta OTIMIZADO
-        const html = `
+        // 🔥 CORREÇÃO: Usar uma variável mutável (let) para construir o HTML
+        let html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -9721,7 +9721,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         <div class="questoes-grid">
 `;
 
-        // Gerar as questões com círculos grandes
+        // 🔥 CORREÇÃO: Usar html += para adicionar as questões, não reatribuir
         for (let i = 0; i < qtdQuestoes; i++) {
             html += `
             <div class="questao">
