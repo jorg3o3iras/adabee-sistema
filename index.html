@@ -4180,91 +4180,108 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ===== GERAR GRID CORREÇÃO MANUAL =====
-            function gerarGridCorrecaoManual() {
-                const grid = document.getElementById('cm-grid');
-                if (!grid) return;
-                const qtd = correcaoManualData.quantidade || 20;
-                const alternativas = correcaoManualData.alternativas || ['A', 'B', 'C', 'D'];
-                const respostas = correcaoManualData.respostasAluno || [];
-                const gabarito = correcaoManualData.gabarito || [];
-                const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
+function gerarGridCorrecaoManual() {
+    const grid = document.getElementById('cm-grid');
+    if (!grid) return;
+    const qtd = correcaoManualData.quantidade || 20;
+    const alternativas = correcaoManualData.alternativas || ['A', 'B', 'C', 'D'];
+    const respostas = correcaoManualData.respostasAluno || [];
+    const gabarito = correcaoManualData.gabarito || [];
+    const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
 
-                if (isProducao) {
-                    grid.style.display = 'flex';
-                    grid.style.flexDirection = 'column';
-                    grid.style.gap = '12px';
-                    grid.style.maxHeight = 'none';
-                    grid.style.overflowY = 'visible';
-                } else {
-                    grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
-                    grid.style.gap = '6px';
-                    grid.style.maxHeight = '280px';
-                    grid.style.overflowY = 'auto';
-                }
+    if (isProducao) {
+        grid.style.display = 'flex';
+        grid.style.flexDirection = 'column';
+        grid.style.gap = '12px';
+        grid.style.maxHeight = 'none';
+        grid.style.overflowY = 'visible';
+    } else {
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+        grid.style.gap = '6px';
+        grid.style.maxHeight = '280px';
+        grid.style.overflowY = 'auto';
+    }
 
-                grid.innerHTML = '';
-                for (let i = 0; i < qtd; i++) {
-                    const div = document.createElement('div');
-                    div.className = 'correcao-manual-item';
-                    const respostaAluno = (i < respostas.length) ? respostas[i] : '';
-                    const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
+    grid.innerHTML = '';
+    for (let i = 0; i < qtd; i++) {
+        const div = document.createElement('div');
+        div.className = 'correcao-manual-item';
+        const respostaAluno = (i < respostas.length) ? respostas[i] : '';
+        const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
-                    if (isProducao) {
-                        div.style.background = 'var(--bg2)';
-                        div.style.border = '1px solid var(--border)';
-                        div.style.borderRadius = '8px';
-                        div.style.padding = '10px 14px';
-                        div.style.textAlign = 'left';
-                        div.style.display = 'flex';
-                        div.style.flexDirection = 'column';
-                        div.style.gap = '6px';
+        if (isProducao) {
+            div.style.background = 'var(--bg2)';
+            div.style.border = '1px solid var(--border)';
+            div.style.borderRadius = '8px';
+            div.style.padding = '10px 14px';
+            div.style.textAlign = 'left';
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.gap = '6px';
 
-                        div.innerHTML = `
-                            <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
-                            <div style="font-size:10px;color:var(--text3);">Gabarito: ${respostaGabarito || '—'}</div>
-                            <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${respostaAluno}</textarea>
-                            <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
-                                <option value="">Nível BNCC</option>
-                                <option value="Inicial">Inicial</option>
-                                <option value="Básico">Básico</option>
-                                <option value="Proficiente">Proficiente</option>
-                                <option value="Avançado">Avançado</option>
-                            </select>
-                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical;"></textarea>
-                        `;
-                        const textarea = div.querySelector('.q-resposta-texto');
-                        textarea.dataset.questao = i;
-                        textarea.addEventListener('input', function() {
-                            correcaoManualData.respostasAluno[i] = this.value;
-                            atualizarResumoCorrecaoManual();
-                        });
-                    } else {
-                        let options = '<option value="">—</option>';
-                        alternativas.forEach(alt => {
-                            const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
-                            options += `<option value="${alt}" ${selected}>${alt}</option>`;
-                        });
-                        let statusClass = '';
-                        let statusText = '';
-                        if (respostaAluno) {
-                            const isCorreto = respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
-                            if (isCorreto) { statusClass = 'correta'; statusText = '✅'; } else { statusClass = 'errada'; statusText = '❌'; }
-                        }
-                        div.innerHTML = `
-                            <div class="q-num">Q${i+1}</div>
-                            <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div>
-                            <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
-                            <div class="q-status ${statusClass}">${statusText}</div>
-                        `;
-                        const select = div.querySelector('.q-select');
-                        if (select) {
-                            if (respostaAluno && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase()) { select.className = 'q-select correta'; } else if (respostaAluno) { select.className = 'q-select errada'; }
-                        }
-                    }
-                    grid.appendChild(div);
+            div.innerHTML = `
+                <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
+                <div style="font-size:10px;color:var(--text3);">Gabarito: ${respostaGabarito || '—'}</div>
+                <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${respostaAluno}</textarea>
+                <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
+                    <option value="">Nível BNCC</option>
+                    <option value="Inicial">Inicial</option>
+                    <option value="Básico">Básico</option>
+                    <option value="Proficiente">Proficiente</option>
+                    <option value="Avançado">Avançado</option>
+                </select>
+                <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical;"></textarea>
+            `;
+            const textarea = div.querySelector('.q-resposta-texto');
+            textarea.dataset.questao = i;
+            textarea.addEventListener('input', function() {
+                correcaoManualData.respostasAluno[i] = this.value;
+                atualizarResumoCorrecaoManual();
+            });
+        } else {
+            // 🔥 CORREÇÃO: Definir isCorreto ANTES de usar no innerHTML
+            const isCorreto = respostaAluno && respostaGabarito && 
+                             respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+
+            let options = '<option value="">—</option>';
+            alternativas.forEach(alt => {
+                const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
+                options += `<option value="${alt}" ${selected}>${alt}</option>`;
+            });
+
+            let statusClass = '';
+            let statusText = '';
+            if (respostaAluno) {
+                if (isCorreto) { 
+                    statusClass = 'correta'; 
+                    statusText = '✅'; 
+                } else { 
+                    statusClass = 'errada'; 
+                    statusText = '❌'; 
                 }
             }
+
+            // 🔥 CORREÇÃO: Usar isCorreto definido acima
+            div.innerHTML = `
+                <div class="q-num">Q${i+1}</div>
+                <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div>
+                <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
+                <div class="q-status ${statusClass}">${statusText}</div>
+            `;
+
+            const select = div.querySelector('.q-select');
+            if (select) {
+                if (respostaAluno && isCorreto) { 
+                    select.className = 'q-select correta'; 
+                } else if (respostaAluno) { 
+                    select.className = 'q-select errada'; 
+                }
+            }
+        }
+        grid.appendChild(div);
+    }
+}
 
             function atualizarRespostaManual(select) {
                 const questaoIndex = parseInt(select.dataset.questao);
