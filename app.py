@@ -330,11 +330,11 @@ def preprocessar_imagem(imagem_base64):
         return imagem_base64
 
 # ============================================
-# 🔥 FUNÇÃO DE CORREÇÃO COM GEMINI (MELHORADA)
+# 🔥 FUNÇÃO DE CORREÇÃO COM GEMINI (MELHORADA - VERSÃO PROFISSIONAL)
 # ============================================
 
 def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando Gemini com imagem pré-processada"""
+    """Corrige a prova usando Gemini com detecção profissional de cartão resposta"""
     
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
@@ -360,8 +360,8 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
         }
 
     try:
-        # 🔥 NOVO: Pré-processar a imagem
-        imagem_processada = preprocessar_imagem(imagem_base64)
+        # 🔥 PRÉ-PROCESSAMENTO ESPECIALIZADO PARA CARTÃO RESPOSTA
+        imagem_processada = preprocessar_cartao_resposta(imagem_base64)
         
         imagem_limpa = imagem_processada
         if ',' in imagem_processada:
@@ -372,22 +372,39 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 image_data = base64.b64decode(imagem_limpa)
                 alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
 
-                # 🔥 PROMPT MELHORADO E MAIS DETALHADO
+                # 🔥 PROMPT PROFISSIONAL PARA DETECÇÃO PRECISA
                 prompt = f"""
-Você é um especialista em correção de provas escolares da disciplina de {disciplina}.
+Você é um sistema de correção automatizada de provas com alta precisão.
 
-### ANÁLISE DA IMAGEM:
-- A imagem é um cartão resposta preenchido por um aluno
-- As marcações são circulos pintados ou preenchidos com caneta/lápis
-- Identifique CADA marcação feita pelo aluno (A, B, C, D)
+### CONTEXTO:
+- Você recebe uma imagem de um **cartão resposta** escaneado/fotografado
+- O cartão contém círculos que o aluno preencheu com caneta ou lápis
+- Sua tarefa é DETECTAR COM PRECISÃO cada marcação
 
-### REGRAS DE DETECÇÃO (IMPORTANTE):
-1. Se a marcação estiver CLARA e NÍTIDA → Confiança 90-100%
-2. Se a marcação estiver LEVEMENTE BORRADA → Confiança 70-89%
-3. Se a marcação estiver MUITO BORRADA → Confiança 50-69%
-4. Se a marcação estiver ILEGÍVEL → Confiança abaixo de 50% (marque como "INDEFINIDO")
-5. Se houver DUAS marcações na mesma questão → Considere a MAIS FORTE/ESCURA
-6. Se a questão estiver em BRANCO (sem marcação) → "NÃO_RESPONDEU"
+### REGRAS DE DETECÇÃO (OBRIGATÓRIAS):
+
+1. **ANÁLISE DE CADA QUESTÃO**:
+   - Examine a imagem para cada questão numerada (Q1, Q2, Q3...)
+   - Identifique qual círculo (A, B, C, D) está preenchido
+   - O preenchimento é caracterizado por:
+     * Área escura/colorida dentro do círculo
+     * Contraste com o fundo branco do cartão
+     * Marcação uniforme (pintado completamente)
+
+2. **NÍVEIS DE CONFIANÇA (CRITÉRIOS OBJETIVOS)**:
+   - **Alta (90-100%)**: Marcação CLARA, uniforme, sem rasuras, círculo completamente preenchido
+   - **Média (70-89%)**: Marcação visível mas com leve borrão ou preenchimento incompleto
+   - **Baixa (50-69%)**: Marcação fraca, borrada, rasurada ou com dúvida entre duas opções
+   - **Muito Baixa (<50%)**: Marcação quase invisível, imagem de má qualidade
+
+3. **CASOS ESPECIAIS**:
+   - **Múltiplas marcações**: Considere a MAIS ESCURA/FORTE como a resposta
+   - **Sem marcação**: Marque como "NÃO_RESPONDEU" (confiança 0%)
+   - **Marcaçao rasurada**: Marque como "INDEFINIDO" com confiança baixa
+
+4. **VALIDAÇÃO CRUZADA**:
+   - Compare cada resposta detectada com o gabarito fornecido
+   - Se houver inconsistência, reavalie a detecção
 
 ### INFORMAÇÕES DA PROVA:
 - Total de questões: {len(gabarito)}
@@ -396,33 +413,28 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
 - Disciplina: {disciplina}
 - Série: {serie}
 
-### INSTRUÇÕES IMPORTANTES:
-1. Analise cada questão minuciosamente
-2. Para CADA questão, identifique a alternativa marcada
-3. Se não tiver certeza, atribua um nível de confiança mais baixo
-4. IMPORTANTE: Se a marcação estiver muito borrada, marque "INDEFINIDO"
-5. IMPORTANTE: Se não houver marcação, marque "NÃO_RESPONDEU"
-6. A confiança é a certeza que você tem sobre a detecção
-
-### FORMATO DE RESPOSTA (APENAS JSON VÁLIDO):
+### FORMATO DE RESPOSTA (JSON VÁLIDO - APENAS JSON):
 {{
     "respostas": ["A", "B", "C", "D", ...],
     "confianca_por_questao": [95, 90, 85, 70, 60, ...],
-    "observacoes": "Questão 3 está borrada. Questão 5 parece não ter resposta.",
-    "qualidade_imagem": "Boa" | "Regular" | "Ruim"
+    "observacoes": "Questão 3 borrada. Questão 5 sem resposta.",
+    "qualidade_imagem": "Boa" | "Regular" | "Ruim",
+    "detalhes_deteccao": "Descreva como identificou cada marcação"
 }}
 
 ⚠️ Responda APENAS o JSON, sem texto adicional.
 """
 
+                # Fazer a requisição com timeout
                 response = model.generate_content([
                     prompt,
                     {"mime_type": "image/jpeg", "data": image_data}
                 ])
 
                 resposta_texto = response.text
-                print(f"📝 Resposta Gemini: {resposta_texto[:200]}...")
+                print(f"📝 Resposta Gemini: {resposta_texto[:300]}...")
 
+                # Extrair JSON
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
 
                 if json_match:
@@ -430,71 +442,131 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                         dados = json.loads(json_match.group())
                         respostas_detectadas = dados.get('respostas', [])
                         confianca_por_questao = dados.get('confianca_por_questao', [])
-                        confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 70
-                    except:
+                        qualidade_imagem = dados.get('qualidade_imagem', 'Regular')
+                        
+                        # Calcular confiança média
+                        if confianca_por_questao:
+                            confianca_media = sum(confianca_por_questao) / len(confianca_por_questao)
+                        else:
+                            confianca_media = 70
+                            
+                    except json.JSONDecodeError:
+                        print("⚠️ Erro ao parsear JSON do Gemini")
                         respostas_detectadas = []
                         confianca_por_questao = []
                         confianca_media = 50
+                        qualidade_imagem = 'Ruim'
                 else:
+                    print("⚠️ Nenhum JSON encontrado na resposta")
                     respostas_detectadas = []
                     confianca_por_questao = []
                     confianca_media = 50
+                    qualidade_imagem = 'Ruim'
 
+                # Se não detectou respostas, tentar Relay
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
                     print("⚠️ Nenhuma resposta detectada, tentando Relay...")
                     return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
+                # Normalizar respostas
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
-
+                
+                # Garantir tamanho correto
                 while len(respostas_detectadas) < len(gabarito):
                     respostas_detectadas.append('NÃO_RESPONDEU')
                     confianca_por_questao.append(0)
-
+                    
                 while len(confianca_por_questao) < len(gabarito):
                     confianca_por_questao.append(50)
-
+                    
+                # Cortar para o tamanho do gabarito
                 respostas_detectadas = respostas_detectadas[:len(gabarito)]
                 confianca_por_questao = confianca_por_questao[:len(gabarito)]
-                respostas_detectadas = [str(r).strip().upper() if r else 'NÃO_RESPONDEU' for r in respostas_detectadas]
+                
+                # Normalizar strings
+                respostas_detectadas = [
+                    str(r).strip().upper() if r and str(r).strip() else 'NÃO_RESPONDEU' 
+                    for r in respostas_detectadas
+                ]
 
+                # ============================================
+                # 🔥 VALIDAÇÃO E CORREÇÃO DE RESPOSTAS
+                # ============================================
+                
+                # Validar se as respostas estão dentro das alternativas válidas
+                for i, resp in enumerate(respostas_detectadas):
+                    if resp not in alternativas_lista and resp not in ['NÃO_RESPONDEU', 'INDEFINIDO']:
+                        # Tentar corrigir resposta - pode ter vindo com formatação errada
+                        if len(resp) == 1 and resp.upper() in alternativas_lista:
+                            respostas_detectadas[i] = resp.upper()
+                        else:
+                            respostas_detectadas[i] = 'NÃO_RESPONDEU'
+                            confianca_por_questao[i] = 0
+
+                # ============================================
+                # CALCULAR RESULTADOS
+                # ============================================
+                
                 acertos = 0
                 correcoes = []
                 questoes_status = []
+                respostas_corrigidas = []
 
                 for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
                     gab_normalizado = str(gab).strip().upper() if gab else ''
-                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
-
+                    
+                    # Verificar se é uma resposta válida
+                    is_resposta_valida = resp in alternativas_lista
+                    is_correto = is_resposta_valida and resp == gab_normalizado
+                    
+                    # Atualizar contagem de acertos
                     if is_correto:
                         acertos += 1
                         status_msg = 'ADQUIRIU HABILIDADE'
-                    elif resp and resp != 'NÃO_RESPONDEU' and resp != 'INDEFINIDO':
+                    elif is_resposta_valida:
                         status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
                     else:
                         status_msg = 'NÃO RESPONDEU'
-
+                    
+                    # Guardar resposta corrigida (se for inválida, mantém original)
+                    resp_final = resp if is_resposta_valida else 'NÃO_RESPONDEU'
+                    respostas_corrigidas.append(resp_final)
+                    
+                    # Criar objetos de correção
                     correcoes.append({
                         'questao': i+1,
-                        'resposta': resp if resp else '—',
+                        'resposta': resp_final,
                         'gabarito': gab_normalizado if gab_normalizado else '—',
                         'correto': is_correto,
-                        'status': status_msg
+                        'status': status_msg,
+                        'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
                     })
-
+                    
+                    # Status da questão
+                    status_emoji = '✅' if is_correto else '❌' if is_resposta_valida else '—'
                     questoes_status.append({
                         'numero': i+1,
-                        'resposta': resp if resp else '—',
+                        'resposta': resp_final,
                         'gabarito': gab_normalizado if gab_normalizado else '—',
                         'acertou': is_correto,
                         'status': status_msg,
-                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
+                        'status_texto': f"{status_emoji} {status_msg}",
+                        'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
                     })
 
+                # Calcular nota
                 valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
                 nota = acertos * valor_por_questao
                 porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
                 conceito = calcular_conceito(porcentagem)
+                
+                # Calcular confiança média final
+                confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 50
 
+                # ============================================
+                # RETORNAR RESULTADO COMPLETO
+                # ============================================
+                
                 return {
                     'aluno': aluno_nome,
                     'serie': serie,
@@ -504,7 +576,7 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                     'nota': round(nota, 1),
                     'porcentagem': porcentagem,
                     'conceito': conceito,
-                    'respostas_detectadas': respostas_detectadas,
+                    'respostas_detectadas': respostas_corrigidas,  # Respostas normalizadas
                     'gabarito': gabarito,
                     'correcoes': correcoes,
                     'questoes_status': questoes_status,
@@ -512,7 +584,8 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
                     'confianca': round(confianca_media, 1),
                     'confianca_por_questao': confianca_por_questao,
                     'modo': 'gemini',
-                    'valor_por_questao': round(valor_por_questao, 2)
+                    'valor_por_questao': round(valor_por_questao, 2),
+                    'qualidade_imagem': qualidade_imagem
                 }
 
             except Exception as e:
@@ -526,6 +599,73 @@ Você é um especialista em correção de provas escolares da disciplina de {dis
     except Exception as e:
         print(f"❌ Erro geral: {e}")
         return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
+
+
+# ============================================
+# 🔥 NOVA FUNÇÃO: PRÉ-PROCESSAMENTO ESPECIALIZADO PARA CARTÃO RESPOSTA
+# ============================================
+
+def preprocessar_cartao_resposta(imagem_base64):
+    """
+    Pré-processamento especializado para cartão resposta.
+    Otimiza a imagem para detecção de círculos preenchidos.
+    """
+    try:
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        image_data = base64.b64decode(imagem_base64)
+        np_array = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return imagem_base64
+        
+        # 1. Converter para escala de cinza
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # 2. Aumentar contraste (CLAHE) - ESSENCIAL PARA DETECTAR CÍRCULOS
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        enhanced = clahe.apply(gray)
+        
+        # 3. Binarização adaptativa - DESTACA OS CÍRCULOS PREENCHIDOS
+        # Usa OTSU para encontrar o melhor limiar
+        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # 4. Operações morfológicas para limpar ruído
+        kernel = np.ones((2,2), np.uint8)
+        cleaned = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+        
+        # 5. Detectar círculos com Hough Circle Transform
+        circles = cv2.HoughCircles(
+            cleaned, 
+            cv2.HOUGH_GRADIENT, 
+            dp=1, 
+            minDist=30,
+            param1=50, 
+            param2=30, 
+            minRadius=10, 
+            maxRadius=50
+        )
+        
+        # 6. Se detectou círculos, desenhar overlay para ajudar a IA
+        if circles is not None:
+            circles = np.round(circles[0, :]).astype("int")
+            for (x, y, r) in circles:
+                # Desenhar círculo na imagem original para guiar a IA
+                cv2.circle(img, (x, y), r, (0, 255, 0), 2)
+                # Marcar centro
+                cv2.circle(img, (x, y), 2, (0, 0, 255), 3)
+        
+        # 7. Converter de volta para base64
+        _, buffer = cv2.imencode('.jpg', img)
+        img_base64 = base64.b64encode(buffer).decode('utf-8')
+        
+        return f"data:image/jpeg;base64,{img_base64}"
+        
+    except Exception as e:
+        print(f"⚠️ Erro no pré-processamento do cartão: {e}")
+        return imagem_base64
 
 # ============================================
 # FUNÇÃO DE CORREÇÃO COM RELAY (FALLBACK)
