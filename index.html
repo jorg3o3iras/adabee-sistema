@@ -8862,7 +8862,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     showToast('❌ Erro: ' + erro.message, 'error'); }
             }
 
-            aasync function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
         // ABRE A NOVA ABA ANTES DA REQUISIÇÃO (para evitar bloqueio de pop-up)
         const novaAba = window.open('', '_blank');
