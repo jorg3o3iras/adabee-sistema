@@ -8834,33 +8834,145 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             async function gerarListaTurma() {
-                const escolaId = document.getElementById('lista-escola').value;
-                const turmaId = document.getElementById('lista-turma').value;
-                if (!turmaId) { showToast('❌ Selecione uma turma!', 'error'); return; }
-                if (!escolaId) { showToast('❌ Selecione uma escola!', 'error'); return; }
-                try {
-                    const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-                    const turmas = await carregarTurmasComCache();
-                    const turma = turmas.find(t => t.id == turmaId);
-                    const container = document.getElementById('lista-resultado');
-                    if (!container) return;
-                    if (!alunos || alunos.length === 0 || alunos.erro) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
-                        showToast('❌ Nenhum aluno na turma!', 'error'); return; }
-                    const provas = await carregarProvasComCache();
-                    const prova = provas.find(p => p.turma_id == turmaId);
-                    if (!prova) { container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada para esta turma</div>';
-                        showToast('❌ Nenhuma prova para esta turma!', 'error'); return; }
-                    const escolas = await carregarEscolasComCache();
-                    const escola = escolas.find(e => e.id == turma?.escola_id);
-                    let html = '<div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;"><div style="font-size:16px;font-weight:800;">' + (escola?.nome || 'Escola') + '</div><div style="color:var(--text2);font-size:13px;margin-top:4px;">Selecione um aluno para gerar o cartão resposta</div><div style="color:var(--text3);font-size:12px;margin-top:2px;">Professor(a): ' + (turma?.professor || '—') + ' | Turno: ' + (turma?.turno || 'Manhã') + ' | Total: ' + alunos.length + ' alunos</div></div>';
-                    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-                    alunos.forEach(aluno => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div><strong>' + aluno.nome + '</strong> <span class="badge badge-blue">Nº ' + (aluno.numero_chamada || '—') + '</span></div><button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(' + escolaId + ',' + turmaId + ',' + aluno.id + ',' + prova.id + ')">📄 Gerar Cartão</button></div>'; });
-                    html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);"><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div></div><div style="text-align:center;"><div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div></div></div>';
-                    container.innerHTML = html;
-                    showToast('📋 ' + alunos.length + ' alunos encontrados. Selecione um para gerar o cartão!', 'info');
-                } catch (erro) { console.error('Erro ao gerar lista:', erro);
-                    showToast('❌ Erro: ' + erro.message, 'error'); }
-            }
+    const escolaId = document.getElementById('lista-escola').value;
+    const turmaId = document.getElementById('lista-turma').value;
+    const provaId = document.getElementById('lista-prova')?.value || '';
+    
+    if (!turmaId) { 
+        showToast('❌ Selecione uma turma!', 'error'); 
+        return; 
+    }
+    if (!escolaId) { 
+        showToast('❌ Selecione uma escola!', 'error'); 
+        return; 
+    }
+    
+    try {
+        // Buscar alunos da turma
+        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+        const turmas = await carregarTurmasComCache();
+        const turma = turmas.find(t => t.id == turmaId);
+        
+        const container = document.getElementById('lista-resultado');
+        if (!container) return;
+        
+        if (!alunos || alunos.length === 0 || alunos.erro) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+            showToast('❌ Nenhum aluno na turma!', 'error');
+            return;
+        }
+        
+        // Buscar provas pela série da turma
+        const provas = await carregarProvasComCache();
+        const serieTurma = turma?.serie || '';
+        
+        let provasDisponiveis = provas.filter(p => p.serie === serieTurma);
+        if (provasDisponiveis.length === 0) {
+            provasDisponiveis = provas;
+        }
+        
+        // Se tiver prova selecionada no dropdown, usa ela, senão pega a primeira
+        let prova = null;
+        if (provaId) {
+            prova = provas.find(p => p.id == provaId);
+        }
+        if (!prova && provasDisponiveis.length > 0) {
+            prova = provasDisponiveis[0];
+        }
+        
+        if (!prova) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:30px;color:var(--orange);">
+                    <div style="font-size:40px;margin-bottom:10px;">📝</div>
+                    <p style="font-weight:700;">Nenhuma prova cadastrada para esta turma</p>
+                    <p style="font-size:12px;color:var(--text3);">Cadastre uma prova para a série <strong>${serieTurma || 'desta turma'}</strong></p>
+                    <button class="btn btn-primary" style="margin-top:10px;" onclick="go('prova-upload')">➕ Cadastrar Prova</button>
+                </div>
+            `;
+            showToast('❌ Nenhuma prova para esta turma!', 'error');
+            return;
+        }
+        
+        const escolas = await carregarEscolasComCache();
+        const escola = escolas.find(e => e.id == turma?.escola_id);
+        
+        // 🔥 CRIA O SELECT DE PROVAS PARA O USUÁRIO ESCOLHER
+        let provasOptions = '';
+        provasDisponiveis.forEach(p => {
+            const selected = p.id == prova.id ? 'selected' : '';
+            provasOptions += `<option value="${p.id}" ${selected}>${p.titulo} (${p.disciplina || 'Sem disciplina'})</option>`;
+        });
+
+        // 🔥 MOSTRA OS ALUNOS E JÁ GERA OS CARTOES
+        let html = `
+            <div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+                <div style="font-size:16px;font-weight:800;">${escola?.nome || 'Escola'}</div>
+                <div style="color:var(--text2);font-size:13px;margin-top:4px;">
+                    Turma: ${turma?.nome || '—'} | Série: ${turma?.serie || '—'}
+                </div>
+                <div style="color:var(--text3);font-size:12px;margin-top:2px;">
+                    Professor(a): ${turma?.professor || '—'} | 
+                    Turno: ${turma?.turno || 'Manhã'} | 
+                    Total: ${alunos.length} alunos
+                </div>
+                <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:12px;font-weight:600;color:var(--text2);">📖 Prova:</label>
+                        <select id="lista-prova-select" class="form-control" style="width:250px;padding:6px 10px;font-size:12px;" onchange="gerarListaTurma()">
+                            ${provasOptions}
+                        </select>
+                    </div>
+                    <button class="btn btn-green" onclick="gerarCartoesTodosAlunos(${escolaId}, ${turmaId}, ${prova.id})">
+                        📄 GERAR TODOS OS CARTOES
+                    </button>
+                    <button class="btn btn-primary" onclick="gerarListaTurma()">🔄 Atualizar</button>
+                </div>
+                <div style="margin-top:8px;color:var(--text3);font-size:11px;">
+                    ✅ Clique em "GERAR TODOS OS CARTOES" para abrir todos os cartões resposta de uma vez
+                </div>
+            </div>
+        `;
+        
+        // Lista de alunos com seus respectivos cartões (já carregados)
+        html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:400px;overflow-y:auto;">';
+        
+        for (let i = 0; i < alunos.length; i++) {
+            const aluno = alunos[i];
+            html += `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                    <div>
+                        <strong>${aluno.nome}</strong> 
+                        <span class="badge badge-blue">Nº ${aluno.numero_chamada || '—'}</span>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(${escolaId}, ${turmaId}, ${aluno.id}, ${prova.id})">
+                        📄 Gerar Cartão
+                    </button>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        
+        // Assinaturas
+        html += `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        showToast(`📋 ${alunos.length} alunos encontrados. Clique em "GERAR TODOS OS CARTOES" para gerar todos!`, 'info');
+        
+    } catch (erro) {
+        console.error('Erro ao gerar lista:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
 
             async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
