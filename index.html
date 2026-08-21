@@ -9301,7 +9301,9 @@ async function processarComIA(imagemBase64) {
                 }
             }
 
-            <!-- ===== FUNÇÃO GERAR CARTAO RESPOSTA (LAYOUT PROFISSIONAL) ===== -->
+            // ============================================
+// FUNÇÃO GERAR CARTAO RESPOSTA (1 PÁGINA APENAS)
+// ============================================
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
         // ABRE A NOVA ABA
@@ -9350,7 +9352,38 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         const serie = turma.serie || prova?.serie || '';
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // ===== LAYOUT PROFISSIONAL =====
+        // 🔥 CALCULAR QUANTAS COLUNAS USAR BASEADO NO NÚMERO DE QUESTÕES
+        let colunas = 5; // padrão
+        if (qtdQuestoes <= 10) colunas = 5;
+        else if (qtdQuestoes <= 15) colunas = 5;
+        else if (qtdQuestoes <= 20) colunas = 5;
+        else if (qtdQuestoes <= 25) colunas = 5;
+        else colunas = 6;
+
+        // 🔥 TAMANHO DOS CÍRCULOS BASEADO NA QUANTIDADE
+        let circuloTamanho = 38;
+        let circuloFontSize = 16;
+        let gapQuestoes = 18;
+        let paddingQuestao = '16px 12px';
+        
+        if (qtdQuestoes >= 25) {
+            circuloTamanho = 30;
+            circuloFontSize = 12;
+            gapQuestoes = 10;
+            paddingQuestao = '10px 6px';
+        } else if (qtdQuestoes >= 20) {
+            circuloTamanho = 32;
+            circuloFontSize = 13;
+            gapQuestoes = 12;
+            paddingQuestao = '12px 8px';
+        } else if (qtdQuestoes >= 15) {
+            circuloTamanho = 34;
+            circuloFontSize = 14;
+            gapQuestoes = 14;
+            paddingQuestao = '14px 10px';
+        }
+
+        // ===== LAYOUT PROFISSIONAL 1 PÁGINA =====
         let html = `
 <!DOCTYPE html>
 <html>
@@ -9360,7 +9393,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     <title>Cartão Resposta - ${nomeAluno}</title>
     <style>
         /* ============================================
-           CARTÃO RESPOSTA PROFISSIONAL
+           CARTÃO RESPOSTA - 1 PÁGINA APENAS
            ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -9369,150 +9402,144 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             background: #f0f2f5;
             display: flex;
             justify-content: center;
-            padding: 20px;
+            padding: 10px;
             min-height: 100vh;
         }
         
         .container {
-            max-width: 1100px;
+            max-width: 1000px;
             width: 100%;
             background: #ffffff;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             border: 1px solid #e5e7eb;
         }
         
-        /* ===== CABEÇALHO ===== */
+        /* ===== CABEÇALHO COMPACTO ===== */
         .header {
             text-align: center;
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 25px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
         }
         .header .brasao {
-            font-size: 48px;
-            margin-bottom: 4px;
+            font-size: 32px;
+            margin-bottom: 2px;
         }
         .header h1 {
-            font-size: 22px;
+            font-size: 16px;
             color: #1e293b;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
         .header h2 {
-            font-size: 18px;
+            font-size: 14px;
             color: #475569;
-            margin-top: 4px;
+            margin-top: 2px;
             font-weight: 600;
         }
         .header .sub {
-            font-size: 13px;
+            font-size: 11px;
             color: #94a3b8;
-            margin-top: 6px;
+            margin-top: 2px;
             font-weight: 500;
         }
         
-        /* ===== INFORMAÇÕES DO ALUNO ===== */
+        /* ===== INFORMAÇÕES DO ALUNO COMPACTAS ===== */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 6px;
             background: #f8fafc;
-            padding: 16px 20px;
-            border-radius: 10px;
-            margin-bottom: 25px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
             border: 1px solid #e2e8f0;
         }
         .info-grid .item {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 1px;
         }
         .info-grid .label {
-            font-size: 10px;
+            font-size: 8px;
             font-weight: 700;
             color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
         .info-grid .value {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: #0f172a;
         }
         
-        /* ===== INSTRUÇÕES ===== */
+        /* ===== INSTRUÇÕES COMPACTAS ===== */
         .instrucoes {
             background: #eff6ff;
-            border-left: 4px solid #2563eb;
-            padding: 14px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            border-left: 3px solid #2563eb;
+            padding: 8px 14px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 11px;
             color: #1e293b;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
             flex-wrap: wrap;
         }
-        .instrucoes .icone {
-            font-size: 28px;
-        }
-        .instrucoes strong {
-            color: #2563eb;
-        }
+        .instrucoes .icone { font-size: 18px; }
+        .instrucoes strong { color: #2563eb; }
         .instrucoes .destaque {
             background: #dbeafe;
-            padding: 4px 12px;
-            border-radius: 20px;
+            padding: 2px 10px;
+            border-radius: 14px;
             font-weight: 700;
             color: #1d4ed8;
+            font-size: 10px;
         }
         
-        /* ===== GRID DE QUESTÕES ===== */
+        /* ===== GRID DE QUESTÕES - AJUSTÁVEL ===== */
         .questoes-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 18px;
-            margin: 20px 0 30px;
+            grid-template-columns: repeat(${colunas}, 1fr);
+            gap: ${gapQuestoes}px;
+            margin: 8px 0 12px;
         }
         
         /* ===== CADA QUESTÃO ===== */
         .questao {
             background: #fafbfc;
-            border: 2px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 16px 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: ${paddingQuestao};
             text-align: center;
             transition: all 0.2s;
-            position: relative;
         }
         .questao:hover {
             border-color: #2563eb;
             background: #f0f7ff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .questao .numero {
-            font-size: 12px;
+            font-size: 9px;
             font-weight: 700;
             color: #94a3b8;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            letter-spacing: 0.3px;
             text-transform: uppercase;
         }
         .questao .numero span {
             background: #f1f5f9;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 8px;
         }
         
         /* ===== OPÇÕES ===== */
         .opcoes {
             display: flex;
             justify-content: center;
-            gap: 8px;
+            gap: 4px;
             flex-wrap: wrap;
         }
         
@@ -9520,69 +9547,50 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
+            gap: 1px;
             cursor: pointer;
-            padding: 4px;
-            border-radius: 10px;
+            padding: 2px;
+            border-radius: 8px;
             transition: all 0.2s;
-            min-width: 48px;
-            position: relative;
+            min-width: 36px;
         }
-        .opcao:hover {
-            transform: scale(1.05);
-        }
+        .opcao:hover { transform: scale(1.04); }
         
-        /* 🔥 CÍRCULO GRANDE E CLARO PARA IA */
+        /* 🔥 CÍRCULO - TAMANHO AJUSTÁVEL */
         .opcao .circulo {
-            width: 38px;
-            height: 38px;
+            width: ${circuloTamanho}px;
+            height: ${circuloTamanho}px;
             border-radius: 50%;
-            border: 3px solid #cbd5e1;
+            border: 2.5px solid #cbd5e1;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: ${circuloFontSize}px;
             font-weight: 700;
             color: #475569;
-            transition: all 0.25s ease;
-            position: relative;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
         
-        /* Sombra interna para dar profundidade */
-        .opcao .circulo::after {
-            content: '';
-            position: absolute;
-            inset: 3px;
-            border-radius: 50%;
-            background: transparent;
-            transition: all 0.25s ease;
-        }
-        
-        /* Estado marcado - DESTAQUE VISUAL FORTE */
+        /* Estado marcado */
         .opcao input:checked + .circulo {
             border-color: #2563eb;
             background: #2563eb;
             color: white;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 4px 12px rgba(37, 99, 235, 0.2);
-            transform: scale(1.06);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 2px 8px rgba(37, 99, 235, 0.15);
+            transform: scale(1.04);
         }
         
-        .opcao input:checked + .circulo::after {
-            background: rgba(255,255,255,0.15);
-        }
-        
-        /* Efeito hover */
         .opcao:hover .circulo {
             border-color: #94a3b8;
-            transform: scale(1.04);
+            transform: scale(1.03);
         }
         .opcao input:checked:hover .circulo {
             border-color: #1d4ed8;
             background: #1d4ed8;
-            transform: scale(1.08);
-            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(37, 99, 235, 0.25);
+            transform: scale(1.06);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10), 0 2px 12px rgba(37, 99, 235, 0.20);
         }
         
         /* Esconder input radio */
@@ -9595,83 +9603,78 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         
         /* Label da opção */
         .opcao .label-alt {
-            font-size: 11px;
+            font-size: 8px;
             font-weight: 600;
             color: #64748b;
-            margin-top: 4px;
-            letter-spacing: 0.3px;
+            margin-top: 2px;
+            letter-spacing: 0.2px;
         }
         
         .opcao input:checked + .circulo + .label-alt {
             color: #2563eb;
         }
         
-        /* ===== RODAPÉ ===== */
+        /* ===== RODAPÉ COMPACTO ===== */
         .footer {
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1.5px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
-            font-size: 12px;
+            gap: 8px;
+            font-size: 10px;
             color: #94a3b8;
         }
-        .footer strong {
-            color: #475569;
-        }
+        .footer strong { color: #475569; }
         
         .btn-print {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 16px 44px;
-            border-radius: 12px;
-            font-size: 17px;
+            padding: 10px 30px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.25s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-top: 10px;
+            gap: 8px;
+            margin-top: 6px;
             width: 100%;
             justify-content: center;
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
+            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.20);
         }
         .btn-print:hover {
             background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.35);
-        }
-        .btn-print:active {
-            transform: translateY(0px);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.30);
         }
         
         /* ===== LEGENDA ===== */
         .legenda {
             text-align: center;
-            margin-top: 14px;
-            font-size: 11px;
+            margin-top: 8px;
+            font-size: 9px;
             color: #94a3b8;
             border-top: 1px solid #e2e8f0;
-            padding-top: 14px;
+            padding-top: 8px;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 16px;
             flex-wrap: wrap;
         }
         .legenda span {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
         .legenda .dot {
             display: inline-block;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             border: 2px solid #cbd5e1;
         }
@@ -9680,53 +9683,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             border-color: #2563eb;
         }
         
-        /* ===== RESPONSIVIDADE ===== */
-        @media (max-width: 900px) {
-            .questoes-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 14px;
-            }
-            .container { padding: 20px; }
-            .opcao .circulo { width: 34px; height: 34px; font-size: 14px; }
-        }
-        
-        @media (max-width: 650px) {
-            .questoes-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 12px;
-            }
-            .opcao .circulo {
-                width: 30px;
-                height: 30px;
-                font-size: 12px;
-                border-width: 2.5px;
-            }
-            .container { padding: 15px; }
-            .info-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-                padding: 12px 14px;
-            }
-            .header h1 { font-size: 18px; }
-            .header h2 { font-size: 15px; }
-        }
-        
-        @media (max-width: 400px) {
-            .questoes-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-            }
-            .opcao .circulo {
-                width: 26px;
-                height: 26px;
-                font-size: 10px;
-                border-width: 2px;
-            }
-            .opcao { min-width: 36px; }
-            .info-grid { grid-template-columns: 1fr; }
-        }
-        
-        /* ===== IMPRESSÃO ===== */
+        /* ===== IMPRESSÃO - UMA PÁGINA ===== */
         @media print {
             body {
                 background: white;
@@ -9736,7 +9693,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             .container {
                 box-shadow: none;
                 border: none;
-                padding: 20px;
+                padding: 12px 16px;
                 border-radius: 0;
                 max-width: 100%;
             }
@@ -9745,7 +9702,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 border-color: #e2e8f0;
                 background: #fafbfc;
                 transform: none;
-                box-shadow: none;
             }
             .opcao:hover .circulo {
                 transform: none;
@@ -9767,11 +9723,54 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             .questao { break-inside: avoid; page-break-inside: avoid; }
             .questoes-grid { page-break-inside: avoid; }
         }
+        
+        /* ===== RESPONSIVIDADE ===== */
+        @media (max-width: 768px) {
+            .questoes-grid {
+                grid-template-columns: repeat(${Math.min(colunas, 4)}, 1fr);
+                gap: ${Math.max(gapQuestoes - 4, 6)}px;
+            }
+            .container { padding: 12px 14px; }
+            .opcao .circulo { 
+                width: ${Math.max(circuloTamanho - 6, 26)}px; 
+                height: ${Math.max(circuloTamanho - 6, 26)}px;
+                font-size: ${Math.max(circuloFontSize - 2, 10)}px;
+            }
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+                padding: 8px 12px;
+            }
+            .header h1 { font-size: 14px; }
+            .header h2 { font-size: 12px; }
+        }
+        
+        @media (max-width: 500px) {
+            .questoes-grid {
+                grid-template-columns: repeat(${Math.min(colunas, 3)}, 1fr);
+                gap: 6px;
+            }
+            .opcao .circulo {
+                width: ${Math.max(circuloTamanho - 10, 22)}px;
+                height: ${Math.max(circuloTamanho - 10, 22)}px;
+                font-size: ${Math.max(circuloFontSize - 4, 9)}px;
+                border-width: 2px;
+            }
+            .opcao { min-width: 28px; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+        
+        @media (max-width: 400px) {
+            .questoes-grid {
+                grid-template-columns: repeat(${Math.min(colunas, 2)}, 1fr);
+                gap: 4px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- ===== CABEÇALHO INSTITUCIONAL ===== -->
+        <!-- ===== CABEÇALHO INSTITUCIONAL COMPACTO ===== -->
         <div class="header">
             <div class="brasao">🏛️</div>
             <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
@@ -9779,7 +9778,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
         </div>
 
-        <!-- ===== INFORMAÇÕES DO ALUNO ===== -->
+        <!-- ===== INFORMAÇÕES DO ALUNO COMPACTAS ===== -->
         <div class="info-grid">
             <div class="item">
                 <span class="label">🎒 Aluno(a)</span>
@@ -9801,13 +9800,17 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 <span class="label">📅 Data</span>
                 <span class="value">${dataAtual}</span>
             </div>
+            <div class="item">
+                <span class="label">📝 Questões</span>
+                <span class="value">${qtdQuestoes}</span>
+            </div>
         </div>
 
-        <!-- ===== INSTRUÇÕES ===== -->
+        <!-- ===== INSTRUÇÕES COMPACTAS ===== -->
         <div class="instrucoes">
             <span class="icone">✏️</span>
             <span>
-                <strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo da alternativa escolhida.
+                <strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo.
                 Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.
             </span>
             <span class="destaque">${qtdQuestoes} questões</span>
@@ -9878,7 +9881,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         novaAba.document.write(html);
         novaAba.document.close();
 
-        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
+        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado em 1 página!`, 'success');
 
     } catch (erro) {
         console.error('Erro ao gerar cartão:', erro);
