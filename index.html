@@ -7691,470 +7691,479 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             // FUNÇÃO GERAR CARTAO RESPOSTA (1 PÁGINA APENAS)
             // ============================================
-            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
-                try {
-                    const novaAba = window.open('', '_blank');
-                    if (!novaAba) {
-                        showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
-                        return;
-                    }
-                    
-                    novaAba.document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
-                        <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
-                            <div style="text-align:center;">
-                                <div style="font-size:60px;margin-bottom:20px;">⏳</div>
-                                <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
-                                <p style="color:#64748b;">Aguarde um momento</p>
-                            </div>
-                        </body>
-                        </html>
-                    `);
-                    novaAba.document.close();
-
-                    const provas = await carregarProvasComCache();
-                    const prova = provas.find(p => p.id == provaId);
-                    const qtdQuestoes = prova?.quantidade_questoes || 20;
-                    const tipoQuestoes = prova?.tipo_questoes || 4;
-                    const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-
-                    const [alunoResp, escolaResp, turmaResp] = await Promise.all([
-                        fetch(`${API_URL}/api/alunos/${alunoId}`),
-                        fetch(`${API_URL}/api/escolas/${escolaId}`),
-                        fetch(`${API_URL}/api/turmas/${turmaId}`)
-                    ]);
-                    
-                    const aluno = await alunoResp.json();
-                    const escola = await escolaResp.json();
-                    const turma = await turmaResp.json();
-
-                    const nomeAluno = aluno.nome || 'Aluno';
-                    const nomeEscola = escola.nome || 'Escola';
-                    const nomeTurma = turma.nome || 'Turma';
-                    const serie = turma.serie || prova?.serie || '';
-                    const dataAtual = new Date().toLocaleDateString('pt-BR');
-
-                    // CALCULAR CONFIGURAÇÕES BASEADO NA QUANTIDADE DE QUESTÕES
-                    let colunas = 5;
-                    let circuloTamanho = 38;
-                    let circuloFontSize = 16;
-                    let gapQuestoes = 18;
-                    let paddingQuestao = '16px 12px';
-                    
-                    if (qtdQuestoes >= 25) {
-                        colunas = 6;
-                        circuloTamanho = 28;
-                        circuloFontSize = 11;
-                        gapQuestoes = 8;
-                        paddingQuestao = '8px 4px';
-                    } else if (qtdQuestoes >= 20) {
-                        colunas = 5;
-                        circuloTamanho = 30;
-                        circuloFontSize = 12;
-                        gapQuestoes = 10;
-                        paddingQuestao = '10px 6px';
-                    } else if (qtdQuestoes >= 15) {
-                        colunas = 5;
-                        circuloTamanho = 34;
-                        circuloFontSize = 14;
-                        gapQuestoes = 14;
-                        paddingQuestao = '12px 8px';
-                    }
-
-                    let html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Cartão Resposta - ${nomeAluno}</title>
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                
-                body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    background: #f0f2f5;
-                    display: flex;
-                    justify-content: center;
-                    padding: 10px;
-                    min-height: 100vh;
-                }
-                
-                .container {
-                    max-width: 1000px;
-                    width: 100%;
-                    background: #ffffff;
-                    padding: 20px 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-                    border: 1px solid #e5e7eb;
-                }
-                
-                .header {
-                    text-align: center;
-                    border-bottom: 2px solid #2563eb;
-                    padding-bottom: 10px;
-                    margin-bottom: 12px;
-                }
-                .header .brasao { font-size: 32px; margin-bottom: 2px; }
-                .header h1 { font-size: 16px; color: #1e293b; letter-spacing: 1px; }
-                .header h2 { font-size: 14px; color: #475569; margin-top: 2px; font-weight: 600; }
-                .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
-                
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                    gap: 6px;
-                    background: #f8fafc;
-                    padding: 10px 16px;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
-                    border: 1px solid #e2e8f0;
-                }
-                .info-grid .item { display: flex; flex-direction: column; gap: 1px; }
-                .info-grid .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
-                .info-grid .value { font-size: 12px; font-weight: 700; color: #0f172a; }
-                
-                .instrucoes {
-                    background: #eff6ff;
-                    border-left: 3px solid #2563eb;
-                    padding: 8px 14px;
-                    border-radius: 6px;
-                    margin-bottom: 12px;
-                    font-size: 11px;
-                    color: #1e293b;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    flex-wrap: wrap;
-                }
-                .instrucoes .icone { font-size: 18px; }
-                .instrucoes strong { color: #2563eb; }
-                .instrucoes .destaque {
-                    background: #dbeafe;
-                    padding: 2px 10px;
-                    border-radius: 14px;
-                    font-weight: 700;
-                    color: #1d4ed8;
-                    font-size: 10px;
-                }
-                
-                .questoes-grid {
-                    display: grid;
-                    grid-template-columns: repeat(${colunas}, 1fr);
-                    gap: ${gapQuestoes}px;
-                    margin: 8px 0 12px;
-                }
-                
-                .questao {
-                    background: #fafbfc;
-                    border: 1.5px solid #e2e8f0;
-                    border-radius: 10px;
-                    padding: ${paddingQuestao};
-                    text-align: center;
-                    transition: all 0.2s;
-                }
-                .questao:hover {
-                    border-color: #2563eb;
-                    background: #f0f7ff;
-                }
-                .questao .numero {
-                    font-size: 9px;
-                    font-weight: 700;
-                    color: #94a3b8;
-                    margin-bottom: 6px;
-                    letter-spacing: 0.3px;
-                    text-transform: uppercase;
-                }
-                .questao .numero span {
-                    background: #f1f5f9;
-                    padding: 1px 8px;
-                    border-radius: 10px;
-                    font-size: 8px;
-                }
-                
-                .opcoes {
-                    display: flex;
-                    justify-content: center;
-                    gap: 4px;
-                    flex-wrap: wrap;
-                }
-                
-                .opcao {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 1px;
-                    cursor: pointer;
-                    padding: 2px;
-                    border-radius: 8px;
-                    transition: all 0.2s;
-                    min-width: 36px;
-                }
-                .opcao:hover { transform: scale(1.04); }
-                
-                .opcao .circulo {
-                    width: ${circuloTamanho}px;
-                    height: ${circuloTamanho}px;
-                    border-radius: 50%;
-                    border: 2.5px solid #cbd5e1;
-                    background: #ffffff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: ${circuloFontSize}px;
-                    font-weight: 700;
-                    color: #475569;
-                    transition: all 0.2s ease;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-                }
-                
-                .opcao input:checked + .circulo {
-                    border-color: #2563eb;
-                    background: #2563eb;
-                    color: white;
-                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 2px 8px rgba(37, 99, 235, 0.15);
-                    transform: scale(1.04);
-                }
-                
-                .opcao:hover .circulo {
-                    border-color: #94a3b8;
-                    transform: scale(1.03);
-                }
-                .opcao input:checked:hover .circulo {
-                    border-color: #1d4ed8;
-                    background: #1d4ed8;
-                    transform: scale(1.06);
-                    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10), 0 2px 12px rgba(37, 99, 235, 0.20);
-                }
-                
-                .opcao input[type="radio"] {
-                    position: absolute;
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                }
-                
-                .opcao .label-alt {
-                    font-size: 8px;
-                    font-weight: 600;
-                    color: #64748b;
-                    margin-top: 2px;
-                    letter-spacing: 0.2px;
-                }
-                
-                .opcao input:checked + .circulo + .label-alt {
-                    color: #2563eb;
-                }
-                
-                .footer {
-                    margin-top: 10px;
-                    padding-top: 10px;
-                    border-top: 1.5px solid #e2e8f0;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    flex-wrap: wrap;
-                    gap: 8px;
-                    font-size: 10px;
-                    color: #94a3b8;
-                }
-                .footer strong { color: #475569; }
-                
-                .btn-print {
-                    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-                    color: white;
-                    border: none;
-                    padding: 10px 30px;
-                    border-radius: 10px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-top: 6px;
-                    width: 100%;
-                    justify-content: center;
-                    box-shadow: 0 2px 12px rgba(37, 99, 235, 0.20);
-                }
-                .btn-print:hover {
-                    background: linear-gradient(135deg, #1d4ed8, #1e40af);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.30);
-                }
-                
-                .legenda {
-                    text-align: center;
-                    margin-top: 8px;
-                    font-size: 9px;
-                    color: #94a3b8;
-                    border-top: 1px solid #e2e8f0;
-                    padding-top: 8px;
-                    display: flex;
-                    justify-content: center;
-                    gap: 16px;
-                    flex-wrap: wrap;
-                }
-                .legenda span { display: inline-flex; align-items: center; gap: 4px; }
-                .legenda .dot {
-                    display: inline-block;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
-                    border: 2px solid #cbd5e1;
-                }
-                .legenda .dot.checked {
-                    background: #2563eb;
-                    border-color: #2563eb;
-                }
-                
-                @media print {
-                    body { background: white; padding: 0; margin: 0; }
-                    .container { box-shadow: none; border: none; padding: 12px 16px; border-radius: 0; max-width: 100%; }
-                    .btn-print { display: none; }
-                    .questao:hover { border-color: #e2e8f0; background: #fafbfc; transform: none; }
-                    .opcao:hover .circulo { transform: none; border-color: #cbd5e1; }
-                    .opcao input:checked + .circulo {
-                        border-color: #2563eb;
-                        background: #2563eb;
-                        color: white;
-                        box-shadow: none;
-                    }
-                    .opcao input:checked:hover .circulo { transform: none; box-shadow: none; }
-                    .header { border-bottom-color: #1e293b; }
-                    .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
-                    .footer { border-top-color: #1e293b; }
-                    .questao { break-inside: avoid; page-break-inside: avoid; }
-                    .questoes-grid { page-break-inside: avoid; }
-                }
-                
-                @media (max-width: 768px) {
-                    .questoes-grid {
-                        grid-template-columns: repeat(${Math.min(colunas, 4)}, 1fr);
-                        gap: ${Math.max(gapQuestoes - 4, 6)}px;
-                    }
-                    .container { padding: 12px 14px; }
-                    .opcao .circulo { 
-                        width: ${Math.max(circuloTamanho - 6, 26)}px; 
-                        height: ${Math.max(circuloTamanho - 6, 26)}px;
-                        font-size: ${Math.max(circuloFontSize - 2, 10)}px;
-                    }
-                    .info-grid { grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; }
-                    .header h1 { font-size: 14px; }
-                    .header h2 { font-size: 12px; }
-                }
-                
-                @media (max-width: 500px) {
-                    .questoes-grid {
-                        grid-template-columns: repeat(${Math.min(colunas, 3)}, 1fr);
-                        gap: 6px;
-                    }
-                    .opcao .circulo {
-                        width: ${Math.max(circuloTamanho - 10, 22)}px;
-                        height: ${Math.max(circuloTamanho - 10, 22)}px;
-                        font-size: ${Math.max(circuloFontSize - 4, 9)}px;
-                        border-width: 2px;
-                    }
-                    .opcao { min-width: 28px; }
-                    .info-grid { grid-template-columns: 1fr; }
-                }
-                
-                @media (max-width: 400px) {
-                    .questoes-grid {
-                        grid-template-columns: repeat(${Math.min(colunas, 2)}, 1fr);
-                        gap: 4px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="brasao">🏛️</div>
-                    <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
-                    <h2>SISAM 2026 — CARTÃO RESPOSTA</h2>
-                    <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
+            // ============================================
+// FUNÇÃO GERAR CARTAO RESPOSTA (LINHA ÚNICA A B C D)
+// ============================================
+async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+    try {
+        const novaAba = window.open('', '_blank');
+        if (!novaAba) {
+            showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
+            return;
+        }
+        
+        novaAba.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
+            <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
+                <div style="text-align:center;">
+                    <div style="font-size:60px;margin-bottom:20px;">⏳</div>
+                    <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
+                    <p style="color:#64748b;">Aguarde um momento</p>
                 </div>
+            </body>
+            </html>
+        `);
+        novaAba.document.close();
 
-                <div class="info-grid">
-                    <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">${nomeAluno}</span></div>
-                    <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
-                    <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
-                    <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
-                    <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
-                    <div class="item"><span class="label">📝 Questões</span><span class="value">${qtdQuestoes}</span></div>
-                </div>
+        const provas = await carregarProvasComCache();
+        const prova = provas.find(p => p.id == provaId);
+        const qtdQuestoes = prova?.quantidade_questoes || 20;
+        const tipoQuestoes = prova?.tipo_questoes || 4;
+        const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
-                <div class="instrucoes">
-                    <span class="icone">✏️</span>
-                    <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
-                    <span class="destaque">${qtdQuestoes} questões</span>
-                </div>
+        const [alunoResp, escolaResp, turmaResp] = await Promise.all([
+            fetch(`${API_URL}/api/alunos/${alunoId}`),
+            fetch(`${API_URL}/api/escolas/${escolaId}`),
+            fetch(`${API_URL}/api/turmas/${turmaId}`)
+        ]);
+        
+        const aluno = await alunoResp.json();
+        const escola = await escolaResp.json();
+        const turma = await turmaResp.json();
 
-                <div class="questoes-grid">
-        `;
+        const nomeAluno = aluno.nome || 'Aluno';
+        const nomeEscola = escola.nome || 'Escola';
+        const nomeTurma = turma.nome || 'Turma';
+        const serie = turma.serie || prova?.serie || '';
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-                    for (let i = 0; i < qtdQuestoes; i++) {
-                        html += `
-                    <div class="questao">
-                        <div class="numero"><span>Q${i+1}</span></div>
-                        <div class="opcoes">
-                        `;
-                        
-                        for (let alt of alternativas) {
-                            html += `
-                            <label class="opcao">
-                                <input type="radio" name="q${i+1}" value="${alt}">
-                                <span class="circulo">${alt}</span>
-                                <span class="label-alt">${alt}</span>
-                            </label>
-                            `;
-                        }
-                        
-                        html += `
-                        </div>
-                    </div>
-                        `;
-                    }
+        // 🔥 CONFIGURAÇÕES BASEADO NA QUANTIDADE DE QUESTÕES
+        let colunas = 5;
+        let circuloTamanho = 42;
+        let circuloFontSize = 18;
+        let gapQuestoes = 16;
+        let paddingQuestao = '14px 10px';
+        let fonteNumero = '11px';
+        
+        if (qtdQuestoes >= 25) {
+            colunas = 6;
+            circuloTamanho = 34;
+            circuloFontSize = 14;
+            gapQuestoes = 10;
+            paddingQuestao = '10px 6px';
+            fonteNumero = '9px';
+        } else if (qtdQuestoes >= 20) {
+            colunas = 5;
+            circuloTamanho = 36;
+            circuloFontSize = 15;
+            gapQuestoes = 12;
+            paddingQuestao = '12px 8px';
+            fonteNumero = '10px';
+        } else if (qtdQuestoes >= 15) {
+            colunas = 5;
+            circuloTamanho = 38;
+            circuloFontSize = 16;
+            gapQuestoes = 14;
+            paddingQuestao = '14px 10px';
+            fonteNumero = '10px';
+        }
 
-                    html += `
-                </div>
+        let html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartão Resposta - ${nomeAluno}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: #ffffff;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .header .brasao { font-size: 32px; margin-bottom: 2px; }
+        .header h1 { font-size: 16px; color: #1e293b; letter-spacing: 1px; }
+        .header h2 { font-size: 14px; color: #475569; margin-top: 2px; font-weight: 600; }
+        .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 6px;
+            background: #f8fafc;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-grid .item { display: flex; flex-direction: column; gap: 1px; }
+        .info-grid .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+        .info-grid .value { font-size: 12px; font-weight: 700; color: #0f172a; }
+        
+        .instrucoes {
+            background: #eff6ff;
+            border-left: 3px solid #2563eb;
+            padding: 8px 14px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 11px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .instrucoes .icone { font-size: 18px; }
+        .instrucoes strong { color: #2563eb; }
+        .instrucoes .destaque {
+            background: #dbeafe;
+            padding: 2px 10px;
+            border-radius: 14px;
+            font-weight: 700;
+            color: #1d4ed8;
+            font-size: 10px;
+        }
+        
+        /* 🔥 GRID DE QUESTÕES COM A B C D EM LINHA */
+        .questoes-grid {
+            display: grid;
+            grid-template-columns: repeat(${colunas}, 1fr);
+            gap: ${gapQuestoes}px;
+            margin: 8px 0 12px;
+        }
+        
+        .questao {
+            background: #fafbfc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: ${paddingQuestao};
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .questao:hover {
+            border-color: #2563eb;
+            background: #f0f7ff;
+        }
+        .questao .numero {
+            font-size: ${fonteNumero};
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+        .questao .numero span {
+            background: #f1f5f9;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 8px;
+        }
+        
+        /* 🔥 OPÇÕES EM LINHA (A B C D) */
+        .opcoes {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .opcao {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            min-width: 40px;
+        }
+        .opcao:hover { transform: scale(1.05); }
+        
+        .opcao .circulo {
+            width: ${circuloTamanho}px;
+            height: ${circuloTamanho}px;
+            border-radius: 50%;
+            border: 2.5px solid #cbd5e1;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: ${circuloFontSize}px;
+            font-weight: 700;
+            color: #475569;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        
+        .opcao input:checked + .circulo {
+            border-color: #2563eb;
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 2px 8px rgba(37, 99, 235, 0.15);
+            transform: scale(1.04);
+        }
+        
+        .opcao:hover .circulo {
+            border-color: #94a3b8;
+            transform: scale(1.03);
+        }
+        .opcao input:checked:hover .circulo {
+            border-color: #1d4ed8;
+            background: #1d4ed8;
+            transform: scale(1.06);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10), 0 2px 12px rgba(37, 99, 235, 0.20);
+        }
+        
+        .opcao input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .opcao .label-alt {
+            font-size: 9px;
+            font-weight: 600;
+            color: #64748b;
+            margin-top: 2px;
+            letter-spacing: 0.2px;
+        }
+        
+        .opcao input:checked + .circulo + .label-alt {
+            color: #2563eb;
+        }
+        
+        .footer {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1.5px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+        .footer strong { color: #475569; }
+        
+        .btn-print {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            width: 100%;
+            justify-content: center;
+            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.20);
+        }
+        .btn-print:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.30);
+        }
+        
+        .legenda {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 9px;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .legenda span { display: inline-flex; align-items: center; gap: 4px; }
+        .legenda .dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+        }
+        .legenda .dot.checked {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .container { box-shadow: none; border: none; padding: 12px 16px; border-radius: 0; max-width: 100%; }
+            .btn-print { display: none; }
+            .questao:hover { border-color: #e2e8f0; background: #fafbfc; transform: none; }
+            .opcao:hover .circulo { transform: none; border-color: #cbd5e1; }
+            .opcao input:checked + .circulo {
+                border-color: #2563eb;
+                background: #2563eb;
+                color: white;
+                box-shadow: none;
+            }
+            .opcao input:checked:hover .circulo { transform: none; box-shadow: none; }
+            .header { border-bottom-color: #1e293b; }
+            .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
+            .footer { border-top-color: #1e293b; }
+            .questao { break-inside: avoid; page-break-inside: avoid; }
+            .questoes-grid { page-break-inside: avoid; }
+        }
+        
+        @media (max-width: 768px) {
+            .questoes-grid {
+                grid-template-columns: repeat(${Math.min(colunas, 4)}, 1fr);
+                gap: ${Math.max(gapQuestoes - 4, 6)}px;
+            }
+            .container { padding: 12px 14px; }
+            .opcao .circulo { 
+                width: ${Math.max(circuloTamanho - 6, 28)}px; 
+                height: ${Math.max(circuloTamanho - 6, 28)}px;
+                font-size: ${Math.max(circuloFontSize - 2, 11)}px;
+            }
+            .info-grid { grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; }
+            .header h1 { font-size: 14px; }
+            .header h2 { font-size: 12px; }
+        }
+        
+        @media (max-width: 500px) {
+            .questoes-grid {
+                grid-template-columns: repeat(${Math.min(colunas, 3)}, 1fr);
+                gap: 6px;
+            }
+            .opcao .circulo {
+                width: ${Math.max(circuloTamanho - 10, 24)}px;
+                height: ${Math.max(circuloTamanho - 10, 24)}px;
+                font-size: ${Math.max(circuloFontSize - 4, 10)}px;
+                border-width: 2px;
+            }
+            .opcao { min-width: 30px; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+        
+        @media (max-width: 400px) {
+            .questoes-grid {
+                grid-template-columns: repeat(${Math.min(colunas, 2)}, 1fr);
+                gap: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="brasao">🏛️</div>
+            <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
+            <h2>SISAM 2026 — CARTÃO RESPOSTA</h2>
+            <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
+        </div>
 
-                <button class="btn-print" onclick="window.print()">
-                    🖨️ IMPRIMIR CARTÃO RESPOSTA
-                </button>
+        <div class="info-grid">
+            <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">${nomeAluno}</span></div>
+            <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
+            <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
+            <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
+            <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
+            <div class="item"><span class="label">📝 Questões</span><span class="value">${qtdQuestoes}</span></div>
+        </div>
 
-                <div class="footer">
-                    <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
-                    <span>${new Date().toLocaleString('pt-BR')}</span>
-                </div>
+        <div class="instrucoes">
+            <span class="icone">✏️</span>
+            <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
+            <span class="destaque">${qtdQuestoes} questões</span>
+        </div>
 
-                <div class="legenda">
-                    <span><span class="dot"></span> Não preenchido</span>
-                    <span><span class="dot checked"></span> Preenchido</span>
-                    <span>⚠️ Preencha o círculo completamente</span>
+        <div class="questoes-grid">
+`;
+
+        for (let i = 0; i < qtdQuestoes; i++) {
+            html += `
+            <div class="questao">
+                <div class="numero"><span>Q${i+1}</span></div>
+                <div class="opcoes">
+            `;
+            
+            for (let alt of alternativas) {
+                html += `
+                    <label class="opcao">
+                        <input type="radio" name="q${i+1}" value="${alt}">
+                        <span class="circulo">${alt}</span>
+                        <span class="label-alt">${alt}</span>
+                    </label>
+                `;
+            }
+            
+            html += `
                 </div>
             </div>
-            <script>setTimeout(function(){}, 1000);<\/script>
-        </body>
-        </html>
-        `;
+            `;
+        }
 
-                    novaAba.document.open();
-                    novaAba.document.write(html);
-                    novaAba.document.close();
+        html += `
+        </div>
 
-                    showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado em 1 página!`, 'success');
+        <button class="btn-print" onclick="window.print()">
+            🖨️ IMPRIMIR CARTÃO RESPOSTA
+        </button>
 
-                } catch (erro) {
-                    console.error('Erro ao gerar cartão:', erro);
-                    showToast('❌ Erro: ' + erro.message, 'error');
-                }
-            }
+        <div class="footer">
+            <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
+            <span>${new Date().toLocaleString('pt-BR')}</span>
+        </div>
+
+        <div class="legenda">
+            <span><span class="dot"></span> Não preenchido</span>
+            <span><span class="dot checked"></span> Preenchido</span>
+            <span>⚠️ Preencha o círculo completamente</span>
+        </div>
+    </div>
+    <script>setTimeout(function(){}, 1000);<\/script>
+</body>
+</html>
+`;
+
+        novaAba.document.open();
+        novaAba.document.write(html);
+        novaAba.document.close();
+
+        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
+
+    } catch (erro) {
+        console.error('Erro ao gerar cartão:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
 
             // ============================================
             // GERAR TODOS OS CARTOES RESPOSTA DA TURMA
