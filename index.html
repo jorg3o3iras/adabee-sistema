@@ -1413,6 +1413,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <!-- ============================================================ -->
             <!-- ========== RELATÓRIO POR TURMA ========== -->
             <!-- ============================================================ -->
+            
+            <!-- ========== RELATÓRIO POR TURMA (MODIFICADO) ========== -->
+            <!-- ============================================================ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header">
                     <div>
@@ -1420,7 +1423,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <p class="page-sub">Filtros e distribuição de acertos por disciplina</p>
                     </div>
                     <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-outline" onclick="imprimirRelatorioTurma()">🖨️ Imprimir</button>
                         <button class="btn btn-green" onclick="exportarRelatorio()">📥 PDF</button>
                     </div>
                 </div>
@@ -1431,6 +1434,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     <p style="font-size:11px; color:#666;">Data: <span id="print-data-rel-turma"></span></p>
                 </div>
 
+                <!-- Filtros -->
                 <div class="card no-print" style="margin-bottom:16px;">
                     <div class="form-row c4">
                         <div class="form-group">
@@ -1473,21 +1477,19 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- ===== CARD ÚNICO: PORCENTAGEM + CONCEITOS ===== -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📊 Porcentagem e Conceitos</div>
                         <span class="badge badge-blue" id="rel-total-alunos-conceitos">0 alunos</span>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <!-- Lado esquerdo: porcentagem -->
                         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg2); border-radius:12px; padding:20px;">
                             <div style="font-size:48px; font-weight:800; color:var(--purple);" id="rel-media">0%</div>
-                            <div style="font-size:14px; color:var(--text2);">Porcentagem de Acertos</div>
-                            <div style="font-size:12px; color:var(--text3); margin-top:4px;" id="rel-disciplina-nome-card">Disciplina: —</div>
-                            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); width:100%; text-align:center;">
-                                <span style="font-size:13px; font-weight:700; color:var(--text2);">Conceito da Turma:</span>
-                                <span id="rel-conceito-geral" class="badge badge-gray" style="font-size:14px; padding:4px 16px; margin-left:6px;">—</span>
-                            </div>
+                            <div style="font-size:14px; color:var(--text2);">Porcentagem</div>
                         </div>
+                        <!-- Lado direito: conceitos -->
                         <div style="display:flex; flex-direction:column; gap:12px;">
                             <div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
@@ -1529,6 +1531,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- ========== CARD ADICIONADO: LISTA DE ALUNOS ========== -->
                 <div class="card" id="rel-tabela-alunos">
                     <div class="card-header">
                         <div class="card-title">📋 Lista de Alunos</div>
@@ -1575,6 +1578,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- ========== NOVO CARD: ACERTOS POR QUESTÃO ========== -->
                 <div class="card" id="rel-acertos-por-questao">
                     <div class="card-header">
                         <div class="card-title" id="rel-acertos-por-questao-titulo">📊 Acertos por Questão — <span id="rel-acertos-disciplina">Disciplina</span></div>
@@ -1590,6 +1594,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
 
+                <!-- CARD ÚNICO DA DISCIPLINA SELECIONADA (substitui os 5 cards + gráfico) -->
                 <div class="card" id="rel-distribuicao-unica">
                     <div class="card-header">
                         <div class="card-title" id="rel-disciplina-titulo">📈 Distribuição de Notas — <span id="rel-disciplina-nome">Disciplina</span></div>
@@ -1607,6 +1612,145 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     </div>
                 </div>
             </div>
+
+            <!-- ========== CONFIG ========== -->
+            <div class="page" id="page-config">
+                <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
+                <div class="g2 no-print">
+                    <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">🤖 IA & Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div><div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div><div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">👥 Usuários</div><button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo</button></div><div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tb-usuarios"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
+                </div>
+            </div>
+
+            <!-- ========== USER PAGES (não utilizadas, mantidas apenas para compatibilidade) ========== -->
+            <div class="page" id="page-u-dashboard" style="display:none;"></div>
+            <div class="page" id="page-u-escola" style="display:none;"></div>
+            <div class="page" id="page-u-turmas" style="display:none;"></div>
+            <div class="page" id="page-u-alunos" style="display:none;"></div>
+            <div class="page" id="page-u-resultados" style="display:none;"></div>
+            <div class="page" id="page-u-relatorios" style="display:none;"></div>
+
+            <!-- ========== NOVA ABA: DESEMPENHO DO ALUNO (COM CARD ÚNICO + GABARITO OFICIAL + BNCC) ========== -->
+            <div class="page" id="page-desempenho">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Desempenho do Aluno</div>
+                        <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Desempenho do Aluno</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-desempenho"></span></p>
+                </div>
+
+                <div class="card no-print">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">🏫 ESCOLA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-escola-desempenho" onchange="carregarTurmasDesempenho(this.value)">
+                                <option value="">Carregando escolas...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">👥 TURMA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-turma-desempenho" onchange="carregarAlunosDesempenho(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🎒 ALUNO <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-aluno-desempenho">
+                                <option value="">Selecione o aluno...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📄 PROVA <span class="req">*</span></label>
+                            <select class="form-control" id="filtro-prova-desempenho">
+                                <option value="">Carregando provas...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
+                        <button class="btn btn-primary" onclick="gerarDesempenho()">🚀 GERAR DESEMPENHO</button>
+                        <button class="btn btn-green no-print" id="btnGerarDocumento" onclick="gerarDocumentoDesempenho()">📄 GERAR DOCUMENTO</button>
+                        <button class="btn btn-orange no-print" onclick="editarGabaritoDesempenho()" title="Editar Gabarito do Aluno">✏️ Editar Gabarito</button>
+                        <button class="btn btn-outline no-print" onclick="limparFiltrosDesempenho()">✕ Limpar</button>
+                    </div>
+                </div>
+
+                <div id="resultado-desempenho" style="display:none;">
+
+                    <div class="desempenho-resumo">
+                        <div class="item">
+                            <div class="valor blue" id="resumo-nota">0%</div>
+                            <div class="label">Porcentagem de Acertos</div>
+                        </div>
+                        <div class="item"><div class="valor green" id="resumo-acertos">0</div><div class="label">Acertos</div></div>
+                        <div class="item"><div class="valor red" id="resumo-erros">0</div><div class="label">Erros</div></div>
+                        <div class="item"><div class="valor purple" id="resumo-conceito">—</div><div class="label">Conceito</div></div>
+                    </div>
+
+                    <!-- ===== CARD ÚNICO DA DISCIPLINA SELECIONADA ===== -->
+                    <div id="desempenho-disciplina-unica" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title" id="disciplina-unica-titulo">📖 Disciplina</div>
+                                <span class="badge" id="disciplina-unica-status">—</span>
+                            </div>
+                            <div class="questoes-grid" id="disciplina-unica-questoes" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div class="stats" style="display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:13px;">
+                                <span>✅ Acertos: <span class="acertos" id="disciplina-unica-acertos">0</span></span>
+                                <span>❌ Erros: <span class="erros" id="disciplina-unica-erros">0</span></span>
+                                <span>⭐ Aproveitamento: <span class="nota" id="disciplina-unica-nota">0%</span></span>
+                                <span>📊 Conceito: <span id="disciplina-unica-conceito">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== CARD GABARITO OFICIAL DA PROVA (COM BNCC) ===== -->
+                    <div id="gabarito-oficial-card" style="display: none; margin-top: 16px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title" id="gabarito-oficial-titulo">📋 Gabarito Oficial da Prova</div>
+                                <span class="badge badge-blue">Oficial</span>
+                            </div>
+                            <div class="questoes-grid" id="gabarito-oficial-grid" style="display:grid; grid-template-columns: repeat(10, 1fr); gap: 6px; padding: 8px 4px;"></div>
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); text-align:center;">
+                                Respostas corretas da prova
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="desempenho-info no-print">
+                        <div><strong>🏫 Escola</strong><br><span id="info-escola">—</span></div>
+                        <div><strong>👥 Turma</strong><br><span id="info-turma">—</span></div>
+                        <div><strong>🎒 Aluno</strong><br><span id="info-aluno">—</span></div>
+                        <div><strong>📄 Prova</strong><br><span id="info-prova">—</span></div>
+                        <div><strong>📅 Data</strong><br><span id="info-data">—</span></div>
+                    </div>
+
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--bg2); border-radius:10px; margin-top:16px; border:1px solid var(--border); font-size:12px;">
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(16,185,129,0.2); border:1px solid var(--green);"></span> ✅ Acertou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid var(--red);"></span> ❌ Errou</span>
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; border-radius:4px; background:var(--bg2); border:1px solid var(--border);"></span> — Não respondeu</span>
+                        <span style="color:var(--text3);">|</span>
+                        <span class="badge badge-conceito-inicial">🔴 Inicial (até 40%)</span>
+                        <span class="badge badge-conceito-basico">🟠 Básico (41-60%)</span>
+                        <span class="badge badge-conceito-proficiente">🔵 Proficiente (61-80%)</span>
+                        <span class="badge badge-conceito-avancado">🟢 Avançado (>80%)</span>
+                    </div>
+                </div>
+            </div>
+            <!-- ===== FIM DA ABA DESEMPENHO ===== -->
+
+        </div>
 
             <!-- ========== CONFIG ========== -->
             <div class="page" id="page-config">
