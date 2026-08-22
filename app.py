@@ -101,8 +101,10 @@ DB_POOL_MAX = int(os.getenv('DB_POOL_MAX', '30'))
 
 if not SUPABASE_URL:
     print("❌ ERRO: SUPABASE_URL não definida no .env")
+    print("⚠️ O servidor não conseguirá conectar ao banco de dados!")
 
 class PooledConnection:
+    """Wrapper para devolver automaticamente a conexão ao pool."""
     __slots__ = ('_conn', '_pool', '_closed')
 
     def __init__(self, conn, pool):
@@ -159,6 +161,7 @@ def _get_pool():
         return None
 
 def get_db_connection():
+    """Obtém conexão reutilizável do pool."""
     pool = _get_pool()
     if not pool:
         return None
@@ -184,7 +187,7 @@ USUARIOS_FIXOS = {
 }
 
 # ============================================
-# FUNÇÕES AUXILIARES
+# FUNÇÃO PARA CALCULAR CONCEITO
 # ============================================
 
 def calcular_conceito(porcentagem):
@@ -222,7 +225,15 @@ def calcular_conceito(porcentagem):
             'badge': 'badge-conceito-avancado'
         }
 
+# ============================================
+# FUNÇÃO PARA IDENTIFICAR DISCIPLINA
+# ============================================
+
 def identificar_disciplina(prova_titulo, disciplina, serie):
+    """
+    Identifica o tipo de avaliação com base no título, disciplina e série
+    Retorna: 'Portugues', 'Matematica', 'Producao', 'CH', 'CN' ou 'Geral'
+    """
     disciplina_lower = (disciplina or '').lower().strip()
 
     if re.search(r'\bportugu[êe]s\b', disciplina_lower) or 'língua' in disciplina_lower:
@@ -260,7 +271,12 @@ def identificar_disciplina(prova_titulo, disciplina, serie):
 
     return 'Geral'
 
+# ============================================
+# FUNÇÃO PARA EXTRAIR MIMETYPE DA IMAGEM
+# ============================================
+
 def extrair_mimetype(imagem_base64):
+    """Extrai o mimetype real do prefixo data:image/...;base64"""
     if not imagem_base64:
         return 'image/jpeg'
 
@@ -272,368 +288,12 @@ def extrair_mimetype(imagem_base64):
     return 'image/jpeg'
 
 # ============================================
-# 🔥 FUNÇÃO PARA GERAR PADRÃO DE GABARITO
+# FUNÇÃO DE CORREÇÃO COM GEMINI
 # ============================================
 
-def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
-    """
-    Gera um padrão de gabarito para a IA comparar.
-    """
-    alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-    
-    # 🔥 GABARITO EM FORMATO ESTRUTURADO
-    padrao = {
-        'total_questoes': len(gabarito),
-        'alternativas': alternativas,
-        'gabarito_oficial': gabarito,
-        'questoes': []
-    }
-    
-    for i, resp in enumerate(gabarito):
-        padrao['questoes'].append({
-            'numero': i + 1,
-            'resposta_correta': resp.upper() if resp else None,
-            'alternativas': alternativas,
-            'posicao': i + 1
-        })
-    
-    return padrao
+def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
+    """Corrige a prova usando Gemini ou simulação"""
 
-# ============================================
-# 🔥 PRÉ-PROCESSAMENTO DE IMAGEM MELHORADO
-# ============================================
-
-def preprocessar_cartao_resposta(imagem_base64):
-    """
-    Pré-processamento avançado para cartão resposta.
-    DETECÇÃO PRECISA DE CÍRCULOS MARCADOS
-    """
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return imagem_base64
-        
-        # 1. REDIMENSIONAR PARA PADRÃO
-        height, width = img.shape[:2]
-        max_dim = 1600
-        if width > max_dim or height > max_dim:
-            scale = min(max_dim/width, max_dim/height)
-            new_width = int(width * scale)
-            new_height = int(height * scale)
-            img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
-        
-        # 2. CONVERTER PARA ESCALA DE CINZA
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # 3. CORREÇÃO DE CONTRASTE (CLAHE)
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
-        
-        # 4. REMOVER RUÍDO
-        denoised = cv2.bilateralFilter(enhanced, 9, 75, 75)
-        denoised = cv2.GaussianBlur(denoised, (5, 5), 0)
-        
-        # 5. DETECÇÃO DE BORDAS
-        edges = cv2.Canny(denoised, 30, 100)
-        
-        # 6. DETECÇÃO DE CÍRCULOS COM HOUGH - PARÂMETROS OTIMIZADOS
-        circles = cv2.HoughCircles(
-            edges,
-            cv2.HOUGH_GRADIENT,
-            dp=1.0,
-            minDist=20,
-            param1=80,
-            param2=25,
-            minRadius=10,
-            maxRadius=50
-        )
-        
-        # 7. ANALISAR CADA CÍRCULO DETECTADO
-        if circles is not None:
-            circles = np.round(circles[0, :]).astype("int")
-            print(f"🔵 Círculos detectados: {len(circles)}")
-            
-            # Para cada círculo, verificar se está preenchido
-            for (x, y, r) in circles:
-                # Extrair a região do círculo
-                mask = np.zeros(gray.shape, dtype=np.uint8)
-                cv2.circle(mask, (x, y), r, 255, -1)
-                roi = cv2.bitwise_and(gray, gray, mask=mask)
-                
-                # Calcular a intensidade média da região
-                mean_intensity = cv2.mean(roi, mask=mask)[0]
-                
-                # Calcular a porcentagem de pixels escuros no círculo
-                dark_pixels = cv2.countNonZero(cv2.bitwise_and(
-                    cv2.threshold(roi, 80, 255, cv2.THRESH_BINARY_INV)[1],
-                    mask
-                ))
-                total_pixels = cv2.countNonZero(mask)
-                dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
-                
-                # Decidir se está preenchido
-                is_filled = dark_ratio > 0.3  # 30% de pixels escuros = preenchido
-                
-                # Desenhar no overlay
-                if is_filled:
-                    cv2.circle(img, (x, y), r, (0, 255, 0), 3)  # Verde = preenchido
-                    cv2.putText(img, "PREENCHIDO", (x-40, y-10), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
-                else:
-                    cv2.circle(img, (x, y), r, (0, 0, 255), 2)  # Vermelho = vazio
-        
-        # 8. AUMENTAR CONTRASTE PARA A IA
-        final = cv2.convertScaleAbs(img, alpha=1.2, beta=20)
-        
-        # 9. CONVERTER PARA BASE64
-        _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 92])
-        img_base64 = base64.b64encode(buffer).decode('utf-8')
-        
-        print(f"✅ Pré-processamento concluído. Círculos detectados: {len(circles) if circles is not None else 0}")
-        
-        return f"data:image/jpeg;base64,{img_base64}"
-        
-    except Exception as e:
-        print(f"⚠️ Erro no pré-processamento: {e}")
-        traceback.print_exc()
-        return imagem_base64
-
-# ============================================
-# 🔥 DETECÇÃO DE NOME DO ALUNO (OCR)
-# ============================================
-
-def extrair_nome_aluno(imagem_base64):
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return None
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        try:
-            custom_config = r'--oem 3 --psm 6 -l por'
-            texto = pytesseract.image_to_string(binary, config=custom_config)
-            texto = texto.strip().replace('\n', ' ').replace('\r', '')
-            
-            padroes = [
-                r'(?:Nome|ALUNO|Aluno|Estudante)[\s:]+([A-Za-zÀ-ÖØ-öø-ÿ\s]+)',
-                r'([A-Za-zÀ-ÖØ-öø-ÿ]+\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)'
-            ]
-            
-            for padrao in padroes:
-                match = re.search(padrao, texto, re.IGNORECASE)
-                if match:
-                    nome = match.group(1).strip()
-                    if len(nome.split()) >= 2:
-                        return nome[:50]
-            
-            palavras = texto.split()
-            if len(palavras) >= 2:
-                possiveis_nomes = []
-                for p in palavras:
-                    if len(p) > 3 and p[0].isupper():
-                        possiveis_nomes.append(p)
-                if len(possiveis_nomes) >= 2:
-                    return ' '.join(possiveis_nomes[:3])
-                    
-        except Exception as e:
-            print(f"⚠️ Erro no OCR: {e}")
-        
-        return None
-        
-    except Exception as e:
-        print(f"⚠️ Erro ao extrair nome: {e}")
-        return None
-
-# ============================================
-# 🔥 VALIDAÇÃO DE RESPOSTAS
-# ============================================
-
-def validar_e_corrigir_respostas(respostas_detectadas, gabarito, alternativas, confianca_por_questao):
-    total = len(gabarito)
-    respostas_corrigidas = []
-    confianca_corrigida = []
-    
-    # 🔥 DETECTAR PADRÃO SUSPEITO
-    padrao_suspeito = False
-    if len(respostas_detectadas) > 5:
-        from collections import Counter
-        counter = Counter(respostas_detectadas)
-        for letra, count in counter.items():
-            if count / len(respostas_detectadas) > 0.7 and letra != 'NÃO_RESPONDEU':
-                padrao_suspeito = True
-                print(f"⚠️ PADRÃO SUSPEITO DETECTADO: {count}/{len(respostas_detectadas)} respostas são '{letra}'")
-                break
-    
-    for i, resp in enumerate(respostas_detectadas):
-        if not resp or resp == '' or resp is None:
-            respostas_corrigidas.append('NÃO_RESPONDEU')
-            confianca_corrigida.append(0)
-            continue
-        
-        resp_str = str(resp).strip().upper()
-        resp_str = re.sub(r'[^A-Z]', '', resp_str)
-        
-        if not resp_str:
-            respostas_corrigidas.append('NÃO_RESPONDEU')
-            confianca_corrigida.append(0)
-            continue
-        
-        if len(resp_str) == 1 and resp_str in alternativas:
-            respostas_corrigidas.append(resp_str)
-            conf = confianca_por_questao[i] if i < len(confianca_por_questao) else 70
-            confianca_corrigida.append(conf)
-        else:
-            encontrada = False
-            for alt in alternativas:
-                if alt in resp_str:
-                    respostas_corrigidas.append(alt)
-                    conf = confianca_por_questao[i] * 0.7 if i < len(confianca_por_questao) else 50
-                    confianca_corrigida.append(conf)
-                    encontrada = True
-                    break
-            if not encontrada:
-                respostas_corrigidas.append('NÃO_RESPONDEU')
-                confianca_corrigida.append(0)
-    
-    while len(respostas_corrigidas) < total:
-        respostas_corrigidas.append('NÃO_RESPONDEU')
-        confianca_corrigida.append(0)
-    
-    respostas_corrigidas = respostas_corrigidas[:total]
-    confianca_corrigida = confianca_corrigida[:total]
-    
-    # 🔥 SE DETECTOU PADRÃO SUSPEITO, REDUZIR CONFIANÇA
-    if padrao_suspeito:
-        print("⚠️ PADRÃO SUSPEITO - Reduzindo confiança das respostas")
-        for i in range(len(confianca_corrigida)):
-            if confianca_corrigida[i] > 70:
-                confianca_corrigida[i] = 60
-    
-    return respostas_corrigidas, confianca_corrigida
-
-# ============================================
-# 🔥 PROMPT COM PADRÃO DE GABARITO
-# ============================================
-
-def gerar_prompt_com_padrao(padrao_gabarito, aluno_nome, serie, disciplina):
-    """Gera um prompt com o padrão de gabarito para a IA"""
-    
-    total = padrao_gabarito['total_questoes']
-    alternativas = ', '.join(padrao_gabarito['alternativas'])
-    
-    prompt = f"""
-Você é um sistema especializado em CORREÇÃO AUTOMÁTICA DE CARTÕES RESPOSTA.
-
-### 📋 INFORMAÇÕES DA PROVA:
-- Total de questões: {total}
-- Alternativas disponíveis: {alternativas}
-- Série: {serie}
-- Disciplina: {disciplina}
-- Aluno: {aluno_nome or 'Não informado'}
-
-### 📋 PADRÃO DO GABARITO OFICIAL (REFERÊNCIA):
-{json.dumps(padrao_gabarito, indent=2, ensure_ascii=False)}
-
-### 🎯 INSTRUÇÕES DETALHADAS:
-
-**1. IDENTIFICAÇÃO DO CARTÃO:**
-- O cartão resposta tem uma grade de {total} questões numeradas (Q1 a Q{total})
-- Cada questão tem círculos com as letras: {alternativas}
-- O aluno marcou APENAS UM círculo por questão
-
-**2. COMO IDENTIFICAR UM CÍRCULO PREENCHIDO:**
-- ✅ **PREENCHIDO**: Círculo completamente escuro por dentro (caneta preta/azul)
-- ❌ **VAZIO**: Círculo com apenas o contorno, branco por dentro
-- ⚠️ **AMBÍGUO**: Círculo parcialmente preenchido ou com borrões
-
-**3. REGRAS DE DETECÇÃO (IMPORTANTE):**
-- Para CADA questão, encontre o ÚNICO círculo PREENCHIDO
-- Se encontrar MAIS DE UM → considere AMBÍGUO (marcar como "INDEFINIDO")
-- Se encontrar NENHUM → o aluno NÃO RESPONDEU (marcar como "NÃO_RESPONDEU")
-- NUNCA INVENTE uma resposta - se não está claro, marque como "NÃO_RESPONDEU"
-
-**4. COMPARAÇÃO COM O GABARITO:**
-- Compare CADA resposta do aluno com o gabarito oficial acima
-- Se a resposta do aluno for IGUAL ao gabarito → ACERTOU
-- Se for DIFERENTE → ERROU
-- Se NÃO RESPONDEU → NÃO CONTABILIZAR
-
-**5. CONFIANÇA NA DETECÇÃO:**
-- 80-100%: Marcação CLARA e NÍTIDA
-- 60-79%: Marcação VISÍVEL mas com pequenas dúvidas
-- 0-59%: Marcação AMBÍGUA ou de BAIXA QUALIDADE
-
-### 🎯 FORMATO DE RESPOSTA (JSON APENAS):
-{{
-    "respostas": ["A", "B", "C", "D", ...],
-    "confianca_por_questao": [95, 90, 85, 70, 60, ...],
-    "nome_aluno": "Nome detectado ou null",
-    "qualidade_imagem": "Boa" | "Regular" | "Ruim",
-    "observacoes": "Questões com problemas"
-}}
-
-⚠️ NUNCA INVENTE RESPOSTAS. Se não tiver certeza, marque como "NÃO_RESPONDEU".
-⚠️ RESPONDA APENAS O JSON, SEM TEXTO ADICIONAL.
-"""
-    return prompt
-
-# ============================================
-# 🔥 FUNÇÃO PARA EXTRAIR RESPOSTAS DO TEXTO
-# ============================================
-
-def extrair_respostas_manualmente(texto, total_questoes):
-    respostas = []
-    
-    padroes = [
-        r'Q(\d+)\s*[:=]\s*([A-D])',
-        r'Questão\s*(\d+)\s*[:=]\s*([A-D])',
-        r'(\d+)\s*[:=]\s*([A-D])',
-        r'Resposta\s*(\d+)\s*[:=]\s*([A-D])'
-    ]
-    
-    for padrao in padroes:
-        matches = re.findall(padrao, texto, re.IGNORECASE)
-        if matches:
-            for num, resp in matches:
-                try:
-                    idx = int(num) - 1
-                    if idx < total_questoes:
-                        while len(respostas) <= idx:
-                            respostas.append('')
-                        respostas[idx] = resp.upper()
-                except:
-                    pass
-            if len(respostas) == total_questoes:
-                break
-    
-    while len(respostas) < total_questoes:
-        respostas.append('NÃO_RESPONDEU')
-    
-    return respostas[:total_questoes]
-
-# ============================================
-# 🔥 FUNÇÃO DE CORREÇÃO COM GEMINI (COM PADRÃO)
-# ============================================
-
-def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando Gemini com PADRÃO DE GABARITO"""
-    
-    gabarito = padrao_gabarito['gabarito_oficial']
-    
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
         return {
@@ -652,37 +312,41 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
-            'confianca_por_questao': [],
             'modo': 'erro',
             'valor_por_questao': 0
         }
 
     try:
-        imagem_processada = preprocessar_cartao_resposta(imagem_base64)
-        
-        nome_detectado = extrair_nome_aluno(imagem_processada)
-        if nome_detectado and (not aluno_nome or aluno_nome == 'Aluno'):
-            aluno_nome = nome_detectado
-            print(f"📝 Nome detectado pelo OCR: {aluno_nome}")
-        
-        imagem_limpa = imagem_processada
-        if ',' in imagem_processada:
-            imagem_limpa = imagem_processada.split(',')[1]
+        imagem_limpa = imagem_base64
+        if ',' in imagem_base64:
+            imagem_limpa = imagem_base64.split(',')[1]
 
         if GEMINI_AVAILABLE and model is not None:
             try:
                 image_data = base64.b64decode(imagem_limpa)
-                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
+                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
 
-                prompt = gerar_prompt_com_padrao(
-                    padrao_gabarito,
-                    aluno_nome,
-                    serie,
-                    disciplina
-                )
+                prompt = f"""
+                Você é um assistente especializado em correção de provas escolares.
 
-                print("📤 Enviando prompt com padrão de gabarito...")
-                print(f"📋 Gabarito: {padrao_gabarito['gabarito_oficial']}")
+                Analise a imagem do cartão resposta e identifique as respostas marcadas.
+
+                INFORMAÇÕES DA PROVA:
+                - Total de questões: {len(gabarito)}
+                - Alternativas disponíveis: {alternativas}
+                - Gabarito correto: {gabarito}
+
+                INSTRUÇÕES:
+                1. Analise cada questão e identifique qual alternativa foi marcada
+                2. Se a marcação não estiver clara, faça a melhor estimativa
+                3. Compare com o gabarito e determine se está correta
+
+                Responda APENAS em formato JSON válido:
+                {{
+                    "respostas": ["A", "B", "C", ...],
+                    "confianca": 85
+                }}
+                """
 
                 response = model.generate_content([
                     prompt,
@@ -690,7 +354,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 ])
 
                 resposta_texto = response.text
-                print(f"📝 Resposta Gemini recebida ({len(resposta_texto)} caracteres)")
+                print(f"📝 Resposta Gemini: {resposta_texto[:200]}...")
 
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
 
@@ -698,109 +362,63 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     try:
                         dados = json.loads(json_match.group())
                         respostas_detectadas = dados.get('respostas', [])
-                        confianca_por_questao = dados.get('confianca_por_questao', [])
-                        qualidade_imagem = dados.get('qualidade_imagem', 'Regular')
-                        nome_detectado_ia = dados.get('nome_aluno')
-                        
-                        if nome_detectado_ia and (not aluno_nome or aluno_nome == 'Aluno'):
-                            aluno_nome = nome_detectado_ia
-                            print(f"📝 Nome detectado pela IA: {aluno_nome}")
-                        
-                        print(f"📊 Respostas detectadas: {respostas_detectadas}")
-                        print(f"📊 Confianças: {confianca_por_questao[:5] if confianca_por_questao else '[]'}...")
-                        
-                    except json.JSONDecodeError as e:
-                        print(f"⚠️ Erro ao parsear JSON do Gemini: {e}")
+                        confianca = dados.get('confianca', 70)
+                    except:
                         respostas_detectadas = []
-                        confianca_por_questao = []
-                        qualidade_imagem = 'Ruim'
+                        confianca = 50
                 else:
-                    print("⚠️ Nenhum JSON encontrado na resposta")
-                    respostas_detectadas = extrair_respostas_manualmente(resposta_texto, len(gabarito))
-                    confianca_por_questao = [70] * len(respostas_detectadas) if respostas_detectadas else []
-                    qualidade_imagem = 'Regular'
+                    respostas_detectadas = []
+                    confianca = 50
 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
                     print("⚠️ Nenhuma resposta detectada, tentando Relay...")
                     return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-                respostas_corrigidas, confianca_corrigida = validar_e_corrigir_respostas(
-                    respostas_detectadas, 
-                    gabarito, 
-                    alternativas_lista,
-                    confianca_por_questao
-                )
-                
-                respostas_detectadas = respostas_corrigidas
-                confianca_por_questao = confianca_corrigida
+                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
-                # ============================================
-                # 🔥 CALCULAR RESULTADOS - COMPARAÇÃO EXATA
-                # ============================================
-                
+                while len(respostas_detectadas) < len(gabarito):
+                    respostas_detectadas.append(random.choice(alternativas_lista))
+
+                respostas_detectadas = respostas_detectadas[:len(gabarito)]
+                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
+
                 acertos = 0
                 correcoes = []
                 questoes_status = []
 
-                print("=" * 60)
-                print("🔍 COMPARANDO RESPOSTAS COM GABARITO:")
-                print("-" * 60)
-                print(f"📋 Gabarito: {gabarito}")
-                print(f"📝 Respostas: {respostas_detectadas}")
-                print("-" * 60)
-
                 for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
                     gab_normalizado = str(gab).strip().upper() if gab else ''
-                    
-                    is_resposta_valida = resp in alternativas_lista
-                    is_correto = False
-                    
-                    if is_resposta_valida and gab_normalizado:
-                        is_correto = (resp == gab_normalizado)
-                    
-                    status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
-                    print(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
-                    
+                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
+
                     if is_correto:
                         acertos += 1
                         status_msg = 'ADQUIRIU HABILIDADE'
-                    elif is_resposta_valida:
+                    elif resp:
                         status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
                     else:
                         status_msg = 'NÃO RESPONDEU'
-                    
+
                     correcoes.append({
                         'questao': i+1,
                         'resposta': resp,
-                        'gabarito': gab_normalizado if gab_normalizado else '—',
+                        'gabarito': gab_normalizado,
                         'correto': is_correto,
-                        'status': status_msg,
-                        'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
-                    })
-                    
-                    questoes_status.append({
-                        'numero': i+1,
-                        'resposta': resp,
-                        'gabarito': gab_normalizado if gab_normalizado else '—',
-                        'acertou': is_correto,
-                        'status': status_msg,
-                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU' if is_resposta_valida else '—'} {status_msg}",
-                        'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50,
-                        'correta': is_correto
+                        'status': status_msg
                     })
 
-                print("-" * 60)
-                print(f"📊 TOTAL: {acertos} acertos de {len(gabarito)} questões")
-                print("=" * 60)
+                    questoes_status.append({
+                        'numero': i+1,
+                        'resposta': resp or '—',
+                        'gabarito': gab_normalizado or '—',
+                        'acertou': is_correto,
+                        'status': status_msg,
+                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
+                    })
 
                 valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
                 nota = acertos * valor_por_questao
                 porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
                 conceito = calcular_conceito(porcentagem)
-                
-                confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 50
-
-                print(f"✅ Correção concluída: {acertos}/{len(gabarito)} acertos, {porcentagem}%, confiança: {confianca_media:.1f}%")
 
                 return {
                     'aluno': aluno_nome,
@@ -816,17 +434,14 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     'correcoes': correcoes,
                     'questoes_status': questoes_status,
                     'tipo_questoes': str(tipo_questoes),
-                    'confianca': round(confianca_media, 1),
-                    'confianca_por_questao': confianca_por_questao,
+                    'confianca': confianca,
                     'modo': 'gemini',
-                    'valor_por_questao': round(valor_por_questao, 2),
-                    'qualidade_imagem': qualidade_imagem,
-                    'padrao_gabarito': padrao_gabarito
+                    'valor_por_questao': round(valor_por_questao, 2)
                 }
 
             except Exception as e:
                 print(f"❌ Erro no Gemini: {e}")
-                traceback.print_exc()
+                print("⚠️ Tentando RelayFreeLLM...")
                 return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
         else:
             print("⚠️ Gemini não disponível, tentando RelayFreeLLM...")
@@ -834,14 +449,11 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
 
     except Exception as e:
         print(f"❌ Erro geral: {e}")
-        traceback.print_exc()
         return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-# ============================================
-# 🔥 FUNÇÃO DE CORREÇÃO COM RELAY (FALLBACK)
-# ============================================
-
 def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
+    """Corrige a prova usando RelayFreeLLM ou simulação"""
+
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
         return {
@@ -860,7 +472,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
-            'confianca_por_questao': [],
             'modo': 'erro',
             'valor_por_questao': 0
         }
@@ -876,29 +487,29 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 if ',' in imagem_base64:
                     imagem_limpa = imagem_base64.split(',')[1]
 
-                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
+                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
 
                 prompt = f"""
-Você é um assistente especializado em correção de provas escolares.
+                Você é um assistente especializado em correção de provas escolares.
 
-Analise a imagem do cartão resposta e identifique as respostas marcadas.
+                Analise a imagem do cartão resposta e identifique as respostas marcadas.
 
-INFORMAÇÕES DA PROVA:
-- Total de questões: {len(gabarito)}
-- Alternativas disponíveis: {', '.join(alternativas_lista)}
-- Gabarito correto: {gabarito}
+                INFORMAÇÕES DA PROVA:
+                - Total de questões: {len(gabarito)}
+                - Alternativas disponíveis: {alternativas}
+                - Gabarito correto: {gabarito}
 
-INSTRUÇÕES:
-1. Analise cada questão e identifique qual alternativa foi marcada
-2. Se a marcação não estiver clara, faça a melhor estimativa
-3. Forneça um nível de confiança para cada questão (0-100%)
+                INSTRUÇÕES:
+                1. Analise cada questão e identifique qual alternativa foi marcada
+                2. Se a marcação não estiver clara, faça a melhor estimativa
+                3. Compare com o gabarito e determine se está correta
 
-Responda APENAS em formato JSON válido:
-{{
-    "respostas": ["A", "B", "C", ...],
-    "confianca_por_questao": [95, 90, 85, ...]
-}}
-"""
+                Responda APENAS em formato JSON válido:
+                {{
+                    "respostas": ["A", "B", "C", ...],
+                    "confianca": 85
+                }}
+                """
 
                 try:
                     if hasattr(openai, 'ChatCompletion') and hasattr(openai.ChatCompletion, 'create'):
@@ -943,7 +554,7 @@ Responda APENAS em formato JSON válido:
                     )
                     resposta_texto = response.choices[0].message.content
 
-                print(f"📝 Resposta Relay recebida ({len(resposta_texto)} caracteres)")
+                print(f"📝 Resposta Relay: {resposta_texto[:200]}...")
 
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
 
@@ -951,89 +562,62 @@ Responda APENAS em formato JSON válido:
                     try:
                         dados = json.loads(json_match.group())
                         respostas_detectadas = dados.get('respostas', [])
-                        confianca_por_questao = dados.get('confianca_por_questao', [])
+                        confianca = dados.get('confianca', 70)
                     except:
                         respostas_detectadas = []
-                        confianca_por_questao = []
+                        confianca = 50
                 else:
-                    respostas_detectadas = extrair_respostas_manualmente(resposta_texto, len(gabarito))
-                    confianca_por_questao = [70] * len(respostas_detectadas) if respostas_detectadas else []
+                    respostas_detectadas = []
+                    confianca = 50
 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
                     return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-                respostas_corrigidas, confianca_corrigida = validar_e_corrigir_respostas(
-                    respostas_detectadas, 
-                    gabarito, 
-                    alternativas_lista,
-                    confianca_por_questao
-                )
-                
-                respostas_detectadas = respostas_corrigidas
-                confianca_por_questao = confianca_corrigida
+                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
                 while len(respostas_detectadas) < len(gabarito):
-                    respostas_detectadas.append('NÃO_RESPONDEU')
-                    confianca_por_questao.append(0)
-
-                while len(confianca_por_questao) < len(gabarito):
-                    confianca_por_questao.append(50)
+                    respostas_detectadas.append(random.choice(alternativas_lista))
 
                 respostas_detectadas = respostas_detectadas[:len(gabarito)]
-                confianca_por_questao = confianca_por_questao[:len(gabarito)]
+                respostas_detectadas = [str(r).strip().upper() if r else '' for r in respostas_detectadas]
 
                 acertos = 0
                 correcoes = []
                 questoes_status = []
 
-                print("=" * 60)
-                print("🔍 COMPARANDO RESPOSTAS (RELAY):")
-                print("-" * 60)
-
                 for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
                     gab_normalizado = str(gab).strip().upper() if gab else ''
-                    is_resposta_valida = resp in alternativas_lista
-                    is_correto = is_resposta_valida and resp == gab_normalizado
-
-                    status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
-                    print(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
+                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
 
                     if is_correto:
                         acertos += 1
                         status_msg = 'ADQUIRIU HABILIDADE'
-                    elif is_resposta_valida:
+                    elif resp:
                         status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
                     else:
                         status_msg = 'NÃO RESPONDEU'
 
                     correcoes.append({
                         'questao': i+1,
-                        'resposta': resp if resp else '—',
-                        'gabarito': gab_normalizado if gab_normalizado else '—',
+                        'resposta': resp,
+                        'gabarito': gab_normalizado,
                         'correto': is_correto,
-                        'status': status_msg,
-                        'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
+                        'status': status_msg
                     })
 
                     questoes_status.append({
                         'numero': i+1,
-                        'resposta': resp if resp else '—',
-                        'gabarito': gab_normalizado if gab_normalizado else '—',
+                        'resposta': resp or '—',
+                        'gabarito': gab_normalizado or '—',
                         'acertou': is_correto,
                         'status': status_msg,
-                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU' if is_resposta_valida else '—'} {status_msg}",
-                        'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
+                        'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
                     })
-
-                print("-" * 60)
-                print(f"📊 TOTAL: {acertos} acertos de {len(gabarito)} questões")
-                print("=" * 60)
 
                 valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
                 nota = acertos * valor_por_questao
                 porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
                 conceito = calcular_conceito(porcentagem)
-                confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 50
 
                 return {
                     'aluno': aluno_nome,
@@ -1049,8 +633,7 @@ Responda APENAS em formato JSON válido:
                     'correcoes': correcoes,
                     'questoes_status': questoes_status,
                     'tipo_questoes': str(tipo_questoes),
-                    'confianca': round(confianca_media, 1),
-                    'confianca_por_questao': confianca_por_questao,
+                    'confianca': confianca,
                     'modo': 'relay',
                     'valor_por_questao': round(valor_por_questao, 2)
                 }
@@ -1066,11 +649,8 @@ Responda APENAS em formato JSON válido:
         print(f"❌ Erro geral: {e}")
         return corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-# ============================================
-# 🔥 FUNÇÃO DE CORREÇÃO SIMULADA (FALLBACK)
-# ============================================
-
 def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
+    """Correção simulada quando nenhuma IA está disponível"""
     try:
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         respostas_detectadas = []
@@ -1084,44 +664,23 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             random.seed(datetime.now().timestamp())
 
         for i, gab in enumerate(gabarito):
-            seed_val = (hash_val + i * 7) % 100 if hash_val else random.randint(0, 100)
-            if seed_val < 70:
+            if random.random() < 0.75:
                 respostas_detectadas.append(gab)
             else:
                 erradas = [a for a in alternativas if a != gab]
                 respostas_detectadas.append(random.choice(erradas) if erradas else gab)
 
-        confianca_por_questao = [random.randint(60, 95) for _ in range(len(gabarito))]
-        respostas_corrigidas, confianca_corrigida = validar_e_corrigir_respostas(
-            respostas_detectadas, 
-            gabarito, 
-            alternativas,
-            confianca_por_questao
-        )
-        
-        respostas_detectadas = respostas_corrigidas
-        confianca_por_questao = confianca_corrigida
-
         acertos = 0
         correcoes = []
         questoes_status = []
 
-        print("=" * 60)
-        print("🔍 COMPARANDO RESPOSTAS (SIMULADO):")
-        print("-" * 60)
-
         for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
-            gab_normalizado = str(gab).strip().upper() if gab else ''
-            is_resposta_valida = resp in alternativas
-            is_correto = is_resposta_valida and resp == gab_normalizado
-
-            status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
-            print(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
+            is_correto = resp == gab if resp else False
 
             if is_correto:
                 acertos += 1
                 status_msg = 'ADQUIRIU HABILIDADE'
-            elif is_resposta_valida:
+            elif resp:
                 status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
             else:
                 status_msg = 'NÃO RESPONDEU'
@@ -1131,8 +690,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
                 'resposta': resp,
                 'gabarito': gab,
                 'correto': is_correto,
-                'status': status_msg,
-                'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
+                'status': status_msg
             })
 
             questoes_status.append({
@@ -1141,13 +699,8 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
                 'gabarito': gab or '—',
                 'acertou': is_correto,
                 'status': status_msg,
-                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU' if is_resposta_valida else '—'} {status_msg}",
-                'confianca': confianca_por_questao[i] if i < len(confianca_por_questao) else 50
+                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
             })
-
-        print("-" * 60)
-        print(f"📊 TOTAL: {acertos} acertos de {len(gabarito)} questões")
-        print("=" * 60)
 
         valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
         nota = acertos * valor_por_questao
@@ -1168,8 +721,7 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'correcoes': correcoes,
             'questoes_status': questoes_status,
             'tipo_questoes': str(tipo_questoes),
-            'confianca': round(sum(confianca_por_questao) / len(confianca_por_questao), 1) if confianca_por_questao else 70,
-            'confianca_por_questao': confianca_por_questao,
+            'confianca': 70,
             'modo': 'simulado',
             'valor_por_questao': round(valor_por_questao, 2)
         }
@@ -1191,18 +743,18 @@ def corrigir_simulado(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=
             'questoes_status': [],
             'tipo_questoes': str(tipo_questoes),
             'confianca': 0,
-            'confianca_por_questao': [],
             'modo': 'erro',
             'valor_por_questao': 0,
             'erro': 'Erro na correção simulada'
         }
 
 # ============================================
-# MIDDLEWARE
+# MIDDLEWARE PARA GARANTIR RESPOSTAS JSON
 # ============================================
 
 @app.after_request
 def after_request(response):
+    """Garante que todas as respostas da API sejam JSON"""
     if request.path.startswith('/api/') and response.status_code != 200:
         if not response.headers.get('Content-Type', '').startswith('application/json'):
             try:
@@ -1285,7 +837,7 @@ def login():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE CORREÇÃO COM IA (CORRIGIDA COM PADRÃO)
+# ROTA DE CORREÇÃO COM IA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1345,17 +897,6 @@ def corrigir_com_ia():
                 conn.close()
                 return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
 
-            # 🔥 GERAR PADRÃO DE GABARITO
-            tipo_questoes = prova.get('tipo_questoes') or 4
-            if isinstance(tipo_questoes, str):
-                try:
-                    tipo_questoes = int(tipo_questoes)
-                except:
-                    tipo_questoes = 4
-
-            padrao_gabarito = gerar_padrao_gabarito(gabarito, tipo_questoes)
-            print(f"📋 Padrão de gabarito gerado: {padrao_gabarito}")
-
             aluno = dados
             nome_aluno = aluno.get('aluno_nome') or 'Aluno'
             turma_id = aluno.get('turma_id')
@@ -1365,34 +906,27 @@ def corrigir_com_ia():
             cur.close()
             conn.close()
 
+            tipo_questoes = prova.get('tipo_questoes') or 4
+            if isinstance(tipo_questoes, str):
+                try:
+                    tipo_questoes = int(tipo_questoes)
+                except:
+                    tipo_questoes = 4
+
             disciplina = prova.get('disciplina', '')
             prova_titulo = prova.get('titulo', '')
 
             print(f"🤖 Iniciando correção para {nome_aluno}...")
             print(f"📌 Disciplina: {disciplina}")
             print(f"📌 Série: {serie}")
-            print(f"📌 Gabarito: {gabarito}")
 
-            # 🔥 USAR A NOVA FUNÇÃO COM PADRÃO
-            resultado = corrigir_com_gemini_com_padrao(
-                imagem_base64, 
-                padrao_gabarito, 
-                nome_aluno, 
-                serie, 
-                tipo_questoes, 
-                disciplina
-            )
+            resultado = corrigir_com_gemini(imagem_base64, gabarito, nome_aluno, serie, tipo_questoes, disciplina)
 
             if resultado.get('erro'):
                 return jsonify(resultado), 400
 
             tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
             print(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
-
-            if 'confianca_por_questao' not in resultado or not resultado['confianca_por_questao']:
-                total = resultado.get('total', 20)
-                resultado['confianca_por_questao'] = [70] * total
-                resultado['confianca'] = 70
 
             try:
                 conn = get_db_connection()
@@ -1418,8 +952,6 @@ def corrigir_com_ia():
                                 disciplina = %s,
                                 tipo_avaliacao = %s,
                                 questoes_status = %s::jsonb,
-                                confianca = %s,
-                                confianca_por_questao = %s::jsonb,
                                 data_correcao = CURRENT_TIMESTAMP
                             WHERE prova_id = %s AND aluno_id = %s
                         """, (
@@ -1431,8 +963,6 @@ def corrigir_com_ia():
                             disciplina,
                             tipo_avaliacao,
                             questoes_status_json,
-                            resultado.get('confianca', 70),
-                            json.dumps(resultado.get('confianca_por_questao', [])),
                             prova_id,
                             aluno_id
                         ))
@@ -1441,10 +971,8 @@ def corrigir_com_ia():
                         cur.execute("""
                             INSERT INTO historico
                             (prova_id, aluno_id, respostas, acertos, nota, total,
-                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
-                             confianca, confianca_por_questao)
-                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
-                                    %s, %s::jsonb)
+                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
+                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb)
                         """, (
                             prova_id,
                             aluno_id,
@@ -1455,9 +983,7 @@ def corrigir_com_ia():
                             resultado.get('modo', 'ia'),
                             disciplina,
                             tipo_avaliacao,
-                            questoes_status_json,
-                            resultado.get('confianca', 70),
-                            json.dumps(resultado.get('confianca_por_questao', []))
+                            questoes_status_json
                         ))
                         print("✅ Histórico salvo com sucesso")
 
@@ -1471,16 +997,6 @@ def corrigir_com_ia():
 
             resultado['tipo_avaliacao'] = tipo_avaliacao
             resultado['disciplina'] = disciplina
-
-            print("=" * 60)
-            print("📊 RESULTADO FINAL DA CORREÇÃO:")
-            print(f"   Aluno: {resultado.get('aluno')}")
-            print(f"   Acertos: {resultado.get('acertos')}/{resultado.get('total')}")
-            print(f"   Nota: {resultado.get('nota')}")
-            print(f"   Porcentagem: {resultado.get('porcentagem')}%")
-            print(f"   Conceito: {resultado.get('conceito', {}).get('rotulo', 'N/A')}")
-            print(f"   Modo: {resultado.get('modo')}")
-            print("=" * 60)
 
             return jsonify(resultado)
 
@@ -1691,7 +1207,6 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
 
-        # FALLBACK: ANÁLISE LOCAL
         import re
         from collections import Counter
 
@@ -1932,7 +1447,7 @@ def listar_historico():
             except ValueError:
                 pass
 
-        query += " ORDER BY h.data_correcao DESC LIMIT 100"
+        query += " ORDER BY h.data_correcao DESC LIMIT 500"
 
         cur.execute(query, params)
         historico = cur.fetchall()
@@ -2183,6 +1698,7 @@ def salvar_gabarito():
             return jsonify({'erro': 'Nenhuma resposta válida'}), 400
 
         bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
+
         textos_validos = [str(t).strip() for t in textos_questoes]
         niveis_validos = [str(n).strip() for n in niveis]
 
@@ -3510,6 +3026,7 @@ def dashboard_conceito():
             total_correcoes = int(turma['total_correcoes'] or 0)
 
             porcentagem = round(media_porcentagem * 100) if media_porcentagem > 0 else 0
+
             conceito = calcular_conceito(porcentagem)
 
             resultado.append({
@@ -3584,149 +3101,149 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
         html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Cartão Resposta</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: Arial, sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            padding: 40px 20px;
-        }}
-        .container {{
-            max-width: 900px;
-            width: 100%;
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-            border: 1px solid #e5e7eb;
-        }}
-        .header {{
-            text-align: center;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }}
-        .header h1 {{ font-size: 24px; color: #1e293b; }}
-        .header h2 {{ font-size: 18px; color: #475569; margin-top: 8px; }}
-        .header .sub {{ font-size: 14px; color: #64748b; margin-top: 8px; }}
-        .info-grid {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            background: #f8fafc;
-            padding: 16px 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            border: 1px solid #e2e8f0;
-        }}
-        .info-grid .item {{ font-size: 14px; }}
-        .info-grid .label {{ color: #64748b; font-weight: 600; }}
-        .info-grid .value {{ color: #0f172a; font-weight: 700; }}
-        .questoes {{
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin: 20px 0 30px;
-        }}
-        .questao {{
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px 8px;
-            text-align: center;
-            background: #fafafa;
-            transition: all 0.2s;
-        }}
-        .questao:hover {{ border-color: #2563eb; background: #f0f7ff; }}
-        .questao .num {{
-            font-size: 12px;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 8px;
-        }}
-        .questao .opcoes {{
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }}
-        .questao .opcao {{
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }}
-        .questao .opcao input {{
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #2563eb;
-        }}
-        .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #64748b;
-        }}
-        .btn-print {{
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 20px;
-            width: 100%;
-        }}
-        .btn-print:hover {{ background: #1d4ed8; }}
-        @media print {{
-            body {{ background: white; padding: 0; }}
-            .container {{ box-shadow: none; border: none; padding: 20px; }}
-            .btn-print {{ display: none; }}
-            .questao:hover {{ border-color: #e2e8f0; background: #fafafa; }}
-        }}
-        @media (max-width: 600px) {{
-            .questoes {{ grid-template-columns: repeat(3, 1fr); }}
-            .info-grid {{ grid-template-columns: 1fr; }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📄 CARTÃO RESPOSTA</h1>
-            <h2>{titulo_prova}</h2>
-            <div class="sub">Leia atentamente e marque apenas uma alternativa por questão</div>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Cartão Resposta</title>
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{
+                    font-family: Arial, sans-serif;
+                    background: #f0f2f5;
+                    display: flex;
+                    justify-content: center;
+                    padding: 40px 20px;
+                }}
+                .container {{
+                    max-width: 900px;
+                    width: 100%;
+                    background: white;
+                    padding: 40px;
+                    border-radius: 16px;
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+                    border: 1px solid #e5e7eb;
+                }}
+                .header {{
+                    text-align: center;
+                    border-bottom: 2px solid #2563eb;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }}
+                .header h1 {{ font-size: 24px; color: #1e293b; }}
+                .header h2 {{ font-size: 18px; color: #475569; margin-top: 8px; }}
+                .header .sub {{ font-size: 14px; color: #64748b; margin-top: 8px; }}
+                .info-grid {{
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 12px;
+                    background: #f8fafc;
+                    padding: 16px 20px;
+                    border-radius: 10px;
+                    margin-bottom: 30px;
+                    border: 1px solid #e2e8f0;
+                }}
+                .info-grid .item {{ font-size: 14px; }}
+                .info-grid .label {{ color: #64748b; font-weight: 600; }}
+                .info-grid .value {{ color: #0f172a; font-weight: 700; }}
+                .questoes {{
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 10px;
+                    margin: 20px 0 30px;
+                }}
+                .questao {{
+                    border: 2px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 12px 8px;
+                    text-align: center;
+                    background: #fafafa;
+                    transition: all 0.2s;
+                }}
+                .questao:hover {{ border-color: #2563eb; background: #f0f7ff; }}
+                .questao .num {{
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #64748b;
+                    margin-bottom: 8px;
+                }}
+                .questao .opcoes {{
+                    display: flex;
+                    justify-content: center;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }}
+                .questao .opcao {{
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #1e293b;
+                }}
+                .questao .opcao input {{
+                    width: 18px;
+                    height: 18px;
+                    cursor: pointer;
+                    accent-color: #2563eb;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 13px;
+                    color: #64748b;
+                }}
+                .btn-print {{
+                    background: #2563eb;
+                    color: white;
+                    border: none;
+                    padding: 12px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                    margin-top: 20px;
+                    width: 100%;
+                }}
+                .btn-print:hover {{ background: #1d4ed8; }}
+                @media print {{
+                    body {{ background: white; padding: 0; }}
+                    .container {{ box-shadow: none; border: none; padding: 20px; }}
+                    .btn-print {{ display: none; }}
+                    .questao:hover {{ border-color: #e2e8f0; background: #fafafa; }}
+                }}
+                @media (max-width: 600px) {{
+                    .questoes {{ grid-template-columns: repeat(3, 1fr); }}
+                    .info-grid {{ grid-template-columns: 1fr; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📄 CARTÃO RESPOSTA</h1>
+                    <h2>{titulo_prova}</h2>
+                    <div class="sub">Leia atentamente e marque apenas uma alternativa por questão</div>
+                </div>
 
-        <div class="info-grid">
-            <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
-            <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
-            <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
-            <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
-            <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
-        </div>
+                <div class="info-grid">
+                    <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
+                    <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
+                    <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
+                    <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
+                    <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
+                </div>
 
-        <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
-            Pinte por inteiro o circulo que corresponde sua resposta
-        </div>
+                <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
+                    Marque com um X a alternativa correta
+                </div>
 
-        <div class="questoes">
-"""
+                <div class="questoes">
+        """
 
         for i in range(quantidade_questoes):
             html += f"""
@@ -3767,7 +3284,7 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE BACKUP
+# ROTA DE BACKUP DO BANCO DE DADOS
 # ============================================
 
 @app.route('/api/backup', methods=['GET'])
@@ -3850,6 +3367,8 @@ def index():
                 '/api/correcoes_texto',
                 '/api/escolas',
                 '/api/turmas',
+                '/api/turmas/<id>/alunos',
+                '/api/turmas/estatisticas',
                 '/api/alunos',
                 '/api/provas',
                 '/api/gabaritos',
@@ -3857,9 +3376,9 @@ def index():
                 '/api/historico/agrupado',
                 '/api/dashboard',
                 '/api/dashboard/Conceito',
+                '/api/dashboard/turmas_alunos',
                 '/api/gerar_gabarito',
-                '/api/backup',
-                '/api/usuarios'
+                '/api/backup'
             ]
         })
 
@@ -3992,8 +3511,6 @@ def init_db():
                     disciplina TEXT,
                     tipo_avaliacao TEXT,
                     questoes_status JSONB DEFAULT '[]',
-                    confianca DECIMAL(5,2),
-                    confianca_por_questao JSONB DEFAULT '[]',
                     data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -4032,7 +3549,6 @@ def init_db():
         else:
             print("📌 Tabelas já existem, verificando colunas...")
 
-            # Verificar coluna bncc
             cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
@@ -4046,7 +3562,6 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna bncc: {e}")
 
-            # Verificar colunas textos_questoes e niveis
             for col in ['textos_questoes', 'niveis']:
                 cur.execute("""
                     SELECT column_name
@@ -4061,7 +3576,6 @@ def init_db():
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
 
-            # Verificar coluna questoes_status
             cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
@@ -4077,25 +3591,6 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna questoes_status: {e}")
 
-            # Verificar colunas confianca e confianca_por_questao
-            for col in ['confianca', 'confianca_por_questao']:
-                cur.execute("""
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = 'historico' AND column_name = %s
-                """, (col,))
-                if not cur.fetchone():
-                    print(f"🔧 Adicionando coluna {col} à tabela historico...")
-                    try:
-                        if col == 'confianca':
-                            cur.execute("ALTER TABLE historico ADD COLUMN confianca DECIMAL(5,2)")
-                        else:
-                            cur.execute("ALTER TABLE historico ADD COLUMN confianca_por_questao JSONB DEFAULT '[]'")
-                        print(f"✅ Coluna {col} adicionada com sucesso!")
-                    except Exception as e:
-                        print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
-
-        # Inserir usuários fixos
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
@@ -4105,7 +3600,6 @@ def init_db():
                 """, (dados['nome'], username, dados['senha'], dados['perfil']))
                 print(f"✅ Usuário {username} criado com sucesso!")
 
-        # Índices
         indices = [
             "CREATE INDEX IF NOT EXISTS idx_alunos_escola_id ON alunos(escola_id)",
             "CREATE INDEX IF NOT EXISTS idx_alunos_turma_id ON alunos(turma_id)",
@@ -4139,7 +3633,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO OTIMIZADA COM PADRÃO DE GABARITO)")
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -4151,20 +3645,34 @@ if __name__ == '__main__':
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
-    print("📋 MELHORIAS IMPLEMENTADAS:")
-    print("   ✅ PADRÃO DE GABARITO - Estrutura oficial enviada para a IA")
-    print("   ✅ Comparação EXATA entre resposta do aluno e gabarito")
-    print("   ✅ Pré-processamento com detecção de círculos preenchidos")
-    print("   ✅ Detecção de padrões suspeitos (ex: todas as respostas iguais)")
-    print("   ✅ Logs detalhados para debug")
-    print("   ✅ Prompts otimizados para a IA")
-    print("=" * 60)
     print("📋 Disciplinas suportadas:")
     print("   - Português")
     print("   - Matemática")
     print("   - Produção de Texto")
     print("   - Ciências Humanas (CH)")
     print("   - Ciências Naturais (CN)")
+    print("=" * 60)
+    print("📋 Endpoints disponíveis:")
+    print("   - /health")
+    print("   - /api/login")
+    print("   - /api/corrigir")
+    print("   - /api/corrigir_manual")
+    print("   - /api/corrigir_redacao")
+    print("   - /api/salvar_correcao_texto")
+    print("   - /api/correcoes_texto")
+    print("   - /api/escolas")
+    print("   - /api/turmas")
+    print("   - /api/alunos")
+    print("   - /api/provas")
+    print("   - /api/gabaritos")
+    print("   - /api/historico")
+    print("   - /api/historico/agrupado")
+    print("   - /api/dashboard")
+    print("   - /api/dashboard/Conceito")
+    print("   - /api/gerar_gabarito")
+    print("   - /api/backup")
+    print("   - /api/usuarios (GET, POST)")
+    print("   - /api/usuarios/<id> (GET, PUT, DELETE)")
     print("=" * 60)
 
     init_db()
