@@ -263,16 +263,189 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .upload-zone .uz-ico { font-size:40px; margin-bottom:8px; }
 .upload-zone .uz-hint { font-size:12px; color:var(--text3); margin-top:4px; }
 
-.gab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; margin:10px 0; }
-.gab-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 4px; text-align:center; display:flex; flex-direction:column; gap:2px; }
-.gab-num { font-size:9px; color:var(--text3); font-weight:700; }
-.gab-select { width:100%; padding:4px 2px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-weight:700; font-size:13px; text-align:center; outline:none; transition:all .2s; }
-.gab-select:focus { border-color:var(--blue); }
-.gab-select.filled { border-color:var(--green); background:rgba(16,185,129,0.08); }
-.gab-bncc { width:100%; padding:2px 2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center; outline:none; transition:border .2s; margin-top:2px; }
-.gab-bncc:focus { border-color:var(--purple); }
-.gab-texto { width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical; }
-.gab-nivel { width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px; }
+/* ============================================
+   🔥 GABARITO - ESTILOS MELHORADOS E MAIS VISÍVEIS
+   ============================================ */
+.gab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+    margin: 12px 0;
+}
+.gab-item {
+    background: var(--bg2);
+    border: 2.5px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.gab-item:hover {
+    border-color: var(--blue);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+}
+.gab-item .gab-num {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--blue);
+    background: rgba(59,130,246,0.12);
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+.gab-item .gab-select {
+    width: 100%;
+    padding: 8px 4px;
+    background: var(--bg);
+    border: 2px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 16px;
+    text-align: center;
+    outline: none;
+    transition: all .2s;
+    cursor: pointer;
+}
+.gab-item .gab-select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+}
+.gab-item .gab-select.filled {
+    border-color: var(--green);
+    background: rgba(16,185,129,0.1);
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.15);
+}
+.gab-item .gab-bncc {
+    width: 100%;
+    padding: 4px 6px;
+    background: var(--bg);
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 9px;
+    text-align: center;
+    outline: none;
+    transition: border .2s;
+    margin-top: 2px;
+}
+.gab-item .gab-bncc:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.15);
+}
+.gab-item .gab-texto {
+    width: 100%;
+    min-height: 60px;
+    background: var(--bg2);
+    border: 2px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 12px;
+    resize: vertical;
+    transition: border .2s;
+}
+.gab-item .gab-texto:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+.gab-item .gab-nivel {
+    width: 100%;
+    margin-top: 2px;
+    padding: 4px 6px;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 11px;
+    transition: border .2s;
+}
+.gab-item .gab-nivel:focus {
+    border-color: var(--purple);
+}
+.gab-item .gab-observacao {
+    width: 100%;
+    min-height: 30px;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 4px 6px;
+    font-size: 10px;
+    resize: vertical;
+    margin-top: 4px;
+    transition: border .2s;
+}
+.gab-item .gab-observacao:focus {
+    border-color: var(--text2);
+}
+.gab-item .gab-titulo {
+    width: 100%;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 4px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    transition: border .2s;
+}
+.gab-item .gab-titulo:focus {
+    border-color: var(--blue);
+}
+
+/* 🔥 TÍTULO DO GABARITO - MOSTRA O NOME DA PROVA */
+.gab-header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(59,130,246,0.2);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.gab-header-title .icon {
+    font-size: 20px;
+}
+.gab-header-title .prova-nome {
+    color: var(--blue);
+    font-weight: 800;
+}
+.gab-header-title .badge-disciplina {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    background: rgba(139,92,246,0.2);
+    color: var(--purple);
+    font-weight: 700;
+}
+
+.gab-grid-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 12px 0;
+}
+.gab-grid-texto .gab-item {
+    border-left: 4px solid var(--purple);
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.gab-select option { background: var(--bg2); color: var(--text); }
 
 .ai-hero { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.06)); border:1px solid rgba(139,92,246,0.15); border-radius:var(--r); padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
 .ai-hero-icon { font-size:44px; }
@@ -584,12 +757,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .habilidade-card { max-height: 350px; }
     .desempenho-resumo { grid-template-columns: 1fr 1fr; }
     .desempenho-info { grid-template-columns: 1fr 1fr; }
+    .gab-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+    .gab-item .gab-num { font-size: 12px; }
+    .gab-item .gab-select { font-size: 14px; padding: 6px 3px; }
+    .gab-header-title { font-size: 14px; flex-wrap: wrap; }
 }
 @media (max-width:480px) {
     .stats-grid { grid-template-columns:1fr; }
     .login-card { padding:24px 18px; margin:10px; }
     .cam-container { padding:14px; }
-    .gab-grid { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); }
+    .gab-grid { grid-template-columns:repeat(auto-fill,minmax(75px,1fr)); gap: 6px; }
+    .gab-item { padding: 6px 4px; }
+    .gab-item .gab-num { font-size: 10px; padding: 2px 6px; }
+    .gab-item .gab-select { font-size: 12px; padding: 4px 2px; }
+    .gab-item .gab-bncc { font-size: 7px; }
     .modal { padding:16px; }
     .correcao-aluno-info { grid-template-columns:1fr; }
     .correcao-manual-grid { grid-template-columns: repeat(4, 1fr); }
@@ -609,6 +790,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .desempenho-info { grid-template-columns: 1fr; }
     .questao-item .q-resp { font-size: 10px; }
     .questao-item .q-status-text { font-size: 6px; }
+    .gab-header-title { font-size: 12px; flex-direction: column; align-items: flex-start; }
 }
 
 /* ============================================
@@ -705,6 +887,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .desempenho-resumo .item .valor.blue { color: #004085 !important; }
     .desempenho-resumo .item .valor.purple { color: #4a148c !important; }
     .desempenho-info { background: #f1f5f9 !important; border-color: #ccc !important; }
+    .gab-item { border-color: #ccc !important; background: #fafafa !important; }
+    .gab-item .gab-num { color: #000 !important; background: #e9ecef !important; }
+    .gab-item .gab-select { border-color: #aaa !important; background: #fff !important; color: #000 !important; }
+    .gab-item .gab-select.filled { border-color: #28a745 !important; background: #d4edda !important; color: #155724 !important; }
+    .gab-header-title { background: #f5f5f5 !important; border-color: #ccc !important; color: #000 !important; }
+    .gab-header-title .prova-nome { color: #000 !important; }
 }
 .print-only { display: none !important; }
 @media print { .print-only { display: block !important; } }
@@ -1077,7 +1265,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
                         </div>
                     </div>
-                    <div id="gab-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;"></div>
+                    <!-- 🔥 NOVO CABEÇALHO COM O NOME DA PROVA -->
+                    <div id="gab-header-container">
+                        <!-- Será preenchido dinamicamente pelo buildGabGrid() -->
+                    </div>
                     <div class="gab-grid" id="gab-grid"></div>
                     <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
                     <div class="btn-group no-print"><button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button><button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button></div>
@@ -7941,19 +8132,35 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // GABARITO - BUILD GRID
+            // 🔥 GABARITO - BUILD GRID (MELHORADO)
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
+                const headerContainer = document.getElementById('gab-header-container');
                 if (!grid) return;
+
                 const serieEl = document.getElementById('gab-serie');
                 const totalEl = document.getElementById('gab-total');
                 const provaSelect = document.getElementById('gab-prova');
+
                 if (!serieEl || !totalEl || !provaSelect) return;
 
                 const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+                const provaNome = selectedOption ? selectedOption.text || 'Gabarito' : 'Gabarito';
                 const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
                 const isProducao = (disciplina === 'Produção de Texto');
+
+                // 🔥 CABEÇALHO COM O NOME DA PROVA
+                if (headerContainer) {
+                    const disciplinaLabel = disciplina || 'Disciplina';
+                    headerContainer.innerHTML = `
+                        <div class="gab-header-title">
+                            <span class="icon">📝</span>
+                            <span>Gabarito: <span class="prova-nome">${provaNome}</span></span>
+                            <span class="badge-disciplina">${disciplinaLabel}</span>
+                        </div>
+                    `;
+                }
 
                 const alts = ['A', 'B', 'C', 'D'];
                 const total = parseInt(totalEl.value) || 20;
@@ -7972,8 +8179,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     grid.style.gap = '16px';
                 } else {
                     grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(90px, 1fr))';
-                    grid.style.gap = '6px';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
+                    grid.style.gap = '12px';
                 }
 
                 grid.innerHTML = '';
@@ -7982,16 +8189,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     div.className = 'gab-item';
                     if (isProducao) {
                         div.innerHTML = `
-                            <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold; text-align:center;" />
-                            <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;"></textarea>
-                            <select class="gab-nivel" style="width:100%; margin-top:2px; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
+                            <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:1.5px solid var(--border2); border-radius:6px; color:var(--text); padding:6px 8px; font-size:12px; font-weight:bold; text-align:center;" />
+                            <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:60px; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); padding:6px 8px; font-size:12px; resize:vertical;"></textarea>
+                            <select class="gab-nivel" style="width:100%; margin-top:2px; padding:4px 6px; background:var(--bg2); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-size:11px;">
                                 <option value="">Nível BNCC</option>
                                 <option value="Inicial">Inicial</option>
                                 <option value="Básico">Básico</option>
                                 <option value="Proficiente">Proficiente</option>
                                 <option value="Avançado">Avançado</option>
                             </select>
-                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical; margin-top:4px;"></textarea>
+                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); padding:4px 6px; font-size:10px; resize:vertical; margin-top:4px;"></textarea>
                         `;
                     } else {
                         let opts = '<option value="">—</option>';
@@ -7999,7 +8206,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         div.innerHTML = `
                             <div class="gab-num">Q${i}</div>
                             <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
-                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:2px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-size:8px; text-align:center;" />
+                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:4px 6px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-size:9px; text-align:center;" />
                         `;
                     }
                     grid.appendChild(div);
