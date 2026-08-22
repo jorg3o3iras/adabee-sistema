@@ -281,13 +281,13 @@ def extrair_mimetype(imagem_base64):
     return 'image/jpeg'
 
 # ============================================
-# 🔥 FUNÇÃO DE PRÉ-PROCESSAMENTO AVANÇADO
+# 🔥 FUNÇÃO DE PRÉ-PROCESSAMENTO AVANÇADO (MELHORADA)
 # ============================================
 
 def preprocessar_cartao_resposta(imagem_base64):
     """
     Pré-processamento avançado para cartão resposta.
-    Usa técnicas de visão computacional para melhorar a detecção.
+    VERSÃO MELHORADA COM MAIS TÉCNICAS DE PROCESSAMENTO
     """
     try:
         if ',' in imagem_base64:
@@ -300,25 +300,31 @@ def preprocessar_cartao_resposta(imagem_base64):
         if img is None:
             return imagem_base64
         
-        # 1. REDIMENSIONAR PARA PADRÃO (melhora consistência)
+        # 1. REDIMENSIONAR PARA PADRÃO
         height, width = img.shape[:2]
-        if width > 1200 or height > 1200:
-            scale = min(1200/width, 1200/height)
+        max_dim = 1400
+        if width > max_dim or height > max_dim:
+            scale = min(max_dim/width, max_dim/height)
             new_width = int(width * scale)
             new_height = int(height * scale)
             img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
         
-        # 2. CONVERTER PARA ESCALA DE CINZA
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # 3. EQUALIZAÇÃO DE HISTOGRAMA (CLAHE - MELHORADO)
+        # 2. CORREÇÃO DE COR E CONTRASTE (CLAHE)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
+        l = clahe.apply(l)
+        lab = cv2.merge((l, a, b))
+        img_corrigida = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
         
-        # 4. REMOVER RUÍDO COM BILATERAL FILTER (preserva bordas)
-        denoised = cv2.bilateralFilter(enhanced, 9, 75, 75)
+        # 3. CONVERTER PARA ESCALA DE CINZA
+        gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
         
-        # 5. SHARPENING (nitidez)
+        # 4. REMOVER RUÍDO (BILATERAL + GAUSSIAN)
+        denoised = cv2.bilateralFilter(gray, 9, 75, 75)
+        denoised = cv2.GaussianBlur(denoised, (3, 3), 0)
+        
+        # 5. SHARPENING ADAPTATIVO
         kernel_sharpen = np.array([
             [-1, -1, -1],
             [-1, 9, -1],
@@ -326,37 +332,73 @@ def preprocessar_cartao_resposta(imagem_base64):
         ])
         sharpened = cv2.filter2D(denoised, -1, kernel_sharpen)
         
-        # 6. DETECÇÃO DE CÍRCULOS COM HOUGH CIRCLE (MELHORADO)
-        circles = cv2.HoughCircles(
-            sharpened,
-            cv2.HOUGH_GRADIENT,
-            dp=1.2,
-            minDist=20,
-            param1=80,
-            param2=25,
-            minRadius=8,
-            maxRadius=35
+        # 6. MELHORAR CONTRASTE LOCAL
+        kernel = np.ones((3, 3), np.uint8)
+        morph = cv2.morphologyEx(sharpened, cv2.MORPH_GRADIENT, kernel)
+        enhanced = cv2.addWeighted(sharpened, 0.8, morph, 0.2, 0)
+        
+        # 7. BINARIZAÇÃO ADAPTATIVA
+        binary = cv2.adaptiveThreshold(
+            enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv2.THRESH_BINARY, 11, 2
         )
         
-        # 7. CRIAR OVERLAY PARA AJUDAR A IA
+        # 8. DETECÇÃO DE CÍRCULOS COM HOUGH CIRCLE (MELHORADO)
+        circles = cv2.HoughCircles(
+            binary,
+            cv2.HOUGH_GRADIENT,
+            dp=1.2,
+            minDist=15,
+            param1=100,
+            param2=30,
+            minRadius=6,
+            maxRadius=40
+        )
+        
+        # 9. CRIAR OVERLAY PARA AJUDAR A IA
         overlay = img.copy()
+        circulos_detectados = 0
+        
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
+            circulos_detectados = len(circles)
+            
             for (x, y, r) in circles:
                 # Desenhar círculo verde para guiar a IA
-                cv2.circle(overlay, (x, y), r, (0, 255, 0), 2)
-                # Marcar centro
+                cv2.circle(overlay, (x, y), r, (0, 255, 0), 3)
                 cv2.circle(overlay, (x, y), 2, (0, 0, 255), 3)
         
-        # 8. COMBINAR IMAGEM ORIGINAL COM OVERLAY (transparência)
-        alpha = 0.6
+        # 10. COMBINAR IMAGEM ORIGINAL COM OVERLAY
+        alpha = 0.5
         result = cv2.addWeighted(img, 1 - alpha, overlay, alpha, 0)
         
-        # 9. CONVERTER PARA BASE64
-        _, buffer = cv2.imencode('.jpg', result, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        # 11. ADICIONAR INFORMAÇÕES NA IMAGEM
+        if circulos_detectados > 0:
+            cv2.putText(
+                result, 
+                f"Circulos: {circulos_detectados}", 
+                (10, 30), 
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                0.8, 
+                (0, 255, 0), 
+                2
+            )
+        else:
+            cv2.putText(
+                result, 
+                "Nenhum circulo detectado", 
+                (10, 30), 
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                0.8, 
+                (0, 0, 255), 
+                2
+            )
+        
+        # 12. CONVERTER PARA BASE64
+        _, buffer = cv2.imencode('.jpg', result, [cv2.IMWRITE_JPEG_QUALITY, 92])
         img_base64 = base64.b64encode(buffer).decode('utf-8')
         
-        print(f"✅ Pré-processamento concluído. Círculos detectados: {len(circles) if circles is not None else 0}")
+        print(f"✅ Pré-processamento concluído. Círculos detectados: {circulos_detectados}")
         
         return f"data:image/jpeg;base64,{img_base64}"
         
@@ -433,12 +475,13 @@ def extrair_nome_aluno(imagem_base64):
         return None
 
 # ============================================
-# 🔥 VALIDAÇÃO E CORREÇÃO DE RESPOSTAS
+# 🔥 VALIDAÇÃO E CORREÇÃO DE RESPOSTAS (MELHORADA)
 # ============================================
 
 def validar_e_corrigir_respostas(respostas_detectadas, gabarito, alternativas, confianca_por_questao):
     """
     Valida e corrige respostas com base em regras e padrões.
+    VERSÃO MELHORADA COM MAIS CRITÉRIOS DE VALIDAÇÃO
     """
     total = len(gabarito)
     respostas_corrigidas = []
@@ -446,87 +489,140 @@ def validar_e_corrigir_respostas(respostas_detectadas, gabarito, alternativas, c
     
     # 1. NORMALIZAR RESPOSTAS
     for i, resp in enumerate(respostas_detectadas):
-        if not resp or resp == '':
+        if not resp or resp == '' or resp is None:
             respostas_corrigidas.append('NÃO_RESPONDEU')
             confianca_corrigida.append(0)
             continue
         
-        resp = str(resp).strip().upper()
+        # Converter para string e limpar
+        resp_str = str(resp).strip().upper()
         
-        # Remover caracteres especiais
-        resp = re.sub(r'[^A-Z]', '', resp)
+        # Remover caracteres especiais, manter apenas letras
+        resp_str = re.sub(r'[^A-Z]', '', resp_str)
         
-        # Verificar se é válida
-        if len(resp) == 1 and resp in alternativas:
-            respostas_corrigidas.append(resp)
-            confianca_corrigida.append(confianca_por_questao[i] if i < len(confianca_por_questao) else 70)
+        # Se ficou vazio após limpeza
+        if not resp_str:
+            respostas_corrigidas.append('NÃO_RESPONDEU')
+            confianca_corrigida.append(0)
+            continue
+        
+        # Verificar se é uma alternativa válida
+        if len(resp_str) == 1 and resp_str in alternativas:
+            respostas_corrigidas.append(resp_str)
+            conf = confianca_por_questao[i] if i < len(confianca_por_questao) else 70
+            confianca_corrigida.append(conf)
         else:
-            # Tentar extrair a letra da resposta
+            # Tentar encontrar a melhor alternativa
+            encontrada = False
             for alt in alternativas:
-                if alt in resp:
+                if alt in resp_str:
                     respostas_corrigidas.append(alt)
-                    confianca_corrigida.append(confianca_por_questao[i] * 0.7 if i < len(confianca_por_questao) else 50)
+                    conf = confianca_por_questao[i] * 0.7 if i < len(confianca_por_questao) else 50
+                    confianca_corrigida.append(conf)
+                    encontrada = True
                     break
-            else:
+            
+            if not encontrada:
                 respostas_corrigidas.append('NÃO_RESPONDEU')
                 confianca_corrigida.append(0)
     
-    # 2. DETECTAR PADRÕES DE MARCAÇÃO
+    # 2. GARANTIR TAMANHO CORRETO
+    while len(respostas_corrigidas) < total:
+        respostas_corrigidas.append('NÃO_RESPONDEU')
+        confianca_corrigida.append(0)
+    
+    respostas_corrigidas = respostas_corrigidas[:total]
+    confianca_corrigida = confianca_corrigida[:total]
+    
+    # 3. DETECTAR PADRÕES DE MARCAÇÃO
     confianca_media = sum(confianca_corrigida) / len(confianca_corrigida) if confianca_corrigida else 0
     
     if confianca_media < 50:
-        print("⚠️ Baixa confiança detectada. Verificando padrões...")
+        print(f"⚠️ Baixa confiança ({confianca_media:.1f}%). Verificando padrões...")
         
-        padrao_encontrado = False
+        # Verificar padrão de alternância
+        padrao_alternancia = False
         for i in range(2, len(respostas_corrigidas)):
             if (respostas_corrigidas[i] == respostas_corrigidas[i-2] and 
                 respostas_corrigidas[i] != 'NÃO_RESPONDEU'):
-                padrao_encontrado = True
+                padrao_alternancia = True
                 break
         
-        if padrao_encontrado:
+        if padrao_alternancia:
             print("🔍 Padrão de alternância detectado. Ajustando confiança...")
             for i in range(len(confianca_corrigida)):
                 if confianca_corrigida[i] < 60 and respostas_corrigidas[i] != 'NÃO_RESPONDEU':
                     confianca_corrigida[i] = 65
+        
+        # Verificar padrão de sequência
+        padrao_sequencia = False
+        for i in range(1, len(respostas_corrigidas)):
+            if i > 0 and respostas_corrigidas[i] == respostas_corrigidas[i-1] and respostas_corrigidas[i] != 'NÃO_RESPONDEU':
+                padrao_sequencia = True
+                break
+        
+        if padrao_sequencia:
+            print("🔍 Padrão de sequência detectado. Ajustando confiança...")
+            for i in range(len(confianca_corrigida)):
+                if confianca_corrigida[i] < 50 and respostas_corrigidas[i] != 'NÃO_RESPONDEU':
+                    confianca_corrigida[i] = 55
     
-    # 3. VERIFICAR CONSISTÊNCIA COM GABARITO
+    # 4. VERIFICAR CONSISTÊNCIA COM GABARITO
     for i in range(len(respostas_corrigidas)):
         if i < len(gabarito) and gabarito[i]:
-            gab = gabarito[i].strip().upper()
+            gab = str(gabarito[i]).strip().upper()
             if respostas_corrigidas[i] == gab:
-                confianca_corrigida[i] = min(confianca_corrigida[i] + 10, 100)
+                # Acertou - aumentar confiança
+                confianca_corrigida[i] = min(confianca_corrigida[i] + 15, 100)
             elif respostas_corrigidas[i] != 'NÃO_RESPONDEU':
+                # Errou - diminuir confiança
                 confianca_corrigida[i] = max(confianca_corrigida[i] - 10, 0)
+    
+    # 5. AJUSTAR CONFIANÇA PARA RESPOSTAS NÃO RESPONDIDAS
+    for i in range(len(respostas_corrigidas)):
+        if respostas_corrigidas[i] == 'NÃO_RESPONDEU':
+            confianca_corrigida[i] = 0
     
     return respostas_corrigidas, confianca_corrigida
 
 # ============================================
-# 🔥 PROMPT OTIMIZADO PARA GEMINI
+# 🔥 PROMPT OTIMIZADO PARA GEMINI (MELHORADO)
 # ============================================
 
 def gerar_prompt_otimizado(gabarito, alternativas, disciplina, serie, aluno_nome):
-    """Gera um prompt otimizado para o Gemini"""
+    """Gera um prompt otimizado para o Gemini - VERSÃO MELHORADA"""
+    
+    total_questoes = len(gabarito)
+    gabarito_formatado = []
+    for i, g in enumerate(gabarito):
+        gabarito_formatado.append(f"Q{i+1}: {g if g else 'Não definido'}")
     
     prompt = f"""
 Você é um sistema especializado em CORREÇÃO AUTOMÁTICA DE CARTÕES RESPOSTA.
 
-### 🔍 INSTRUÇÕES DETALHADAS:
+### 📋 INFORMAÇÕES DA PROVA:
+- Total de questões: {total_questoes}
+- Alternativas disponíveis: {', '.join(alternativas)}
+- Série: {serie}
+- Disciplina: {disciplina}
+- Aluno: {aluno_nome or 'Não informado'}
+
+### 🎯 INSTRUÇÕES DETALHADAS:
 
 **1. IDENTIFICAÇÃO DO CARTÃO:**
 - Localize o cartão resposta na imagem
-- Identifique a grade de questões (normalmente Q1 a Q{len(gabarito)})
+- A grade de questões é organizada em linhas e colunas
 - Cada questão tem círculos com letras (A, B, C, D)
 
-**2. DETECÇÃO DE MARCAÇÕES (CRITÉRIOS):**
+**2. DETECÇÃO DE MARCAÇÕES (CRITÉRIOS RÍGIDOS):**
 - Um círculo é considerado **PREECHIDO** quando:
   * A área interna está escura (caneta preta/azul)
-  * O contraste com o fundo branco é alto
+  * O contraste com o fundo branco é > 40%
   * A marcação cobre >60% da área do círculo
   * A marcação é uniforme (não rabiscada)
 
 - Um círculo é considerado **NÃO PREECHIDO** quando:
-  * Está vazio (branco)
+  * Está totalmente vazio (branco)
   * Tem apenas um ponto ou risco leve
   * Está parcialmente preenchido (<40%)
 
@@ -534,17 +630,15 @@ Você é um sistema especializado em CORREÇÃO AUTOMÁTICA DE CARTÕES RESPOSTA
 - Se **DOIS** círculos estão marcados: considere o **MAIS ESCURO** como resposta
 - Se **TRÊS OU MAIS** estão marcados: marque como "INDEFINIDO"
 - Se **NENHUM** está marcado: marque como "NÃO_RESPONDEU"
+- Se a marcação está **RABISCADA**: considere inválida
 
 **4. VALIDAÇÃO CRUZADA:**
 - Compare cada resposta detectada com o gabarito
 - Se a resposta não estiver em {alternativas}, considere inválida
+- Se a confiança for baixa (<60%), indique claramente
 
 ### 📋 GABARITO DA PROVA:
 {json.dumps(gabarito)}
-
-### 📌 DISCIPLINA: {disciplina}
-### 📌 SÉRIE: {serie}
-### 📌 ALUNO: {aluno_nome or 'Não informado'}
 
 ### 🎯 FORMATO DE RESPOSTA (JSON APENAS):
 {{
@@ -560,11 +654,50 @@ Você é um sistema especializado em CORREÇÃO AUTOMÁTICA DE CARTÕES RESPOSTA
     return prompt
 
 # ============================================
+# FUNÇÃO AUXILIAR PARA EXTRAIR RESPOSTAS DO TEXTO
+# ============================================
+
+def extrair_respostas_manualmente(texto, total_questoes):
+    """
+    Tenta extrair respostas do texto quando o JSON falha.
+    """
+    respostas = []
+    
+    # Procurar padrões como "Q1: A", "Questão 1: B", etc.
+    padroes = [
+        r'Q(\d+)\s*[:=]\s*([A-D])',
+        r'Questão\s*(\d+)\s*[:=]\s*([A-D])',
+        r'(\d+)\s*[:=]\s*([A-D])',
+        r'Resposta\s*(\d+)\s*[:=]\s*([A-D])'
+    ]
+    
+    for padrao in padroes:
+        matches = re.findall(padrao, texto, re.IGNORECASE)
+        if matches:
+            for num, resp in matches:
+                try:
+                    idx = int(num) - 1
+                    if idx < total_questoes:
+                        while len(respostas) <= idx:
+                            respostas.append('')
+                        respostas[idx] = resp.upper()
+                except:
+                    pass
+            if len(respostas) == total_questoes:
+                break
+    
+    # Se encontrou algumas respostas, preencher o resto
+    while len(respostas) < total_questoes:
+        respostas.append('NÃO_RESPONDEU')
+    
+    return respostas[:total_questoes]
+
+# ============================================
 # 🔥 FUNÇÃO DE CORREÇÃO COM GEMINI (MELHORADA)
 # ============================================
 
 def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """Corrige a prova usando Gemini com detecção profissional de cartão resposta"""
+    """Corrige a prova usando Gemini - VERSÃO MELHORADA"""
     
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
@@ -606,7 +739,6 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
         if GEMINI_AVAILABLE and model is not None:
             try:
                 image_data = base64.b64decode(imagem_limpa)
-                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
                 # 🔥 PROMPT OTIMIZADO
@@ -625,7 +757,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 ])
 
                 resposta_texto = response.text
-                print(f"📝 Resposta Gemini: {resposta_texto[:300]}...")
+                print(f"📝 Resposta Gemini recebida ({len(resposta_texto)} caracteres)")
 
                 # Extrair JSON
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
@@ -642,24 +774,20 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                             aluno_nome = nome_detectado_ia
                             print(f"📝 Nome detectado pela IA: {aluno_nome}")
                         
-                        # Calcular confiança média
-                        if confianca_por_questao:
-                            confianca_media = sum(confianca_por_questao) / len(confianca_por_questao)
-                        else:
-                            confianca_media = 70
-                            
-                    except json.JSONDecodeError:
-                        print("⚠️ Erro ao parsear JSON do Gemini")
+                        print(f"📊 Respostas detectadas: {len(respostas_detectadas)}")
+                        print(f"📊 Confianças: {confianca_por_questao[:5] if confianca_por_questao else '[]'}...")
+                        
+                    except json.JSONDecodeError as e:
+                        print(f"⚠️ Erro ao parsear JSON do Gemini: {e}")
                         respostas_detectadas = []
                         confianca_por_questao = []
-                        confianca_media = 50
                         qualidade_imagem = 'Ruim'
                 else:
                     print("⚠️ Nenhum JSON encontrado na resposta")
-                    respostas_detectadas = []
-                    confianca_por_questao = []
-                    confianca_media = 50
-                    qualidade_imagem = 'Ruim'
+                    # Tentar extrair respostas manualmente
+                    respostas_detectadas = extrair_respostas_manualmente(resposta_texto, len(gabarito))
+                    confianca_por_questao = [70] * len(respostas_detectadas) if respostas_detectadas else []
+                    qualidade_imagem = 'Regular'
 
                 # Se não detectou respostas, tentar Relay
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
@@ -677,17 +805,6 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 respostas_detectadas = respostas_corrigidas
                 confianca_por_questao = confianca_corrigida
                 confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 50
-
-                # Garantir tamanho correto
-                while len(respostas_detectadas) < len(gabarito):
-                    respostas_detectadas.append('NÃO_RESPONDEU')
-                    confianca_por_questao.append(0)
-                    
-                while len(confianca_por_questao) < len(gabarito):
-                    confianca_por_questao.append(50)
-                    
-                respostas_detectadas = respostas_detectadas[:len(gabarito)]
-                confianca_por_questao = confianca_por_questao[:len(gabarito)]
 
                 # ============================================
                 # CALCULAR RESULTADOS
@@ -741,6 +858,8 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
                 # Calcular confiança média final
                 confianca_media = sum(confianca_por_questao) / len(confianca_por_questao) if confianca_por_questao else 50
 
+                print(f"✅ Correção concluída: {acertos}/{len(gabarito)} acertos, {porcentagem}%, confiança: {confianca_media:.1f}%")
+
                 # ============================================
                 # RETORNAR RESULTADO COMPLETO
                 # ============================================
@@ -768,6 +887,7 @@ def corrigir_com_gemini(imagem_base64, gabarito, aluno_nome, serie, tipo_questoe
 
             except Exception as e:
                 print(f"❌ Erro no Gemini: {e}")
+                traceback.print_exc()
                 print("⚠️ Tentando RelayFreeLLM...")
                 return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
         else:
@@ -818,7 +938,6 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
                 if ',' in imagem_base64:
                     imagem_limpa = imagem_base64.split(',')[1]
 
-                alternativas = "A, B, C, D" if tipo_questoes == 4 else "A, B, C"
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
                 prompt = f"""
@@ -828,7 +947,7 @@ Analise a imagem do cartão resposta e identifique as respostas marcadas.
 
 INFORMAÇÕES DA PROVA:
 - Total de questões: {len(gabarito)}
-- Alternativas disponíveis: {alternativas}
+- Alternativas disponíveis: {', '.join(alternativas_lista)}
 - Gabarito correto: {gabarito}
 
 INSTRUÇÕES:
@@ -887,7 +1006,7 @@ Responda APENAS em formato JSON válido:
                     )
                     resposta_texto = response.choices[0].message.content
 
-                print(f"📝 Resposta Relay: {resposta_texto[:200]}...")
+                print(f"📝 Resposta Relay recebida ({len(resposta_texto)} caracteres)")
 
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
 
@@ -902,8 +1021,9 @@ Responda APENAS em formato JSON válido:
                         confianca_por_questao = []
                         confianca_media = 50
                 else:
-                    respostas_detectadas = []
-                    confianca_por_questao = []
+                    # Tentar extrair respostas manualmente
+                    respostas_detectadas = extrair_respostas_manualmente(resposta_texto, len(gabarito))
+                    confianca_por_questao = [70] * len(respostas_detectadas) if respostas_detectadas else []
                     confianca_media = 50
 
                 if not respostas_detectadas or len(respostas_detectadas) == 0:
@@ -937,12 +1057,13 @@ Responda APENAS em formato JSON válido:
 
                 for i, (resp, gab) in enumerate(zip(respostas_detectadas, gabarito)):
                     gab_normalizado = str(gab).strip().upper() if gab else ''
-                    is_correto = resp == gab_normalizado if resp and gab_normalizado else False
+                    is_resposta_valida = resp in alternativas_lista
+                    is_correto = is_resposta_valida and resp == gab_normalizado
 
                     if is_correto:
                         acertos += 1
                         status_msg = 'ADQUIRIU HABILIDADE'
-                    elif resp and resp != 'NÃO_RESPONDEU' and resp != 'INDEFINIDO':
+                    elif is_resposta_valida:
                         status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
                     else:
                         status_msg = 'NÃO RESPONDEU'
@@ -1208,7 +1329,7 @@ def login():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE CORREÇÃO COM IA
+# ROTA DE CORREÇÃO COM IA (MELHORADA)
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -4059,6 +4180,7 @@ if __name__ == '__main__':
     print("   ✅ OCR para extração de nome do aluno")
     print("   ✅ Cálculo avançado de confiança")
     print("   ✅ Detecção de padrões de marcação")
+    print("   ✅ Extração manual de respostas (fallback)")
     print("=" * 60)
     print("📋 Disciplinas suportadas:")
     print("   - Português")
