@@ -5452,7 +5452,7 @@ function salvarDadosCorrecaoManual(dados) {
  */
 /**
  * ATUALIZA A INTERFACE COM OS RESULTADOS DA CORREÇÃO
- * VERSÃO COMPLETA - EXIBE GABARITO, RESPOSTAS DO ALUNO E RESULTADO DA IA
+ * VERSÃO COMPLETA - GABARITO OFICIAL SEPARADO DO GABARITO DO ALUNO
  */
 function atualizarInterfaceCorrecao(dados) {
     const box = document.getElementById('ia-result');
@@ -5527,13 +5527,13 @@ function atualizarInterfaceCorrecao(dados) {
     }
 
     // ==========================================
-    // 7. 🔥 NOVO: GRID COMPLETO (GABARITO + ALUNO + RESULTADO IA)
+    // 7. 🔥 NOVO: GRID COMPLETO SEPARADO
     // ==========================================
     const grid = document.getElementById('ia-comp');
     if (grid) {
         grid.innerHTML = '';
         
-        // Determinar quantas colunas por linha (responsivo)
+        // Determinar quantas colunas por linha
         const totalQuestoes = dados.resultadoQuestoes.length;
         let colunasPorLinha = 5;
         if (totalQuestoes <= 10) colunasPorLinha = 5;
@@ -5542,101 +5542,198 @@ function atualizarInterfaceCorrecao(dados) {
         else if (totalQuestoes <= 25) colunasPorLinha = 5;
         else colunasPorLinha = 6;
         
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = `repeat(${colunasPorLinha}, 1fr)`;
-        grid.style.gap = '12px';
-        grid.style.padding = '12px 0';
+        // ==========================================
+        // 🔥 SEÇÃO 1: GABARITO OFICIAL GERADO PELO SISTEMA
+        // ==========================================
         
-        // Dados para o grid
-        dados.resultadoQuestoes.forEach((q, index) => {
-            const acertou = q.acertou;
-            const conf = q.confianca || 0;
-            const respostaAluno = q.resposta || '—';
-            const gabarito = q.gabarito || '—';
-            
-            // Definir cores baseadas no resultado
-            let corBg, corBorder, corTexto, icone, statusText, statusBadge;
-            if (acertou) {
-                corBg = 'rgba(16,185,129,0.10)';
-                corBorder = 'rgba(16,185,129,0.40)';
-                corTexto = 'var(--green)';
-                icone = '✅';
-                statusText = 'ACERTOU';
-                statusBadge = 'badge-green';
-            } else if (q.respondida && !acertou) {
-                corBg = 'rgba(239,68,68,0.10)';
-                corBorder = 'rgba(239,68,68,0.40)';
-                corTexto = 'var(--red)';
-                icone = '❌';
-                statusText = 'ERROU';
-                statusBadge = 'badge-red';
-            } else {
-                corBg = 'rgba(100,116,139,0.06)';
-                corBorder = 'rgba(100,116,139,0.20)';
-                corTexto = 'var(--text3)';
-                icone = '—';
-                statusText = 'NÃO RESPONDEU';
-                statusBadge = 'badge-gray';
-            }
-
-            // Nível de confiança
-            let confiancaLabel = 'Alta';
-            let confiancaCor = 'var(--green)';
-            if (conf < 50) { confiancaLabel = 'Baixa'; confiancaCor = 'var(--red)'; }
-            else if (conf < 70) { confiancaLabel = 'Média'; confiancaCor = 'var(--orange)'; }
-
-            // Criar o card da questão
+        // Título do Gabarito Oficial
+        const tituloOficial = document.createElement('div');
+        tituloOficial.style.cssText = `
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 10px 0;
+            background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12));
+            border-radius: 10px;
+            border: 2px solid rgba(59,130,246,0.20);
+            margin-bottom: 4px;
+            margin-top: 8px;
+        `;
+        tituloOficial.innerHTML = `
+            <span style="font-size:16px;font-weight:900;color:var(--blue);letter-spacing:0.5px;">
+                📋 GABARITO OFICIAL GERADO PELO SISTEMA
+            </span>
+            <span style="font-size:12px;color:var(--text3);margin-left:12px;font-weight:600;">
+                (${totalQuestoes} questões)
+            </span>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;font-weight:500;">
+                ✅ Respostas corretas definidas no cadastro da prova
+            </div>
+        `;
+        grid.appendChild(tituloOficial);
+        
+        // Grid do Gabarito Oficial
+        const gridOficial = document.createElement('div');
+        gridOficial.style.cssText = `
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(${colunasPorLinha}, 1fr);
+            gap: 8px;
+            padding: 8px 0;
+            background: rgba(59,130,246,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(59,130,246,0.08);
+        `;
+        
+        dados.resultadoQuestoes.forEach((q) => {
             const div = document.createElement('div');
             div.style.cssText = `
-                background: ${corBg};
-                border-radius: 12px;
-                padding: 12px 8px;
+                background: rgba(59,130,246,0.06);
+                border-radius: 8px;
+                padding: 8px 4px;
                 text-align: center;
-                border: 2px solid ${corBorder};
-                transition: all 0.3s ease;
+                border: 1.5px solid rgba(59,130,246,0.15);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 4px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                gap: 2px;
             `;
-            
-            // Conteúdo do card
             div.innerHTML = `
-                <!-- Número da Questão -->
-                <div style="font-size:9px;font-weight:700;color:var(--text3);background:var(--bg2);padding:1px 12px;border-radius:12px;width:100%;text-align:center;text-transform:uppercase;letter-spacing:0.5px;">
-                    Q${q.numero}
-                </div>
-                
-                <!-- LINHA 1: GABARITO OFICIAL -->
-                <div style="display:flex;width:100%;justify-content:center;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <div style="text-align:center;flex:1;">
-                        <div style="font-size:7px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">📋 Gabarito</div>
-                        <div style="font-size:18px;font-weight:900;color:var(--green);line-height:1.2;">${gabarito}</div>
-                    </div>
-                    <div style="color:var(--text3);font-size:12px;">➜</div>
-                    <div style="text-align:center;flex:1;">
-                        <div style="font-size:7px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">✏️ Aluno</div>
-                        <div style="font-size:18px;font-weight:900;color:${corTexto};line-height:1.2;">${respostaAluno}</div>
-                    </div>
-                </div>
-                
-                <!-- LINHA 2: RESULTADO DA IA -->
-                <div style="display:flex;width:100%;justify-content:center;align-items:center;gap:6px;padding:3px 0;flex-wrap:wrap;">
-                    <span style="font-size:13px;font-weight:700;color:${corTexto};">${icone} ${statusText}</span>
-                    <span class="badge ${statusBadge}" style="font-size:7px;padding:1px 8px;">${acertou ? 'ADQUIRIU HABILIDADE' : (q.respondida ? 'RECOMPOSIÇÃO' : 'NÃO RESPONDEU')}</span>
-                </div>
-                
-                <!-- LINHA 3: CONFIANÇA DA IA -->
-                <div style="display:flex;width:100%;justify-content:center;align-items:center;gap:6px;padding:2px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:2px;">
-                    <span style="font-size:8px;color:var(--text3);">🤖 Confiança:</span>
-                    <span style="font-size:10px;font-weight:700;color:${confiancaCor};">${conf}%</span>
-                    <span style="font-size:7px;color:var(--text3);">(${confiancaLabel})</span>
-                </div>
+                <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;">Q${q.numero}</div>
+                <div style="font-size:22px;font-weight:900;color:var(--green);line-height:1.2;">${q.gabarito || '—'}</div>
+                <div style="font-size:7px;color:var(--text3);font-weight:600;">✅ Correta</div>
             `;
-            
-            grid.appendChild(div);
+            gridOficial.appendChild(div);
         });
+        grid.appendChild(gridOficial);
+        
+        // ==========================================
+        // 🔥 SEÇÃO 2: GABARITO DO ALUNO
+        // ==========================================
+        
+        // Título do Gabarito do Aluno
+        const tituloAluno = document.createElement('div');
+        tituloAluno.style.cssText = `
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 10px 0;
+            background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.12));
+            border-radius: 10px;
+            border: 2px solid rgba(139,92,246,0.20);
+            margin-bottom: 4px;
+            margin-top: 12px;
+        `;
+        tituloAluno.innerHTML = `
+            <span style="font-size:16px;font-weight:900;color:var(--purple);letter-spacing:0.5px;">
+                📋 GABARITO DO ALUNO
+            </span>
+            <span style="font-size:12px;color:var(--text3);margin-left:12px;font-weight:600;">
+                ${dados.aluno.nome || 'Aluno'}
+            </span>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;font-weight:500;">
+                ✏️ Respostas marcadas pelo aluno no cartão resposta
+            </div>
+        `;
+        grid.appendChild(tituloAluno);
+        
+        // Grid do Gabarito do Aluno
+        const gridAluno = document.createElement('div');
+        gridAluno.style.cssText = `
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(${colunasPorLinha}, 1fr);
+            gap: 8px;
+            padding: 8px 0;
+            background: rgba(139,92,246,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(139,92,246,0.08);
+        `;
+        
+        dados.resultadoQuestoes.forEach((q) => {
+            const acertou = q.acertou;
+            const resposta = q.resposta || '—';
+            const conf = q.confianca || 0;
+            
+            let corBg, corTexto, icone, status;
+            if (acertou) {
+                corBg = 'rgba(16,185,129,0.12)';
+                corTexto = 'var(--green)';
+                icone = '✅';
+                status = 'ACERTOU';
+            } else if (q.respondida) {
+                corBg = 'rgba(239,68,68,0.12)';
+                corTexto = 'var(--red)';
+                icone = '❌';
+                status = 'ERROU';
+            } else {
+                corBg = 'rgba(100,116,139,0.08)';
+                corTexto = 'var(--text3)';
+                icone = '—';
+                status = 'NÃO RESPONDEU';
+            }
+            
+            const div = document.createElement('div');
+            div.style.cssText = `
+                background: ${corBg};
+                border-radius: 8px;
+                padding: 8px 4px;
+                text-align: center;
+                border: 1.5px solid ${acertou ? 'rgba(16,185,129,0.25)' : (q.respondida ? 'rgba(239,68,68,0.25)' : 'rgba(100,116,139,0.15)')};
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+            `;
+            div.innerHTML = `
+                <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;">Q${q.numero}</div>
+                <div style="font-size:22px;font-weight:900;color:${corTexto};line-height:1.2;">${resposta}</div>
+                <div style="font-size:7px;font-weight:700;color:${corTexto};">${icone} ${status}</div>
+                <div style="font-size:6px;color:var(--text3);">Conf: ${conf}%</div>
+            `;
+            gridAluno.appendChild(div);
+        });
+        grid.appendChild(gridAluno);
+        
+        // ==========================================
+        // 🔥 SEÇÃO 3: COMPARAÇÃO (RESUMO)
+        // ==========================================
+        
+        const divComparacao = document.createElement('div');
+        divComparacao.style.cssText = `
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 12px;
+            padding: 14px 16px;
+            margin-top: 12px;
+            background: var(--bg2);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        `;
+        
+        const acertos = dados.acertos;
+        const erros = dados.totalQuestoes - acertos - (dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length);
+        const naoRespondidas = dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length;
+        const porcentagem = dados.porcentagem;
+        
+        divComparacao.innerHTML = `
+            <div style="text-align:center;padding:8px;background:rgba(16,185,129,0.08);border-radius:8px;border:1px solid rgba(16,185,129,0.15);">
+                <div style="font-size:24px;font-weight:900;color:var(--green);">${acertos}</div>
+                <div style="font-size:10px;color:var(--text2);font-weight:600;">✅ ACERTOS</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:rgba(239,68,68,0.08);border-radius:8px;border:1px solid rgba(239,68,68,0.15);">
+                <div style="font-size:24px;font-weight:900;color:var(--red);">${erros}</div>
+                <div style="font-size:10px;color:var(--text2);font-weight:600;">❌ ERROS</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:rgba(100,116,139,0.08);border-radius:8px;border:1px solid rgba(100,116,139,0.15);">
+                <div style="font-size:24px;font-weight:900;color:var(--text3);">${naoRespondidas}</div>
+                <div style="font-size:10px;color:var(--text2);font-weight:600;">— NÃO RESPONDEU</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:rgba(59,130,246,0.08);border-radius:8px;border:1px solid rgba(59,130,246,0.15);">
+                <div style="font-size:24px;font-weight:900;color:var(--blue);">${porcentagem}%</div>
+                <div style="font-size:10px;color:var(--text2);font-weight:600;">📊 APROVEITAMENTO</div>
+            </div>
+        `;
+        grid.appendChild(divComparacao);
     }
 }
 
