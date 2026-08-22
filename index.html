@@ -268,68 +268,70 @@ tr:hover td { background:rgba(255,255,255,0.02); }
    ============================================ */
 .gab-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 12px;
-    margin: 12px 0;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 14px;
+    margin: 16px 0;
 }
 .gab-item {
     background: var(--bg2);
-    border: 2.5px solid var(--border2);
-    border-radius: 10px;
-    padding: 10px 8px;
+    border: 3px solid var(--border2) !important;
+    border-radius: 12px !important;
+    padding: 14px 10px !important;
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
 .gab-item:hover {
-    border-color: var(--blue);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+    border-color: var(--blue) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(59,130,246,0.2);
 }
 .gab-item .gab-num {
-    font-size: 14px;
-    font-weight: 800;
-    color: var(--blue);
-    background: rgba(59,130,246,0.12);
-    padding: 3px 8px;
-    border-radius: 6px;
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    padding: 4px 14px !important;
+    border-radius: 10px !important;
     display: inline-block;
     letter-spacing: 0.5px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .gab-item .gab-select {
     width: 100%;
-    padding: 8px 4px;
+    padding: 10px 4px;
     background: var(--bg);
-    border: 2px solid var(--border2);
-    border-radius: 6px;
+    border: 2.5px solid var(--border2);
+    border-radius: 8px;
     color: var(--text);
     font-weight: 700;
-    font-size: 16px;
+    font-size: 18px !important;
     text-align: center;
     outline: none;
-    transition: all .2s;
+    transition: all .3s;
     cursor: pointer;
 }
 .gab-item .gab-select:focus {
     border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+    box-shadow: 0 0 0 4px rgba(59,130,246,0.25);
 }
 .gab-item .gab-select.filled {
-    border-color: var(--green);
-    background: rgba(16,185,129,0.1);
-    box-shadow: 0 0 0 2px rgba(16,185,129,0.15);
+    border-color: var(--green) !important;
+    background: rgba(16,185,129,0.12) !important;
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
 }
 .gab-item .gab-bncc {
     width: 100%;
-    padding: 4px 6px;
+    padding: 5px 8px;
     background: var(--bg);
-    border: 1.5px solid var(--border2);
-    border-radius: 4px;
+    border: 2px solid var(--border2);
+    border-radius: 6px;
     color: var(--text);
-    font-size: 9px;
+    font-size: 10px;
     text-align: center;
     outline: none;
     transition: border .2s;
@@ -337,33 +339,33 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 }
 .gab-item .gab-bncc:focus {
     border-color: var(--purple);
-    box-shadow: 0 0 0 2px rgba(139,92,246,0.15);
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
 }
 .gab-item .gab-texto {
     width: 100%;
-    min-height: 60px;
+    min-height: 70px;
     background: var(--bg2);
-    border: 2px solid var(--border2);
-    border-radius: 6px;
+    border: 2.5px solid var(--border2);
+    border-radius: 8px;
     color: var(--text);
-    padding: 6px 8px;
-    font-size: 12px;
+    padding: 8px 10px;
+    font-size: 13px;
     resize: vertical;
     transition: border .2s;
 }
 .gab-item .gab-texto:focus {
     border-color: var(--blue);
-    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
 }
 .gab-item .gab-nivel {
     width: 100%;
     margin-top: 2px;
-    padding: 4px 6px;
+    padding: 5px 8px;
     background: var(--bg2);
-    border: 1.5px solid var(--border2);
-    border-radius: 4px;
+    border: 2px solid var(--border2);
+    border-radius: 6px;
     color: var(--text);
-    font-size: 11px;
+    font-size: 12px;
     transition: border .2s;
 }
 .gab-item .gab-nivel:focus {
@@ -371,13 +373,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 }
 .gab-item .gab-observacao {
     width: 100%;
-    min-height: 30px;
+    min-height: 35px;
     background: var(--bg2);
-    border: 1.5px solid var(--border2);
-    border-radius: 4px;
+    border: 2px solid var(--border2);
+    border-radius: 6px;
     color: var(--text);
-    padding: 4px 6px;
-    font-size: 10px;
+    padding: 5px 8px;
+    font-size: 11px;
     resize: vertical;
     margin-top: 4px;
     transition: border .2s;
@@ -388,11 +390,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .gab-item .gab-titulo {
     width: 100%;
     background: var(--bg2);
-    border: 1.5px solid var(--border2);
-    border-radius: 4px;
+    border: 2px solid var(--border2);
+    border-radius: 6px;
     color: var(--text);
-    padding: 4px 6px;
-    font-size: 12px;
+    padding: 6px 10px;
+    font-size: 14px;
     font-weight: bold;
     text-align: center;
     transition: border .2s;
@@ -403,33 +405,36 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 /* 🔥 TÍTULO DO GABARITO - MOSTRA O NOME DA PROVA */
 .gab-header-title {
-    font-size: 16px;
+    font-size: 20px !important;
     font-weight: 700;
     color: var(--text);
-    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: 1px solid rgba(59,130,246,0.2);
-    margin-bottom: 12px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 2px solid rgba(59,130,246,0.3);
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
+    box-shadow: 0 2px 16px rgba(59,130,246,0.1);
 }
 .gab-header-title .icon {
-    font-size: 20px;
+    font-size: 28px;
 }
 .gab-header-title .prova-nome {
-    color: var(--blue);
-    font-weight: 800;
+    color: #60a5fa !important;
+    font-weight: 800 !important;
+    font-size: 20px !important;
 }
 .gab-header-title .badge-disciplina {
     margin-left: auto;
-    font-size: 10px;
-    padding: 3px 12px;
+    font-size: 12px;
+    padding: 4px 16px;
     border-radius: 20px;
-    background: rgba(139,92,246,0.2);
+    background: rgba(139,92,246,0.25);
     color: var(--purple);
     font-weight: 700;
+    border: 1px solid rgba(139,92,246,0.3);
 }
 
 .gab-grid-texto {
@@ -439,10 +444,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     margin: 12px 0;
 }
 .gab-grid-texto .gab-item {
-    border-left: 4px solid var(--purple);
+    border-left: 5px solid var(--purple) !important;
     background: var(--bg2);
-    border-radius: 10px;
-    padding: 12px 16px;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
 }
 
 .gab-select option { background: var(--bg2); color: var(--text); }
@@ -757,20 +762,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .habilidade-card { max-height: 350px; }
     .desempenho-resumo { grid-template-columns: 1fr 1fr; }
     .desempenho-info { grid-template-columns: 1fr 1fr; }
-    .gab-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
-    .gab-item .gab-num { font-size: 12px; }
-    .gab-item .gab-select { font-size: 14px; padding: 6px 3px; }
-    .gab-header-title { font-size: 14px; flex-wrap: wrap; }
+    .gab-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+    .gab-item .gab-num { font-size: 16px !important; }
+    .gab-item .gab-select { font-size: 15px !important; padding: 8px 3px; }
+    .gab-header-title { font-size: 16px !important; flex-wrap: wrap; }
+    .gab-header-title .prova-nome { font-size: 16px !important; }
 }
 @media (max-width:480px) {
     .stats-grid { grid-template-columns:1fr; }
     .login-card { padding:24px 18px; margin:10px; }
     .cam-container { padding:14px; }
-    .gab-grid { grid-template-columns:repeat(auto-fill,minmax(75px,1fr)); gap: 6px; }
-    .gab-item { padding: 6px 4px; }
-    .gab-item .gab-num { font-size: 10px; padding: 2px 6px; }
-    .gab-item .gab-select { font-size: 12px; padding: 4px 2px; }
-    .gab-item .gab-bncc { font-size: 7px; }
+    .gab-grid { grid-template-columns:repeat(auto-fill,minmax(85px,1fr)); gap: 8px; }
+    .gab-item { padding: 10px 6px !important; }
+    .gab-item .gab-num { font-size: 14px !important; padding: 3px 10px !important; }
+    .gab-item .gab-select { font-size: 13px !important; padding: 6px 2px; }
+    .gab-item .gab-bncc { font-size: 8px; }
     .modal { padding:16px; }
     .correcao-aluno-info { grid-template-columns:1fr; }
     .correcao-manual-grid { grid-template-columns: repeat(4, 1fr); }
@@ -790,7 +796,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .desempenho-info { grid-template-columns: 1fr; }
     .questao-item .q-resp { font-size: 10px; }
     .questao-item .q-status-text { font-size: 6px; }
-    .gab-header-title { font-size: 12px; flex-direction: column; align-items: flex-start; }
+    .gab-header-title { font-size: 14px !important; flex-direction: column; align-items: flex-start; }
+    .gab-header-title .prova-nome { font-size: 14px !important; }
 }
 
 /* ============================================
@@ -8179,8 +8186,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     grid.style.gap = '16px';
                 } else {
                     grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
-                    grid.style.gap = '12px';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+                    grid.style.gap = '14px';
                 }
 
                 grid.innerHTML = '';
@@ -8189,16 +8196,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     div.className = 'gab-item';
                     if (isProducao) {
                         div.innerHTML = `
-                            <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:1.5px solid var(--border2); border-radius:6px; color:var(--text); padding:6px 8px; font-size:12px; font-weight:bold; text-align:center;" />
-                            <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:60px; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); padding:6px 8px; font-size:12px; resize:vertical;"></textarea>
-                            <select class="gab-nivel" style="width:100%; margin-top:2px; padding:4px 6px; background:var(--bg2); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-size:11px;">
+                            <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); padding:6px 10px; font-size:14px; font-weight:bold; text-align:center;" />
+                            <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:70px; background:var(--bg2); border:2.5px solid var(--border2); border-radius:8px; color:var(--text); padding:8px 10px; font-size:13px; resize:vertical;"></textarea>
+                            <select class="gab-nivel" style="width:100%; margin-top:2px; padding:5px 8px; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); font-size:12px;">
                                 <option value="">Nível BNCC</option>
                                 <option value="Inicial">Inicial</option>
                                 <option value="Básico">Básico</option>
                                 <option value="Proficiente">Proficiente</option>
                                 <option value="Avançado">Avançado</option>
                             </select>
-                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); padding:4px 6px; font-size:10px; resize:vertical; margin-top:4px;"></textarea>
+                            <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:35px; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); padding:5px 8px; font-size:11px; resize:vertical; margin-top:4px;"></textarea>
                         `;
                     } else {
                         let opts = '<option value="">—</option>';
@@ -8206,7 +8213,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         div.innerHTML = `
                             <div class="gab-num">Q${i}</div>
                             <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
-                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:4px 6px; background:var(--bg); border:1.5px solid var(--border2); border-radius:4px; color:var(--text); font-size:9px; text-align:center;" />
+                            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:5px 8px; background:var(--bg); border:2px solid var(--border2); border-radius:6px; color:var(--text); font-size:10px; text-align:center;" />
                         `;
                     }
                     grid.appendChild(div);
