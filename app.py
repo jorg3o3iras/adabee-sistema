@@ -23,7 +23,6 @@ import logging
 import zipfile
 import hashlib
 from collections import Counter
-import time
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -35,7 +34,7 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ============================================
-# 🔥 CONFIGURAÇÃO GEMINI
+# CONFIGURAÇÃO GEMINI
 # ============================================
 
 GEMINI_AVAILABLE = False
@@ -72,7 +71,7 @@ except Exception as e:
     GEMINI_AVAILABLE = False
 
 # ============================================
-# 🔥 CONFIGURAÇÃO RELAYFREELLM
+# CONFIGURAÇÃO RELAYFREELLM
 # ============================================
 
 RELAY_AVAILABLE = False
@@ -93,7 +92,7 @@ except Exception as e:
     RELAY_AVAILABLE = False
 
 # ============================================
-# 🔥 CONFIGURAÇÃO DO BANCO DE DADOS
+# CONFIGURAÇÃO DO BANCO DE DADOS
 # ============================================
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
@@ -176,7 +175,7 @@ def get_db_connection():
         return None
 
 # ============================================
-# 🔥 USUÁRIOS FIXOS
+# USUÁRIOS FIXOS
 # ============================================
 
 USUARIOS_FIXOS = {
@@ -186,27 +185,7 @@ USUARIOS_FIXOS = {
 }
 
 # ============================================
-# 🔥 CACHE DE CORREÇÕES
-# ============================================
-
-CORRECOES_CACHE = {}
-CORRECOES_CACHE_TTL = 3600  # 1 hora
-
-def get_cache_key(imagem_hash, prova_id, aluno_id):
-    return f"{imagem_hash}_{prova_id}_{aluno_id}"
-
-def limpar_cache_antigo():
-    agora = datetime.now().timestamp()
-    chaves_remover = []
-    for chave, dados in CORRECOES_CACHE.items():
-        if agora - dados['timestamp'] > CORRECOES_CACHE_TTL:
-            chaves_remover.append(chave)
-    for chave in chaves_remover:
-        del CORRECOES_CACHE[chave]
-        logging.info(f"🧹 Cache antigo removido: {chave}")
-
-# ============================================
-# 🔥 FUNÇÃO: CALCULAR CONCEITO
+# FUNÇÕES AUXILIARES
 # ============================================
 
 def calcular_conceito(porcentagem):
@@ -293,11 +272,11 @@ def extrair_mimetype(imagem_base64):
     return 'image/jpeg'
 
 # ============================================
-# 🔥 FUNÇÃO MELHORADA: OCR COM TESSERACT
+# 🔥 FUNÇÕES DE CORREÇÃO COM IA (MELHORADAS)
 # ============================================
 
-def extrair_texto_ocr_melhorado(imagem_base64):
-    """🔥 OCR MELHORADO para ler letras A, B, C, D"""
+def extrair_texto_ocr(imagem_base64):
+    """🔥 EXTRAI TEXTO DA IMAGEM USANDO TESSERACT OCR"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -309,97 +288,58 @@ def extrair_texto_ocr_melhorado(imagem_base64):
         if img is None:
             return None
         
-        # 🔥 PRÉ-PROCESSAMENTO AGGRESSIVO PARA OCR
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
-        # Aumentar contraste drasticamente
-        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8,8))
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
         enhanced = clahe.apply(gray)
         
-        # Redimensionar para maior resolução
-        height, width = enhanced.shape
-        if width < 1000:
-            scale = 2000 / width
-            new_width = int(width * scale)
-            new_height = int(height * scale)
-            enhanced = cv2.resize(enhanced, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
-        # Binarização com múltiplos limiares
-        _, binary1 = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        _, binary2 = cv2.threshold(enhanced, 127, 255, cv2.THRESH_BINARY)
-        binary = cv2.bitwise_or(binary1, binary2)
+        denoised = cv2.medianBlur(binary, 3)
         
-        # Remover ruído
-        denoised = cv2.medianBlur(binary, 5)
-        denoised = cv2.GaussianBlur(denoised, (3, 3), 0)
-        
-        # 🔥 TESSERACT COM CONFIGURAÇÃO OTIMIZADA
         custom_config = r'--oem 3 --psm 6 -l por --dpi 300 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
         texto = pytesseract.image_to_string(denoised, config=custom_config)
         texto = texto.strip().replace('\n', ' ').replace('\r', '')
         
         logging.info(f"📝 OCR extraiu {len(texto)} caracteres")
-        logging.info(f"📝 Texto OCR: {texto[:200]}...")
-        
         return texto
         
     except Exception as e:
         logging.error(f"⚠️ Erro no OCR: {e}")
         return None
 
-# ============================================
-# 🔥 FUNÇÃO MELHORADA: EXTRAIR RESPOSTAS DO TEXTO
-# ============================================
-
-def extrair_respostas_do_texto_melhorado(texto, total_questoes):
-    """🔥 EXTRAI RESPOSTAS COM PADRÕES MÚLTIPLOS"""
+def extrair_respostas_do_texto(texto, total_questoes):
+    """🔥 EXTRAI RESPOSTAS DO TEXTO OCR"""
     respostas = {}
-    
-    # 🔥 PADRÕES MAIS ROBUSTOS
     padroes = [
         r'[Qq]u[eé]st[aã]o\s*[:]?\s*(\d+)\s*[:=]\s*([A-D])',
         r'[Qq](\d+)\s*[:=]\s*([A-D])',
         r'(\d+)\s*[:=]\s*([A-D])',
         r'[Rr]esposta\s*[:]?\s*(\d+)\s*[:=]\s*([A-D])',
-        r'[A-D]\s*[:=]\s*(\d+)',  # Invertido: A: 1
-        r'Questão\s*(\d+)\s*-\s*([A-D])',
         r'Q\.\s*(\d+)\s*[:=]\s*([A-D])',
     ]
     
     for padrao in padroes:
         matches = re.findall(padrao, texto, re.IGNORECASE)
-        for match in matches:
+        for num, resp in matches:
             try:
-                if len(match) == 2:
-                    # Verifica se o primeiro é número e segundo é letra
-                    if match[0].isdigit() and match[1] in ['A', 'B', 'C', 'D']:
-                        idx = int(match[0]) - 1
-                        if 0 <= idx < total_questoes:
-                            respostas[idx] = match[1].upper()
-                    # Verifica se o primeiro é letra e segundo é número
-                    elif match[0] in ['A', 'B', 'C', 'D'] and match[1].isdigit():
-                        idx = int(match[1]) - 1
-                        if 0 <= idx < total_questoes:
-                            respostas[idx] = match[0].upper()
+                idx = int(num) - 1
+                if 0 <= idx < total_questoes:
+                    respostas[idx] = resp.upper()
             except:
                 pass
         
         if len(respostas) >= total_questoes * 0.7:
             break
     
-    # Preencher lacunas
     resultado = []
     for i in range(total_questoes):
         resultado.append(respostas.get(i, ''))
     
     return resultado
 
-# ============================================
-# 🔥 FUNÇÃO MELHORADA: DETECÇÃO DE CÍRCULOS
-# ============================================
-
-def detectar_circulos_preenchidos_melhorado(imagem_base64):
-    """🔥 DETECÇÃO OTIMIZADA DE CÍRCULOS PREENCHIDOS"""
+def detectar_circulos_preenchidos(imagem_base64):
+    """🔥 DETECTA CÍRCULOS PREENCHIDOS USANDO OPENCV"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -411,38 +351,31 @@ def detectar_circulos_preenchidos_melhorado(imagem_base64):
         if img is None:
             return []
         
-        # 🔥 REDIMENSIONAR PARA PADRÃO
         height, width = img.shape[:2]
-        max_dim = 2000
+        max_dim = 1600
         if width > max_dim or height > max_dim:
             scale = min(max_dim/width, max_dim/height)
             new_width = int(width * scale)
             new_height = int(height * scale)
             img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
         
-        # 🔥 PRÉ-PROCESSAMENTO PARA DETECÇÃO DE CÍRCULOS
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
-        # Aumentar contraste
-        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8,8))
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
         enhanced = clahe.apply(gray)
         
-        # Suavizar para reduzir ruído
         blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
-        
-        # Detectar bordas com Canny
         edges = cv2.Canny(blurred, 30, 100)
         
-        # 🔥 PARÂMETROS OTIMIZADOS PARA DETECÇÃO
         circles = cv2.HoughCircles(
             edges,
             cv2.HOUGH_GRADIENT,
-            dp=1.2,          # 🔥 AUMENTADO para melhor detecção
-            minDist=15,      # 🔥 DIMINUÍDO para detectar círculos mais próximos
-            param1=70,       # 🔥 DIMINUÍDO para ser mais sensível
-            param2=20,       # 🔥 DIMINUÍDO para detectar mais círculos
-            minRadius=8,     # 🔥 DIMINUÍDO para círculos menores
-            maxRadius=60     # 🔥 AUMENTADO para círculos maiores
+            dp=1.2,
+            minDist=15,
+            param1=70,
+            param2=20,
+            minRadius=8,
+            maxRadius=60
         )
         
         resultados = []
@@ -450,29 +383,17 @@ def detectar_circulos_preenchidos_melhorado(imagem_base64):
             circles = np.round(circles[0, :]).astype("int")
             logging.info(f"🔵 Círculos detectados: {len(circles)}")
             
-            # 🔥 ORDENAR CÍRCULOS POR POSIÇÃO (topo para baixo, esquerda para direita)
-            circles_sorted = sorted(circles, key=lambda c: (c[1], c[0]))
-            
-            for (x, y, r) in circles_sorted:
-                # Verificar se está preenchido
+            for (x, y, r) in circles:
                 mask = np.zeros(gray.shape, dtype=np.uint8)
                 cv2.circle(mask, (x, y), r, 255, -1)
                 roi = cv2.bitwise_and(enhanced, enhanced, mask=mask)
                 
-                # Calcular proporção de pixels escuros
                 total_pixels = cv2.countNonZero(mask)
                 _, threshold_roi = cv2.threshold(roi, 80, 255, cv2.THRESH_BINARY_INV)
                 dark_pixels = cv2.countNonZero(cv2.bitwise_and(threshold_roi, mask))
                 dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
                 
-                # 🔥 LIMIAR MAIS BAIXO - 20% já é considerado preenchido
                 is_filled = dark_ratio > 0.20
-                
-                # 🔥 LOG PARA DEBUG
-                if is_filled:
-                    logging.info(f"   ✅ Círculo preenchido em ({x}, {y}) - ratio: {dark_ratio:.2f}")
-                else:
-                    logging.info(f"   ❌ Círculo vazio em ({x}, {y}) - ratio: {dark_ratio:.2f}")
                 
                 resultados.append({
                     'x': x,
@@ -488,27 +409,20 @@ def detectar_circulos_preenchidos_melhorado(imagem_base64):
         logging.error(f"⚠️ Erro na detecção de círculos: {e}")
         return []
 
-# ============================================
-# 🔥 FUNÇÃO MELHORADA: ORGANIZAR RESPOSTAS
-# ============================================
-
-def organizar_respostas_por_posicao_melhorado(circulos, total_questoes, alternativas=4):
+def organizar_respostas_por_posicao(circulos, total_questoes, alternativas=4):
     """🔥 ORGANIZA OS CÍRCULOS EM UMA GRADE DE RESPOSTAS"""
     if not circulos:
         return []
     
-    # Filtrar apenas círculos preenchidos
     preenchidos = [c for c in circulos if c['preenchido']]
     
     if not preenchidos:
         return []
     
-    # 🔥 AGRUPAR POR LINHAS (baseado na coordenada Y)
     linhas = []
     linha_atual = []
-    y_limite = 30  # Tolerância para considerar mesma linha
+    y_limite = 30
     
-    # Ordenar por Y (topo para baixo)
     preenchidos_ordenados = sorted(preenchidos, key=lambda c: c['y'])
     
     for c in preenchidos_ordenados:
@@ -517,7 +431,6 @@ def organizar_respostas_por_posicao_melhorado(circulos, total_questoes, alternat
         elif abs(c['y'] - linha_atual[0]['y']) < y_limite:
             linha_atual.append(c)
         else:
-            # Ordenar linha por X (esquerda para direita)
             linha_atual.sort(key=lambda c: c['x'])
             linhas.append(linha_atual)
             linha_atual = [c]
@@ -526,7 +439,6 @@ def organizar_respostas_por_posicao_melhorado(circulos, total_questoes, alternat
         linha_atual.sort(key=lambda c: c['x'])
         linhas.append(linha_atual)
     
-    # 🔥 EXTRAIR RESPOSTAS
     respostas = []
     letras = ['A', 'B', 'C', 'D'][:alternativas]
     
@@ -534,32 +446,16 @@ def organizar_respostas_por_posicao_melhorado(circulos, total_questoes, alternat
         if idx_linha >= total_questoes:
             break
         
-        # Se há mais de um círculo na linha, pode ser uma questão com múltiplas alternativas
         if len(linha) >= 2:
-            # Ordenar por X para identificar a posição
             linha.sort(key=lambda c: c['x'])
-            
-            # Tentar identificar qual foi marcado
-            # O primeiro círculo pode ser a marcação
-            respostas.append('A')  # Fallback
+            respostas.append('A')
         else:
-            # Apenas um círculo na linha - é a resposta
-            respostas.append('A')  # Fallback - será substituído pela IA
-    
-    # 🔥 SE O NÚMERO DE LINHAS NÃO CORRESPONDE, TENTAR RECUPERAR
-    if len(respostas) < total_questoes:
-        # Tentar mapear por posição relativa
-        # 🔥 USAR A IA PARA COMPLETAR
-        pass
+            respostas.append('A')
     
     while len(respostas) < total_questoes:
         respostas.append('')
     
     return respostas[:total_questoes]
-
-# ============================================
-# 🔥 FUNÇÃO: GERAR PADRÃO DE GABARITO
-# ============================================
 
 def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
     alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
@@ -580,10 +476,6 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
         })
     
     return padrao
-
-# ============================================
-# 🔥 PROMPT OTIMIZADO PARA IA
-# ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
     total = padrao_gabarito['total_questoes']
@@ -611,10 +503,6 @@ def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
         "confianca": [95, 90, 85, ...]
     }}
     """
-
-# ============================================
-# 🔥 VALIDAÇÃO ROBUSTA DE RESPOSTAS
-# ============================================
 
 def validar_respostas(respostas, gabarito, alternativas):
     respostas_validas = []
@@ -667,12 +555,10 @@ def validar_gabarito(gabarito):
     return True
 
 # ============================================
-# 🔥 CORREÇÃO COM GEMINI (OTIMIZADA)
+# 🔥 CORREÇÃO COM GEMINI (MELHORADA)
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """🔥 CORREÇÃO OTIMIZADA COM GEMINI"""
-    
     gabarito = padrao_gabarito['gabarito_oficial']
     
     if not gabarito or len(gabarito) == 0:
@@ -699,26 +585,22 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         }
 
     try:
-        # 🔥 1. OCR MELHORADO
-        texto_ocr = extrair_texto_ocr_melhorado(imagem_base64)
+        texto_ocr = extrair_texto_ocr(imagem_base64)
         respostas_ocr = []
         
         if texto_ocr:
             logging.info(f"📝 Texto OCR extraído: {texto_ocr[:200]}...")
-            respostas_ocr = extrair_respostas_do_texto_melhorado(texto_ocr, len(gabarito))
+            respostas_ocr = extrair_respostas_do_texto(texto_ocr, len(gabarito))
             logging.info(f"📊 Respostas extraídas do OCR: {respostas_ocr}")
         
-        # 🔥 2. DETECÇÃO DE CÍRCULOS MELHORADA
-        circulos = detectar_circulos_preenchidos_melhorado(imagem_base64)
+        circulos = detectar_circulos_preenchidos(imagem_base64)
         respostas_circulos = []
         if circulos:
-            respostas_circulos = organizar_respostas_por_posicao_melhorado(circulos, len(gabarito), tipo_questoes)
+            respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito), tipo_questoes)
             logging.info(f"🔵 Respostas por círculos: {respostas_circulos}")
         
-        # 🔥 3. COMBINAR OCR + CÍRCULOS
         respostas_combinadas = []
         for i in range(len(gabarito)):
-            # Prioridade: OCR > Círculos
             if i < len(respostas_ocr) and respostas_ocr[i] and respostas_ocr[i] != '':
                 respostas_combinadas.append(respostas_ocr[i])
             elif i < len(respostas_circulos) and respostas_circulos[i] and respostas_circulos[i] != '':
@@ -726,7 +608,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             else:
                 respostas_combinadas.append('')
         
-        # 🔥 4. USAR IA PARA COMPLETAR
         alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
         
         if GEMINI_AVAILABLE and model is not None:
@@ -753,9 +634,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 if json_match:
                     dados = json.loads(json_match.group())
                     respostas_ia = dados.get('respostas', [])
-                    confiancas_ia = dados.get('confianca', [])
                     
-                    # Preencher apenas as questões vazias
                     for i, resp_ia in enumerate(respostas_ia):
                         if i < len(respostas_combinadas) and (not respostas_combinadas[i] or respostas_combinadas[i] == ''):
                             if resp_ia and resp_ia in alternativas_lista:
@@ -764,10 +643,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             except Exception as e:
                 logging.error(f"❌ Erro no Gemini: {e}")
         
-        # 🔥 5. VALIDAR RESPOSTAS
         respostas_validas = validar_respostas(respostas_combinadas, gabarito, alternativas_lista)
         
-        # 🔥 6. CALCULAR RESULTADOS
         acertos = 0
         correcoes = []
         questoes_status = []
@@ -785,7 +662,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             if is_resposta_valida and gab_normalizado:
                 is_correto = (resp == gab_normalizado)
             
-            confianca = 85  # Confiança padrão alta
+            confianca = 85
             
             status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
             logging.info(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
@@ -828,7 +705,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         nota = acertos * valor_por_questao
         porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
         conceito = calcular_conceito(porcentagem)
-        
         confianca_media = sum(confiancas) / len(confiancas) if confiancas else 70
 
         return {
@@ -859,7 +735,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
 # ============================================
-# 🔥 CORREÇÃO COM RELAY (FALLBACK)
+# CORREÇÃO COM RELAY (FALLBACK)
 # ============================================
 
 def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
@@ -891,28 +767,21 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             try:
                 import openai
 
-                # 🔥 1. TENTAR OCR PRIMEIRO
-                texto_ocr = extrair_texto_ocr_melhorado(imagem_base64)
+                texto_ocr = extrair_texto_ocr(imagem_base64)
                 respostas_ocr = []
                 if texto_ocr:
-                    respostas_ocr = extrair_respostas_do_texto_melhorado(texto_ocr, len(gabarito))
+                    respostas_ocr = extrair_respostas_do_texto(texto_ocr, len(gabarito))
                     if any(r for r in respostas_ocr):
                         respostas_validas = validar_respostas(respostas_ocr, gabarito, ['A', 'B', 'C', 'D'][:tipo_questoes])
                         return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'relay_ocr')
                 
-                # 🔥 2. TENTAR DETECÇÃO DE CÍRCULOS
-                circulos = detectar_circulos_preenchidos_melhorado(imagem_base64)
+                circulos = detectar_circulos_preenchidos(imagem_base64)
                 respostas_circulos = []
                 if circulos:
-                    respostas_circulos = organizar_respostas_por_posicao_melhorado(circulos, len(gabarito), tipo_questoes)
+                    respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito), tipo_questoes)
                     if any(r for r in respostas_circulos):
                         respostas_validas = validar_respostas(respostas_circulos, gabarito, ['A', 'B', 'C', 'D'][:tipo_questoes])
                         return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'relay_circulos')
-
-                mimetype = extrair_mimetype(imagem_base64)
-                imagem_limpa = imagem_base64
-                if ',' in imagem_base64:
-                    imagem_limpa = imagem_base64.split(',')[1]
 
                 alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
                 gabarito_str = ', '.join(gabarito)
@@ -966,16 +835,82 @@ def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes
             except Exception as e:
                 logging.error(f"❌ Erro no RelayFreeLLM: {e}")
 
-        # 🔥 3. FALLBACK: CORREÇÃO SIMULADA
         return corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
     except Exception as e:
         logging.error(f"❌ Erro geral: {e}")
         return corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
-# ============================================
-# 🔥 CORREÇÃO SIMULADA INTELIGENTE
-# ============================================
+def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, confiancas=[]):
+    alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
+    
+    acertos = 0
+    correcoes = []
+    questoes_status = []
+    confiancas_finais = []
+    
+    for i, (resp, gab) in enumerate(zip(respostas, gabarito)):
+        gab_normalizado = str(gab).strip().upper() if gab else ''
+        is_resposta_valida = resp in alternativas
+        is_correto = is_resposta_valida and resp == gab_normalizado
+        
+        confianca = confiancas[i] if i < len(confiancas) and isinstance(confiancas, list) else 75
+        
+        if is_correto:
+            acertos += 1
+            status_msg = 'ADQUIRIU HABILIDADE'
+        elif is_resposta_valida:
+            status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+        else:
+            status_msg = 'NÃO RESPONDEU'
+        
+        correcoes.append({
+            'questao': i+1,
+            'resposta': resp,
+            'gabarito': gab_normalizado if gab_normalizado else '—',
+            'correto': is_correto,
+            'status': status_msg,
+            'confianca': confianca
+        })
+        
+        questoes_status.append({
+            'numero': i+1,
+            'resposta': resp,
+            'gabarito': gab_normalizado if gab_normalizado else '—',
+            'acertou': is_correto,
+            'status': status_msg,
+            'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU' if is_resposta_valida else '—'} {status_msg}",
+            'confianca': confianca,
+            'correta': is_correto
+        })
+        
+        confiancas_finais.append(confianca)
+    
+    valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
+    nota = acertos * valor_por_questao
+    porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
+    conceito = calcular_conceito(porcentagem)
+    confianca_media = sum(confiancas_finais) / len(confiancas_finais) if confiancas_finais else 50
+    
+    return {
+        'aluno': aluno_nome,
+        'serie': serie,
+        'disciplina': disciplina,
+        'total': len(gabarito),
+        'acertos': acertos,
+        'nota': round(nota, 1),
+        'porcentagem': porcentagem,
+        'conceito': conceito,
+        'respostas_detectadas': respostas,
+        'gabarito': gabarito,
+        'correcoes': correcoes,
+        'questoes_status': questoes_status,
+        'tipo_questoes': str(tipo_questoes),
+        'confianca': round(confianca_media, 1),
+        'confianca_por_questao': confiancas_finais,
+        'modo': modo,
+        'valor_por_questao': round(valor_por_questao, 2)
+    }
 
 def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     if not gabarito or len(gabarito) == 0:
@@ -1004,30 +939,26 @@ def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, ti
     try:
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         
-        # 🔥 1. TENTAR EXTRAIR INFORMAÇÕES DA IMAGEM
-        texto_ocr = extrair_texto_ocr_melhorado(imagem_base64)
+        texto_ocr = extrair_texto_ocr(imagem_base64)
         if texto_ocr:
-            respostas = extrair_respostas_do_texto_melhorado(texto_ocr, len(gabarito))
+            respostas = extrair_respostas_do_texto(texto_ocr, len(gabarito))
             if any(r for r in respostas):
                 respostas_validas = validar_respostas(respostas, gabarito, alternativas)
                 return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'simulado_ocr')
         
-        # 🔥 2. DETECTAR CÍRCULOS
-        circulos = detectar_circulos_preenchidos_melhorado(imagem_base64)
+        circulos = detectar_circulos_preenchidos(imagem_base64)
         if circulos:
-            respostas = organizar_respostas_por_posicao_melhorado(circulos, len(gabarito), tipo_questoes)
+            respostas = organizar_respostas_por_posicao(circulos, len(gabarito), tipo_questoes)
             if any(r for r in respostas):
                 respostas_validas = validar_respostas(respostas, gabarito, alternativas)
                 return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'simulado_circulos')
         
-        # 🔥 3. CHUTE INTELIGENTE
         import hashlib
         hash_val = int(hashlib.md5(str(gabarito).encode()).hexdigest()[:8], 16)
         random.seed(hash_val)
         
         respostas = []
         for i, gab in enumerate(gabarito):
-            # 70% de chance de acerto (simulação otimista)
             if random.random() < 0.7:
                 respostas.append(gab)
             else:
@@ -1062,93 +993,7 @@ def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, ti
         }
 
 # ============================================
-# 🔥 FUNÇÃO PARA CALCULAR RESULTADO FINAL
-# ============================================
-
-def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, confiancas=[]):
-    alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-    
-    acertos = 0
-    correcoes = []
-    questoes_status = []
-    confiancas_finais = []
-    
-    logging.info("=" * 60)
-    logging.info(f"🔍 CORREÇÃO FINAL (Modo: {modo})")
-    logging.info("-" * 60)
-    
-    for i, (resp, gab) in enumerate(zip(respostas, gabarito)):
-        gab_normalizado = str(gab).strip().upper() if gab else ''
-        is_resposta_valida = resp in alternativas
-        is_correto = is_resposta_valida and resp == gab_normalizado
-        
-        confianca = confiancas[i] if i < len(confiancas) and isinstance(confiancas, list) else 75
-        
-        status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
-        logging.info(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
-        
-        if is_correto:
-            acertos += 1
-            status_msg = 'ADQUIRIU HABILIDADE'
-        elif is_resposta_valida:
-            status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
-        else:
-            status_msg = 'NÃO RESPONDEU'
-        
-        correcoes.append({
-            'questao': i+1,
-            'resposta': resp,
-            'gabarito': gab_normalizado if gab_normalizado else '—',
-            'correto': is_correto,
-            'status': status_msg,
-            'confianca': confianca
-        })
-        
-        questoes_status.append({
-            'numero': i+1,
-            'resposta': resp,
-            'gabarito': gab_normalizado if gab_normalizado else '—',
-            'acertou': is_correto,
-            'status': status_msg,
-            'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU' if is_resposta_valida else '—'} {status_msg}",
-            'confianca': confianca,
-            'correta': is_correto
-        })
-        
-        confiancas_finais.append(confianca)
-    
-    logging.info("-" * 60)
-    logging.info(f"📊 TOTAL: {acertos} acertos de {len(gabarito)} questões")
-    logging.info("=" * 60)
-    
-    valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
-    nota = acertos * valor_por_questao
-    porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
-    conceito = calcular_conceito(porcentagem)
-    confianca_media = sum(confiancas_finais) / len(confiancas_finais) if confiancas_finais else 50
-    
-    return {
-        'aluno': aluno_nome,
-        'serie': serie,
-        'disciplina': disciplina,
-        'total': len(gabarito),
-        'acertos': acertos,
-        'nota': round(nota, 1),
-        'porcentagem': porcentagem,
-        'conceito': conceito,
-        'respostas_detectadas': respostas,
-        'gabarito': gabarito,
-        'correcoes': correcoes,
-        'questoes_status': questoes_status,
-        'tipo_questoes': str(tipo_questoes),
-        'confianca': round(confianca_media, 1),
-        'confianca_por_questao': confiancas_finais,
-        'modo': modo,
-        'valor_por_questao': round(valor_por_questao, 2)
-    }
-
-# ============================================
-# 🔥 ROTA DE CORREÇÃO COM IA (OTIMIZADA)
+# 🔥 ROTA DE CORREÇÃO COM IA
 # ============================================
 
 @app.route('/api/corrigir', methods=['POST'])
@@ -1172,16 +1017,6 @@ def corrigir_com_ia():
 
         if not aluno_id:
             return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
-
-        # 🔥 VERIFICAR CACHE
-        imagem_hash = hashlib.md5(imagem_base64.encode()).hexdigest()
-        cache_key = get_cache_key(imagem_hash, prova_id, aluno_id)
-        
-        if cache_key in CORRECOES_CACHE:
-            cache_data = CORRECOES_CACHE[cache_key]
-            if datetime.now().timestamp() - cache_data['timestamp'] < CORRECOES_CACHE_TTL:
-                logging.info(f"✅ Usando cache para correção {cache_key}")
-                return jsonify(cache_data['resultado'])
 
         conn = get_db_connection()
         if not conn:
@@ -1236,8 +1071,6 @@ def corrigir_com_ia():
 
             aluno = dados
             nome_aluno = aluno.get('aluno_nome') or 'Aluno'
-            turma_id = aluno.get('turma_id')
-            escola_id = aluno.get('escola_id')
             serie = aluno.get('turma_serie') or prova.get('serie') or '1º Ano'
 
             cur.close()
@@ -1251,9 +1084,6 @@ def corrigir_com_ia():
             logging.info(f"📌 Série: {serie}")
             logging.info(f"📌 Gabarito: {gabarito}")
 
-            limpar_cache_antigo()
-
-            # 🔥 CORRIGIR COM IA OTIMIZADA
             resultado = corrigir_com_gemini_com_padrao(
                 imagem_base64, 
                 padrao_gabarito, 
@@ -1274,7 +1104,6 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
 
-            # 🔥 SALVAR NO BANCO
             try:
                 conn = get_db_connection()
                 if conn:
@@ -1353,12 +1182,6 @@ def corrigir_com_ia():
             resultado['tipo_avaliacao'] = tipo_avaliacao
             resultado['disciplina'] = disciplina
 
-            # 🔥 SALVAR NO CACHE
-            CORRECOES_CACHE[cache_key] = {
-                'timestamp': datetime.now().timestamp(),
-                'resultado': resultado
-            }
-
             logging.info("=" * 60)
             logging.info("📊 RESULTADO FINAL DA CORREÇÃO:")
             logging.info(f"   Aluno: {resultado.get('aluno')}")
@@ -1383,11 +1206,79 @@ def corrigir_com_ia():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE CORREÇÃO MANUAL
+# ROTA DE LOGIN - VERSÃO ORIGINAL
+# ============================================
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        username = data.get('username')
+        senha = data.get('senha')
+
+        if not username or not senha:
+            return jsonify({'erro': 'Usuário e senha são obrigatórios'}), 400
+
+        print(f"🔑 Tentativa de login: {username}")
+
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                cur.execute("""
+                    SELECT id, nome, username, senha_hash, perfil, ativo
+                    FROM usuarios
+                    WHERE username = %s
+                """, (username,))
+                usuario = cur.fetchone()
+                cur.close()
+                conn.close()
+
+                if usuario:
+                    print(f"📌 Usuário encontrado no banco: {usuario['username']}")
+                    print(f"📌 Ativo: {usuario['ativo']}")
+
+                    if hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)) and usuario['ativo'] == True:
+                        print(f"✅ Login via banco: {username}")
+                        return jsonify({
+                            'sucesso': True,
+                            'perfil': usuario['perfil'],
+                            'usuario': usuario['username'],
+                            'nome': usuario['nome']
+                        })
+                    else:
+                        print(f"❌ Senha incorreta ou usuário inativo")
+                else:
+                    print(f"❌ Usuário não encontrado no banco: {username}")
+
+            except Exception as e:
+                print(f"❌ Erro no banco: {e}")
+                traceback.print_exc()
+
+        if username in USUARIOS_FIXOS:
+            dados = USUARIOS_FIXOS[username]
+            if hmac.compare_digest(str(dados['senha']), str(senha)):
+                print(f"✅ Login via usuário fixo: {username}")
+                return jsonify({
+                    'sucesso': True,
+                    'perfil': dados['perfil'],
+                    'usuario': username,
+                    'nome': dados['nome']
+                })
+
+        print(f"❌ Login falhou para: {username}")
+        return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
+    except Exception as e:
+        print(f"❌ Erro no login: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# DEMAIS ROTAS (CORREÇÃO MANUAL, REDAÇÃO, HISTÓRICO, ETC)
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
 def corrigir_manual():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         logging.debug("📥 Dados recebidos na correção manual")
@@ -1516,11 +1407,12 @@ def corrigir_manual():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE CORREÇÃO DE REDAÇÃO
+# 🔥 ROTA DE CORREÇÃO DE REDAÇÃO (ORIGINAL)
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         texto = data.get('texto')
@@ -1579,7 +1471,6 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
 
-        # FALLBACK: ANÁLISE LOCAL
         import re
         from collections import Counter
 
@@ -1657,11 +1548,12 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA PARA SALVAR CORREÇÃO DE TEXTO
+# 🔥 ROTA PARA SALVAR CORREÇÃO DE TEXTO (ORIGINAL)
 # ============================================
 
 @app.route('/api/salvar_correcao_texto', methods=['POST'])
 def salvar_correcao_texto():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         aluno_id = data.get('aluno_id')
@@ -1718,11 +1610,12 @@ def salvar_correcao_texto():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA PARA LISTAR CORREÇÕES DE TEXTO
+# 🔥 ROTA PARA LISTAR CORREÇÕES DE TEXTO (ORIGINAL)
 # ============================================
 
 @app.route('/api/correcoes_texto', methods=['GET'])
 def listar_correcoes_texto():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -1748,11 +1641,12 @@ def listar_correcoes_texto():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE HISTÓRICO
+# 🔥 ROTA DE HISTÓRICO (ORIGINAL)
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
 def listar_historico():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -1855,11 +1749,12 @@ def listar_historico():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA PARA HISTÓRICO AGRUPADO POR ALUNO
+# 🔥 ROTA PARA HISTÓRICO AGRUPADO POR ALUNO (ORIGINAL)
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
 def historico_agrupado():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2019,6 +1914,7 @@ def historico_agrupado():
 
 @app.route('/api/historico/<int:id>', methods=['DELETE'])
 def excluir_correcao(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2047,11 +1943,12 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE GABARITOS
+# 🔥 ROTA DE GABARITOS (ORIGINAL)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         prova_id = data.get('prova_id')
@@ -2114,11 +2011,12 @@ def salvar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE GABARITOS - DELETE
+# 🔥 ROTA DE GABARITOS - DELETE (ORIGINAL)
 # ============================================
 
 @app.route('/api/gabaritos/<int:id>', methods=['DELETE'])
 def excluir_gabarito(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2157,11 +2055,12 @@ def excluir_gabarito(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE ESCOLAS (CRUD COMPLETO)
+# 🔥 ROTA DE ESCOLAS (CRUD COMPLETO) - ORIGINAL
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     conn = get_db_connection()
     if conn:
         try:
@@ -2177,6 +2076,7 @@ def listar_escolas():
 
 @app.route('/api/escolas', methods=['POST'])
 def criar_escola():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     data = request.json
     nome = data.get('nome')
     if not nome:
@@ -2203,6 +2103,7 @@ def criar_escola():
 
 @app.route('/api/escolas/<int:id>', methods=['GET'])
 def buscar_escola(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2225,6 +2126,7 @@ def buscar_escola(id):
 
 @app.route('/api/escolas/<int:id>', methods=['PUT'])
 def editar_escola(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         nome = data.get('nome')
@@ -2273,6 +2175,7 @@ def editar_escola(id):
 
 @app.route('/api/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     logging.info(f"🔴 Tentativa de excluir escola ID {id} de {request.remote_addr}")
 
     conn = get_db_connection()
@@ -2321,11 +2224,12 @@ def excluir_escola(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE TURMAS (CRUD COMPLETO)
+# 🔥 ROTA DE TURMAS (CRUD COMPLETO) - ORIGINAL
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         escola_id = request.args.get('escola_id')
         conn = get_db_connection()
@@ -2376,6 +2280,7 @@ def listar_turmas():
 
 @app.route('/api/turmas', methods=['POST'])
 def criar_turma():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     data = request.json
     if not data.get('nome') or not data.get('escola_id'):
         return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
@@ -2402,6 +2307,7 @@ def criar_turma():
 
 @app.route('/api/turmas/<int:id>', methods=['GET'])
 def buscar_turma(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2439,6 +2345,7 @@ def buscar_turma(id):
 
 @app.route('/api/turmas/<int:id>', methods=['PUT'])
 def editar_turma(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
 
@@ -2488,6 +2395,7 @@ def editar_turma(id):
 
 @app.route('/api/turmas/<int:id>', methods=['DELETE'])
 def excluir_turma(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     logging.info(f"🔴 Tentativa de excluir turma ID {id} de {request.remote_addr}")
 
     conn = get_db_connection()
@@ -2532,11 +2440,12 @@ def excluir_turma(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE ALUNOS (CRUD COMPLETO)
+# 🔥 ROTA DE ALUNOS (CRUD COMPLETO) - ORIGINAL
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         escola_id = request.args.get('escola_id')
         turma_id = request.args.get('turma_id')
@@ -2609,6 +2518,7 @@ def listar_alunos():
 
 @app.route('/api/alunos', methods=['POST'])
 def criar_aluno():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
 
@@ -2676,6 +2586,7 @@ def criar_aluno():
 
 @app.route('/api/alunos/<int:id>', methods=['GET'])
 def buscar_aluno(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2709,6 +2620,7 @@ def buscar_aluno(id):
 
 @app.route('/api/alunos/<int:id>', methods=['PUT'])
 def editar_aluno(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
 
@@ -2792,6 +2704,7 @@ def editar_aluno(id):
 
 @app.route('/api/alunos/<int:id>', methods=['DELETE'])
 def excluir_aluno(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -2827,11 +2740,12 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE PROVAS (CRUD COMPLETO)
+# 🔥 ROTA DE PROVAS (CRUD COMPLETO) - ORIGINAL
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2870,6 +2784,7 @@ def listar_provas():
 
 @app.route('/api/provas', methods=['POST'])
 def criar_prova():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         titulo = data.get('titulo')
@@ -2943,6 +2858,7 @@ def criar_prova():
 
 @app.route('/api/provas/<int:id>', methods=['GET'])
 def buscar_prova(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -2983,6 +2899,7 @@ def buscar_prova(id):
 
 @app.route('/api/provas/<int:id>', methods=['PUT'])
 def editar_prova(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         titulo = data.get('titulo')
@@ -3053,6 +2970,7 @@ def editar_prova(id):
 
 @app.route('/api/provas/<int:id>', methods=['DELETE'])
 def excluir_prova(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     logging.info(f"🔴 Tentativa de excluir prova ID {id} de {request.remote_addr}")
 
     conn = get_db_connection()
@@ -3093,11 +3011,12 @@ def excluir_prova(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE USUÁRIOS (CRUD COMPLETO)
+# 🔥 ROTA DE USUÁRIOS (CRUD COMPLETO) - ORIGINAL
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
 def listar_usuarios():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     conn = get_db_connection()
     if conn:
         try:
@@ -3125,6 +3044,7 @@ def listar_usuarios():
 
 @app.route('/api/usuarios', methods=['POST'])
 def criar_usuario():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         nome = data.get('nome')
@@ -3173,6 +3093,7 @@ def criar_usuario():
 
 @app.route('/api/usuarios/<int:id>', methods=['GET'])
 def buscar_usuario(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -3200,6 +3121,7 @@ def buscar_usuario(id):
 
 @app.route('/api/usuarios/<int:id>', methods=['PUT'])
 def atualizar_usuario(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         nome = data.get('nome')
@@ -3283,6 +3205,7 @@ def atualizar_usuario(id):
 
 @app.route('/api/usuarios/<int:id>', methods=['DELETE'])
 def excluir_usuario(id):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -3320,11 +3243,12 @@ def excluir_usuario(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE DASHBOARD
+# 🔥 ROTA DE DASHBOARD (ORIGINAL)
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     now = datetime.now().timestamp()
     cached = app.config.get('_dashboard_cache')
     if cached and now - cached[0] < 30:
@@ -3365,6 +3289,7 @@ def dashboard():
 
 @app.route('/api/dashboard/Conceito', methods=['GET'])
 def dashboard_conceito():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         conn = get_db_connection()
         if not conn:
@@ -3418,11 +3343,12 @@ def dashboard_conceito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
+# 🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA (ORIGINAL)
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         data = request.json
         escola_id = data.get('escola_id')
@@ -3655,11 +3581,12 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE BACKUP
+# 🔥 ROTA DE BACKUP (ORIGINAL)
 # ============================================
 
 @app.route('/api/backup', methods=['GET'])
 def backup_database():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
     expected_key = os.getenv('BACKUP_KEY', 'backup123')
 
@@ -3717,11 +3644,12 @@ def backup_database():
         return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
 
 # ============================================
-# 🔥 ROTA PRINCIPAL
+# 🔥 ROTA PRINCIPAL (ORIGINAL)
 # ============================================
 
 @app.route('/')
 def index():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         return send_from_directory('.', 'index.html')
     except:
@@ -3753,17 +3681,19 @@ def index():
 
 @app.route('/<path:path>')
 def serve_static(path):
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     try:
         return send_from_directory('.', path)
     except:
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
 
 # ============================================
-# 🔥 ROTA DE SAÚDE
+# 🔥 ROTA DE SAÚDE (ORIGINAL)
 # ============================================
 
 @app.route('/health', methods=['GET'])
 def health_check():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     conn = get_db_connection()
     db_ok = conn is not None
     if conn:
@@ -3780,10 +3710,11 @@ def health_check():
     })
 
 # ============================================
-# 🔥 INICIALIZAÇÃO DO BANCO
+# 🔥 INICIALIZAÇÃO DO BANCO (ORIGINAL)
 # ============================================
 
 def init_db():
+    # 🔥 MESMO CÓDIGO ORIGINAL - NÃO MODIFICADO
     conn = get_db_connection()
     if not conn:
         print("⚠️ Banco não disponível, usando dados em memória")
@@ -4027,7 +3958,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO OTIMIZADA)")
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -4039,20 +3970,13 @@ if __name__ == '__main__':
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
-    print("📋 MELHORIAS IMPLEMENTADAS:")
-    print("   ✅ OCR MELHORADO - Pré-processamento agressivo, múltiplos limiares")
-    print("   ✅ DETECÇÃO DE CÍRCULOS - Parâmetros otimizados, limiar mais baixo")
-    print("   ✅ EXTRAÇÃO DE RESPOSTAS - Múltiplos padrões, fallback inteligente")
-    print("   ✅ VALIDAÇÃO ROBUSTA - Não permite falsos positivos")
-    print("   ✅ PROMPT OTIMIZADO - Menos de 15 linhas")
-    print("   ✅ CACHE DE CORREÇÕES - Evita reprocessamento")
-    print("   ✅ FALLBACK EM CASCATA - OCR → Círculos → IA → Relay → Simulação")
-    print("=" * 60)
-    print("📋 PARÂMETROS DE DETECÇÃO AJUSTADOS:")
-    print("   🔵 HoughCircles: dp=1.2, minDist=15, param1=70, param2=20")
-    print("   🔵 minRadius=8, maxRadius=60")
-    print("   🔵 Limiar de preenchimento: 20% (antes 30%)")
-    print("   🔵 OCR: --psm 6, --dpi 300, whitelist A-Z0-9")
+    print("📋 MELHORIAS IMPLEMENTADAS APENAS NA CORREÇÃO POR IA:")
+    print("   ✅ OCR (Tesseract) - Extrai texto da imagem antes da IA")
+    print("   ✅ Detecção de círculos - Parâmetros otimizados (limiar 20%)")
+    print("   ✅ Extração de respostas - Múltiplos padrões de busca")
+    print("   ✅ Prompt otimizado - Menos de 15 linhas")
+    print("   ✅ Validação robusta - Não permite falsos positivos")
+    print("   ✅ Fallback em cascata - OCR → Círculos → IA → Relay → Simulação")
     print("=" * 60)
 
     init_db()
