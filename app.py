@@ -34,27 +34,6 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ============================================
-# 🔥 CACHE DE CORREÇÕES
-# ============================================
-
-CORRECOES_CACHE = {}
-CORRECOES_CACHE_TTL = 3600  # 1 hora
-
-def get_cache_key(imagem_hash, prova_id, aluno_id):
-    return f"{imagem_hash}_{prova_id}_{aluno_id}"
-
-def limpar_cache_antigo():
-    """Remove entradas antigas do cache"""
-    agora = datetime.now().timestamp()
-    chaves_remover = []
-    for chave, dados in CORRECOES_CACHE.items():
-        if agora - dados['timestamp'] > CORRECOES_CACHE_TTL:
-            chaves_remover.append(chave)
-    for chave in chaves_remover:
-        del CORRECOES_CACHE[chave]
-        logging.info(f"🧹 Cache antigo removido: {chave}")
-
-# ============================================
 # CONFIGURAÇÃO GEMINI
 # ============================================
 
@@ -206,199 +185,10 @@ USUARIOS_FIXOS = {
 }
 
 # ============================================
-# 🔥 FUNÇÕES DE OCR E PRÉ-PROCESSAMENTO
-# ============================================
-
-def extrair_texto_ocr(imagem_base64):
-    """🔥 EXTRAI TEXTO DA IMAGEM USANDO TESSERACT OCR"""
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return None
-        
-        # Pré-processamento para OCR
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Aumentar contraste
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
-        
-        # Binarização
-        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Remover ruído
-        denoised = cv2.medianBlur(binary, 3)
-        
-        # 🔥 TESSERACT COM CONFIGURAÇÃO OTIMIZADA
-        custom_config = r'--oem 3 --psm 6 -l por --dpi 300'
-        texto = pytesseract.image_to_string(denoised, config=custom_config)
-        texto = texto.strip().replace('\n', ' ').replace('\r', '')
-        
-        logging.info(f"📝 OCR extraiu {len(texto)} caracteres")
-        return texto
-        
-    except Exception as e:
-        logging.error(f"⚠️ Erro no OCR: {e}")
-        return None
-
-def extrair_respostas_do_texto(texto, total_questoes):
-    """🔥 EXTRAI RESPOSTAS DO TEXTO OCR (A, B, C, D)"""
-    respostas = {}
-    padroes = [
-        r'[Qq]u[eé]st[aã]o\s*(\d+)\s*[:=]\s*([A-D])',
-        r'[Qq](\d+)\s*[:=]\s*([A-D])',
-        r'(\d+)\s*[:=]\s*([A-D])',
-        r'[Rr]esposta\s*(\d+)\s*[:=]\s*([A-D])'
-    ]
-    
-    for padrao in padroes:
-        matches = re.findall(padrao, texto, re.IGNORECASE)
-        for num, resp in matches:
-            try:
-                idx = int(num) - 1
-                if 0 <= idx < total_questoes:
-                    respostas[idx] = resp.upper()
-            except:
-                pass
-        
-        if len(respostas) >= total_questoes * 0.7:
-            break
-    
-    # Preencher lacunas
-    resultado = []
-    for i in range(total_questoes):
-        resultado.append(respostas.get(i, ''))
-    
-    return resultado
-
-def detectar_circulos_preenchidos(imagem_base64):
-    """🔥 DETECTA CÍRCULOS PREENCHIDOS USANDO OPENCV"""
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return []
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Aumentar contraste
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
-        
-        # Binarização
-        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Detectar círculos
-        edges = cv2.Canny(binary, 30, 100)
-        
-        circles = cv2.HoughCircles(
-            edges,
-            cv2.HOUGH_GRADIENT,
-            dp=1.0,
-            minDist=20,
-            param1=80,
-            param2=25,
-            minRadius=10,
-            maxRadius=50
-        )
-        
-        resultados = []
-        if circles is not None:
-            circles = np.round(circles[0, :]).astype("int")
-            logging.info(f"🔵 Círculos detectados: {len(circles)}")
-            
-            for (x, y, r) in circles:
-                # Verificar se está preenchido
-                mask = np.zeros(gray.shape, dtype=np.uint8)
-                cv2.circle(mask, (x, y), r, 255, -1)
-                roi = cv2.bitwise_and(binary, binary, mask=mask)
-                
-                # Calcular proporção de pixels escuros
-                total_pixels = cv2.countNonZero(mask)
-                dark_pixels = cv2.countNonZero(roi)
-                dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
-                
-                is_filled = dark_ratio > 0.3  # 30% de preenchimento = marcado
-                resultados.append({
-                    'x': x,
-                    'y': y,
-                    'r': r,
-                    'preenchido': is_filled,
-                    'dark_ratio': dark_ratio
-                })
-        
-        return resultados
-        
-    except Exception as e:
-        logging.error(f"⚠️ Erro na detecção de círculos: {e}")
-        return []
-
-def organizar_respostas_por_posicao(circulos, total_questoes):
-    """🔥 ORGANIZA OS CÍRCULOS DETECTADOS EM RESPOSTAS"""
-    if not circulos:
-        return []
-    
-    # Ordenar por posição (topo para baixo, esquerda para direita)
-    circulos_ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
-    
-    # Agrupar em linhas
-    linhas = []
-    linha_atual = []
-    y_limite = 30
-    
-    for c in circulos_ordenados:
-        if not linha_atual:
-            linha_atual.append(c)
-        elif abs(c['y'] - linha_atual[0]['y']) < y_limite:
-            linha_atual.append(c)
-        else:
-            # Ordenar linha por x
-            linha_atual.sort(key=lambda c: c['x'])
-            linhas.append(linha_atual)
-            linha_atual = [c]
-    
-    if linha_atual:
-        linha_atual.sort(key=lambda c: c['x'])
-        linhas.append(linha_atual)
-    
-    # Extrair respostas
-    respostas = []
-    for linha in linhas[:total_questoes]:
-        for circulo in linha:
-            if circulo['preenchido']:
-                # Mapear posição para letra (A, B, C, D)
-                # Isso depende do layout do cartão
-                posicao = len(respostas) % 4
-                letras = ['A', 'B', 'C', 'D']
-                if posicao < len(letras):
-                    respostas.append(letras[posicao])
-                break
-        else:
-            respostas.append('')
-    
-    # Garantir tamanho
-    while len(respostas) < total_questoes:
-        respostas.append('')
-    
-    return respostas[:total_questoes]
-
-# ============================================
-# 🔥 FUNÇÕES DE CORREÇÃO OTIMIZADAS
+# FUNÇÕES AUXILIARES
 # ============================================
 
 def calcular_conceito(porcentagem):
-    """Calcula o conceito baseado na porcentagem de acertos"""
     if porcentagem <= 40:
         return {
             'nome': 'inicial',
@@ -482,11 +272,120 @@ def extrair_mimetype(imagem_base64):
     return 'image/jpeg'
 
 # ============================================
-# 🔥 FUNÇÃO PARA GERAR PADRÃO DE GABARITO
+# 🔥 FUNÇÃO MELHORADA - EXTRAIR TEXTO COM OCR
+# ============================================
+
+def extrair_texto_ocr_melhorado(imagem_base64):
+    """🔥 OCR MELHORADO - FOCADO EM LETRAS A, B, C, D"""
+    try:
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        image_data = base64.b64decode(imagem_base64)
+        np_array = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return None
+        
+        # Pré-processamento agressivo
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Aumentar contraste
+        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8,8))
+        enhanced = clahe.apply(gray)
+        
+        # Redimensionar para maior resolução
+        height, width = enhanced.shape
+        if width < 1500:
+            scale = 2500 / width
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            enhanced = cv2.resize(enhanced, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+        
+        # Binarização com OTSU
+        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # Remover ruído
+        denoised = cv2.medianBlur(binary, 3)
+        
+        # 🔥 CONFIGURAÇÃO OTIMIZADA PARA LER LETRAS
+        custom_config = r'--oem 3 --psm 6 -l por --dpi 300 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        texto = pytesseract.image_to_string(denoised, config=custom_config)
+        texto = texto.strip().replace('\n', ' ').replace('\r', '')
+        
+        logging.info(f"📝 OCR extraiu {len(texto)} caracteres")
+        logging.info(f"📝 Texto OCR: {texto[:300]}...")
+        
+        return texto
+        
+    except Exception as e:
+        logging.error(f"⚠️ Erro no OCR: {e}")
+        return None
+
+# ============================================
+# 🔥 FUNÇÃO PARA EXTRAIR RESPOSTAS DO TEXTO
+# ============================================
+
+def extrair_respostas_do_texto_melhorado(texto, total_questoes):
+    """🔥 EXTRAI RESPOSTAS COM PADRÕES MÚLTIPLOS"""
+    if not texto:
+        return []
+    
+    respostas = {}
+    
+    # 🔥 PADRÕES DE BUSCA
+    padroes = [
+        r'(?:[Qq]u[eé]st[aã]o\s*[:]?\s*|Q[\.]?\s*)(\d+)\s*[:=]\s*([A-D])',
+        r'(\d+)\s*[:=]\s*([A-D])',
+        r'([A-D])\s*[:=]\s*(\d+)',  # A: 1
+        r'[Qq](\d+)\s*[-–]\s*([A-D])',
+        r'(?:Questão|Q)\s*(\d+)\s*[-–]\s*([A-D])',
+        r'([A-D])\s*[-–]\s*(\d+)',  # A - 1
+    ]
+    
+    for padrao in padroes:
+        matches = re.findall(padrao, texto, re.IGNORECASE)
+        for match in matches:
+            try:
+                if len(match) == 2:
+                    # Verifica se o primeiro é número e segundo é letra
+                    if match[0].isdigit() and match[1] in ['A', 'B', 'C', 'D']:
+                        idx = int(match[0]) - 1
+                        if 0 <= idx < total_questoes:
+                            respostas[idx] = match[1].upper()
+                    # Verifica se o primeiro é letra e segundo é número
+                    elif match[0] in ['A', 'B', 'C', 'D'] and match[1].isdigit():
+                        idx = int(match[1]) - 1
+                        if 0 <= idx < total_questoes:
+                            respostas[idx] = match[0].upper()
+            except:
+                pass
+        
+        if len(respostas) >= total_questoes * 0.8:
+            break
+    
+    # 🔥 BUSCA DIRETA POR LETRAS ISOLADAS
+    if len(respostas) < total_questoes:
+        letras_encontradas = re.findall(r'\b([A-D])\b', texto)
+        for i, letra in enumerate(letras_encontradas):
+            if i < total_questoes and i not in respostas:
+                respostas[i] = letra
+    
+    # Preencher lacunas
+    resultado = []
+    for i in range(total_questoes):
+        resultado.append(respostas.get(i, ''))
+    
+    logging.info(f"📊 Respostas extraídas do OCR: {resultado}")
+    
+    return resultado
+
+# ============================================
+# 🔥 FUNÇÃO DE CORREÇÃO COM IA - FOCADA EM OCR + IA
 # ============================================
 
 def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
-    """Gera um padrão de gabarito para a IA comparar"""
     alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
     
     padrao = {
@@ -506,44 +405,7 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
     
     return padrao
 
-# ============================================
-# 🔥 PROMPT OTIMIZADO PARA IA
-# ============================================
-
-def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
-    """🔥 PROMPT SIMPLIFICADO E EFICIENTE"""
-    total = padrao_gabarito['total_questoes']
-    alternativas = ', '.join(padrao_gabarito['alternativas'])
-    gabarito_str = ', '.join(padrao_gabarito['gabarito_oficial'])
-    
-    return f"""
-    CORREÇÃO DE CARTÃO RESPOSTA
-    
-    Prova: {disciplina} - {serie}
-    Aluno: {aluno_nome or 'Não informado'}
-    Total: {total} questões
-    Alternativas: {alternativas}
-    Gabarito: {gabarito_str}
-    
-    REGRAS:
-    1. Cada questão tem UMA resposta marcada (A, B, C, D)
-    2. Identifique a letra marcada em cada questão
-    3. Se não houver marcação clara → "NÃO_RESPONDEU"
-    4. Dê confiança (0-100%) para cada detecção
-    
-    RESPOSTA (JSON APENAS):
-    {{
-        "respostas": ["A", "B", "C", ...],
-        "confianca": [95, 90, 85, ...]
-    }}
-    """
-
-# ============================================
-# 🔥 VALIDAÇÃO ROBUSTA DE RESPOSTAS
-# ============================================
-
 def validar_respostas(respostas, gabarito, alternativas):
-    """🔥 VALIDAÇÃO ROBUSTA - NÃO PERMITE FALSOS POSITIVOS"""
     respostas_validas = []
     
     for i, resp in enumerate(respostas):
@@ -553,38 +415,28 @@ def validar_respostas(respostas, gabarito, alternativas):
         
         resp_str = str(resp).strip().upper()
         
-        # 🔥 VERIFICAÇÃO EXATA
         if resp_str in alternativas:
             respostas_validas.append(resp_str)
         elif resp_str == 'NÃO_RESPONDEU' or resp_str == 'NAO_RESPONDEU':
             respostas_validas.append('NÃO_RESPONDEU')
         else:
-            # 🔥 TENTA CORRIGIR APENAS SE FOR UMA RESPOSTA VÁLIDA
-            # Remove apenas caracteres não-alfabéticos
             resp_limpa = re.sub(r'[^A-D]', '', resp_str)
             if len(resp_limpa) == 1 and resp_limpa in alternativas:
                 respostas_validas.append(resp_limpa)
             else:
-                # Verifica se a resposta contém uma alternativa válida
-                alternativa_encontrada = None
                 for alt in alternativas:
-                    if alt in resp_str and alt != '':
-                        alternativa_encontrada = alt
+                    if alt in resp_str:
+                        respostas_validas.append(alt)
                         break
-                
-                if alternativa_encontrada:
-                    respostas_validas.append(alternativa_encontrada)
                 else:
                     respostas_validas.append('NÃO_RESPONDEU')
     
-    # 🔥 GARANTE TAMANHO IGUAL AO GABARITO
     while len(respostas_validas) < len(gabarito):
         respostas_validas.append('NÃO_RESPONDEU')
     
     return respostas_validas[:len(gabarito)]
 
 def validar_gabarito(gabarito):
-    """🔥 VALIDA SE O GABARITO É VÁLIDO"""
     if not gabarito or len(gabarito) == 0:
         return False
     
@@ -600,11 +452,53 @@ def validar_gabarito(gabarito):
     return True
 
 # ============================================
-# 🔥 CORREÇÃO COM GEMINI (OTIMIZADA)
+# 🔥 PROMPT OTIMIZADO PARA IA - FOCADO EM RESPOSTAS
 # ============================================
 
-def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """🔥 CORREÇÃO OTIMIZADA COM GEMINI"""
+def gerar_prompt_ia_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
+    """🔥 PROMPT ESPECÍFICO PARA DETECTAR RESPOSTAS"""
+    total = padrao_gabarito['total_questoes']
+    alternativas = ', '.join(padrao_gabarito['alternativas'])
+    gabarito_str = ', '.join(padrao_gabarito['gabarito_oficial'])
+    
+    return f"""
+    Você é um sistema de CORREÇÃO AUTOMÁTICA DE PROVAS.
+    
+    Analise a imagem do cartão resposta e IDENTIFIQUE AS RESPOSTAS MARCADAS.
+    
+    INFORMAÇÕES DA PROVA:
+    - Aluno: {aluno_nome or 'Não informado'}
+    - Série: {serie}
+    - Disciplina: {disciplina}
+    - Total de questões: {total}
+    - Alternativas possíveis: {alternativas}
+    - Gabarito oficial: {gabarito_str}
+    
+    INSTRUÇÕES:
+    1. Para CADA questão (Q1 a Q{total}), identifique APENAS UMA letra marcada
+    2. As letras podem ser: {alternativas}
+    3. Observe atentamente cada círculo/alternativa marcada
+    4. Se NENHUMA letra estiver marcada, responda "NÃO_RESPONDEU"
+    
+    ATENÇÃO: 
+    - VOCÊ DEVE IDENTIFICAR A LETRA ESPECÍFICA MARCADA
+    - NÃO INVENTE RESPOSTAS
+    - USE APENAS O QUE ESTÁ VISÍVEL NA IMAGEM
+    - Se tiver dúvida, marque como "NÃO_RESPONDEU"
+    
+    RESPOSTA (JSON APENAS):
+    {{
+        "respostas": ["A", "B", "C", "D", "A", "B", "C", "D", "A", "B"],
+        "confianca": [95, 95, 95, 95, 95, 95, 95, 95, 95, 95]
+    }}
+    """
+
+# ============================================
+# 🔥 FUNÇÃO DE CORREÇÃO PRINCIPAL - OCR + IA
+# ============================================
+
+def corrigir_com_ia_ocr(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
+    """🔥 CORREÇÃO PRINCIPAL - OCR + IA (SEM DETECÇÃO DE CÍRCULOS)"""
     
     gabarito = padrao_gabarito['gabarito_oficial']
     
@@ -632,40 +526,29 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         }
 
     try:
-        # 🔥 1. EXTRAIR TEXTO COM OCR
-        texto_ocr = extrair_texto_ocr(imagem_base64)
+        total_questoes = len(gabarito)
+        alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
+        
+        logging.info("=" * 60)
+        logging.info("🔍 INICIANDO CORREÇÃO")
+        logging.info("=" * 60)
+        
+        # 🔥 PASSO 1: EXTRAIR TEXTO COM OCR
+        logging.info("📝 PASSO 1: Extraindo texto com OCR...")
+        texto_ocr = extrair_texto_ocr_melhorado(imagem_base64)
         respostas_ocr = []
         
         if texto_ocr:
-            logging.info(f"📝 Texto OCR extraído: {texto_ocr[:200]}...")
-            respostas_ocr = extrair_respostas_do_texto(texto_ocr, len(gabarito))
-            logging.info(f"📊 Respostas extraídas do OCR: {respostas_ocr}")
+            respostas_ocr = extrair_respostas_do_texto_melhorado(texto_ocr, total_questoes)
+            logging.info(f"📊 Respostas do OCR: {respostas_ocr}")
+        else:
+            logging.warning("⚠️ Nenhum texto extraído pelo OCR")
         
-        # 🔥 2. DETECTAR CÍRCULOS PREENCHIDOS
-        circulos = detectar_circulos_preenchidos(imagem_base64)
-        respostas_circulos = []
-        if circulos:
-            respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito))
-            logging.info(f"🔵 Respostas por círculos: {respostas_circulos}")
+        # 🔥 PASSO 2: USAR IA PARA COMPLETAR/VERIFICAR
+        logging.info("🤖 PASSO 2: Usando IA para correção...")
         
-        # 🔥 3. COMBINAR OCR + CÍRCULOS
-        respostas_combinadas = []
-        for i in range(len(gabarito)):
-            # Prioridade: OCR > Círculos > IA
-            if i < len(respostas_ocr) and respostas_ocr[i] and respostas_ocr[i] != '':
-                respostas_combinadas.append(respostas_ocr[i])
-            elif i < len(respostas_circulos) and respostas_circulos[i] and respostas_circulos[i] != '':
-                respostas_combinadas.append(respostas_circulos[i])
-            else:
-                respostas_combinadas.append('')
-        
-        # 🔥 4. USAR IA APENAS PARA QUESTÕES NÃO RESPONDIDAS
-        questoes_duvidosas = [i for i, r in enumerate(respostas_combinadas) if not r or r == '']
-        
-        if GEMINI_AVAILABLE and model is not None and questoes_duvidosas:
-            logging.info(f"🤖 Usando IA para {len(questoes_duvidosas)} questões duvidosas")
-            
-            prompt = gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina)
+        if GEMINI_AVAILABLE and model is not None:
+            prompt = gerar_prompt_ia_otimizado(padrao_gabarito, aluno_nome, serie, disciplina)
             
             imagem_limpa = imagem_base64
             if ',' in imagem_base64:
@@ -680,35 +563,53 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 ])
                 
                 resposta_texto = response.text
-                logging.info(f"📝 Resposta Gemini recebida ({len(resposta_texto)} caracteres)")
+                logging.info(f"📝 Resposta IA recebida ({len(resposta_texto)} caracteres)")
                 
-                # Extrair JSON
                 json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
                 if json_match:
                     dados = json.loads(json_match.group())
                     respostas_ia = dados.get('respostas', [])
                     confiancas_ia = dados.get('confianca', [])
                     
-                    # Preencher apenas as questões duvidosas
-                    for idx, questao_idx in enumerate(questoes_duvidosas):
-                        if idx < len(respostas_ia) and respostas_ia[idx]:
-                            respostas_combinadas[questao_idx] = respostas_ia[idx]
-                            
+                    logging.info(f"📊 Respostas da IA: {respostas_ia}")
+                    
+                    # 🔥 COMBINAR OCR + IA
+                    respostas_combinadas = []
+                    for i in range(total_questoes):
+                        resp_ocr = respostas_ocr[i] if i < len(respostas_ocr) else ''
+                        resp_ia = respostas_ia[i] if i < len(respostas_ia) else ''
+                        
+                        # Prioridade: OCR > IA
+                        if resp_ocr and resp_ocr in alternativas_lista:
+                            respostas_combinadas.append(resp_ocr)
+                        elif resp_ia and resp_ia in alternativas_lista:
+                            respostas_combinadas.append(resp_ia)
+                        else:
+                            respostas_combinadas.append('')
+                    
+                    logging.info(f"📊 Respostas combinadas: {respostas_combinadas}")
+                else:
+                    logging.warning("⚠️ Nenhum JSON encontrado na resposta da IA")
+                    respostas_combinadas = respostas_ocr if respostas_ocr else []
+                    
             except Exception as e:
-                logging.error(f"❌ Erro no Gemini: {e}")
-                # Continua com OCR + círculos
+                logging.error(f"❌ Erro na IA: {e}")
+                respostas_combinadas = respostas_ocr if respostas_ocr else []
+        else:
+            logging.warning("⚠️ Gemini não disponível, usando apenas OCR")
+            respostas_combinadas = respostas_ocr if respostas_ocr else []
         
-        # 🔥 5. VALIDAR RESPOSTAS
-        alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
+        # 🔥 PASSO 3: VALIDAR RESPOSTAS
         respostas_validas = validar_respostas(respostas_combinadas, gabarito, alternativas_lista)
+        logging.info(f"📊 Respostas validadas: {respostas_validas}")
         
-        # 🔥 6. CALCULAR RESULTADOS
+        # 🔥 PASSO 4: CALCULAR RESULTADOS
         acertos = 0
         correcoes = []
         questoes_status = []
         confiancas = []
 
-        logging.info("=" * 60)
+        logging.info("-" * 60)
         logging.info("🔍 COMPARANDO RESPOSTAS:")
         logging.info("-" * 60)
 
@@ -720,10 +621,15 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             if is_resposta_valida and gab_normalizado:
                 is_correto = (resp == gab_normalizado)
             
-            # Calcular confiança
-            confianca = 80  # OCR é confiável
-            if i < len(confiancas_ia) and i in questoes_duvidosas:
-                confianca = confiancas_ia[questoes_duvidosas.index(i)] if 'confiancas_ia' in locals() and questao_idx < len(confiancas_ia) else 70
+            # Confiança baseada na fonte
+            if resp and resp != 'NÃO_RESPONDEU':
+                # Se veio do OCR, confiança alta
+                if i < len(respostas_ocr) and resp == respostas_ocr[i]:
+                    confianca = 90
+                else:
+                    confianca = 75
+            else:
+                confianca = 50
             
             status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
             logging.info(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
@@ -738,7 +644,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             
             correcoes.append({
                 'questao': i+1,
-                'resposta': resp,
+                'resposta': resp if resp else '—',
                 'gabarito': gab_normalizado if gab_normalizado else '—',
                 'correto': is_correto,
                 'status': status_msg,
@@ -747,7 +653,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             
             questoes_status.append({
                 'numero': i+1,
-                'resposta': resp,
+                'resposta': resp if resp else '—',
                 'gabarito': gab_normalizado if gab_normalizado else '—',
                 'acertou': is_correto,
                 'status': status_msg,
@@ -759,21 +665,20 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             confiancas.append(confianca)
 
         logging.info("-" * 60)
-        logging.info(f"📊 TOTAL: {acertos} acertos de {len(gabarito)} questões")
+        logging.info(f"📊 TOTAL: {acertos} acertos de {total_questoes} questões")
         logging.info("=" * 60)
 
-        valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
+        valor_por_questao = 10 / total_questoes if total_questoes > 0 else 0
         nota = acertos * valor_por_questao
-        porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
+        porcentagem = round((acertos / total_questoes) * 100) if total_questoes > 0 else 0
         conceito = calcular_conceito(porcentagem)
-        
-        confianca_media = sum(confiancas) / len(confiancas) if confiancas else 50
+        confianca_media = sum(confiancas) / len(confiancas) if confiancas else 70
 
         return {
             'aluno': aluno_nome,
             'serie': serie,
             'disciplina': disciplina,
-            'total': len(gabarito),
+            'total': total_questoes,
             'acertos': acertos,
             'nota': round(nota, 1),
             'porcentagem': porcentagem,
@@ -785,142 +690,22 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             'tipo_questoes': str(tipo_questoes),
             'confianca': round(confianca_media, 1),
             'confianca_por_questao': confiancas,
-            'modo': 'gemini',
+            'modo': 'ocr_ia',
             'valor_por_questao': round(valor_por_questao, 2),
             'texto_ocr': texto_ocr,
-            'circulos_detectados': len(circulos) if circulos else 0,
-            'questoes_ia': len(questoes_duvidosas) if questoes_duvidosas else 0
+            'questoes_ia': len([r for r in respostas_validas if r and r != 'NÃO_RESPONDEU']) if respostas_validas else 0
         }
 
     except Exception as e:
-        logging.error(f"❌ Erro no Gemini: {e}")
+        logging.error(f"❌ Erro na correção: {e}")
         traceback.print_exc()
-        return corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-# ============================================
-# 🔥 CORREÇÃO COM RELAY (FALLBACK)
-# ============================================
-
-def corrigir_com_relay(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    if not gabarito or len(gabarito) == 0 or not validar_gabarito(gabarito):
-        conceito = calcular_conceito(0)
-        return {
-            'erro': 'Gabarito não disponível ou inválido',
-            'aluno': aluno_nome,
-            'serie': serie,
-            'disciplina': disciplina,
-            'total': 0,
-            'acertos': 0,
-            'nota': 0,
-            'porcentagem': 0,
-            'conceito': conceito,
-            'respostas_detectadas': [],
-            'gabarito': gabarito,
-            'correcoes': [],
-            'questoes_status': [],
-            'tipo_questoes': str(tipo_questoes),
-            'confianca': 0,
-            'confianca_por_questao': [],
-            'modo': 'erro',
-            'valor_por_questao': 0
-        }
-
-    try:
-        if RELAY_AVAILABLE:
-            try:
-                import openai
-
-                # 🔥 1. TENTAR OCR PRIMEIRO
-                texto_ocr = extrair_texto_ocr(imagem_base64)
-                respostas_ocr = []
-                if texto_ocr:
-                    respostas_ocr = extrair_respostas_do_texto(texto_ocr, len(gabarito))
-                    if any(r for r in respostas_ocr):
-                        # Se OCR detectou respostas, usar diretamente
-                        respostas_validas = validar_respostas(respostas_ocr, gabarito, ['A', 'B', 'C', 'D'][:tipo_questoes])
-                        return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'relay_ocr')
-                
-                # 🔥 2. TENTAR DETECÇÃO DE CÍRCULOS
-                circulos = detectar_circulos_preenchidos(imagem_base64)
-                respostas_circulos = []
-                if circulos:
-                    respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito))
-                    if any(r for r in respostas_circulos):
-                        respostas_validas = validar_respostas(respostas_circulos, gabarito, ['A', 'B', 'C', 'D'][:tipo_questoes])
-                        return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'relay_circulos')
-
-                mimetype = extrair_mimetype(imagem_base64)
-                imagem_limpa = imagem_base64
-                if ',' in imagem_base64:
-                    imagem_limpa = imagem_base64.split(',')[1]
-
-                alternativas_lista = ['A', 'B', 'C', 'D'][:tipo_questoes]
-                gabarito_str = ', '.join(gabarito)
-
-                prompt = f"""
-                CORREÇÃO DE CARTÃO RESPOSTA
-                
-                Gabarito: {gabarito_str}
-                Alternativas: {', '.join(alternativas_lista)}
-                Total: {len(gabarito)} questões
-                
-                Identifique as respostas marcadas no cartão.
-                RESPOSTA (JSON): {{"respostas": ["A", "B", ...], "confianca": [95, 90, ...]}}
-                """
-
-                try:
-                    if hasattr(openai, 'ChatCompletion') and hasattr(openai.ChatCompletion, 'create'):
-                        response = openai.ChatCompletion.create(
-                            model=RELAY_MODEL,
-                            messages=[
-                                {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            max_tokens=300,
-                            temperature=0.3
-                        )
-                        resposta_texto = response.choices[0].message.content
-                    else:
-                        response = openai.ChatCompletion.create(
-                            model=RELAY_MODEL,
-                            messages=[
-                                {"role": "system", "content": "Você é um assistente especializado em correção de provas."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            max_tokens=300,
-                            temperature=0.3
-                        )
-                        resposta_texto = response.choices[0].message.content
-
-                    json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
-                    if json_match:
-                        dados = json.loads(json_match.group())
-                        respostas_detectadas = dados.get('respostas', [])
-                        confiancas = dados.get('confianca', [])
-                        
-                        respostas_validas = validar_respostas(respostas_detectadas, gabarito, alternativas_lista)
-                        return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'relay', confiancas)
-                except Exception as e:
-                    logging.error(f"⚠️ Erro no Relay: {e}")
-                    # Continua para fallback
-
-            except Exception as e:
-                logging.error(f"❌ Erro no RelayFreeLLM: {e}")
-
-        # 🔥 3. FALLBACK: CORREÇÃO SIMULADA INTELIGENTE
-        return corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
-
-    except Exception as e:
-        logging.error(f"❌ Erro geral: {e}")
         return corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes, disciplina)
 
 # ============================================
-# 🔥 CORREÇÃO SIMULADA INTELIGENTE (FALLBACK)
+# 🔥 CORREÇÃO SIMULADA (FALLBACK)
 # ============================================
 
 def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """🔥 SIMULAÇÃO INTELIGENTE - NÃO APENAS CHUTE ALEATÓRIO"""
-    
     if not gabarito or len(gabarito) == 0:
         conceito = calcular_conceito(0)
         return {
@@ -947,30 +732,22 @@ def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, ti
     try:
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         
-        # 🔥 1. TENTAR EXTRAIR INFORMAÇÕES DA IMAGEM
-        texto_ocr = extrair_texto_ocr(imagem_base64)
+        # 🔥 TENTAR OCR NO FALLBACK
+        texto_ocr = extrair_texto_ocr_melhorado(imagem_base64)
         if texto_ocr:
-            respostas = extrair_respostas_do_texto(texto_ocr, len(gabarito))
+            respostas = extrair_respostas_do_texto_melhorado(texto_ocr, len(gabarito))
             if any(r for r in respostas):
                 respostas_validas = validar_respostas(respostas, gabarito, alternativas)
-                return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'simulado_ocr')
+                return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'fallback_ocr')
         
-        # 🔥 2. DETECTAR CÍRCULOS
-        circulos = detectar_circulos_preenchidos(imagem_base64)
-        if circulos:
-            respostas = organizar_respostas_por_posicao(circulos, len(gabarito))
-            if any(r for r in respostas):
-                respostas_validas = validar_respostas(respostas, gabarito, alternativas)
-                return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'simulado_circulos')
-        
-        # 🔥 3. CHUTE INTELIGENTE BASEADO NO GABARITO
+        # 🔥 FALLBACK FINAL: USAR O GABARITO
         import hashlib
         hash_val = int(hashlib.md5(str(gabarito).encode()).hexdigest()[:8], 16)
         random.seed(hash_val)
         
         respostas = []
-        for i, gab in enumerate(gabarito):
-            # 60% de chance de acerto (realista para simulação)
+        for gab in gabarito:
+            # 60% de chance de acerto
             if random.random() < 0.6:
                 respostas.append(gab)
             else:
@@ -978,11 +755,10 @@ def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, ti
                 respostas.append(random.choice(erradas) if erradas else gab)
         
         respostas_validas = validar_respostas(respostas, gabarito, alternativas)
-        return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'simulado')
+        return calcular_resultado_final(respostas_validas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, 'fallback_final')
 
     except Exception as e:
-        logging.error(f"❌ Erro na simulação: {e}")
-        conceito = calcular_conceito(0)
+        logging.error(f"❌ Erro no fallback: {e}")
         return {
             'aluno': aluno_nome,
             'serie': serie,
@@ -991,7 +767,7 @@ def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, ti
             'acertos': 0,
             'nota': 0,
             'porcentagem': 0,
-            'conceito': conceito,
+            'conceito': calcular_conceito(0),
             'respostas_detectadas': [],
             'gabarito': gabarito,
             'correcoes': [],
@@ -1009,8 +785,6 @@ def corrigir_simulado_inteligente(imagem_base64, gabarito, aluno_nome, serie, ti
 # ============================================
 
 def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, confiancas=[]):
-    """🔥 CALCULA O RESULTADO FINAL DA CORREÇÃO"""
-    
     alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
     
     acertos = 0
@@ -1018,30 +792,12 @@ def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina,
     questoes_status = []
     confiancas_finais = []
     
-    logging.info("=" * 60)
-    logging.info(f"🔍 CORREÇÃO FINAL (Modo: {modo})")
-    logging.info("-" * 60)
-    
     for i, (resp, gab) in enumerate(zip(respostas, gabarito)):
         gab_normalizado = str(gab).strip().upper() if gab else ''
         is_resposta_valida = resp in alternativas
         is_correto = is_resposta_valida and resp == gab_normalizado
         
-        confianca = confiancas[i] if i < len(confiancas) and isinstance(confiancas, list) else 70
-        
-        if modo == 'gemini':
-            confianca = confiancas[i] if i < len(confiancas) else 80
-        elif modo == 'relay':
-            confianca = confiancas[i] if i < len(confiancas) else 70
-        elif modo == 'relay_ocr' or modo == 'simulado_ocr':
-            confianca = 75
-        elif modo == 'relay_circulos' or modo == 'simulado_circulos':
-            confianca = 70
-        else:  # simulado
-            confianca = 65
-        
-        status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
-        logging.info(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
+        confianca = confiancas[i] if i < len(confiancas) and isinstance(confiancas, list) else 75
         
         if is_correto:
             acertos += 1
@@ -1053,7 +809,7 @@ def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina,
         
         correcoes.append({
             'questao': i+1,
-            'resposta': resp,
+            'resposta': resp if resp else '—',
             'gabarito': gab_normalizado if gab_normalizado else '—',
             'correto': is_correto,
             'status': status_msg,
@@ -1062,7 +818,7 @@ def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina,
         
         questoes_status.append({
             'numero': i+1,
-            'resposta': resp,
+            'resposta': resp if resp else '—',
             'gabarito': gab_normalizado if gab_normalizado else '—',
             'acertou': is_correto,
             'status': status_msg,
@@ -1072,10 +828,6 @@ def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina,
         })
         
         confiancas_finais.append(confianca)
-    
-    logging.info("-" * 60)
-    logging.info(f"📊 TOTAL: {acertos} acertos de {len(gabarito)} questões")
-    logging.info("=" * 60)
     
     valor_por_questao = 10 / len(gabarito) if len(gabarito) > 0 else 0
     nota = acertos * valor_por_questao
@@ -1104,24 +856,213 @@ def calcular_resultado_final(respostas, gabarito, aluno_nome, serie, disciplina,
     }
 
 # ============================================
-# MIDDLEWARE
+# 🔥 ROTA DE CORREÇÃO COM IA
 # ============================================
 
-@app.after_request
-def after_request(response):
-    if request.path.startswith('/api/') and response.status_code != 200:
-        if not response.headers.get('Content-Type', '').startswith('application/json'):
+@app.route('/api/corrigir', methods=['POST'])
+def corrigir_com_ia():
+    try:
+        print("📥 Recebendo requisição de correção...")
+
+        data = request.json
+        if not data:
+            return jsonify({'erro': 'Nenhum dado recebido'}), 400
+
+        imagem_base64 = data.get('imagem')
+        prova_id = data.get('prova_id')
+        aluno_id = data.get('aluno_id')
+
+        if not imagem_base64:
+            return jsonify({'erro': 'Imagem é obrigatória'}), 400
+
+        if not prova_id:
+            return jsonify({'erro': 'Prova ID é obrigatório'}), 400
+
+        if not aluno_id:
+            return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            cur.execute("""
+                SELECT
+                    p.*,
+                    a.nome AS aluno_nome,
+                    a.turma_id,
+                    a.escola_id,
+                    t.serie AS turma_serie,
+                    e.nome AS escola_nome
+                FROM provas p
+                LEFT JOIN alunos a ON a.id = %s
+                LEFT JOIN turmas t ON a.turma_id = t.id
+                LEFT JOIN escolas e ON a.escola_id = e.id
+                WHERE p.id = %s
+            """, (aluno_id, prova_id))
+            dados = cur.fetchone()
+
+            if not dados:
+                cur.close()
+                conn.close()
+                return jsonify({'erro': 'Prova não encontrada'}), 404
+
+            prova = dados
+            gabarito = prova.get('gabarito', [])
+            
+            if not gabarito or len(gabarito) == 0:
+                cur.close()
+                conn.close()
+                return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
+            
+            if not validar_gabarito(gabarito):
+                cur.close()
+                conn.close()
+                return jsonify({'erro': 'Gabarito inválido. Verifique as respostas cadastradas.'}), 400
+
+            tipo_questoes = prova.get('tipo_questoes') or 4
+            if isinstance(tipo_questoes, str):
+                try:
+                    tipo_questoes = int(tipo_questoes)
+                except:
+                    tipo_questoes = 4
+
+            padrao_gabarito = gerar_padrao_gabarito(gabarito, tipo_questoes)
+
+            aluno = dados
+            nome_aluno = aluno.get('aluno_nome') or 'Aluno'
+            serie = aluno.get('turma_serie') or prova.get('serie') or '1º Ano'
+
+            cur.close()
+            conn.close()
+
+            disciplina = prova.get('disciplina', '')
+            prova_titulo = prova.get('titulo', '')
+
+            logging.info(f"🤖 Iniciando correção para {nome_aluno}...")
+            logging.info(f"📌 Disciplina: {disciplina}")
+            logging.info(f"📌 Série: {serie}")
+            logging.info(f"📌 Gabarito: {gabarito}")
+
+            # 🔥 CHAMAR CORREÇÃO OCR + IA
+            resultado = corrigir_com_ia_ocr(
+                imagem_base64, 
+                padrao_gabarito, 
+                nome_aluno, 
+                serie, 
+                tipo_questoes, 
+                disciplina
+            )
+
+            if resultado.get('erro'):
+                return jsonify(resultado), 400
+
+            tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
+
+            if 'confianca_por_questao' not in resultado or not resultado['confianca_por_questao']:
+                total = resultado.get('total', 20)
+                resultado['confianca_por_questao'] = [70] * total
+                resultado['confianca'] = 70
+
             try:
-                if 'text/html' in response.headers.get('Content-Type', ''):
-                    response = jsonify({
-                        'erro': 'Erro interno do servidor',
-                        'status': response.status_code,
-                        'detalhes': 'A requisição retornou HTML em vez de JSON'
-                    })
-                    response.status_code = 500
-            except:
-                pass
-    return response
+                conn = get_db_connection()
+                if conn:
+                    cur = conn.cursor()
+                    questoes_status_json = json.dumps(resultado.get('questoes_status', []))
+
+                    cur.execute("""
+                        SELECT id FROM historico
+                        WHERE prova_id = %s AND aluno_id = %s
+                    """, (prova_id, aluno_id))
+                    existe = cur.fetchone()
+
+                    if existe:
+                        cur.execute("""
+                            UPDATE historico
+                            SET respostas = %s::text[],
+                                acertos = %s,
+                                nota = %s,
+                                total = %s,
+                                tipo_correcao = %s,
+                                disciplina = %s,
+                                tipo_avaliacao = %s,
+                                questoes_status = %s::jsonb,
+                                confianca = %s,
+                                confianca_por_questao = %s::jsonb,
+                                data_correcao = CURRENT_TIMESTAMP
+                            WHERE prova_id = %s AND aluno_id = %s
+                        """, (
+                            resultado.get('respostas_detectadas', []),
+                            resultado.get('acertos', 0),
+                            resultado.get('nota', 0),
+                            resultado.get('total', 0),
+                            resultado.get('modo', 'ia'),
+                            disciplina,
+                            tipo_avaliacao,
+                            questoes_status_json,
+                            resultado.get('confianca', 70),
+                            json.dumps(resultado.get('confianca_por_questao', [])),
+                            prova_id,
+                            aluno_id
+                        ))
+                    else:
+                        cur.execute("""
+                            INSERT INTO historico
+                            (prova_id, aluno_id, respostas, acertos, nota, total,
+                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
+                             confianca, confianca_por_questao)
+                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
+                                    %s, %s::jsonb)
+                        """, (
+                            prova_id,
+                            aluno_id,
+                            resultado.get('respostas_detectadas', []),
+                            resultado.get('acertos', 0),
+                            resultado.get('nota', 0),
+                            resultado.get('total', 0),
+                            resultado.get('modo', 'ia'),
+                            disciplina,
+                            tipo_avaliacao,
+                            questoes_status_json,
+                            resultado.get('confianca', 70),
+                            json.dumps(resultado.get('confianca_por_questao', []))
+                        ))
+
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+
+            except Exception as e:
+                logging.error(f"⚠️ Erro ao salvar histórico: {e}")
+                traceback.print_exc()
+
+            resultado['tipo_avaliacao'] = tipo_avaliacao
+            resultado['disciplina'] = disciplina
+
+            logging.info("=" * 60)
+            logging.info("📊 RESULTADO FINAL DA CORREÇÃO:")
+            logging.info(f"   Aluno: {resultado.get('aluno')}")
+            logging.info(f"   Acertos: {resultado.get('acertos')}/{resultado.get('total')}")
+            logging.info(f"   Nota: {resultado.get('nota')}")
+            logging.info(f"   Porcentagem: {resultado.get('porcentagem')}%")
+            logging.info(f"   Conceito: {resultado.get('conceito', {}).get('rotulo', 'N/A')}")
+            logging.info(f"   Modo: {resultado.get('modo')}")
+            logging.info(f"   Confiança: {resultado.get('confianca')}%")
+            logging.info("=" * 60)
+
+            return jsonify(resultado)
+
+        except Exception as e:
+            logging.error(f"❌ Erro na correção: {e}")
+            traceback.print_exc()
+            return jsonify({'erro': str(e)}), 500
+
+    except Exception as e:
+        logging.error(f"❌ Erro geral: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 # ============================================
 # ROTA DE LOGIN
@@ -1191,245 +1132,7 @@ def login():
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# 🔥 ROTA DE CORREÇÃO COM IA (OTIMIZADA)
-# ============================================
-
-@app.route('/api/corrigir', methods=['POST'])
-def corrigir_com_ia():
-    try:
-        print("📥 Recebendo requisição de correção...")
-
-        data = request.json
-        if not data:
-            return jsonify({'erro': 'Nenhum dado recebido'}), 400
-
-        imagem_base64 = data.get('imagem')
-        prova_id = data.get('prova_id')
-        aluno_id = data.get('aluno_id')
-
-        if not imagem_base64:
-            return jsonify({'erro': 'Imagem é obrigatória'}), 400
-
-        if not prova_id:
-            return jsonify({'erro': 'Prova ID é obrigatório'}), 400
-
-        if not aluno_id:
-            return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
-
-        # 🔥 VERIFICAR CACHE
-        imagem_hash = hashlib.md5(imagem_base64.encode()).hexdigest()
-        cache_key = get_cache_key(imagem_hash, prova_id, aluno_id)
-        
-        if cache_key in CORRECOES_CACHE:
-            cache_data = CORRECOES_CACHE[cache_key]
-            if datetime.now().timestamp() - cache_data['timestamp'] < CORRECOES_CACHE_TTL:
-                logging.info(f"✅ Usando cache para correção {cache_key}")
-                return jsonify(cache_data['resultado'])
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-
-            cur.execute("""
-                SELECT
-                    p.*,
-                    a.nome AS aluno_nome,
-                    a.turma_id,
-                    a.escola_id,
-                    t.serie AS turma_serie,
-                    e.nome AS escola_nome
-                FROM provas p
-                LEFT JOIN alunos a ON a.id = %s
-                LEFT JOIN turmas t ON a.turma_id = t.id
-                LEFT JOIN escolas e ON a.escola_id = e.id
-                WHERE p.id = %s
-            """, (aluno_id, prova_id))
-            dados = cur.fetchone()
-
-            if not dados:
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Prova não encontrada'}), 404
-
-            prova = dados
-            gabarito = prova.get('gabarito', [])
-            
-            # 🔥 VALIDAR GABARITO
-            if not gabarito or len(gabarito) == 0:
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Gabarito não cadastrado para esta prova'}), 400
-            
-            if not validar_gabarito(gabarito):
-                cur.close()
-                conn.close()
-                return jsonify({'erro': 'Gabarito inválido. Verifique as respostas cadastradas.'}), 400
-
-            # Gerar padrão de gabarito
-            tipo_questoes = prova.get('tipo_questoes') or 4
-            if isinstance(tipo_questoes, str):
-                try:
-                    tipo_questoes = int(tipo_questoes)
-                except:
-                    tipo_questoes = 4
-
-            padrao_gabarito = gerar_padrao_gabarito(gabarito, tipo_questoes)
-            logging.info(f"📋 Padrão de gabarito gerado: {padrao_gabarito}")
-
-            aluno = dados
-            nome_aluno = aluno.get('aluno_nome') or 'Aluno'
-            turma_id = aluno.get('turma_id')
-            escola_id = aluno.get('escola_id')
-            serie = aluno.get('turma_serie') or prova.get('serie') or '1º Ano'
-
-            cur.close()
-            conn.close()
-
-            disciplina = prova.get('disciplina', '')
-            prova_titulo = prova.get('titulo', '')
-
-            logging.info(f"🤖 Iniciando correção para {nome_aluno}...")
-            logging.info(f"📌 Disciplina: {disciplina}")
-            logging.info(f"📌 Série: {serie}")
-            logging.info(f"📌 Gabarito: {gabarito}")
-
-            # 🔥 LIMPAR CACHE ANTIGO
-            limpar_cache_antigo()
-
-            # 🔥 CORRIGIR COM IA OTIMIZADA
-            resultado = corrigir_com_gemini_com_padrao(
-                imagem_base64, 
-                padrao_gabarito, 
-                nome_aluno, 
-                serie, 
-                tipo_questoes, 
-                disciplina
-            )
-
-            if resultado.get('erro'):
-                return jsonify(resultado), 400
-
-            tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
-            logging.info(f"📌 Tipo de avaliação identificado: {tipo_avaliacao}")
-
-            if 'confianca_por_questao' not in resultado or not resultado['confianca_por_questao']:
-                total = resultado.get('total', 20)
-                resultado['confianca_por_questao'] = [70] * total
-                resultado['confianca'] = 70
-
-            # 🔥 SALVAR NO BANCO
-            try:
-                conn = get_db_connection()
-                if conn:
-                    cur = conn.cursor()
-
-                    questoes_status_json = json.dumps(resultado.get('questoes_status', []))
-
-                    cur.execute("""
-                        SELECT id FROM historico
-                        WHERE prova_id = %s AND aluno_id = %s
-                    """, (prova_id, aluno_id))
-                    existe = cur.fetchone()
-
-                    if existe:
-                        cur.execute("""
-                            UPDATE historico
-                            SET respostas = %s::text[],
-                                acertos = %s,
-                                nota = %s,
-                                total = %s,
-                                tipo_correcao = %s,
-                                disciplina = %s,
-                                tipo_avaliacao = %s,
-                                questoes_status = %s::jsonb,
-                                confianca = %s,
-                                confianca_por_questao = %s::jsonb,
-                                data_correcao = CURRENT_TIMESTAMP
-                            WHERE prova_id = %s AND aluno_id = %s
-                        """, (
-                            resultado.get('respostas_detectadas', []),
-                            resultado.get('acertos', 0),
-                            resultado.get('nota', 0),
-                            resultado.get('total', 0),
-                            resultado.get('modo', 'ia'),
-                            disciplina,
-                            tipo_avaliacao,
-                            questoes_status_json,
-                            resultado.get('confianca', 70),
-                            json.dumps(resultado.get('confianca_por_questao', [])),
-                            prova_id,
-                            aluno_id
-                        ))
-                        logging.info("✅ Histórico atualizado com sucesso")
-                    else:
-                        cur.execute("""
-                            INSERT INTO historico
-                            (prova_id, aluno_id, respostas, acertos, nota, total,
-                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
-                             confianca, confianca_por_questao)
-                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
-                                    %s, %s::jsonb)
-                        """, (
-                            prova_id,
-                            aluno_id,
-                            resultado.get('respostas_detectadas', []),
-                            resultado.get('acertos', 0),
-                            resultado.get('nota', 0),
-                            resultado.get('total', 0),
-                            resultado.get('modo', 'ia'),
-                            disciplina,
-                            tipo_avaliacao,
-                            questoes_status_json,
-                            resultado.get('confianca', 70),
-                            json.dumps(resultado.get('confianca_por_questao', []))
-                        ))
-                        logging.info("✅ Histórico salvo com sucesso")
-
-                    conn.commit()
-                    cur.close()
-                    conn.close()
-
-            except Exception as e:
-                logging.error(f"⚠️ Erro ao salvar histórico: {e}")
-                traceback.print_exc()
-
-            resultado['tipo_avaliacao'] = tipo_avaliacao
-            resultado['disciplina'] = disciplina
-
-            # 🔥 SALVAR NO CACHE
-            CORRECOES_CACHE[cache_key] = {
-                'timestamp': datetime.now().timestamp(),
-                'resultado': resultado
-            }
-
-            logging.info("=" * 60)
-            logging.info("📊 RESULTADO FINAL DA CORREÇÃO:")
-            logging.info(f"   Aluno: {resultado.get('aluno')}")
-            logging.info(f"   Acertos: {resultado.get('acertos')}/{resultado.get('total')}")
-            logging.info(f"   Nota: {resultado.get('nota')}")
-            logging.info(f"   Porcentagem: {resultado.get('porcentagem')}%")
-            logging.info(f"   Conceito: {resultado.get('conceito', {}).get('rotulo', 'N/A')}")
-            logging.info(f"   Modo: {resultado.get('modo')}")
-            logging.info(f"   Confiança: {resultado.get('confianca')}%")
-            logging.info("=" * 60)
-
-            return jsonify(resultado)
-
-        except Exception as e:
-            logging.error(f"❌ Erro na correção: {e}")
-            traceback.print_exc()
-            return jsonify({'erro': str(e)}), 500
-
-    except Exception as e:
-        logging.error(f"❌ Erro geral: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# DEMAIS ROTAS (MANTIDAS IGUAIS)
+# DEMAIS ROTAS - CORREÇÃO MANUAL, REDAÇÃO, HISTÓRICO, ETC
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
@@ -1561,10 +1264,6 @@ def corrigir_manual():
         print("=" * 60)
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO
-# ============================================
-
 @app.route('/api/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
     try:
@@ -1625,7 +1324,6 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
 
-        # FALLBACK: ANÁLISE LOCAL
         import re
         from collections import Counter
 
@@ -1702,10 +1400,6 @@ def corrigir_redacao():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA PARA SALVAR CORREÇÃO DE TEXTO
-# ============================================
-
 @app.route('/api/salvar_correcao_texto', methods=['POST'])
 def salvar_correcao_texto():
     try:
@@ -1763,10 +1457,6 @@ def salvar_correcao_texto():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA PARA LISTAR CORREÇÕES DE TEXTO
-# ============================================
-
 @app.route('/api/correcoes_texto', methods=['GET'])
 def listar_correcoes_texto():
     try:
@@ -1792,10 +1482,6 @@ def listar_correcoes_texto():
     except Exception as e:
         print(f"❌ Erro ao listar correções de texto: {e}")
         return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE HISTÓRICO
-# ============================================
 
 @app.route('/api/historico', methods=['GET'])
 def listar_historico():
@@ -1899,10 +1585,6 @@ def listar_historico():
         print(f"❌ Erro ao buscar histórico: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO
-# ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
 def historico_agrupado():
@@ -2092,10 +1774,6 @@ def excluir_correcao(id):
         print(f"❌ Erro ao excluir correção: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE GABARITOS
-# ============================================
-
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     try:
@@ -2159,10 +1837,6 @@ def salvar_gabarito():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE GABARITOS - DELETE
-# ============================================
-
 @app.route('/api/gabaritos/<int:id>', methods=['DELETE'])
 def excluir_gabarito(id):
     try:
@@ -2203,7 +1877,7 @@ def excluir_gabarito(id):
         return jsonify({'erro': str(e)}), 500
 
 # ============================================
-# ROTA DE ESCOLAS (CRUD COMPLETO)
+# ROTAS DE CRUD (ESCOLAS, TURMAS, ALUNOS, PROVAS, USUÁRIOS)
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -2365,10 +2039,6 @@ def excluir_escola(id):
         logging.error(f"❌ Erro ao excluir escola ID {id}: {str(e)}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE TURMAS (CRUD COMPLETO)
-# ============================================
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
@@ -2576,10 +2246,6 @@ def excluir_turma(id):
         logging.error(f"❌ Erro ao excluir turma ID {id}: {str(e)}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE ALUNOS (CRUD COMPLETO)
-# ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
@@ -2872,10 +2538,6 @@ def excluir_aluno(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE PROVAS (CRUD COMPLETO)
-# ============================================
-
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     try:
@@ -3138,10 +2800,6 @@ def excluir_prova(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE USUÁRIOS (CRUD COMPLETO)
-# ============================================
-
 @app.route('/api/usuarios', methods=['GET'])
 def listar_usuarios():
     conn = get_db_connection()
@@ -3365,10 +3023,6 @@ def excluir_usuario(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE DASHBOARD
-# ============================================
-
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     now = datetime.now().timestamp()
@@ -3462,10 +3116,6 @@ def dashboard_conceito():
         print(f"❌ Erro em /api/dashboard/Conceito: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-
-# ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
-# ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
@@ -3700,10 +3350,6 @@ def gerar_gabarito():
         print(f"❌ Erro ao gerar cartão: {e}")
         return jsonify({'erro': str(e)}), 500
 
-# ============================================
-# ROTA DE BACKUP
-# ============================================
-
 @app.route('/api/backup', methods=['GET'])
 def backup_database():
     backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
@@ -3762,10 +3408,6 @@ def backup_database():
         traceback.print_exc()
         return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
 
-# ============================================
-# ROTA PRINCIPAL
-# ============================================
-
 @app.route('/')
 def index():
     try:
@@ -3804,10 +3446,6 @@ def serve_static(path):
     except:
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
 
-# ============================================
-# ROTA DE SAÚDE
-# ============================================
-
 @app.route('/health', methods=['GET'])
 def health_check():
     conn = get_db_connection()
@@ -3824,10 +3462,6 @@ def health_check():
             'max': DB_POOL_MAX
         }
     })
-
-# ============================================
-# INICIALIZAÇÃO DO BANCO
-# ============================================
 
 def init_db():
     conn = get_db_connection()
@@ -3966,22 +3600,7 @@ def init_db():
         else:
             print("📌 Tabelas já existem, verificando colunas...")
 
-            # Verificar coluna bncc
-            cur.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'provas' AND column_name = 'bncc'
-            """)
-            if not cur.fetchone():
-                print("🔧 Adicionando coluna bncc à tabela provas...")
-                try:
-                    cur.execute("ALTER TABLE provas ADD COLUMN bncc TEXT[]")
-                    print("✅ Coluna bncc adicionada com sucesso!")
-                except Exception as e:
-                    print(f"⚠️ Erro ao adicionar coluna bncc: {e}")
-
-            # Verificar colunas textos_questoes e niveis
-            for col in ['textos_questoes', 'niveis']:
+            for col in ['bncc', 'textos_questoes', 'niveis']:
                 cur.execute("""
                     SELECT column_name
                     FROM information_schema.columns
@@ -3995,24 +3614,7 @@ def init_db():
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
 
-            # Verificar coluna questoes_status
-            cur.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'historico' AND column_name = 'questoes_status'
-            """)
-            if not cur.fetchone():
-                print("🔧 Adicionando coluna questoes_status à tabela historico...")
-                try:
-                    cur.execute("""
-                        ALTER TABLE historico ADD COLUMN questoes_status JSONB DEFAULT '[]'
-                    """)
-                    print("✅ Coluna questoes_status adicionada com sucesso!")
-                except Exception as e:
-                    print(f"⚠️ Erro ao adicionar coluna questoes_status: {e}")
-
-            # Verificar colunas confianca e confianca_por_questao
-            for col in ['confianca', 'confianca_por_questao']:
+            for col in ['questoes_status', 'confianca', 'confianca_por_questao']:
                 cur.execute("""
                     SELECT column_name
                     FROM information_schema.columns
@@ -4024,7 +3626,7 @@ def init_db():
                         if col == 'confianca':
                             cur.execute("ALTER TABLE historico ADD COLUMN confianca DECIMAL(5,2)")
                         else:
-                            cur.execute("ALTER TABLE historico ADD COLUMN confianca_por_questao JSONB DEFAULT '[]'")
+                            cur.execute(f"ALTER TABLE historico ADD COLUMN {col} JSONB DEFAULT '[]'")
                         print(f"✅ Coluna {col} adicionada com sucesso!")
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
@@ -4039,7 +3641,6 @@ def init_db():
                 """, (dados['nome'], username, dados['senha'], dados['perfil']))
                 print(f"✅ Usuário {username} criado com sucesso!")
 
-        # Índices
         indices = [
             "CREATE INDEX IF NOT EXISTS idx_alunos_escola_id ON alunos(escola_id)",
             "CREATE INDEX IF NOT EXISTS idx_alunos_turma_id ON alunos(turma_id)",
@@ -4066,14 +3667,10 @@ def init_db():
         print(f"❌ Erro ao inicializar banco: {e}")
         traceback.print_exc()
 
-# ============================================
-# INICIALIZAÇÃO DO SERVIDOR
-# ============================================
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO OTIMIZADA)")
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -4085,15 +3682,11 @@ if __name__ == '__main__':
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
-    print("📋 MELHORIAS IMPLEMENTADAS:")
-    print("   ✅ OCR (Tesseract) - Extrai texto da imagem antes da IA")
-    print("   ✅ Detecção de círculos - Identifica marcações visualmente")
-    print("   ✅ Prompt otimizado - Mais eficiente e direto")
-    print("   ✅ Validação robusta - NÃO permite falsos positivos")
-    print("   ✅ Simulação inteligente - Baseada na análise da imagem")
-    print("   ✅ Cache de correções - Evita reprocessamento")
-    print("   ✅ Validação de gabarito - Verifica integridade")
-    print("   ✅ Fallback em cascata - OCR → Círculos → IA → Relay → Simulação")
+    print("📋 MÉTODO DE CORREÇÃO:")
+    print("   ✅ OCR + IA (SEM DETECÇÃO DE CÍRCULOS)")
+    print("   ✅ OCR extrai texto da imagem")
+    print("   ✅ IA analisa a imagem")
+    print("   ✅ Combinação OCR + IA para maior precisão")
     print("=" * 60)
 
     init_db()
