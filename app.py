@@ -363,7 +363,7 @@ def validar_gabarito(gabarito):
 # ============================================
 
 def corrigir_com_ia_simples(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """🔥 CORREÇÃO SIMPLES - APENAS IA"""
+    """🔥 CORREÇÃO SIMPLES - APENAS IA, SEM INVENTAR RESPOSTAS"""
     
     gabarito = padrao_gabarito['gabarito_oficial']
     
@@ -443,21 +443,43 @@ def corrigir_com_ia_simples(imagem_base64, padrao_gabarito, aluno_nome, serie, t
             respostas_detectadas = []
             confiancas = []
         
-        # 🔥 VALIDAR RESPOSTAS
-        respostas_validas = validar_respostas(respostas_detectadas, gabarito, alternativas_lista)
+        # 🔥 🔥 🔥 CORREÇÃO AQUI - NÃO USAR GABARITO COMO RESPOSTA DO ALUNO
+        # Se não detectou nada, marcar TODAS como NÃO_RESPONDEU
+        if not respostas_detectadas or len(respostas_detectadas) == 0:
+            logging.warning("⚠️ Nenhuma resposta detectada, marcando todas como NÃO_RESPONDEU")
+            respostas_validas = ['NÃO_RESPONDEU'] * total_questoes
+            confiancas = [0] * total_questoes
+        else:
+            # Validar respostas
+            respostas_validas = validar_respostas(respostas_detectadas, gabarito, alternativas_lista)
+            
+            # Garantir que as respostas válidas não sejam o gabarito
+            # Se todas as respostas forem iguais ao gabarito, pode ser erro da IA
+            if all(r == gabarito[i] for i, r in enumerate(respostas_validas) if r != 'NÃO_RESPONDEU'):
+                # Verificar se há pelo menos uma resposta diferente
+                has_different = False
+                for i, r in enumerate(respostas_validas):
+                    if r != 'NÃO_RESPONDEU' and i < len(gabarito) and r != gabarito[i]:
+                        has_different = True
+                        break
+                
+                # Se todas as respostas são iguais ao gabarito, pode ser que a IA só copiou o gabarito
+                # Neste caso, manter as respostas, mas com confiança baixa
+                if not has_different and any(r != 'NÃO_RESPONDEU' for r in respostas_validas):
+                    logging.warning("⚠️ Todas as respostas são iguais ao gabarito - pode ser erro da IA")
+                    # Manter as respostas, mas reduzir confiança
+                    confiancas = [min(c, 30) for c in confiancas]
         
-        # 🔥 SE NENHUMA RESPOSTA FOI DETECTADA, USAR O GABARITO (FALLBACK)
-        if len([r for r in respostas_validas if r != 'NÃO_RESPONDEU']) == 0:
-            logging.warning("⚠️ Nenhuma resposta detectada, usando gabarito como fallback")
-            respostas_validas = gabarito.copy()
-            confiancas = [70] * total_questoes
-        
-        # 🔥 GARANTIR TAMANHO
+        # Garantir tamanho
+        while len(respostas_validas) < total_questoes:
+            respostas_validas.append('NÃO_RESPONDEU')
         while len(confiancas) < total_questoes:
-            confiancas.append(70)
+            confiancas.append(0)
+        
+        respostas_validas = respostas_validas[:total_questoes]
         confiancas = confiancas[:total_questoes]
         
-        # 🔥 CALCULAR RESULTADOS
+        # 🔥 CALCULAR RESULTADOS - APENAS COM O QUE FOI DETECTADO
         acertos = 0
         correcoes = []
         questoes_status = []
@@ -474,7 +496,7 @@ def corrigir_com_ia_simples(imagem_base64, padrao_gabarito, aluno_nome, serie, t
             if is_resposta_valida and gab_normalizado:
                 is_correto = (resp == gab_normalizado)
             
-            confianca = confiancas[i] if i < len(confiancas) else 70
+            confianca = confiancas[i] if i < len(confiancas) else 0
             
             status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
             logging.info(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
@@ -515,7 +537,7 @@ def corrigir_com_ia_simples(imagem_base64, padrao_gabarito, aluno_nome, serie, t
         nota = acertos * valor_por_questao
         porcentagem = round((acertos / total_questoes) * 100) if total_questoes > 0 else 0
         conceito = calcular_conceito(porcentagem)
-        confianca_media = sum(confiancas) / len(confiancas) if confiancas else 70
+        confianca_media = sum(confiancas) / len(confiancas) if confiancas else 0
 
         return {
             'aluno': aluno_nome,
@@ -535,6 +557,36 @@ def corrigir_com_ia_simples(imagem_base64, padrao_gabarito, aluno_nome, serie, t
             'confianca_por_questao': confiancas,
             'modo': 'ia',
             'valor_por_questao': round(valor_por_questao, 2)
+        }
+
+    except Exception as e:
+        logging.error(f"❌ Erro na correção: {e}")
+        traceback.print_exc()
+        
+        # 🔥 FALLBACK: MARCAR TUDO COMO NÃO RESPONDEU
+        conceito = calcular_conceito(0)
+        respostas_vazias = ['NÃO_RESPONDEU'] * len(gabarito)
+        confiancas_vazias = [0] * len(gabarito)
+        
+        return {
+            'aluno': aluno_nome,
+            'serie': serie,
+            'disciplina': disciplina,
+            'total': len(gabarito),
+            'acertos': 0,
+            'nota': 0,
+            'porcentagem': 0,
+            'conceito': conceito,
+            'respostas_detectadas': respostas_vazias,
+            'gabarito': gabarito,
+            'correcoes': [],
+            'questoes_status': [],
+            'tipo_questoes': str(tipo_questoes),
+            'confianca': 0,
+            'confianca_por_questao': confiancas_vazias,
+            'modo': 'fallback_vazio',
+            'valor_por_questao': 10 / len(gabarito) if len(gabarito) > 0 else 0,
+            'erro': str(e)
         }
 
     except Exception as e:
