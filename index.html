@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -175,49 +174,6 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 .btn-del { background:transparent; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px; transition:all .2s; }
 .btn-del:hover { background:rgba(239,68,68,0.15); }
 
-/* ============================================
-   ESTILOS PARA FEEDBACK VISUAL
-   ============================================ */
-
-@keyframes highlightRow {
-    0% { background: rgba(16, 185, 129, 0.2); transform: scale(1.02); }
-    50% { background: rgba(16, 185, 129, 0.3); transform: scale(1.01); }
-    100% { background: rgba(16, 185, 129, 0.1); transform: scale(1); }
-}
-
-tr.saving { animation: highlightRow 0.8s ease; }
-
-.save-badge { display: inline-block; animation: badgePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-@keyframes badgePop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
-
-.btn.loading { position: relative; color: transparent !important; }
-.btn.loading::after {
-    content: '';
-    position: absolute;
-    width: 20px; height: 20px;
-    top: 50%; left: 50%;
-    margin-left: -10px; margin-top: -10px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-#progress-modal .progress { position: relative; overflow: hidden; }
-#progress-modal .progress-fill { background: linear-gradient(90deg, #8b5cf6, #6d28d9); position: relative; }
-#progress-modal .progress-fill::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
-    animation: shimmer 1.5s infinite;
-}
-@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
-#progress-etapas .etapa-concluida { color: var(--green); }
-#progress-etapas .etapa-em-andamento { background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--purple); }
-#progress-etapas .etapa-erro { color: var(--red); background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--red); }
-
 .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
 .badge-blue { background:rgba(59,130,246,0.15); color:var(--blue); }
 .badge-green { background:rgba(16,185,129,0.15); color:var(--green); }
@@ -248,11 +204,6 @@ table { width:100%; border-collapse:collapse; font-size:12px; }
 th { text-align:center; padding:5px 3px; font-weight:600; color:var(--text2); border-bottom:1px solid var(--border); font-size:8px; text-transform:uppercase; letter-spacing:.2px; }
 td { padding:5px 3px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; vertical-align:middle; font-size:11px; }
 tr:hover td { background:rgba(255,255,255,0.02); }
-
-#ultimas-correcoes-container { max-height: 400px; overflow-y: auto; }
-#ultimas-correcoes-container::-webkit-scrollbar { width: 4px; }
-#ultimas-correcoes-container::-webkit-scrollbar-track { background: var(--bg2); border-radius: 4px; }
-#ultimas-correcoes-container::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
 .search-wrap { display:flex; align-items:center; background:var(--bg2); border:1.5px solid var(--border); border-radius:8px; padding:0 12px; transition:border .3s; }
 .search-wrap:focus-within { border-color:var(--blue); }
@@ -404,7 +355,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     border-color: var(--blue);
 }
 
-/* 🔥 TÍTULO DO GABARITO - MOSTRA O NOME DA PROVA */
 .gab-header-title {
     font-size: 20px !important;
     font-weight: 700;
@@ -419,37 +369,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     gap: 16px;
     box-shadow: 0 2px 16px rgba(59,130,246,0.1);
 }
-.gab-header-title .icon {
-    font-size: 28px;
-}
-.gab-header-title .prova-nome {
-    color: #60a5fa !important;
-    font-weight: 800 !important;
-    font-size: 20px !important;
-}
-.gab-header-title .badge-disciplina {
-    margin-left: auto;
-    font-size: 12px;
-    padding: 4px 16px;
-    border-radius: 20px;
-    background: rgba(139,92,246,0.25);
-    color: var(--purple);
-    font-weight: 700;
-    border: 1px solid rgba(139,92,246,0.3);
-}
+.gab-header-title .icon { font-size: 28px; }
+.gab-header-title .prova-nome { color: #60a5fa !important; font-weight: 800 !important; font-size: 20px !important; }
+.gab-header-title .badge-disciplina { margin-left: auto; font-size: 12px; padding: 4px 16px; border-radius: 20px; background: rgba(139,92,246,0.25); color: var(--purple); font-weight: 700; border: 1px solid rgba(139,92,246,0.3); }
 
-.gab-grid-texto {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin: 12px 0;
-}
-.gab-grid-texto .gab-item {
-    border-left: 5px solid var(--purple) !important;
-    background: var(--bg2);
-    border-radius: 12px !important;
-    padding: 14px 18px !important;
-}
+.gab-grid-texto { display: flex; flex-direction: column; gap: 16px; margin: 12px 0; }
+.gab-grid-texto .gab-item { border-left: 5px solid var(--purple) !important; background: var(--bg2); border-radius: 12px !important; padding: 14px 18px !important; }
 
 .gab-select option { background: var(--bg2); color: var(--text); }
 
@@ -710,7 +635,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .desempenho-resumo .item .valor.blue { color: var(--blue); }
 .desempenho-resumo .item .valor.purple { color: var(--purple); }
 
-/* Estilos para o card único de disciplina */
 .questao-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 2px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 1px; transition: border-color 0.2s; }
 .questao-item .q-num { font-size: 7px; color: var(--text3); font-weight: 700; }
 .questao-item .q-resp { font-weight: 700; font-size: 12px; background: var(--bg); border-radius: 4px; padding: 0 4px; line-height: 20px; width: 100%; }
@@ -929,7 +853,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .acertos-por-questao-item .q-label { font-size: 9px; color: var(--text3); margin-top: 2px; }
 .acertos-por-questao-item .q-divider { color: var(--text3); font-size: 12px; margin: 0 2px; }
 
-/* 🔥 ESTILO PARA INDICADORES DE CONFIANÇA */
 .confianca-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -946,17 +869,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .questao-confianca-media { border-color: rgba(245,158,11,0.4) !important; background: rgba(245,158,11,0.05) !important; }
 .questao-confianca-baixa { border-color: rgba(239,68,68,0.4) !important; background: rgba(239,68,68,0.05) !important; border-width: 2px !important; }
 
-/* 🔥 ESTILO PARA QUESTÕES CERTAS E ERRADAS NA CORREÇÃO */
 .questao-item.acertou { border-color: var(--green) !important; background: rgba(16,185,129,0.12) !important; }
 .questao-item.errou { border-color: var(--red) !important; background: rgba(239,68,68,0.12) !important; }
 .questao-item .resultado-badge { font-size: 7px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
 .questao-item.acertou .resultado-badge { background: rgba(16,185,129,0.2); color: var(--green); }
 .questao-item.errou .resultado-badge { background: rgba(239,68,68,0.2); color: var(--red); }
-
-/* ============================================
-   🔥 ESTILOS DO CARTAO RESPOSTA (GERADO EM NOVA ABA)
-   ============================================ */
-/* Estes estilos serão aplicados ao HTML gerado dentro da função gerarCartaoResposta() */
 </style>
 </head>
 <body>
@@ -1278,10 +1195,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
                         </div>
                     </div>
-                    <!-- 🔥 NOVO CABEÇALHO COM O NOME DA PROVA -->
-                    <div id="gab-header-container">
-                        <!-- Será preenchido dinamicamente pelo buildGabGrid() -->
-                    </div>
+                    <!-- CABEÇALHO COM O NOME DA PROVA -->
+                    <div id="gab-header-container"></div>
                     <div class="gab-grid" id="gab-grid"></div>
                     <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
                     <div class="btn-group no-print"><button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button><button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button></div>
@@ -1614,9 +1529,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ============================================================ -->
             <!-- ========== RELATÓRIO POR TURMA ========== -->
-            <!-- ============================================================ -->
             <div class="page" id="page-rel-turma">
                 <div class="page-header">
                     <div>
@@ -1823,7 +1736,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 </div>
             </div>
 
-            <!-- ========== USER PAGES (não utilizadas) ========== -->
+            <!-- ========== USER PAGES ========== -->
             <div class="page" id="page-u-dashboard" style="display:none;"></div>
             <div class="page" id="page-u-escola" style="display:none;"></div>
             <div class="page" id="page-u-turmas" style="display:none;"></div>
@@ -2297,17 +2210,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             let ultimaImagem = null;
             let gerandoDocumento = false;
             let paginaAtual = 'dashboard';
-            let dadosCarregados = {
-                escolas: false,
-                turmas: false,
-                alunos: false,
-                provas: false,
-                resultados: false,
-                gabaritos: false,
-                relTurma: false,
-                desempenho: false
-            };
-
+            
             // ============================================
             // SISTEMA DE PROGRESSO VISUAL
             // ============================================
@@ -2931,11 +2834,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // NAVEGAÇÃO - VERSÃO OTIMIZADA (COM CACHE)
+            // NAVEGAÇÃO
             // ============================================
             function go(page) {
-                if (paginaAtual === page) return;
-                
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                 const el = document.getElementById('page-' + page);
                 if (el) el.classList.add('active');
@@ -2944,56 +2845,32 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 
                 switch(page) {
                     case 'escola':
-                        if (!dadosCarregados.escolas) {
-                            carregarEscolas();
-                            dadosCarregados.escolas = true;
-                        }
+                        carregarEscolas();
                         break;
                     case 'turmas':
-                        if (!dadosCarregados.turmas) {
-                            carregarFiltroEscolaTurmas();
-                            carregarTurmas();
-                            dadosCarregados.turmas = true;
-                        }
+                        carregarFiltroEscolaTurmas();
+                        carregarTurmas();
                         break;
                     case 'alunos':
-                        if (!dadosCarregados.alunos) {
-                            const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
-                            carregarAlunos(escolaId);
-                            dadosCarregados.alunos = true;
-                        }
+                        const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+                        carregarAlunos(escolaId);
                         break;
                     case 'provas':
-                        if (!dadosCarregados.provas) {
-                            carregarProvas();
-                            dadosCarregados.provas = true;
-                        }
+                        carregarProvas();
                         break;
                     case 'resultados':
-                        if (!dadosCarregados.resultados) {
-                            carregarFiltrosResultados();
-                            carregarResultadosComFiltros();
-                            dadosCarregados.resultados = true;
-                        }
+                        carregarFiltrosResultados();
+                        carregarResultadosComFiltros();
                         break;
                     case 'gabaritos':
-                        if (!dadosCarregados.gabaritos) {
-                            carregarGabaritos();
-                            dadosCarregados.gabaritos = true;
-                        }
+                        carregarGabaritos();
                         break;
                     case 'rel-turma':
-                        if (!dadosCarregados.relTurma) {
-                            carregarFiltrosRelTurma();
-                            carregarRelatorioTurmaFiltrado();
-                            dadosCarregados.relTurma = true;
-                        }
+                        carregarFiltrosRelTurma();
+                        carregarRelatorioTurmaFiltrado();
                         break;
                     case 'desempenho':
-                        if (!dadosCarregados.desempenho) {
-                            carregarEscolasDesempenho();
-                            dadosCarregados.desempenho = true;
-                        }
+                        carregarEscolasDesempenho();
                         break;
                     case 'dashboard':
                         carregarDashboard();
@@ -3001,8 +2878,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         break;
                     case 'corrigir-ia':
                         carregarEscolasCorrigir();
-                        break;
-                    case 'lista-turma':
                         break;
                 }
                 
@@ -3020,25 +2895,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         toggle.innerHTML = '☰';
                     }
                 }
-            }
-
-            // ============================================
-            // RECARREGAR PÁGINA ATUAL
-            // ============================================
-            function recarregarPaginaAtual() {
-                const page = paginaAtual;
-                switch(page) {
-                    case 'escola': dadosCarregados.escolas = false; break;
-                    case 'turmas': dadosCarregados.turmas = false; break;
-                    case 'alunos': dadosCarregados.alunos = false; break;
-                    case 'provas': dadosCarregados.provas = false; break;
-                    case 'resultados': dadosCarregados.resultados = false; break;
-                    case 'gabaritos': dadosCarregados.gabaritos = false; break;
-                    case 'rel-turma': dadosCarregados.relTurma = false; break;
-                    case 'desempenho': dadosCarregados.desempenho = false; break;
-                }
-                go(page);
-                showToast('🔄 Página recarregada!', 'info');
             }
 
             // ============================================
@@ -5295,7 +5151,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // 🔥 CORREÇÃO COM IA - PROCESSO COMPLETO
+            // 🔥 CORREÇÃO COM IA - PROCESSO COMPLETO (INSERIDO DO PRIMEIRO CÓDIGO)
             // ============================================
             async function processarComIA(imagemBase64) {
                 const escolaId = document.getElementById('corrigir-escola')?.value;
@@ -5629,10 +5485,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         const cor = q.acertou ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)';
                         const corTexto = q.acertou ? 'var(--green)' : 'var(--red)';
                         const icone = q.acertou ? '✅' : (q.respondida ? '❌' : '—');
-                        return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">
-                            Q${q.numero}:${q.resposta || '—'} ${icone}
-                            <span style="font-size:8px;opacity:0.7;">${q.confianca}%</span>
-                        </span>`;
+                        return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${q.resposta || '—'} ${icone}<span style="font-size:8px;opacity:0.7;">${q.confianca}%</span></span>`;
                     }).join('');
                 }
 
@@ -5660,12 +5513,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         margin-top: 6px;
                     `;
                     tituloOficial.innerHTML = `
-                        <span style="font-size:12px;font-weight:800;color:var(--blue);letter-spacing:0.3px;">
-                            📋 GABARITO OFICIAL GERADO PELO SISTEMA
-                        </span>
-                        <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">
-                            (${totalQuestoes} questões)
-                        </span>
+                        <span style="font-size:12px;font-weight:800;color:var(--blue);letter-spacing:0.3px;">📋 GABARITO OFICIAL GERADO PELO SISTEMA</span>
+                        <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">(${totalQuestoes} questões)</span>
                     `;
                     grid.appendChild(tituloOficial);
                     
@@ -5714,12 +5563,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         margin-top: 8px;
                     `;
                     tituloAluno.innerHTML = `
-                        <span style="font-size:12px;font-weight:800;color:var(--purple);letter-spacing:0.3px;">
-                            📋 GABARITO DO ALUNO
-                        </span>
-                        <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">
-                            ${dados.aluno.nome || 'Aluno'}
-                        </span>
+                        <span style="font-size:12px;font-weight:800;color:var(--purple);letter-spacing:0.3px;">📋 GABARITO DO ALUNO</span>
+                        <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">${dados.aluno.nome || 'Aluno'}</span>
                     `;
                     grid.appendChild(tituloAluno);
                     
@@ -6673,7 +6518,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // 🔥 CARREGAR RELATÓRIO POR TURMA FILTRADO (CORRIGIDO)
+            // 🔥 CARREGAR RELATÓRIO POR TURMA FILTRADO
             // ============================================
             async function carregarRelatorioTurmaFiltrado() {
                 try {
@@ -6682,7 +6527,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const turmaId = document.getElementById('rel-turma-turma').value;
                     const provaId = document.getElementById('rel-turma-prova').value;
 
-                    // 🔥 OBTER A DISCIPLINA DA PROVA SELECIONADA
                     let disciplinaSelecionada = 'Português';
                     let tipoAvaliacao = 'portugues';
                     
@@ -6692,7 +6536,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         disciplinaSelecionada = optionProva.dataset.disciplina;
                     }
 
-                    // 🔥 MAPEAMENTO DE DISCIPLINAS
                     const disciplinaMap = {
                         'Português': 'portugues',
                         'Matemática': 'matematica',
@@ -6705,11 +6548,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     };
                     tipoAvaliacao = disciplinaMap[disciplinaSelecionada] || 'portugues';
 
-                    console.log(`📌 Disciplina selecionada: ${disciplinaSelecionada} -> ${tipoAvaliacao}`);
-
-                    // ============================================
-                    // 🔥 CARREGAR ALUNOS DA TURMA
-                    // ============================================
                     let alunosDaTurma = [];
                     let totalAlunos = 0;
 
@@ -6725,9 +6563,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         }
                     }
 
-                    // ============================================
-                    // 🔥 CARREGAR CORREÇÕES AGRUPADAS
-                    // ============================================
                     let url = API_URL + '/api/historico/agrupado';
                     const params = new URLSearchParams();
                     if (escolaId && escolaId !== '') params.append('escola', escolaId);
@@ -6739,13 +6574,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const response = await fetch(url);
                     const dadosAgrupados = await response.json();
 
-                    // ============================================
-                    // 🔥 PROCESSAR DADOS
-                    // ============================================
                     const alunosComCorrecao = [];
                     const alunosSemCorrecao = [];
 
-                    // Mapear alunos com correção
                     if (dadosAgrupados && !dadosAgrupados.erro && Array.isArray(dadosAgrupados)) {
                         dadosAgrupados.forEach(aluno => {
                             const discData = aluno[tipoAvaliacao];
@@ -6771,7 +6602,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         });
                     }
 
-                    // Identificar alunos sem correção
                     if (totalAlunos > 0) {
                         const idsComCorrecao = new Set(alunosComCorrecao.map(a => a.aluno_id));
                         alunosDaTurma.forEach(aluno => {
@@ -6795,18 +6625,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         });
                     }
 
-                    // ============================================
-                    // 🔥 ATUALIZAR ESTATÍSTICAS
-                    // ============================================
                     const totalComCorrecao = alunosComCorrecao.length;
                     const totalSemCorrecao = alunosSemCorrecao.length;
 
                     document.getElementById('rel-total-alunos-conceitos').textContent = totalComCorrecao + ' alunos';
                     document.getElementById('rel-total-alunos-tabela').textContent = totalComCorrecao + ' alunos';
 
-                    // ============================================
-                    // 🔥 CALCULAR MÉDIA E CONCEITO DA TURMA
-                    // ============================================
                     let somaPorcentagem = 0;
                     let totalQuestoes = 0;
                     let totalAcertos = 0;
@@ -6828,9 +6652,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     document.getElementById('rel-total-correcoes').textContent = totalComCorrecao + ' correções';
                     document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada;
 
-                    // ============================================
-                    // 🔥 ATUALIZAR CONCEITO GERAL
-                    // ============================================
                     const conceitoGeralEl = document.getElementById('rel-conceito-geral');
                     if (conceitoGeralEl) {
                         const labels = {
@@ -6849,9 +6670,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         conceitoGeralEl.className = `badge ${badgeClasses[conceitoGeral] || 'badge-gray'}`;
                     }
 
-                    // ============================================
-                    // 🔥 ATUALIZAR BARRAS DE CONCEITO
-                    // ============================================
                     const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
                     alunosComCorrecao.forEach(aluno => {
                         const conceito = aluno.disciplinaData.conceito;
@@ -6871,9 +6689,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         if (bar) bar.style.width = pct + '%';
                     });
 
-                    // ============================================
-                    // 🔥 ATUALIZAR TABELA DE ALUNOS
-                    // ============================================
                     const tbody = document.getElementById('tb-rel-alunos');
                     if (!tbody) return;
 
@@ -6941,19 +6756,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     }).join('');
 
                     // ============================================
-                    // 🔥 ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
+                    // ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
                     // ============================================
                     atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
 
-                    // ============================================
-                    // 🔥 ATUALIZAR ESTATÍSTICAS DA DISCIPLINA
-                    // ============================================
                     document.getElementById('rel-disc-acertos').textContent = totalAcertos;
                     document.getElementById('rel-disc-erros').textContent = totalErros;
                     document.getElementById('rel-disc-media').textContent = totalComCorrecao > 0 ? (totalAcertos / totalComCorrecao).toFixed(1) : '0.0';
                     document.getElementById('rel-disc-conceito').textContent = conceitoGeral || '—';
-
-                    console.log(`✅ Relatório atualizado: ${totalComCorrecao} alunos com correção, ${totalSemCorrecao} sem correção`);
 
                 } catch (erro) {
                     console.error('❌ Erro ao carregar relatório por turma:', erro);
@@ -7107,8 +6917,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         `;
                         container.appendChild(div);
                     });
-
-                    console.log(`✅ Gráfico de acertos atualizado: ${sortedKeys.length} questões`);
 
                 } catch (erro) {
                     console.error('❌ Erro ao atualizar gráfico de acertos:', erro);
@@ -7376,16 +7184,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             div.innerHTML = `
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <span style="font-size:12px; font-weight:700; color:var(--text2);">Q${q.numero}</span>
-                                    <span class="q-status-text" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:${q.acertou ? 'rgba(16,185,129,0.15)' : (q.respondida ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)')}; color:${q.acertou ? 'var(--green)' : (q.respondida ? 'var(--red)' : 'var(--text3)')};">
-                                    ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '—')}
+                                    <span class="q-status-text" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:${q.acertou ? 'rgba(16,185,129,0.15)' : (q.respondida ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)')}; color:${q.acertou ? 'var(--green)' : (q.respondida ? 'var(--red)' : 'var(--text3)')};">${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '—')}
                                 </span>
                                 </div>
                                 <div style="font-size:11px; color:var(--text3);">Resposta: <strong>${q.resposta}</strong></div>
                                 <div style="font-size:11px; color:var(--text3);">Gabarito: <strong style="color:var(--green);">${q.gabarito}</strong></div>
                                 ${bnccHtml}
-                                <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">
-                                    Nível BNCC: ${q.bncc || 'Não definido'}
-                                </div>
+                                <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${q.bncc || 'Não definido'}</div>
                             `;
                             grid.appendChild(div);
                         });
@@ -7406,9 +7211,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                                 <div class="q-num">Q${q.numero}</div>
                                 <div class="q-resp">${q.resposta}</div>
                                 <div class="q-gab">${q.gabarito}</div>
-                                <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
-                                    ${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}
-                                </span>
+                                <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}</span>
                                 ${bnccHtml}
                             `;
                             grid.appendChild(div);
@@ -7519,7 +7322,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                     const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
 
-                    // Geração do HTML do documento
+                    // Geração do HTML do documento (encurtado para caber)
                     let html = `
                     <!DOCTYPE html>
                     <html>
@@ -7704,7 +7507,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // CARREGAR DADOS - FUNÇÃO PRINCIPAL (OTIMIZADA)
+            // CARREGAR DADOS - FUNÇÃO PRINCIPAL
             // ============================================
             async function carregarDados() {
                 console.log('🔄 Carregando dados do sistema...');
@@ -8145,7 +7948,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // 🔥 GABARITO - BUILD GRID (MELHORADO)
+            // GABARITO - BUILD GRID
             // ============================================
             function buildGabGrid() {
                 const grid = document.getElementById('gab-grid');
@@ -8163,7 +7966,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
                 const isProducao = (disciplina === 'Produção de Texto');
 
-                // 🔥 CABEÇALHO COM O NOME DA PROVA
                 if (headerContainer) {
                     const disciplinaLabel = disciplina || 'Disciplina';
                     headerContainer.innerHTML = `
@@ -8560,7 +8362,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             }
 
             // ============================================
-            // 🔥 FUNÇÃO GERAR CARTAO RESPOSTA (A B C D EM LINHA ÚNICA) - VERSÃO MELHORADA!
+            // FUNÇÃO GERAR CARTAO RESPOSTA (A B C D EM LINHA ÚNICA)
             // ============================================
             async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
                 try {
@@ -8608,7 +8410,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const serie = turma.serie || prova?.serie || '';
                     const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-                    // CONFIGURAÇÕES BASEADO NA QUANTIDADE DE QUESTÕES
                     let colunas = 5;
                     let circuloTamanho = 38;
                     let circuloFontSize = 16;
@@ -8640,413 +8441,411 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     }
 
                     let html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Cartão Resposta - ${nomeAluno}</title>
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                
-                body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    background: #f0f2f5;
-                    display: flex;
-                    justify-content: center;
-                    padding: 10px;
-                    min-height: 100vh;
-                }
-                
-                .container {
-                    max-width: 1100px;
-                    width: 100%;
-                    background: #ffffff;
-                    padding: 15px 20px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-                    border: 1px solid #e5e7eb;
-                }
-                
-                .header {
-                    text-align: center;
-                    border-bottom: 3px solid #2563eb;
-                    padding-bottom: 10px;
-                    margin-bottom: 12px;
-                }
-                .header .brasao { font-size: 32px; margin-bottom: 2px; }
-                .header h1 { font-size: 16px; color: #1e293b; letter-spacing: 1px; }
-                .header h2 { 
-                    font-size: 16px; 
-                    color: #2563eb; 
-                    margin-top: 2px; 
-                    font-weight: 800;
-                    background: #eff6ff;
-                    display: inline-block;
-                    padding: 4px 20px;
-                    border-radius: 20px;
-                }
-                .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
-                .header .prova-nome {
-                    font-size: 12px;
-                    color: #475569;
-                    font-weight: 600;
-                    margin-top: 4px;
-                    background: #f1f5f9;
-                    padding: 2px 14px;
-                    border-radius: 12px;
-                    display: inline-block;
-                }
-                
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                    gap: 6px;
-                    background: #f8fafc;
-                    padding: 8px 14px;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
-                    border: 1px solid #e2e8f0;
-                }
-                .info-grid .item { display: flex; flex-direction: column; gap: 1px; }
-                .info-grid .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
-                .info-grid .value { font-size: 11px; font-weight: 700; color: #0f172a; }
-                
-                .instrucoes {
-                    background: #eff6ff;
-                    border-left: 4px solid #2563eb;
-                    padding: 6px 12px;
-                    border-radius: 6px;
-                    margin-bottom: 10px;
-                    font-size: 10px;
-                    color: #1e293b;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }
-                .instrucoes .icone { font-size: 16px; }
-                .instrucoes strong { color: #2563eb; }
-                .instrucoes .destaque {
-                    background: #dbeafe;
-                    padding: 2px 12px;
-                    border-radius: 12px;
-                    font-weight: 700;
-                    color: #1d4ed8;
-                    font-size: 10px;
-                }
-                
-                /* 🔥 GRID DE QUESTÕES - MELHORADA COM BORDAS MAIS FORTES */
-                .questoes-grid {
-                    display: grid;
-                    grid-template-columns: repeat(${colunas}, 1fr);
-                    gap: ${gapQuestoes}px;
-                    margin: 8px 0 10px;
-                }
-                
-                .questao {
-                    background: #fafbfc;
-                    border: 2.5px solid #000000 !important;
-                    border-radius: 10px !important;
-                    padding: ${paddingQuestao};
-                    text-align: center;
-                    transition: all 0.2s;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-                }
-                .questao:hover {
-                    border-color: #2563eb !important;
-                    background: #f0f7ff;
-                    box-shadow: 0 2px 12px rgba(37,99,235,0.10);
-                }
-                .questao .numero {
-                    font-size: ${fonteNumero};
-                    font-weight: 800;
-                    color: #1e293b;
-                    margin-bottom: 5px;
-                    letter-spacing: 0.5px;
-                    text-transform: uppercase;
-                }
-                .questao .numero span {
-                    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-                    color: #ffffff;
-                    padding: 2px 10px;
-                    border-radius: 12px;
-                    font-size: 9px;
-                    box-shadow: 0 1px 6px rgba(37,99,235,0.20);
-                }
-                
-                /* 🔥 OPÇÕES EM LINHA (A B C D) - CÍRCULOS MAIORES */
-                .opcoes {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 5px;
-                    flex-wrap: nowrap;
-                }
-                
-                .opcao {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 1px;
-                    cursor: pointer;
-                    padding: 2px 3px;
-                    border-radius: 8px;
-                    transition: all 0.2s;
-                }
-                .opcao:hover { transform: scale(1.06); }
-                
-                .opcao .circulo {
-                    width: ${circuloTamanho}px;
-                    height: ${circuloTamanho}px;
-                    border-radius: 50%;
-                    border: 3px solid #000000 !important;
-                    background: #ffffff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: ${circuloFontSize}px;
-                    font-weight: 800;
-                    color: #000000;
-                    transition: all 0.2s ease;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-                }
-                
-                .opcao input:checked + .circulo {
-                    border-color: #2563eb !important;
-                    background: #2563eb !important;
-                    color: white !important;
-                    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 2px 10px rgba(37, 99, 235, 0.20);
-                    transform: scale(1.05);
-                }
-                
-                .opcao:hover .circulo {
-                    border-color: #64748b !important;
-                    transform: scale(1.04);
-                }
-                .opcao input:checked:hover .circulo {
-                    border-color: #1d4ed8 !important;
-                    background: #1d4ed8 !important;
-                    transform: scale(1.07);
-                    box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.12), 0 2px 14px rgba(37, 99, 235, 0.25);
-                }
-                
-                .opcao input[type="radio"] {
-                    position: absolute;
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                }
-                
-                .opcao .label-alt {
-                    font-size: 9px;
-                    font-weight: 700;
-                    color: #000000;
-                    margin-top: 2px;
-                    letter-spacing: 0.3px;
-                }
-                
-                .opcao input:checked + .circulo + .label-alt {
-                    color: #2563eb;
-                }
-                
-                .footer {
-                    margin-top: 8px;
-                    padding-top: 8px;
-                    border-top: 1.5px solid #e2e8f0;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    font-size: 9px;
-                    color: #94a3b8;
-                }
-                .footer strong { color: #475569; }
-                
-                .btn-print {
-                    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-                    color: white;
-                    border: none;
-                    padding: 12px 28px;
-                    border-radius: 10px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-top: 8px;
-                    width: 100%;
-                    justify-content: center;
-                    box-shadow: 0 2px 16px rgba(37, 99, 235, 0.25);
-                }
-                .btn-print:hover {
-                    background: linear-gradient(135deg, #1d4ed8, #1e40af);
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.35);
-                }
-                
-                .legenda {
-                    text-align: center;
-                    margin-top: 6px;
-                    font-size: 9px;
-                    color: #94a3b8;
-                    border-top: 1px solid #e2e8f0;
-                    padding-top: 6px;
-                    display: flex;
-                    justify-content: center;
-                    gap: 16px;
-                    flex-wrap: wrap;
-                }
-                .legenda span { display: inline-flex; align-items: center; gap: 5px; }
-                .legenda .dot {
-                    display: inline-block;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
-                    border: 2.5px solid #94a3b8;
-                }
-                .legenda .dot.checked {
-                    background: #2563eb;
-                    border-color: #2563eb;
-                }
-                
-                @media print {
-                    body { background: white; padding: 0; margin: 0; }
-                    .container { box-shadow: none; border: none; padding: 10px 12px; border-radius: 0; max-width: 100%; }
-                    .btn-print { display: none; }
-                    .questao:hover { border-color: #cbd5e1 !important; background: #fafbfc; transform: none; box-shadow: none; }
-                    .opcao:hover .circulo { transform: none; border-color: #94a3b8 !important; }
-                    .opcao input:checked + .circulo {
-                        border-color: #2563eb !important;
-                        background: #2563eb !important;
-                        color: white !important;
-                        box-shadow: none;
-                    }
-                    .opcao input:checked:hover .circulo { transform: none; box-shadow: none; }
-                    .header { border-bottom-color: #1e293b; }
-                    .header h2 { background: #f1f5f9; color: #1e293b; }
-                    .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
-                    .footer { border-top-color: #1e293b; }
-                    .questao { break-inside: avoid; page-break-inside: avoid; }
-                    .questoes-grid { page-break-inside: avoid; }
-                    .questao .numero span { background: #1e293b; color: white; box-shadow: none; }
-                }
-                
-                @media (max-width: 768px) {
-                    .questoes-grid {
-                        grid-template-columns: repeat(${Math.min(colunas, 4)}, 1fr);
-                        gap: ${Math.max(gapQuestoes - 2, 4)}px;
-                    }
-                    .container { padding: 10px 12px; }
-                    .opcao .circulo { 
-                        width: ${Math.max(circuloTamanho - 6, 26)}px; 
-                        height: ${Math.max(circuloTamanho - 6, 26)}px;
-                        font-size: ${Math.max(circuloFontSize - 3, 11)}px;
-                        border-width: 2.5px;
-                    }
-                    .info-grid { grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px 10px; }
-                    .header h1 { font-size: 14px; }
-                    .header h2 { font-size: 14px; }
-                }
-                
-                @media (max-width: 500px) {
-                    .questoes-grid {
-                        grid-template-columns: repeat(${Math.min(colunas, 3)}, 1fr);
-                        gap: 4px;
-                    }
-                    .opcao .circulo {
-                        width: ${Math.max(circuloTamanho - 10, 22)}px;
-                        height: ${Math.max(circuloTamanho - 10, 22)}px;
-                        font-size: ${Math.max(circuloFontSize - 5, 10)}px;
-                        border-width: 2px;
-                    }
-                    .info-grid { grid-template-columns: 1fr; }
-                }
-                
-                @media (max-width: 400px) {
-                    .questoes-grid {
-                        grid-template-columns: repeat(${Math.min(colunas, 2)}, 1fr);
-                        gap: 3px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="brasao">🏛️</div>
-                    <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
-                    <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
-                    <div class="prova-nome">${nomeProva}</div>
-                    <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
-                </div>
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Cartão Resposta - ${nomeAluno}</title>
+                        <style>
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            
+                            body {
+                                font-family: 'Segoe UI', Arial, sans-serif;
+                                background: #f0f2f5;
+                                display: flex;
+                                justify-content: center;
+                                padding: 10px;
+                                min-height: 100vh;
+                            }
+                            
+                            .container {
+                                max-width: 1100px;
+                                width: 100%;
+                                background: #ffffff;
+                                padding: 15px 20px;
+                                border-radius: 12px;
+                                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                                border: 1px solid #e5e7eb;
+                            }
+                            
+                            .header {
+                                text-align: center;
+                                border-bottom: 3px solid #2563eb;
+                                padding-bottom: 10px;
+                                margin-bottom: 12px;
+                            }
+                            .header .brasao { font-size: 32px; margin-bottom: 2px; }
+                            .header h1 { font-size: 16px; color: #1e293b; letter-spacing: 1px; }
+                            .header h2 { 
+                                font-size: 16px; 
+                                color: #2563eb; 
+                                margin-top: 2px; 
+                                font-weight: 800;
+                                background: #eff6ff;
+                                display: inline-block;
+                                padding: 4px 20px;
+                                border-radius: 20px;
+                            }
+                            .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
+                            .header .prova-nome {
+                                font-size: 12px;
+                                color: #475569;
+                                font-weight: 600;
+                                margin-top: 4px;
+                                background: #f1f5f9;
+                                padding: 2px 14px;
+                                border-radius: 12px;
+                                display: inline-block;
+                            }
+                            
+                            .info-grid {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                                gap: 6px;
+                                background: #f8fafc;
+                                padding: 8px 14px;
+                                border-radius: 8px;
+                                margin-bottom: 12px;
+                                border: 1px solid #e2e8f0;
+                            }
+                            .info-grid .item { display: flex; flex-direction: column; gap: 1px; }
+                            .info-grid .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+                            .info-grid .value { font-size: 11px; font-weight: 700; color: #0f172a; }
+                            
+                            .instrucoes {
+                                background: #eff6ff;
+                                border-left: 4px solid #2563eb;
+                                padding: 6px 12px;
+                                border-radius: 6px;
+                                margin-bottom: 10px;
+                                font-size: 10px;
+                                color: #1e293b;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                flex-wrap: wrap;
+                            }
+                            .instrucoes .icone { font-size: 16px; }
+                            .instrucoes strong { color: #2563eb; }
+                            .instrucoes .destaque {
+                                background: #dbeafe;
+                                padding: 2px 12px;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                color: #1d4ed8;
+                                font-size: 10px;
+                            }
+                            
+                            .questoes-grid {
+                                display: grid;
+                                grid-template-columns: repeat(${colunas}, 1fr);
+                                gap: ${gapQuestoes}px;
+                                margin: 8px 0 10px;
+                            }
+                            
+                            .questao {
+                                background: #fafbfc;
+                                border: 2.5px solid #000000 !important;
+                                border-radius: 10px !important;
+                                padding: ${paddingQuestao};
+                                text-align: center;
+                                transition: all 0.2s;
+                                box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+                            }
+                            .questao:hover {
+                                border-color: #2563eb !important;
+                                background: #f0f7ff;
+                                box-shadow: 0 2px 12px rgba(37,99,235,0.10);
+                            }
+                            .questao .numero {
+                                font-size: ${fonteNumero};
+                                font-weight: 800;
+                                color: #1e293b;
+                                margin-bottom: 5px;
+                                letter-spacing: 0.5px;
+                                text-transform: uppercase;
+                            }
+                            .questao .numero span {
+                                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                                color: #ffffff;
+                                padding: 2px 10px;
+                                border-radius: 12px;
+                                font-size: 9px;
+                                box-shadow: 0 1px 6px rgba(37,99,235,0.20);
+                            }
+                            
+                            .opcoes {
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                gap: 5px;
+                                flex-wrap: nowrap;
+                            }
+                            
+                            .opcao {
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                gap: 1px;
+                                cursor: pointer;
+                                padding: 2px 3px;
+                                border-radius: 8px;
+                                transition: all 0.2s;
+                            }
+                            .opcao:hover { transform: scale(1.06); }
+                            
+                            .opcao .circulo {
+                                width: ${circuloTamanho}px;
+                                height: ${circuloTamanho}px;
+                                border-radius: 50%;
+                                border: 3px solid #000000 !important;
+                                background: #ffffff;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: ${circuloFontSize}px;
+                                font-weight: 800;
+                                color: #000000;
+                                transition: all 0.2s ease;
+                                box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                            }
+                            
+                            .opcao input:checked + .circulo {
+                                border-color: #2563eb !important;
+                                background: #2563eb !important;
+                                color: white !important;
+                                box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 2px 10px rgba(37, 99, 235, 0.20);
+                                transform: scale(1.05);
+                            }
+                            
+                            .opcao:hover .circulo {
+                                border-color: #64748b !important;
+                                transform: scale(1.04);
+                            }
+                            .opcao input:checked:hover .circulo {
+                                border-color: #1d4ed8 !important;
+                                background: #1d4ed8 !important;
+                                transform: scale(1.07);
+                                box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.12), 0 2px 14px rgba(37, 99, 235, 0.25);
+                            }
+                            
+                            .opcao input[type="radio"] {
+                                position: absolute;
+                                opacity: 0;
+                                width: 0;
+                                height: 0;
+                            }
+                            
+                            .opcao .label-alt {
+                                font-size: 9px;
+                                font-weight: 700;
+                                color: #000000;
+                                margin-top: 2px;
+                                letter-spacing: 0.3px;
+                            }
+                            
+                            .opcao input:checked + .circulo + .label-alt {
+                                color: #2563eb;
+                            }
+                            
+                            .footer {
+                                margin-top: 8px;
+                                padding-top: 8px;
+                                border-top: 1.5px solid #e2e8f0;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                flex-wrap: wrap;
+                                gap: 6px;
+                                font-size: 9px;
+                                color: #94a3b8;
+                            }
+                            .footer strong { color: #475569; }
+                            
+                            .btn-print {
+                                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                                color: white;
+                                border: none;
+                                padding: 12px 28px;
+                                border-radius: 10px;
+                                font-size: 14px;
+                                font-weight: 700;
+                                cursor: pointer;
+                                transition: all 0.2s;
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                margin-top: 8px;
+                                width: 100%;
+                                justify-content: center;
+                                box-shadow: 0 2px 16px rgba(37, 99, 235, 0.25);
+                            }
+                            .btn-print:hover {
+                                background: linear-gradient(135deg, #1d4ed8, #1e40af);
+                                transform: translateY(-2px);
+                                box-shadow: 0 4px 24px rgba(37, 99, 235, 0.35);
+                            }
+                            
+                            .legenda {
+                                text-align: center;
+                                margin-top: 6px;
+                                font-size: 9px;
+                                color: #94a3b8;
+                                border-top: 1px solid #e2e8f0;
+                                padding-top: 6px;
+                                display: flex;
+                                justify-content: center;
+                                gap: 16px;
+                                flex-wrap: wrap;
+                            }
+                            .legenda span { display: inline-flex; align-items: center; gap: 5px; }
+                            .legenda .dot {
+                                display: inline-block;
+                                width: 12px;
+                                height: 12px;
+                                border-radius: 50%;
+                                border: 2.5px solid #94a3b8;
+                            }
+                            .legenda .dot.checked {
+                                background: #2563eb;
+                                border-color: #2563eb;
+                            }
+                            
+                            @media print {
+                                body { background: white; padding: 0; margin: 0; }
+                                .container { box-shadow: none; border: none; padding: 10px 12px; border-radius: 0; max-width: 100%; }
+                                .btn-print { display: none; }
+                                .questao:hover { border-color: #cbd5e1 !important; background: #fafbfc; transform: none; box-shadow: none; }
+                                .opcao:hover .circulo { transform: none; border-color: #94a3b8 !important; }
+                                .opcao input:checked + .circulo {
+                                    border-color: #2563eb !important;
+                                    background: #2563eb !important;
+                                    color: white !important;
+                                    box-shadow: none;
+                                }
+                                .opcao input:checked:hover .circulo { transform: none; box-shadow: none; }
+                                .header { border-bottom-color: #1e293b; }
+                                .header h2 { background: #f1f5f9; color: #1e293b; }
+                                .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
+                                .footer { border-top-color: #1e293b; }
+                                .questao { break-inside: avoid; page-break-inside: avoid; }
+                                .questoes-grid { page-break-inside: avoid; }
+                                .questao .numero span { background: #1e293b; color: white; box-shadow: none; }
+                            }
+                            
+                            @media (max-width: 768px) {
+                                .questoes-grid {
+                                    grid-template-columns: repeat(${Math.min(colunas, 4)}, 1fr);
+                                    gap: ${Math.max(gapQuestoes - 2, 4)}px;
+                                }
+                                .container { padding: 10px 12px; }
+                                .opcao .circulo { 
+                                    width: ${Math.max(circuloTamanho - 6, 26)}px; 
+                                    height: ${Math.max(circuloTamanho - 6, 26)}px;
+                                    font-size: ${Math.max(circuloFontSize - 3, 11)}px;
+                                    border-width: 2.5px;
+                                }
+                                .info-grid { grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px 10px; }
+                                .header h1 { font-size: 14px; }
+                                .header h2 { font-size: 14px; }
+                            }
+                            
+                            @media (max-width: 500px) {
+                                .questoes-grid {
+                                    grid-template-columns: repeat(${Math.min(colunas, 3)}, 1fr);
+                                    gap: 4px;
+                                }
+                                .opcao .circulo {
+                                    width: ${Math.max(circuloTamanho - 10, 22)}px;
+                                    height: ${Math.max(circuloTamanho - 10, 22)}px;
+                                    font-size: ${Math.max(circuloFontSize - 5, 10)}px;
+                                    border-width: 2px;
+                                }
+                                .info-grid { grid-template-columns: 1fr; }
+                            }
+                            
+                            @media (max-width: 400px) {
+                                .questoes-grid {
+                                    grid-template-columns: repeat(${Math.min(colunas, 2)}, 1fr);
+                                    gap: 3px;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <div class="brasao">🏛️</div>
+                                <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
+                                <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
+                                <div class="prova-nome">${nomeProva}</div>
+                                <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
+                            </div>
 
-                <div class="info-grid">
-                    <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">${nomeAluno}</span></div>
-                    <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
-                    <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
-                    <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
-                    <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
-                    <div class="item"><span class="label">📝 Questões</span><span class="value">${qtdQuestoes}</span></div>
-                </div>
+                            <div class="info-grid">
+                                <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">${nomeAluno}</span></div>
+                                <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
+                                <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
+                                <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
+                                <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
+                                <div class="item"><span class="label">📝 Questões</span><span class="value">${qtdQuestoes}</span></div>
+                            </div>
 
-                <div class="instrucoes">
-                    <span class="icone">✏️</span>
-                    <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
-                    <span class="destaque">${qtdQuestoes} questões</span>
-                </div>
+                            <div class="instrucoes">
+                                <span class="icone">✏️</span>
+                                <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
+                                <span class="destaque">${qtdQuestoes} questões</span>
+                            </div>
 
-                <div class="questoes-grid">
-        `;
+                            <div class="questoes-grid">
+                    `;
 
                     for (let i = 0; i < qtdQuestoes; i++) {
                         html += `
-                    <div class="questao">
-                        <div class="numero"><span>Q${i+1}</span></div>
-                        <div class="opcoes">
+                            <div class="questao">
+                                <div class="numero"><span>Q${i+1}</span></div>
+                                <div class="opcoes">
                         `;
                         
                         for (let alt of alternativas) {
                             html += `
-                            <label class="opcao">
-                                <input type="radio" name="q${i+1}" value="${alt}">
-                                <span class="circulo">${alt}</span>
-                                <span class="label-alt">${alt}</span>
-                            </label>
+                                <label class="opcao">
+                                    <input type="radio" name="q${i+1}" value="${alt}">
+                                    <span class="circulo">${alt}</span>
+                                    <span class="label-alt">${alt}</span>
+                                </label>
                             `;
                         }
                         
                         html += `
-                        </div>
-                    </div>
+                                </div>
+                            </div>
                         `;
                     }
 
                     html += `
-                </div>
+                            </div>
 
-                <button class="btn-print" onclick="window.print()">
-                    🖨️ IMPRIMIR CARTÃO RESPOSTA
-                </button>
+                            <button class="btn-print" onclick="window.print()">
+                                🖨️ IMPRIMIR CARTÃO RESPOSTA
+                            </button>
 
-                <div class="footer">
-                    <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
-                    <span>${new Date().toLocaleString('pt-BR')}</span>
-                </div>
+                            <div class="footer">
+                                <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
+                                <span>${new Date().toLocaleString('pt-BR')}</span>
+                            </div>
 
-                <div class="legenda">
-                    <span><span class="dot"></span> Não preenchido</span>
-                    <span><span class="dot checked"></span> Preenchido</span>
-                    <span>⚠️ Preencha o círculo completamente</span>
-                </div>
-            </div>
-            <script>setTimeout(function(){}, 1000);<\/script>
-        </body>
-        </html>
-        `;
+                            <div class="legenda">
+                                <span><span class="dot"></span> Não preenchido</span>
+                                <span><span class="dot checked"></span> Preenchido</span>
+                                <span>⚠️ Preencha o círculo completamente</span>
+                            </div>
+                        </div>
+                        <script>setTimeout(function(){}, 1000);<\/script>
+                    </body>
+                    </html>
+                    `;
 
                     novaAba.document.open();
                     novaAba.document.write(html);
@@ -9622,4 +9421,4 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             });
         </script>
     </body>
-</html>
+    </html>
