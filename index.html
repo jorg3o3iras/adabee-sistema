@@ -8407,7 +8407,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         const serie = turma.serie || prova?.serie || '';
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 🔥 LAYOUT COMPACTO - TUDO EM UMA PÁGINA
+        // 🔥 LAYOUT VERTICAL COMPACTO - TODAS AS QUESTÕES EM UMA COLUNA
         let html = `
 <!DOCTYPE html>
 <html>
@@ -8423,17 +8423,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             background: #f0f2f5;
             display: flex;
             justify-content: center;
-            padding: 10px;
+            padding: 8px;
             min-height: 100vh;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 650px;
             width: 100%;
             background: #ffffff;
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            padding: 12px 16px;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
             border: 1px solid #e5e7eb;
         }
         
@@ -8441,111 +8441,116 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         .header {
             text-align: center;
             border-bottom: 2px solid #2563eb;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
         }
         
-        .header .brasao { font-size: 24px; }
-        .header h1 { font-size: 11px; color: #1e293b; letter-spacing: 1px; font-weight: 700; }
+        .header .brasao { font-size: 20px; }
+        .header h1 { font-size: 10px; color: #1e293b; letter-spacing: 0.5px; font-weight: 700; }
         .header h2 { 
-            font-size: 14px; 
+            font-size: 12px; 
             color: #2563eb; 
             font-weight: 800;
             background: #eff6ff;
             display: inline-block;
-            padding: 2px 20px;
-            border-radius: 16px;
+            padding: 1px 16px;
+            border-radius: 12px;
             margin-top: 1px;
         }
         .header .prova-nome {
-            font-size: 11px;
+            font-size: 10px;
             color: #475569;
             font-weight: 600;
             background: #f1f5f9;
-            padding: 1px 14px;
-            border-radius: 10px;
+            padding: 1px 12px;
+            border-radius: 8px;
             display: inline-block;
-            margin-top: 2px;
+            margin-top: 1px;
         }
         
         /* INFO COMPACTA - UMA LINHA */
         .info-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 4px 8px;
+            gap: 2px 6px;
             background: #f8fafc;
-            padding: 6px 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 6px;
             border: 1px solid #e2e8f0;
-            font-size: 10px;
+            font-size: 9px;
         }
         
         .info-grid .item { display: flex; flex-direction: column; }
-        .info-grid .label { font-size: 7px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2px; }
-        .info-grid .value { font-size: 10px; font-weight: 700; color: #0f172a; }
+        .info-grid .label { font-size: 6px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2px; }
+        .info-grid .value { font-size: 9px; font-weight: 700; color: #0f172a; }
         
         /* INSTRUÇÕES COMPACTAS */
         .instrucoes {
             background: #eff6ff;
             border-left: 3px solid #2563eb;
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 4px;
-            margin-bottom: 8px;
-            font-size: 9px;
+            margin-bottom: 6px;
+            font-size: 8px;
             color: #1e293b;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
         
-        .instrucoes .icone { font-size: 14px; }
+        .instrucoes .icone { font-size: 12px; }
         .instrucoes strong { color: #2563eb; }
         .instrucoes .destaque {
             background: #dbeafe;
-            padding: 1px 12px;
-            border-radius: 10px;
+            padding: 0 10px;
+            border-radius: 8px;
             font-weight: 700;
             color: #1d4ed8;
-            font-size: 8px;
+            font-size: 7px;
         }
         
-        /* GRADE DE QUESTÕES - 4 COLUNAS PARA CABER TUDO */
+        /* LISTA VERTICAL - UMA QUESTÃO POR LINHA */
         .questoes-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 4px 8px;
-            margin: 6px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
             width: 100%;
+            margin: 4px 0;
         }
         
-        .questao-item {
+        .questao-linha {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 3px 6px;
+            padding: 3px 8px;
             border-bottom: 1px solid #f1f5f9;
             background: #ffffff;
             border-radius: 4px;
-            gap: 4px;
+            width: 100%;
+            min-height: 32px;
         }
         
-        .questao-item .numero {
-            font-size: 10px;
+        .questao-linha:hover {
+            background: #f8fafc;
+        }
+        
+        .questao-linha .numero {
+            font-size: 11px;
             font-weight: 800;
             color: #1e293b;
-            min-width: 32px;
+            min-width: 38px;
             text-align: center;
             flex-shrink: 0;
         }
         
-        .questao-item .numero span {
+        .questao-linha .numero span {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #ffffff;
             padding: 1px 10px;
             border-radius: 10px;
-            font-size: 8px;
+            font-size: 9px;
             box-shadow: 0 1px 4px rgba(37,99,235,0.20);
         }
         
@@ -8553,7 +8558,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 4px;
+            gap: 8px;
             flex: 1;
         }
         
@@ -8563,20 +8568,23 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             align-items: center;
             gap: 1px;
             cursor: pointer;
-            padding: 1px 2px;
+            padding: 1px 3px;
             border-radius: 4px;
+            transition: all 0.15s;
         }
         
+        .opcao:hover { transform: scale(1.04); }
+        
         .opcao .circulo {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             border: 2.5px solid #000000 !important;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 800;
             color: #000000;
             transition: all 0.15s ease;
@@ -8596,6 +8604,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             transform: scale(1.03);
         }
         
+        .opcao input:checked:hover .circulo {
+            transform: scale(1.06);
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.08), 0 2px 10px rgba(0,0,0,0.18);
+        }
+        
         .opcao input[type="radio"] {
             position: absolute;
             opacity: 0;
@@ -8604,22 +8617,28 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         }
         
         .opcao .label-alt {
-            font-size: 7px;
+            font-size: 8px;
             font-weight: 700;
             color: #000000;
             letter-spacing: 0.2px;
+            margin-top: 1px;
+        }
+        
+        .opcao input:checked + .circulo + .label-alt {
+            color: #000000;
+            font-weight: 900;
         }
         
         /* RODAPÉ COMPACTO */
         .footer {
-            margin-top: 8px;
-            padding-top: 6px;
+            margin-top: 6px;
+            padding-top: 4px;
             border-top: 1.5px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 3px;
             font-size: 7px;
             color: #94a3b8;
         }
@@ -8630,25 +8649,25 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 8px 20px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 6px;
+            gap: 6px;
+            margin-top: 4px;
             width: 100%;
             justify-content: center;
-            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.20);
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.18);
         }
         
         .btn-print:hover {
             background: linear-gradient(135deg, #1d4ed8, #1e40af);
             transform: translateY(-1px);
-            box-shadow: 0 4px 18px rgba(37, 99, 235, 0.30);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28);
         }
         
         .legenda {
@@ -8660,7 +8679,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             padding-top: 4px;
             display: flex;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
         
@@ -8677,18 +8696,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             border-color: #000000;
         }
         
-        /* IMPRESSÃO */
+        /* IMPRESSÃO - TUDO EM UMA PÁGINA */
         @media print {
             body { background: white; padding: 0; margin: 0; }
             .container { 
                 box-shadow: none; 
                 border: none; 
-                padding: 8px 12px; 
+                padding: 6px 10px; 
                 border-radius: 0; 
                 max-width: 100%;
             }
             .btn-print { display: none; }
-            .questao-item:hover { background: #ffffff; }
+            .questao-linha:hover { background: #ffffff; }
             .opcao:hover .circulo { transform: none; border-color: #000000 !important; }
             .opcao input:checked + .circulo { 
                 background: #000000 !important; 
@@ -8697,65 +8716,70 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 box-shadow: none; 
                 transform: none;
             }
-            .questao-item { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
-            .questao-item .numero span { background: #1e293b; color: white; box-shadow: none; }
+            .opcao input:checked:hover + .circulo { transform: none; box-shadow: none; }
+            .questao-linha { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
+            .questao-linha .numero span { background: #1e293b; color: white; box-shadow: none; }
             .header { border-bottom-color: #1e293b; }
             .header h2 { background: #f1f5f9; color: #1e293b; }
             .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
             .footer { border-top-color: #1e293b; }
+            
+            /* Garante que tudo caiba em uma página */
+            .container { max-height: 100vh; overflow: hidden; }
+            .questoes-container { gap: 1px; }
+            .questao-linha { min-height: 26px; padding: 2px 6px; }
+            .opcao .circulo { width: 24px; height: 24px; font-size: 11px; border-width: 2px; }
+            .opcao .label-alt { font-size: 7px; }
+            .info-grid { padding: 2px 8px; gap: 1px 4px; }
+            .info-grid .value { font-size: 8px; }
         }
         
-        @media (max-width: 700px) {
-            .questoes-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 3px 6px;
-            }
+        @media (max-width: 600px) {
             .opcao .circulo {
-                width: 24px;
-                height: 24px;
-                font-size: 10px;
+                width: 26px;
+                height: 26px;
+                font-size: 11px;
                 border-width: 2px;
             }
+            .opcoes { gap: 5px; }
             .info-grid {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 2px 6px;
-                padding: 4px 8px;
+                gap: 1px 4px;
+                padding: 3px 6px;
                 font-size: 8px;
             }
-            .info-grid .value { font-size: 9px; }
-            .header h2 { font-size: 12px; padding: 2px 14px; }
-            .header h1 { font-size: 9px; }
+            .info-grid .value { font-size: 8px; }
+            .header h2 { font-size: 10px; padding: 1px 12px; }
+            .header h1 { font-size: 8px; }
+            .questao-linha { min-height: 28px; padding: 2px 4px; }
+            .questao-linha .numero { min-width: 30px; font-size: 9px; }
+            .questao-linha .numero span { font-size: 7px; padding: 0 8px; }
+            .container { padding: 8px 10px; }
+            .instrucoes { font-size: 7px; padding: 2px 8px; gap: 4px; }
         }
         
-        @media (max-width: 450px) {
-            .questoes-container {
-                grid-template-columns: 1fr 1fr;
-                gap: 2px 4px;
-            }
+        @media (max-width: 400px) {
             .opcao .circulo {
-                width: 20px;
-                height: 20px;
-                font-size: 8px;
+                width: 22px;
+                height: 22px;
+                font-size: 9px;
                 border-width: 1.5px;
             }
             .opcao .label-alt { font-size: 6px; }
-            .questao-item .numero { min-width: 24px; font-size: 8px; }
-            .questao-item .numero span { font-size: 6px; padding: 0 6px; }
+            .opcoes { gap: 3px; }
+            .questao-linha { min-height: 24px; padding: 1px 3px; }
+            .questao-linha .numero { min-width: 24px; font-size: 8px; }
+            .questao-linha .numero span { font-size: 6px; padding: 0 6px; }
             .info-grid {
                 grid-template-columns: 1fr 1fr;
-                gap: 1px 4px;
-                padding: 3px 6px;
+                gap: 1px 3px;
+                padding: 2px 4px;
                 font-size: 7px;
             }
-            .info-grid .value { font-size: 8px; }
-            .container { padding: 6px 8px; }
-            .header { padding-bottom: 4px; margin-bottom: 6px; }
-            .header .brasao { font-size: 18px; }
-            .header h2 { font-size: 10px; padding: 1px 10px; }
-            .header h1 { font-size: 8px; }
-            .header .prova-nome { font-size: 9px; padding: 0 10px; }
-            .instrucoes { font-size: 7px; padding: 2px 8px; gap: 4px; }
-            .instrucoes .destaque { font-size: 7px; padding: 0 8px; }
+            .info-grid .value { font-size: 7px; }
+            .header h2 { font-size: 9px; padding: 0 10px; }
+            .header .prova-nome { font-size: 8px; padding: 0 8px; }
+            .container { padding: 4px 6px; }
         }
     </style>
 </head>
@@ -8784,13 +8808,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <span class="destaque">${qtdQuestoes} questões</span>
         </div>
 
-        <!-- GRADE 4 COLUNAS -->
+        <!-- LISTA VERTICAL - UMA QUESTÃO POR LINHA -->
         <div class="questoes-container">
 `;
 
         for (let i = 0; i < qtdQuestoes; i++) {
             html += `
-            <div class="questao-item">
+            <div class="questao-linha">
                 <div class="numero"><span>Q${i+1}</span></div>
                 <div class="opcoes">
             `;
