@@ -1261,7 +1261,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <div class="card-header">
                             <div class="card-title" style="color:var(--green);">🤖 Resultado — Correção por IA</div>
                             <div class="btn-group">
-                                <span class="badge badge-green">✅ Processado</span>
+                                <span class="badge badge-green" id="ia-status">✅ APROVADO</span>
+                                <span class="badge badge-gray" id="ia-metodo">📌 método</span>
                                 <span class="badge badge-gray" id="confianca-badge">0% conf.</span>
                             </div>
                         </div>
@@ -5171,7 +5172,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
                 const etapas = [
                     { nome: '📸 Preparando imagem', descricao: 'Processando a imagem do cartão resposta...' },
-                    { nome: '🤖 Analisando com IA', descricao: 'Detectando respostas no cartão...' },
+                    { nome: '🔍 OCR + Posição', descricao: 'Lendo alternativas marcadas...' },
+                    { nome: '🤖 Analisando com IA', descricao: 'Detectando respostas...' },
                     { nome: '📊 Processando resultados', descricao: 'Comparando com o gabarito e calculando nota...' },
                     { nome: '💾 Finalizando', descricao: 'Salvando os resultados...' }
                 ];
@@ -5198,6 +5200,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     const totalQuestoes = prova.quantidade_questoes || 20;
                     const tipoQuestoes = prova.tipo_questoes || 4;
                     const isProducao = (prova.disciplina === 'Produção de Texto');
+                    const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
                     if (!gabarito || gabarito.length === 0) {
                         throw new Error('Esta prova não tem gabarito cadastrado!');
@@ -5287,7 +5290,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         gabarito: gabarito,
                         respostas: respostasNormalizadas,
                         quantidade: totalQuestoes,
-                        alternativas: tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'],
+                        alternativas: alternativas,
                         notaMaxima: 10,
                         notaMinima: 5,
                         valorPorQuestao: valorPorQuestao,
@@ -5297,6 +5300,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         questoes_status: resultadoQuestoes
                     });
 
+                    // 🔥 ATUALIZAR INTERFACE COM INFORMAÇÕES DO MÉTODO USADO
+                    const metodoUsado = respostaIA.metodo_usado || respostaIA.modo || 'desconhecido';
+                    
                     atualizarInterfaceCorrecao({
                         aluno: aluno,
                         prova: prova,
@@ -5306,7 +5312,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         nota: nota,
                         porcentagem: porcentagem,
                         conceito: conceito,
-                        confiancas: confiancasNormalizadas
+                        confiancas: confiancasNormalizadas,
+                        metodoUsado: metodoUsado
                     });
 
                     progressManager.finalizar(`✅ Correção concluída! ${acertos}/${totalQuestoes} acertos — Nota: ${nota.toFixed(1)}`);
@@ -5461,6 +5468,22 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     statusEl.className = 'badge ' + (aprovado ? 'badge-green' : 'badge-red');
                 }
 
+                // 🔥 MÉTODO USADO
+                const metodo = dados.metodoUsado || 'desconhecido';
+                const metodoBadge = document.getElementById('ia-metodo');
+                if (metodoBadge) {
+                    const metodoLabels = {
+                        'ocr': '📖 OCR',
+                        'circulos': '⭕ Círculos',
+                        'ia': '🤖 IA',
+                        'ia_fallback': '🤖 IA (Fallback)',
+                        'fallback': '⚠️ Fallback',
+                        'manual': '✏️ Manual'
+                    };
+                    metodoBadge.textContent = metodoLabels[metodo] || `📌 ${metodo}`;
+                    metodoBadge.className = `badge ${metodo === 'fallback' ? 'badge-red' : metodo === 'ia' ? 'badge-purple' : 'badge-gray'}`;
+                }
+
                 const confiancaMedia = dados.confiancas.reduce((a, b) => a + b, 0) / dados.confiancas.length || 0;
                 const badgeConfianca = document.getElementById('confianca-badge');
                 if (badgeConfianca) {
@@ -5474,8 +5497,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     resumoConfianca.style.display = 'flex';
                     resumoConfianca.innerHTML = `
                         <span>📊 Confiança média: <strong style="color:${confiancaMedia >= 70 ? 'var(--green)' : confiancaMedia >= 50 ? 'var(--orange)' : 'var(--red)'};">${confiancaMedia.toFixed(1)}%</strong></span>
-                        <span>${totalDuvidosas > 0 ? `⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)` : '✅ Todas as questões têm alta confiança!'}</span>
+                        ${totalDuvidosas > 0 ? `<span>⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)</span>` : '<span>✅ Todas as questões têm alta confiança!</span>'}
                         <span>🎯 Acertos: <strong style="color:var(--green);">${dados.acertos}</strong> / ${dados.totalQuestoes}</span>
+                        <span>📌 Método: <strong>${metodo}</strong></span>
                     `;
                 }
 
@@ -5485,7 +5509,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         const cor = q.acertou ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)';
                         const corTexto = q.acertou ? 'var(--green)' : 'var(--red)';
                         const icone = q.acertou ? '✅' : (q.respondida ? '❌' : '—');
-                        return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${q.resposta || '—'} ${icone}<span style="font-size:8px;opacity:0.7;">${q.confianca}%</span></span>`;
+                        const confColor = q.confianca < 70 ? 'var(--orange)' : 'var(--text2)';
+                        return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${q.resposta || '—'} ${icone}<span style="font-size:8px;color:${confColor};">${q.confianca}%</span></span>`;
                     }).join('');
                 }
 
@@ -5515,6 +5540,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     tituloOficial.innerHTML = `
                         <span style="font-size:12px;font-weight:800;color:var(--blue);letter-spacing:0.3px;">📋 GABARITO OFICIAL GERADO PELO SISTEMA</span>
                         <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">(${totalQuestoes} questões)</span>
+                        <span style="font-size:9px;color:var(--text3);margin-left:8px;">📌 ${dados.metodoUsado || 'ia'}</span>
                     `;
                     grid.appendChild(tituloOficial);
                     
@@ -5565,6 +5591,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     tituloAluno.innerHTML = `
                         <span style="font-size:12px;font-weight:800;color:var(--purple);letter-spacing:0.3px;">📋 GABARITO DO ALUNO</span>
                         <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">${dados.aluno.nome || 'Aluno'}</span>
+                        <span style="font-size:9px;color:var(--text3);margin-left:8px;">📌 ${dados.metodoUsado || 'ia'}</span>
                     `;
                     grid.appendChild(tituloAluno);
                     
@@ -5583,6 +5610,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                     dados.resultadoQuestoes.forEach((q) => {
                         const acertou = q.acertou;
                         const resposta = q.resposta || '—';
+                        const confianca = q.confianca || 100;
                         
                         let corBg, corTexto, icone;
                         if (acertou) {
@@ -5598,6 +5626,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             corTexto = 'var(--text3)';
                             icone = '—';
                         }
+                        
+                        const confColor = confianca < 70 ? 'var(--orange)' : 'var(--text3)';
                         
                         const div = document.createElement('div');
                         div.style.cssText = `
@@ -5615,6 +5645,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                             <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
                             <div style="font-size:16px;font-weight:900;color:${corTexto};line-height:1.1;">${resposta}</div>
                             <div style="font-size:6px;font-weight:700;color:${corTexto};">${icone}</div>
+                            <div style="font-size:6px;color:${confColor};">${Math.round(confianca)}%</div>
                         `;
                         gridAluno.appendChild(div);
                     });
@@ -8361,518 +8392,518 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
             }
 
-   async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
-    try {
-        const novaAba = window.open('', '_blank');
-        if (!novaAba) {
-            showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
-            return;
-        }
-        
-        novaAba.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
-            <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
-                <div style="text-align:center;">
-                    <div style="font-size:60px;margin-bottom:20px;">⏳</div>
-                    <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
-                    <p style="color:#64748b;">Aguarde um momento</p>
+            async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+                try {
+                    const novaAba = window.open('', '_blank');
+                    if (!novaAba) {
+                        showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
+                        return;
+                    }
+                    
+                    novaAba.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
+                        <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
+                            <div style="text-align:center;">
+                                <div style="font-size:60px;margin-bottom:20px;">⏳</div>
+                                <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
+                                <p style="color:#64748b;">Aguarde um momento</p>
+                            </div>
+                        </body>
+                        </html>
+                    `);
+                    novaAba.document.close();
+
+                    const provas = await carregarProvasComCache();
+                    const prova = provas.find(p => p.id == provaId);
+                    const qtdQuestoes = prova?.quantidade_questoes || 20;
+                    const tipoQuestoes = prova?.tipo_questoes || 4;
+                    const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+                    const nomeProva = prova?.titulo || 'Prova';
+
+                    const [alunoResp, escolaResp, turmaResp] = await Promise.all([
+                        fetch(`${API_URL}/api/alunos/${alunoId}`),
+                        fetch(`${API_URL}/api/escolas/${escolaId}`),
+                        fetch(`${API_URL}/api/turmas/${turmaId}`)
+                    ]);
+                    
+                    const aluno = await alunoResp.json();
+                    const escola = await escolaResp.json();
+                    const turma = await turmaResp.json();
+
+                    const nomeAluno = aluno.nome || 'Aluno';
+                    const nomeEscola = escola.nome || 'Escola';
+                    const nomeTurma = turma.nome || 'Turma';
+                    const serie = turma.serie || prova?.serie || '';
+                    const dataAtual = new Date().toLocaleDateString('pt-BR');
+
+                    // 🔥 LAYOUT VERTICAL COMPACTO - TODAS AS QUESTÕES EM UMA COLUNA
+                    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Cartão Resposta - ${nomeAluno}</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background: #f0f2f5;
+                    display: flex;
+                    justify-content: center;
+                    padding: 8px;
+                    min-height: 100vh;
+                }
+                
+                .container {
+                    max-width: 650px;
+                    width: 100%;
+                    background: #ffffff;
+                    padding: 12px 16px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+                    border: 1px solid #e5e7eb;
+                }
+                
+                /* CABEÇALHO COMPACTO */
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid #2563eb;
+                    padding-bottom: 6px;
+                    margin-bottom: 6px;
+                }
+                
+                .header .brasao { font-size: 20px; }
+                .header h1 { font-size: 10px; color: #1e293b; letter-spacing: 0.5px; font-weight: 700; }
+                .header h2 { 
+                    font-size: 12px; 
+                    color: #2563eb; 
+                    font-weight: 800;
+                    background: #eff6ff;
+                    display: inline-block;
+                    padding: 1px 16px;
+                    border-radius: 12px;
+                    margin-top: 1px;
+                }
+                .header .prova-nome {
+                    font-size: 10px;
+                    color: #475569;
+                    font-weight: 600;
+                    background: #f1f5f9;
+                    padding: 1px 12px;
+                    border-radius: 8px;
+                    display: inline-block;
+                    margin-top: 1px;
+                }
+                
+                /* INFO COMPACTA - UMA LINHA */
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: repeat(6, 1fr);
+                    gap: 2px 6px;
+                    background: #f8fafc;
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                    margin-bottom: 6px;
+                    border: 1px solid #e2e8f0;
+                    font-size: 9px;
+                }
+                
+                .info-grid .item { display: flex; flex-direction: column; }
+                .info-grid .label { font-size: 6px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2px; }
+                .info-grid .value { font-size: 9px; font-weight: 700; color: #0f172a; }
+                
+                /* INSTRUÇÕES COMPACTAS */
+                .instrucoes {
+                    background: #eff6ff;
+                    border-left: 3px solid #2563eb;
+                    padding: 3px 10px;
+                    border-radius: 4px;
+                    margin-bottom: 6px;
+                    font-size: 8px;
+                    color: #1e293b;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                }
+                
+                .instrucoes .icone { font-size: 12px; }
+                .instrucoes strong { color: #2563eb; }
+                .instrucoes .destaque {
+                    background: #dbeafe;
+                    padding: 0 10px;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    color: #1d4ed8;
+                    font-size: 7px;
+                }
+                
+                /* LISTA VERTICAL - UMA QUESTÃO POR LINHA */
+                .questoes-container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                    width: 100%;
+                    margin: 4px 0;
+                }
+                
+                .questao-linha {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 3px 8px;
+                    border-bottom: 1px solid #f1f5f9;
+                    background: #ffffff;
+                    border-radius: 4px;
+                    width: 100%;
+                    min-height: 32px;
+                }
+                
+                .questao-linha:hover {
+                    background: #f8fafc;
+                }
+                
+                .questao-linha .numero {
+                    font-size: 11px;
+                    font-weight: 800;
+                    color: #1e293b;
+                    min-width: 38px;
+                    text-align: center;
+                    flex-shrink: 0;
+                }
+                
+                .questao-linha .numero span {
+                    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                    color: #ffffff;
+                    padding: 1px 10px;
+                    border-radius: 10px;
+                    font-size: 9px;
+                    box-shadow: 0 1px 4px rgba(37,99,235,0.20);
+                }
+                
+                .opcoes {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 8px;
+                    flex: 1;
+                }
+                
+                .opcao {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 1px;
+                    cursor: pointer;
+                    padding: 1px 3px;
+                    border-radius: 4px;
+                    transition: all 0.15s;
+                }
+                
+                .opcao:hover { transform: scale(1.04); }
+                
+                .opcao .circulo {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    border: 2.5px solid #000000 !important;
+                    background: #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 13px;
+                    font-weight: 800;
+                    color: #000000;
+                    transition: all 0.15s ease;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+                }
+                
+                .opcao input:checked + .circulo {
+                    border-color: #000000 !important;
+                    background: #000000 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 0 3px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.15);
+                    transform: scale(1.04);
+                }
+                
+                .opcao:hover .circulo {
+                    border-color: #333333 !important;
+                    transform: scale(1.03);
+                }
+                
+                .opcao input:checked:hover .circulo {
+                    transform: scale(1.06);
+                    box-shadow: 0 0 0 4px rgba(0,0,0,0.08), 0 2px 10px rgba(0,0,0,0.18);
+                }
+                
+                .opcao input[type="radio"] {
+                    position: absolute;
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+                
+                .opcao .label-alt {
+                    font-size: 8px;
+                    font-weight: 700;
+                    color: #000000;
+                    letter-spacing: 0.2px;
+                    margin-top: 1px;
+                }
+                
+                .opcao input:checked + .circulo + .label-alt {
+                    color: #000000;
+                    font-weight: 900;
+                }
+                
+                /* RODAPÉ COMPACTO */
+                .footer {
+                    margin-top: 6px;
+                    padding-top: 4px;
+                    border-top: 1.5px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 3px;
+                    font-size: 7px;
+                    color: #94a3b8;
+                }
+                
+                .footer strong { color: #475569; }
+                
+                .btn-print {
+                    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                    color: white;
+                    border: none;
+                    padding: 6px 16px;
+                    border-radius: 6px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin-top: 4px;
+                    width: 100%;
+                    justify-content: center;
+                    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.18);
+                }
+                
+                .btn-print:hover {
+                    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28);
+                }
+                
+                .legenda {
+                    text-align: center;
+                    margin-top: 4px;
+                    font-size: 7px;
+                    color: #94a3b8;
+                    border-top: 1px solid #e2e8f0;
+                    padding-top: 4px;
+                    display: flex;
+                    justify-content: center;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+                
+                .legenda .dot {
+                    display: inline-block;
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    border: 2px solid #94a3b8;
+                }
+                
+                .legenda .dot.checked {
+                    background: #000000;
+                    border-color: #000000;
+                }
+                
+                /* IMPRESSÃO - TUDO EM UMA PÁGINA */
+                @media print {
+                    body { background: white; padding: 0; margin: 0; }
+                    .container { 
+                        box-shadow: none; 
+                        border: none; 
+                        padding: 6px 10px; 
+                        border-radius: 0; 
+                        max-width: 100%;
+                    }
+                    .btn-print { display: none; }
+                    .questao-linha:hover { background: #ffffff; }
+                    .opcao:hover .circulo { transform: none; border-color: #000000 !important; }
+                    .opcao input:checked + .circulo { 
+                        background: #000000 !important; 
+                        border-color: #000000 !important; 
+                        color: #ffffff !important; 
+                        box-shadow: none; 
+                        transform: none;
+                    }
+                    .opcao input:checked:hover + .circulo { transform: none; box-shadow: none; }
+                    .questao-linha { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
+                    .questao-linha .numero span { background: #1e293b; color: white; box-shadow: none; }
+                    .header { border-bottom-color: #1e293b; }
+                    .header h2 { background: #f1f5f9; color: #1e293b; }
+                    .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
+                    .footer { border-top-color: #1e293b; }
+                    
+                    /* Garante que tudo caiba em uma página */
+                    .container { max-height: 100vh; overflow: hidden; }
+                    .questoes-container { gap: 1px; }
+                    .questao-linha { min-height: 26px; padding: 2px 6px; }
+                    .opcao .circulo { width: 24px; height: 24px; font-size: 11px; border-width: 2px; }
+                    .opcao .label-alt { font-size: 7px; }
+                    .info-grid { padding: 2px 8px; gap: 1px 4px; }
+                    .info-grid .value { font-size: 8px; }
+                }
+                
+                @media (max-width: 600px) {
+                    .opcao .circulo {
+                        width: 26px;
+                        height: 26px;
+                        font-size: 11px;
+                        border-width: 2px;
+                    }
+                    .opcoes { gap: 5px; }
+                    .info-grid {
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 1px 4px;
+                        padding: 3px 6px;
+                        font-size: 8px;
+                    }
+                    .info-grid .value { font-size: 8px; }
+                    .header h2 { font-size: 10px; padding: 1px 12px; }
+                    .header h1 { font-size: 8px; }
+                    .questao-linha { min-height: 28px; padding: 2px 4px; }
+                    .questao-linha .numero { min-width: 30px; font-size: 9px; }
+                    .questao-linha .numero span { font-size: 7px; padding: 0 8px; }
+                    .container { padding: 8px 10px; }
+                    .instrucoes { font-size: 7px; padding: 2px 8px; gap: 4px; }
+                }
+                
+                @media (max-width: 400px) {
+                    .opcao .circulo {
+                        width: 22px;
+                        height: 22px;
+                        font-size: 9px;
+                        border-width: 1.5px;
+                    }
+                    .opcao .label-alt { font-size: 6px; }
+                    .opcoes { gap: 3px; }
+                    .questao-linha { min-height: 24px; padding: 1px 3px; }
+                    .questao-linha .numero { min-width: 24px; font-size: 8px; }
+                    .questao-linha .numero span { font-size: 6px; padding: 0 6px; }
+                    .info-grid {
+                        grid-template-columns: 1fr 1fr;
+                        gap: 1px 3px;
+                        padding: 2px 4px;
+                        font-size: 7px;
+                    }
+                    .info-grid .value { font-size: 7px; }
+                    .header h2 { font-size: 9px; padding: 0 10px; }
+                    .header .prova-nome { font-size: 8px; padding: 0 8px; }
+                    .container { padding: 4px 6px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="brasao">🏛️</div>
+                    <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
+                    <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
+                    <div class="prova-nome">${nomeProva}</div>
                 </div>
+
+                <!-- INFO EM UMA LINHA -->
+                <div class="info-grid">
+                    <div class="item"><span class="label">🎒 Aluno</span><span class="value">${nomeAluno}</span></div>
+                    <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
+                    <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
+                    <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
+                    <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
+                    <div class="item"><span class="label">📝 Qtd</span><span class="value">${qtdQuestoes}</span></div>
+                </div>
+
+                <div class="instrucoes">
+                    <span class="icone">✏️</span>
+                    <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
+                    <span class="destaque">${qtdQuestoes} questões</span>
+                </div>
+
+                <!-- LISTA VERTICAL - UMA QUESTÃO POR LINHA -->
+                <div class="questoes-container">
+        `;
+
+                    for (let i = 0; i < qtdQuestoes; i++) {
+                        html += `
+                        <div class="questao-linha">
+                            <div class="numero"><span>Q${i+1}</span></div>
+                            <div class="opcoes">
+                        `;
+                        
+                        for (let alt of alternativas) {
+                            html += `
+                                <label class="opcao">
+                                    <input type="radio" name="q${i+1}" value="${alt}">
+                                    <span class="circulo">${alt}</span>
+                                    <span class="label-alt">${alt}</span>
+                                </label>
+                            `;
+                        }
+                        
+                        html += `
+                            </div>
+                        </div>
+                        `;
+                    }
+
+                    html += `
+                    </div>
+
+                    <button class="btn-print" onclick="window.print()">
+                        🖨️ IMPRIMIR CARTÃO RESPOSTA
+                    </button>
+
+                    <div class="footer">
+                        <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
+                        <span>${new Date().toLocaleString('pt-BR')}</span>
+                    </div>
+
+                    <div class="legenda">
+                        <span><span class="dot"></span> Não preenchido</span>
+                        <span><span class="dot checked"></span> Preenchido</span>
+                        <span>⚠️ Preencha o círculo completamente</span>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        console.log('✅ Cartão resposta pronto');
+                    };
+                <\/script>
             </body>
             </html>
-        `);
-        novaAba.document.close();
+        `;
 
-        const provas = await carregarProvasComCache();
-        const prova = provas.find(p => p.id == provaId);
-        const qtdQuestoes = prova?.quantidade_questoes || 20;
-        const tipoQuestoes = prova?.tipo_questoes || 4;
-        const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-        const nomeProva = prova?.titulo || 'Prova';
+                    novaAba.document.open();
+                    novaAba.document.write(html);
+                    novaAba.document.close();
 
-        const [alunoResp, escolaResp, turmaResp] = await Promise.all([
-            fetch(`${API_URL}/api/alunos/${alunoId}`),
-            fetch(`${API_URL}/api/escolas/${escolaId}`),
-            fetch(`${API_URL}/api/turmas/${turmaId}`)
-        ]);
-        
-        const aluno = await alunoResp.json();
-        const escola = await escolaResp.json();
-        const turma = await turmaResp.json();
+                    showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
 
-        const nomeAluno = aluno.nome || 'Aluno';
-        const nomeEscola = escola.nome || 'Escola';
-        const nomeTurma = turma.nome || 'Turma';
-        const serie = turma.serie || prova?.serie || '';
-        const dataAtual = new Date().toLocaleDateString('pt-BR');
-
-        // 🔥 LAYOUT VERTICAL COMPACTO - TODAS AS QUESTÕES EM UMA COLUNA
-        let html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartão Resposta - ${nomeAluno}</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            padding: 8px;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 650px;
-            width: 100%;
-            background: #ffffff;
-            padding: 12px 16px;
-            border-radius: 10px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-            border: 1px solid #e5e7eb;
-        }
-        
-        /* CABEÇALHO COMPACTO */
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 6px;
-            margin-bottom: 6px;
-        }
-        
-        .header .brasao { font-size: 20px; }
-        .header h1 { font-size: 10px; color: #1e293b; letter-spacing: 0.5px; font-weight: 700; }
-        .header h2 { 
-            font-size: 12px; 
-            color: #2563eb; 
-            font-weight: 800;
-            background: #eff6ff;
-            display: inline-block;
-            padding: 1px 16px;
-            border-radius: 12px;
-            margin-top: 1px;
-        }
-        .header .prova-nome {
-            font-size: 10px;
-            color: #475569;
-            font-weight: 600;
-            background: #f1f5f9;
-            padding: 1px 12px;
-            border-radius: 8px;
-            display: inline-block;
-            margin-top: 1px;
-        }
-        
-        /* INFO COMPACTA - UMA LINHA */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 2px 6px;
-            background: #f8fafc;
-            padding: 4px 10px;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            border: 1px solid #e2e8f0;
-            font-size: 9px;
-        }
-        
-        .info-grid .item { display: flex; flex-direction: column; }
-        .info-grid .label { font-size: 6px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2px; }
-        .info-grid .value { font-size: 9px; font-weight: 700; color: #0f172a; }
-        
-        /* INSTRUÇÕES COMPACTAS */
-        .instrucoes {
-            background: #eff6ff;
-            border-left: 3px solid #2563eb;
-            padding: 3px 10px;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            font-size: 8px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        
-        .instrucoes .icone { font-size: 12px; }
-        .instrucoes strong { color: #2563eb; }
-        .instrucoes .destaque {
-            background: #dbeafe;
-            padding: 0 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            color: #1d4ed8;
-            font-size: 7px;
-        }
-        
-        /* LISTA VERTICAL - UMA QUESTÃO POR LINHA */
-        .questoes-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            width: 100%;
-            margin: 4px 0;
-        }
-        
-        .questao-linha {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 3px 8px;
-            border-bottom: 1px solid #f1f5f9;
-            background: #ffffff;
-            border-radius: 4px;
-            width: 100%;
-            min-height: 32px;
-        }
-        
-        .questao-linha:hover {
-            background: #f8fafc;
-        }
-        
-        .questao-linha .numero {
-            font-size: 11px;
-            font-weight: 800;
-            color: #1e293b;
-            min-width: 38px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        
-        .questao-linha .numero span {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            padding: 1px 10px;
-            border-radius: 10px;
-            font-size: 9px;
-            box-shadow: 0 1px 4px rgba(37,99,235,0.20);
-        }
-        
-        .opcoes {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-        
-        .opcao {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1px;
-            cursor: pointer;
-            padding: 1px 3px;
-            border-radius: 4px;
-            transition: all 0.15s;
-        }
-        
-        .opcao:hover { transform: scale(1.04); }
-        
-        .opcao .circulo {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2.5px solid #000000 !important;
-            background: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 800;
-            color: #000000;
-            transition: all 0.15s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-        }
-        
-        .opcao input:checked + .circulo {
-            border-color: #000000 !important;
-            background: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: 0 0 0 3px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.15);
-            transform: scale(1.04);
-        }
-        
-        .opcao:hover .circulo {
-            border-color: #333333 !important;
-            transform: scale(1.03);
-        }
-        
-        .opcao input:checked:hover .circulo {
-            transform: scale(1.06);
-            box-shadow: 0 0 0 4px rgba(0,0,0,0.08), 0 2px 10px rgba(0,0,0,0.18);
-        }
-        
-        .opcao input[type="radio"] {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .opcao .label-alt {
-            font-size: 8px;
-            font-weight: 700;
-            color: #000000;
-            letter-spacing: 0.2px;
-            margin-top: 1px;
-        }
-        
-        .opcao input:checked + .circulo + .label-alt {
-            color: #000000;
-            font-weight: 900;
-        }
-        
-        /* RODAPÉ COMPACTO */
-        .footer {
-            margin-top: 6px;
-            padding-top: 4px;
-            border-top: 1.5px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 3px;
-            font-size: 7px;
-            color: #94a3b8;
-        }
-        
-        .footer strong { color: #475569; }
-        
-        .btn-print {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 4px;
-            width: 100%;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.18);
-        }
-        
-        .btn-print:hover {
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28);
-        }
-        
-        .legenda {
-            text-align: center;
-            margin-top: 4px;
-            font-size: 7px;
-            color: #94a3b8;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 4px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .legenda .dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 2px solid #94a3b8;
-        }
-        
-        .legenda .dot.checked {
-            background: #000000;
-            border-color: #000000;
-        }
-        
-        /* IMPRESSÃO - TUDO EM UMA PÁGINA */
-        @media print {
-            body { background: white; padding: 0; margin: 0; }
-            .container { 
-                box-shadow: none; 
-                border: none; 
-                padding: 6px 10px; 
-                border-radius: 0; 
-                max-width: 100%;
+                } catch (erro) {
+                    console.error('Erro ao gerar cartão:', erro);
+                    showToast('❌ Erro: ' + erro.message, 'error');
+                }
             }
-            .btn-print { display: none; }
-            .questao-linha:hover { background: #ffffff; }
-            .opcao:hover .circulo { transform: none; border-color: #000000 !important; }
-            .opcao input:checked + .circulo { 
-                background: #000000 !important; 
-                border-color: #000000 !important; 
-                color: #ffffff !important; 
-                box-shadow: none; 
-                transform: none;
-            }
-            .opcao input:checked:hover + .circulo { transform: none; box-shadow: none; }
-            .questao-linha { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
-            .questao-linha .numero span { background: #1e293b; color: white; box-shadow: none; }
-            .header { border-bottom-color: #1e293b; }
-            .header h2 { background: #f1f5f9; color: #1e293b; }
-            .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
-            .footer { border-top-color: #1e293b; }
-            
-            /* Garante que tudo caiba em uma página */
-            .container { max-height: 100vh; overflow: hidden; }
-            .questoes-container { gap: 1px; }
-            .questao-linha { min-height: 26px; padding: 2px 6px; }
-            .opcao .circulo { width: 24px; height: 24px; font-size: 11px; border-width: 2px; }
-            .opcao .label-alt { font-size: 7px; }
-            .info-grid { padding: 2px 8px; gap: 1px 4px; }
-            .info-grid .value { font-size: 8px; }
-        }
-        
-        @media (max-width: 600px) {
-            .opcao .circulo {
-                width: 26px;
-                height: 26px;
-                font-size: 11px;
-                border-width: 2px;
-            }
-            .opcoes { gap: 5px; }
-            .info-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 1px 4px;
-                padding: 3px 6px;
-                font-size: 8px;
-            }
-            .info-grid .value { font-size: 8px; }
-            .header h2 { font-size: 10px; padding: 1px 12px; }
-            .header h1 { font-size: 8px; }
-            .questao-linha { min-height: 28px; padding: 2px 4px; }
-            .questao-linha .numero { min-width: 30px; font-size: 9px; }
-            .questao-linha .numero span { font-size: 7px; padding: 0 8px; }
-            .container { padding: 8px 10px; }
-            .instrucoes { font-size: 7px; padding: 2px 8px; gap: 4px; }
-        }
-        
-        @media (max-width: 400px) {
-            .opcao .circulo {
-                width: 22px;
-                height: 22px;
-                font-size: 9px;
-                border-width: 1.5px;
-            }
-            .opcao .label-alt { font-size: 6px; }
-            .opcoes { gap: 3px; }
-            .questao-linha { min-height: 24px; padding: 1px 3px; }
-            .questao-linha .numero { min-width: 24px; font-size: 8px; }
-            .questao-linha .numero span { font-size: 6px; padding: 0 6px; }
-            .info-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 1px 3px;
-                padding: 2px 4px;
-                font-size: 7px;
-            }
-            .info-grid .value { font-size: 7px; }
-            .header h2 { font-size: 9px; padding: 0 10px; }
-            .header .prova-nome { font-size: 8px; padding: 0 8px; }
-            .container { padding: 4px 6px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="brasao">🏛️</div>
-            <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
-            <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
-            <div class="prova-nome">${nomeProva}</div>
-        </div>
-
-        <!-- INFO EM UMA LINHA -->
-        <div class="info-grid">
-            <div class="item"><span class="label">🎒 Aluno</span><span class="value">${nomeAluno}</span></div>
-            <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
-            <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
-            <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
-            <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
-            <div class="item"><span class="label">📝 Qtd</span><span class="value">${qtdQuestoes}</span></div>
-        </div>
-
-        <div class="instrucoes">
-            <span class="icone">✏️</span>
-            <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
-            <span class="destaque">${qtdQuestoes} questões</span>
-        </div>
-
-        <!-- LISTA VERTICAL - UMA QUESTÃO POR LINHA -->
-        <div class="questoes-container">
-`;
-
-        for (let i = 0; i < qtdQuestoes; i++) {
-            html += `
-            <div class="questao-linha">
-                <div class="numero"><span>Q${i+1}</span></div>
-                <div class="opcoes">
-            `;
-            
-            for (let alt of alternativas) {
-                html += `
-                    <label class="opcao">
-                        <input type="radio" name="q${i+1}" value="${alt}">
-                        <span class="circulo">${alt}</span>
-                        <span class="label-alt">${alt}</span>
-                    </label>
-                `;
-            }
-            
-            html += `
-                </div>
-            </div>
-            `;
-        }
-
-        html += `
-        </div>
-
-        <button class="btn-print" onclick="window.print()">
-            🖨️ IMPRIMIR CARTÃO RESPOSTA
-        </button>
-
-        <div class="footer">
-            <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
-            <span>${new Date().toLocaleString('pt-BR')}</span>
-        </div>
-
-        <div class="legenda">
-            <span><span class="dot"></span> Não preenchido</span>
-            <span><span class="dot checked"></span> Preenchido</span>
-            <span>⚠️ Preencha o círculo completamente</span>
-        </div>
-    </div>
-    <script>
-        window.onload = function() {
-            console.log('✅ Cartão resposta pronto');
-        };
-    <\/script>
-</body>
-</html>
-`;
-
-        novaAba.document.open();
-        novaAba.document.write(html);
-        novaAba.document.close();
-
-        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
-
-    } catch (erro) {
-        console.error('Erro ao gerar cartão:', erro);
-        showToast('❌ Erro: ' + erro.message, 'error');
-    }
-}
 
             // ============================================
             // GERAR TODOS OS CARTOES RESPOSTA DA TURMA
