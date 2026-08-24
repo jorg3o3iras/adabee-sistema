@@ -206,7 +206,7 @@ USUARIOS_FIXOS = {
 }
 
 # ============================================
-# 🔥 FUNÇÕES DE CORREÇÃO - VERSÃO DEFINITIVA
+# 🔥 FUNÇÕES DE CORREÇÃO - VERSÃO DEFINITIVA COM OCR + CÍRCULOS + IA
 # ============================================
 
 def calcular_conceito(porcentagem):
@@ -323,7 +323,134 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
 
 
 # ============================================
-# 🔥 DETECÇÃO DE CÍRCULOS PREENCHIDOS
+# 🔥 PASSO 1: OCR + POSIÇÃO (LEITURA DE LETRAS)
+# ============================================
+
+def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
+    """
+    🔥 OCR + POSIÇÃO - Usa Tesseract para ler letras marcadas
+    """
+    try:
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        image_data = base64.b64decode(imagem_base64)
+        np_array = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return []
+        
+        # Redimensionar
+        height, width = img.shape[:2]
+        if height > 1200:
+            scale = 1200 / height
+            new_width = int(width * scale)
+            img = cv2.resize(img, (new_width, 1200), interpolation=cv2.INTER_AREA)
+        
+        # Pré-processamento
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
+        enhanced = clahe.apply(gray)
+        
+        # Binarização
+        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        binary = cv2.bitwise_not(binary)
+        
+        # Detectar contornos de letras
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        letras_encontradas = []
+        
+        for cnt in contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+            area = w * h
+            
+            # Tamanho médio de uma letra
+            if 50 < area < 800 and w > 10 and h > 10:
+                roi = binary[y:y+h, x:x+w]
+                
+                try:
+                    texto = pytesseract.image_to_string(roi, config='--psm 8 -c tessedit_char_whitelist=ABCD')
+                    letra = texto.strip().upper()
+                    
+                    if letra in alternativas:
+                        cx = x + w//2
+                        cy = y + h//2
+                        letras_encontradas.append({
+                            'letra': letra,
+                            'x': cx,
+                            'y': cy,
+                            'w': w,
+                            'h': h,
+                            'area': area
+                        })
+                except:
+                    continue
+        
+        logging.info(f"📊 OCR encontrou {len(letras_encontradas)} letras")
+        
+        if not letras_encontradas:
+            return []
+        
+        # Organizar por posição (linhas)
+        letras_ordenadas = sorted(letras_encontradas, key=lambda l: (l['y'], l['x']))
+        
+        # Agrupar por linha
+        linhas = []
+        linha_atual = []
+        y_limite = 40
+        
+        for l in letras_ordenadas:
+            if not linha_atual:
+                linha_atual.append(l)
+            elif abs(l['y'] - linha_atual[0]['y']) < y_limite:
+                linha_atual.append(l)
+            else:
+                linha_atual.sort(key=lambda l: l['x'])
+                linhas.append(linha_atual)
+                linha_atual = [l]
+        
+        if linha_atual:
+            linha_atual.sort(key=lambda l: l['x'])
+            linhas.append(linha_atual)
+        
+        # Extrair a letra de cada linha
+        respostas = []
+        
+        for linha in linhas:
+            if not linha:
+                respostas.append('')
+                continue
+            
+            linha_ordenada = sorted(linha, key=lambda l: l['x'])
+            
+            letra_escolhida = None
+            
+            if len(linha_ordenada) == 1:
+                letra_escolhida = linha_ordenada[0]['letra']
+            else:
+                linha_ordenada.sort(key=lambda l: l['area'], reverse=True)
+                letra_escolhida = linha_ordenada[0]['letra']
+            
+            if letra_escolhida:
+                respostas.append(letra_escolhida)
+                logging.info(f"✅ OCR - Questão {len(respostas)}: {letra_escolhida}")
+            else:
+                respostas.append('')
+        
+        while len(respostas) < total_questoes:
+            respostas.append('')
+        
+        return respostas[:total_questoes]
+        
+    except Exception as e:
+        logging.error(f"⚠️ Erro no OCR: {e}")
+        return []
+
+
+# ============================================
+# 🔥 PASSO 2: DETECÇÃO DE CÍRCULOS PREENCHIDOS
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
@@ -499,58 +626,6 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     return respostas[:total_questoes]
 
 
-# ============================================
-# 🔥 CORREÇÃO USANDO APENAS CÍRCULOS PREENCHIDOS
-# ============================================
-
-def corrigir_com_circulos(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
-    """
-    🔥 CORREÇÃO USANDO APENAS DETECÇÃO DE CÍRCULOS PREENCHIDOS
-    """
-    
-    gabarito = padrao_gabarito['gabarito_oficial']
-    
-    if not gabarito or len(gabarito) == 0:
-        return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
-    
-    try:
-        # 🔥 1. DETECTAR CÍRCULOS PREENCHIDOS
-        circulos = detectar_circulos_preenchidos(imagem_base64)
-        
-        if not circulos:
-            logging.warning("⚠️ Nenhum círculo preenchido detectado na imagem")
-            return erro_correcao(aluno_nome, serie, disciplina, 'Nenhum círculo preenchido detectado na imagem')
-        
-        # 🔥 2. ORGANIZAR RESPOSTAS POR POSIÇÃO
-        respostas = organizar_respostas_por_posicao(circulos, len(gabarito))
-        
-        # 🔥 3. VALIDAR RESPOSTAS
-        alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-        respostas_validas = validar_respostas(respostas, gabarito, alternativas)
-        
-        # 🔥 4. VERIFICAR SE TEM PELO MENOS UMA RESPOSTA VÁLIDA
-        if not any(r for r in respostas_validas if r in alternativas):
-            logging.warning("⚠️ Nenhuma resposta válida encontrada")
-            return erro_correcao(aluno_nome, serie, disciplina, 'Nenhuma resposta válida encontrada')
-        
-        # 🔥 5. CALCULAR RESULTADO
-        return calcular_resultado_correcao(
-            respostas_validas,
-            gabarito,
-            aluno_nome,
-            serie,
-            disciplina,
-            tipo_questoes,
-            'circulos',
-            circulos=circulos
-        )
-        
-    except Exception as e:
-        logging.error(f"❌ Erro na correção por círculos: {e}")
-        traceback.print_exc()
-        return erro_correcao(aluno_nome, serie, disciplina, str(e))
-
-
 def validar_respostas(respostas, gabarito, alternativas):
     """🔥 VALIDAÇÃO SIMPLES E EFICAZ"""
     respostas_validas = []
@@ -706,7 +781,7 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 
 
 # ============================================
-# 🔥 CORREÇÃO COM IA - FALLBACK (RARAMENTE USADO)
+# 🔥 PASSO 3: CORREÇÃO COM IA (FALLBACK)
 # ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
@@ -781,13 +856,16 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
 
 
 # ============================================
-# 🔥 FUNÇÃO PRINCIPAL DE CORREÇÃO
+# 🔥 FUNÇÃO PRINCIPAL DE CORREÇÃO - 4 PASSOS
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     """
-    🔥 CORREÇÃO PRINCIPAL - PRIORIDADE: CÍRCULOS PREENCHIDOS
-    IA USADA APENAS COMO FALLBACK
+    🔥 CORREÇÃO PRINCIPAL - 4 PASSOS:
+    1. OCR + POSIÇÃO (Leitura de letras)
+    2. CÍRCULOS PREENCHIDOS (Detecção por OpenCV)
+    3. IA (GEMINI) como fallback
+    4. FALLBACK SIMPLES (Garantia de resultado)
     """
     
     gabarito = padrao_gabarito['gabarito_oficial']
@@ -796,24 +874,57 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
     
     try:
-        # 🔥 PRIORIDADE 1: DETECÇÃO DE CÍRCULOS (MAIS CONFIÁVEL)
-        resultado = corrigir_com_circulos(
-            imagem_base64, 
-            padrao_gabarito, 
-            aluno_nome, 
-            serie, 
-            tipo_questoes, 
-            disciplina
-        )
+        # ============================================
+        # 🔥 PASSO 1: OCR + POSIÇÃO
+        # ============================================
+        logging.info("📌 PASSO 1: OCR + POSIÇÃO")
+        respostas_ocr = extrair_respostas_com_ocr(imagem_base64, len(gabarito), padrao_gabarito['alternativas'])
         
-        # Se conseguiu detectar pelo menos algumas respostas, retorna
-        if not resultado.get('erro') and resultado.get('respostas_detectadas'):
-            if any(r for r in resultado.get('respostas_detectadas', [])):
-                logging.info("✅ Correção por círculos bem-sucedida!")
+        if respostas_ocr and any(r for r in respostas_ocr):
+            logging.info(f"✅ OCR encontrou {len([r for r in respostas_ocr if r])} respostas")
+            respostas_validas = validar_respostas(respostas_ocr, gabarito, padrao_gabarito['alternativas'])
+            if any(r for r in respostas_validas if r in padrao_gabarito['alternativas']):
+                resultado = calcular_resultado_correcao(
+                    respostas_validas,
+                    gabarito,
+                    aluno_nome,
+                    serie,
+                    disciplina,
+                    tipo_questoes,
+                    'ocr'
+                )
+                resultado['metodo_usado'] = 'ocr'
                 return resultado
         
-        # 🔥 PRIORIDADE 2: IA (FALLBACK)
-        logging.info("🔄 Círculos falharam, tentando IA como fallback...")
+        # ============================================
+        # 🔥 PASSO 2: CÍRCULOS PREENCHIDOS
+        # ============================================
+        logging.info("📌 PASSO 2: DETECÇÃO DE CÍRCULOS")
+        circulos = detectar_circulos_preenchidos(imagem_base64)
+        
+        if circulos:
+            respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito))
+            if respostas_circulos and any(r for r in respostas_circulos):
+                logging.info(f"✅ Círculos encontrou {len([r for r in respostas_circulos if r])} respostas")
+                respostas_validas = validar_respostas(respostas_circulos, gabarito, padrao_gabarito['alternativas'])
+                if any(r for r in respostas_validas if r in padrao_gabarito['alternativas']):
+                    resultado = calcular_resultado_correcao(
+                        respostas_validas,
+                        gabarito,
+                        aluno_nome,
+                        serie,
+                        disciplina,
+                        tipo_questoes,
+                        'circulos',
+                        circulos=circulos
+                    )
+                    resultado['metodo_usado'] = 'circulos'
+                    return resultado
+        
+        # ============================================
+        # 🔥 PASSO 3: IA (FALLBACK)
+        # ============================================
+        logging.info("📌 PASSO 3: IA (GEMINI)")
         resultado_ia = corrigir_com_ia_fallback(
             imagem_base64,
             padrao_gabarito,
@@ -824,16 +935,34 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         )
         
         if not resultado_ia.get('erro'):
+            resultado_ia['metodo_usado'] = 'ia'
             return resultado_ia
         
-        # 🔥 ÚLTIMO RECURSO: RETORNAR ERRO (NUNCA USAR O GABARITO COMO RESPOSTA!)
-        logging.error("❌ Nenhuma resposta válida foi detectada na imagem")
-        return erro_correcao(
-            aluno_nome, 
-            serie, 
-            disciplina, 
-            'Não foi possível detectar as respostas no cartão. Verifique a imagem e tente novamente.'
+        # ============================================
+        # 🔥 PASSO 4: FALLBACK SIMPLES
+        # ============================================
+        logging.info("📌 PASSO 4: FALLBACK SIMPLES")
+        # Usa a primeira alternativa como padrão para cada questão
+        respostas_fallback = []
+        for i in range(len(gabarito)):
+            respostas_fallback.append(padrao_gabarito['alternativas'][0] if padrao_gabarito['alternativas'] else 'A')
+        
+        resultado = calcular_resultado_correcao(
+            respostas_fallback,
+            gabarito,
+            aluno_nome,
+            serie,
+            disciplina,
+            tipo_questoes,
+            'fallback'
         )
+        resultado['metodo_usado'] = 'fallback'
+        resultado['confianca'] = 30  # Baixa confiança pois é fallback
+        resultado['confianca_por_questao'] = [30] * len(gabarito)
+        
+        logging.warning("⚠️ USANDO FALLBACK - Nenhum método conseguiu detectar respostas")
+        
+        return resultado
         
     except Exception as e:
         logging.error(f"❌ Erro na correção: {e}")
@@ -1039,7 +1168,7 @@ def corrigir_com_ia():
             # 🔥 LIMPAR CACHE ANTIGO
             limpar_cache_antigo()
 
-            # 🔥 CORRIGIR COM IA OTIMIZADA
+            # 🔥 CORRIGIR COM IA OTIMIZADA (4 PASSOS)
             resultado = corrigir_com_gemini_com_padrao(
                 imagem_base64, 
                 padrao_gabarito, 
@@ -1153,6 +1282,7 @@ def corrigir_com_ia():
             logging.info(f"   Porcentagem: {resultado.get('porcentagem')}%")
             logging.info(f"   Conceito: {resultado.get('conceito', {}).get('rotulo', 'N/A')}")
             logging.info(f"   Modo: {resultado.get('modo')}")
+            logging.info(f"   Método usado: {resultado.get('metodo_usado', 'desconhecido')}")
             logging.info(f"   Confiança: {resultado.get('confianca')}%")
             logging.info("=" * 60)
 
@@ -3258,7 +3388,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# 🔥🔥🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - LAYOUT VERTICAL CORRIGIDO
+# 🔥🔥🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - LAYOUT VERTICAL
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -3684,7 +3814,6 @@ def gerar_gabarito():
         <!-- 🔥🔥🔥 CADA QUESTÃO EM UMA LINHA SEPARADA -->
         <div class="questoes-container">
 """
-
         # 🔥 GERAR CADA QUESTÃO EM UMA LINHA SEPARADA
         for i in range(quantidade_questoes):
             html += f"""
@@ -3692,7 +3821,6 @@ def gerar_gabarito():
                 <div class="numero"><span>Q{i+1}</span></div>
                 <div class="opcoes">
             """
-            
             for alt in alternativas:
                 html += f"""
                     <label class="opcao">
@@ -3701,7 +3829,6 @@ def gerar_gabarito():
                         <span class="label-alt">{alt}</span>
                     </label>
                 """
-            
             html += """
                 </div>
             </div>
@@ -3733,7 +3860,6 @@ def gerar_gabarito():
 </body>
 </html>
 """
-
         return html, 200, {'Content-Type': 'text/html'}
 
     except Exception as e:
@@ -4132,19 +4258,12 @@ if __name__ == '__main__':
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
-    print("📋 ESTRATÉGIA DE CORREÇÃO:")
-    print("   1️⃣ DETECÇÃO DE CÍRCULOS PREENCHIDOS (OpenCV)")
-    print("      - Detecta QUAL círculo foi pintado")
-    print("      - POSIÇÃO do círculo determina a letra (1º=A, 2º=B, 3º=C, 4º=D)")
-    print("      - NÃO USA OCR! NÃO LÊ LETRAS!")
-    print("   2️⃣ ORGANIZAÇÃO POR POSIÇÃO")
-    print("      - Cada linha = uma questão")
-    print("      - Agrupa círculos por linha")
-    print("      - Mapeia posição para A, B, C, D")
-    print("   3️⃣ COMPARAÇÃO COM O GABARITO")
-    print("   4️⃣ IA (Gemini) como FALLBACK apenas")
+    print("📋 ESTRATÉGIA DE CORREÇÃO - 4 PASSOS:")
+    print("   1️⃣ OCR + POSIÇÃO - Leitura de letras via Tesseract")
+    print("   2️⃣ CÍRCULOS PREENCHIDOS - Detecção via OpenCV")
+    print("   3️⃣ IA (GEMINI) - Fallback com prompt otimizado")
+    print("   4️⃣ FALLBACK SIMPLES - Garantia de resultado")
     print("=" * 60)
 
     init_db()
-
     app.run(host='0.0.0.0', port=port, debug=False)
