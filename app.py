@@ -3258,28 +3258,33 @@ def dashboard_conceito():
 
 
 # ============================================
-# 🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - NOVO LAYOUT
+# 🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - VERSÃO CORRIGIDA
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
         data = request.json
+        
+        # 🔥 VALIDAÇÃO DE DADOS OBRIGATÓRIOS
+        campos_obrigatorios = ['escola_id', 'turma_id', 'aluno_id', 'prova_id']
+        for campo in campos_obrigatorios:
+            if not data.get(campo):
+                return jsonify({'erro': f'Campo "{campo}" é obrigatório'}), 400
+        
         escola_id = data.get('escola_id')
         turma_id = data.get('turma_id')
         aluno_id = data.get('aluno_id')
         prova_id = data.get('prova_id')
         quantidade_questoes = data.get('quantidade_questoes', 20)
 
-        if not escola_id or not turma_id or not aluno_id or not prova_id:
-            return jsonify({'erro': 'Dados incompletos'}), 400
-
         conn = get_db_connection()
         if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # 🔥 BUSCAR DADOS DO ALUNO
         cur.execute("""
             SELECT a.nome, e.nome as escola_nome, t.nome as turma_nome, t.serie
             FROM alunos a
@@ -3289,6 +3294,7 @@ def gerar_gabarito():
         """, (aluno_id,))
         aluno = cur.fetchone()
 
+        # 🔥 BUSCAR DADOS DA PROVA
         cur.execute("""
             SELECT p.*
             FROM provas p
@@ -3300,8 +3306,9 @@ def gerar_gabarito():
         conn.close()
 
         if not aluno or not prova:
-            return jsonify({'erro': 'Dados não encontrados'}), 404
+            return jsonify({'erro': 'Aluno ou prova não encontrados'}), 404
 
+        # 🔥 EXTRAIR DADOS
         nome_aluno = aluno['nome']
         escola_nome = aluno['escola_nome'] or ''
         turma_nome = aluno['turma_nome'] or ''
@@ -3311,7 +3318,44 @@ def gerar_gabarito():
         tipo_questoes = int(prova.get('tipo_questoes', 4))
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
-        # 🔥 HTML CORRIGIDO - CADA QUESTÃO EM UMA LINHA SEPARADA
+        # 🔥 DETERMINAR NÚMERO DE COLUNAS PARA O GRID
+        if quantidade_questoes <= 10:
+            colunas = 5
+            circulo_tamanho = 42
+            fonte_circulo = 17
+            gap = 14
+            padding = '12px 8px'
+            fonte_numero = '12px'
+        elif quantidade_questoes <= 15:
+            colunas = 5
+            circulo_tamanho = 38
+            fonte_circulo = 15
+            gap = 10
+            padding = '10px 6px'
+            fonte_numero = '11px'
+        elif quantidade_questoes <= 20:
+            colunas = 5
+            circulo_tamanho = 34
+            fonte_circulo = 14
+            gap = 8
+            padding = '8px 5px'
+            fonte_numero = '10px'
+        elif quantidade_questoes <= 25:
+            colunas = 5
+            circulo_tamanho = 30
+            fonte_circulo = 12
+            gap = 6
+            padding = '6px 4px'
+            fonte_numero = '9px'
+        else:
+            colunas = 6
+            circulo_tamanho = 28
+            fonte_circulo = 11
+            gap = 5
+            padding = '5px 3px'
+            fonte_numero = '8px'
+
+        # 🔥 HTML CORRIGIDO - LAYOUT VERTICAL OTIMIZADO
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -3341,6 +3385,7 @@ def gerar_gabarito():
             border: 1px solid #e5e7eb;
         }}
         
+        /* 🔥 CABEÇALHO */
         .header {{
             text-align: center;
             border-bottom: 3px solid #2563eb;
@@ -3372,6 +3417,7 @@ def gerar_gabarito():
             display: inline-block;
         }}
         
+        /* 🔥 INFORMAÇÕES DO ALUNO */
         .info-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -3387,6 +3433,7 @@ def gerar_gabarito():
         .info-grid .label {{ font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }}
         .info-grid .value {{ font-size: 12px; font-weight: 700; color: #0f172a; }}
         
+        /* 🔥 INSTRUÇÕES */
         .instrucoes {{
             background: #eff6ff;
             border-left: 4px solid #2563eb;
@@ -3412,6 +3459,7 @@ def gerar_gabarito():
             font-size: 10px;
         }}
         
+        /* 🔥 LAYOUT VERTICAL - CADA QUESTÃO EM UMA LINHA */
         .questao-linha {{
             display: flex;
             align-items: center;
@@ -3420,11 +3468,11 @@ def gerar_gabarito():
             border-bottom: 1px solid #f1f5f9;
             transition: all 0.2s;
             background: #ffffff;
+            border-radius: 6px;
         }}
         
         .questao-linha:hover {{
             background: #f8fafc;
-            border-radius: 8px;
         }}
         
         .questao-linha .numero {{
@@ -3433,6 +3481,7 @@ def gerar_gabarito():
             color: #1e293b;
             min-width: 50px;
             text-align: center;
+            flex-shrink: 0;
         }}
         
         .questao-linha .numero span {{
@@ -3444,11 +3493,12 @@ def gerar_gabarito():
             box-shadow: 0 1px 6px rgba(37,99,235,0.20);
         }}
         
+        /* 🔥 OPÇÕES EM LINHA - A, B, C, D DA ESQUERDA PARA DIREITA */
         .opcoes {{
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: {gap}px;
             flex: 1;
         }}
         
@@ -3466,21 +3516,22 @@ def gerar_gabarito():
         .opcao:hover {{ transform: scale(1.05); }}
         
         .opcao .circulo {{
-            width: 38px;
-            height: 38px;
+            width: {circulo_tamanho}px;
+            height: {circulo_tamanho}px;
             border-radius: 50%;
             border: 3px solid #000000 !important;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: {fonte_circulo}px;
             font-weight: 800;
             color: #000000;
             transition: all 0.2s ease;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }}
         
+        /* 🔥 QUANDO MARCADO - PRETO SÓLIDO PARA DETECÇÃO PERFEITA */
         .opcao input:checked + .circulo {{
             border-color: #000000 !important;
             background: #000000 !important;
@@ -3519,6 +3570,7 @@ def gerar_gabarito():
             font-weight: 900;
         }}
         
+        /* 🔥 RODAPÉ */
         .footer {{
             margin-top: 16px;
             padding-top: 12px;
@@ -3585,6 +3637,7 @@ def gerar_gabarito():
             border-color: #000000;
         }}
         
+        /* 🔥 IMPRESSÃO */
         @media print {{
             body {{ background: white; padding: 0; margin: 0; }}
             .container {{ box-shadow: none; border: none; padding: 12px 16px; border-radius: 0; max-width: 100%; }}
@@ -3607,6 +3660,7 @@ def gerar_gabarito():
             .questao-linha .numero span {{ background: #1e293b; color: white; box-shadow: none; }}
         }}
         
+        /* 🔥 RESPONSIVIDADE */
         @media (max-width: 600px) {{
             .questao-linha {{
                 flex-direction: column;
@@ -3642,6 +3696,7 @@ def gerar_gabarito():
 </head>
 <body>
     <div class="container">
+        <!-- 🔥 CABEÇALHO -->
         <div class="header">
             <div class="brasao">🏛️</div>
             <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
@@ -3650,6 +3705,7 @@ def gerar_gabarito():
             <div class="sub">{escola_nome} | {serie} | {turma_nome}</div>
         </div>
 
+        <!-- 🔥 INFORMAÇÕES -->
         <div class="info-grid">
             <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">{nome_aluno}</span></div>
             <div class="item"><span class="label">🏫 Escola</span><span class="value">{escola_nome}</span></div>
@@ -3659,12 +3715,14 @@ def gerar_gabarito():
             <div class="item"><span class="label">📝 Questões</span><span class="value">{quantidade_questoes}</span></div>
         </div>
 
+        <!-- 🔥 INSTRUÇÕES -->
         <div class="instrucoes">
             <span class="icone">✏️</span>
             <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
             <span class="destaque">{quantidade_questoes} questões</span>
         </div>
 
+        <!-- 🔥 CADA QUESTÃO EM UMA LINHA SEPARADA -->
         <div id="questoes-container">
 """
 
@@ -3693,15 +3751,18 @@ def gerar_gabarito():
         html += f"""
         </div>
 
+        <!-- 🔥 BOTÃO IMPRIMIR -->
         <button class="btn-print" onclick="window.print()">
             🖨️ IMPRIMIR CARTÃO RESPOSTA
         </button>
 
+        <!-- 🔥 RODAPÉ -->
         <div class="footer">
             <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
             <span>{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
         </div>
 
+        <!-- 🔥 LEGENDA -->
         <div class="legenda">
             <span><span class="dot"></span> Não preenchido</span>
             <span><span class="dot checked"></span> Preenchido</span>
