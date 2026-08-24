@@ -326,67 +326,10 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
 # 🔥 DETECÇÃO DE CÍRCULOS PREENCHIDOS - VERSÃO DEFINITIVA
 # ============================================
 
-def extrair_letra_do_circulo(imagem, x, y, r):
-    """
-    🔥 EXTRAI APENAS A LETRA QUE ESTÁ DENTRO DO CÍRCULO
-    Ignora qualquer texto fora da área do círculo
-    """
-    try:
-        # Recortar a área do círculo com uma margem
-        margem = int(r * 0.3)
-        x1 = max(0, x - r - margem)
-        y1 = max(0, y - r - margem)
-        x2 = min(imagem.shape[1], x + r + margem)
-        y2 = min(imagem.shape[0], y + r + margem)
-        
-        roi = imagem[y1:y2, x1:x2]
-        
-        if roi is None or roi.size == 0:
-            return None
-        
-        # Pré-processamento da ROI (Região de Interesse)
-        gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        
-        # Aumentar contraste
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4,4))
-        enhanced = clahe.apply(gray_roi)
-        
-        # Binarização
-        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Inverter para ficar com texto preto em fundo branco
-        binary_inv = cv2.bitwise_not(binary)
-        
-        # 🔥 TESSERACT APENAS NA ÁREA DO CÍRCULO
-        custom_config = r'--oem 3 --psm 8 -l por --tessedit_char_whitelist ABCD'
-        texto = pytesseract.image_to_string(binary_inv, config=custom_config)
-        texto = texto.strip().replace('\n', ' ').replace('\r', '')
-        
-        # 🔥 EXTRAIR APENAS A PRIMEIRA LETRA VÁLIDA (A, B, C, D)
-        for char in texto.upper():
-            if char in ['A', 'B', 'C', 'D']:
-                return char
-        
-        # 🔥 SE NÃO ENCONTROU, TENTA COM CONFIGURAÇÃO MAIS PERMISSIVA
-        custom_config = r'--oem 3 --psm 8'
-        texto2 = pytesseract.image_to_string(binary_inv, config=custom_config)
-        texto2 = texto2.strip().replace('\n', ' ').replace('\r', '')
-        
-        for char in texto2.upper():
-            if char in ['A', 'B', 'C', 'D']:
-                return char
-        
-        return None
-        
-    except Exception as e:
-        logging.error(f"⚠️ Erro ao extrair letra do círculo: {e}")
-        return None
-
-
 def detectar_circulos_preenchidos(imagem_base64):
     """
-    🔥 DETECTA CÍRCULOS PREENCHIDOS E EXTRAI A LETRA DENTRO DE CADA UM
-    VERSÃO DEFINITIVA - IGNORA LETRAS FORA DOS CÍRCULOS
+    🔥 DETECTA CÍRCULOS PREENCHIDOS NA IMAGEM
+    NÃO FAZ OCR - APENAS DETECTA QUAL CÍRCULO FOI MARCADO
     """
     try:
         if ',' in imagem_base64:
@@ -408,12 +351,14 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
-        # Aumentar contraste para melhor detecção de círculos
+        # Aumentar contraste
         clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8,8))
         enhanced = clahe.apply(gray)
         
-        # 🔥 USAR A IMAGEM INVERTIDA PARA DETECTAR CÍRCULOS MAIS ESCUROS
+        # Binarização
         _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # 🔥 INVERTER PARA DETECTAR CÍRCULOS MAIS ESCUROS (PREENCHIDOS)
         binary_inv = cv2.bitwise_not(binary)
         
         # Detectar círculos
@@ -434,10 +379,10 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
-            logging.info(f"🔵 Círculos detectados: {len(circles)}")
+            logging.info(f"🔵 Total de círculos detectados: {len(circles)}")
             
             for (x, y, r) in circles:
-                # 🔥 1. VERIFICAR SE O CÍRCULO ESTÁ PREENCHIDO
+                # 🔥 VERIFICAR SE O CÍRCULO ESTÁ PREENCHIDO
                 mask = np.zeros(gray.shape, dtype=np.uint8)
                 cv2.circle(mask, (x, y), r, 255, -1)
                 roi = cv2.bitwise_and(binary_inv, binary_inv, mask=mask)
@@ -446,33 +391,26 @@ def detectar_circulos_preenchidos(imagem_base64):
                 dark_pixels = cv2.countNonZero(roi)
                 dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
                 
-                is_filled = dark_ratio > 0.20  # 20% preenchido = marcado
-                
-                # 🔥 2. SE ESTIVER PREENCHIDO, EXTRAIR A LETRA DENTRO DO CÍRCULO
-                letra_dentro = None
-                if is_filled:
-                    letra_dentro = extrair_letra_do_circulo(img, x, y, r)
-                    
-                    # Se não conseguiu extrair, tenta com uma ROI maior
-                    if not letra_dentro:
-                        letra_dentro = extrair_letra_do_circulo(img, x, y, int(r * 1.5))
+                # 🔥 LIMIAR: se mais de 20% do círculo está escuro, está preenchido
+                is_filled = dark_ratio > 0.20
                 
                 resultados.append({
                     'x': x,
                     'y': y,
                     'r': r,
                     'preenchido': is_filled,
-                    'dark_ratio': dark_ratio,
-                    'letra': letra_dentro  # 🔥 LETRA QUE ESTÁ DENTRO DO CÍRCULO
+                    'dark_ratio': dark_ratio
                 })
                 
-                if is_filled and letra_dentro:
-                    logging.info(f"🔵 Círculo preenchido em ({x}, {y}) com letra: {letra_dentro}")
+                if is_filled:
+                    logging.info(f"🔵 Círculo PREENCHIDO em ({x}, {y}) | Escuridão: {dark_ratio:.2f}")
+                else:
+                    logging.info(f"⚪ Círculo VAZIO em ({x}, {y}) | Escuridão: {dark_ratio:.2f}")
         
-        # 🔥 FILTRAR APENAS CÍRCULOS PREENCHIDOS COM LETRA VÁLIDA
-        preenchidos = [c for c in resultados if c['preenchido'] and c['letra'] in ['A', 'B', 'C', 'D']]
+        # 🔥 FILTRAR APENAS CÍRCULOS PREENCHIDOS
+        preenchidos = [c for c in resultados if c['preenchido']]
         
-        logging.info(f"📊 Total de círculos preenchidos com letra válida: {len(preenchidos)}")
+        logging.info(f"📊 Círculos preenchidos: {len(preenchidos)} de {len(resultados)}")
         
         return preenchidos
         
@@ -482,18 +420,18 @@ def detectar_circulos_preenchidos(imagem_base64):
         return []
 
 
-def organizar_respostas_dos_circulos(circulos, total_questoes):
+def organizar_respostas_por_posicao(circulos, total_questoes):
     """
-    🔥 ORGANIZA AS RESPOSTAS DOS CÍRCULOS PREENCHIDOS
-    Usa a LETRA DENTRO DO CÍRCULO como resposta
+    🔥 ORGANIZA OS CÍRCULOS PREENCHIDOS POR POSIÇÃO
+    A POSIÇÃO DETERMINA A LETRA (1º = A, 2º = B, 3º = C, 4º = D)
     """
     if not circulos:
         return []
     
-    # Ordenar por posição (topo para baixo, esquerda para direita)
+    # 🔥 ORDENAR POR POSIÇÃO (topo para baixo, esquerda para direita)
     circulos_ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
     
-    # Agrupar por linhas
+    # 🔥 AGRUPAR POR LINHAS (cada linha = uma questão)
     linhas = []
     linha_atual = []
     y_limite = 50
@@ -512,35 +450,62 @@ def organizar_respostas_dos_circulos(circulos, total_questoes):
         linha_atual.sort(key=lambda c: c['x'])
         linhas.append(linha_atual)
     
-    # 🔥 EXTRAIR A LETRA DE CADA LINHA
+    # 🔥 EXTRAIR A RESPOSTA DE CADA LINHA
     respostas = []
+    
     for linha in linhas:
-        if linha:
-            # Pegar a letra do primeiro círculo da linha
-            # (assumindo que cada linha é uma questão)
-            letra = linha[0].get('letra', '')
-            if letra in ['A', 'B', 'C', 'D']:
-                respostas.append(letra)
+        if not linha:
+            respostas.append('')
+            continue
+        
+        # 🔥 A LINHA TEM VÁRIOS CÍRCULOS (A, B, C, D)
+        # O ALUNO MARCOU UM DELES (o que está preenchido)
+        # A POSIÇÃO DO CÍRCULO PREENCHIDO NA LINHA DETERMINA A LETRA
+        
+        # 🔥 ORDENAR A LINHA POR POSIÇÃO X (esquerda para direita)
+        linha_ordenada = sorted(linha, key=lambda c: c['x'])
+        
+        # 🔥 ENCONTRAR QUAL CÍRCULO FOI PREENCHIDO
+        circulo_preenchido = None
+        for c in linha_ordenada:
+            if c['preenchido']:
+                circulo_preenchido = c
+                break
+        
+        if circulo_preenchido:
+            # 🔥 ENCONTRAR A POSIÇÃO DO CÍRCULO PREENCHIDO NA LINHA
+            posicao = linha_ordenada.index(circulo_preenchido)
+            
+            # 🔥 MAPEAR POSIÇÃO PARA LETRA (0 = A, 1 = B, 2 = C, 3 = D)
+            letras = ['A', 'B', 'C', 'D']
+            
+            if posicao < len(letras):
+                respostas.append(letras[posicao])
+                logging.info(f"✅ Questão {len(respostas)}: Círculo {posicao+1}º marcado → Letra {letras[posicao]}")
             else:
                 respostas.append('')
+                logging.warning(f"⚠️ Posição inválida: {posicao}")
         else:
+            # NENHUM CÍRCULO PREENCHIDO NESTA LINHA
             respostas.append('')
+            logging.info(f"❌ Questão {len(respostas)+1}: Nenhum círculo preenchido")
     
-    # Garantir tamanho
+    # 🔥 GARANTIR TAMANHO
     while len(respostas) < total_questoes:
         respostas.append('')
+    
+    logging.info(f"📊 Respostas organizadas: {respostas}")
     
     return respostas[:total_questoes]
 
 
 # ============================================
-# 🔥 CORREÇÃO PRINCIPAL - USANDO APENAS CÍRCULOS
+# 🔥 CORREÇÃO USANDO APENAS CÍRCULOS PREENCHIDOS
 # ============================================
 
 def corrigir_com_circulos(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
     """
-    🔥 CORREÇÃO USANDO APENAS A DETECÇÃO DE CÍRCULOS PREENCHIDOS
-    ESTA É A ESTRATÉGIA MAIS CONFIÁVEL PARA CARTÃO RESPOSTA
+    🔥 CORREÇÃO USANDO APENAS DETECÇÃO DE CÍRCULOS PREENCHIDOS
     """
     
     gabarito = padrao_gabarito['gabarito_oficial']
@@ -553,23 +518,22 @@ def corrigir_com_circulos(imagem_base64, padrao_gabarito, aluno_nome, serie, tip
         circulos = detectar_circulos_preenchidos(imagem_base64)
         
         if not circulos:
-            logging.warning("⚠️ Nenhum círculo preenchido detectado")
+            logging.warning("⚠️ Nenhum círculo preenchido detectado na imagem")
             return erro_correcao(aluno_nome, serie, disciplina, 'Nenhum círculo preenchido detectado na imagem')
         
-        # 🔥 2. ORGANIZAR RESPOSTAS DOS CÍRCULOS
-        respostas_circulos = organizar_respostas_dos_circulos(circulos, len(gabarito))
-        
-        if not respostas_circulos or len([r for r in respostas_circulos if r]) == 0:
-            logging.warning("⚠️ Nenhuma resposta válida extraída dos círculos")
-            return erro_correcao(aluno_nome, serie, disciplina, 'Nenhuma resposta válida encontrada nos círculos')
-        
-        logging.info(f"📊 Respostas extraídas dos círculos: {respostas_circulos}")
+        # 🔥 2. ORGANIZAR RESPOSTAS POR POSIÇÃO
+        respostas = organizar_respostas_por_posicao(circulos, len(gabarito))
         
         # 🔥 3. VALIDAR RESPOSTAS
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-        respostas_validas = validar_respostas(respostas_circulos, gabarito, alternativas)
+        respostas_validas = validar_respostas(respostas, gabarito, alternativas)
         
-        # 🔥 4. CALCULAR RESULTADO
+        # 🔥 4. VERIFICAR SE TEM PELO MENOS UMA RESPOSTA VÁLIDA
+        if not any(r for r in respostas_validas if r in alternativas):
+            logging.warning("⚠️ Nenhuma resposta válida encontrada")
+            return erro_correcao(aluno_nome, serie, disciplina, 'Nenhuma resposta válida encontrada')
+        
+        # 🔥 5. CALCULAR RESULTADO
         return calcular_resultado_correcao(
             respostas_validas,
             gabarito,
@@ -618,7 +582,7 @@ def validar_respostas(respostas, gabarito, alternativas):
 
 
 def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, circulos=None):
-    """🔥 CALCULA RESULTADO FINAL - SIMPLIFICADO"""
+    """🔥 CALCULA RESULTADO FINAL"""
     
     alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
     
@@ -627,24 +591,42 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
     questoes_status = []
     
     logging.info("=" * 60)
-    logging.info("🔍 COMPARANDO RESPOSTAS:")
+    logging.info(f"🔍 CORREÇÃO (Modo: {modo})")
+    logging.info("-" * 60)
+    logging.info(f"📋 GABARITO OFICIAL: {gabarito}")
+    logging.info(f"📋 RESPOSTAS ALUNO: {respostas}")
     logging.info("-" * 60)
     
-    for i, (resp, gab) in enumerate(zip(respostas, gabarito)):
+    for i in range(len(gabarito)):
+        # 🔥 RESPOSTA DO ALUNO
+        resp = respostas[i] if i < len(respostas) else ''
+        
+        # 🔥 GABARITO OFICIAL
+        gab = gabarito[i] if i < len(gabarito) else ''
         gab_normalizado = str(gab).strip().upper() if gab else ''
+        
+        # 🔥 VERIFICA SE A RESPOSTA É VÁLIDA
         is_resposta_valida = resp in alternativas
-        is_correto = is_resposta_valida and resp == gab_normalizado
         
-        status_icone = '✅' if is_correto else ('❌' if is_resposta_valida else '—')
-        logging.info(f"Q{i+1}: Aluno={resp} | Gabarito={gab_normalizado} | {status_icone}")
+        # 🔥 VERIFICA SE A RESPOSTA É CORRETA
+        is_correto = False
+        if is_resposta_valida and gab_normalizado:
+            is_correto = (resp == gab_normalizado)
+            if is_correto:
+                acertos += 1
         
+        # 🔥 STATUS DA QUESTÃO
         if is_correto:
-            acertos += 1
-            status_msg = 'ADQUIRIU HABILIDADE'
+            status_msg = 'ADQUIRIU HABILIDADE ✅'
+            status_icone = '✅'
         elif is_resposta_valida:
-            status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+            status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM ❌'
+            status_icone = '❌'
         else:
-            status_msg = 'NÃO RESPONDEU'
+            status_msg = 'NÃO RESPONDEU —'
+            status_icone = '—'
+        
+        logging.info(f"Q{i+1}: Aluno={resp if resp else '—'} | Gabarito={gab_normalizado if gab_normalizado else '—'} | {status_icone}")
         
         correcoes.append({
             'questao': i+1,
@@ -661,7 +643,7 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
             'gabarito': gab_normalizado if gab_normalizado else '—',
             'acertou': is_correto,
             'status': status_msg,
-            'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU' if is_resposta_valida else '—'} {status_msg}",
+            'status_texto': f"{status_icone} {status_msg}",
             'confianca': 80 if is_resposta_valida else 50,
             'correta': is_correto
         })
@@ -724,7 +706,7 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 
 
 # ============================================
-# 🔥 CORREÇÃO COM IA - FALLBACK
+# 🔥 CORREÇÃO COM IA - FALLBACK (RARAMENTE USADO)
 # ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
@@ -844,16 +826,13 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         if not resultado_ia.get('erro'):
             return resultado_ia
         
-        # 🔥 ÚLTIMO RECURSO: USAR O GABARITO
-        logging.warning("⚠️ Usando gabarito como fallback final")
-        return calcular_resultado_correcao(
-            gabarito.copy(),
-            gabarito,
-            aluno_nome,
-            serie,
-            disciplina,
-            tipo_questoes,
-            'fallback_final'
+        # 🔥 ÚLTIMO RECURSO: RETORNAR ERRO (NUNCA USAR O GABARITO COMO RESPOSTA!)
+        logging.error("❌ Nenhuma resposta válida foi detectada na imagem")
+        return erro_correcao(
+            aluno_nome, 
+            serie, 
+            disciplina, 
+            'Não foi possível detectar as respostas no cartão. Verifique a imagem e tente novamente.'
         )
         
     except Exception as e:
@@ -3907,11 +3886,12 @@ if __name__ == '__main__':
     print("=" * 60)
     print("📋 ESTRATÉGIA DE CORREÇÃO:")
     print("   1️⃣ DETECÇÃO DE CÍRCULOS PREENCHIDOS (OpenCV)")
-    print("      - Extrai a letra DENTRO de cada círculo")
-    print("      - Ignora letras fora dos círculos")
+    print("      - Detecta QUAL círculo foi pintado")
+    print("      - POSIÇÃO do círculo determina a letra (1º=A, 2º=B, 3º=C, 4º=D)")
+    print("      - NÃO USA OCR! NÃO LÊ LETRAS!")
     print("   2️⃣ ORGANIZAÇÃO POR POSIÇÃO")
     print("      - Agrupa círculos por linha")
-    print("      - Mapeia para A, B, C, D")
+    print("      - Mapeia posição para A, B, C, D")
     print("   3️⃣ COMPARAÇÃO COM O GABARITO")
     print("   4️⃣ IA (Gemini) como FALLBACK apenas")
     print("=" * 60)
