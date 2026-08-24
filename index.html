@@ -8407,7 +8407,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         const serie = turma.serie || prova?.serie || '';
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 🔥 LAYOUT VERTICAL - UMA QUESTÃO POR LINHA
+        // 🔥 LAYOUT COMPACTO - TUDO EM UMA PÁGINA
         let html = `
 <!DOCTYPE html>
 <html>
@@ -8423,138 +8423,137 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             background: #f0f2f5;
             display: flex;
             justify-content: center;
-            padding: 20px;
+            padding: 10px;
             min-height: 100vh;
         }
         
         .container {
-            max-width: 750px;
+            max-width: 800px;
             width: 100%;
             background: #ffffff;
-            padding: 25px 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
             border: 1px solid #e5e7eb;
         }
         
+        /* CABEÇALHO COMPACTO */
         .header {
             text-align: center;
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 15px;
-            margin-bottom: 18px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
         }
         
-        .header .brasao { font-size: 32px; margin-bottom: 2px; }
-        .header h1 { font-size: 16px; color: #1e293b; letter-spacing: 1px; }
+        .header .brasao { font-size: 24px; }
+        .header h1 { font-size: 11px; color: #1e293b; letter-spacing: 1px; font-weight: 700; }
         .header h2 { 
-            font-size: 16px; 
+            font-size: 14px; 
             color: #2563eb; 
-            margin-top: 2px; 
             font-weight: 800;
             background: #eff6ff;
             display: inline-block;
-            padding: 4px 24px;
-            border-radius: 20px;
+            padding: 2px 20px;
+            border-radius: 16px;
+            margin-top: 1px;
         }
-        .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
         .header .prova-nome {
-            font-size: 13px;
+            font-size: 11px;
             color: #475569;
             font-weight: 600;
-            margin-top: 4px;
             background: #f1f5f9;
-            padding: 2px 16px;
-            border-radius: 12px;
+            padding: 1px 14px;
+            border-radius: 10px;
             display: inline-block;
+            margin-top: 2px;
         }
         
+        /* INFO COMPACTA - UMA LINHA */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 8px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px 8px;
             background: #f8fafc;
-            padding: 10px 16px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .info-grid .item { display: flex; flex-direction: column; gap: 1px; }
-        .info-grid .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
-        .info-grid .value { font-size: 12px; font-weight: 700; color: #0f172a; }
-        
-        .instrucoes {
-            background: #eff6ff;
-            border-left: 4px solid #2563eb;
-            padding: 8px 14px;
+            padding: 6px 12px;
             border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 11px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .instrucoes .icone { font-size: 18px; }
-        .instrucoes strong { color: #2563eb; }
-        .instrucoes .destaque {
-            background: #dbeafe;
-            padding: 2px 14px;
-            border-radius: 12px;
-            font-weight: 700;
-            color: #1d4ed8;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
             font-size: 10px;
         }
         
-        .questoes-container {
+        .info-grid .item { display: flex; flex-direction: column; }
+        .info-grid .label { font-size: 7px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2px; }
+        .info-grid .value { font-size: 10px; font-weight: 700; color: #0f172a; }
+        
+        /* INSTRUÇÕES COMPACTAS */
+        .instrucoes {
+            background: #eff6ff;
+            border-left: 3px solid #2563eb;
+            padding: 4px 12px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 9px;
+            color: #1e293b;
             display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin: 12px 0;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .instrucoes .icone { font-size: 14px; }
+        .instrucoes strong { color: #2563eb; }
+        .instrucoes .destaque {
+            background: #dbeafe;
+            padding: 1px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            color: #1d4ed8;
+            font-size: 8px;
+        }
+        
+        /* GRADE DE QUESTÕES - 4 COLUNAS PARA CABER TUDO */
+        .questoes-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px 8px;
+            margin: 6px 0;
             width: 100%;
         }
         
-        .questao-linha {
+        .questao-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 6px 12px;
+            padding: 3px 6px;
             border-bottom: 1px solid #f1f5f9;
             background: #ffffff;
-            border-radius: 6px;
-            width: 100%;
-            transition: background 0.2s;
+            border-radius: 4px;
+            gap: 4px;
         }
         
-        .questao-linha:hover {
-            background: #f8fafc;
-        }
-        
-        .questao-linha .numero {
-            font-size: 14px;
+        .questao-item .numero {
+            font-size: 10px;
             font-weight: 800;
             color: #1e293b;
-            min-width: 50px;
+            min-width: 32px;
             text-align: center;
             flex-shrink: 0;
         }
         
-        .questao-linha .numero span {
+        .questao-item .numero span {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #ffffff;
-            padding: 2px 14px;
-            border-radius: 12px;
-            font-size: 11px;
-            box-shadow: 0 1px 6px rgba(37,99,235,0.20);
+            padding: 1px 10px;
+            border-radius: 10px;
+            font-size: 8px;
+            box-shadow: 0 1px 4px rgba(37,99,235,0.20);
         }
         
         .opcoes {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 12px;
+            gap: 4px;
             flex: 1;
         }
         
@@ -8562,47 +8561,39 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
+            gap: 1px;
             cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 8px;
-            transition: all 0.2s;
+            padding: 1px 2px;
+            border-radius: 4px;
         }
         
-        .opcao:hover { transform: scale(1.05); }
-        
         .opcao .circulo {
-            width: 40px;
-            height: 40px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            border: 3px solid #000000 !important;
+            border: 2.5px solid #000000 !important;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 800;
             color: #000000;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
         
         .opcao input:checked + .circulo {
             border-color: #000000 !important;
             background: #000000 !important;
             color: #ffffff !important;
-            box-shadow: 0 0 0 4px rgba(0,0,0,0.12), 0 2px 10px rgba(0,0,0,0.20);
-            transform: scale(1.05);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.15);
+            transform: scale(1.04);
         }
         
         .opcao:hover .circulo {
             border-color: #333333 !important;
-            transform: scale(1.04);
-        }
-        
-        .opcao input:checked:hover .circulo {
-            transform: scale(1.07);
-            box-shadow: 0 0 0 5px rgba(0,0,0,0.10), 0 2px 14px rgba(0,0,0,0.25);
+            transform: scale(1.03);
         }
         
         .opcao input[type="radio"] {
@@ -8613,28 +8604,23 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         }
         
         .opcao .label-alt {
-            font-size: 9px;
+            font-size: 7px;
             font-weight: 700;
             color: #000000;
-            margin-top: 2px;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }
         
-        .opcao input:checked + .circulo + .label-alt {
-            color: #000000;
-            font-weight: 900;
-        }
-        
+        /* RODAPÉ COMPACTO */
         .footer {
-            margin-top: 16px;
-            padding-top: 12px;
+            margin-top: 8px;
+            padding-top: 6px;
             border-top: 1.5px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 6px;
-            font-size: 9px;
+            gap: 4px;
+            font-size: 7px;
             color: #94a3b8;
         }
         
@@ -8644,46 +8630,46 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 12px 28px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 8px;
+            margin-top: 6px;
             width: 100%;
             justify-content: center;
-            box-shadow: 0 2px 16px rgba(37, 99, 235, 0.25);
+            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.20);
         }
         
         .btn-print:hover {
             background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 18px rgba(37, 99, 235, 0.30);
         }
         
         .legenda {
             text-align: center;
-            margin-top: 8px;
-            font-size: 9px;
+            margin-top: 4px;
+            font-size: 7px;
             color: #94a3b8;
             border-top: 1px solid #e2e8f0;
-            padding-top: 8px;
+            padding-top: 4px;
             display: flex;
             justify-content: center;
-            gap: 16px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         
         .legenda .dot {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            border: 2.5px solid #94a3b8;
+            border: 2px solid #94a3b8;
         }
         
         .legenda .dot.checked {
@@ -8691,11 +8677,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             border-color: #000000;
         }
         
+        /* IMPRESSÃO */
         @media print {
             body { background: white; padding: 0; margin: 0; }
-            .container { box-shadow: none; border: none; padding: 12px 16px; border-radius: 0; max-width: 100%; }
+            .container { 
+                box-shadow: none; 
+                border: none; 
+                padding: 8px 12px; 
+                border-radius: 0; 
+                max-width: 100%;
+            }
             .btn-print { display: none; }
-            .questao-linha:hover { background: #ffffff; }
+            .questao-item:hover { background: #ffffff; }
             .opcao:hover .circulo { transform: none; border-color: #000000 !important; }
             .opcao input:checked + .circulo { 
                 background: #000000 !important; 
@@ -8704,45 +8697,65 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 box-shadow: none; 
                 transform: none;
             }
-            .opcao input:checked:hover + .circulo { transform: none; box-shadow: none; }
+            .questao-item { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
+            .questao-item .numero span { background: #1e293b; color: white; box-shadow: none; }
             .header { border-bottom-color: #1e293b; }
             .header h2 { background: #f1f5f9; color: #1e293b; }
             .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
             .footer { border-top-color: #1e293b; }
-            .questao-linha { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
-            .questao-linha .numero span { background: #1e293b; color: white; box-shadow: none; }
         }
         
-        @media (max-width: 600px) {
-            .questao-linha {
-                flex-direction: column;
-                gap: 6px;
-                padding: 10px 8px;
+        @media (max-width: 700px) {
+            .questoes-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 3px 6px;
             }
-            .questao-linha .numero { min-width: auto; }
-            .opcoes { gap: 6px; }
             .opcao .circulo {
-                width: 34px;
-                height: 34px;
-                font-size: 13px;
-                border-width: 2.5px;
-            }
-            .container { padding: 12px 14px; }
-            .info-grid { grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; }
-            .header h1 { font-size: 14px; }
-            .header h2 { font-size: 14px; }
-        }
-        
-        @media (max-width: 400px) {
-            .opcao .circulo {
-                width: 28px;
-                height: 28px;
+                width: 24px;
+                height: 24px;
                 font-size: 10px;
                 border-width: 2px;
             }
-            .opcoes { gap: 3px; }
-            .opcao .label-alt { font-size: 7px; }
-            .info-grid { grid-template-columns: 1fr; }
+            .info-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 2px 6px;
+                padding: 4px 8px;
+                font-size: 8px;
+            }
+            .info-grid .value { font-size: 9px; }
+            .header h2 { font-size: 12px; padding: 2px 14px; }
+            .header h1 { font-size: 9px; }
+        }
+        
+        @media (max-width: 450px) {
+            .questoes-container {
+                grid-template-columns: 1fr 1fr;
+                gap: 2px 4px;
+            }
+            .opcao .circulo {
+                width: 20px;
+                height: 20px;
+                font-size: 8px;
+                border-width: 1.5px;
+            }
+            .opcao .label-alt { font-size: 6px; }
+            .questao-item .numero { min-width: 24px; font-size: 8px; }
+            .questao-item .numero span { font-size: 6px; padding: 0 6px; }
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 1px 4px;
+                padding: 3px 6px;
+                font-size: 7px;
+            }
+            .info-grid .value { font-size: 8px; }
+            .container { padding: 6px 8px; }
+            .header { padding-bottom: 4px; margin-bottom: 6px; }
+            .header .brasao { font-size: 18px; }
+            .header h2 { font-size: 10px; padding: 1px 10px; }
+            .header h1 { font-size: 8px; }
+            .header .prova-nome { font-size: 9px; padding: 0 10px; }
+            .instrucoes { font-size: 7px; padding: 2px 8px; gap: 4px; }
+            .instrucoes .destaque { font-size: 7px; padding: 0 8px; }
         }
     </style>
 </head>
@@ -8753,16 +8766,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
             <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
             <div class="prova-nome">${nomeProva}</div>
-            <div class="sub">${nomeEscola} | ${serie} | ${nomeTurma}</div>
         </div>
 
+        <!-- INFO EM UMA LINHA -->
         <div class="info-grid">
-            <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">${nomeAluno}</span></div>
+            <div class="item"><span class="label">🎒 Aluno</span><span class="value">${nomeAluno}</span></div>
             <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
             <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
             <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
             <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
-            <div class="item"><span class="label">📝 Questões</span><span class="value">${qtdQuestoes}</span></div>
+            <div class="item"><span class="label">📝 Qtd</span><span class="value">${qtdQuestoes}</span></div>
         </div>
 
         <div class="instrucoes">
@@ -8771,12 +8784,13 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <span class="destaque">${qtdQuestoes} questões</span>
         </div>
 
+        <!-- GRADE 4 COLUNAS -->
         <div class="questoes-container">
 `;
 
         for (let i = 0; i < qtdQuestoes; i++) {
             html += `
-            <div class="questao-linha">
+            <div class="questao-item">
                 <div class="numero"><span>Q${i+1}</span></div>
                 <div class="opcoes">
             `;
