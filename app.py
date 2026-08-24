@@ -323,7 +323,7 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
 
 
 # ============================================
-# 🔥 DETECÇÃO DE CÍRCULOS PREENCHIDOS - VERSÃO DEFINITIVA
+# 🔥 DETECÇÃO DE CÍRCULOS PREENCHIDOS
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
@@ -3258,7 +3258,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
+# 🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - NOVO LAYOUT
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -3311,124 +3311,331 @@ def gerar_gabarito():
         tipo_questoes = int(prova.get('tipo_questoes', 4))
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
+        # 🔥 HTML CORRIGIDO - CADA QUESTÃO EM UMA LINHA SEPARADA
         html = f"""
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Cartão Resposta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartão Resposta - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        
         body {{
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             background: #f0f2f5;
             display: flex;
             justify-content: center;
-            padding: 40px 20px;
+            padding: 20px;
+            min-height: 100vh;
         }}
+        
         .container {{
-            max-width: 900px;
+            max-width: 850px;
             width: 100%;
-            background: white;
-            padding: 40px;
+            background: #ffffff;
+            padding: 25px 30px;
             border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
             border: 1px solid #e5e7eb;
         }}
+        
         .header {{
             text-align: center;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 15px;
+            margin-bottom: 18px;
         }}
-        .header h1 {{ font-size: 24px; color: #1e293b; }}
-        .header h2 {{ font-size: 18px; color: #475569; margin-top: 8px; }}
-        .header .sub {{ font-size: 14px; color: #64748b; margin-top: 8px; }}
+        
+        .header .brasao {{ font-size: 32px; margin-bottom: 2px; }}
+        .header h1 {{ font-size: 16px; color: #1e293b; letter-spacing: 1px; }}
+        .header h2 {{ 
+            font-size: 16px; 
+            color: #2563eb; 
+            margin-top: 2px; 
+            font-weight: 800;
+            background: #eff6ff;
+            display: inline-block;
+            padding: 4px 24px;
+            border-radius: 20px;
+        }}
+        .header .sub {{ font-size: 11px; color: #94a3b8; margin-top: 2px; }}
+        .header .prova-nome {{
+            font-size: 13px;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 4px;
+            background: #f1f5f9;
+            padding: 2px 16px;
+            border-radius: 12px;
+            display: inline-block;
+        }}
+        
         .info-grid {{
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
             background: #f8fafc;
-            padding: 16px 20px;
+            padding: 10px 16px;
             border-radius: 10px;
-            margin-bottom: 30px;
+            margin-bottom: 16px;
             border: 1px solid #e2e8f0;
         }}
-        .info-grid .item {{ font-size: 14px; }}
-        .info-grid .label {{ color: #64748b; font-weight: 600; }}
-        .info-grid .value {{ color: #0f172a; font-weight: 700; }}
-        .questoes {{
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin: 20px 0 30px;
-        }}
-        .questao {{
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px 8px;
-            text-align: center;
-            background: #fafafa;
-            transition: all 0.2s;
-        }}
-        .questao:hover {{ border-color: #2563eb; background: #f0f7ff; }}
-        .questao .num {{
-            font-size: 12px;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 8px;
-        }}
-        .questao .opcoes {{
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }}
-        .questao .opcao {{
+        
+        .info-grid .item {{ display: flex; flex-direction: column; gap: 1px; }}
+        .info-grid .label {{ font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }}
+        .info-grid .value {{ font-size: 12px; font-weight: 700; color: #0f172a; }}
+        
+        .instrucoes {{
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 8px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 11px;
+            color: #1e293b;
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 14px;
-            font-weight: 600;
+            gap: 10px;
+            flex-wrap: wrap;
+        }}
+        
+        .instrucoes .icone {{ font-size: 18px; }}
+        .instrucoes strong {{ color: #2563eb; }}
+        .instrucoes .destaque {{
+            background: #dbeafe;
+            padding: 2px 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            color: #1d4ed8;
+            font-size: 10px;
+        }}
+        
+        .questao-linha {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.2s;
+            background: #ffffff;
+        }}
+        
+        .questao-linha:hover {{
+            background: #f8fafc;
+            border-radius: 8px;
+        }}
+        
+        .questao-linha .numero {{
+            font-size: 13px;
+            font-weight: 800;
             color: #1e293b;
+            min-width: 50px;
+            text-align: center;
         }}
-        .questao .opcao input {{
-            width: 18px;
-            height: 18px;
+        
+        .questao-linha .numero span {{
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            padding: 2px 14px;
+            border-radius: 12px;
+            font-size: 11px;
+            box-shadow: 0 1px 6px rgba(37,99,235,0.20);
+        }}
+        
+        .opcoes {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }}
+        
+        .opcao {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
             cursor: pointer;
-            accent-color: #2563eb;
+            padding: 2px 4px;
+            border-radius: 8px;
+            transition: all 0.2s;
         }}
+        
+        .opcao:hover {{ transform: scale(1.05); }}
+        
+        .opcao .circulo {{
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 3px solid #000000 !important;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 800;
+            color: #000000;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }}
+        
+        .opcao input:checked + .circulo {{
+            border-color: #000000 !important;
+            background: #000000 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.12), 0 2px 10px rgba(0,0,0,0.20);
+            transform: scale(1.05);
+        }}
+        
+        .opcao:hover .circulo {{
+            border-color: #333333 !important;
+            transform: scale(1.04);
+        }}
+        
+        .opcao input:checked:hover .circulo {{
+            transform: scale(1.07);
+            box-shadow: 0 0 0 5px rgba(0,0,0,0.10), 0 2px 14px rgba(0,0,0,0.25);
+        }}
+        
+        .opcao input[type="radio"] {{
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }}
+        
+        .opcao .label-alt {{
+            font-size: 9px;
+            font-weight: 700;
+            color: #000000;
+            margin-top: 2px;
+            letter-spacing: 0.3px;
+        }}
+        
+        .opcao input:checked + .circulo + .label-alt {{
+            color: #000000;
+            font-weight: 900;
+        }}
+        
         .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1.5px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
-            font-size: 13px;
-            color: #64748b;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            font-size: 9px;
+            color: #94a3b8;
         }}
+        
+        .footer strong {{ color: #475569; }}
+        
         .btn-print {{
-            background: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 20px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
             width: 100%;
+            justify-content: center;
+            box-shadow: 0 2px 16px rgba(37, 99, 235, 0.25);
         }}
-        .btn-print:hover {{ background: #1d4ed8; }}
+        
+        .btn-print:hover {{
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.35);
+        }}
+        
+        .legenda {{
+            text-align: center;
+            margin-top: 8px;
+            font-size: 9px;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }}
+        
+        .legenda .dot {{
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2.5px solid #94a3b8;
+        }}
+        
+        .legenda .dot.checked {{
+            background: #000000;
+            border-color: #000000;
+        }}
+        
         @media print {{
-            body {{ background: white; padding: 0; }}
-            .container {{ box-shadow: none; border: none; padding: 20px; }}
+            body {{ background: white; padding: 0; margin: 0; }}
+            .container {{ box-shadow: none; border: none; padding: 12px 16px; border-radius: 0; max-width: 100%; }}
             .btn-print {{ display: none; }}
-            .questao:hover {{ border-color: #e2e8f0; background: #fafafa; }}
+            .questao-linha:hover {{ background: #ffffff; border-radius: 0; }}
+            .opcao:hover .circulo {{ transform: none; border-color: #000000 !important; }}
+            .opcao input:checked + .circulo {{ 
+                background: #000000 !important; 
+                border-color: #000000 !important; 
+                color: #ffffff !important; 
+                box-shadow: none; 
+                transform: none;
+            }}
+            .opcao input:checked:hover + .circulo {{ transform: none; box-shadow: none; }}
+            .header {{ border-bottom-color: #1e293b; }}
+            .header h2 {{ background: #f1f5f9; color: #1e293b; }}
+            .instrucoes {{ background: #f8fafc; border-left-color: #1e293b; }}
+            .footer {{ border-top-color: #1e293b; }}
+            .questao-linha {{ break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }}
+            .questao-linha .numero span {{ background: #1e293b; color: white; box-shadow: none; }}
         }}
+        
         @media (max-width: 600px) {{
-            .questoes {{ grid-template-columns: repeat(3, 1fr); }}
+            .questao-linha {{
+                flex-direction: column;
+                gap: 6px;
+                padding: 10px 8px;
+            }}
+            .questao-linha .numero {{ min-width: auto; }}
+            .opcoes {{ gap: 6px; }}
+            .opcao .circulo {{
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+                border-width: 2.5px;
+            }}
+            .container {{ padding: 12px 14px; }}
+            .info-grid {{ grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; }}
+            .header h1 {{ font-size: 14px; }}
+            .header h2 {{ font-size: 14px; }}
+        }}
+        
+        @media (max-width: 400px) {{
+            .opcao .circulo {{
+                width: 26px;
+                height: 26px;
+                font-size: 10px;
+                border-width: 2px;
+            }}
+            .opcoes {{ gap: 3px; }}
+            .opcao .label-alt {{ font-size: 7px; }}
             .info-grid {{ grid-template-columns: 1fr; }}
         }}
     </style>
@@ -3436,61 +3643,85 @@ def gerar_gabarito():
 <body>
     <div class="container">
         <div class="header">
-            <h1>📄 CARTÃO RESPOSTA</h1>
-            <h2>{titulo_prova}</h2>
-            <div class="sub">Leia atentamente e marque apenas uma alternativa por questão</div>
+            <div class="brasao">🏛️</div>
+            <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
+            <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
+            <div class="prova-nome">{titulo_prova}</div>
+            <div class="sub">{escola_nome} | {serie} | {turma_nome}</div>
         </div>
 
         <div class="info-grid">
-            <div class="item"><span class="label">Aluno(a):</span> <span class="value">{nome_aluno}</span></div>
-            <div class="item"><span class="label">Escola:</span> <span class="value">{escola_nome}</span></div>
-            <div class="item"><span class="label">Turma:</span> <span class="value">{turma_nome}</span></div>
-            <div class="item"><span class="label">Série:</span> <span class="value">{serie}</span></div>
-            <div class="item"><span class="label">Data:</span> <span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
+            <div class="item"><span class="label">🎒 Aluno(a)</span><span class="value">{nome_aluno}</span></div>
+            <div class="item"><span class="label">🏫 Escola</span><span class="value">{escola_nome}</span></div>
+            <div class="item"><span class="label">👥 Turma</span><span class="value">{turma_nome}</span></div>
+            <div class="item"><span class="label">📚 Série</span><span class="value">{serie}</span></div>
+            <div class="item"><span class="label">📅 Data</span><span class="value">{datetime.now().strftime('%d/%m/%Y')}</span></div>
+            <div class="item"><span class="label">📝 Questões</span><span class="value">{quantidade_questoes}</span></div>
         </div>
 
-        <div style="text-align:center;font-size:14px;font-weight:700;color:#475569;margin-bottom:12px;">
-            Pinte por inteiro o circulo que corresponde sua resposta
+        <div class="instrucoes">
+            <span class="icone">✏️</span>
+            <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
+            <span class="destaque">{quantidade_questoes} questões</span>
         </div>
 
-        <div class="questoes">
+        <div id="questoes-container">
 """
+
+        # 🔥 GERAR CADA QUESTÃO EM UMA LINHA SEPARADA
         for i in range(quantidade_questoes):
             html += f"""
-                <div class="questao">
-                    <div class="num">Q{i+1}</div>
-                    <div class="opcoes">
+            <div class="questao-linha">
+                <div class="numero"><span>Q{i+1}</span></div>
+                <div class="opcoes">
             """
+            
             for alt in alternativas:
                 html += f"""
-                        <label class="opcao">
-                            <input type="radio" name="q{i+1}" value="{alt}">
-                            {alt}
-                        </label>
+                    <label class="opcao">
+                        <input type="radio" name="q{i+1}" value="{alt}">
+                        <span class="circulo">{alt}</span>
+                        <span class="label-alt">{alt}</span>
+                    </label>
                 """
+            
             html += """
-                    </div>
                 </div>
+            </div>
             """
 
         html += f"""
-                </div>
+        </div>
 
-                <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR CARTÃO</button>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ IMPRIMIR CARTÃO RESPOSTA
+        </button>
 
-                <div class="footer">
-                    <span>Gerado pelo sistema CorrigePro</span>
-                    <span>{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        <div class="footer">
+            <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
+            <span>{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+        </div>
+
+        <div class="legenda">
+            <span><span class="dot"></span> Não preenchido</span>
+            <span><span class="dot checked"></span> Preenchido</span>
+            <span>⚠️ Preencha o círculo completamente</span>
+        </div>
+    </div>
+    <script>
+        window.onload = function() {{
+            console.log('✅ Cartão resposta pronto');
+        }};
+    </script>
+</body>
+</html>
+"""
 
         return html, 200, {'Content-Type': 'text/html'}
 
     except Exception as e:
         print(f"❌ Erro ao gerar cartão: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
 
@@ -3890,6 +4121,7 @@ if __name__ == '__main__':
     print("      - POSIÇÃO do círculo determina a letra (1º=A, 2º=B, 3º=C, 4º=D)")
     print("      - NÃO USA OCR! NÃO LÊ LETRAS!")
     print("   2️⃣ ORGANIZAÇÃO POR POSIÇÃO")
+    print("      - Cada linha = uma questão")
     print("      - Agrupa círculos por linha")
     print("      - Mapeia posição para A, B, C, D")
     print("   3️⃣ COMPARAÇÃO COM O GABARITO")
