@@ -8361,11 +8361,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 }
             }
 
-            // ============================================
-// 🔥 FUNÇÃO GERAR CARTAO RESPOSTA - LAYOUT VERTICAL CORRIGIDO
-// ============================================
-
-async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+   async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
         const novaAba = window.open('', '_blank');
         if (!novaAba) {
@@ -8411,7 +8407,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         const serie = turma.serie || prova?.serie || '';
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 🔥🔥🔥 LAYOUT VERTICAL - UMA QUESTÃO POR LINHA
+        // 🔥 LAYOUT VERTICAL - UMA QUESTÃO POR LINHA
         let html = `
 <!DOCTYPE html>
 <html>
@@ -8512,7 +8508,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             font-size: 10px;
         }
         
-        /* 🔥 LAYOUT VERTICAL - UMA QUESTÃO POR LINHA */
         .questoes-container {
             display: flex;
             flex-direction: column;
@@ -8776,11 +8771,9 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
             <span class="destaque">${qtdQuestoes} questões</span>
         </div>
 
-        <!-- 🔥 CADA QUESTÃO EM UMA LINHA SEPARADA -->
         <div class="questoes-container">
 `;
 
-        // 🔥 GERAR CADA QUESTÃO EM UMA LINHA SEPARADA
         for (let i = 0; i < qtdQuestoes; i++) {
             html += `
             <div class="questao-linha">
@@ -8826,7 +8819,7 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         window.onload = function() {
             console.log('✅ Cartão resposta pronto');
         };
-    </script>
+    <\/script>
 </body>
 </html>
 `;
