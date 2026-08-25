@@ -656,8 +656,8 @@ def validar_respostas(respostas, gabarito, alternativas):
     return respostas_validas[:len(gabarito)]
 
 
-def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, circulos=None):
-    """🔥 CALCULA RESULTADO FINAL"""
+def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, circulos=None, bncc=None):
+    """🔥 CALCULA RESULTADO FINAL COM BNCC"""
     
     alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
     
@@ -680,6 +680,11 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
         gab = gabarito[i] if i < len(gabarito) else ''
         gab_normalizado = str(gab).strip().upper() if gab else ''
         
+        # 🔥 BNCC DA QUESTÃO
+        codigo_bncc = ''
+        if bncc and i < len(bncc):
+            codigo_bncc = bncc[i] if bncc[i] else ''
+        
         # 🔥 VERIFICA SE A RESPOSTA É VÁLIDA
         is_resposta_valida = resp in alternativas
         
@@ -701,7 +706,7 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
             status_msg = 'NÃO RESPONDEU —'
             status_icone = '—'
         
-        logging.info(f"Q{i+1}: Aluno={resp if resp else '—'} | Gabarito={gab_normalizado if gab_normalizado else '—'} | {status_icone}")
+        logging.info(f"Q{i+1}: Aluno={resp if resp else '—'} | Gabarito={gab_normalizado if gab_normalizado else '—'} | BNCC={codigo_bncc} | {status_icone}")
         
         correcoes.append({
             'questao': i+1,
@@ -709,7 +714,8 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
             'gabarito': gab_normalizado if gab_normalizado else '—',
             'correto': is_correto,
             'status': status_msg,
-            'confianca': 80 if is_resposta_valida else 50
+            'confianca': 80 if is_resposta_valida else 50,
+            'bncc': codigo_bncc
         })
         
         questoes_status.append({
@@ -720,7 +726,8 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
             'status': status_msg,
             'status_texto': f"{status_icone} {status_msg}",
             'confianca': 80 if is_resposta_valida else 50,
-            'correta': is_correto
+            'correta': is_correto,
+            'bncc': codigo_bncc
         })
     
     logging.info("-" * 60)
@@ -751,7 +758,8 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
         'modo': modo,
         'valor_por_questao': round(valor_por_questao, 2),
         'circulos_detectados': len(circulos) if circulos else 0,
-        'questoes_ia': 0
+        'questoes_ia': 0,
+        'bncc': bncc if bncc else []
     }
 
 
@@ -776,7 +784,8 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
         'confianca': 0,
         'confianca_por_questao': [],
         'modo': 'erro',
-        'valor_por_questao': 0
+        'valor_por_questao': 0,
+        'bncc': []
     }
 
 
@@ -804,7 +813,7 @@ def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
     """
 
 
-def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
+def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
     """🔥 FALLBACK USANDO IA (GEMINI) - APENAS SE CÍRCULOS FALHAREM"""
     
     gabarito = padrao_gabarito['gabarito_oficial']
@@ -845,7 +854,8 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
                 serie,
                 disciplina,
                 tipo_questoes,
-                'ia_fallback'
+                'ia_fallback',
+                bncc=bncc
             )
         
         return erro_correcao(aluno_nome, serie, disciplina, 'Resposta da IA inválida')
@@ -859,7 +869,7 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
 # 🔥 FUNÇÃO PRINCIPAL DE CORREÇÃO - 4 PASSOS
 # ============================================
 
-def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina=''):
+def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
     """
     🔥 CORREÇÃO PRINCIPAL - 4 PASSOS:
     1. OCR + POSIÇÃO (Leitura de letras)
@@ -891,7 +901,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     serie,
                     disciplina,
                     tipo_questoes,
-                    'ocr'
+                    'ocr',
+                    bncc=bncc
                 )
                 resultado['metodo_usado'] = 'ocr'
                 return resultado
@@ -916,7 +927,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                         disciplina,
                         tipo_questoes,
                         'circulos',
-                        circulos=circulos
+                        circulos=circulos,
+                        bncc=bncc
                     )
                     resultado['metodo_usado'] = 'circulos'
                     return resultado
@@ -931,7 +943,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             aluno_nome,
             serie,
             tipo_questoes,
-            disciplina
+            disciplina,
+            bncc=bncc
         )
         
         if not resultado_ia.get('erro'):
@@ -954,7 +967,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             serie,
             disciplina,
             tipo_questoes,
-            'fallback'
+            'fallback',
+            bncc=bncc
         )
         resultado['metodo_usado'] = 'fallback'
         resultado['confianca'] = 30  # Baixa confiança pois é fallback
@@ -1154,6 +1168,9 @@ def corrigir_com_ia():
             escola_id = aluno.get('escola_id')
             serie = aluno.get('turma_serie') or prova.get('serie') or '1º Ano'
 
+            # 🔥 PEGAR BNCC DA PROVA
+            bncc_gabarito = prova.get('bncc', [])
+
             cur.close()
             conn.close()
 
@@ -1164,18 +1181,20 @@ def corrigir_com_ia():
             logging.info(f"📌 Disciplina: {disciplina}")
             logging.info(f"📌 Série: {serie}")
             logging.info(f"📌 Gabarito: {gabarito}")
+            logging.info(f"📌 BNCC: {bncc_gabarito}")
 
             # 🔥 LIMPAR CACHE ANTIGO
             limpar_cache_antigo()
 
-            # 🔥 CORRIGIR COM IA OTIMIZADA (4 PASSOS)
+            # 🔥 CORRIGIR COM IA OTIMIZADA (4 PASSOS) COM BNCC
             resultado = corrigir_com_gemini_com_padrao(
                 imagem_base64, 
                 padrao_gabarito, 
                 nome_aluno, 
                 serie, 
                 tipo_questoes, 
-                disciplina
+                disciplina,
+                bncc=bncc_gabarito
             )
 
             if resultado.get('erro'):
@@ -1189,13 +1208,24 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
 
-            # 🔥 SALVAR NO BANCO
+            # 🔥 SALVAR NO BANCO COM BNCC
             try:
                 conn = get_db_connection()
                 if conn:
                     cur = conn.cursor()
 
-                    questoes_status_json = json.dumps(resultado.get('questoes_status', []))
+                    # 🔥 ADICIONA BNCC EM CADA QUESTÃO DO STATUS
+                    questoes_status = resultado.get('questoes_status', [])
+                    for i, q in enumerate(questoes_status):
+                        if i < len(bncc_gabarito):
+                            q['bncc'] = bncc_gabarito[i] if bncc_gabarito[i] else ''
+                        else:
+                            q['bncc'] = ''
+                    
+                    questoes_status_json = json.dumps(questoes_status)
+                    
+                    # 🔥 RESPOSTAS DETECTADAS COM BNCC
+                    respostas_detectadas = resultado.get('respostas_detectadas', [])
 
                     cur.execute("""
                         SELECT id FROM historico
@@ -1216,10 +1246,11 @@ def corrigir_com_ia():
                                 questoes_status = %s::jsonb,
                                 confianca = %s,
                                 confianca_por_questao = %s::jsonb,
+                                bncc = %s::text[],
                                 data_correcao = CURRENT_TIMESTAMP
                             WHERE prova_id = %s AND aluno_id = %s
                         """, (
-                            resultado.get('respostas_detectadas', []),
+                            respostas_detectadas,
                             resultado.get('acertos', 0),
                             resultado.get('nota', 0),
                             resultado.get('total', 0),
@@ -1229,6 +1260,7 @@ def corrigir_com_ia():
                             questoes_status_json,
                             resultado.get('confianca', 70),
                             json.dumps(resultado.get('confianca_por_questao', [])),
+                            bncc_gabarito,
                             prova_id,
                             aluno_id
                         ))
@@ -1238,13 +1270,13 @@ def corrigir_com_ia():
                             INSERT INTO historico
                             (prova_id, aluno_id, respostas, acertos, nota, total,
                              tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
-                             confianca, confianca_por_questao)
+                             confianca, confianca_por_questao, bncc)
                             VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
-                                    %s, %s::jsonb)
+                                    %s, %s::jsonb, %s::text[])
                         """, (
                             prova_id,
                             aluno_id,
-                            resultado.get('respostas_detectadas', []),
+                            respostas_detectadas,
                             resultado.get('acertos', 0),
                             resultado.get('nota', 0),
                             resultado.get('total', 0),
@@ -1253,7 +1285,8 @@ def corrigir_com_ia():
                             tipo_avaliacao,
                             questoes_status_json,
                             resultado.get('confianca', 70),
-                            json.dumps(resultado.get('confianca_por_questao', []))
+                            json.dumps(resultado.get('confianca_por_questao', [])),
+                            bncc_gabarito
                         ))
                         logging.info("✅ Histórico salvo com sucesso")
 
@@ -1267,6 +1300,7 @@ def corrigir_com_ia():
 
             resultado['tipo_avaliacao'] = tipo_avaliacao
             resultado['disciplina'] = disciplina
+            resultado['bncc'] = bncc_gabarito
 
             # 🔥 SALVAR NO CACHE
             CORRECOES_CACHE[cache_key] = {
@@ -1284,6 +1318,7 @@ def corrigir_com_ia():
             logging.info(f"   Modo: {resultado.get('modo')}")
             logging.info(f"   Método usado: {resultado.get('metodo_usado', 'desconhecido')}")
             logging.info(f"   Confiança: {resultado.get('confianca')}%")
+            logging.info(f"   BNCC: {bncc_gabarito}")
             logging.info("=" * 60)
 
             return jsonify(resultado)
@@ -1342,13 +1377,14 @@ def corrigir_manual():
 
         cur = conn.cursor()
 
-        cur.execute("SELECT disciplina, titulo, serie, gabarito FROM provas WHERE id = %s", (prova_id,))
+        cur.execute("SELECT disciplina, titulo, serie, gabarito, bncc FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
 
         disciplina = prova[0] if prova else ''
         prova_titulo = prova[1] if prova else ''
         serie_prova = prova[2] if prova else ''
         gabarito = prova[3] if prova else []
+        bncc_gabarito = prova[4] if prova else []
 
         cur.execute("""
             SELECT t.serie FROM alunos a
@@ -1366,6 +1402,7 @@ def corrigir_manual():
             resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
             gab = str(gabarito[i]) if i < len(gabarito) and gabarito[i] is not None else ''
             is_correto = resp and gab and resp.upper() == gab.upper()
+            codigo_bncc = bncc_gabarito[i] if i < len(bncc_gabarito) and bncc_gabarito[i] else ''
 
             if is_correto:
                 status_msg = 'ADQUIRIU HABILIDADE'
@@ -1380,7 +1417,8 @@ def corrigir_manual():
                 'gabarito': gab or '—',
                 'acertou': is_correto,
                 'status': status_msg,
-                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}"
+                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}",
+                'bncc': codigo_bncc
             })
 
         try:
@@ -1406,19 +1444,20 @@ def corrigir_manual():
                     disciplina = %s,
                     tipo_avaliacao = %s,
                     questoes_status = %s::jsonb,
+                    bncc = %s::text[],
                     data_correcao = CURRENT_TIMESTAMP
                 WHERE prova_id = %s AND aluno_id = %s
-            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, prova_id, aluno_id))
+            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, bncc_gabarito, prova_id, aluno_id))
             result_id = existe[0] if isinstance(existe, tuple) else existe
             print(f"✅ Atualizado! ID: {result_id}")
         else:
             cur.execute("""
                 INSERT INTO historico
                 (prova_id, aluno_id, respostas, acertos, nota, total,
-                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
-                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s, %s::jsonb)
+                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status, bncc)
+                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s, %s::jsonb, %s::text[])
                 RETURNING id
-            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json))
+            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, bncc_gabarito))
             result = cur.fetchone()
             result_id = result[0] if result else None
             print(f"✅ Criado! ID: {result_id}")
@@ -1437,7 +1476,8 @@ def corrigir_manual():
             'conceito': conceito,
             'porcentagem': porcentagem,
             'tipo_avaliacao': tipo_avaliacao,
-            'questoes_status': questoes_status
+            'questoes_status': questoes_status,
+            'bncc': bncc_gabarito
         })
     except Exception as e:
         print("=" * 60)
@@ -1757,7 +1797,9 @@ def listar_historico():
                 query += " AND h.prova_id = %s"
                 params.append(prova_id_int)
             except ValueError:
-                pass        query += " ORDER BY h.data_correcao DESC LIMIT 100"
+                pass
+        
+        query += " ORDER BY h.data_correcao DESC LIMIT 100"
 
         cur.execute(query, params)
         historico = cur.fetchall()
@@ -1902,6 +1944,9 @@ def historico_agrupado():
                 except:
                     questoes_status = []
 
+            # 🔥 PEGA O BNCC DO HISTÓRICO
+            bncc_historico = item.get('bncc', [])
+
             if tipo not in alunos_map[aluno_key]['avaliacoes']:
                 alunos_map[aluno_key]['avaliacoes'][tipo] = {
                     'nota': float(item.get('nota', 0)),
@@ -1911,7 +1956,7 @@ def historico_agrupado():
                     'data': item.get('data_correcao', ''),
                     'disciplina': disciplina,
                     'questoes_status': questoes_status,
-                    'bncc': item.get('bncc', [])
+                    'bncc': bncc_historico
                 }
 
         resultado = []
@@ -4101,6 +4146,7 @@ def init_db():
                     questoes_status JSONB DEFAULT '[]',
                     confianca DECIMAL(5,2),
                     confianca_por_questao JSONB DEFAULT '[]',
+                    bncc TEXT[],
                     data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -4201,6 +4247,20 @@ def init_db():
                         print(f"✅ Coluna {col} adicionada com sucesso!")
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
+
+            # Verificar coluna bncc na tabela historico
+            cur.execute("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'historico' AND column_name = 'bncc'
+            """)
+            if not cur.fetchone():
+                print("🔧 Adicionando coluna bncc à tabela historico...")
+                try:
+                    cur.execute("ALTER TABLE historico ADD COLUMN bncc TEXT[]")
+                    print("✅ Coluna bncc adicionada ao historico com sucesso!")
+                except Exception as e:
+                    print(f"⚠️ Erro ao adicionar coluna bncc ao historico: {e}")
 
         # Inserir usuários fixos
         for username, dados in USUARIOS_FIXOS.items():
