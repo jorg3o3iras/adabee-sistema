@@ -1716,7 +1716,8 @@ def listar_historico():
                 t.id as turma_id,
                 e.id as escola_id,
                 p.quantidade_questoes as total_questoes,
-                p.tipo_questoes
+                p.tipo_questoes,
+                p.bncc
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
@@ -1756,9 +1757,7 @@ def listar_historico():
                 query += " AND h.prova_id = %s"
                 params.append(prova_id_int)
             except ValueError:
-                pass
-
-        query += " ORDER BY h.data_correcao DESC LIMIT 100"
+                pass        query += " ORDER BY h.data_correcao DESC LIMIT 100"
 
         cur.execute(query, params)
         historico = cur.fetchall()
@@ -1821,7 +1820,8 @@ def historico_agrupado():
                 p.serie as prova_serie,
                 t.serie,
                 t.nome as turma_nome,
-                e.nome as escola_nome
+                e.nome as escola_nome,
+                p.bncc
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
@@ -1910,14 +1910,15 @@ def historico_agrupado():
                     'prova': prova_titulo,
                     'data': item.get('data_correcao', ''),
                     'disciplina': disciplina,
-                    'questoes_status': questoes_status
+                    'questoes_status': questoes_status,
+                    'bncc': item.get('bncc', [])
                 }
 
         resultado = []
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
 
-            default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': []}
+            default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': [], 'bncc': []}
             portugues = dict(avaliacoes.get('Portugues', default))
             matematica = dict(avaliacoes.get('Matematica', default))
             producao = dict(avaliacoes.get('Producao', default))
