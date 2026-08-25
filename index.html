@@ -1576,7 +1576,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
                     </div>
                     <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-outline" onclick="imprimirResultadosMelhorados()">🖨️ Imprimir</button>
                         <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
                     </div>
                 </div>
@@ -1964,7 +1964,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                         <p class="page-sub">Selecione a escola, turma, aluno e prova para visualizar o desempenho detalhado por disciplina</p>
                     </div>
                     <div class="page-actions no-print">
-                        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="btn btn-outline" onclick="imprimirDesempenhoMelhorado()">🖨️ Imprimir</button>
                     </div>
                 </div>
 
@@ -6762,292 +6762,289 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             // ============================================
             // 🔥 CARREGAR RELATÓRIO POR TURMA FILTRADO - APENAS UMA DISCIPLINA
             // ============================================
-            // ============================================
-// 🔥 CARREGAR RELATÓRIO POR TURMA FILTRADO - APENAS UMA DISCIPLINA
-// ============================================
-async function carregarRelatorioTurmaFiltrado() {
-    try {
-        const escolaId = document.getElementById('rel-turma-escola').value;
-        const serie = document.getElementById('rel-turma-serie').value;
-        const turmaId = document.getElementById('rel-turma-turma').value;
-        const provaId = document.getElementById('rel-turma-prova').value;
+            async function carregarRelatorioTurmaFiltrado() {
+                try {
+                    const escolaId = document.getElementById('rel-turma-escola').value;
+                    const serie = document.getElementById('rel-turma-serie').value;
+                    const turmaId = document.getElementById('rel-turma-turma').value;
+                    const provaId = document.getElementById('rel-turma-prova').value;
 
-        let disciplinaSelecionada = 'Português';
-        let tipoAvaliacao = 'portugues';
-        let corDisciplina = '#3b82f6';
-        let bgDisciplina = 'rgba(59,130,246,0.05)';
-        let iconDisciplina = '📖';
-        
-        const selectProva = document.getElementById('rel-turma-prova');
-        const optionProva = selectProva.options[selectProva.selectedIndex];
-        if (optionProva && optionProva.dataset.disciplina) {
-            disciplinaSelecionada = optionProva.dataset.disciplina;
-        }
+                    let disciplinaSelecionada = 'Português';
+                    let tipoAvaliacao = 'portugues';
+                    let corDisciplina = '#3b82f6';
+                    let bgDisciplina = 'rgba(59,130,246,0.05)';
+                    let iconDisciplina = '📖';
+                    
+                    const selectProva = document.getElementById('rel-turma-prova');
+                    const optionProva = selectProva.options[selectProva.selectedIndex];
+                    if (optionProva && optionProva.dataset.disciplina) {
+                        disciplinaSelecionada = optionProva.dataset.disciplina;
+                    }
 
-        const disciplinaMap = {
-            'Português': { chave: 'portugues', cor: '#3b82f6', bg: 'rgba(59,130,246,0.05)', label: 'Português', icon: '📖' },
-            'Matemática': { chave: 'matematica', cor: '#10b981', bg: 'rgba(16,185,129,0.05)', label: 'Matemática', icon: '🔢' },
-            'Produção de Texto': { chave: 'producao', cor: '#8b5cf6', bg: 'rgba(139,92,246,0.05)', label: 'Produção de Texto', icon: '✍️' },
-            'Ciências Humanas': { chave: 'ch', cor: '#f59e0b', bg: 'rgba(245,158,11,0.05)', label: 'Ciências Humanas', icon: '🌍' },
-            'Ciências Naturais': { chave: 'cn', cor: '#14b8a6', bg: 'rgba(20,184,166,0.05)', label: 'Ciências Naturais', icon: '🔬' },
-            'História': { chave: 'ch', cor: '#f59e0b', bg: 'rgba(245,158,11,0.05)', label: 'História', icon: '📜' },
-            'Geografia': { chave: 'ch', cor: '#f59e0b', bg: 'rgba(245,158,11,0.05)', label: 'Geografia', icon: '🗺️' },
-            'Inglês': { chave: 'portugues', cor: '#3b82f6', bg: 'rgba(59,130,246,0.05)', label: 'Inglês', icon: '🇬🇧' }
-        };
+                    const disciplinaMap = {
+                        'Português': { chave: 'portugues', cor: '#3b82f6', bg: 'rgba(59,130,246,0.05)', label: 'Português', icon: '📖' },
+                        'Matemática': { chave: 'matematica', cor: '#10b981', bg: 'rgba(16,185,129,0.05)', label: 'Matemática', icon: '🔢' },
+                        'Produção de Texto': { chave: 'producao', cor: '#8b5cf6', bg: 'rgba(139,92,246,0.05)', label: 'Produção de Texto', icon: '✍️' },
+                        'Ciências Humanas': { chave: 'ch', cor: '#f59e0b', bg: 'rgba(245,158,11,0.05)', label: 'Ciências Humanas', icon: '🌍' },
+                        'Ciências Naturais': { chave: 'cn', cor: '#14b8a6', bg: 'rgba(20,184,166,0.05)', label: 'Ciências Naturais', icon: '🔬' },
+                        'História': { chave: 'ch', cor: '#f59e0b', bg: 'rgba(245,158,11,0.05)', label: 'História', icon: '📜' },
+                        'Geografia': { chave: 'ch', cor: '#f59e0b', bg: 'rgba(245,158,11,0.05)', label: 'Geografia', icon: '🗺️' },
+                        'Inglês': { chave: 'portugues', cor: '#3b82f6', bg: 'rgba(59,130,246,0.05)', label: 'Inglês', icon: '🇬🇧' }
+                    };
 
-        const infoDisciplina = disciplinaMap[disciplinaSelecionada] || disciplinaMap['Português'];
-        tipoAvaliacao = infoDisciplina.chave;
-        corDisciplina = infoDisciplina.cor;
-        bgDisciplina = infoDisciplina.bg;
-        const labelDisciplina = infoDisciplina.label;
-        iconDisciplina = infoDisciplina.icon;
+                    const infoDisciplina = disciplinaMap[disciplinaSelecionada] || disciplinaMap['Português'];
+                    tipoAvaliacao = infoDisciplina.chave;
+                    corDisciplina = infoDisciplina.cor;
+                    bgDisciplina = infoDisciplina.bg;
+                    const labelDisciplina = infoDisciplina.label;
+                    iconDisciplina = infoDisciplina.icon;
 
-        let alunosDaTurma = [];
-        let totalAlunos = 0;
+                    let alunosDaTurma = [];
+                    let totalAlunos = 0;
 
-        if (turmaId) {
-            try {
-                const alunosData = await carregarAlunosComCache({ turma_id: turmaId });
-                if (alunosData && !alunosData.erro && Array.isArray(alunosData)) {
-                    alunosDaTurma = alunosData;
-                    totalAlunos = alunosData.length;
-                }
-            } catch (e) {
-                console.warn('Erro ao buscar alunos da turma:', e);
-            }
-        }
+                    if (turmaId) {
+                        try {
+                            const alunosData = await carregarAlunosComCache({ turma_id: turmaId });
+                            if (alunosData && !alunosData.erro && Array.isArray(alunosData)) {
+                                alunosDaTurma = alunosData;
+                                totalAlunos = alunosData.length;
+                            }
+                        } catch (e) {
+                            console.warn('Erro ao buscar alunos da turma:', e);
+                        }
+                    }
 
-        let url = API_URL + '/api/historico/agrupado';
-        const params = new URLSearchParams();
-        if (escolaId && escolaId !== '') params.append('escola', escolaId);
-        if (serie && serie !== '') params.append('serie', serie);
-        if (turmaId && turmaId !== '') params.append('turma', turmaId);
-        if (provaId && provaId !== '') params.append('prova', provaId);
-        if (params.toString()) url += '?' + params.toString();
+                    let url = API_URL + '/api/historico/agrupado';
+                    const params = new URLSearchParams();
+                    if (escolaId && escolaId !== '') params.append('escola', escolaId);
+                    if (serie && serie !== '') params.append('serie', serie);
+                    if (turmaId && turmaId !== '') params.append('turma', turmaId);
+                    if (provaId && provaId !== '') params.append('prova', provaId);
+                    if (params.toString()) url += '?' + params.toString();
 
-        const response = await fetch(url);
-        const dadosAgrupados = await response.json();
+                    const response = await fetch(url);
+                    const dadosAgrupados = await response.json();
 
-        const alunosComCorrecao = [];
-        const alunosSemCorrecao = [];
+                    const alunosComCorrecao = [];
+                    const alunosSemCorrecao = [];
 
-        if (dadosAgrupados && !dadosAgrupados.erro && Array.isArray(dadosAgrupados)) {
-            dadosAgrupados.forEach(aluno => {
-                const discData = aluno[tipoAvaliacao];
-                if (discData && typeof discData === 'object') {
-                    const acertos = discData.acertos || 0;
-                    const total = discData.total || 20;
-                    const erros = total - acertos;
-                    const pct = total > 0 ? Math.round((acertos / total) * 100) : 0;
-                    const conceito = calcularConceito(pct);
+                    if (dadosAgrupados && !dadosAgrupados.erro && Array.isArray(dadosAgrupados)) {
+                        dadosAgrupados.forEach(aluno => {
+                            const discData = aluno[tipoAvaliacao];
+                            if (discData && typeof discData === 'object') {
+                                const acertos = discData.acertos || 0;
+                                const total = discData.total || 20;
+                                const erros = total - acertos;
+                                const pct = total > 0 ? Math.round((acertos / total) * 100) : 0;
+                                const conceito = calcularConceito(pct);
 
-                    alunosComCorrecao.push({
-                        ...aluno,
-                        disciplinaData: {
-                            acertos: acertos,
-                            erros: erros,
-                            total: total,
-                            porcentagem: pct,
-                            conceito: conceito,
-                            nota: discData.nota || 0
+                                alunosComCorrecao.push({
+                                    ...aluno,
+                                    disciplinaData: {
+                                        acertos: acertos,
+                                        erros: erros,
+                                        total: total,
+                                        porcentagem: pct,
+                                        conceito: conceito,
+                                        nota: discData.nota || 0
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    if (totalAlunos > 0) {
+                        const idsComCorrecao = new Set(alunosComCorrecao.map(a => a.aluno_id));
+                        alunosDaTurma.forEach(aluno => {
+                            if (!idsComCorrecao.has(aluno.id)) {
+                                alunosSemCorrecao.push({
+                                    aluno_id: aluno.id,
+                                    aluno_nome: aluno.nome,
+                                    serie: aluno.turma_serie || serie,
+                                    turma: aluno.turma_nome || '',
+                                    escola: aluno.escola_nome || '',
+                                    disciplinaData: {
+                                        acertos: 0,
+                                        erros: 0,
+                                        total: 20,
+                                        porcentagem: 0,
+                                        conceito: calcularConceito(0),
+                                        nota: 0
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    const totalComCorrecao = alunosComCorrecao.length;
+                    const totalSemCorrecao = alunosSemCorrecao.length;
+
+                    document.getElementById('rel-total-alunos-conceitos').textContent = totalComCorrecao + ' alunos';
+                    document.getElementById('rel-total-alunos-tabela').textContent = totalComCorrecao + ' alunos';
+
+                    let somaPorcentagem = 0;
+                    let totalQuestoes = 0;
+                    let totalAcertos = 0;
+                    let totalErros = 0;
+
+                    alunosComCorrecao.forEach(aluno => {
+                        const d = aluno.disciplinaData;
+                        somaPorcentagem += d.porcentagem;
+                        totalAcertos += d.acertos;
+                        totalErros += d.erros;
+                        totalQuestoes += d.total;
+                    });
+
+                    const media = totalComCorrecao > 0 ? Math.round(somaPorcentagem / totalComCorrecao) : 0;
+                    const conceitoGeral = calcularConceito(media);
+
+                    document.getElementById('rel-media').textContent = media + '%';
+                    document.getElementById('rel-disciplina-nome-card').textContent = `Disciplina: ${disciplinaSelecionada}`;
+                    document.getElementById('rel-total-correcoes').textContent = totalComCorrecao + ' correções';
+                    document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada;
+
+                    const conceitoGeralEl = document.getElementById('rel-conceito-geral');
+                    if (conceitoGeralEl) {
+                        const labels = {
+                            'inicial': '🔴 Inicial',
+                            'basico': '🟠 Básico',
+                            'proficiente': '🔵 Proficiente',
+                            'avancado': '🟢 Avançado'
+                        };
+                        const badgeClasses = {
+                            'inicial': 'badge-conceito-inicial',
+                            'basico': 'badge-conceito-basico',
+                            'proficiente': 'badge-conceito-proficiente',
+                            'avancado': 'badge-conceito-avancado'
+                        };
+                        conceitoGeralEl.textContent = labels[conceitoGeral] || '—';
+                        conceitoGeralEl.className = `badge ${badgeClasses[conceitoGeral] || 'badge-gray'}`;
+                    }
+
+                    const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
+                    alunosComCorrecao.forEach(aluno => {
+                        const conceito = aluno.disciplinaData.conceito;
+                        if (contagemConceitos[conceito] !== undefined) {
+                            contagemConceitos[conceito]++;
                         }
                     });
-                }
-            });
-        }
 
-        if (totalAlunos > 0) {
-            const idsComCorrecao = new Set(alunosComCorrecao.map(a => a.aluno_id));
-            alunosDaTurma.forEach(aluno => {
-                if (!idsComCorrecao.has(aluno.id)) {
-                    alunosSemCorrecao.push({
-                        aluno_id: aluno.id,
-                        aluno_nome: aluno.nome,
-                        serie: aluno.turma_serie || serie,
-                        turma: aluno.turma_nome || '',
-                        escola: aluno.escola_nome || '',
-                        disciplinaData: {
-                            acertos: 0,
-                            erros: 0,
-                            total: 20,
-                            porcentagem: 0,
-                            conceito: calcularConceito(0),
-                            nota: 0
-                        }
+                    const totalConceitos = alunosComCorrecao.length || 1;
+                    ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
+                        const count = contagemConceitos[conceito] || 0;
+                        let pct = (count / totalConceitos) * 100;
+                        pct = Math.max(pct, 2);
+
+                        document.getElementById(`rel-conceito-${conceito}-count`).textContent = count;
+                        const bar = document.getElementById(`rel-conceito-${conceito}-bar`);
+                        if (bar) bar.style.width = pct + '%';
                     });
+
+                    // ============================================
+                    // 🔥 ATUALIZAR O CABEÇALHO DA TABELA - APENAS UMA DISCIPLINA (IGUAL AO EXEMPLO)
+                    // ============================================
+                    const table = document.querySelector('#tb-rel-alunos')?.closest('table');
+                    const thead = table?.querySelector('thead');
+                    if (thead) {
+                        thead.innerHTML = `
+                            <tr>
+                                <th>POS.</th>
+                                <th>Nº</th>
+                                <th>NOME</th>
+                                <th>SÉRIE</th>
+                                <th colspan="3" style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:10px;color:${corDisciplina};">
+                                    ${iconDisciplina} ${labelDisciplina.toUpperCase()}
+                                </th>
+                                <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">ESCOLA</th>
+                                <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">TURMA</th>
+                            </tr>
+                            <tr>
+                                <th style="font-size:7px;"></th>
+                                <th style="font-size:7px;"></th>
+                                <th style="font-size:7px;"></th>
+                                <th style="font-size:7px;"></th>
+                                <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ACERTOS</th>
+                                <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ERROS</th>
+                                <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">CONCEITO</th>
+                                <th style="font-size:7px;"></th>
+                                <th style="font-size:7px;"></th>
+                            </tr>
+                        `;
+                    }
+
+                    const tbody = document.getElementById('tb-rel-alunos');
+                    if (!tbody) return;
+
+                    const todosAlunos = [...alunosComCorrecao, ...alunosSemCorrecao];
+                    
+                    if (todosAlunos.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>`;
+                        document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
+                        return;
+                    }
+
+                    // Ordenar por porcentagem (maior para menor)
+                    todosAlunos.sort((a, b) => (b.disciplinaData.porcentagem || 0) - (a.disciplinaData.porcentagem || 0));
+
+                    function badgeConceito(c) {
+                        const classes = {
+                            'inicial': 'badge-conceito-inicial-sm',
+                            'basico': 'badge-conceito-basico-sm',
+                            'proficiente': 'badge-conceito-proficiente-sm',
+                            'avancado': 'badge-conceito-avancado-sm'
+                        };
+                        return classes[c] || 'badge-gray';
+                    }
+
+                    const conceitoLabel = {
+                        'inicial': 'inicial',
+                        'basico': 'basico',
+                        'proficiente': 'proficiente',
+                        'avancado': 'avancado'
+                    };
+
+                    // 🔥 TABELA COM APENAS A DISCIPLINA SELECIONADA - IGUAL AO EXEMPLO
+                    tbody.innerHTML = todosAlunos.map((aluno, index) => {
+                        const d = aluno.disciplinaData;
+                        
+                        // Determinar a medalha
+                        let medalha = '';
+                        if (index === 0) medalha = '🥇';
+                        else if (index === 1) medalha = '🥈';
+                        else if (index === 2) medalha = '🥉';
+                        else medalha = (index + 1);
+
+                        // Formatar o conceito com cor
+                        const conceitoBadge = `<span class="badge ${badgeConceito(d.conceito)}">${conceitoLabel[d.conceito] || d.conceito}</span>`;
+
+                        return `<tr>
+                            <td style="font-size:14px;">${medalha}</td>
+                            <td>${index + 1}</td>
+                            <td style="text-align:left;font-weight:600;">${aluno.aluno_nome || 'Aluno'}</td>
+                            <td><span class="badge badge-purple" style="font-size:9px;">${aluno.serie || '—'}</span></td>
+                            <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
+                            <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
+                            <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>
+                            <td style="font-size:9px;color:var(--text2);">${aluno.escola || '—'}</td>
+                            <td style="font-size:9px;color:var(--text2);">${aluno.turma || '—'}</td>
+                        </tr>`;
+                    }).join('');
+
+                    // ============================================
+                    // ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
+                    // ============================================
+                    atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
+
+                    document.getElementById('rel-disc-acertos').textContent = totalAcertos;
+                    document.getElementById('rel-disc-erros').textContent = totalErros;
+                    document.getElementById('rel-disc-media').textContent = totalComCorrecao > 0 ? (totalAcertos / totalComCorrecao).toFixed(1) : '0.0';
+                    document.getElementById('rel-disc-conceito').textContent = conceitoGeral || '—';
+
+                } catch (erro) {
+                    console.error('❌ Erro ao carregar relatório por turma:', erro);
+                    showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
                 }
-            });
-        }
-
-        const totalComCorrecao = alunosComCorrecao.length;
-        const totalSemCorrecao = alunosSemCorrecao.length;
-
-        document.getElementById('rel-total-alunos-conceitos').textContent = totalComCorrecao + ' alunos';
-        document.getElementById('rel-total-alunos-tabela').textContent = totalComCorrecao + ' alunos';
-
-        let somaPorcentagem = 0;
-        let totalQuestoes = 0;
-        let totalAcertos = 0;
-        let totalErros = 0;
-
-        alunosComCorrecao.forEach(aluno => {
-            const d = aluno.disciplinaData;
-            somaPorcentagem += d.porcentagem;
-            totalAcertos += d.acertos;
-            totalErros += d.erros;
-            totalQuestoes += d.total;
-        });
-
-        const media = totalComCorrecao > 0 ? Math.round(somaPorcentagem / totalComCorrecao) : 0;
-        const conceitoGeral = calcularConceito(media);
-
-        document.getElementById('rel-media').textContent = media + '%';
-        document.getElementById('rel-disciplina-nome-card').textContent = `Disciplina: ${disciplinaSelecionada}`;
-        document.getElementById('rel-total-correcoes').textContent = totalComCorrecao + ' correções';
-        document.getElementById('rel-disciplina-nome').textContent = disciplinaSelecionada;
-
-        const conceitoGeralEl = document.getElementById('rel-conceito-geral');
-        if (conceitoGeralEl) {
-            const labels = {
-                'inicial': '🔴 Inicial',
-                'basico': '🟠 Básico',
-                'proficiente': '🔵 Proficiente',
-                'avancado': '🟢 Avançado'
-            };
-            const badgeClasses = {
-                'inicial': 'badge-conceito-inicial',
-                'basico': 'badge-conceito-basico',
-                'proficiente': 'badge-conceito-proficiente',
-                'avancado': 'badge-conceito-avancado'
-            };
-            conceitoGeralEl.textContent = labels[conceitoGeral] || '—';
-            conceitoGeralEl.className = `badge ${badgeClasses[conceitoGeral] || 'badge-gray'}`;
-        }
-
-        const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
-        alunosComCorrecao.forEach(aluno => {
-            const conceito = aluno.disciplinaData.conceito;
-            if (contagemConceitos[conceito] !== undefined) {
-                contagemConceitos[conceito]++;
             }
-        });
-
-        const totalConceitos = alunosComCorrecao.length || 1;
-        ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
-            const count = contagemConceitos[conceito] || 0;
-            let pct = (count / totalConceitos) * 100;
-            pct = Math.max(pct, 2);
-
-            document.getElementById(`rel-conceito-${conceito}-count`).textContent = count;
-            const bar = document.getElementById(`rel-conceito-${conceito}-bar`);
-            if (bar) bar.style.width = pct + '%';
-        });
-
-        // ============================================
-        // 🔥 ATUALIZAR O CABEÇALHO DA TABELA - APENAS UMA DISCIPLINA (IGUAL AO EXEMPLO)
-        // ============================================
-        const table = document.querySelector('#tb-rel-alunos')?.closest('table');
-        const thead = table?.querySelector('thead');
-        if (thead) {
-            thead.innerHTML = `
-                <tr>
-                    <th>POS.</th>
-                    <th>Nº</th>
-                    <th>NOME</th>
-                    <th>SÉRIE</th>
-                    <th colspan="3" style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:10px;color:${corDisciplina};">
-                        ${iconDisciplina} ${labelDisciplina.toUpperCase()}
-                    </th>
-                    <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">ESCOLA</th>
-                    <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">TURMA</th>
-                </tr>
-                <tr>
-                    <th style="font-size:7px;"></th>
-                    <th style="font-size:7px;"></th>
-                    <th style="font-size:7px;"></th>
-                    <th style="font-size:7px;"></th>
-                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ACERTOS</th>
-                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ERROS</th>
-                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">CONCEITO</th>
-                    <th style="font-size:7px;"></th>
-                    <th style="font-size:7px;"></th>
-                </tr>
-            `;
-        }
-
-        const tbody = document.getElementById('tb-rel-alunos');
-        if (!tbody) return;
-
-        const todosAlunos = [...alunosComCorrecao, ...alunosSemCorrecao];
-        
-        if (todosAlunos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>`;
-            document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
-            return;
-        }
-
-        // Ordenar por porcentagem (maior para menor)
-        todosAlunos.sort((a, b) => (b.disciplinaData.porcentagem || 0) - (a.disciplinaData.porcentagem || 0));
-
-        function badgeConceito(c) {
-            const classes = {
-                'inicial': 'badge-conceito-inicial-sm',
-                'basico': 'badge-conceito-basico-sm',
-                'proficiente': 'badge-conceito-proficiente-sm',
-                'avancado': 'badge-conceito-avancado-sm'
-            };
-            return classes[c] || 'badge-gray';
-        }
-
-        const conceitoLabel = {
-            'inicial': 'inicial',
-            'basico': 'basico',
-            'proficiente': 'proficiente',
-            'avancado': 'avancado'
-        };
-
-        // 🔥 TABELA COM APENAS A DISCIPLINA SELECIONADA - IGUAL AO EXEMPLO
-        tbody.innerHTML = todosAlunos.map((aluno, index) => {
-            const d = aluno.disciplinaData;
-            
-            // Determinar a medalha
-            let medalha = '';
-            if (index === 0) medalha = '🥇';
-            else if (index === 1) medalha = '🥈';
-            else if (index === 2) medalha = '🥉';
-            else medalha = (index + 1);
-
-            // Formatar o conceito com cor
-            const conceitoBadge = `<span class="badge ${badgeConceito(d.conceito)}">${conceitoLabel[d.conceito] || d.conceito}</span>`;
-
-            return `<tr>
-                <td style="font-size:14px;">${medalha}</td>
-                <td>${index + 1}</td>
-                <td style="text-align:left;font-weight:600;">${aluno.aluno_nome || 'Aluno'}</td>
-                <td><span class="badge badge-purple" style="font-size:9px;">${aluno.serie || '—'}</span></td>
-                <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
-                <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
-                <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>
-                <td style="font-size:9px;color:var(--text2);">${aluno.escola || '—'}</td>
-                <td style="font-size:9px;color:var(--text2);">${aluno.turma || '—'}</td>
-            </tr>`;
-        }).join('');
-
-        // ============================================
-        // ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
-        // ============================================
-        atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
-
-        document.getElementById('rel-disc-acertos').textContent = totalAcertos;
-        document.getElementById('rel-disc-erros').textContent = totalErros;
-        document.getElementById('rel-disc-media').textContent = totalComCorrecao > 0 ? (totalAcertos / totalComCorrecao).toFixed(1) : '0.0';
-        document.getElementById('rel-disc-conceito').textContent = conceitoGeral || '—';
-
-    } catch (erro) {
-        console.error('❌ Erro ao carregar relatório por turma:', erro);
-        showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
-    }
-}
 
             function limparFiltrosRelTurma() {
                 document.getElementById('rel-turma-escola').value = '';
@@ -8347,9 +8344,11 @@ async function carregarRelatorioTurmaFiltrado() {
                             gap: 12px;
                         }
                         
-                        .header-left .brasao {
-                            font-size: 32px;
-                            color: #1e293b;
+                        .header-left .logo {
+                            width: 60px;
+                            height: 60px;
+                            object-fit: contain;
+                            border-radius: 4px;
                         }
                         
                         .header-left .instituicao {
@@ -8703,7 +8702,7 @@ async function carregarRelatorioTurmaFiltrado() {
                     <div class="header">
                         <div class="header-top">
                             <div class="header-left">
-                                <div class="brasao">🏛️</div>
+                                <img src="https://github.com/jorg3o3iras/adabee-sistema/blob/main/dgp.jpg?raw=true" alt="DGP" class="logo" style="width:60px;height:60px;object-fit:contain;border-radius:4px;">
                                 <div class="instituicao">
                                     <span class="prefeitura">PREFEITURA MUNICIPAL DE</span>
                                     <span class="secretaria">SÃO SEBASTIÃO DA BOA VISTA</span>
@@ -8891,6 +8890,1189 @@ async function carregarRelatorioTurmaFiltrado() {
                 };
 
                 showToast('📄 PDF gerado com sucesso!', 'success');
+            }
+
+            // ============================================
+            // 🔥 FUNÇÃO PARA IMPRIMIR RESULTADOS MELHORADOS
+            // ============================================
+            function imprimirResultadosMelhorados() {
+                const tbody = document.getElementById('tb-resultados-filtrado');
+                if (!tbody) {
+                    showToast('❌ Nenhum dado para imprimir!', 'error');
+                    return;
+                }
+
+                const rows = tbody.querySelectorAll('tr');
+                if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum'))) {
+                    showToast('⚠️ Nenhum dado disponível para impressão.', 'error');
+                    return;
+                }
+
+                // Obtém os filtros atuais
+                const escolaSelect = document.getElementById('filtro-escola');
+                const serieSelect = document.getElementById('filtro-serie');
+                const turmaSelect = document.getElementById('filtro-turma');
+                const provaSelect = document.getElementById('filtro-prova');
+
+                const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas as escolas';
+                const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas as séries';
+                const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas as turmas';
+                const provaNome = provaSelect.options[provaSelect.selectedIndex]?.text || 'Todas as provas';
+
+                // Coleta os dados dos alunos
+                const alunosData = [];
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 20) {
+                        const posicao = cells[0]?.textContent.trim() || '';
+                        const numero = cells[1]?.textContent.trim() || '';
+                        const nome = cells[2]?.textContent.trim() || '';
+                        const serie = cells[3]?.textContent.trim() || '';
+                        
+                        // Português
+                        const ptAcertos = cells[4]?.textContent.trim() || '0';
+                        const ptErros = cells[5]?.textContent.trim() || '0';
+                        const ptConceito = cells[6]?.textContent.trim() || '';
+                        
+                        // Matemática
+                        const matAcertos = cells[7]?.textContent.trim() || '0';
+                        const matErros = cells[8]?.textContent.trim() || '0';
+                        const matConceito = cells[9]?.textContent.trim() || '';
+                        
+                        // Produção
+                        const prodAcertos = cells[10]?.textContent.trim() || '0';
+                        const prodErros = cells[11]?.textContent.trim() || '0';
+                        const prodConceito = cells[12]?.textContent.trim() || '';
+                        
+                        // CH
+                        const chAcertos = cells[13]?.textContent.trim() || '0';
+                        const chErros = cells[14]?.textContent.trim() || '0';
+                        const chConceito = cells[15]?.textContent.trim() || '';
+                        
+                        // CN
+                        const cnAcertos = cells[16]?.textContent.trim() || '0';
+                        const cnErros = cells[17]?.textContent.trim() || '0';
+                        const cnConceito = cells[18]?.textContent.trim() || '';
+                        
+                        const escola = cells[19]?.textContent.trim() || '';
+                        const turma = cells[20]?.textContent.trim() || '';
+                        
+                        // Calcula total de acertos (soma de todas as disciplinas)
+                        const totalAcertos = (parseInt(ptAcertos) || 0) + (parseInt(matAcertos) || 0) + 
+                                            (parseInt(prodAcertos) || 0) + (parseInt(chAcertos) || 0) + 
+                                            (parseInt(cnAcertos) || 0);
+                        
+                        alunosData.push({ 
+                            posicao, numero, nome, serie, 
+                            ptAcertos, ptErros, ptConceito,
+                            matAcertos, matErros, matConceito,
+                            prodAcertos, prodErros, prodConceito,
+                            chAcertos, chErros, chConceito,
+                            cnAcertos, cnErros, cnConceito,
+                            escola, turma, totalAcertos 
+                        });
+                    }
+                });
+
+                // ============================================
+                // GERAÇÃO DO HTML PARA IMPRESSÃO
+                // ============================================
+                const dataAtual = new Date().toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Obtém os totais
+                const totalAlunos = alunosData.length;
+                const totalAlunosEl = document.getElementById('res-total-filtrado');
+                const totalAlunosCorrigidos = totalAlunosEl ? totalAlunosEl.textContent : totalAlunos;
+
+                // Função para obter a badge do conceito
+                function getConceitoBadge(conceito) {
+                    const conceitos = {
+                        'inicial': { label: 'Inicial', color: '#ef4444', bg: '#fef2f2' },
+                        'basico': { label: 'Básico', color: '#f59e0b', bg: '#fffbeb' },
+                        'proficiente': { label: 'Proficiente', color: '#3b82f6', bg: '#eff6ff' },
+                        'avancado': { label: 'Avançado', color: '#10b981', bg: '#ecfdf5' }
+                    };
+                    const c = conceitos[conceito.toLowerCase()] || { label: conceito, color: '#64748b', bg: '#f1f5f9' };
+                    return `<span style="background:${c.bg}; color:${c.color}; padding:1px 8px; border-radius:10px; font-size:8px; font-weight:700;">${c.label}</span>`;
+                }
+
+                // Gera o HTML do relatório
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório de Resultados</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body {
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            background: #ffffff;
+                            padding: 15px;
+                            color: #1e293b;
+                        }
+                        
+                        /* ===== CABEÇALHO INSTITUCIONAL ===== */
+                        .header {
+                            border-bottom: 3px solid #1e293b;
+                            padding-bottom: 12px;
+                            margin-bottom: 16px;
+                            position: relative;
+                        }
+                        
+                        .header-top {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            margin-bottom: 4px;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                        }
+                        
+                        .header-left {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                        }
+                        
+                        .header-left .logo {
+                            width: 50px;
+                            height: 50px;
+                            object-fit: contain;
+                            border-radius: 4px;
+                        }
+                        
+                        .header-left .instituicao {
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        
+                        .header-left .instituicao .prefeitura {
+                            font-size: 9px;
+                            font-weight: 600;
+                            color: #475569;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .header-left .instituicao .secretaria {
+                            font-size: 12px;
+                            font-weight: 800;
+                            color: #1e293b;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        .header-left .instituicao .departamento {
+                            font-size: 9px;
+                            color: #475569;
+                            font-weight: 600;
+                        }
+                        
+                        .header-left .instituicao .sisam {
+                            font-size: 13px;
+                            font-weight: 900;
+                            color: #2563eb;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .header-right {
+                            text-align: right;
+                            border-left: 2px solid #e2e8f0;
+                            padding-left: 14px;
+                        }
+                        
+                        .header-right .titulo-relatorio {
+                            font-size: 16px;
+                            font-weight: 800;
+                            color: #1e293b;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        .header-right .subtitulo-relatorio {
+                            font-size: 10px;
+                            color: #475569;
+                            font-weight: 600;
+                        }
+                        
+                        /* ===== FILTROS ===== */
+                        .filtros-info {
+                            display: grid;
+                            grid-template-columns: repeat(4, 1fr);
+                            gap: 6px 16px;
+                            background: #f8fafc;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            border: 1px solid #e2e8f0;
+                            margin-bottom: 12px;
+                            font-size: 10px;
+                        }
+                        
+                        .filtros-info .item .label {
+                            font-size: 7px;
+                            font-weight: 700;
+                            color: #94a3b8;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .filtros-info .item .value {
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: #0f172a;
+                        }
+                        
+                        /* ===== RESUMO ===== */
+                        .resumo-grid {
+                            display: grid;
+                            grid-template-columns: repeat(4, 1fr);
+                            gap: 10px;
+                            margin: 10px 0 14px;
+                        }
+                        
+                        .resumo-card {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 6px;
+                            padding: 10px 14px;
+                            text-align: center;
+                        }
+                        
+                        .resumo-card .valor {
+                            font-size: 22px;
+                            font-weight: 900;
+                        }
+                        
+                        .resumo-card .valor.blue { color: #3b82f6; }
+                        .resumo-card .valor.green { color: #10b981; }
+                        .resumo-card .valor.orange { color: #f59e0b; }
+                        .resumo-card .valor.red { color: #ef4444; }
+                        
+                        .resumo-card .label {
+                            font-size: 8px;
+                            color: #94a3b8;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3px;
+                            margin-top: 2px;
+                        }
+                        
+                        /* ===== TABELA DE ALUNOS ===== */
+                        .table-wrap {
+                            overflow-x: auto;
+                            margin: 8px 0;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 6px;
+                        }
+                        
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 8px;
+                        }
+                        
+                        thead {
+                            background: #f1f5f9;
+                        }
+                        
+                        th {
+                            padding: 5px 3px;
+                            text-align: center;
+                            font-weight: 700;
+                            color: #475569;
+                            border-bottom: 2px solid #e2e8f0;
+                            font-size: 6px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        td {
+                            padding: 4px 2px;
+                            border-bottom: 1px solid #f1f5f9;
+                            text-align: center;
+                            font-size: 7px;
+                            color: #1e293b;
+                        }
+                        
+                        tr:nth-child(even) td {
+                            background: #fafbfc;
+                        }
+                        
+                        .nome-aluno {
+                            font-weight: 600;
+                            text-align: left;
+                            padding-left: 6px;
+                        }
+                        
+                        .badge-conceito-sm {
+                            display: inline-block;
+                            padding: 1px 6px;
+                            border-radius: 8px;
+                            font-size: 6px;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            letter-spacing: 0.2px;
+                        }
+                        
+                        .badge-inicial-sm { background: #fef2f2; color: #ef4444; }
+                        .badge-basico-sm { background: #fffbeb; color: #f59e0b; }
+                        .badge-proficiente-sm { background: #eff6ff; color: #3b82f6; }
+                        .badge-avancado-sm { background: #ecfdf5; color: #10b981; }
+                        
+                        .col-disciplina-header {
+                            background: rgba(0,0,0,0.02);
+                            border-bottom: 2px solid;
+                        }
+                        
+                        .col-pt { border-bottom-color: #3b82f6; }
+                        .col-mat { border-bottom-color: #10b981; }
+                        .col-prod { border-bottom-color: #8b5cf6; }
+                        .col-ch { border-bottom-color: #f59e0b; }
+                        .col-cn { border-bottom-color: #14b8a6; }
+                        
+                        .acertos-text { color: #10b981; font-weight: 700; }
+                        .erros-text { color: #ef4444; font-weight: 700; }
+                        
+                        .col-escola, .col-turma {
+                            font-size: 6px;
+                            color: #64748b;
+                            max-width: 60px;
+                        }
+                        
+                        /* ===== ASSINATURAS ===== */
+                        .assinaturas {
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 30px;
+                            margin-top: 18px;
+                            padding-top: 12px;
+                            border-top: 1px solid #e2e8f0;
+                            text-align: center;
+                        }
+                        
+                        .assinatura-item {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                        }
+                        
+                        .assinatura-item .linha {
+                            width: 150px;
+                            border-bottom: 1.5px solid #1e293b;
+                            margin-bottom: 4px;
+                        }
+                        
+                        .assinatura-item .cargo {
+                            font-size: 8px;
+                            color: #64748b;
+                            font-weight: 600;
+                        }
+                        
+                        .assinatura-item .nome-assinatura {
+                            font-size: 9px;
+                            font-weight: 700;
+                            color: #1e293b;
+                            margin-bottom: 2px;
+                        }
+                        
+                        /* ===== RODAPÉ ===== */
+                        .footer {
+                            margin-top: 16px;
+                            padding-top: 10px;
+                            border-top: 1px solid #e2e8f0;
+                            display: flex;
+                            justify-content: space-between;
+                            font-size: 7px;
+                            color: #94a3b8;
+                            flex-wrap: wrap;
+                            gap: 4px;
+                        }
+                        
+                        .footer strong {
+                            color: #475569;
+                        }
+                        
+                        /* ===== IMPRESSÃO ===== */
+                        @media print {
+                            body { padding: 8px; }
+                            .no-print { display: none; }
+                            tr { break-inside: avoid; }
+                            .assinaturas { break-inside: avoid; }
+                            @page { size: A4 landscape; margin: 8mm 6mm; }
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .filtros-info { grid-template-columns: repeat(2, 1fr); }
+                            .resumo-grid { grid-template-columns: repeat(2, 1fr); }
+                            .assinaturas { grid-template-columns: 1fr; gap: 16px; }
+                            .header-top { flex-direction: column; align-items: flex-start; }
+                            .header-right { border-left: none; padding-left: 0; text-align: left; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <!-- ===== CABEÇALHO ===== -->
+                    <div class="header">
+                        <div class="header-top">
+                            <div class="header-left">
+                                <img src="https://github.com/jorg3o3iras/adabee-sistema/blob/main/dgp.jpg?raw=true" alt="DGP" class="logo" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">
+                                <div class="instituicao">
+                                    <span class="prefeitura">PREFEITURA MUNICIPAL DE</span>
+                                    <span class="secretaria">SÃO SEBASTIÃO DA BOA VISTA</span>
+                                    <span class="departamento">SECRETARIA MUNICIPAL DE EDUCAÇÃO</span>
+                                    <span class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICA - DGP</span>
+                                    <span class="sisam">SISAM 2026</span>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="titulo-relatorio">📊 RELATÓRIO DE RESULTADOS</div>
+                                <div class="subtitulo-relatorio">Relatório de desempenho dos alunos por disciplina</div>
+                                <div style="font-size:8px; color:#94a3b8; margin-top:2px;">
+                                    Ano Letivo 2026
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== FILTROS ===== -->
+                    <div class="filtros-info">
+                        <div class="item">
+                            <span class="label">🏫 Escola</span>
+                            <span class="value">${escolaNome}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">📚 Série</span>
+                            <span class="value">${serieNome}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">👥 Turma</span>
+                            <span class="value">${turmaNome}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">📄 Prova</span>
+                            <span class="value">${provaNome}</span>
+                        </div>
+                    </div>
+
+                    <!-- ===== RESUMO ===== -->
+                    <div class="resumo-grid">
+                        <div class="resumo-card">
+                            <div class="valor blue">${totalAlunosCorrigidos}</div>
+                            <div class="label">Total de Alunos Corrigidos</div>
+                        </div>
+                        <div class="resumo-card">
+                            <div class="valor green" id="res-total-acertos-print">0</div>
+                            <div class="label">✅ Total de Acertos</div>
+                        </div>
+                        <div class="resumo-card">
+                            <div class="valor red" id="res-total-erros-print">0</div>
+                            <div class="label">❌ Total de Erros</div>
+                        </div>
+                        <div class="resumo-card">
+                            <div class="valor orange" id="res-media-geral-print">0%</div>
+                            <div class="label">📊 Média Geral</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== TABELA DE ALUNOS ===== -->
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2" style="text-align:left;">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="3" class="col-disciplina-header col-pt" style="border-bottom:2px solid #3b82f6;font-size:6px;">Português</th>
+                                    <th colspan="3" class="col-disciplina-header col-mat" style="border-bottom:2px solid #10b981;font-size:6px;">Matemática</th>
+                                    <th colspan="3" class="col-disciplina-header col-prod" style="border-bottom:2px solid #8b5cf6;font-size:6px;">Produção</th>
+                                    <th colspan="3" class="col-disciplina-header col-ch" style="border-bottom:2px solid #f59e0b;font-size:6px;">CH</th>
+                                    <th colspan="3" class="col-disciplina-header col-cn" style="border-bottom:2px solid #14b8a6;font-size:6px;">CN</th>
+                                    <th rowspan="2" style="font-size:6px;">Escola</th>
+                                    <th rowspan="2" style="font-size:6px;">Turma</th>
+                                </tr>
+                                <tr>
+                                    <th style="font-size:5px;">Acertos</th>
+                                    <th style="font-size:5px;">Erros</th>
+                                    <th style="font-size:5px;">Conceito</th>
+                                    <th style="font-size:5px;">Acertos</th>
+                                    <th style="font-size:5px;">Erros</th>
+                                    <th style="font-size:5px;">Conceito</th>
+                                    <th style="font-size:5px;">Acertos</th>
+                                    <th style="font-size:5px;">Erros</th>
+                                    <th style="font-size:5px;">Conceito</th>
+                                    <th style="font-size:5px;">Acertos</th>
+                                    <th style="font-size:5px;">Erros</th>
+                                    <th style="font-size:5px;">Conceito</th>
+                                    <th style="font-size:5px;">Acertos</th>
+                                    <th style="font-size:5px;">Erros</th>
+                                    <th style="font-size:5px;">Conceito</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${alunosData.map((a, index) => {
+                                    const medalha = a.posicao === '🥇' ? '🥇' : 
+                                                   a.posicao === '🥈' ? '🥈' : 
+                                                   a.posicao === '🥉' ? '🥉' : 
+                                                   a.posicao || (index + 1);
+                                    
+                                    // Função para badge de conceito
+                                    const badgeConceito = (conceito) => {
+                                        const classes = {
+                                            'inicial': 'badge-inicial-sm',
+                                            'basico': 'badge-basico-sm',
+                                            'proficiente': 'badge-proficiente-sm',
+                                            'avancado': 'badge-avancado-sm'
+                                        };
+                                        const cls = classes[conceito?.toLowerCase()] || 'badge-inicial-sm';
+                                        return `<span class="badge-conceito-sm ${cls}">${conceito || '—'}</span>`;
+                                    };
+                                    
+                                    return `
+                                        <tr>
+                                            <td><span style="font-size:12px;">${medalha}</span></td>
+                                            <td>${a.numero}</td>
+                                            <td class="nome-aluno">${a.nome}</td>
+                                            <td>${a.serie}</td>
+                                            <td><span class="acertos-text">${a.ptAcertos}</span></td>
+                                            <td><span class="erros-text">${a.ptErros}</span></td>
+                                            <td>${badgeConceito(a.ptConceito)}</td>
+                                            <td><span class="acertos-text">${a.matAcertos}</span></td>
+                                            <td><span class="erros-text">${a.matErros}</span></td>
+                                            <td>${badgeConceito(a.matConceito)}</td>
+                                            <td><span class="acertos-text">${a.prodAcertos}</span></td>
+                                            <td><span class="erros-text">${a.prodErros}</span></td>
+                                            <td>${badgeConceito(a.prodConceito)}</td>
+                                            <td><span class="acertos-text">${a.chAcertos}</span></td>
+                                            <td><span class="erros-text">${a.chErros}</span></td>
+                                            <td>${badgeConceito(a.chConceito)}</td>
+                                            <td><span class="acertos-text">${a.cnAcertos}</span></td>
+                                            <td><span class="erros-text">${a.cnErros}</span></td>
+                                            <td>${badgeConceito(a.cnConceito)}</td>
+                                            <td class="col-escola">${a.escola}</td>
+                                            <td class="col-turma">${a.turma}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ===== ASSINATURAS ===== -->
+                    <div class="assinaturas">
+                        <div class="assinatura-item">
+                            <div class="linha"></div>
+                            <div class="nome-assinatura">Professor(a) Responsável</div>
+                            <div class="cargo">Professor(a)</div>
+                        </div>
+                        <div class="assinatura-item">
+                            <div class="linha"></div>
+                            <div class="nome-assinatura">Diretor(a)</div>
+                            <div class="cargo">Diretor(a)</div>
+                        </div>
+                        <div class="assinatura-item">
+                            <div class="linha"></div>
+                            <div class="nome-assinatura">Secretário(a) de Educação</div>
+                            <div class="cargo">Secretaria Municipal de Educação</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== RODAPÉ ===== -->
+                    <div class="footer">
+                        <span>📄 Documento gerado pelo sistema <strong>CorrigePro</strong></span>
+                        <span>${dataAtual}</span>
+                        <span>© 2026 CorrigePro — Secretaria Municipal de Educação</span>
+                    </div>
+
+                </body>
+                </html>
+                `;
+
+                // ============================================
+                // ABRIR EM NOVA JANELA E IMPRIMIR
+                // ============================================
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+
+                win.document.write(html);
+                win.document.close();
+
+                // Aguarda o carregamento e imprime
+                win.onload = function() {
+                    setTimeout(() => {
+                        win.focus();
+                        win.print();
+                    }, 500);
+                };
+
+                showToast('🖨️ Relatório enviado para impressão!', 'success');
+            }
+
+            // ============================================
+            // 🔥 FUNÇÃO PARA IMPRIMIR DESEMPENHO MELHORADO
+            // ============================================
+            function imprimirDesempenhoMelhorado() {
+                const data = desempenhoData.alunoSelecionado;
+                if (!data) {
+                    showToast('⚠️ Gere o desempenho primeiro!', 'error');
+                    return;
+                }
+
+                const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
+
+                // ============================================
+                // GERAÇÃO DO HTML PARA IMPRESSÃO
+                // ============================================
+                const dataAtual = new Date().toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Função para obter a badge do conceito
+                function getConceitoBadge(conceito) {
+                    const conceitos = {
+                        'Inicial': { label: 'Inicial', color: '#ef4444', bg: '#fef2f2' },
+                        'Básico': { label: 'Básico', color: '#f59e0b', bg: '#fffbeb' },
+                        'Proficiente': { label: 'Proficiente', color: '#3b82f6', bg: '#eff6ff' },
+                        'Avançado': { label: 'Avançado', color: '#10b981', bg: '#ecfdf5' }
+                    };
+                    const c = conceitos[conceito] || { label: conceito, color: '#64748b', bg: '#f1f5f9' };
+                    return `<span style="background:${c.bg}; color:${c.color}; padding:2px 12px; border-radius:12px; font-size:10px; font-weight:700;">${c.label}</span>`;
+                }
+
+                // Gera o HTML do relatório
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório de Desempenho - ${aluno.nome}</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body {
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            background: #ffffff;
+                            padding: 15px;
+                            color: #1e293b;
+                        }
+                        
+                        /* ===== CABEÇALHO INSTITUCIONAL ===== */
+                        .header {
+                            border-bottom: 3px solid #1e293b;
+                            padding-bottom: 12px;
+                            margin-bottom: 16px;
+                            position: relative;
+                        }
+                        
+                        .header-top {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            margin-bottom: 4px;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                        }
+                        
+                        .header-left {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                        }
+                        
+                        .header-left .logo {
+                            width: 50px;
+                            height: 50px;
+                            object-fit: contain;
+                            border-radius: 4px;
+                        }
+                        
+                        .header-left .instituicao {
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        
+                        .header-left .instituicao .prefeitura {
+                            font-size: 9px;
+                            font-weight: 600;
+                            color: #475569;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .header-left .instituicao .secretaria {
+                            font-size: 12px;
+                            font-weight: 800;
+                            color: #1e293b;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        .header-left .instituicao .departamento {
+                            font-size: 9px;
+                            color: #475569;
+                            font-weight: 600;
+                        }
+                        
+                        .header-left .instituicao .sisam {
+                            font-size: 13px;
+                            font-weight: 900;
+                            color: #2563eb;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .header-right {
+                            text-align: right;
+                            border-left: 2px solid #e2e8f0;
+                            padding-left: 14px;
+                        }
+                        
+                        .header-right .titulo-relatorio {
+                            font-size: 16px;
+                            font-weight: 800;
+                            color: #1e293b;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        .header-right .subtitulo-relatorio {
+                            font-size: 10px;
+                            color: #475569;
+                            font-weight: 600;
+                        }
+                        
+                        /* ===== INFORMAÇÕES ===== */
+                        .info-grid {
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 6px 16px;
+                            background: #f8fafc;
+                            padding: 10px 16px;
+                            border-radius: 6px;
+                            border: 1px solid #e2e8f0;
+                            margin-bottom: 12px;
+                            font-size: 10px;
+                        }
+                        
+                        .info-grid .item .label {
+                            font-size: 7px;
+                            font-weight: 700;
+                            color: #94a3b8;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        
+                        .info-grid .item .value {
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: #0f172a;
+                        }
+                        
+                        /* ===== RESUMO ===== */
+                        .resumo-grid {
+                            display: grid;
+                            grid-template-columns: repeat(4, 1fr);
+                            gap: 10px;
+                            margin: 10px 0 14px;
+                        }
+                        
+                        .resumo-card {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 6px;
+                            padding: 10px 14px;
+                            text-align: center;
+                        }
+                        
+                        .resumo-card .valor {
+                            font-size: 24px;
+                            font-weight: 900;
+                        }
+                        
+                        .resumo-card .valor.blue { color: #3b82f6; }
+                        .resumo-card .valor.green { color: #10b981; }
+                        .resumo-card .valor.red { color: #ef4444; }
+                        .resumo-card .valor.purple { color: #8b5cf6; }
+                        
+                        .resumo-card .label {
+                            font-size: 8px;
+                            color: #94a3b8;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3px;
+                            margin-top: 2px;
+                        }
+                        
+                        /* ===== QUESTÕES ===== */
+                        .section-title {
+                            font-size: 13px;
+                            font-weight: 800;
+                            color: #1e293b;
+                            margin: 12px 0 8px;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+                        
+                        .section-title .badge {
+                            font-size: 8px;
+                            background: #eff6ff;
+                            color: #2563eb;
+                            padding: 2px 10px;
+                            border-radius: 10px;
+                            font-weight: 700;
+                        }
+                        
+                        .questoes-grid {
+                            display: grid;
+                            grid-template-columns: repeat(10, 1fr);
+                            gap: 4px;
+                            margin-bottom: 10px;
+                        }
+                        
+                        .questao-item {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 4px;
+                            padding: 4px 2px;
+                            text-align: center;
+                            font-size: 8px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 1px;
+                        }
+                        
+                        .questao-item.acertou {
+                            border-color: #10b981;
+                            background: rgba(16,185,129,0.08);
+                        }
+                        
+                        .questao-item.errou {
+                            border-color: #ef4444;
+                            background: rgba(239,68,68,0.08);
+                        }
+                        
+                        .questao-item .q-num {
+                            font-size: 6px;
+                            color: #94a3b8;
+                            font-weight: 700;
+                        }
+                        
+                        .questao-item .q-resp {
+                            font-weight: 700;
+                            font-size: 10px;
+                            border-radius: 3px;
+                            padding: 0 3px;
+                            line-height: 18px;
+                            width: 100%;
+                        }
+                        
+                        .questao-item.acertou .q-resp { color: #10b981; }
+                        .questao-item.errou .q-resp { color: #ef4444; }
+                        
+                        .questao-item .q-gab {
+                            font-size: 6px;
+                            color: #94a3b8;
+                        }
+                        
+                        .questao-item .q-status-text {
+                            font-size: 6px;
+                            font-weight: 700;
+                            padding: 0 3px;
+                            border-radius: 3px;
+                        }
+                        
+                        .questao-item.acertou .q-status-text { color: #10b981; }
+                        .questao-item.errou .q-status-text { color: #ef4444; }
+                        
+                        /* ===== GABARITO OFICIAL ===== */
+                        .gabarito-grid {
+                            display: grid;
+                            grid-template-columns: repeat(10, 1fr);
+                            gap: 4px;
+                            margin: 6px 0 10px;
+                        }
+                        
+                        .gabarito-item {
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 4px;
+                            padding: 4px 2px;
+                            text-align: center;
+                            font-size: 8px;
+                        }
+                        
+                        .gabarito-item .q-num {
+                            font-size: 6px;
+                            color: #94a3b8;
+                            font-weight: 700;
+                        }
+                        
+                        .gabarito-item .q-resp {
+                            font-weight: 700;
+                            font-size: 10px;
+                            color: #10b981;
+                        }
+                        
+                        .gabarito-item .q-bncc {
+                            font-size: 5px;
+                            color: #8b5cf6;
+                            margin-top: 2px;
+                        }
+                        
+                        /* ===== ASSINATURAS ===== */
+                        .assinaturas {
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 30px;
+                            margin-top: 18px;
+                            padding-top: 12px;
+                            border-top: 1px solid #e2e8f0;
+                            text-align: center;
+                        }
+                        
+                        .assinatura-item {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                        }
+                        
+                        .assinatura-item .linha {
+                            width: 150px;
+                            border-bottom: 1.5px solid #1e293b;
+                            margin-bottom: 4px;
+                        }
+                        
+                        .assinatura-item .cargo {
+                            font-size: 8px;
+                            color: #64748b;
+                            font-weight: 600;
+                        }
+                        
+                        .assinatura-item .nome-assinatura {
+                            font-size: 9px;
+                            font-weight: 700;
+                            color: #1e293b;
+                            margin-bottom: 2px;
+                        }
+                        
+                        /* ===== RODAPÉ ===== */
+                        .footer {
+                            margin-top: 16px;
+                            padding-top: 10px;
+                            border-top: 1px solid #e2e8f0;
+                            display: flex;
+                            justify-content: space-between;
+                            font-size: 7px;
+                            color: #94a3b8;
+                            flex-wrap: wrap;
+                            gap: 4px;
+                        }
+                        
+                        .footer strong {
+                            color: #475569;
+                        }
+                        
+                        /* ===== IMPRESSÃO ===== */
+                        @media print {
+                            body { padding: 8px; }
+                            .no-print { display: none; }
+                            .questao-item { break-inside: avoid; }
+                            tr { break-inside: avoid; }
+                            .assinaturas { break-inside: avoid; }
+                            @page { size: A4 portrait; margin: 8mm 6mm; }
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .info-grid { grid-template-columns: 1fr 1fr; }
+                            .resumo-grid { grid-template-columns: 1fr 1fr; }
+                            .questoes-grid { grid-template-columns: repeat(5, 1fr); }
+                            .gabarito-grid { grid-template-columns: repeat(5, 1fr); }
+                            .assinaturas { grid-template-columns: 1fr; gap: 16px; }
+                            .header-top { flex-direction: column; align-items: flex-start; }
+                            .header-right { border-left: none; padding-left: 0; text-align: left; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <!-- ===== CABEÇALHO ===== -->
+                    <div class="header">
+                        <div class="header-top">
+                            <div class="header-left">
+                                <img src="https://github.com/jorg3o3iras/adabee-sistema/blob/main/dgp.jpg?raw=true" alt="DGP" class="logo" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">
+                                <div class="instituicao">
+                                    <span class="prefeitura">PREFEITURA MUNICIPAL DE</span>
+                                    <span class="secretaria">SÃO SEBASTIÃO DA BOA VISTA</span>
+                                    <span class="departamento">SECRETARIA MUNICIPAL DE EDUCAÇÃO</span>
+                                    <span class="departamento">DEPARTAMENTO DE GESTÃO PEDAGÓGICA - DGP</span>
+                                    <span class="sisam">SISAM 2026</span>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="titulo-relatorio">📊 RELATÓRIO DE DESEMPENHO</div>
+                                <div class="subtitulo-relatorio">${prova.titulo || 'Avaliação'}</div>
+                                <div style="font-size:8px; color:#94a3b8; margin-top:2px;">
+                                    ${disciplina} - Ano Letivo 2026
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== INFORMAÇÕES ===== -->
+                    <div class="info-grid">
+                        <div class="item">
+                            <span class="label">🏫 Escola</span>
+                            <span class="value">${escola.nome || '—'}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">👥 Turma</span>
+                            <span class="value">${(turma.nome || '') + ' - ' + (turma.serie || '')}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">🎒 Aluno</span>
+                            <span class="value">${aluno.nome || '—'}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">📄 Prova</span>
+                            <span class="value">${prova.titulo || '—'}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">📅 Data</span>
+                            <span class="value">${new Date().toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <div class="item">
+                            <span class="label">📊 Disciplina</span>
+                            <span class="value">${disciplina}</span>
+                        </div>
+                    </div>
+
+                    <!-- ===== RESUMO ===== -->
+                    <div class="resumo-grid">
+                        <div class="resumo-card">
+                            <div class="valor blue">${porcentagem}%</div>
+                            <div class="label">📊 Porcentagem de Acertos</div>
+                        </div>
+                        <div class="resumo-card">
+                            <div class="valor green">${acertos}</div>
+                            <div class="label">✅ Acertos</div>
+                        </div>
+                        <div class="resumo-card">
+                            <div class="valor red">${erros}</div>
+                            <div class="label">❌ Erros</div>
+                        </div>
+                        <div class="resumo-card">
+                            <div class="valor purple">${getConceitoBadge(conceito)}</div>
+                            <div class="label">📊 Conceito</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== DESEMPENHO POR QUESTÃO ===== -->
+                    <div class="section-title">
+                        📖 ${disciplina}
+                        <span class="badge">${totalQuestoes} questões</span>
+                    </div>
+
+                    <div class="questoes-grid">
+                        ${resultadoQuestoes.map(q => {
+                            const acertou = q.acertou;
+                            const resposta = q.resposta || '—';
+                            const gab = q.gabarito || '—';
+                            const statusIcon = acertou ? '✅' : (q.respondida ? '❌' : '—');
+                            const statusText = acertou ? 'ACERTOU' : (q.respondida ? 'ERROU' : 'NÃO RESP.');
+                            const statusClass = acertou ? 'acertou' : (q.respondida ? 'errou' : '');
+                            const bnccHtml = q.bncc ? `<div style="font-size:5px; color:#8b5cf6; margin-top:1px;">BNCC: ${q.bncc}</div>` : '';
+                            return `
+                                <div class="questao-item ${statusClass}">
+                                    <div class="q-num">Q${q.numero}</div>
+                                    <div class="q-resp">${resposta}</div>
+                                    <div class="q-gab">${gab}</div>
+                                    <span class="q-status-text">${statusIcon} ${statusText}</span>
+                                    ${bnccHtml}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- ===== GABARITO OFICIAL ===== -->
+                    <div class="section-title">
+                        📋 Gabarito Oficial
+                        <span class="badge">Oficial</span>
+                    </div>
+
+                    <div class="gabarito-grid">
+                        ${gabarito.map((gab, idx) => {
+                            const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
+                            const bnccHtml = codigoBncc ? `<div class="q-bncc">BNCC: ${codigoBncc}</div>` : '';
+                            return `
+                                <div class="gabarito-item">
+                                    <div class="q-num">Q${idx+1}</div>
+                                    <div class="q-resp">${gab || '—'}</div>
+                                    ${bnccHtml}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- ===== ASSINATURAS ===== -->
+                    <div class="assinaturas">
+                        <div class="assinatura-item">
+                            <div class="linha"></div>
+                            <div class="nome-assinatura">Professor(a) Responsável</div>
+                            <div class="cargo">Professor(a)</div>
+                        </div>
+                        <div class="assinatura-item">
+                            <div class="linha"></div>
+                            <div class="nome-assinatura">Diretor(a)</div>
+                            <div class="cargo">Diretor(a)</div>
+                        </div>
+                        <div class="assinatura-item">
+                            <div class="linha"></div>
+                            <div class="nome-assinatura">Secretário(a) de Educação</div>
+                            <div class="cargo">Secretaria Municipal de Educação</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== RODAPÉ ===== -->
+                    <div class="footer">
+                        <span>📄 Documento gerado pelo sistema <strong>CorrigePro</strong></span>
+                        <span>${dataAtual}</span>
+                        <span>© 2026 CorrigePro — Secretaria Municipal de Educação</span>
+                    </div>
+
+                </body>
+                </html>
+                `;
+
+                // ============================================
+                // ABRIR EM NOVA JANELA E IMPRIMIR
+                // ============================================
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+                    return;
+                }
+
+                win.document.write(html);
+                win.document.close();
+
+                // Aguarda o carregamento e imprime
+                win.onload = function() {
+                    setTimeout(() => {
+                        win.focus();
+                        win.print();
+                    }, 500);
+                };
+
+                showToast('🖨️ Relatório de desempenho enviado para impressão!', 'success');
             }
 
             // ============================================
