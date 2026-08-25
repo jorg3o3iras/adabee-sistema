@@ -8228,10 +8228,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 win.print();
             }
 
+            // ==
             // ============================================
-            // 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA
-            // ============================================
-            function exportarRelatorioPDF() {
+// 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA - CORRIGIDA
+// ============================================
+function exportarRelatorioPDF() {
     // Verifica se há dados para exportar
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
@@ -8245,6 +8246,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         return;
     }
 
+    showToast('📄 Gerando PDF...', 'info');
+
+    // 🔥 PEGA OS DADOS DA TELA
     // Obtém os filtros atuais
     const escolaSelect = document.getElementById('rel-turma-escola');
     const serieSelect = document.getElementById('rel-turma-serie');
@@ -8255,7 +8259,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Não informado';
     const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Não informado';
     
-    // Obtém a disciplina do select de prova
+    // Obtém a disciplina
     let disciplinaNome = 'Português';
     const provaOption = provaSelect.options[provaSelect.selectedIndex];
     if (provaOption && provaOption.dataset.disciplina) {
@@ -8269,36 +8273,61 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     const conceitoEl = document.getElementById('rel-conceito-geral');
     const conceito = conceitoEl ? conceitoEl.textContent : '—';
 
-    // 🔥 PEGA OS DADOS DOS CARDS DA TELA (QUE JÁ ESTÃO CORRETOS)
+    // 🔥 PEGA OS ACERTOS POR QUESTÃO DIRETAMENTE DOS CARDS DA TELA
     const acertosGrid = document.getElementById('rel-acertos-grid');
     let acertosPorQuestao = [];
     
     if (acertosGrid) {
-        // 🔥 PEGA CADA CARD DA TELA
         const items = acertosGrid.querySelectorAll('.acertos-por-questao-item');
         items.forEach(item => {
             // PEGA O NÚMERO DA QUESTÃO
             const qNumEl = item.querySelector('.q-num');
             const qNum = qNumEl ? qNumEl.textContent.trim() : '';
             
-            // PEGA ACERTOS E ERROS
+            // 🔥 PEGA ACERTOS - PROCURA PELA CLASSE .q-acertos
+            let acertos = '0';
             const acertosEl = item.querySelector('.q-acertos');
+            if (acertosEl) {
+                acertos = acertosEl.textContent.trim();
+            } else {
+                // TENTA PEGAR DO TEXTO
+                const text = item.textContent;
+                const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+                if (match) {
+                    acertos = match[1] || '0';
+                }
+            }
+            
+            // 🔥 PEGA ERROS - PROCURA PELA CLASSE .q-erros
+            let erros = '0';
             const errosEl = item.querySelector('.q-erros');
-            const acertos = acertosEl ? acertosEl.textContent.trim() : '0';
-            const erros = errosEl ? errosEl.textContent.trim() : '0';
+            if (errosEl) {
+                erros = errosEl.textContent.trim();
+            } else {
+                const text = item.textContent;
+                const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+                if (match) {
+                    erros = match[2] || '0';
+                }
+            }
             
-            // CALCULA O TOTAL
-            const total = parseInt(acertos) + parseInt(erros);
+            // 🔥 PEGA TOTAL
+            let total = parseInt(acertos) + parseInt(erros);
+            const totalEl = item.querySelector('.q-total');
+            if (totalEl) {
+                const totalText = totalEl.textContent.replace('Total: ', '').trim();
+                if (totalText && !isNaN(parseInt(totalText))) {
+                    total = parseInt(totalText);
+                }
+            }
             
-            // 🔥 PEGA O BNCC - PROCURA PELA CLASSE q-bncc-code
+            // 🔥 PEGA BNCC - PROCURA PELA CLASSE .q-bncc-code
             let bncc = 'N/A';
             const bnccEl = item.querySelector('.q-bncc-code');
             if (bnccEl) {
                 bncc = bnccEl.textContent.trim();
-            }
-            
-            // 🔥 SE NÃO ENCONTROU PELA CLASSE, TENTA ENCONTRAR PELO TEXTO
-            if (bncc === 'N/A') {
+            } else {
+                // TENTA ENCONTRAR NO TEXTO
                 const divs = item.querySelectorAll('div');
                 divs.forEach(div => {
                     const text = div.textContent.trim();
@@ -8320,19 +8349,35 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         });
     }
 
-    // 🔥 SE NÃO CONSEGUIU PEGAR DOS CARDS, TENTA PEGAR DO ELEMENTO QUE MOSTRA O TOTAL
+    // 🔥 SE NÃO CONSEGUIU PEGAR DOS CARDS, TENTA PEGAR DO ELEMENTO PAI
     if (acertosPorQuestao.length === 0) {
         const gridItems = document.querySelectorAll('#rel-acertos-grid > div');
         gridItems.forEach(item => {
             const qNum = item.querySelector('.q-num')?.textContent || '';
-            const acertos = item.querySelector('.q-acertos')?.textContent || '0';
-            const erros = item.querySelector('.q-erros')?.textContent || '0';
+            
+            // TENTA ENCONTRAR OS NÚMEROS NO TEXTO
+            const texto = item.textContent;
+            const match = texto.match(/(\d+)\s*\/\s*(\d+)/);
+            let acertos = '0', erros = '0';
+            if (match) {
+                acertos = match[1] || '0';
+                erros = match[2] || '0';
+            }
             const total = parseInt(acertos) + parseInt(erros);
             
             let bncc = 'N/A';
             const bnccEl = item.querySelector('.q-bncc-code');
             if (bnccEl) {
                 bncc = bnccEl.textContent.trim();
+            } else {
+                // PROCURA POR TEXTO COM EF
+                const divs = item.querySelectorAll('div');
+                divs.forEach(div => {
+                    const text = div.textContent.trim();
+                    if (text.includes('EF')) {
+                        bncc = text;
+                    }
+                });
             }
             
             if (qNum) {
@@ -8366,17 +8411,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         }
     });
 
-    // ============================================
-    // GERAÇÃO DO HTML PARA O PDF
-    // ============================================
-    const dataAtual = new Date().toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
     // Determina os totais
     const totalAlunos = alunosData.length;
     let totalAcertos = 0;
@@ -8394,7 +8428,18 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         });
     }
 
-    // Função para obter a badge do conceito
+    // ============================================
+    // GERAÇÃO DO HTML PARA O PDF
+    // ============================================
+    const dataAtual = new Date().toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // Função para badge do conceito
     function getConceitoBadge(conceito) {
         const conceitos = {
             'inicial': { label: '🔴 Inicial', color: '#ef4444', bg: '#fef2f2' },
@@ -8426,7 +8471,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 border-bottom: 3px solid #1e293b;
                 padding-bottom: 16px;
                 margin-bottom: 20px;
-                position: relative;
             }
             
             .header-top {
@@ -8794,6 +8838,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 .questao-card { break-inside: avoid; }
                 tr { break-inside: avoid; }
                 .assinaturas { break-inside: avoid; }
+                @page { size: A4 landscape; margin: 8mm 6mm; }
             }
             
             @media (max-width: 768px) {
@@ -8925,7 +8970,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     </html>
     `;
 
-    // Abrir em nova janela e imprimir
+    // Abrir em nova janela
     const win = window.open('', '_blank');
     if (!win) {
         showToast('⚠️ Permita pop-ups para gerar o PDF.', 'error');
