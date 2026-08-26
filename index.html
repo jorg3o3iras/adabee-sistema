@@ -7197,10 +7197,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         // Acertos / Erros
         // Total: 9
         // EF01LP10
+        // 55% | 45%  <-- ADICIONADO: Porcentagem de acertos e erros
         sortedKeys.forEach(num => {
             const data = questoesMap.get(num);
             const total = data.acertos + data.erros;
             const bnccCode = bnccMap.get(num) || 'N/A';
+            
+            // 🔥 CALCULAR PORCENTAGENS
+            const pctAcertos = total > 0 ? Math.round((data.acertos / total) * 100) : 0;
+            const pctErros = total > 0 ? Math.round((data.erros / total) * 100) : 0;
 
             const div = document.createElement('div');
             div.className = 'acertos-por-questao-item';
@@ -7216,6 +7221,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
                 <div style="font-size:11px; font-weight:700; color:var(--blue);">Total: ${total}</div>
                 <div style="font-size:12px; font-weight:700; color:#8b5cf6; background:rgba(139,92,246,0.12); padding:2px 10px; border-radius:8px; margin-top:4px; font-family:'Courier New',monospace; letter-spacing:0.3px; display:inline-block;">
                     ${bnccCode}
+                </div>
+                <div style="display:flex; justify-content:center; gap:10px; margin-top:4px; font-size:10px; font-weight:700; width:100%;">
+                    <span style="color:var(--green);">${pctAcertos}%</span>
+                    <span style="color:var(--text3); font-weight:300;">|</span>
+                    <span style="color:var(--red);">${pctErros}%</span>
                 </div>
             `;
             container.appendChild(div);
@@ -8336,6 +8346,20 @@ function exportarRelatorioPDF() {
                     }
                 });
             }
+
+            // 🔥 PEGA PORCENTAGENS
+            let pctAcertos = '0%';
+            let pctErros = '0%';
+            const pctElements = item.querySelectorAll('div');
+            pctElements.forEach(div => {
+                const text = div.textContent.trim();
+                // Procura padrão como "55% | 45%" ou "55%|45%"
+                const pctMatch = text.match(/(\d+)%\s*[|]\s*(\d+)%/);
+                if (pctMatch) {
+                    pctAcertos = pctMatch[1] + '%';
+                    pctErros = pctMatch[2] + '%';
+                }
+            });
             
             if (qNum) {
                 acertosPorQuestao.push({ 
@@ -8343,7 +8367,9 @@ function exportarRelatorioPDF() {
                     acertos: acertos, 
                     erros: erros, 
                     total: total,
-                    bncc: bncc 
+                    bncc: bncc,
+                    pctAcertos: pctAcertos,
+                    pctErros: pctErros
                 });
             }
         });
@@ -8379,6 +8405,19 @@ function exportarRelatorioPDF() {
                     }
                 });
             }
+
+            // TENTA PEGAR PORCENTAGENS
+            let pctAcertos = '0%';
+            let pctErros = '0%';
+            const allDivs = item.querySelectorAll('div');
+            allDivs.forEach(div => {
+                const text = div.textContent.trim();
+                const pctMatch = text.match(/(\d+)%\s*[|]\s*(\d+)%/);
+                if (pctMatch) {
+                    pctAcertos = pctMatch[1] + '%';
+                    pctErros = pctMatch[2] + '%';
+                }
+            });
             
             if (qNum) {
                 acertosPorQuestao.push({ 
@@ -8386,7 +8425,9 @@ function exportarRelatorioPDF() {
                     acertos: acertos, 
                     erros: erros, 
                     total: total,
-                    bncc: bncc 
+                    bncc: bncc,
+                    pctAcertos: pctAcertos,
+                    pctErros: pctErros
                 });
             }
         });
@@ -8673,6 +8714,19 @@ function exportarRelatorioPDF() {
                 border: 1px solid rgba(139,92,246,0.2);
             }
             
+            /* 🔥 NOVO ESTILO PARA PORCENTAGENS NO PDF */
+            .q-porcentagens {
+                display: flex;
+                justify-content: center;
+                gap: 12px;
+                margin-top: 4px;
+                font-size: 10px;
+                font-weight: 700;
+            }
+            .q-porcentagens .pct-acertos { color: #10b981; }
+            .q-porcentagens .pct-erros { color: #ef4444; }
+            .q-porcentagens .pct-divider { color: #94a3b8; font-weight: 300; }
+            
             .resumo-grid {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
@@ -8889,6 +8943,18 @@ function exportarRelatorioPDF() {
         <div class="questoes-grid">
             ${acertosPorQuestao.map(q => {
                 const total = parseInt(q.acertos) + parseInt(q.erros);
+                // 🔥 CALCULAR PORCENTAGENS SE NÃO FORAM PEGAS DA TELA
+                let pctAcertos = q.pctAcertos || '0%';
+                let pctErros = q.pctErros || '0%';
+                if (total > 0) {
+                    const calcAcertos = Math.round((parseInt(q.acertos) / total) * 100);
+                    const calcErros = Math.round((parseInt(q.erros) / total) * 100);
+                    // Só usa o cálculo se não tiver porcentagem vinda da tela
+                    if (pctAcertos === '0%' || pctAcertos === '0%') {
+                        pctAcertos = calcAcertos + '%';
+                        pctErros = calcErros + '%';
+                    }
+                }
                 return `
                     <div class="questao-card">
                         <div class="q-num">${q.numero}</div>
@@ -8900,6 +8966,11 @@ function exportarRelatorioPDF() {
                         <div class="q-label">Acertos / Erros</div>
                         <div class="q-total">Total: ${total}</div>
                         <div class="q-bncc">${q.bncc}</div>
+                        <div class="q-porcentagens">
+                            <span class="pct-acertos">${pctAcertos}</span>
+                            <span class="pct-divider">|</span>
+                            <span class="pct-erros">${pctErros}</span>
+                        </div>
                     </div>
                 `;
             }).join('')}
@@ -8990,10 +9061,7 @@ function exportarRelatorioPDF() {
     showToast('📄 PDF gerado com sucesso!', 'success');
 }
 
-            // ============================================
-            // 🔥 FUNÇÃO PARA IMPRIMIR RESULTADOS MELHORADOS
-            // ============================================
-            // ============================================
+ // ============================================
 // 🔥 FUNÇÃO PARA IMPRIMIR RESULTADOS MELHORADOS
 // ============================================
 function imprimirResultadosMelhorados() {
