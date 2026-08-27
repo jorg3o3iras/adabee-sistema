@@ -1352,7 +1352,7 @@ def validar_gabarito(gabarito):
 
 
 # ============================================
-# ROTA DE CORREÇÃO MANUAL
+# 🔥 ROTA DE CORREÇÃO MANUAL - CORRIGIDA (SEM BNCC NO HISTORICO)
 # ============================================
 
 @app.route('/api/corrigir_manual', methods=['POST'])
@@ -1377,6 +1377,7 @@ def corrigir_manual():
 
         cur = conn.cursor()
 
+        # 🔥 BUSCA DADOS DA PROVA (INCLUINDO BNCC PARA EXIBIÇÃO)
         cur.execute("SELECT disciplina, titulo, serie, gabarito, bncc FROM provas WHERE id = %s", (prova_id,))
         prova = cur.fetchone()
 
@@ -1384,7 +1385,7 @@ def corrigir_manual():
         prova_titulo = prova[1] if prova else ''
         serie_prova = prova[2] if prova else ''
         gabarito = prova[3] if prova else []
-        bncc_gabarito = prova[4] if prova else []
+        bncc_gabarito = prova[4] if prova else []  # 🔥 BNCC VEM DA PROVA, NÃO É SALVO NO HISTORICO
 
         cur.execute("""
             SELECT t.serie FROM alunos a
@@ -1397,11 +1398,14 @@ def corrigir_manual():
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
         print(f"📌 Tipo avaliação: {tipo_avaliacao}")
 
+        # 🔥 CRIA O STATUS DAS QUESTÕES (COM BNCC APENAS PARA EXIBIÇÃO)
         questoes_status = []
         for i in range(total):
             resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
             gab = str(gabarito[i]) if i < len(gabarito) and gabarito[i] is not None else ''
             is_correto = resp and gab and resp.upper() == gab.upper()
+            
+            # 🔥 BNCC APENAS PARA EXIBIÇÃO (NÃO É SALVO NO BANCO)
             codigo_bncc = bncc_gabarito[i] if i < len(bncc_gabarito) and bncc_gabarito[i] else ''
 
             if is_correto:
@@ -1418,7 +1422,7 @@ def corrigir_manual():
                 'acertou': is_correto,
                 'status': status_msg,
                 'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}",
-                'bncc': codigo_bncc
+                'bncc': codigo_bncc  # 🔥 BNCC APENAS PARA EXIBIÇÃO
             })
 
         try:
@@ -1434,6 +1438,7 @@ def corrigir_manual():
         existe = cur.fetchone()
 
         if existe:
+            # 🔥 ATUALIZA SEM BNCC (A COLUNA NÃO EXISTE NO HISTORICO)
             cur.execute("""
                 UPDATE historico
                 SET respostas = %s::text[],
@@ -1444,20 +1449,20 @@ def corrigir_manual():
                     disciplina = %s,
                     tipo_avaliacao = %s,
                     questoes_status = %s::jsonb,
-                    bncc = %s::text[],
                     data_correcao = CURRENT_TIMESTAMP
                 WHERE prova_id = %s AND aluno_id = %s
-            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, bncc_gabarito, prova_id, aluno_id))
+            """, (respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, prova_id, aluno_id))
             result_id = existe[0] if isinstance(existe, tuple) else existe
             print(f"✅ Atualizado! ID: {result_id}")
         else:
+            # 🔥 INSERE SEM BNCC (A COLUNA NÃO EXISTE NO HISTORICO)
             cur.execute("""
                 INSERT INTO historico
                 (prova_id, aluno_id, respostas, acertos, nota, total,
-                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status, bncc)
-                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s, %s::jsonb, %s::text[])
+                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status)
+                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual', %s, %s, %s::jsonb)
                 RETURNING id
-            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json, bncc_gabarito))
+            """, (prova_id, aluno_id, respostas, acertos, nota, total, disciplina, tipo_avaliacao, questoes_status_json))
             result = cur.fetchone()
             result_id = result[0] if result else None
             print(f"✅ Criado! ID: {result_id}")
@@ -1469,6 +1474,7 @@ def corrigir_manual():
         porcentagem = round((acertos / total) * 100) if total > 0 else 0
         conceito = calcular_conceito(porcentagem)
 
+        # 🔥 RETORNA O BNCC PARA O FRONTEND EXIBIR
         return jsonify({
             'sucesso': True,
             'id': result_id,
@@ -4267,7 +4273,7 @@ def init_db():
         else:
             print("📌 Tabelas já existem, verificando colunas...")
 
-            # Verificar coluna bncc
+            # Verificar coluna bncc na tabela provas
             cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
@@ -4296,7 +4302,7 @@ def init_db():
                     except Exception as e:
                         print(f"⚠️ Erro ao adicionar coluna {col}: {e}")
 
-            # Verificar coluna questoes_status
+            # Verificar coluna questoes_status na tabela historico
             cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
