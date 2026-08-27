@@ -5957,6 +5957,9 @@ function imprimirAlunos() {
 // ============================================
 // 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA
 // ============================================
+// ============================================
+// 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA - CORRIGIDA
+// ============================================
 function exportarRelatorioPDF() {
     // Verifica se há dados para exportar
     const tbody = document.getElementById('tb-rel-alunos');
@@ -5979,13 +5982,13 @@ function exportarRelatorioPDF() {
     const turmaSelect = document.getElementById('rel-turma-turma');
     const provaSelect = document.getElementById('rel-turma-prova');
 
-    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Não informado';
-    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Não informado';
-    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Não informado';
+    const escolaNome = escolaSelect?.options[escolaSelect.selectedIndex]?.text || 'Não informado';
+    const serieNome = serieSelect?.options[serieSelect.selectedIndex]?.text || 'Não informado';
+    const turmaNome = turmaSelect?.options[turmaSelect.selectedIndex]?.text || 'Não informado';
     
     // Obtém a disciplina
     let disciplinaNome = 'Português';
-    const provaOption = provaSelect.options[provaSelect.selectedIndex];
+    const provaOption = provaSelect?.options[provaSelect.selectedIndex];
     if (provaOption && provaOption.dataset.disciplina) {
         disciplinaNome = provaOption.dataset.disciplina;
     }
@@ -5997,8 +6000,11 @@ function exportarRelatorioPDF() {
     const conceitoEl = document.getElementById('rel-conceito-geral');
     const conceito = conceitoEl ? conceitoEl.textContent : '—';
 
-    // Coleta os dados dos alunos
+    // 🔥 COLETA OS DADOS DOS ALUNOS DIRETAMENTE DA TABELA
     const alunosData = [];
+    let totalAcertosGeral = 0;
+    let totalErrosGeral = 0;
+    
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 9) {
@@ -6006,30 +6012,151 @@ function exportarRelatorioPDF() {
             const numero = cells[1]?.textContent.trim() || '';
             const nome = cells[2]?.textContent.trim() || '';
             const serie = cells[3]?.textContent.trim() || '';
-            const acertos = cells[4]?.textContent.trim() || '0';
-            const erros = cells[5]?.textContent.trim() || '0';
+            
+            // 🔥 PEGA OS ACERTOS E ERROS DA TABELA
+            const acertosText = cells[4]?.textContent.trim() || '0';
+            const errosText = cells[5]?.textContent.trim() || '0';
+            const acertos = parseInt(acertosText) || 0;
+            const erros = parseInt(errosText) || 0;
+            
             const conceitoAluno = cells[6]?.textContent.trim() || '';
             const escola = cells[7]?.textContent.trim() || '';
             const turma = cells[8]?.textContent.trim() || '';
             
-            alunosData.push({ posicao, numero, nome, serie, acertos, erros, conceito: conceitoAluno, escola, turma });
+            totalAcertosGeral += acertos;
+            totalErrosGeral += erros;
+            
+            alunosData.push({ 
+                posicao, 
+                numero, 
+                nome, 
+                serie, 
+                acertos, 
+                erros, 
+                conceito: conceitoAluno, 
+                escola, 
+                turma 
+            });
         }
     });
 
-    // Determina os totais
     const totalAlunos = alunosData.length;
-    let totalAcertos = 0;
-    let totalErros = 0;
+
+    // 🔥 COLETA OS DADOS DE ACERTOS POR QUESTÃO DIRETAMENTE DO DOM
+    const acertosPorQuestao = [];
+    const acertosGrid = document.getElementById('rel-acertos-grid');
     
-    alunosData.forEach(a => {
-        totalAcertos += parseInt(a.acertos) || 0;
-        totalErros += parseInt(a.erros) || 0;
-    });
+    if (acertosGrid) {
+        // Procura por todos os cards de questão
+        const items = acertosGrid.querySelectorAll('.acertos-por-questao-item, [style*="padding:12px 10px"], [class*="questao"]');
+        
+        items.forEach(item => {
+            // Tenta encontrar o número da questão
+            let qNum = '';
+            const qNumEl = item.querySelector('.q-num') || item.querySelector('[style*="font-size: 14px; font-weight: 800;"]');
+            if (qNumEl) {
+                qNum = qNumEl.textContent.trim();
+            } else {
+                // Tenta extrair do texto
+                const texto = item.textContent || '';
+                const match = texto.match(/Q(\d+)/i);
+                if (match) {
+                    qNum = 'Q' + match[1];
+                }
+            }
+            
+            // Tenta encontrar acertos/erros
+            let acertos = '0', erros = '0';
+            const numeros = item.querySelectorAll('[style*="color: var(--green);"], [style*="color: var(--red);"]');
+            if (numeros.length >= 2) {
+                acertos = numeros[0].textContent.trim();
+                erros = numeros[1].textContent.trim();
+            } else {
+                // Tenta extrair do texto "22 / 3"
+                const texto = item.textContent || '';
+                const match = texto.match(/(\d+)\s*\/\s*(\d+)/);
+                if (match) {
+                    acertos = match[1] || '0';
+                    erros = match[2] || '0';
+                }
+            }
+            
+            // Tenta encontrar total
+            let total = parseInt(acertos) + parseInt(erros);
+            
+            // Tenta encontrar BNCC
+            let bncc = 'N/A';
+            const bnccEl = item.querySelector('[style*="color:#8b5cf6;"]') || 
+                           item.querySelector('[style*="background:rgba(139,92,246,0.12);"]');
+            if (bnccEl) {
+                bncc = bnccEl.textContent.trim();
+            } else {
+                const texto = item.textContent || '';
+                const match = texto.match(/(EF\d+[A-Z]+\d+)/);
+                if (match) {
+                    bncc = match[1];
+                }
+            }
+            
+            // Tenta encontrar porcentagens
+            let pctAcertos = '0%', pctErros = '0%';
+            const pctElements = item.querySelectorAll('[style*="color: var(--green);"], [style*="color: var(--red);"]');
+            if (pctElements.length >= 4) {
+                pctAcertos = pctElements[2]?.textContent.trim() || '0%';
+                pctErros = pctElements[3]?.textContent.trim() || '0%';
+            } else {
+                const texto = item.textContent || '';
+                const match = texto.match(/(\d+)%\s*[|]\s*(\d+)%/);
+                if (match) {
+                    pctAcertos = match[1] + '%';
+                    pctErros = match[2] + '%';
+                }
+            }
+            
+            if (qNum) {
+                acertosPorQuestao.push({ 
+                    numero: qNum, 
+                    acertos: acertos, 
+                    erros: erros, 
+                    total: total,
+                    bncc: bncc,
+                    pctAcertos: pctAcertos,
+                    pctErros: pctErros
+                });
+            }
+        });
+    }
+
+    // 🔥 SE NÃO CONSEGUIU PEGAR DOS CARDS, TENTA PEGAR DO CONTEÚDO DIRETO
+    if (acertosPorQuestao.length === 0 && acertosGrid) {
+        const html = acertosGrid.innerHTML;
+        const matches = html.match(/Q(\d+).*?(\d+)\s*\/\s*(\d+).*?(EF\d+[A-Z]+\d+).*?(\d+)%\s*[|]\s*(\d+)%/gs);
+        if (matches) {
+            matches.forEach(match => {
+                const qMatch = match.match(/Q(\d+)/);
+                const numMatch = match.match(/(\d+)\s*\/\s*(\d+)/);
+                const bnccMatch = match.match(/(EF\d+[A-Z]+\d+)/);
+                const pctMatch = match.match(/(\d+)%\s*[|]\s*(\d+)%/);
+                
+                if (qMatch && numMatch) {
+                    acertosPorQuestao.push({
+                        numero: 'Q' + qMatch[1],
+                        acertos: numMatch[1] || '0',
+                        erros: numMatch[2] || '0',
+                        total: parseInt(numMatch[1] || '0') + parseInt(numMatch[2] || '0'),
+                        bncc: bnccMatch ? bnccMatch[1] : 'N/A',
+                        pctAcertos: pctMatch ? pctMatch[1] + '%' : '0%',
+                        pctErros: pctMatch ? pctMatch[2] + '%' : '0%'
+                    });
+                }
+            });
+        }
+    }
 
     // 🔥 CALCULA A MÉDIA CORRETA
-    const totalQuestoesGeral = totalAcertos + totalErros;
+    const totalQuestoesGeral = totalAcertosGeral + totalErrosGeral;
     const mediaCalculada = totalQuestoesGeral > 0 && totalAlunos > 0 ? 
-        Math.round((totalAcertos / (totalAlunos * (totalQuestoesGeral / totalAlunos))) * 100) : 0;
+        Math.round((totalAcertosGeral / (totalAlunos * (totalQuestoesGeral / totalAlunos))) * 100) : 0;
 
     // ============================================
     // GERAÇÃO DO HTML PARA O PDF
@@ -6042,6 +6169,7 @@ function exportarRelatorioPDF() {
         minute: '2-digit'
     });
 
+    // Função para badge do conceito
     function getConceitoBadge(conceito) {
         const conceitos = {
             'inicial': { label: '🔴 Inicial', color: '#ef4444', bg: '#fef2f2' },
@@ -6053,6 +6181,7 @@ function exportarRelatorioPDF() {
         return `<span style="background:${c.bg}; color:${c.color}; padding:2px 12px; border-radius:12px; font-size:10px; font-weight:700;">${c.label}</span>`;
     }
 
+    // Gera o HTML do relatório
     let html = `
     <!DOCTYPE html>
     <html>
@@ -6500,7 +6629,7 @@ function exportarRelatorioPDF() {
         </div>
 
         <div class="questoes-grid">
-            ${acertosPorQuestao.map(q => {
+            ${acertosPorQuestao.length > 0 ? acertosPorQuestao.map(q => {
                 const total = parseInt(q.acertos) + parseInt(q.erros);
                 let pctAcertos = q.pctAcertos || '0%';
                 let pctErros = q.pctErros || '0%';
@@ -6530,12 +6659,16 @@ function exportarRelatorioPDF() {
                         </div>
                     </div>
                 `;
-            }).join('')}
+            }).join('') : `
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">
+                    Nenhum dado disponível para esta disciplina.
+                </div>
+            `}
         </div>
 
         <div class="resumo-grid">
-            <div class="resumo-card"><div class="valor green">${totalAcertos}</div><div class="label">✅ Total de Acertos</div></div>
-            <div class="resumo-card"><div class="valor red">${totalErros}</div><div class="label">❌ Total de Erros</div></div>
+            <div class="resumo-card"><div class="valor green">${totalAcertosGeral}</div><div class="label">✅ Total de Acertos</div></div>
+            <div class="resumo-card"><div class="valor red">${totalErrosGeral}</div><div class="label">❌ Total de Erros</div></div>
             <div class="resumo-card"><div class="valor blue">${media || mediaCalculada + '%'}</div><div class="label">📊 Média da Turma</div></div>
             <div class="resumo-card"><div class="valor purple">${conceito}</div><div class="label">📊 Conceito</div></div>
         </div>
