@@ -5896,6 +5896,9 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
             // ============================================
 // 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA - CORRIGIDA
 // ============================================
+// ============================================
+// 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA - CORRIGIDA
+// ============================================
 function exportarRelatorioPDF() {
     // Verifica se há dados para exportar
     const tbody = document.getElementById('tb-rel-alunos');
@@ -5912,7 +5915,6 @@ function exportarRelatorioPDF() {
 
     showToast('📄 Gerando PDF...', 'info');
 
-    // 🔥 PEGA OS DADOS DA TELA
     // Obtém os filtros atuais
     const escolaSelect = document.getElementById('rel-turma-escola');
     const serieSelect = document.getElementById('rel-turma-serie');
@@ -5937,83 +5939,84 @@ function exportarRelatorioPDF() {
     const conceitoEl = document.getElementById('rel-conceito-geral');
     const conceito = conceitoEl ? conceitoEl.textContent : '—';
 
-    // 🔥 PEGA OS ACERTOS POR QUESTÃO DIRETAMENTE DOS CARDS DA TELA
+    // 🔥 CORREÇÃO: PEGAR OS DADOS DE ACERTOS POR QUESTÃO DO DOM CORRETAMENTE
     const acertosGrid = document.getElementById('rel-acertos-grid');
     let acertosPorQuestao = [];
     
     if (acertosGrid) {
-        const items = acertosGrid.querySelectorAll('.acertos-por-questao-item');
+        // 🔥 PROCURA POR TODOS OS ELEMENTOS QUE CONTÊM DADOS DE QUESTÕES
+        const items = acertosGrid.querySelectorAll('.acertos-por-questao-item, div[style*="padding:12px 10px"], div[class*="questao"]');
+        
         items.forEach(item => {
-            // PEGA O NÚMERO DA QUESTÃO
-            const qNumEl = item.querySelector('.q-num');
-            const qNum = qNumEl ? qNumEl.textContent.trim() : '';
-            
-            // 🔥 PEGA ACERTOS - PROCURA PELA CLASSE .q-acertos
-            let acertos = '0';
-            const acertosEl = item.querySelector('.q-acertos');
-            if (acertosEl) {
-                acertos = acertosEl.textContent.trim();
+            // Tenta encontrar o número da questão
+            let qNum = '';
+            const qNumEl = item.querySelector('.q-num') || item.querySelector('[style*="font-size: 14px; font-weight: 800;"]');
+            if (qNumEl) {
+                qNum = qNumEl.textContent.trim();
             } else {
-                // TENTA PEGAR DO TEXTO
-                const text = item.textContent;
-                const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+                // Tenta extrair do texto
+                const texto = item.textContent || '';
+                const match = texto.match(/Q(\d+)/i);
                 if (match) {
-                    acertos = match[1] || '0';
+                    qNum = 'Q' + match[1];
                 }
             }
             
-            // 🔥 PEGA ERROS - PROCURA PELA CLASSE .q-erros
-            let erros = '0';
-            const errosEl = item.querySelector('.q-erros');
-            if (errosEl) {
-                erros = errosEl.textContent.trim();
+            // Tenta encontrar acertos/erros
+            let acertos = '0', erros = '0';
+            const numeros = item.querySelectorAll('[style*="color: var(--green);"], [style*="color: var(--red);"]');
+            if (numeros.length >= 2) {
+                acertos = numeros[0].textContent.trim();
+                erros = numeros[1].textContent.trim();
             } else {
-                const text = item.textContent;
-                const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+                // Tenta extrair do texto "22 / 3"
+                const texto = item.textContent || '';
+                const match = texto.match(/(\d+)\s*\/\s*(\d+)/);
                 if (match) {
+                    acertos = match[1] || '0';
                     erros = match[2] || '0';
                 }
             }
             
-            // 🔥 PEGA TOTAL
+            // Tenta encontrar total
             let total = parseInt(acertos) + parseInt(erros);
-            const totalEl = item.querySelector('.q-total');
+            const totalEl = item.querySelector('[style*="color: var(--blue);"]') || 
+                           item.querySelector('[style*="font-size:11px; font-weight:700; color:var(--blue);"]');
             if (totalEl) {
-                const totalText = totalEl.textContent.replace('Total: ', '').trim();
+                const totalText = totalEl.textContent.replace('Total:', '').trim();
                 if (totalText && !isNaN(parseInt(totalText))) {
                     total = parseInt(totalText);
                 }
             }
             
-            // 🔥 PEGA BNCC - PROCURA PELA CLASSE .q-bncc-code
+            // Tenta encontrar BNCC
             let bncc = 'N/A';
-            const bnccEl = item.querySelector('.q-bncc-code');
+            const bnccEl = item.querySelector('[style*="color:#8b5cf6;"]') || 
+                           item.querySelector('[style*="background:rgba(139,92,246,0.12);"]');
             if (bnccEl) {
                 bncc = bnccEl.textContent.trim();
             } else {
-                // TENTA ENCONTRAR NO TEXTO
-                const divs = item.querySelectorAll('div');
-                divs.forEach(div => {
-                    const text = div.textContent.trim();
-                    if (text.includes('EF') || text.includes('N/A')) {
-                        bncc = text;
-                    }
-                });
-            }
-
-            // 🔥 PEGA PORCENTAGENS
-            let pctAcertos = '0%';
-            let pctErros = '0%';
-            const pctElements = item.querySelectorAll('div');
-            pctElements.forEach(div => {
-                const text = div.textContent.trim();
-                // Procura padrão como "55% | 45%" ou "55%|45%"
-                const pctMatch = text.match(/(\d+)%\s*[|]\s*(\d+)%/);
-                if (pctMatch) {
-                    pctAcertos = pctMatch[1] + '%';
-                    pctErros = pctMatch[2] + '%';
+                const texto = item.textContent || '';
+                const match = texto.match(/(EF\d+[A-Z]+\d+)/);
+                if (match) {
+                    bncc = match[1];
                 }
-            });
+            }
+            
+            // Tenta encontrar porcentagens
+            let pctAcertos = '0%', pctErros = '0%';
+            const pctElements = item.querySelectorAll('[style*="color: var(--green);"], [style*="color: var(--red);"]');
+            if (pctElements.length >= 4) {
+                pctAcertos = pctElements[2]?.textContent.trim() || '0%';
+                pctErros = pctElements[3]?.textContent.trim() || '0%';
+            } else {
+                const texto = item.textContent || '';
+                const match = texto.match(/(\d+)%\s*[|]\s*(\d+)%/);
+                if (match) {
+                    pctAcertos = match[1] + '%';
+                    pctErros = match[2] + '%';
+                }
+            }
             
             if (qNum) {
                 acertosPorQuestao.push({ 
@@ -6029,69 +6032,41 @@ function exportarRelatorioPDF() {
         });
     }
 
-    // 🔥 SE NÃO CONSEGUIU PEGAR DOS CARDS, TENTA PEGAR DO ELEMENTO PAI
+    // 🔥 SE NÃO CONSEGUIU PEGAR DOS CARDS, TENTA PEGAR DO CONTEÚDO DIRETO
     if (acertosPorQuestao.length === 0) {
-        const gridItems = document.querySelectorAll('#rel-acertos-grid > div');
-        gridItems.forEach(item => {
-            const qNum = item.querySelector('.q-num')?.textContent || '';
-            
-            // TENTA ENCONTRAR OS NÚMEROS NO TEXTO
-            const texto = item.textContent;
-            const match = texto.match(/(\d+)\s*\/\s*(\d+)/);
-            let acertos = '0', erros = '0';
-            if (match) {
-                acertos = match[1] || '0';
-                erros = match[2] || '0';
-            }
-            const total = parseInt(acertos) + parseInt(erros);
-            
-            let bncc = 'N/A';
-            const bnccEl = item.querySelector('.q-bncc-code');
-            if (bnccEl) {
-                bncc = bnccEl.textContent.trim();
-            } else {
-                // PROCURA POR TEXTO COM EF
-                const divs = item.querySelectorAll('div');
-                divs.forEach(div => {
-                    const text = div.textContent.trim();
-                    if (text.includes('EF')) {
-                        bncc = text;
+        const container = document.getElementById('rel-acertos-grid');
+        if (container) {
+            // Pega todo o texto e tenta extrair as questões
+            const html = container.innerHTML;
+            const matches = html.match(/Q(\d+).*?(\d+)\s*\/\s*(\d+).*?(EF\d+[A-Z]+\d+).*?(\d+)%\s*[|]\s*(\d+)%/gs);
+            if (matches) {
+                matches.forEach(match => {
+                    const qMatch = match.match(/Q(\d+)/);
+                    const numMatch = match.match(/(\d+)\s*\/\s*(\d+)/);
+                    const bnccMatch = match.match(/(EF\d+[A-Z]+\d+)/);
+                    const pctMatch = match.match(/(\d+)%\s*[|]\s*(\d+)%/);
+                    
+                    if (qMatch && numMatch) {
+                        acertosPorQuestao.push({
+                            numero: 'Q' + qMatch[1],
+                            acertos: numMatch[1] || '0',
+                            erros: numMatch[2] || '0',
+                            total: parseInt(numMatch[1] || '0') + parseInt(numMatch[2] || '0'),
+                            bncc: bnccMatch ? bnccMatch[1] : 'N/A',
+                            pctAcertos: pctMatch ? pctMatch[1] + '%' : '0%',
+                            pctErros: pctMatch ? pctMatch[2] + '%' : '0%'
+                        });
                     }
                 });
             }
-
-            // TENTA PEGAR PORCENTAGENS
-            let pctAcertos = '0%';
-            let pctErros = '0%';
-            const allDivs = item.querySelectorAll('div');
-            allDivs.forEach(div => {
-                const text = div.textContent.trim();
-                const pctMatch = text.match(/(\d+)%\s*[|]\s*(\d+)%/);
-                if (pctMatch) {
-                    pctAcertos = pctMatch[1] + '%';
-                    pctErros = pctMatch[2] + '%';
-                }
-            });
-            
-            if (qNum) {
-                acertosPorQuestao.push({ 
-                    numero: qNum, 
-                    acertos: acertos, 
-                    erros: erros, 
-                    total: total,
-                    bncc: bncc,
-                    pctAcertos: pctAcertos,
-                    pctErros: pctErros
-                });
-            }
-        });
+        }
     }
 
     // Coleta os dados dos alunos
     const alunosData = [];
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
+        if (cells.length >= 9) {
             const posicao = cells[0]?.textContent.trim() || '';
             const numero = cells[1]?.textContent.trim() || '';
             const nome = cells[2]?.textContent.trim() || '';
@@ -6110,6 +6085,8 @@ function exportarRelatorioPDF() {
     const totalAlunos = alunosData.length;
     let totalAcertos = 0;
     let totalErros = 0;
+    
+    // 🔥 CORREÇÃO: Usa os dados dos alunos para os totais
     alunosData.forEach(a => {
         totalAcertos += parseInt(a.acertos) || 0;
         totalErros += parseInt(a.erros) || 0;
@@ -6122,6 +6099,11 @@ function exportarRelatorioPDF() {
             totalErros += parseInt(q.erros) || 0;
         });
     }
+
+    // 🔥 CALCULA A MÉDIA CORRETA
+    const totalQuestoesGeral = totalAcertos + totalErros;
+    const mediaCalculada = totalQuestoesGeral > 0 && totalAlunos > 0 ? 
+        Math.round((totalAcertos / (totalAlunos * (totalQuestoesGeral / totalAlunos))) * 100) : 0;
 
     // ============================================
     // GERAÇÃO DO HTML PARA O PDF
@@ -6142,7 +6124,7 @@ function exportarRelatorioPDF() {
             'proficiente': { label: '🔵 Proficiente', color: '#3b82f6', bg: '#eff6ff' },
             'avancado': { label: '🟢 Avançado', color: '#10b981', bg: '#ecfdf5' }
         };
-        const c = conceitos[conceito.toLowerCase()] || { label: conceito, color: '#64748b', bg: '#f1f5f9' };
+        const c = conceitos[conceito?.toLowerCase()] || { label: conceito || '—', color: '#64748b', bg: '#f1f5f9' };
         return `<span style="background:${c.bg}; color:${c.color}; padding:2px 12px; border-radius:12px; font-size:10px; font-weight:700;">${c.label}</span>`;
     }
 
@@ -6368,7 +6350,6 @@ function exportarRelatorioPDF() {
                 border: 1px solid rgba(139,92,246,0.2);
             }
             
-            /* 🔥 NOVO ESTILO PARA PORCENTAGENS NO PDF */
             .q-porcentagens {
                 display: flex;
                 justify-content: center;
@@ -6595,15 +6576,13 @@ function exportarRelatorioPDF() {
         </div>
 
         <div class="questoes-grid">
-            ${acertosPorQuestao.map(q => {
+            ${acertosPorQuestao.length > 0 ? acertosPorQuestao.map(q => {
                 const total = parseInt(q.acertos) + parseInt(q.erros);
-                // 🔥 CALCULAR PORCENTAGENS SE NÃO FORAM PEGAS DA TELA
                 let pctAcertos = q.pctAcertos || '0%';
                 let pctErros = q.pctErros || '0%';
                 if (total > 0) {
                     const calcAcertos = Math.round((parseInt(q.acertos) / total) * 100);
                     const calcErros = Math.round((parseInt(q.erros) / total) * 100);
-                    // Só usa o cálculo se não tiver porcentagem vinda da tela
                     if (pctAcertos === '0%' || pctAcertos === '0%') {
                         pctAcertos = calcAcertos + '%';
                         pctErros = calcErros + '%';
@@ -6627,13 +6606,17 @@ function exportarRelatorioPDF() {
                         </div>
                     </div>
                 `;
-            }).join('')}
+            }).join('') : `
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">
+                    Nenhum dado disponível para esta disciplina.
+                </div>
+            `}
         </div>
 
         <div class="resumo-grid">
             <div class="resumo-card"><div class="valor green">${totalAcertos}</div><div class="label">✅ Total de Acertos</div></div>
             <div class="resumo-card"><div class="valor red">${totalErros}</div><div class="label">❌ Total de Erros</div></div>
-            <div class="resumo-card"><div class="valor blue">${media}</div><div class="label">📊 Média da Turma</div></div>
+            <div class="resumo-card"><div class="valor blue">${media || mediaCalculada + '%'}</div><div class="label">📊 Média da Turma</div></div>
             <div class="resumo-card"><div class="valor purple">${conceito}</div><div class="label">📊 Conceito</div></div>
         </div>
 
