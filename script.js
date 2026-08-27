@@ -2620,7 +2620,6 @@
     const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
     const nota = Math.min((acertos * valorPorQuestao), cmStandaloneData.notaMaxima || 10);
 
-    // 🔥 MOSTRA TOAST DE CARREGAMENTO (SEM PROGRESS MANAGER)
     showToast('💾 Salvando correção manual...', 'info');
 
     const dadosCorrecao = {
@@ -2663,13 +2662,60 @@
     .then(data => {
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
+            
+            // 🔥 LIMPA O CACHE
             limparCache();
+            
+            // 🔥 FECHA O MODAL
             closeM('m-correcao-manual-standalone');
+
+            // 🔥 ATUALIZA TODOS OS DADOS AUTOMATICAMENTE
             setTimeout(() => {
-                carregarResultadosComFiltros();
-                carregarDashboard();
+                // Atualiza a página atual
+                const paginaAtual = document.querySelector('.page.active');
+                if (paginaAtual) {
+                    const pageId = paginaAtual.id.replace('page-', '');
+                    
+                    // 🔥 RECARREGA OS DADOS CONFORME A PÁGINA ATUAL
+                    switch(pageId) {
+                        case 'resultados':
+                            carregarResultadosComFiltros();
+                            break;
+                        case 'dashboard':
+                            carregarDashboard();
+                            carregarUltimasCorrecoes();
+                            break;
+                        case 'rel-turma':
+                            carregarRelatorioTurmaFiltrado();
+                            break;
+                        case 'desempenho':
+                            // Se estiver na página de desempenho, recarrega
+                            if (desempenhoData.alunoSelecionado) {
+                                gerarDesempenho();
+                            }
+                            break;
+                        default:
+                            // Recarrega tudo para garantir
+                            carregarResultadosComFiltros();
+                            carregarDashboard();
+                            carregarUltimasCorrecoes();
+                            break;
+                    }
+                } else {
+                    // Fallback: recarrega tudo
+                    carregarResultadosComFiltros();
+                    carregarDashboard();
+                    carregarUltimasCorrecoes();
+                }
+                
+                // 🔥 ATUALIZA O CONCEITO REAL
+                carregarConceitoReal();
+                
+                // 🔥 ATUALIZA O HISTÓRICO
                 carregarUltimasCorrecoes();
-            }, 500);
+                
+                console.log('✅ Todos os dados foram atualizados automaticamente!');
+            }, 300);
         } else {
             showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
         }
