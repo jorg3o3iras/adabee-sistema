@@ -13,400 +13,194 @@
             // ============================================
             // SISTEMA DE PROGRESSO VISUAL
             // ============================================
-            // ============================================
-// SISTEMA DE PROGRESSO VISUAL - CORRIGIDO
-// ============================================
-class ProgressManager {
-    constructor() {
-        this.modal = null;
-        this.barra = null;
-        this.textoEtapa = null;
-        this.textoTempo = null;
-        this.porcentagem = null;
-        this.containerEtapas = null;
-        this.titulo = null;
-        this.icone = null;
-        this.fecharBtn = null;
-        this.cancelarBtn = null;
-        this.etapas = [];
-        this.etapaAtual = 0;
-        this.tempoInicio = null;
-        this.timer = null;
-        this.modalCriado = false;
-        this.elementosValidos = false;
-    }
-
-    criarModal() {
-        // Verifica se o modal já existe
-        let modal = document.getElementById('progress-modal');
-        
-        if (!modal) {
-            // Cria o modal dinamicamente
-            modal = document.createElement('div');
-            modal.id = 'progress-modal';
-            modal.className = 'modal-overlay';
-            modal.style.display = 'none';
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width: 560px; width: 90%;">
-                    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span id="progress-icone" style="font-size:24px;">🤖</span>
-                            <h3 id="progress-titulo" style="margin:0;font-size:16px;">Processando...</h3>
-                        </div>
-                        <button id="progress-fechar" class="btn btn-outline btn-sm" style="display:none;">✕ Fechar</button>
-                    </div>
-                    <div style="padding:20px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                            <span id="progress-status" style="font-size:13px;color:var(--text2);">Iniciando...</span>
-                            <span id="progress-porcentagem" style="font-size:13px;font-weight:700;color:var(--blue);">0%</span>
-                        </div>
-                        <div style="background:var(--bg2);border-radius:8px;height:8px;overflow:hidden;margin-bottom:12px;">
-                            <div id="progress-barra" style="height:100%;width:0%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);border-radius:8px;transition:width 0.3s ease;"></div>
-                        </div>
-                        <div id="progress-etapas" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-height:200px;overflow-y:auto;"></div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text3);">
-                            <span id="progress-tempo">⏱️ estimando...</span>
-                            <button id="progress-cancelar" class="btn btn-outline btn-sm" style="display:inline-flex;">Cancelar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            this.modalCriado = true;
-        }
-
-        // Obtém referências aos elementos
-        this.modal = document.getElementById('progress-modal');
-        this.barra = document.getElementById('progress-barra');
-        this.textoEtapa = document.getElementById('progress-status');
-        this.textoTempo = document.getElementById('progress-tempo');
-        this.porcentagem = document.getElementById('progress-porcentagem');
-        this.containerEtapas = document.getElementById('progress-etapas');
-        this.titulo = document.getElementById('progress-titulo');
-        this.icone = document.getElementById('progress-icone');
-        this.fecharBtn = document.getElementById('progress-fechar');
-        this.cancelarBtn = document.getElementById('progress-cancelar');
-
-        // Verifica se todos os elementos foram encontrados
-        this.elementosValidos = !!(
-            this.modal && 
-            this.barra && 
-            this.textoEtapa && 
-            this.textoTempo && 
-            this.porcentagem && 
-            this.containerEtapas && 
-            this.titulo && 
-            this.icone && 
-            this.fecharBtn && 
-            this.cancelarBtn
-        );
-
-        if (!this.elementosValidos) {
-            console.warn('⚠️ Alguns elementos do progress modal não foram encontrados. Usando fallback com toast.');
-        }
-
-        // Configura eventos
-        if (this.fecharBtn) {
-            this.fecharBtn.addEventListener('click', () => this.fechar());
-        }
-        if (this.cancelarBtn) {
-            this.cancelarBtn.addEventListener('click', () => {
-                if (confirm('Deseja cancelar o processo atual?')) {
-                    this.fechar();
-                    showToast('⏹️ Processo cancelado!', 'warning');
+            class ProgressManager {
+                constructor() {
+                    this.modal = null;
+                    this.barra = null;
+                    this.textoEtapa = null;
+                    this.textoTempo = null;
+                    this.etapas = [];
+                    this.etapaAtual = 0;
+                    this.tempoInicio = null;
+                    this.timer = null;
+                    this.criarModal();
                 }
-            });
-        }
-        if (this.modal) {
-            this.modal.addEventListener('click', (e) => {
-                if (e.target === this.modal) {
-                    // Não fecha clicando fora para evitar cancelamentos acidentais
+
+                criarModal() {
+                    this.modal = document.getElementById('progress-modal');
+                    this.barra = document.getElementById('progress-barra');
+                    this.textoEtapa = document.getElementById('progress-status');
+                    this.textoTempo = document.getElementById('progress-tempo');
+                    this.porcentagem = document.getElementById('progress-porcentagem');
+                    this.containerEtapas = document.getElementById('progress-etapas');
+                    this.titulo = document.getElementById('progress-titulo');
+                    this.icone = document.getElementById('progress-icone');
+                    this.fecharBtn = document.getElementById('progress-fechar');
+                    this.cancelarBtn = document.getElementById('progress-cancelar');
                 }
-            });
-        }
-    }
 
-    iniciar(titulo, etapas, icone = '🤖') {
-        // Garante que o modal existe
-        if (!this.modal || !this.elementosValidos) {
-            this.criarModal();
-        }
+                iniciar(titulo, etapas, icone = '🤖') {
+                    this.etapas = etapas.map(e => ({ ...e, concluida: false }));
+                    this.etapaAtual = 0;
+                    this.tempoInicio = Date.now();
+                    this.timer = null;
 
-        // Se ainda não for válido, usa fallback com toast
-        if (!this.elementosValidos) {
-            console.warn('⚠️ ProgressManager não disponível. Usando fallback com toast.');
-            showToast(`⏳ ${titulo} - ${etapas.length} etapas`, 'info');
-            // Cria um objeto de fallback para não quebrar o fluxo
-            return this.criarFallback(titulo, etapas);
-        }
+                    this.titulo.textContent = titulo;
+                    this.icone.textContent = icone;
+                    this.barra.style.width = '0%';
+                    this.barra.style.background = 'linear-gradient(90deg, #8b5cf6, #6d28d9)';
+                    this.porcentagem.textContent = '0%';
+                    this.textoTempo.textContent = '⏱️ estimando...';
+                    this.fecharBtn.style.display = 'none';
+                    this.cancelarBtn.style.display = 'inline-flex';
 
-        this.etapas = etapas.map(e => ({ ...e, concluida: false }));
-        this.etapaAtual = 0;
-        this.tempoInicio = Date.now();
-        
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
+                    this.containerEtapas.innerHTML = '';
+                    this.etapas.forEach((etapa, index) => {
+                        const div = document.createElement('div');
+                        div.id = `progress-etapa-${index}`;
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.style.gap = '8px';
+                        div.style.padding = '4px 8px';
+                        div.style.borderRadius = '4px';
+                        div.style.opacity = index === 0 ? '1' : '0.5';
+                        div.innerHTML = `
+                            <span style="font-size: 14px;" id="progress-icon-${index}">${index === 0 ? '⏳' : '○'}</span>
+                            <span>${etapa.nome}</span>
+                            <span style="margin-left: auto; font-size: 11px; color: var(--text3);" id="progress-status-${index}">
+                                ${index === 0 ? '⏳ em andamento...' : '⏳ aguardando'}
+                            </span>
+                        `;
+                        this.containerEtapas.appendChild(div);
+                    });
 
-        if (this.titulo) this.titulo.textContent = titulo;
-        if (this.icone) this.icone.textContent = icone;
-        if (this.barra) this.barra.style.width = '0%';
-        if (this.barra) this.barra.style.background = 'linear-gradient(90deg, #8b5cf6, #6d28d9)';
-        if (this.porcentagem) this.porcentagem.textContent = '0%';
-        if (this.textoTempo) this.textoTempo.textContent = '⏱️ estimando...';
-        if (this.fecharBtn) this.fecharBtn.style.display = 'none';
-        if (this.cancelarBtn) this.cancelarBtn.style.display = 'inline-flex';
-
-        if (this.containerEtapas) {
-            this.containerEtapas.innerHTML = '';
-            this.etapas.forEach((etapa, index) => {
-                const div = document.createElement('div');
-                div.id = `progress-etapa-${index}`;
-                div.style.cssText = `
-                    display:flex; align-items:center; gap:8px; padding:4px 8px; 
-                    border-radius:4px; opacity: ${index === 0 ? '1' : '0.5'};
-                    transition: all 0.3s ease;
-                `;
-                div.innerHTML = `
-                    <span style="font-size:14px;" id="progress-icon-${index}">${index === 0 ? '⏳' : '○'}</span>
-                    <span style="font-size:12px;font-weight:600;">${etapa.nome}</span>
-                    <span style="margin-left:auto;font-size:10px;color:var(--text3);" id="progress-status-${index}">
-                        ${index === 0 ? '⏳ em andamento...' : '⏳ aguardando'}
-                    </span>
-                `;
-                this.containerEtapas.appendChild(div);
-            });
-        }
-
-        if (this.modal) {
-            this.modal.style.display = 'flex';
-            this.modal.classList.add('show');
-        }
-
-        // Inicia o timer para atualizar o tempo estimado
-        this.timer = setInterval(() => this.atualizarTempoEstimado(), 1000);
-        
-        this.atualizarEtapa(0);
-        showToast(`🔄 ${titulo} iniciado...`, 'info');
-    }
-
-    criarFallback(titulo, etapas) {
-        // Retorna um objeto com métodos vazios para não quebrar o fluxo
-        let etapaAtual = 0;
-        return {
-            atualizarEtapa: (index) => {
-                etapaAtual = index;
-                if (index < etapas.length) {
-                    showToast(`📌 ${etapas[index].nome} - ${etapas[index].descricao || ''}`, 'info');
+                    this.modal.style.display = 'flex';
+                    this.modal.classList.add('show');
+                    this.atualizarEtapa(0);
                 }
-            },
-            concluirEtapa: (index) => {
-                if (index < etapas.length) {
-                    showToast(`✅ ${etapas[index].nome} concluído!`, 'success');
+
+                atualizarEtapa(index) {
+                    this.etapaAtual = index;
+                    const progresso = (index / this.etapas.length) * 100;
+                    this.barra.style.width = progresso + '%';
+                    this.porcentagem.textContent = Math.round(progresso) + '%';
+
+                    if (index < this.etapas.length) {
+                        this.textoEtapa.textContent = this.etapas[index].descricao || this.etapas[index].nome;
+                        
+                        if (index > 0) {
+                            const etapaAnterior = document.getElementById(`progress-etapa-${index-1}`);
+                            if (etapaAnterior) {
+                                etapaAnterior.style.opacity = '0.7';
+                                const icon = document.getElementById(`progress-icon-${index-1}`);
+                                if (icon) icon.textContent = '✅';
+                                const status = document.getElementById(`progress-status-${index-1}`);
+                                if (status) status.textContent = '✅ concluído';
+                            }
+                        }
+
+                        const etapaAtualEl = document.getElementById(`progress-etapa-${index}`);
+                        if (etapaAtualEl) {
+                            etapaAtualEl.style.opacity = '1';
+                            etapaAtualEl.style.background = 'rgba(139, 92, 246, 0.1)';
+                            const icon = document.getElementById(`progress-icon-${index}`);
+                            if (icon) icon.textContent = '⏳';
+                            const status = document.getElementById(`progress-status-${index}`);
+                            if (status) status.textContent = '⏳ em andamento...';
+                        }
+                    }
+
+                    this.atualizarTempoEstimado();
                 }
-            },
-            proximaEtapa: () => {
-                const proxima = etapaAtual + 1;
-                if (proxima < etapas.length) {
-                    etapaAtual = proxima;
-                    showToast(`📌 ${etapas[proxima].nome} - ${etapas[proxima].descricao || ''}`, 'info');
+
+                atualizarTempoEstimado() {
+                    if (this.tempoInicio) {
+                        const elapsed = (Date.now() - this.tempoInicio) / 1000;
+                        const total = this.etapas.length;
+                        const atual = this.etapaAtual + 1;
+                        
+                        if (atual > 0 && atual <= total) {
+                            const mediaPorEtapa = elapsed / atual;
+                            const restante = (total - atual) * mediaPorEtapa;
+                            
+                            if (restante > 0) {
+                                const minutos = Math.floor(restante / 60);
+                                const segundos = Math.floor(restante % 60);
+                                this.textoTempo.textContent = `⏱️ ~${minutos > 0 ? minutos + 'm ' : ''}${segundos}s restantes`;
+                            }
+                        }
+                    }
                 }
-                return proxima;
-            },
-            finalizar: (mensagem) => {
-                showToast(`✅ ${mensagem}`, 'success');
-            },
-            erro: (mensagem) => {
-                showToast(`❌ ${mensagem}`, 'error');
-            },
-            fechar: () => {
-                // Não faz nada
-            }
-        };
-    }
 
-    atualizarEtapa(index) {
-        if (!this.elementosValidos) {
-            // Fallback via toast
-            if (index < this.etapas.length) {
-                showToast(`📌 ${this.etapas[index].nome} - ${this.etapas[index].descricao || ''}`, 'info');
-            }
-            return;
-        }
+                concluirEtapa(index) {
+                    if (index < this.etapas.length) {
+                        const etapaEl = document.getElementById(`progress-etapa-${index}`);
+                        if (etapaEl) {
+                            etapaEl.style.opacity = '0.7';
+                            const icon = document.getElementById(`progress-icon-${index}`);
+                            if (icon) icon.textContent = '✅';
+                            const status = document.getElementById(`progress-status-${index}`);
+                            if (status) status.textContent = '✅ concluído';
+                        }
+                    }
+                }
 
-        this.etapaAtual = index;
-        const progresso = (index / this.etapas.length) * 100;
-        if (this.barra) this.barra.style.width = progresso + '%';
-        if (this.porcentagem) this.porcentagem.textContent = Math.round(progresso) + '%';
+                proximaEtapa() {
+                    const proxima = this.etapaAtual + 1;
+                    if (proxima < this.etapas.length) {
+                        this.atualizarEtapa(proxima);
+                    }
+                    return proxima;
+                }
 
-        if (index < this.etapas.length) {
-            if (this.textoEtapa) {
-                this.textoEtapa.textContent = this.etapas[index].descricao || this.etapas[index].nome;
-            }
-            
-            if (index > 0) {
-                const etapaAnterior = document.getElementById(`progress-etapa-${index-1}`);
-                if (etapaAnterior) {
-                    etapaAnterior.style.opacity = '0.7';
-                    const icon = document.getElementById(`progress-icon-${index-1}`);
-                    if (icon) icon.textContent = '✅';
-                    const status = document.getElementById(`progress-status-${index-1}`);
-                    if (status) status.textContent = '✅ concluído';
+                finalizar(mensagem = '✅ Processamento concluído com sucesso!') {
+                    this.barra.style.width = '100%';
+                    this.porcentagem.textContent = '100%';
+                    this.textoEtapa.textContent = mensagem;
+                    this.textoTempo.textContent = '✅ concluído!';
+                    this.fecharBtn.style.display = 'inline-flex';
+                    this.cancelarBtn.style.display = 'none';
+
+                    this.etapas.forEach((_, index) => {
+                        this.concluirEtapa(index);
+                    });
+
+                    setTimeout(() => {
+                        this.fechar();
+                    }, 2000);
+                }
+
+                fechar() {
+                    if (this.timer) {
+                        clearInterval(this.timer);
+                        this.timer = null;
+                    }
+                    this.modal.style.display = 'none';
+                    this.modal.classList.remove('show');
+                }
+
+                erro(mensagem) {
+                    this.barra.style.width = '100%';
+                    this.barra.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+                    this.porcentagem.textContent = '❌ ERRO';
+                    this.textoEtapa.textContent = '❌ ' + mensagem;
+                    this.icone.textContent = '❌';
+                    this.textoTempo.textContent = '❌ falhou';
+                    this.fecharBtn.style.display = 'inline-flex';
+                    this.cancelarBtn.style.display = 'none';
+                    
+                    const etapaAtualEl = document.getElementById(`progress-etapa-${this.etapaAtual}`);
+                    if (etapaAtualEl) {
+                        const icon = document.getElementById(`progress-icon-${this.etapaAtual}`);
+                        if (icon) icon.textContent = '❌';
+                        const status = document.getElementById(`progress-status-${this.etapaAtual}`);
+                        if (status) {
+                            status.textContent = '❌ erro';
+                            status.style.color = 'var(--red)';
+                        }
+                    }
                 }
             }
-
-            const etapaAtualEl = document.getElementById(`progress-etapa-${index}`);
-            if (etapaAtualEl) {
-                etapaAtualEl.style.opacity = '1';
-                etapaAtualEl.style.background = 'rgba(139, 92, 246, 0.1)';
-                const icon = document.getElementById(`progress-icon-${index}`);
-                if (icon) icon.textContent = '⏳';
-                const status = document.getElementById(`progress-status-${index}`);
-                if (status) status.textContent = '⏳ em andamento...';
-            }
-        }
-
-        this.atualizarTempoEstimado();
-    }
-
-    atualizarTempoEstimado() {
-        if (!this.elementosValidos || !this.tempoInicio) return;
-        
-        const elapsed = (Date.now() - this.tempoInicio) / 1000;
-        const total = this.etapas.length;
-        const atual = this.etapaAtual + 1;
-        
-        if (atual > 0 && atual <= total) {
-            const mediaPorEtapa = elapsed / atual;
-            const restante = (total - atual) * mediaPorEtapa;
-            
-            if (restante > 0 && this.textoTempo) {
-                const minutos = Math.floor(restante / 60);
-                const segundos = Math.floor(restante % 60);
-                this.textoTempo.textContent = `⏱️ ~${minutos > 0 ? minutos + 'm ' : ''}${segundos}s restantes`;
-            }
-        }
-    }
-
-    concluirEtapa(index) {
-        if (!this.elementosValidos) {
-            if (index < this.etapas.length) {
-                showToast(`✅ ${this.etapas[index].nome} concluído!`, 'success');
-            }
-            return;
-        }
-
-        if (index < this.etapas.length) {
-            const etapaEl = document.getElementById(`progress-etapa-${index}`);
-            if (etapaEl) {
-                etapaEl.style.opacity = '0.7';
-                const icon = document.getElementById(`progress-icon-${index}`);
-                if (icon) icon.textContent = '✅';
-                const status = document.getElementById(`progress-status-${index}`);
-                if (status) status.textContent = '✅ concluído';
-            }
-        }
-    }
-
-    proximaEtapa() {
-        const proxima = this.etapaAtual + 1;
-        if (proxima < this.etapas.length) {
-            this.atualizarEtapa(proxima);
-        }
-        return proxima;
-    }
-
-    finalizar(mensagem = '✅ Processamento concluído com sucesso!') {
-        if (!this.elementosValidos) {
-            showToast(`✅ ${mensagem}`, 'success');
-            return;
-        }
-
-        if (this.barra) {
-            this.barra.style.width = '100%';
-        }
-        if (this.porcentagem) {
-            this.porcentagem.textContent = '100%';
-        }
-        if (this.textoEtapa) {
-            this.textoEtapa.textContent = mensagem;
-        }
-        if (this.textoTempo) {
-            this.textoTempo.textContent = '✅ concluído!';
-        }
-        if (this.fecharBtn) {
-            this.fecharBtn.style.display = 'inline-flex';
-        }
-        if (this.cancelarBtn) {
-            this.cancelarBtn.style.display = 'none';
-        }
-
-        this.etapas.forEach((_, index) => {
-            this.concluirEtapa(index);
-        });
-
-        showToast(`✅ ${mensagem}`, 'success');
-
-        setTimeout(() => {
-            this.fechar();
-        }, 2000);
-    }
-
-    fechar() {
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
-        if (this.modal) {
-            this.modal.style.display = 'none';
-            this.modal.classList.remove('show');
-        }
-    }
-
-    erro(mensagem) {
-        if (!this.elementosValidos) {
-            showToast(`❌ ${mensagem}`, 'error');
-            return;
-        }
-
-        if (this.barra) {
-            this.barra.style.width = '100%';
-            this.barra.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
-        }
-        if (this.porcentagem) {
-            this.porcentagem.textContent = '❌ ERRO';
-        }
-        if (this.textoEtapa) {
-            this.textoEtapa.textContent = '❌ ' + mensagem;
-        }
-        if (this.icone) {
-            this.icone.textContent = '❌';
-        }
-        if (this.textoTempo) {
-            this.textoTempo.textContent = '❌ falhou';
-        }
-        if (this.fecharBtn) {
-            this.fecharBtn.style.display = 'inline-flex';
-        }
-        if (this.cancelarBtn) {
-            this.cancelarBtn.style.display = 'none';
-        }
-        
-        const etapaAtualEl = document.getElementById(`progress-etapa-${this.etapaAtual}`);
-        if (etapaAtualEl) {
-            const icon = document.getElementById(`progress-icon-${this.etapaAtual}`);
-            if (icon) icon.textContent = '❌';
-            const status = document.getElementById(`progress-status-${this.etapaAtual}`);
-            if (status) {
-                status.textContent = '❌ erro';
-                status.style.color = 'var(--red)';
-            }
-        }
-
-        showToast(`❌ ${mensagem}`, 'error');
-    }
-}
 
             const progressManager = new ProgressManager();
 
@@ -2781,76 +2575,72 @@ class ProgressManager {
             // ============================================
             // SALVAR CORREÇÃO MANUAL STANDALONE
             // ============================================
-            function salvarCorrecaoManualStandalone() {
-                const qtd = cmStandaloneData.quantidade || 20;
-                const respostas = cmStandaloneData.respostas || [];
-                const gabarito = cmStandaloneData.gabarito || [];
+            // ============================================
+// SALVAR CORREÇÃO MANUAL STANDALONE - CORRIGIDA (SEM PROGRESS MANAGER)
+// ============================================
+function salvarCorrecaoManualStandalone() {
+    const qtd = cmStandaloneData.quantidade || 20;
+    const respostas = cmStandaloneData.respostas || [];
+    const gabarito = cmStandaloneData.gabarito || [];
 
-                const temResposta = respostas.some(r => r && r.trim() !== '');
-                if (!temResposta) { showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); return; }
+    const temResposta = respostas.some(r => r && r.trim() !== '');
+    if (!temResposta) { 
+        showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); 
+        return; 
+    }
 
-                let acertos = 0;
-                for (let i = 0; i < qtd; i++) {
-                    const resp = i < respostas.length ? respostas[i] : '';
-                    const gab = i < gabarito.length ? gabarito[i] : '';
-                    if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
-                }
-                const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
+    let acertos = 0;
+    for (let i = 0; i < qtd; i++) {
+        const resp = i < respostas.length ? respostas[i] : '';
+        const gab = i < gabarito.length ? gabarito[i] : '';
+        if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+    }
+    const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
 
-                const etapas = [
-                    { nome: '📝 Processando respostas', descricao: 'Validando respostas do aluno...' },
-                    { nome: '📊 Calculando nota', descricao: 'Calculando aproveitamento...' },
-                    { nome: '💾 Salvando no sistema', descricao: 'Persistindo correção...' }
-                ];
+    // 🔥 MOSTRA TOAST DE CARREGAMENTO
+    showToast('💾 Salvando correção manual...', 'info');
 
-                progressManager.iniciar('💾 Salvando Correção Manual', etapas, '✏️');
+    const dadosCorrecao = {
+        prova_id: cmStandaloneData.provaId,
+        aluno_id: cmStandaloneData.alunoId,
+        respostas: respostas,
+        acertos: acertos,
+        nota: nota,
+        total: qtd
+    };
 
-                const dadosCorrecao = {
-                    prova_id: cmStandaloneData.provaId,
-                    aluno_id: cmStandaloneData.alunoId,
-                    respostas: respostas,
-                    acertos: acertos,
-                    nota: nota,
-                    total: qtd
-                };
+    fetch(API_URL + '/api/corrigir_manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosCorrecao)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.sucesso) {
+            showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
+            
+            limparCache();
+            closeM('m-correcao-manual-standalone');
 
-                fetch(API_URL + '/api/corrigir_manual', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dadosCorrecao)
-                })
-                .then(response => {
-                    progressManager.concluirEtapa(0);
-                    progressManager.proximaEtapa();
-                    return response.json();
-                })
-                .then(data => {
-                    progressManager.concluirEtapa(1);
-                    progressManager.proximaEtapa();
-
-                    if (data.sucesso) {
-                        progressManager.concluirEtapa(2);
-                        progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
-
-                        limparCache();
-                        closeM('m-correcao-manual-standalone');
-
-                        setTimeout(() => {
-                            carregarResultadosComFiltros();
-                            carregarDashboard();
-                            carregarUltimasCorrecoes();
-                        }, 500);
-                    } else {
-                        progressManager.erro(data.erro || 'Erro ao salvar');
-                        showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
-                    }
-                })
-                .catch(erro => {
-                    progressManager.erro(erro.message);
-                    showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
-                    console.error('Erro ao salvar correção manual:', erro);
-                });
-            }
+            setTimeout(() => {
+                carregarResultadosComFiltros();
+                carregarDashboard();
+                carregarUltimasCorrecoes();
+            }, 500);
+        } else {
+            showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
+        }
+    })
+    .catch(erro => {
+        showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+        console.error('Erro ao salvar correção manual:', erro);
+    });
+}
 
             // ============================================
             // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE
