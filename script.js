@@ -7581,7 +7581,35 @@ function openM(id) {
     if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
 }
 
-function closeM(id) { document.getElementById(id).classList.remove('show'); }
+// ============================================
+// FUNÇÃO PARA FECHAR MODAL - CORRIGIDA
+// ============================================
+function closeM(id) {
+    console.log('🔴 Fechando modal:', id);
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        console.log('✅ Modal fechado:', id);
+    } else {
+        console.warn('⚠️ Modal não encontrado:', id);
+    }
+}
+
+// ============================================
+// FUNÇÃO PARA ABRIR MODAL - CORRIGIDA
+// ============================================
+function openM(id) {
+    console.log('🟢 Abrindo modal:', id);
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        console.log('✅ Modal aberto:', id);
+    } else {
+        console.warn('⚠️ Modal não encontrado:', id);
+    }
+}
 
 document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
 
