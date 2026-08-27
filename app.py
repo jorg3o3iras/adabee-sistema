@@ -1835,7 +1835,7 @@ def listar_historico():
 
 
 # ============================================
-# ROTA PARA HISTÓRICO AGRUPADO POR ALUNO
+# 🔥 ROTA PARA HISTÓRICO AGRUPADO POR ALUNO - CORRIGIDA
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
@@ -1853,6 +1853,7 @@ def historico_agrupado():
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # 🔥 CORREÇÃO: Incluir p.gabarito e p.quantidade_questoes na query
         query = """
             SELECT
                 h.*,
@@ -1860,10 +1861,12 @@ def historico_agrupado():
                 p.titulo as prova_titulo,
                 p.disciplina,
                 p.serie as prova_serie,
+                p.gabarito as prova_gabarito,
+                p.quantidade_questoes,
+                p.bncc as prova_bncc,
                 t.serie,
                 t.nome as turma_nome,
-                e.nome as escola_nome,
-                p.bncc
+                e.nome as escola_nome
             FROM historico h
             LEFT JOIN alunos a ON h.aluno_id = a.id
             LEFT JOIN provas p ON h.prova_id = p.id
@@ -1917,6 +1920,7 @@ def historico_agrupado():
         conn.close()
 
         alunos_map = {}
+        
         for item in historico:
             aluno_key = item.get('aluno_id') or item.get('aluno_nome')
             if not aluno_key:
@@ -1937,33 +1941,111 @@ def historico_agrupado():
             serie_aluno = item.get('serie', '')
             tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
 
-            questoes_status = item.get('questoes_status', [])
-            if isinstance(questoes_status, str):
-                try:
-                    questoes_status = json.loads(questoes_status)
-                except:
-                    questoes_status = []
+            # 🔥 CORREÇÃO: Pegar respostas e gabarito
+            respostas = item.get('respostas', [])
+            
+            # 🔥 PRIORIDADE: Usar o gabarito da prova (mais confiável)
+            gabarito = item.get('prova_gabarito', [])
+            
+            # 🔥 FALLBACK: Se não tiver gabarito da prova, usa o do histórico
+            if not gabarito or len(gabarito) == 0:
+                gabarito = item.get('gabarito', [])
+            
+            # 🔥 CORREÇÃO: Garantir que as listas tenham o mesmo tamanho
+            total_questoes = item.get('quantidade_questoes', 20)
+            if len(respostas) < total_questoes:
+                respostas = list(respostas) + [''] * (total_questoes - len(respostas))
+            if len(gabarito) < total_questoes:
+                gabarito = list(gabarito) + [''] * (total_questoes - len(gabarito))
+            
+            # 🔥 CORREÇÃO: Pegar BNCC da prova
+            bncc_list = item.get('prova_bncc', [])
+            if len(bncc_list) < total_questoes:
+                bncc_list = list(bncc_list) + [''] * (total_questoes - len(bncc_list))
+            
+            # 🔥 CORREÇÃO: Calcular acertos/erros por questão CORRETAMENTE
+            questoes_status = []
+            acertos = 0
+            erros = 0
+            
+            for i in range(total_questoes):
+                resp = str(respostas[i] if i < len(respostas) else '').strip().upper()
+                gab = str(gabarito[i] if i < len(gabarito) else '').strip().upper()
+                
+                # 🔥 VERIFICA SE A RESPOSTA É VÁLIDA
+                is_resposta_valida = resp and resp != '' and resp != '—' and resp != '-'
+                is_correto = is_resposta_valida and resp == gab and gab != ''
+                
+                # 🔥 PEGA BNCC DA QUESTÃO
+                codigo_bncc = bncc_list[i] if i < len(bncc_list) and bncc_list[i] else ''
+                
+                if is_correto:
+                    acertos += 1
+                elif is_resposta_valida:
+                    erros += 1
+                else:
+                    erros += 1
+                
+                questoes_status.append({
+                    'numero': i + 1,
+                    'resposta': resp if resp else '—',
+                    'gabarito': gab if gab else '—',
+                    'acertou': is_correto,
+                    'respondida': is_resposta_valida,
+                    'bncc': codigo_bncc,
+                    'status': '✅ ACERTOU' if is_correto else ('❌ ERROU' if is_resposta_valida else '— NÃO RESPONDEU')
+                })
 
-            # 🔥 PEGA O BNCC DO HISTÓRICO
-            bncc_historico = item.get('bncc', [])
-
+            # 🔥 CORREÇÃO: Salvar com respostas e gabarito detalhados
             if tipo not in alunos_map[aluno_key]['avaliacoes']:
                 alunos_map[aluno_key]['avaliacoes'][tipo] = {
                     'nota': float(item.get('nota', 0)),
-                    'acertos': int(item.get('acertos', 0)),
-                    'total': int(item.get('total', 20)),
+                    'acertos': acertos,
+                    'erros': erros,
+                    'total': total_questoes,
                     'prova': prova_titulo,
                     'data': item.get('data_correcao', ''),
                     'disciplina': disciplina,
                     'questoes_status': questoes_status,
-                    'bncc': bncc_historico
+                    'bncc': [q['bncc'] for q in questoes_status],
+                    'respostas': [q['resposta'] for q in questoes_status],
+                    'gabarito': [q['gabarito'] for q in questoes_status]
                 }
+            else:
+                # 🔥 Se já existe, verifica se este é mais recente
+                existing = alunos_map[aluno_key]['avaliacoes'][tipo]
+                data_atual = item.get('data_correcao', '')
+                data_existente = existing.get('data', '')
+                if data_atual > data_existente:
+                    alunos_map[aluno_key]['avaliacoes'][tipo] = {
+                        'nota': float(item.get('nota', 0)),
+                        'acertos': acertos,
+                        'erros': erros,
+                        'total': total_questoes,
+                        'prova': prova_titulo,
+                        'data': data_atual,
+                        'disciplina': disciplina,
+                        'questoes_status': questoes_status,
+                        'bncc': [q['bncc'] for q in questoes_status],
+                        'respostas': [q['resposta'] for q in questoes_status],
+                        'gabarito': [q['gabarito'] for q in questoes_status]
+                    }
 
         resultado = []
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
 
-            default = {'nota': 0, 'acertos': 0, 'total': 20, 'questoes_status': [], 'bncc': []}
+            default = {
+                'nota': 0, 
+                'acertos': 0, 
+                'erros': 0,
+                'total': 20, 
+                'questoes_status': [], 
+                'bncc': [],
+                'respostas': [],
+                'gabarito': []
+            }
+            
             portugues = dict(avaliacoes.get('Portugues', default))
             matematica = dict(avaliacoes.get('Matematica', default))
             producao = dict(avaliacoes.get('Producao', default))
