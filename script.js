@@ -2575,88 +2575,76 @@
             // ============================================
             // SALVAR CORREÇÃO MANUAL STANDALONE
             // ============================================
-            // ============================================
-// SALVAR CORREÇÃO MANUAL - VERSÃO MÍNIMA
-// ============================================
-function salvarCorrecaoManualStandalone() {
-    if (!cmStandaloneData) {
-        showToast('❌ Dados não encontrados!', 'error');
-        return;
-    }
+            function salvarCorrecaoManualStandalone() {
+                const qtd = cmStandaloneData.quantidade || 20;
+                const respostas = cmStandaloneData.respostas || [];
+                const gabarito = cmStandaloneData.gabarito || [];
 
-    const provaId = parseInt(cmStandaloneData.provaId);
-    const alunoId = parseInt(cmStandaloneData.alunoId);
+                const temResposta = respostas.some(r => r && r.trim() !== '');
+                if (!temResposta) { showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); return; }
 
-    if (!provaId || isNaN(provaId) || provaId <= 0) {
-        showToast('❌ ID da prova inválido!', 'error');
-        return;
-    }
+                let acertos = 0;
+                for (let i = 0; i < qtd; i++) {
+                    const resp = i < respostas.length ? respostas[i] : '';
+                    const gab = i < gabarito.length ? gabarito[i] : '';
+                    if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                }
+                const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
 
-    if (!alunoId || isNaN(alunoId) || alunoId <= 0) {
-        showToast('❌ ID do aluno inválido!', 'error');
-        return;
-    }
+                const etapas = [
+                    { nome: '📝 Processando respostas', descricao: 'Validando respostas do aluno...' },
+                    { nome: '📊 Calculando nota', descricao: 'Calculando aproveitamento...' },
+                    { nome: '💾 Salvando no sistema', descricao: 'Persistindo correção...' }
+                ];
 
-    const qtd = cmStandaloneData.quantidade || 20;
-    const respostas = cmStandaloneData.respostas || [];
-    const gabarito = cmStandaloneData.gabarito || [];
+                progressManager.iniciar('💾 Salvando Correção Manual', etapas, '✏️');
 
-    const temResposta = respostas.some(r => r && r.trim() !== '');
-    if (!temResposta) { 
-        showToast('⚠️ Marque pelo menos uma resposta!', 'warning'); 
-        return; 
-    }
+                const dadosCorrecao = {
+                    prova_id: cmStandaloneData.provaId,
+                    aluno_id: cmStandaloneData.alunoId,
+                    respostas: respostas,
+                    acertos: acertos,
+                    nota: nota,
+                    total: qtd
+                };
 
-    let acertos = 0;
-    for (let i = 0; i < qtd; i++) {
-        const resp = i < respostas.length ? respostas[i] : '';
-        const gab = i < gabarito.length ? gabarito[i] : '';
-        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) {
-            acertos++;
-        }
-    }
-    
-    const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
-    const nota = Math.min((acertos * valorPorQuestao), cmStandaloneData.notaMaxima || 10);
+                fetch(API_URL + '/api/corrigir_manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosCorrecao)
+                })
+                .then(response => {
+                    progressManager.concluirEtapa(0);
+                    progressManager.proximaEtapa();
+                    return response.json();
+                })
+                .then(data => {
+                    progressManager.concluirEtapa(1);
+                    progressManager.proximaEtapa();
 
-    showToast('💾 Salvando...', 'info');
+                    if (data.sucesso) {
+                        progressManager.concluirEtapa(2);
+                        progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
 
-    // 🔥 APENAS OS CAMPOS ESSENCIAIS
-    const dadosCorrecao = {
-        prova_id: provaId,
-        aluno_id: alunoId,
-        respostas: respostas.map(r => r || ''),
-        acertos: acertos,
-        nota: nota,
-        total: qtd
-    };
+                        limparCache();
+                        closeM('m-correcao-manual-standalone');
 
-    console.log('📤 Enviando:', JSON.stringify(dadosCorrecao));
-
-    fetch(API_URL + '/api/corrigir_manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dadosCorrecao)
-    })
-    .then(r => r.json().catch(() => ({ erro: 'Erro ao processar resposta' })))
-    .then(data => {
-        if (data.sucesso) {
-            showToast(`✅ Salvo! Nota: ${nota.toFixed(1)}`, 'success');
-            closeM('m-correcao-manual-standalone');
-            limparCache();
-            setTimeout(() => {
-                carregarResultadosComFiltros();
-                carregarDashboard();
-            }, 500);
-        } else {
-            showToast('❌ ' + (data.erro || 'Erro desconhecido'), 'error');
-        }
-    })
-    .catch(erro => {
-        showToast('❌ ' + erro.message, 'error');
-        console.error(erro);
-    });
-}
+                        setTimeout(() => {
+                            carregarResultadosComFiltros();
+                            carregarDashboard();
+                            carregarUltimasCorrecoes();
+                        }, 500);
+                    } else {
+                        progressManager.erro(data.erro || 'Erro ao salvar');
+                        showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
+                    }
+                })
+                .catch(erro => {
+                    progressManager.erro(erro.message);
+                    showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
+                    console.error('Erro ao salvar correção manual:', erro);
+                });
+            }
 
             // ============================================
             // FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE
