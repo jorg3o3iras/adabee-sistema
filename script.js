@@ -2576,51 +2576,116 @@
             // SALVAR CORREÇÃO MANUAL STANDALONE
             // ============================================
             // ============================================
-// SALVAR CORREÇÃO MANUAL STANDALONE - CORRIGIDA (SEM PROGRESS MANAGER)
+// SALVAR CORREÇÃO MANUAL STANDALONE - CORRIGIDA
 // ============================================
 function salvarCorrecaoManualStandalone() {
+    // 🔥 VERIFICA SE OS DADOS EXISTEM
+    if (!cmStandaloneData) {
+        showToast('❌ Dados da correção não encontrados!', 'error');
+        return;
+    }
+
     const qtd = cmStandaloneData.quantidade || 20;
     const respostas = cmStandaloneData.respostas || [];
     const gabarito = cmStandaloneData.gabarito || [];
 
+    // 🔥 VALIDAÇÃO DOS IDs
+    const provaId = parseInt(cmStandaloneData.provaId);
+    const alunoId = parseInt(cmStandaloneData.alunoId);
+
+    if (!provaId || isNaN(provaId) || provaId <= 0) {
+        showToast('❌ ID da prova inválido ou não encontrado!', 'error');
+        console.error('❌ cmStandaloneData.provaId:', cmStandaloneData.provaId);
+        console.error('❌ cmStandaloneData completo:', cmStandaloneData);
+        return;
+    }
+
+    if (!alunoId || isNaN(alunoId) || alunoId <= 0) {
+        showToast('❌ ID do aluno inválido ou não encontrado!', 'error');
+        console.error('❌ cmStandaloneData.alunoId:', cmStandaloneData.alunoId);
+        console.error('❌ cmStandaloneData completo:', cmStandaloneData);
+        return;
+    }
+
+    // 🔥 VERIFICA SE TEM RESPOSTAS
     const temResposta = respostas.some(r => r && r.trim() !== '');
     if (!temResposta) { 
         showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); 
         return; 
     }
 
+    // 🔥 CALCULA ACERTOS
     let acertos = 0;
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
-        if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) {
+            acertos++;
+        }
     }
-    const nota = Math.min((acertos * cmStandaloneData.valorPorQuestao), cmStandaloneData.notaMaxima || 10);
+    
+    const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
+    const nota = Math.min((acertos * valorPorQuestao), cmStandaloneData.notaMaxima || 10);
 
     // 🔥 MOSTRA TOAST DE CARREGAMENTO
     showToast('💾 Salvando correção manual...', 'info');
 
+    // 🔥 LOG DOS DADOS PARA DEBUG
+    console.log('📤 Dados sendo enviados:');
+    console.log('  - prova_id:', provaId);
+    console.log('  - aluno_id:', alunoId);
+    console.log('  - total:', qtd);
+    console.log('  - acertos:', acertos);
+    console.log('  - nota:', nota);
+    console.log('  - respostas:', respostas);
+    console.log('  - gabarito:', gabarito);
+
+    // 🔥 MONTA O OBJETO CORRETO
     const dadosCorrecao = {
-        prova_id: cmStandaloneData.provaId,
-        aluno_id: cmStandaloneData.alunoId,
-        respostas: respostas,
+        prova_id: provaId,
+        aluno_id: alunoId,
+        respostas: respostas.map(r => r || ''),
         acertos: acertos,
         nota: nota,
         total: qtd
     };
 
+    console.log('📤 JSON enviado:', JSON.stringify(dadosCorrecao, null, 2));
+
+    // 🔥 ENVIA PARA O BACKEND
     fetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify(dadosCorrecao)
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+    .then(async response => {
+        // 🔥 TENTA LER A RESPOSTA MESMO EM ERRO
+        let data;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                data = { erro: text || 'Erro desconhecido' };
+            }
         }
-        return response.json();
+
+        console.log('📥 Resposta do servidor:', response.status, data);
+
+        if (!response.ok) {
+            throw new Error(data.erro || data.mensagem || `Erro ${response.status}`);
+        }
+
+        return data;
     })
     .then(data => {
+        console.log('✅ Resposta processada:', data);
+        
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             
@@ -2637,8 +2702,8 @@ function salvarCorrecaoManualStandalone() {
         }
     })
     .catch(erro => {
-        showToast('❌ Erro ao salvar correção: ' + erro.message, 'error');
-        console.error('Erro ao salvar correção manual:', erro);
+        console.error('❌ Erro ao salvar correção manual:', erro);
+        showToast('❌ Erro ao salvar: ' + erro.message, 'error');
     });
 }
 
