@@ -4697,9 +4697,9 @@
             }
 
             // ============================================
-            // ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
-            // ============================================
-            function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao) {
+// 🔥 CORREÇÃO - ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
+// ============================================
+function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao) {
     try {
         const container = document.getElementById('rel-acertos-grid');
         const totalQuestoesEl = document.getElementById('rel-total-questoes');
@@ -4722,9 +4722,7 @@
         const questoesMap = new Map();
         let totalAcertos = 0;
         let totalErros = 0;
-        let totalQuestoes = 0;
         let totalAlunos = 0;
-
         const bnccMap = new Map();
 
         dadosAgrupados.forEach(aluno => {
@@ -4736,6 +4734,7 @@
             totalAlunos++;
 
             if (Array.isArray(questoesStatus) && questoesStatus.length > 0) {
+                // 🔥 USAR questoesStatus QUANDO DISPONÍVEL
                 questoesStatus.forEach((q, idx) => {
                     const num = q.numero || q.questao || (idx + 1);
                     if (!questoesMap.has(num)) {
@@ -4748,21 +4747,33 @@
                         bnccMap.set(num, bncc);
                     }
                     
-                    if (q.acertou === true || q.correta === true) {
+                    // 🔥 CORREÇÃO: Verifica se a questão foi respondida e se está correta
+                    const resp = q.resposta || '';
+                    const gab = q.gabarito || '';
+                    const isRespondida = resp && resp !== '' && resp !== '—' && resp !== '-';
+                    const isCorreta = isRespondida && resp.toUpperCase() === gab.toUpperCase();
+                    
+                    if (isCorreta || q.acertou === true || q.correta === true) {
                         data.acertos++;
                         totalAcertos++;
-                    } else if (q.respondida !== false) {
+                    } else if (isRespondida || q.respondida !== false) {
+                        data.erros++;
+                        totalErros++;
+                    } else {
+                        // Não respondeu - conta como erro
                         data.erros++;
                         totalErros++;
                     }
                 });
             } else {
+                // 🔥 FALLBACK: Usar respostas e gabarito diretamente
                 const respostas = discData.respostas || [];
                 const gabarito = discData.gabarito || [];
                 const total = discData.total || 20;
-                const acertos = discData.acertos || 0;
-
-                for (let i = 0; i < Math.min(respostas.length, total); i++) {
+                
+                // 🔥 CRIA UM MAPA DE ACERTOS POR QUESTÃO A PARTIR DO HISTÓRICO
+                // Para cada aluno, percorremos todas as questões
+                for (let i = 0; i < Math.min(respostas.length, gabarito.length, total); i++) {
                     const num = i + 1;
                     if (!questoesMap.has(num)) {
                         questoesMap.set(num, { acertos: 0, erros: 0 });
@@ -4774,7 +4785,15 @@
                         bnccMap.set(num, bncc);
                     }
                     
-                    if (i < acertos) {
+                    // 🔥 CORREÇÃO: Compara resposta do aluno com gabarito
+                    const resp = String(respostas[i] || '').trim().toUpperCase();
+                    const gab = String(gabarito[i] || '').trim().toUpperCase();
+                    
+                    // Verifica se a resposta é válida
+                    const isRespostaValida = resp && resp !== '' && resp !== '—' && resp !== '-';
+                    const isCorreta = isRespostaValida && resp === gab && gab !== '';
+                    
+                    if (isCorreta) {
                         data.acertos++;
                         totalAcertos++;
                     } else {
@@ -4785,7 +4804,7 @@
             }
         });
 
-        totalQuestoes = questoesMap.size || 20;
+        const totalQuestoes = questoesMap.size || 20;
 
         totalQuestoesEl.textContent = totalQuestoes + ' questões';
         totalAcertosEl.textContent = totalAcertos;
@@ -4803,41 +4822,64 @@
             return;
         }
 
-        // 🔥 FORMATO EXATO QUE VOCÊ QUER:
-        // Q1
-        // 5 / 4
-        // Acertos / Erros
-        // Total: 9
-        // EF01LP10
-        // 55% | 45%  <-- ADICIONADO: Porcentagem de acertos e erros
+        // 🔥 RENDERIZAR OS CARDS
         sortedKeys.forEach(num => {
             const data = questoesMap.get(num);
             const total = data.acertos + data.erros;
             const bnccCode = bnccMap.get(num) || 'N/A';
             
-            // 🔥 CALCULAR PORCENTAGENS
             const pctAcertos = total > 0 ? Math.round((data.acertos / total) * 100) : 0;
             const pctErros = total > 0 ? Math.round((data.erros / total) * 100) : 0;
 
             const div = document.createElement('div');
             div.className = 'acertos-por-questao-item';
+            div.style.cssText = `
+                background: var(--surface);
+                border-radius: 10px;
+                padding: 12px 10px;
+                border: 1px solid var(--border);
+                text-align: center;
+                transition: all 0.2s ease;
+            `;
+            
+            // 🔥 COR BASEADA NA PORCENTAGEM DE ACERTOS
+            let corBarra = '#ef4444';
+            let labelPerformance = '🔴 Baixo';
+            if (pctAcertos >= 80) {
+                corBarra = '#10b981';
+                labelPerformance = '🟢 Alto';
+            } else if (pctAcertos >= 60) {
+                corBarra = '#f59e0b';
+                labelPerformance = '🟡 Médio';
+            } else if (pctAcertos >= 40) {
+                corBarra = '#f59e0b';
+                labelPerformance = '🟡 Médio-Baixo';
+            } else if (pctAcertos >= 20) {
+                corBarra = '#ef4444';
+                labelPerformance = '🔴 Crítico';
+            }
             
             div.innerHTML = `
-                <div class="q-num">Q${num}</div>
-                <div style="display:flex;justify-content:center;align-items:center;gap:4px; font-size:14px; font-weight:700; margin:2px 0;">
-                    <span style="color:var(--green);">${data.acertos}</span>
-                    <span style="color:var(--text3); font-weight:300;">/</span>
-                    <span style="color:var(--red);">${data.erros}</span>
+                <div style="font-size: 14px; font-weight: 800; color: var(--text1); margin-bottom: 4px;">
+                    Q${num}
                 </div>
-                <div style="font-size:9px; color:var(--text3); font-weight:600; margin-bottom:2px;">Acertos / Erros</div>
-                <div style="font-size:11px; font-weight:700; color:var(--blue);">Total: ${total}</div>
-                <div style="font-size:12px; font-weight:700; color:#8b5cf6; background:rgba(139,92,246,0.12); padding:2px 10px; border-radius:8px; margin-top:4px; font-family:'Courier New',monospace; letter-spacing:0.3px; display:inline-block;">
+                <div style="display:flex; justify-content:center; align-items:center; gap:4px; font-size: 16px; font-weight: 700; margin: 4px 0;">
+                    <span style="color: var(--green);">${data.acertos}</span>
+                    <span style="color: var(--text3); font-weight: 300;">/</span>
+                    <span style="color: var(--red);">${data.erros}</span>
+                </div>
+                <div style="font-size: 9px; color: var(--text3); font-weight: 600; margin-bottom: 4px;">Acertos / Erros</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 4px;">Total: ${total}</div>
+                <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; background: rgba(139,92,246,0.12); padding: 3px 12px; border-radius: 8px; display: inline-block; margin-bottom: 4px; font-family: 'Courier New', monospace; letter-spacing: 0.3px;">
                     ${bnccCode}
                 </div>
-                <div style="display:flex; justify-content:center; gap:10px; margin-top:4px; font-size:10px; font-weight:700; width:100%;">
-                    <span style="color:var(--green);">${pctAcertos}%</span>
-                    <span style="color:var(--text3); font-weight:300;">|</span>
-                    <span style="color:var(--red);">${pctErros}%</span>
+                <div class="progress" style="height: 8px; background: var(--bg2); border-radius: 6px; overflow: hidden; margin: 6px 0;">
+                    <div class="progress-fill" style="width: ${Math.max(pctAcertos, 2)}%; background: ${corBarra}; border-radius: 6px; transition: width 0.8s ease;"></div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 10px; font-size: 11px; font-weight: 700;">
+                    <span style="color: var(--green);">${pctAcertos}%</span>
+                    <span style="color: var(--text3); font-weight: 300;">|</span>
+                    <span style="color: var(--red);">${pctErros}%</span>
                 </div>
             `;
             container.appendChild(div);
@@ -4847,7 +4889,7 @@
         console.error('❌ Erro ao atualizar gráfico de acertos:', erro);
         const container = document.getElementById('rel-acertos-grid');
         if (container) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Erro ao carregar dados: ${erro.message}</div>`;
+            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--red);">Erro ao carregar dados: ${erro.message}</div>`;
         }
     }
 }
