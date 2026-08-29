@@ -499,7 +499,7 @@
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
-            <!-- ========== MATRIZ DE PROFICIÊNCIA ========== -->
+            <!-- ========== MATRIZ DE PROFICIÊNCIA (CORRIGIDA) ========== -->
             <div class="page" id="page-matriz">
                 <div class="page-header">
                     <div>
@@ -1428,7 +1428,11 @@ Ana Lima" rows="3"></textarea>
             </div>
         </div>
 
-        <!-- ========== MODAL MATRIZ DE PROFICIÊNCIA ========== -->
+        <!-- ============================================================ -->
+        <!-- ========== MODAIS DA MATRIZ (CORRIGIDOS) ========== -->
+        <!-- ============================================================ -->
+
+        <!-- MODAL MATRIZ (DESCRITOR AGORA É TEXTAREA) -->
         <div class="modal-overlay no-print" id="m-matriz">
             <div class="modal" style="max-width:750px;width:95vw;">
                 <div class="modal-header">
@@ -1504,7 +1508,7 @@ Ana Lima" rows="3"></textarea>
             </div>
         </div>
 
-        <!-- ========== MODAL CONFIRMAR EXCLUSÃO MATRIZ ========== -->
+        <!-- MODAL CONFIRMAR EXCLUSÃO MATRIZ -->
         <div class="modal-overlay no-print" id="m-deletar-matriz" style="display:none;">
             <div class="modal" style="max-width:420px;text-align:center;">
                 <div class="modal-header">
@@ -1524,6 +1528,23 @@ Ana Lima" rows="3"></textarea>
                 <div class="modal-footer" style="justify-content:center;border-top:none;padding-top:0;">
                     <button class="btn btn-outline" onclick="fecharModalDeletarMatriz()">Cancelar</button>
                     <button class="btn btn-red" onclick="confirmarDeletarMatriz()">🗑️ Excluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL VISUALIZAR MATRIZ (NOVO) ========== -->
+        <div class="modal-overlay no-print" id="m-visualizar-matriz">
+            <div class="modal" style="max-width:700px;width:95vw;">
+                <div class="modal-header">
+                    <h3 id="visualizar-matriz-titulo">📊 Matriz de Proficiência</h3>
+                    <button class="modal-close" onclick="closeM('m-visualizar-matriz')">×</button>
+                </div>
+                <div id="visualizar-matriz-conteudo">
+                    <div style="text-align:center;padding:20px;color:var(--text3);">Carregando...</div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="closeM('m-visualizar-matriz')">Fechar</button>
+                    <button class="btn btn-primary" onclick="imprimirMatrizVisualizada()">🖨️ Imprimir PDF</button>
                 </div>
             </div>
         </div>
