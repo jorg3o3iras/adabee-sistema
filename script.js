@@ -8656,7 +8656,7 @@ function visualizarMatriz(id) {
         toast('Matriz não encontrada', 'error');
         return;
     }
-
+	window.matrizVisualizando = matriz;
     visualizarMatrizId = id;
     document.getElementById('visualizar-matriz-titulo').textContent = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
 
@@ -8722,71 +8722,26 @@ function visualizarMatriz(id) {
 // ================================================================
 
 function imprimirMatrizVisualizada() {
-    // 🔥 BUSCA O CONTEÚDO DO MODAL DE VISUALIZAÇÃO
-    const conteudo = document.getElementById('visualizar-matriz-conteudo');
-    if (!conteudo) {
-        toast('❌ Nenhum conteúdo para imprimir. Visualize uma matriz primeiro.', 'error');
+    // 🔥 USA OS DADOS DIRETAMENTE DA VARIÁVEL GLOBAL
+    const matriz = window.matrizVisualizando;
+    if (!matriz) {
+        toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
         return;
     }
 
-    // 🔥 EXTRAI ANO, DISCIPLINA E NÍVEL DO DOM
-    const infoGrid = conteudo.querySelector('.info-grid');
-    let ano = '—', disciplina = '—', nivel = '—';
-
-    if (infoGrid) {
-        const items = infoGrid.querySelectorAll('.value');
-        if (items.length >= 3) {
-            ano = items[0]?.textContent?.trim() || '—';
-            disciplina = items[1]?.textContent?.trim() || '—';
-            // O nível pode estar dentro de um badge ou texto puro
-            const nivelEl = items[2];
-            if (nivelEl) {
-                const badge = nivelEl.querySelector('.badge');
-                nivel = badge ? badge.textContent.trim() : nivelEl.textContent.trim();
-            }
-        }
-    }
-
-    // 🔥 EXTRAI OS DESCRITORES DO DOM
-    const container = conteudo.querySelector('.descritores-container');
-    let descritores = [];
-    if (container) {
-        const items = container.querySelectorAll('.descritor-item');
-        items.forEach(item => {
-            const bnccSpan = item.querySelector('.bncc');
-            const descText = item.querySelector('.desc-text');
-            const bncc = bnccSpan ? bnccSpan.textContent.replace('BNCC: ', '').trim() : '—';
-            const descritor = descText ? descText.textContent.trim() : '—';
-            descritores.push({ bncc, descritor });
-        });
-    }
-
-    // Se não encontrou descritores no formato esperado, tenta buscar os cards individuais
-    if (descritores.length === 0) {
-        const cards = conteudo.querySelectorAll('[style*="background:var(--bg2)"]');
-        cards.forEach(card => {
-            const bnccEl = card.querySelector('[style*="background:rgba(139,92,246,0.12)"]');
-            const descEl = card.querySelector('[style*="font-size:14px;color:var(--text);line-height:1.5;"]');
-            if (bnccEl && descEl) {
-                const bncc = bnccEl.textContent.replace('BNCC:', '').trim() || '—';
-                const descritor = descEl.textContent.trim() || '—';
-                descritores.push({ bncc, descritor });
-            }
-        });
-    }
-
-    // 🔥 TÍTULO DA MATRIZ
-    const tituloEl = document.getElementById('visualizar-matriz-titulo');
-    const titulo = tituloEl ? tituloEl.textContent : 'Matriz de Proficiência';
-
-    // 🔥 GERA O HTML DO PDF
+    const titulo = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
     const win = window.open('', '_blank');
     if (!win) {
         toast('⚠️ Permita pop-ups para gerar o PDF.', 'error');
         return;
     }
 
-    // Monta a tabela de descritores
+    const descritores = matriz.descritores || [];
+    const nivel = matriz.nivel || '—';
+    const ano = matriz.ano || '—';
+    const disciplina = matriz.disciplina || '—';
+
+    // 🔥 MONTA A TABELA DE DESCRITORES (BNCC | DESCRITOR)
     let descritoresHtml = '';
     if (descritores.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
@@ -8802,11 +8757,13 @@ function imprimirMatrizVisualizada() {
                 <tbody>
         `;
         descritores.forEach((d, idx) => {
+            const bncc = d.bncc || '—';
+            const desc = d.descritor || '—';
             const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
             descritoresHtml += `
                 <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${d.bncc}</td>
-                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top;">${d.descritor}</td>
+                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
+                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top;">${desc}</td>
                 </tr>
             `;
         });
