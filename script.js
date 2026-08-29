@@ -8722,54 +8722,67 @@ function visualizarMatriz(id) {
 // ================================================================
 
 function imprimirMatrizVisualizada() {
-    const conteudo = document.getElementById('visualizar-matriz-conteudo');
-    if (!conteudo) {
-        toast('❌ Nenhum conteúdo para imprimir.', 'error');
+    // 🔥 USA OS DADOS DIRETAMENTE DA VARIÁVEL GLOBAL
+    const matriz = window.matrizVisualizando;
+    if (!matriz) {
+        toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
         return;
     }
 
-    const titulo = document.getElementById('visualizar-matriz-titulo').textContent || 'Matriz de Proficiência';
-
+    const titulo = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
     const win = window.open('', '_blank');
     if (!win) {
         toast('⚠️ Permita pop-ups para gerar o PDF.', 'error');
         return;
     }
 
-    // Captura os dados do conteúdo
-    const infoItems = conteudo.querySelectorAll('.info-grid .item');
-    let ano = '—', disciplina = '—', nivel = '—';
-    const badges = conteudo.querySelectorAll('.badge');
-    if (badges.length > 0) {
-        // Pega o último badge (nível)
-        nivel = badges[badges.length - 1]?.textContent || '—';
+    const descritores = matriz.descritores || [];
+    const nivel = matriz.nivel || '—';
+    const ano = matriz.ano || '—';
+    const disciplina = matriz.disciplina || '—';
+
+    // 🔥 MONTA TABELA DE DESCRITORES COM DUAS COLUNAS: BNCC | DESCRITOR
+    let descritoresHtml = '';
+    if (descritores.length === 0) {
+        descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
+    } else {
+        descritoresHtml = `
+            <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:13px;">
+                <thead>
+                    <tr style="background:#f1f5f9; border-bottom:2px solid #2563eb;">
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:25%;">📌 BNCC</th>
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 Descritor</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        descritores.forEach((d, idx) => {
+            const bncc = d.bncc || '—';
+            const desc = d.descritor || '—';
+            const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+            descritoresHtml += `
+                <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
+                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top;">${desc}</td>
+                </tr>
+            `;
+        });
+        descritoresHtml += '</tbody></table>';
     }
-    const values = conteudo.querySelectorAll('.info-grid .value');
-    if (values.length >= 3) {
-        ano = values[0]?.textContent || '—';
-        disciplina = values[1]?.textContent || '—';
-        nivel = values[2]?.textContent || '—';
-    }
 
-    // Captura os descritores
-    const descritoresHtml = conteudo.querySelector('.descritores-container')?.innerHTML || 
-                            conteudo.querySelector('[style*="font-size:14px;color:var(--text);line-height:1.5;"]')?.innerHTML || 
-                            '<div style="color:#94a3b8;">Nenhum descritor cadastrado.</div>';
-
-    const style = document.querySelector('link[href="style.css"]')?.href || '';
-
+    // 🔥 GERA O HTML DO PDF
     win.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <title>${titulo}</title>
-            <link rel="stylesheet" href="${style}">
             <style>
-                body { 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
-                    padding: 30px; 
-                    background: #fff; 
+                * { margin:0; padding:0; box-sizing:border-box; }
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    padding: 30px;
+                    background: #fff;
                     color: #1e293b;
                 }
                 .container {
@@ -8778,7 +8791,8 @@ function imprimirMatrizVisualizada() {
                     background: #ffffff;
                     padding: 20px 30px;
                     border-radius: 12px;
-                    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
                 }
                 .header {
                     text-align: center;
@@ -8786,18 +8800,32 @@ function imprimirMatrizVisualizada() {
                     padding-bottom: 15px;
                     margin-bottom: 20px;
                 }
-                .header h1 { font-size: 20px; font-weight: 800; color: #1e293b; }
-                .header .sub { font-size: 14px; color: #475569; margin-top: 4px; }
+                .header h1 {
+                    font-size: 22px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.3px;
+                }
+                .header .sub {
+                    font-size: 14px;
+                    color: #475569;
+                    margin-top: 4px;
+                }
+                .header .data {
+                    font-size: 12px;
+                    color: #94a3b8;
+                    margin-top: 4px;
+                }
                 .info-grid {
                     display: grid;
                     grid-template-columns: 1fr 1fr 1fr;
                     gap: 15px;
-                    margin-bottom: 20px;
+                    margin: 18px 0 22px;
                 }
                 .info-card {
                     background: #f8fafc;
                     border-radius: 8px;
-                    padding: 10px 14px;
+                    padding: 12px 14px;
                     text-align: center;
                     border: 1px solid #e2e8f0;
                 }
@@ -8812,48 +8840,42 @@ function imprimirMatrizVisualizada() {
                     font-size: 18px;
                     font-weight: 800;
                     color: #0f172a;
+                    margin-top: 4px;
                 }
-                .descritores-section {
-                    border-top: 1px solid #e2e8f0;
-                    padding-top: 16px;
+                .info-card .value .badge {
+                    display: inline-block;
+                    padding: 2px 14px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    background: #e2e8f0;
+                    color: #1e293b;
                 }
-                .descritores-section .section-title {
+                .section-title {
                     font-size: 16px;
                     font-weight: 700;
                     color: #1e293b;
-                    margin-bottom: 12px;
+                    margin: 12px 0 6px;
+                    padding-bottom: 6px;
+                    border-bottom: 2px solid #e2e8f0;
                 }
-                .descritor-item {
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                    padding: 12px 16px;
-                    margin-bottom: 10px;
+                .table-wrap {
+                    overflow-x: auto;
+                    margin-top: 4px;
                 }
-                .descritor-item .header-desc {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    flex-wrap: wrap;
-                    gap: 6px;
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
                 }
-                .descritor-item .header-desc .num {
-                    font-weight: 700;
-                    color: #8b5cf6;
-                }
-                .descritor-item .header-desc .bncc {
+                th {
                     font-size: 11px;
-                    background: #ede9fe;
-                    padding: 2px 12px;
-                    border-radius: 12px;
-                    color: #6d28d9;
-                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
+                    background: #f1f5f9;
                 }
-                .descritor-item .desc-text {
-                    margin-top: 6px;
-                    font-size: 14px;
-                    line-height: 1.5;
-                    color: #1e293b;
+                td, th {
+                    padding: 8px 12px;
+                    text-align: left;
                 }
                 .footer {
                     margin-top: 20px;
@@ -8866,7 +8888,6 @@ function imprimirMatrizVisualizada() {
                 @media print {
                     body { padding: 10px; }
                     .container { box-shadow: none; border: none; }
-                    .descritor-item { break-inside: avoid; }
                 }
             </style>
         </head>
@@ -8875,23 +8896,37 @@ function imprimirMatrizVisualizada() {
                 <div class="header">
                     <h1>${titulo}</h1>
                     <div class="sub">Matriz de Proficiência — SISAM 2026</div>
-                    <div class="sub" style="font-size:12px;color:#94a3b8;margin-top:2px;">${new Date().toLocaleString('pt-BR')}</div>
+                    <div class="data">${new Date().toLocaleString('pt-BR')}</div>
                 </div>
+
                 <div class="info-grid">
-                    <div class="info-card"><div class="label">📚 Ano</div><div class="value">${ano}</div></div>
-                    <div class="info-card"><div class="label">📖 Disciplina</div><div class="value">${disciplina}</div></div>
-                    <div class="info-card"><div class="label">📊 Nível</div><div class="value">${nivel}</div></div>
+                    <div class="info-card">
+                        <div class="label">📚 Ano</div>
+                        <div class="value">${ano}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">📖 Disciplina</div>
+                        <div class="value">${disciplina}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">📊 Nível</div>
+                        <div class="value"><span class="badge">${nivel}</span></div>
+                    </div>
                 </div>
-                <div class="descritores-section">
-                    <div class="section-title">📋 Descritores</div>
+
+                <div class="section-title">📋 Descritores (${descritores.length})</div>
+                <div class="table-wrap">
                     ${descritoresHtml}
                 </div>
+
                 <div class="footer">
                     Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação
                 </div>
             </div>
             <script>
-                window.onload = function() { window.print(); };
+                window.onload = function() {
+                    window.print();
+                };
             <\/script>
         </body>
         </html>
