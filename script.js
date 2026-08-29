@@ -8508,11 +8508,15 @@ async function salvarMatriz() {
             const inputs = item.querySelectorAll('.form-control');
             const bncc = inputs[0] ? inputs[0].value.trim() : '';
             const descritor = inputs[1] ? inputs[1].value.trim() : '';
-            // 🔥 SEMPRE adiciona, mesmo que vazio, para manter a contagem
             descritores.push({ bncc, descritor });
         });
         
+        // 🔥 LOG PARA DEPURAÇÃO
+        console.log('🔍 Descritores coletados:', descritores);
+        
         const dados = { ano, disciplina, nivel, descritores };
+        console.log('📦 Dados a enviar:', dados);
+        
         const editId = document.getElementById('matriz-edit-id').value;
         const url = editId ? `/api/matrizes/${editId}` : '/api/matrizes';
         const method = editId ? 'PUT' : 'POST';
@@ -8531,6 +8535,7 @@ async function salvarMatriz() {
         }
         
         const result = await response.json();
+        console.log('✅ Resposta da API:', result);
         toast(result.mensagem || 'Matriz salva com sucesso!', 'success');
         
         fecharModalMatriz();
