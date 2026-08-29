@@ -8500,18 +8500,22 @@ async function salvarMatriz() {
         if (!disciplina) { toast('Selecione a Disciplina', 'error'); return; }
         if (!nivel) { toast('Selecione o Nível', 'error'); return; }
         
+        // 🔥 Coleta descritores de forma robusta
         const container = document.getElementById('matriz-descritores-container');
         const items = container.querySelectorAll('.matriz-descritor-item');
         const descritores = [];
         
         items.forEach(item => {
-            const inputs = item.querySelectorAll('.form-control');
-            const bncc = inputs[0] ? inputs[0].value.trim() : '';
-            const descritor = inputs[1] ? inputs[1].value.trim() : '';
+            // 🔥 Busca os campos dentro do item
+            const bnccInput = item.querySelector('.form-control:first-child');
+            const descritorInput = item.querySelector('.form-control:last-child');
+            const bncc = bnccInput ? bnccInput.value.trim() : '';
+            const descritor = descritorInput ? descritorInput.value.trim() : '';
             descritores.push({ bncc, descritor });
         });
         
-        // 🔥 LOG PARA DEPURAÇÃO
+        // 🔥 LOGS
+        console.log('🔍 Itens encontrados:', items.length);
         console.log('🔍 Descritores coletados:', descritores);
         
         const dados = { ano, disciplina, nivel, descritores };
