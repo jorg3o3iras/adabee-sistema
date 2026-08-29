@@ -8310,7 +8310,7 @@ function renderizarMatrizes(matrizes) {
 
     let html = '';
     matrizes.forEach((matriz, index) => {
-        // 🔥 TRATAMENTO ROBUSTO PARA descritores
+        // Normaliza os descritores
         let descritores = [];
         if (matriz.descritores) {
             if (Array.isArray(matriz.descritores)) {
@@ -8322,11 +8322,15 @@ function renderizarMatrizes(matrizes) {
                     descritores = [];
                 }
             } else if (typeof matriz.descritores === 'object') {
-                // Se for um objeto único, coloca em um array
                 descritores = [matriz.descritores];
             }
         }
-        
+        // 🔥 Normaliza cada descritor para ter 'descritor' e 'bncc'
+        descritores = descritores.map(d => ({
+            bncc: d.bncc || '',
+            descritor: d.descritor || d.descricao || ''
+        }));
+
         const totalDescritores = descritores.length;
 
         const nivelBadge = {
@@ -8510,26 +8514,25 @@ async function salvarMatriz() {
         if (!disciplina) { toast('Selecione a Disciplina', 'error'); return; }
         if (!nivel) { toast('Selecione o Nível', 'error'); return; }
         
-        // 🔥 Coleta descritores de forma robusta
         const container = document.getElementById('matriz-descritores-container');
         const items = container.querySelectorAll('.matriz-descritor-item');
         const descritores = [];
         
-        items.forEach(item => {
-            // 🔥 Busca os campos dentro do item
-            const bnccInput = item.querySelector('.form-control:first-child');
-            const descritorInput = item.querySelector('.form-control:last-child');
+        items.forEach((item, index) => {
+            // 🔥 Usa seletores específicos para evitar confusão
+            const bnccInput = item.querySelector('input.form-control');
+            const descritorInput = item.querySelector('textarea.form-control');
+            
             const bncc = bnccInput ? bnccInput.value.trim() : '';
             const descritor = descritorInput ? descritorInput.value.trim() : '';
+            
             descritores.push({ bncc, descritor });
+            
+            // 🔥 Log para depuração
+            console.log(`📌 Descritor #${index+1}: BNCC="${bncc}", Descritor="${descritor}"`);
         });
         
-        // 🔥 LOGS
-        console.log('🔍 Itens encontrados:', items.length);
-        console.log('🔍 Descritores coletados:', descritores);
-        
-        const dados = { ano, disciplina, nivel, descritores };
-        console.log('📦 Dados a enviar:', dados);
+        console.log('📦 Dados a enviar:', { ano, disciplina, nivel, descritores });
         
         const editId = document.getElementById('matriz-edit-id').value;
         const url = editId ? `/api/matrizes/${editId}` : '/api/matrizes';
@@ -8540,7 +8543,7 @@ async function salvarMatriz() {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
+            body: JSON.stringify({ ano, disciplina, nivel, descritores })
         });
         
         if (!response.ok) {
@@ -8656,14 +8659,25 @@ function visualizarMatriz(id) {
         toast('Matriz não encontrada', 'error');
         return;
     }
-	window.matrizVisualizando = matriz;
+    
+    // 🔥 Normaliza os descritores (aceita 'descritor' ou 'descricao')
+    const descritores = (matriz.descritores || []).map(d => ({
+        bncc: d.bncc || '',
+        descritor: d.descritor || d.descricao || ''  // fallback para 'descricao'
+    }));
+    
+    // 🔥 Salva na variável global com os dados normalizados
+    window.matrizVisualizando = {
+        ...matriz,
+        descritores: descritores
+    };
+    
     visualizarMatrizId = id;
     document.getElementById('visualizar-matriz-titulo').textContent = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
 
     const conteudo = document.getElementById('visualizar-matriz-conteudo');
     if (!conteudo) return;
 
-    const descritores = matriz.descritores || [];
     let descritoresHtml = '';
     if (descritores.length === 0) {
         descritoresHtml = '<div style="color:var(--text3);font-size:13px;">Nenhum descritor cadastrado.</div>';
@@ -8722,7 +8736,7 @@ function visualizarMatriz(id) {
 // ================================================================
 
 function imprimirMatrizVisualizada() {
-    // 🔥 USA OS DADOS DIRETAMENTE DA VARIÁVEL GLOBAL
+    // 🔥 Usa a matriz normalizada da variável global
     const matriz = window.matrizVisualizando;
     if (!matriz) {
         toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
@@ -8736,12 +8750,16 @@ function imprimirMatrizVisualizada() {
         return;
     }
 
-    const descritores = matriz.descritores || [];
+    // 🔥 Garante que os descritores estejam normalizados
+    const descritores = (matriz.descritores || []).map(d => ({
+        bncc: d.bncc || '',
+        descritor: d.descritor || d.descricao || ''  // fallback
+    }));
+
     const nivel = matriz.nivel || '—';
     const ano = matriz.ano || '—';
     const disciplina = matriz.disciplina || '—';
 
-    // 🔥 MONTA A TABELA DE DESCRITORES (BNCC | DESCRITOR)
     let descritoresHtml = '';
     if (descritores.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
