@@ -4003,6 +4003,159 @@ def gerar_gabarito():
 
 
 # ============================================
+# 🔥 ROTAS PARA MATRIZ DE PROFICIÊNCIA
+# ============================================
+
+@app.route('/api/matrizes', methods=['GET'])
+def listar_matrizes():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, ano, disciplina, nivel, descritores, created_at
+            FROM matrizes
+            ORDER BY created_at DESC
+        """)
+        matrizes = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Converter descritores de JSONB para array
+        for m in matrizes:
+            if m['descritores']:
+                try:
+                    m['descritores'] = json.loads(m['descritores'])
+                except:
+                    m['descritores'] = []
+            else:
+                m['descritores'] = []
+        
+        return jsonify(matrizes)
+    except Exception as e:
+        logging.error(f"Erro ao listar matrizes: {e}")
+        return jsonify([]), 500
+
+
+@app.route('/api/matrizes', methods=['POST'])
+def criar_matriz():
+    try:
+        data = request.json
+        ano = data.get('ano')
+        disciplina = data.get('disciplina')
+        nivel = data.get('nivel')
+        descritores = data.get('descritores', [])
+        
+        if not ano or not disciplina or not nivel:
+            return jsonify({'erro': 'Ano, disciplina e nível são obrigatórios'}), 400
+        
+        descritores_json = json.dumps(descritores, ensure_ascii=False)
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            INSERT INTO matrizes (ano, disciplina, nivel, descritores)
+            VALUES (%s, %s, %s, %s::jsonb)
+            RETURNING id
+        """, (ano, disciplina, nivel, descritores_json))
+        
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'id': result['id'],
+            'mensagem': 'Matriz criada com sucesso!'
+        })
+    except Exception as e:
+        logging.error(f"Erro ao criar matriz: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+@app.route('/api/matrizes/<int:id>', methods=['PUT'])
+def atualizar_matriz(id):
+    try:
+        data = request.json
+        ano = data.get('ano')
+        disciplina = data.get('disciplina')
+        nivel = data.get('nivel')
+        descritores = data.get('descritores', [])
+        
+        if not ano or not disciplina or not nivel:
+            return jsonify({'erro': 'Ano, disciplina e nível são obrigatórios'}), 400
+        
+        descritores_json = json.dumps(descritores, ensure_ascii=False)
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            UPDATE matrizes
+            SET ano = %s,
+                disciplina = %s,
+                nivel = %s,
+                descritores = %s::jsonb
+            WHERE id = %s
+            RETURNING id
+        """, (ano, disciplina, nivel, descritores_json, id))
+        
+        result = cur.fetchone()
+        if not result:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Matriz não encontrada'}), 404
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'id': result['id'],
+            'mensagem': 'Matriz atualizada com sucesso!'
+        })
+    except Exception as e:
+        logging.error(f"Erro ao atualizar matriz: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+@app.route('/api/matrizes/<int:id>', methods=['DELETE'])
+def excluir_matriz(id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("DELETE FROM matrizes WHERE id = %s RETURNING id", (id,))
+        result = cur.fetchone()
+        
+        if not result:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Matriz não encontrada'}), 404
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Matriz excluída com sucesso!'
+        })
+    except Exception as e:
+        logging.error(f"Erro ao excluir matriz: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+# ============================================
 # ROTA DE BACKUP
 # ============================================
 
@@ -4020,7 +4173,7 @@ def backup_database():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
 
-        tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto']
+        tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto', 'matrizes']
         data = {}
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -4096,7 +4249,8 @@ def index():
                 '/api/dashboard/Conceito',
                 '/api/gerar_gabarito',
                 '/api/backup',
-                '/api/usuarios'
+                '/api/usuarios',
+                '/api/matrizes'
             ]
         })
 
@@ -4269,6 +4423,18 @@ def init_db():
                 )
             """)
 
+            # 🔥 NOVA TABELA: MATRIZ DE PROFICIÊNCIA
+            cur.execute("""
+                CREATE TABLE matrizes (
+                    id SERIAL PRIMARY KEY,
+                    ano TEXT NOT NULL,
+                    disciplina TEXT NOT NULL,
+                    nivel TEXT NOT NULL,
+                    descritores JSONB DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             print("✅ Tabelas criadas com sucesso!")
         else:
             print("📌 Tabelas já existem, verificando colunas...")
@@ -4350,6 +4516,31 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro ao adicionar coluna bncc ao historico: {e}")
 
+            # 🔥 VERIFICAR SE A TABELA MATRIZES EXISTE
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'matrizes'
+                )
+            """)
+            matrizes_existe = cur.fetchone()[0]
+            if not matrizes_existe:
+                print("🔧 Criando tabela matrizes...")
+                try:
+                    cur.execute("""
+                        CREATE TABLE matrizes (
+                            id SERIAL PRIMARY KEY,
+                            ano TEXT NOT NULL,
+                            disciplina TEXT NOT NULL,
+                            nivel TEXT NOT NULL,
+                            descritores JSONB DEFAULT '[]',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    print("✅ Tabela matrizes criada com sucesso!")
+                except Exception as e:
+                    print(f"⚠️ Erro ao criar tabela matrizes: {e}")
+
         # Inserir usuários fixos
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
@@ -4371,7 +4562,10 @@ def init_db():
             "CREATE INDEX IF NOT EXISTS idx_historico_aluno_data ON historico(aluno_id, data_correcao DESC)",
             "CREATE INDEX IF NOT EXISTS idx_correcoes_texto_data ON correcoes_texto(data_correcao DESC)",
             "CREATE INDEX IF NOT EXISTS idx_provas_created_at ON provas(created_at DESC)",
-            "CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)"
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)",
+            "CREATE INDEX IF NOT EXISTS idx_matrizes_ano ON matrizes(ano)",
+            "CREATE INDEX IF NOT EXISTS idx_matrizes_disciplina ON matrizes(disciplina)",
+            "CREATE INDEX IF NOT EXISTS idx_matrizes_nivel ON matrizes(nivel)"
         ]
         for sql in indices:
             try:
