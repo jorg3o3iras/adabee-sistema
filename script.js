@@ -2667,10 +2667,7 @@ function salvarCorrecaoManualStandalone() {
             
             // 🔥 LIMPA O CACHE
             limparCache();
-            
-            // 🔥 FECHA O MODAL
-            closeM('m-correcao-manual-standalone');
-
+                        
             // 🔥 ATUALIZA TODOS OS DADOS AUTOMATICAMENTE
             setTimeout(() => {
                 // Atualiza a página atual
