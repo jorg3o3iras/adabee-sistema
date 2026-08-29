@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CorrigePro — Sistema de Correção de Provas</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js"></script>
 </head>
 <body>
 
@@ -501,200 +500,99 @@
             </div>
 
             <!-- ========== MATRIZ DE PROFICIÊNCIA ========== -->
-            <!-- ========== MATRIZ DE PROFICIÊNCIA ========== -->
-<div class="page" id="page-matriz">
-    <div class="page-header">
-        <div>
-            <div class="page-title">📊 Matriz de Proficiência</div>
-            <p class="page-sub">Cadastro de matrizes com BNCC e descritores por ano e disciplina</p>
-        </div>
-        <div class="page-actions no-print">
-            <div class="search-wrap">
-                <span class="search-ico">🔍</span>
-                <input type="text" placeholder="Buscar matriz..." oninput="filtrarTabela(this, 'tb-matrizes')">
-            </div>
-            <button class="btn btn-primary" onclick="abrirModalMatriz()">+ Nova Matriz</button>
-        </div>
-    </div>
+            <div class="page" id="page-matriz">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Matriz de Proficiência</div>
+                        <p class="page-sub">Cadastro de matrizes com BNCC e descritores por ano e disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <div class="search-wrap">
+                            <span class="search-ico">🔍</span>
+                            <input type="text" placeholder="Buscar matriz..." oninput="filtrarTabela(this, 'tb-matrizes')">
+                        </div>
+                        <button class="btn btn-primary" onclick="abrirModalMatriz()">+ Nova Matriz</button>
+                    </div>
+                </div>
 
-    <!-- Filtros -->
-    <div class="card no-print" style="margin-bottom:16px;">
-        <div class="form-row c3">
-            <div class="form-group">
-                <label class="form-label">Ano</label>
-                <select class="form-control" id="filtro-matriz-ano" onchange="filtrarMatrizes()">
-                    <option value="">Todos os anos</option>
-                    <option value="1º Ano">1º Ano</option>
-                    <option value="2º Ano">2º Ano</option>
-                    <option value="3º Ano">3º Ano</option>
-                    <option value="4º Ano">4º Ano</option>
-                    <option value="5º Ano">5º Ano</option>
-                    <option value="6º Ano">6º Ano</option>
-                    <option value="7º Ano">7º Ano</option>
-                    <option value="8º Ano">8º Ano</option>
-                    <option value="9º Ano">9º Ano</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Disciplina</label>
-                <select class="form-control" id="filtro-matriz-disciplina" onchange="filtrarMatrizes()">
-                    <option value="">Todas as disciplinas</option>
-                    <option value="Matemática">Matemática</option>
-                    <option value="Português">Português</option>
-                    <option value="Produção de Texto">Produção de Texto</option>
-                    <option value="Ciências Humanas">Ciências Humanas</option>
-                    <option value="Ciências Naturais">Ciências Naturais</option>
-                    <option value="História">História</option>
-                    <option value="Geografia">Geografia</option>
-                    <option value="Inglês">Inglês</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Nível</label>
-                <select class="form-control" id="filtro-matriz-nivel" onchange="filtrarMatrizes()">
-                    <option value="">Todos os níveis</option>
-                    <option value="Básico">Básico</option>
-                    <option value="Intermediário">Intermediário</option>
-                    <option value="Avançado">Avançado</option>
-                </select>
-            </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-            <button class="btn btn-primary btn-sm" onclick="filtrarMatrizes()">🔍 Filtrar</button>
-            <button class="btn btn-outline btn-sm" onclick="limparFiltrosMatriz()">✕ Limpar</button>
-        </div>
-    </div>
+                <!-- Filtros -->
+                <div class="card no-print" style="margin-bottom:16px;">
+                    <div class="form-row c3">
+                        <div class="form-group">
+                            <label class="form-label">Ano</label>
+                            <select class="form-control" id="filtro-matriz-ano" onchange="filtrarMatrizes()">
+                                <option value="">Todos os anos</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Disciplina</label>
+                            <select class="form-control" id="filtro-matriz-disciplina" onchange="filtrarMatrizes()">
+                                <option value="">Todas as disciplinas</option>
+                                <option value="Matemática">Matemática</option>
+                                <option value="Português">Português</option>
+                                <option value="Produção de Texto">Produção de Texto</option>
+                                <option value="Ciências Humanas">Ciências Humanas</option>
+                                <option value="Ciências Naturais">Ciências Naturais</option>
+                                <option value="História">História</option>
+                                <option value="Geografia">Geografia</option>
+                                <option value="Inglês">Inglês</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nível</label>
+                            <select class="form-control" id="filtro-matriz-nivel" onchange="filtrarMatrizes()">
+                                <option value="">Todos os níveis</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Intermediário">Intermediário</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="filtrarMatrizes()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosMatriz()">✕ Limpar</button>
+                    </div>
+                </div>
 
-    <!-- Tabela de Matrizes -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">📋 Matrizes Cadastradas</div>
-            <span class="badge badge-gray" id="total-matrizes">0 matrizes</span>
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Ano</th>
-                        <th>Disciplina</th>
-                        <th>Nível</th>
-                        <th>Descritores</th>
-                        <th>Data</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="tb-matrizes">
-                    <tr>
-                        <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
-                            Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- ========== MODAL MATRIZ ========== -->
-<div class="modal-overlay no-print" id="m-matriz">
-    <div class="modal" style="max-width:750px;width:95vw;">
-        <div class="modal-header">
-            <h3 id="matriz-modal-title">📊 Nova Matriz de Proficiência</h3>
-            <button class="modal-close" onclick="fecharModalMatriz()">×</button>
-        </div>
-        
-        <input type="hidden" id="matriz-edit-id" value="">
-        
-        <!-- Campos principais -->
-        <div class="form-row c3">
-            <div class="form-group">
-                <label class="form-label">Ano <span class="req">*</span></label>
-                <select class="form-control" id="matriz-ano">
-                    <option value="">Selecione...</option>
-                    <option value="1º Ano">1º Ano</option>
-                    <option value="2º Ano">2º Ano</option>
-                    <option value="3º Ano">3º Ano</option>
-                    <option value="4º Ano">4º Ano</option>
-                    <option value="5º Ano">5º Ano</option>
-                    <option value="6º Ano">6º Ano</option>
-                    <option value="7º Ano">7º Ano</option>
-                    <option value="8º Ano">8º Ano</option>
-                    <option value="9º Ano">9º Ano</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Disciplina <span class="req">*</span></label>
-                <select class="form-control" id="matriz-disciplina">
-                    <option value="">Selecione...</option>
-                    <option value="Matemática">Matemática</option>
-                    <option value="Português">Português</option>
-                    <option value="Produção de Texto">Produção de Texto</option>
-                    <option value="Ciências Humanas">Ciências Humanas</option>
-                    <option value="Ciências Naturais">Ciências Naturais</option>
-                    <option value="História">História</option>
-                    <option value="Geografia">Geografia</option>
-                    <option value="Inglês">Inglês</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Nível <span class="req">*</span></label>
-                <select class="form-control" id="matriz-nivel">
-                    <option value="">Selecione...</option>
-                    <option value="Básico">Básico</option>
-                    <option value="Intermediário">Intermediário</option>
-                    <option value="Avançado">Avançado</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Descritores com BNCC -->
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <div style="font-size:14px;font-weight:700;color:var(--text2);">📋 BNCC e Descritores</div>
-                <button class="btn btn-primary btn-sm" onclick="adicionarDescritorMatriz()">
-                    ➕ Adicionar Descritor
-                </button>
-            </div>
-            
-            <div id="matriz-descritores-container">
-                <!-- Os descritores serão adicionados dinamicamente aqui -->
-                <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
-                    Clique em "Adicionar Descritor" para começar
+                <!-- Tabela de Matrizes -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Matrizes Cadastradas</div>
+                        <span class="badge badge-gray" id="total-matrizes">0 matrizes</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Ano</th>
+                                    <th>Disciplina</th>
+                                    <th>Nível</th>
+                                    <th>Descritores</th>
+                                    <th>Data</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-matrizes">
+                                <tr>
+                                    <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
+                                        Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="modal-footer no-print">
-            <button class="btn btn-outline" onclick="fecharModalMatriz()">Cancelar</button>
-            <button class="btn btn-green" onclick="salvarMatriz()">💾 Salvar Matriz</button>
-        </div>
-    </div>
-</div>
-
-<!-- ========== MODAL CONFIRMAR EXCLUSÃO MATRIZ ========== -->
-<div class="modal-overlay no-print" id="m-deletar-matriz" style="display:none;">
-    <div class="modal" style="max-width:420px;text-align:center;">
-        <div class="modal-header">
-            <h3>🗑️ Confirmar Exclusão</h3>
-            <button class="modal-close" onclick="fecharModalDeletarMatriz()">×</button>
-        </div>
-        <div style="padding:20px 10px;">
-            <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-            <p style="font-size:15px;color:var(--text2);">
-                Tem certeza que deseja excluir a matriz<br>
-                <strong id="matriz-deletar-nome" style="color:var(--red);">"Matriz"</strong>?
-            </p>
-            <p style="font-size:12px;color:var(--text3);margin-top:8px;">
-                Esta ação não pode ser desfeita.
-            </p>
-        </div>
-        <div class="modal-footer" style="justify-content:center;border-top:none;padding-top:0;">
-            <button class="btn btn-outline" onclick="fecharModalDeletarMatriz()">Cancelar</button>
-            <button class="btn btn-red" onclick="confirmarDeletarMatriz()">🗑️ Excluir</button>
-        </div>
-    </div>
-</div>
 
             <!-- ========== RESULTADOS ========== -->
             <div class="page" id="page-resultados">
@@ -1663,6 +1561,9 @@ Ana Lima" rows="3"></textarea>
         </div>
 
     </div>
+
+    <!-- ══════════ CARREGAMENTO DO JAVASCRIPT ══════════ -->
+    <script src="script.js"></script>
 
 </body>
 </html>
