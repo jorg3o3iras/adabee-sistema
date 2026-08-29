@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="pt-BR"><head>
+<html lang="pt-BR">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CorrigePro — Sistema de Correção de Provas</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js"></script>
-    
 </head>
 <body>
 
@@ -59,16 +59,26 @@
                 <div id="adm-sb">
                     <div class="sb-section">Principal</div>
                     <div class="sb-item active" onclick="go('dashboard')" data-p="dashboard"><span class="sb-ico">🏠</span> Dashboard</div>
+                    
                     <div class="sb-section">Cadastros</div>
                     <div class="sb-item" onclick="go('escola')" data-p="escola"><span class="sb-ico">🏫</span> Escolas</div>
                     <div class="sb-item" onclick="go('turmas')" data-p="turmas"><span class="sb-ico">👥</span> Turmas</div>
                     <div class="sb-item" onclick="go('alunos')" data-p="alunos"><span class="sb-ico">🎒</span> Alunos</div>
                     <div class="sb-item" onclick="go('lista-turma')" data-p="lista-turma"><span class="sb-ico">📋</span> Gerar Cartao Resposta</div>
+                    
                     <div class="sb-section">Avaliações</div>
                     <div class="sb-item" onclick="go('prova-upload')" data-p="prova-upload"><span class="sb-ico">📤</span> Cadastrar Prova</div>
                     <div class="sb-item" onclick="go('provas')" data-p="provas"><span class="sb-ico">📑</span> Provas</div>
                     <div class="sb-item" onclick="go('gabarito')" data-p="gabarito"><span class="sb-ico">✅</span> Gabarito</div>
                     <div class="sb-item" onclick="go('gabaritos')" data-p="gabaritos"><span class="sb-ico">📋</span> Gabaritos</div>
+                    
+                    <!-- ═══════ NOVO MENU: MATRIZ DE PROFICIÊNCIA ═══════ -->
+                    <div class="sb-section">Matriz de Proficiência</div>
+                    <div class="sb-item" onclick="go('matriz')" data-p="matriz" style="border-left: 3px solid var(--purple); background: rgba(139, 92, 246, 0.08);">
+                        <span class="sb-ico">📊</span> Matrizes
+                        <span class="sb-badge-new">NOVO</span>
+                    </div>
+                    
                     <div class="sb-section">IA &amp; Correção</div>
                     <div class="sb-item" onclick="go('corrigir-ia')" data-p="corrigir-ia">
                         <span class="sb-ico">🤖</span> Corrigir com IA <span class="sb-badge">IA</span>
@@ -85,12 +95,14 @@
                     <div class="sb-item" onclick="abrirCorrecaoManualStandalone()" style="border-left: 3px solid var(--orange); background: rgba(245, 158, 11, 0.05);">
                         <span class="sb-ico">✏️</span> Correção Manual <span class="sb-badge-new">NOVO</span>
                     </div>
+                    
                     <div class="sb-section">Resultados</div>
                     <div class="sb-item" onclick="go('resultados')" data-p="resultados"><span class="sb-ico">🏆</span> Resultados</div>
                     <div class="sb-item" onclick="go('rel-turma')" data-p="rel-turma"><span class="sb-ico">📊</span> Rel. por Turma</div>
                     <div class="sb-item" onclick="go('desempenho')" data-p="desempenho" style="border-left: 3px solid var(--blue); background: rgba(59,130,246,0.08);">
                         <span class="sb-ico">📊</span> Desempenho do Aluno <span class="sb-badge-new">NOVO</span>
                     </div>
+                    
                     <div class="sb-section">Sistema</div>
                     <div class="sb-item" id="menu-config" onclick="go('config')" data-p="config"><span class="sb-ico">⚙️</span> Configurações</div>
                 </div>
@@ -488,203 +500,297 @@
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
+            <!-- ========== MATRIZ DE PROFICIÊNCIA ========== -->
+            <div class="page" id="page-matriz">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Matriz de Proficiência</div>
+                        <p class="page-sub">Cadastro de matrizes com BNCC e descritores por ano e disciplina</p>
+                    </div>
+                    <div class="page-actions no-print">
+                        <div class="search-wrap">
+                            <span class="search-ico">🔍</span>
+                            <input type="text" placeholder="Buscar matriz..." oninput="filtrarTabela(this, 'tb-matrizes')">
+                        </div>
+                        <button class="btn btn-primary" onclick="abrirModalMatriz()">+ Nova Matriz</button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card no-print" style="margin-bottom:16px;">
+                    <div class="form-row c3">
+                        <div class="form-group">
+                            <label class="form-label">Ano</label>
+                            <select class="form-control" id="filtro-matriz-ano" onchange="filtrarMatrizes()">
+                                <option value="">Todos os anos</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Disciplina</label>
+                            <select class="form-control" id="filtro-matriz-disciplina" onchange="filtrarMatrizes()">
+                                <option value="">Todas as disciplinas</option>
+                                <option value="Matemática">Matemática</option>
+                                <option value="Português">Português</option>
+                                <option value="Produção de Texto">Produção de Texto</option>
+                                <option value="Ciências Humanas">Ciências Humanas</option>
+                                <option value="Ciências Naturais">Ciências Naturais</option>
+                                <option value="História">História</option>
+                                <option value="Geografia">Geografia</option>
+                                <option value="Inglês">Inglês</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nível</label>
+                            <select class="form-control" id="filtro-matriz-nivel" onchange="filtrarMatrizes()">
+                                <option value="">Todos os níveis</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Intermediário">Intermediário</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="filtrarMatrizes()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosMatriz()">✕ Limpar</button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Matrizes -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Matrizes Cadastradas</div>
+                        <span class="badge badge-gray" id="total-matrizes">0 matrizes</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Ano</th>
+                                    <th>Disciplina</th>
+                                    <th>Nível</th>
+                                    <th>Descritores</th>
+                                    <th>Data</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-matrizes">
+                                <tr>
+                                    <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
+                                        Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- ========== RESULTADOS ========== -->
-            &lt;<!-- ========== RESULTADOS ========== -->
-<div class="page" id="page-resultados">
-    <div class="page-header">
-        <div>
-            <div class="page-title">🏆 Resultados</div>
-            <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
-        </div>
-        <div class="page-actions no-print">
-            <button class="btn btn-outline" onclick="imprimirResultadosMelhorados()">🖨️ Imprimir</button>
-            <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
-        </div>
-    </div>
-
-    <div class="print-header print-only">
-        <h2>📊 Relatório de Resultados</h2>
-        <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
-        <p style="font-size:11px; color:#666;">Data: <span id="print-data-resultados"></span></p>
-    </div>
-
-    <div class="card no-print" style="margin-bottom:16px;">
-        <div class="form-row c4">
-            <div class="form-group">
-                <label class="form-label">Escola</label>
-                <select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)">
-                    <option value="">Todas as escolas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Série</label>
-                <select class="form-control" id="filtro-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('filtro-turma')); carregarResultadosComFiltros();">
-                    <option value="">Todas as séries</option>
-                    <option value="1º Ano">1º Ano</option>
-                    <option value="2º Ano">2º Ano</option>
-                    <option value="3º Ano">3º Ano</option>
-                    <option value="4º Ano">4º Ano</option>
-                    <option value="5º Ano">5º Ano</option>
-                    <option value="6º Ano">6º Ano</option>
-                    <option value="7º Ano">7º Ano</option>
-                    <option value="8º Ano">8º Ano</option>
-                    <option value="9º Ano">9º Ano</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Turma</label>
-                <select class="form-control" id="filtro-turma" onchange="carregarResultadosComFiltros()">
-                    <option value="">Todas as turmas</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Prova</label>
-                <select class="form-control" id="filtro-prova" onchange="carregarResultadosComFiltros()">
-                    <option value="">Todas as provas</option>
-                </select>
-            </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-            <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
-            <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
-        </div>
-    </div>
-
-    <!-- 🔥 CARDS REORGANIZADOS: Nº DE ALUNOS NA TURMA, TOTAL CORRIGIDOS, SEM CORREÇÃO -->
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
-        <div style="background:var(--surface); border:1px solid rgba(59,130,246,.3); border-radius:var(--r); padding:16px; text-align:center;">
-            <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-alunos-turma">0</div>
-            <div style="font-size:12px; color:var(--text2);">👥 Nº DE ALUNOS NA TURMA</div>
-            <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-total">100% da turma</div>
-        </div>
-        <div style="background:var(--surface); border:1px solid rgba(16,185,129,.3); border-radius:var(--r); padding:16px; text-align:center;">
-            <div style="font-size:28px; font-weight:800; color:var(--green);" id="res-total-filtrado">0</div>
-            <div style="font-size:12px; color:var(--text2);">✅ Total de Alunos Provas Corrigidas</div>
-            <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-corrigidos">0% da turma</div>
-        </div>
-        <div style="background:var(--surface); border:1px solid rgba(239,68,68,.3); border-radius:var(--r); padding:16px; text-align:center;">
-            <div style="font-size:28px; font-weight:800; color:var(--red);" id="res-diferenca">0</div>
-            <div style="font-size:12px; color:var(--text2);">❌ Alunos sem correção</div>
-            <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-sem-correcao">0% da turma</div>
-        </div>
-    </div>
-
-    <!-- 🔥 NOVO CARD: ALUNOS QUE FIZERAM A PROVA E NÃO FIZERAM (SEPARADO) -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
-        <div style="background:var(--surface); border:1px solid rgba(16,185,129,.2); border-radius:var(--r); padding:16px; text-align:center;">
-            <div style="font-size:24px; font-weight:800; color:var(--green);" id="res-alunos-fizeram">0</div>
-            <div style="font-size:13px; color:var(--text2);">✅ Alunos que FIZERAM a prova</div>
-            <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-fizeram">0% da turma</div>
-            <div style="margin-top:8px; background:var(--bg2); border-radius:6px; padding:6px 12px;">
-                <span style="font-size:12px; font-weight:600; color:var(--green);">✔️ Corrigidos com nota</span>
-            </div>
-        </div>
-        <div style="background:var(--surface); border:1px solid rgba(239,68,68,.2); border-radius:var(--r); padding:16px; text-align:center;">
-            <div style="font-size:24px; font-weight:800; color:var(--red);" id="res-alunos-nao-fizeram">0</div>
-            <div style="font-size:13px; color:var(--text2);">❌ Alunos que NÃO FIZERAM a prova</div>
-            <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-nao-fizeram">0% da turma</div>
-            <div style="margin-top:8px; background:var(--bg2); border-radius:6px; padding:6px 12px;">
-                <span style="font-size:12px; font-weight:600; color:var(--red);">⚠️ Sem correção registrada</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="conceito-graficos" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">📊 Distribuição por Conceito</div>
-                <span class="badge badge-blue no-print">Barras</span>
-            </div>
-            <div id="conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🔴 inicial (até 40%)</span>
-                        <span style="font-weight:700; color:#ef4444;" id="conceito-inicial-count">0</span>
+            <div class="page" id="page-resultados">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🏆 Resultados</div>
+                        <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
                     </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px; transition:width 0.8s ease;" id="conceito-inicial-bar"></div>
+                    <div class="page-actions no-print">
+                        <button class="btn btn-outline" onclick="imprimirResultadosMelhorados()">🖨️ Imprimir</button>
+                        <button class="btn btn-green" onclick="exportarResultadosFiltrados()">📥 Excel</button>
                     </div>
                 </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🟠 básico (41% – 60%)</span>
-                        <span style="font-weight:700; color:#f59e0b;" id="conceito-basico-count">0</span>
-                    </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px; transition:width 0.8s ease;" id="conceito-basico-bar"></div>
-                    </div>
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🔵 proficiente (61% – 80%)</span>
-                        <span style="font-weight:700; color:#3b82f6;" id="conceito-proficiente-count">0</span>
-                    </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px; transition:width 0.8s ease;" id="conceito-proficiente-bar"></div>
-                    </div>
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                        <span>🟢 avançado (acima de 80%)</span>
-                        <span style="font-weight:700; color:#10b981;" id="conceito-avancado-count">0</span>
-                    </div>
-                    <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
-                        <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px; transition:width 0.8s ease;" id="conceito-avancado-bar"></div>
-                    </div>
-                </div>
-            </div>
-            <div style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
-                Total de alunos avaliados: <span id="total-conceitos-label">0</span>
-            </div>
-        </div>
-    </div>
 
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">📋 Lista de Alunos</div>
-            <span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span>
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th rowspan="2">Pos.</th>
-                        <th rowspan="2">Nº</th>
-                        <th rowspan="2">Nome</th>
-                        <th rowspan="2">Série</th>
-                        <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
-                        <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
-                        <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
-                        <th colspan="3" class="col-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
-                        <th colspan="3" class="col-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
-                        <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
-                        <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
-                    </tr>
-                    <tr>
-                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                        <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                        <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                        <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                        <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
-                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
-                        <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
-                    </tr>
-                </thead>
-                <tbody id="tb-resultados-filtrado">
-                    <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+                <div class="print-header print-only">
+                    <h2>📊 Relatório de Resultados</h2>
+                    <p>Sistema de Correção de Provas — São Sebastião da Boa Vista</p>
+                    <p style="font-size:11px; color:#666;">Data: <span id="print-data-resultados"></span></p>
+                </div>
+
+                <div class="card no-print" style="margin-bottom:16px;">
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Escola</label>
+                            <select class="form-control" id="filtro-escola" onchange="carregarTurmasPorEscola(this.value)">
+                                <option value="">Todas as escolas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série</label>
+                            <select class="form-control" id="filtro-serie" onchange="filtrarTurmasPorSerie(this, document.getElementById('filtro-turma')); carregarResultadosComFiltros();">
+                                <option value="">Todas as séries</option>
+                                <option value="1º Ano">1º Ano</option>
+                                <option value="2º Ano">2º Ano</option>
+                                <option value="3º Ano">3º Ano</option>
+                                <option value="4º Ano">4º Ano</option>
+                                <option value="5º Ano">5º Ano</option>
+                                <option value="6º Ano">6º Ano</option>
+                                <option value="7º Ano">7º Ano</option>
+                                <option value="8º Ano">8º Ano</option>
+                                <option value="9º Ano">9º Ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="filtro-turma" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as turmas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prova</label>
+                            <select class="form-control" id="filtro-prova" onchange="carregarResultadosComFiltros()">
+                                <option value="">Todas as provas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="carregarResultadosComFiltros()">🔍 Filtrar</button>
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosResultados()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
+
+                <!-- CARDS REORGANIZADOS -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div style="background:var(--surface); border:1px solid rgba(59,130,246,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-alunos-turma">0</div>
+                        <div style="font-size:12px; color:var(--text2);">👥 Nº DE ALUNOS NA TURMA</div>
+                        <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-total">100% da turma</div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(16,185,129,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--green);" id="res-total-filtrado">0</div>
+                        <div style="font-size:12px; color:var(--text2);">✅ Total de Alunos Provas Corrigidas</div>
+                        <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-corrigidos">0% da turma</div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(239,68,68,.3); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:28px; font-weight:800; color:var(--red);" id="res-diferenca">0</div>
+                        <div style="font-size:12px; color:var(--text2);">❌ Alunos sem correção</div>
+                        <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-sem-correcao">0% da turma</div>
+                    </div>
+                </div>
+
+                <!-- ALUNOS QUE FIZERAM E NÃO FIZERAM -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div style="background:var(--surface); border:1px solid rgba(16,185,129,.2); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:24px; font-weight:800; color:var(--green);" id="res-alunos-fizeram">0</div>
+                        <div style="font-size:13px; color:var(--text2);">✅ Alunos que FIZERAM a prova</div>
+                        <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-fizeram">0% da turma</div>
+                        <div style="margin-top:8px; background:var(--bg2); border-radius:6px; padding:6px 12px;">
+                            <span style="font-size:12px; font-weight:600; color:var(--green);">✔️ Corrigidos com nota</span>
+                        </div>
+                    </div>
+                    <div style="background:var(--surface); border:1px solid rgba(239,68,68,.2); border-radius:var(--r); padding:16px; text-align:center;">
+                        <div style="font-size:24px; font-weight:800; color:var(--red);" id="res-alunos-nao-fizeram">0</div>
+                        <div style="font-size:13px; color:var(--text2);">❌ Alunos que NÃO FIZERAM a prova</div>
+                        <div style="font-size:11px; color:var(--text3); margin-top:4px;" id="res-porcentagem-nao-fizeram">0% da turma</div>
+                        <div style="margin-top:8px; background:var(--bg2); border-radius:6px; padding:6px 12px;">
+                            <span style="font-size:12px; font-weight:600; color:var(--red);">⚠️ Sem correção registrada</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="conceito-graficos" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📊 Distribuição por Conceito</div>
+                            <span class="badge badge-blue no-print">Barras</span>
+                        </div>
+                        <div id="conceito-barras" style="display:flex; flex-direction:column; gap:12px; padding:8px 0;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔴 inicial (até 40%)</span>
+                                    <span style="font-weight:700; color:#ef4444;" id="conceito-inicial-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#ef4444,#dc2626); border-radius:10px; transition:width 0.8s ease;" id="conceito-inicial-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟠 básico (41% – 60%)</span>
+                                    <span style="font-weight:700; color:#f59e0b;" id="conceito-basico-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px; transition:width 0.8s ease;" id="conceito-basico-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🔵 proficiente (61% – 80%)</span>
+                                    <span style="font-weight:700; color:#3b82f6;" id="conceito-proficiente-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:10px; transition:width 0.8s ease;" id="conceito-proficiente-bar"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>🟢 avançado (acima de 80%)</span>
+                                    <span style="font-weight:700; color:#10b981;" id="conceito-avancado-count">0</span>
+                                </div>
+                                <div class="progress" style="height:20px; border-radius:10px; background:var(--bg2);">
+                                    <div class="progress-fill" style="width:2%; background:linear-gradient(90deg,#10b981,#059669); border-radius:10px; transition:width 0.8s ease;" id="conceito-avancado-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+                            Total de alunos avaliados: <span id="total-conceitos-label">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Lista de Alunos</div>
+                        <span class="badge badge-gray" id="total-alunos-tabela">0 alunos</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">Pos.</th>
+                                    <th rowspan="2">Nº</th>
+                                    <th rowspan="2">Nome</th>
+                                    <th rowspan="2">Série</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(59,130,246,0.05);border-bottom:2px solid #3b82f6;"> Português</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(16,185,129,0.05);border-bottom:2px solid #10b981;"> Matemática</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(139,92,246,0.05);border-bottom:2px solid #8b5cf6;"> Produção</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;"> CH</th>
+                                    <th colspan="3" class="col-disciplina" style="background:rgba(20,184,166,0.05);border-bottom:2px solid #14b8a6;"> CN</th>
+                                    <th rowspan="2" class="col-escola" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Escola</th>
+                                    <th rowspan="2" class="col-turma" style="background:rgba(245,158,11,0.05);border-bottom:2px solid #f59e0b;">Turma</th>
+                                </tr>
+                                <tr>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(59,130,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(16,185,129,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(139,92,246,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(245,158,11,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Acertos</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Erros</th>
+                                    <th style="background:rgba(20,184,166,0.03);font-size:7px;padding:2px 2px;">Conceito</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-resultados-filtrado">
+                                <tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
             <!-- ========== RELATÓRIO POR TURMA ========== -->
             <div class="page" id="page-rel-turma">
@@ -1011,7 +1117,6 @@
                     </div>
                 </div>
             </div>
-            <!-- ===== FIM DA ABA DESEMPENHO ===== -->
 
         </div>
 
@@ -1324,6 +1429,106 @@ Ana Lima" rows="3"></textarea>
             </div>
         </div>
 
+        <!-- ========== MODAL MATRIZ DE PROFICIÊNCIA ========== -->
+        <div class="modal-overlay no-print" id="m-matriz">
+            <div class="modal" style="max-width:750px;width:95vw;">
+                <div class="modal-header">
+                    <h3 id="matriz-modal-title">📊 Nova Matriz de Proficiência</h3>
+                    <button class="modal-close" onclick="fecharModalMatriz()">×</button>
+                </div>
+                
+                <input type="hidden" id="matriz-edit-id" value="">
+                
+                <!-- Campos principais -->
+                <div class="form-row c3">
+                    <div class="form-group">
+                        <label class="form-label">Ano <span class="req">*</span></label>
+                        <select class="form-control" id="matriz-ano">
+                            <option value="">Selecione...</option>
+                            <option value="1º Ano">1º Ano</option>
+                            <option value="2º Ano">2º Ano</option>
+                            <option value="3º Ano">3º Ano</option>
+                            <option value="4º Ano">4º Ano</option>
+                            <option value="5º Ano">5º Ano</option>
+                            <option value="6º Ano">6º Ano</option>
+                            <option value="7º Ano">7º Ano</option>
+                            <option value="8º Ano">8º Ano</option>
+                            <option value="9º Ano">9º Ano</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Disciplina <span class="req">*</span></label>
+                        <select class="form-control" id="matriz-disciplina">
+                            <option value="">Selecione...</option>
+                            <option value="Matemática">Matemática</option>
+                            <option value="Português">Português</option>
+                            <option value="Produção de Texto">Produção de Texto</option>
+                            <option value="Ciências Humanas">Ciências Humanas</option>
+                            <option value="Ciências Naturais">Ciências Naturais</option>
+                            <option value="História">História</option>
+                            <option value="Geografia">Geografia</option>
+                            <option value="Inglês">Inglês</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nível <span class="req">*</span></label>
+                        <select class="form-control" id="matriz-nivel">
+                            <option value="">Selecione...</option>
+                            <option value="Básico">Básico</option>
+                            <option value="Intermediário">Intermediário</option>
+                            <option value="Avançado">Avançado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Descritores com BNCC -->
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="font-size:14px;font-weight:700;color:var(--text2);">📋 BNCC e Descritores</div>
+                        <button class="btn btn-primary btn-sm" onclick="adicionarDescritorMatriz()">
+                            ➕ Adicionar Descritor
+                        </button>
+                    </div>
+                    
+                    <div id="matriz-descritores-container">
+                        <!-- Os descritores serão adicionados dinamicamente aqui -->
+                        <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+                            Clique em "Adicionar Descritor" para começar
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer no-print">
+                    <button class="btn btn-outline" onclick="fecharModalMatriz()">Cancelar</button>
+                    <button class="btn btn-green" onclick="salvarMatriz()">💾 Salvar Matriz</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== MODAL CONFIRMAR EXCLUSÃO MATRIZ ========== -->
+        <div class="modal-overlay no-print" id="m-deletar-matriz" style="display:none;">
+            <div class="modal" style="max-width:420px;text-align:center;">
+                <div class="modal-header">
+                    <h3>🗑️ Confirmar Exclusão</h3>
+                    <button class="modal-close" onclick="fecharModalDeletarMatriz()">×</button>
+                </div>
+                <div style="padding:20px 10px;">
+                    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                    <p style="font-size:15px;color:var(--text2);">
+                        Tem certeza que deseja excluir a matriz<br>
+                        <strong id="matriz-deletar-nome" style="color:var(--red);">"Matriz"</strong>?
+                    </p>
+                    <p style="font-size:12px;color:var(--text3);margin-top:8px;">
+                        Esta ação não pode ser desfeita.
+                    </p>
+                </div>
+                <div class="modal-footer" style="justify-content:center;border-top:none;padding-top:0;">
+                    <button class="btn btn-outline" onclick="fecharModalDeletarMatriz()">Cancelar</button>
+                    <button class="btn btn-red" onclick="confirmarDeletarMatriz()">🗑️ Excluir</button>
+                </div>
+            </div>
+        </div>
+
         <!-- TOAST -->
         <div class="toast-container no-print" id="toast-c"></div>
 
@@ -1356,11 +1561,7 @@ Ana Lima" rows="3"></textarea>
             </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- ========== SCRIPT COMPLETO CORRIGIDO ========== -->
-        <!-- ============================================================ -->
+    </div>
 
-        
-    
-    
-</div></body></html>
+</body>
+</html>
