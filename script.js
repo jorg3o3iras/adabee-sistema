@@ -8482,7 +8482,239 @@ function removerDescritorMatriz(btn) {
 }
 
 // ================================================================
-// 🔥 SALVAR MATRIZ (CRIAR / ATUALIZAR)
+// 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO (CORRIGIDO)
+// ================================================================
+
+let matrizesData = [];
+let matrizEditId = null;
+let matrizDescritorCounter = 0;
+let matrizParaDeletar = null;
+let visualizarMatrizId = null;
+
+// ================================================================
+// 🔥 CARREGAR MATRIZES DA API
+// ================================================================
+
+async function carregarMatrizes() {
+    try {
+        const response = await fetch('/api/matrizes');
+        if (!response.ok) throw new Error('Erro ao carregar matrizes');
+        matrizesData = await response.json();
+        renderizarMatrizes(matrizesData);
+        atualizarTotalMatrizes(matrizesData.length);
+    } catch (error) {
+        console.error('❌ Erro ao carregar matrizes:', error);
+        matrizesData = carregarMatrizesLocal();
+        renderizarMatrizes(matrizesData);
+        atualizarTotalMatrizes(matrizesData.length);
+    }
+}
+
+// ================================================================
+// 🔥 RENDERIZAR MATRIZES NA TABELA (COM BOTÃO VISUALIZAR)
+// ================================================================
+
+function renderizarMatrizes(matrizes) {
+    const tbody = document.getElementById('tb-matrizes');
+    if (!tbody) return;
+
+    if (!matrizes || matrizes.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
+                    Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    matrizes.forEach((matriz, index) => {
+        const descritores = matriz.descritores || [];
+        const totalDescritores = descritores.length;
+        
+        // 🔥 GERAR PREVIEW DOS DESCRITORES
+        let descritoresPreview = '';
+        if (totalDescritores > 0) {
+            const previewText = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
+            descritoresPreview = `<span class="descritores-preview" title="${previewText}">${previewText.substring(0, 60)}${previewText.length > 60 ? '...' : ''}</span>`;
+        } else {
+            descritoresPreview = 'Nenhum descritor';
+        }
+
+        // Badge de nível
+        let nivelBadge = 'badge-nivel-basico';
+        if (matriz.nivel === 'Intermediário') nivelBadge = 'badge-nivel-intermediario';
+        else if (matriz.nivel === 'Avançado') nivelBadge = 'badge-nivel-avancado';
+
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td><strong>${matriz.ano || '-'}</strong></td>
+                <td>${matriz.disciplina || '-'}</td>
+                <td><span class="badge ${nivelBadge}">${matriz.nivel || '-'}</span></td>
+                <td>
+                    <span class="badge-descritores">
+                        📋 <span class="count">${totalDescritores}</span>
+                    </span>
+                    ${totalDescritores > 0 ? descritoresPreview : 'Nenhum descritor'}
+                </td>
+                <td style="font-size:10px;color:var(--text3);">${formatarData(matriz.created_at)}</td>
+                <td>
+                    <div class="matriz-actions">
+                        <button class="btn btn-sm btn-edit" onclick="editarMatriz(${matriz.id})" title="Editar">✏️</button>
+                        <button class="btn btn-sm btn-view" onclick="visualizarMatriz(${matriz.id})" title="Visualizar">👁️</button>
+                        <button class="btn btn-sm btn-delete" onclick="excluirMatriz(${matriz.id})" title="Excluir">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+// ================================================================
+// 🔥 ATUALIZAR CONTADOR DE MATRIZES
+// ================================================================
+
+function atualizarTotalMatrizes(total) {
+    const el = document.getElementById('total-matrizes');
+    if (el) el.textContent = `${total} matrizes`;
+}
+
+// ================================================================
+// 🔥 ABRIR MODAL PARA NOVA MATRIZ
+// ================================================================
+
+function abrirModalMatriz() {
+    matrizEditId = null;
+    matrizDescritorCounter = 0;
+    
+    document.getElementById('matriz-modal-title').textContent = '📊 Nova Matriz de Proficiência';
+    document.getElementById('matriz-edit-id').value = '';
+    document.getElementById('matriz-ano').value = '';
+    document.getElementById('matriz-disciplina').value = '';
+    document.getElementById('matriz-nivel').value = '';
+    
+    // Limpar descritores
+    const container = document.getElementById('matriz-descritores-container');
+    container.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+            Clique em "Adicionar Descritor" para começar
+        </div>
+    `;
+    
+    openM('m-matriz');
+}
+
+// ================================================================
+// 🔥 EDITAR MATRIZ
+// ================================================================
+
+function editarMatriz(id) {
+    const matriz = matrizesData.find(m => m.id === id);
+    if (!matriz) {
+        toast('Matriz não encontrada', 'error');
+        return;
+    }
+
+    matrizEditId = id;
+    document.getElementById('matriz-modal-title').textContent = `✏️ Editar Matriz - ${matriz.ano} / ${matriz.disciplina}`;
+    document.getElementById('matriz-edit-id').value = id;
+    document.getElementById('matriz-ano').value = matriz.ano || '';
+    document.getElementById('matriz-disciplina').value = matriz.disciplina || '';
+    document.getElementById('matriz-nivel').value = matriz.nivel || '';
+    
+    // Carregar descritores
+    const container = document.getElementById('matriz-descritores-container');
+    container.innerHTML = '';
+    
+    const descritores = matriz.descritores || [];
+    if (descritores.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+                Nenhum descritor cadastrado. Clique em "Adicionar Descritor" para começar.
+            </div>
+        `;
+    } else {
+        descritores.forEach((d) => {
+            adicionarDescritorMatriz(d.bncc, d.descritor);
+        });
+    }
+    
+    openM('m-matriz');
+}
+
+// ================================================================
+// 🔥 ADICIONAR DESCRITOR DINÂMICAMENTE (COM TEXTAREA)
+// ================================================================
+
+function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
+    const container = document.getElementById('matriz-descritores-container');
+    
+    // Remover o placeholder se existir
+    const placeholder = container.querySelector('.matriz-descritores-empty');
+    if (placeholder) placeholder.remove();
+    
+    const counter = ++matrizDescritorCounter;
+    
+    const item = document.createElement('div');
+    item.className = 'matriz-descritor-item';
+    item.dataset.index = counter;
+    item.innerHTML = `
+        <div class="descritor-header">
+            <span class="descritor-num">📌 Descritor #${counter}</span>
+            <button class="btn-remover-descritor" onclick="removerDescritorMatriz(this)" title="Remover descritor">×</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">BNCC</label>
+                <input class="form-control" type="text" placeholder="Ex: EF01MA01" value="${bnccValue}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descritor</label>
+                <textarea class="form-control" placeholder="Descreva a habilidade..." rows="4" style="resize:vertical; min-height:70px;">${descritorValue}</textarea>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(item);
+    
+    // Scroll para o novo item
+    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ================================================================
+// 🔥 REMOVER DESCRITOR
+// ================================================================
+
+function removerDescritorMatriz(btn) {
+    const item = btn.closest('.matriz-descritor-item');
+    if (!item) return;
+    
+    const num = item.dataset.index;
+    if (confirm(`Remover Descritor #${num}?`)) {
+        item.classList.add('removing');
+        setTimeout(() => {
+            item.remove();
+            // Se não houver mais descritores, mostrar placeholder
+            const container = document.getElementById('matriz-descritores-container');
+            if (container.children.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+                        Clique em "Adicionar Descritor" para começar
+                    </div>
+                `;
+            }
+            toast('Descritor removido', 'info');
+        }, 300);
+    }
+}
+
+// ================================================================
+// 🔥 SALVAR MATRIZ (CRIAR / ATUALIZAR) - CORRIGIDO
 // ================================================================
 
 async function salvarMatriz() {
@@ -8505,7 +8737,7 @@ async function salvarMatriz() {
             return;
         }
         
-        // Coletar descritores
+        // Coletar descritores (inclui mesmo se vazio)
         const container = document.getElementById('matriz-descritores-container');
         const items = container.querySelectorAll('.matriz-descritor-item');
         const descritores = [];
@@ -8513,10 +8745,10 @@ async function salvarMatriz() {
         items.forEach(item => {
             const inputs = item.querySelectorAll('.form-control');
             const bncc = inputs[0] ? inputs[0].value.trim() : '';
+            // O segundo .form-control é um textarea agora
             const descritor = inputs[1] ? inputs[1].value.trim() : '';
-            if (bncc || descritor) {
-                descritores.push({ bncc, descritor });
-            }
+            // 🔥 SEMPRE ADICIONA, MESMO QUE VAZIO
+            descritores.push({ bncc, descritor });
         });
         
         // Montar objeto
@@ -8645,6 +8877,267 @@ function limparFiltrosMatriz() {
 }
 
 // ================================================================
+// 🔥 VISUALIZAR MATRIZ (NOVO)
+// ================================================================
+
+function visualizarMatriz(id) {
+    const matriz = matrizesData.find(m => m.id === id);
+    if (!matriz) {
+        toast('Matriz não encontrada', 'error');
+        return;
+    }
+
+    visualizarMatrizId = id;
+    document.getElementById('visualizar-matriz-titulo').textContent = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
+
+    const conteudo = document.getElementById('visualizar-matriz-conteudo');
+    if (!conteudo) return;
+
+    const descritores = matriz.descritores || [];
+    let descritoresHtml = '';
+    if (descritores.length === 0) {
+        descritoresHtml = '<div style="color:var(--text3);font-size:13px;">Nenhum descritor cadastrado.</div>';
+    } else {
+        descritoresHtml = '<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">';
+        descritores.forEach((d, idx) => {
+            const bncc = d.bncc || '—';
+            const desc = d.descritor || '—';
+            descritoresHtml += `
+                <div style="background:var(--bg2);border-radius:8px;padding:12px 16px;border:1px solid var(--border);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                        <span style="font-weight:700;color:var(--purple);">📌 Descritor #${idx+1}</span>
+                        <span style="font-size:11px;background:rgba(139,92,246,0.12);padding:2px 12px;border-radius:12px;color:var(--purple);font-weight:700;">BNCC: ${bncc}</span>
+                    </div>
+                    <div style="margin-top:6px;font-size:14px;color:var(--text);line-height:1.5;">${desc}</div>
+                </div>
+            `;
+        });
+        descritoresHtml += '</div>';
+    }
+
+    const nivelBadge = {
+        'Básico': 'badge-nivel-basico',
+        'Intermediário': 'badge-nivel-intermediario',
+        'Avançado': 'badge-nivel-avancado'
+    }[matriz.nivel] || 'badge-gray';
+
+    conteudo.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;text-align:center;">
+                <div style="font-size:11px;color:var(--text3);font-weight:600;">📚 ANO</div>
+                <div style="font-size:18px;font-weight:800;color:var(--text);">${matriz.ano || '—'}</div>
+            </div>
+            <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;text-align:center;">
+                <div style="font-size:11px;color:var(--text3);font-weight:600;">📖 DISCIPLINA</div>
+                <div style="font-size:18px;font-weight:800;color:var(--text);">${matriz.disciplina || '—'}</div>
+            </div>
+            <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;text-align:center;">
+                <div style="font-size:11px;color:var(--text3);font-weight:600;">📊 NÍVEL</div>
+                <div style="font-size:18px;font-weight:800;color:var(--text);"><span class="badge ${nivelBadge}">${matriz.nivel || '—'}</span></div>
+            </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+                <span style="font-size:15px;font-weight:700;color:var(--text2);">📋 Descritores (${descritores.length})</span>
+            </div>
+            ${descritoresHtml}
+        </div>
+    `;
+
+    openM('m-visualizar-matriz');
+}
+
+// ================================================================
+// 🔥 IMPRIMIR MATRIZ VISUALIZADA (PDF)
+// ================================================================
+
+function imprimirMatrizVisualizada() {
+    const conteudo = document.getElementById('visualizar-matriz-conteudo');
+    if (!conteudo) {
+        toast('❌ Nenhum conteúdo para imprimir.', 'error');
+        return;
+    }
+
+    const titulo = document.getElementById('visualizar-matriz-titulo').textContent || 'Matriz de Proficiência';
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        toast('⚠️ Permita pop-ups para gerar o PDF.', 'error');
+        return;
+    }
+
+    // Pegar os dados diretamente do conteúdo renderizado
+    const anos = conteudo.querySelectorAll('.info-grid .value');
+    const ano = anos[0]?.textContent || '—';
+    const disciplina = anos[1]?.textContent || '—';
+    const nivel = anos[2]?.textContent || '—';
+
+    const descritoresItems = conteudo.querySelectorAll('.descritor-item');
+    let descritoresHtml = '';
+    if (descritoresItems.length === 0) {
+        descritoresHtml = '<div style="color:#94a3b8;">Nenhum descritor cadastrado.</div>';
+    } else {
+        descritoresItems.forEach((item, idx) => {
+            const bncc = item.querySelector('.bncc-tag')?.textContent || 'BNCC: —';
+            const desc = item.querySelector('.desc-text')?.textContent || '—';
+            descritoresHtml += `
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                        <span style="font-weight:700;color:#8b5cf6;">📌 Descritor #${idx+1}</span>
+                        <span style="font-size:11px;background:#ede9fe;padding:2px 12px;border-radius:12px;color:#6d28d9;font-weight:700;">${bncc}</span>
+                    </div>
+                    <div style="margin-top:6px;font-size:14px;line-height:1.5;color:#1e293b;">${desc}</div>
+                </div>
+            `;
+        });
+    }
+
+    const dataAtual = new Date().toLocaleString('pt-BR');
+
+    win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>${titulo}</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    padding: 30px;
+                    background: #fff;
+                    color: #1e293b;
+                }
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: #ffffff;
+                    padding: 20px 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 3px solid #2563eb;
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                }
+                .header h1 { font-size: 20px; font-weight: 800; color: #1e293b; }
+                .header .sub { font-size: 14px; color: #475569; margin-top: 4px; }
+                .header .sub2 { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 15px;
+                    margin-bottom: 20px;
+                }
+                .info-card {
+                    background: #f8fafc;
+                    border-radius: 8px;
+                    padding: 10px 14px;
+                    text-align: center;
+                    border: 1px solid #e2e8f0;
+                }
+                .info-card .label {
+                    font-size: 10px;
+                    color: #94a3b8;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
+                }
+                .info-card .value {
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #0f172a;
+                }
+                .descritores-section {
+                    border-top: 1px solid #e2e8f0;
+                    padding-top: 16px;
+                }
+                .descritores-section .section-title {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin-bottom: 12px;
+                }
+                .descritor-item {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    margin-bottom: 10px;
+                }
+                .descritor-item .header-desc {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                }
+                .descritor-item .header-desc .num {
+                    font-weight: 700;
+                    color: #8b5cf6;
+                }
+                .descritor-item .header-desc .bncc {
+                    font-size: 11px;
+                    background: #ede9fe;
+                    padding: 2px 12px;
+                    border-radius: 12px;
+                    color: #6d28d9;
+                    font-weight: 700;
+                }
+                .descritor-item .desc-text {
+                    margin-top: 6px;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    color: #1e293b;
+                }
+                .footer {
+                    margin-top: 20px;
+                    padding-top: 12px;
+                    border-top: 1px solid #e2e8f0;
+                    font-size: 10px;
+                    color: #94a3b8;
+                    text-align: center;
+                }
+                @media print {
+                    body { padding: 10px; }
+                    .container { box-shadow: none; border: none; }
+                    .descritor-item { break-inside: avoid; }
+                    @page { margin: 8mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>${titulo}</h1>
+                    <div class="sub">Matriz de Proficiência — SISAM 2026</div>
+                    <div class="sub2">${dataAtual}</div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-card"><div class="label">📚 Ano</div><div class="value">${ano}</div></div>
+                    <div class="info-card"><div class="label">📖 Disciplina</div><div class="value">${disciplina}</div></div>
+                    <div class="info-card"><div class="label">📊 Nível</div><div class="value">${nivel}</div></div>
+                </div>
+                <div class="descritores-section">
+                    <div class="section-title">📋 Descritores</div>
+                    ${descritoresHtml}
+                </div>
+                <div class="footer">
+                    Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação
+                </div>
+            </div>
+            <script>
+                window.onload = function() { window.print(); };
+            <\/script>
+        </body>
+        </html>
+    `);
+    win.document.close();
+}
+
+// ================================================================
 // 🔥 FUNÇÕES AUXILIARES
 // ================================================================
 
@@ -8658,16 +9151,11 @@ function formatarData(dataStr) {
     }
 }
 
-// ================================================================
-// 🔥 TOAST PERSONALIZADO (fallback)
-// ================================================================
-
 function toast(mensagem, tipo = 'info') {
     if (typeof showToast === 'function') {
         showToast(mensagem, tipo);
         return;
     }
-    // Fallback
     const container = document.getElementById('toast-c');
     if (!container) return;
     const el = document.createElement('div');
@@ -8705,9 +9193,7 @@ function salvarMatrizesLocal(matrizes) {
 // 🔥 INICIALIZAÇÃO
 // ================================================================
 
-// Carregar matrizes quando a página for carregada
 document.addEventListener('DOMContentLoaded', function() {
-    // Se a página de matrizes estiver ativa, carregar
     if (document.getElementById('page-matriz')) {
         carregarMatrizes();
     }
