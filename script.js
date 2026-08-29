@@ -2083,7 +2083,7 @@ function salvarCorrecaoManual() {
             progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
 
             limparCache();
-            closeM('m-correcao-manual');
+           
 
             setTimeout(() => {
                 carregarResultadosComFiltros();
