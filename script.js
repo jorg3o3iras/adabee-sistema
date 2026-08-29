@@ -8304,27 +8304,37 @@ function renderizarMatrizes(matrizes) {
     if (!tbody) return;
 
     if (!matrizes || matrizes.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
-                    Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
-                </td>
-            </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma matriz cadastrada.</td></tr>`;
         return;
     }
 
     let html = '';
     matrizes.forEach((matriz, index) => {
-        const descritores = matriz.descritores || [];
+        // 🔥 TRATAMENTO ROBUSTO PARA descritores
+        let descritores = [];
+        if (matriz.descritores) {
+            if (Array.isArray(matriz.descritores)) {
+                descritores = matriz.descritores;
+            } else if (typeof matriz.descritores === 'string') {
+                try {
+                    descritores = JSON.parse(matriz.descritores);
+                } catch (e) {
+                    descritores = [];
+                }
+            } else if (typeof matriz.descritores === 'object') {
+                // Se for um objeto único, coloca em um array
+                descritores = [matriz.descritores];
+            }
+        }
+        
         const totalDescritores = descritores.length;
 
-        // Badge de nível
-        let nivelBadge = 'badge-nivel-basico';
-        if (matriz.nivel === 'Intermediário') nivelBadge = 'badge-nivel-intermediario';
-        else if (matriz.nivel === 'Avançado') nivelBadge = 'badge-nivel-avancado';
+        const nivelBadge = {
+            'Básico': 'badge-nivel-basico',
+            'Intermediário': 'badge-nivel-intermediario',
+            'Avançado': 'badge-nivel-avancado'
+        }[matriz.nivel] || 'badge-gray';
 
-        // Preview dos descritores
         let descritoresPreview = 'Nenhum descritor';
         if (totalDescritores > 0) {
             const previewText = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
