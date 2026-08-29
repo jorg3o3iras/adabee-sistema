@@ -8722,26 +8722,71 @@ function visualizarMatriz(id) {
 // ================================================================
 
 function imprimirMatrizVisualizada() {
-    // 🔥 USA OS DADOS DIRETAMENTE DA VARIÁVEL GLOBAL
-    const matriz = window.matrizVisualizando;
-    if (!matriz) {
-        toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
+    // 🔥 BUSCA O CONTEÚDO DO MODAL DE VISUALIZAÇÃO
+    const conteudo = document.getElementById('visualizar-matriz-conteudo');
+    if (!conteudo) {
+        toast('❌ Nenhum conteúdo para imprimir. Visualize uma matriz primeiro.', 'error');
         return;
     }
 
-    const titulo = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
+    // 🔥 EXTRAI ANO, DISCIPLINA E NÍVEL DO DOM
+    const infoGrid = conteudo.querySelector('.info-grid');
+    let ano = '—', disciplina = '—', nivel = '—';
+
+    if (infoGrid) {
+        const items = infoGrid.querySelectorAll('.value');
+        if (items.length >= 3) {
+            ano = items[0]?.textContent?.trim() || '—';
+            disciplina = items[1]?.textContent?.trim() || '—';
+            // O nível pode estar dentro de um badge ou texto puro
+            const nivelEl = items[2];
+            if (nivelEl) {
+                const badge = nivelEl.querySelector('.badge');
+                nivel = badge ? badge.textContent.trim() : nivelEl.textContent.trim();
+            }
+        }
+    }
+
+    // 🔥 EXTRAI OS DESCRITORES DO DOM
+    const container = conteudo.querySelector('.descritores-container');
+    let descritores = [];
+    if (container) {
+        const items = container.querySelectorAll('.descritor-item');
+        items.forEach(item => {
+            const bnccSpan = item.querySelector('.bncc');
+            const descText = item.querySelector('.desc-text');
+            const bncc = bnccSpan ? bnccSpan.textContent.replace('BNCC: ', '').trim() : '—';
+            const descritor = descText ? descText.textContent.trim() : '—';
+            descritores.push({ bncc, descritor });
+        });
+    }
+
+    // Se não encontrou descritores no formato esperado, tenta buscar os cards individuais
+    if (descritores.length === 0) {
+        const cards = conteudo.querySelectorAll('[style*="background:var(--bg2)"]');
+        cards.forEach(card => {
+            const bnccEl = card.querySelector('[style*="background:rgba(139,92,246,0.12)"]');
+            const descEl = card.querySelector('[style*="font-size:14px;color:var(--text);line-height:1.5;"]');
+            if (bnccEl && descEl) {
+                const bncc = bnccEl.textContent.replace('BNCC:', '').trim() || '—';
+                const descritor = descEl.textContent.trim() || '—';
+                descritores.push({ bncc, descritor });
+            }
+        });
+    }
+
+    // 🔥 TÍTULO DA MATRIZ
+    const tituloEl = document.getElementById('visualizar-matriz-titulo');
+    const titulo = tituloEl ? tituloEl.textContent : 'Matriz de Proficiência';
+
+    // 🔥 GERA O HTML DO PDF
     const win = window.open('', '_blank');
     if (!win) {
         toast('⚠️ Permita pop-ups para gerar o PDF.', 'error');
         return;
     }
 
-    const descritores = matriz.descritores || [];
-    const nivel = matriz.nivel || '—';
-    const ano = matriz.ano || '—';
-    const disciplina = matriz.disciplina || '—';
-
-    // 🔥 MONTA TABELA DE DESCRITORES COM DUAS COLUNAS: BNCC | DESCRITOR
+    // Monta a tabela de descritores
     let descritoresHtml = '';
     if (descritores.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
@@ -8757,180 +8802,179 @@ function imprimirMatrizVisualizada() {
                 <tbody>
         `;
         descritores.forEach((d, idx) => {
-            const bncc = d.bncc || '—';
-            const desc = d.descritor || '—';
             const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
             descritoresHtml += `
                 <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
-                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top;">${desc}</td>
+                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${d.bncc}</td>
+                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top;">${d.descritor}</td>
                 </tr>
             `;
         });
         descritoresHtml += '</tbody></table>';
     }
 
-    // 🔥 GERA O HTML DO PDF
-    win.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>${titulo}</title>
-            <style>
-                * { margin:0; padding:0; box-sizing:border-box; }
-                body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    padding: 30px;
-                    background: #fff;
-                    color: #1e293b;
-                }
-                .container {
-                    max-width: 800px;
-                    margin: 0 auto;
-                    background: #ffffff;
-                    padding: 20px 30px;
-                    border-radius: 12px;
-                    border: 1px solid #e2e8f0;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                }
-                .header {
-                    text-align: center;
-                    border-bottom: 3px solid #2563eb;
-                    padding-bottom: 15px;
-                    margin-bottom: 20px;
-                }
-                .header h1 {
-                    font-size: 22px;
-                    font-weight: 800;
-                    color: #0f172a;
-                    letter-spacing: -0.3px;
-                }
-                .header .sub {
-                    font-size: 14px;
-                    color: #475569;
-                    margin-top: 4px;
-                }
-                .header .data {
-                    font-size: 12px;
-                    color: #94a3b8;
-                    margin-top: 4px;
-                }
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr 1fr;
-                    gap: 15px;
-                    margin: 18px 0 22px;
-                }
-                .info-card {
-                    background: #f8fafc;
-                    border-radius: 8px;
-                    padding: 12px 14px;
-                    text-align: center;
-                    border: 1px solid #e2e8f0;
-                }
-                .info-card .label {
-                    font-size: 10px;
-                    color: #94a3b8;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.3px;
-                }
-                .info-card .value {
-                    font-size: 18px;
-                    font-weight: 800;
-                    color: #0f172a;
-                    margin-top: 4px;
-                }
-                .info-card .value .badge {
-                    display: inline-block;
-                    padding: 2px 14px;
-                    border-radius: 20px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    background: #e2e8f0;
-                    color: #1e293b;
-                }
-                .section-title {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: #1e293b;
-                    margin: 12px 0 6px;
-                    padding-bottom: 6px;
-                    border-bottom: 2px solid #e2e8f0;
-                }
-                .table-wrap {
-                    overflow-x: auto;
-                    margin-top: 4px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                th {
-                    font-size: 11px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.3px;
-                    background: #f1f5f9;
-                }
-                td, th {
-                    padding: 8px 12px;
-                    text-align: left;
-                }
-                .footer {
-                    margin-top: 20px;
-                    padding-top: 12px;
-                    border-top: 1px solid #e2e8f0;
-                    font-size: 10px;
-                    color: #94a3b8;
-                    text-align: center;
-                }
-                @media print {
-                    body { padding: 10px; }
-                    .container { box-shadow: none; border: none; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>${titulo}</h1>
-                    <div class="sub">Matriz de Proficiência — SISAM 2026</div>
-                    <div class="data">${new Date().toLocaleString('pt-BR')}</div>
-                </div>
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>${titulo}</title>
+        <style>
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                padding: 30px;
+                background: #fff;
+                color: #1e293b;
+            }
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                background: #ffffff;
+                padding: 20px 30px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            }
+            .header {
+                text-align: center;
+                border-bottom: 3px solid #2563eb;
+                padding-bottom: 15px;
+                margin-bottom: 20px;
+            }
+            .header h1 {
+                font-size: 22px;
+                font-weight: 800;
+                color: #0f172a;
+                letter-spacing: -0.3px;
+            }
+            .header .sub {
+                font-size: 14px;
+                color: #475569;
+                margin-top: 4px;
+            }
+            .header .data {
+                font-size: 12px;
+                color: #94a3b8;
+                margin-top: 4px;
+            }
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 15px;
+                margin: 18px 0 22px;
+            }
+            .info-card {
+                background: #f8fafc;
+                border-radius: 8px;
+                padding: 12px 14px;
+                text-align: center;
+                border: 1px solid #e2e8f0;
+            }
+            .info-card .label {
+                font-size: 10px;
+                color: #94a3b8;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+            .info-card .value {
+                font-size: 18px;
+                font-weight: 800;
+                color: #0f172a;
+                margin-top: 4px;
+            }
+            .info-card .value .badge {
+                display: inline-block;
+                padding: 2px 14px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 700;
+                background: #e2e8f0;
+                color: #1e293b;
+            }
+            .section-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #1e293b;
+                margin: 12px 0 6px;
+                padding-bottom: 6px;
+                border-bottom: 2px solid #e2e8f0;
+            }
+            .table-wrap {
+                overflow-x: auto;
+                margin-top: 4px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                background: #f1f5f9;
+            }
+            td, th {
+                padding: 8px 12px;
+                text-align: left;
+            }
+            .footer {
+                margin-top: 20px;
+                padding-top: 12px;
+                border-top: 1px solid #e2e8f0;
+                font-size: 10px;
+                color: #94a3b8;
+                text-align: center;
+            }
+            @media print {
+                body { padding: 10px; }
+                .container { box-shadow: none; border: none; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>${titulo}</h1>
+                <div class="sub">Matriz de Proficiência — SISAM 2026</div>
+                <div class="data">${new Date().toLocaleString('pt-BR')}</div>
+            </div>
 
-                <div class="info-grid">
-                    <div class="info-card">
-                        <div class="label">📚 Ano</div>
-                        <div class="value">${ano}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">📖 Disciplina</div>
-                        <div class="value">${disciplina}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">📊 Nível</div>
-                        <div class="value"><span class="badge">${nivel}</span></div>
-                    </div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="label">📚 Ano</div>
+                    <div class="value">${ano}</div>
                 </div>
-
-                <div class="section-title">📋 Descritores (${descritores.length})</div>
-                <div class="table-wrap">
-                    ${descritoresHtml}
+                <div class="info-card">
+                    <div class="label">📖 Disciplina</div>
+                    <div class="value">${disciplina}</div>
                 </div>
-
-                <div class="footer">
-                    Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação
+                <div class="info-card">
+                    <div class="label">📊 Nível</div>
+                    <div class="value"><span class="badge">${nivel}</span></div>
                 </div>
             </div>
-            <script>
-                window.onload = function() {
-                    window.print();
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
+
+            <div class="section-title">📋 Descritores (${descritores.length})</div>
+            <div class="table-wrap">
+                ${descritoresHtml}
+            </div>
+
+            <div class="footer">
+                Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação
+            </div>
+        </div>
+        <script>
+            window.onload = function() {
+                window.print();
+            };
+        <\/script>
+    </body>
+    </html>
+    `;
+
+    win.document.write(html);
     win.document.close();
 }
 
