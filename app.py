@@ -4023,12 +4023,19 @@ def listar_matrizes():
         cur.close()
         conn.close()
         
-        # Converter descritores de JSONB para array
+        # 🔥 CORREÇÃO: Converter descritores de JSONB para array
         for m in matrizes:
             if m['descritores']:
                 try:
-                    m['descritores'] = json.loads(m['descritores'])
-                except:
+                    # Se for string JSON, converte
+                    if isinstance(m['descritores'], str):
+                        m['descritores'] = json.loads(m['descritores'])
+                    # Se já for dict/array, mantém
+                    elif isinstance(m['descritores'], dict):
+                        # Se for um dicionário, converte para lista se necessário
+                        m['descritores'] = [m['descritores']] if m['descritores'] else []
+                except Exception as e:
+                    print(f"⚠️ Erro ao converter descritores: {e}")
                     m['descritores'] = []
             else:
                 m['descritores'] = []
@@ -4086,6 +4093,10 @@ def criar_matriz():
         
         if not ano or not disciplina or not nivel:
             return jsonify({'erro': 'Ano, disciplina e nível são obrigatórios'}), 400
+        
+        # 🔥 GARANTE QUE descritores É UMA LISTA E CONVERTE PARA JSON
+        if not isinstance(descritores, list):
+            descritores = []
         
         descritores_json = json.dumps(descritores, ensure_ascii=False)
         
