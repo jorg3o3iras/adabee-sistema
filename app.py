@@ -4003,7 +4003,7 @@ def gerar_gabarito():
 
 
 # ============================================
-# 🔥 ROTAS PARA MATRIZ DE PROFICIÊNCIA
+# 🔥 ROTAS PARA MATRIZ DE PROFICIÊNCIA (CRUD + GET POR ID)
 # ============================================
 
 @app.route('/api/matrizes', methods=['GET'])
@@ -4037,6 +4037,42 @@ def listar_matrizes():
     except Exception as e:
         logging.error(f"Erro ao listar matrizes: {e}")
         return jsonify([]), 500
+
+
+@app.route('/api/matrizes/<int:id>', methods=['GET'])
+def buscar_matriz_por_id(id):
+    """Busca uma matriz específica pelo ID (para visualização/edição)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, ano, disciplina, nivel, descritores, created_at
+            FROM matrizes
+            WHERE id = %s
+        """, (id,))
+        matriz = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not matriz:
+            return jsonify({'erro': 'Matriz não encontrada'}), 404
+        
+        # Converter descritores de JSONB para array
+        if matriz['descritores']:
+            try:
+                matriz['descritores'] = json.loads(matriz['descritores'])
+            except:
+                matriz['descritores'] = []
+        else:
+            matriz['descritores'] = []
+        
+        return jsonify(matriz)
+    except Exception as e:
+        logging.error(f"Erro ao buscar matriz por ID: {e}")
+        return jsonify({'erro': str(e)}), 500
 
 
 @app.route('/api/matrizes', methods=['POST'])
