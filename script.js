@@ -8259,237 +8259,22 @@ window.addEventListener('resize', function() {
 });
 
 // ================================================================
-// 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
-// ================================================================
-
-let matrizesData = [];
-let matrizEditId = null;
-let matrizDescritorCounter = 0;
-let matrizParaDeletar = null;
-
-// ================================================================
-// 🔥 CARREGAR MATRIZES DA API
-// ================================================================
-
-async function carregarMatrizes() {
-    try {
-        const response = await fetch('/api/matrizes');
-        if (!response.ok) throw new Error('Erro ao carregar matrizes');
-        matrizesData = await response.json();
-        renderizarMatrizes(matrizesData);
-        atualizarTotalMatrizes(matrizesData.length);
-    } catch (error) {
-        console.error('❌ Erro ao carregar matrizes:', error);
-        // Fallback para dados locais (para testes)
-        matrizesData = carregarMatrizesLocal();
-        renderizarMatrizes(matrizesData);
-        atualizarTotalMatrizes(matrizesData.length);
-    }
-}
-
-// ================================================================
-// 🔥 RENDERIZAR MATRIZES NA TABELA
-// ================================================================
-
-function renderizarMatrizes(matrizes) {
-    const tbody = document.getElementById('tb-matrizes');
-    if (!tbody) return;
-
-    if (!matrizes || matrizes.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
-                    Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    let html = '';
-    matrizes.forEach((matriz, index) => {
-        const descritores = matriz.descritores || [];
-        const descritoresPreview = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
-        const totalDescritores = descritores.length;
-
-        // Badge de nível
-        let nivelBadge = 'badge-nivel-basico';
-        if (matriz.nivel === 'Intermediário') nivelBadge = 'badge-nivel-intermediario';
-        else if (matriz.nivel === 'Avançado') nivelBadge = 'badge-nivel-avancado';
-
-        html += `
-            <tr>
-                <td>${index + 1}</td>
-                <td><strong>${matriz.ano || '-'}</strong></td>
-                <td>${matriz.disciplina || '-'}</td>
-                <td><span class="badge ${nivelBadge}">${matriz.nivel || '-'}</span></td>
-                <td>
-                    <span class="badge-descritores">
-                        📋 <span class="count">${totalDescritores}</span>
-                    </span>
-                    ${totalDescritores > 0 ? `<span class="descritores-preview" title="${descritoresPreview}">${descritoresPreview.substring(0, 60)}${descritoresPreview.length > 60 ? '...' : ''}</span>` : 'Nenhum descritor'}
-                </td>
-                <td style="font-size:10px;color:var(--text3);">${formatarData(matriz.created_at)}</td>
-                <td>
-                    <div class="matriz-actions">
-                        <button class="btn btn-sm btn-edit" onclick="editarMatriz(${matriz.id})">✏️</button>
-                        <button class="btn btn-sm btn-delete" onclick="excluirMatriz(${matriz.id})">🗑️</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-
-    tbody.innerHTML = html;
-}
-
-// ================================================================
-// 🔥 ATUALIZAR CONTADOR DE MATRIZES
-// ================================================================
-
-function atualizarTotalMatrizes(total) {
-    const el = document.getElementById('total-matrizes');
-    if (el) el.textContent = `${total} matrizes`;
-}
-
-// ================================================================
-// 🔥 ABRIR MODAL PARA NOVA MATRIZ
-// ================================================================
-
-function abrirModalMatriz() {
-    matrizEditId = null;
-    matrizDescritorCounter = 0;
-    
-    document.getElementById('matriz-modal-title').textContent = '📊 Nova Matriz de Proficiência';
-    document.getElementById('matriz-edit-id').value = '';
-    document.getElementById('matriz-ano').value = '';
-    document.getElementById('matriz-disciplina').value = '';
-    document.getElementById('matriz-nivel').value = '';
-    
-    // Limpar descritores
-    const container = document.getElementById('matriz-descritores-container');
-    container.innerHTML = `
-        <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
-            Clique em "Adicionar Descritor" para começar
-        </div>
-    `;
-    
-    openM('m-matriz');
-}
-
-// ================================================================
-// 🔥 EDITAR MATRIZ
-// ================================================================
-
-function editarMatriz(id) {
-    const matriz = matrizesData.find(m => m.id === id);
-    if (!matriz) {
-        toast('Matriz não encontrada', 'error');
-        return;
-    }
-
-    matrizEditId = id;
-    document.getElementById('matriz-modal-title').textContent = `✏️ Editar Matriz - ${matriz.ano} / ${matriz.disciplina}`;
-    document.getElementById('matriz-edit-id').value = id;
-    document.getElementById('matriz-ano').value = matriz.ano || '';
-    document.getElementById('matriz-disciplina').value = matriz.disciplina || '';
-    document.getElementById('matriz-nivel').value = matriz.nivel || '';
-    
-    // Carregar descritores
-    const container = document.getElementById('matriz-descritores-container');
-    container.innerHTML = '';
-    
-    const descritores = matriz.descritores || [];
-    if (descritores.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
-                Nenhum descritor cadastrado. Clique em "Adicionar Descritor" para começar.
-            </div>
-        `;
-    } else {
-        descritores.forEach((d, index) => {
-            adicionarDescritorMatriz(d.bncc, d.descritor);
-        });
-    }
-    
-    openM('m-matriz');
-}
-
-// ================================================================
-// 🔥 ADICIONAR DESCRITOR DINÂMICAMENTE
-// ================================================================
-
-function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
-    const container = document.getElementById('matriz-descritores-container');
-    
-    // Remover o placeholder se existir
-    const placeholder = container.querySelector('.matriz-descritores-empty');
-    if (placeholder) placeholder.remove();
-    
-    const counter = ++matrizDescritorCounter;
-    
-    const item = document.createElement('div');
-    item.className = 'matriz-descritor-item';
-    item.dataset.index = counter;
-    item.innerHTML = `
-        <div class="descritor-header">
-            <span class="descritor-num">📌 Descritor #${counter}</span>
-            <button class="btn-remover-descritor" onclick="removerDescritorMatriz(this)" title="Remover descritor">×</button>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">BNCC</label>
-                <input class="form-control" type="text" placeholder="Ex: EF01MA01" value="${bnccValue}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Descritor</label>
-                <input class="form-control" type="text" placeholder="Descreva a habilidade..." value="${descritorValue}">
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(item);
-    
-    // Scroll para o novo item
-    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-// ================================================================
-// 🔥 REMOVER DESCRITOR
-// ================================================================
-
-function removerDescritorMatriz(btn) {
-    const item = btn.closest('.matriz-descritor-item');
-    if (!item) return;
-    
-    const num = item.dataset.index;
-    if (confirm(`Remover Descritor #${num}?`)) {
-        item.classList.add('removing');
-        setTimeout(() => {
-            item.remove();
-            // Se não houver mais descritores, mostrar placeholder
-            const container = document.getElementById('matriz-descritores-container');
-            if (container.children.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
-                        Clique em "Adicionar Descritor" para começar
-                    </div>
-                `;
-            }
-            toast('Descritor removido', 'info');
-        }, 300);
-    }
-}
-
-// ================================================================
 // 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO (CORRIGIDO)
 // ================================================================
 
-let matrizesData = [];
-let matrizEditId = null;
-let matrizDescritorCounter = 0;
-let matrizParaDeletar = null;
-let visualizarMatrizId = null;
+// 🔥 Variáveis globais (verifica se já existem para evitar duplicação)
+if (typeof matrizesData === 'undefined') {
+    var matrizesData = [];
+}
+if (typeof matrizEditId === 'undefined') {
+    var matrizEditId = null;
+}
+if (typeof matrizDescritorCounter === 'undefined') {
+    var matrizDescritorCounter = 0;
+}
+if (typeof matrizParaDeletar === 'undefined') {
+    var matrizParaDeletar = null;
+}
 
 // ================================================================
 // 🔥 CARREGAR MATRIZES DA API
@@ -8533,20 +8318,18 @@ function renderizarMatrizes(matrizes) {
     matrizes.forEach((matriz, index) => {
         const descritores = matriz.descritores || [];
         const totalDescritores = descritores.length;
-        
-        // 🔥 GERAR PREVIEW DOS DESCRITORES
-        let descritoresPreview = '';
-        if (totalDescritores > 0) {
-            const previewText = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
-            descritoresPreview = `<span class="descritores-preview" title="${previewText}">${previewText.substring(0, 60)}${previewText.length > 60 ? '...' : ''}</span>`;
-        } else {
-            descritoresPreview = 'Nenhum descritor';
-        }
 
         // Badge de nível
         let nivelBadge = 'badge-nivel-basico';
         if (matriz.nivel === 'Intermediário') nivelBadge = 'badge-nivel-intermediario';
         else if (matriz.nivel === 'Avançado') nivelBadge = 'badge-nivel-avancado';
+
+        // Preview dos descritores
+        let descritoresPreview = 'Nenhum descritor';
+        if (totalDescritores > 0) {
+            const previewText = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
+            descritoresPreview = `<span class="descritores-preview" title="${previewText}">${previewText.substring(0, 60)}${previewText.length > 60 ? '...' : ''}</span>`;
+        }
 
         html += `
             <tr>
@@ -8555,10 +8338,8 @@ function renderizarMatrizes(matrizes) {
                 <td>${matriz.disciplina || '-'}</td>
                 <td><span class="badge ${nivelBadge}">${matriz.nivel || '-'}</span></td>
                 <td>
-                    <span class="badge-descritores">
-                        📋 <span class="count">${totalDescritores}</span>
-                    </span>
-                    ${totalDescritores > 0 ? descritoresPreview : 'Nenhum descritor'}
+                    <span class="badge-descritores">📋 <span class="count">${totalDescritores}</span></span>
+                    ${descritoresPreview}
                 </td>
                 <td style="font-size:10px;color:var(--text3);">${formatarData(matriz.created_at)}</td>
                 <td>
@@ -8598,7 +8379,6 @@ function abrirModalMatriz() {
     document.getElementById('matriz-disciplina').value = '';
     document.getElementById('matriz-nivel').value = '';
     
-    // Limpar descritores
     const container = document.getElementById('matriz-descritores-container');
     container.innerHTML = `
         <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
@@ -8627,7 +8407,6 @@ function editarMatriz(id) {
     document.getElementById('matriz-disciplina').value = matriz.disciplina || '';
     document.getElementById('matriz-nivel').value = matriz.nivel || '';
     
-    // Carregar descritores
     const container = document.getElementById('matriz-descritores-container');
     container.innerHTML = '';
     
@@ -8639,9 +8418,7 @@ function editarMatriz(id) {
             </div>
         `;
     } else {
-        descritores.forEach((d) => {
-            adicionarDescritorMatriz(d.bncc, d.descritor);
-        });
+        descritores.forEach(d => adicionarDescritorMatriz(d.bncc, d.descritor));
     }
     
     openM('m-matriz');
@@ -8654,7 +8431,6 @@ function editarMatriz(id) {
 function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
     const container = document.getElementById('matriz-descritores-container');
     
-    // Remover o placeholder se existir
     const placeholder = container.querySelector('.matriz-descritores-empty');
     if (placeholder) placeholder.remove();
     
@@ -8681,8 +8457,6 @@ function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
     `;
     
     container.appendChild(item);
-    
-    // Scroll para o novo item
     item.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -8699,7 +8473,6 @@ function removerDescritorMatriz(btn) {
         item.classList.add('removing');
         setTimeout(() => {
             item.remove();
-            // Se não houver mais descritores, mostrar placeholder
             const container = document.getElementById('matriz-descritores-container');
             if (container.children.length === 0) {
                 container.innerHTML = `
@@ -8719,25 +8492,14 @@ function removerDescritorMatriz(btn) {
 
 async function salvarMatriz() {
     try {
-        // Validar campos obrigatórios
         const ano = document.getElementById('matriz-ano').value;
         const disciplina = document.getElementById('matriz-disciplina').value;
         const nivel = document.getElementById('matriz-nivel').value;
         
-        if (!ano) {
-            toast('Selecione o Ano', 'error');
-            return;
-        }
-        if (!disciplina) {
-            toast('Selecione a Disciplina', 'error');
-            return;
-        }
-        if (!nivel) {
-            toast('Selecione o Nível', 'error');
-            return;
-        }
+        if (!ano) { toast('Selecione o Ano', 'error'); return; }
+        if (!disciplina) { toast('Selecione a Disciplina', 'error'); return; }
+        if (!nivel) { toast('Selecione o Nível', 'error'); return; }
         
-        // Coletar descritores (inclui mesmo se vazio)
         const container = document.getElementById('matriz-descritores-container');
         const items = container.querySelectorAll('.matriz-descritor-item');
         const descritores = [];
@@ -8745,28 +8507,17 @@ async function salvarMatriz() {
         items.forEach(item => {
             const inputs = item.querySelectorAll('.form-control');
             const bncc = inputs[0] ? inputs[0].value.trim() : '';
-            // O segundo .form-control é um textarea agora
             const descritor = inputs[1] ? inputs[1].value.trim() : '';
-            // 🔥 SEMPRE ADICIONA, MESMO QUE VAZIO
+            // 🔥 SEMPRE adiciona, mesmo que vazio, para manter a contagem
             descritores.push({ bncc, descritor });
         });
         
-        // Montar objeto
-        const dados = {
-            ano: ano,
-            disciplina: disciplina,
-            nivel: nivel,
-            descritores: descritores
-        };
-        
+        const dados = { ano, disciplina, nivel, descritores };
         const editId = document.getElementById('matriz-edit-id').value;
         const url = editId ? `/api/matrizes/${editId}` : '/api/matrizes';
         const method = editId ? 'PUT' : 'POST';
         
-        // Mostrar loading
-        if (typeof showToast === 'function') {
-            showToast('Salvando matriz...', 'info');
-        }
+        if (typeof showToast === 'function') showToast('Salvando matriz...', 'info');
         
         const response = await fetch(url, {
             method: method,
@@ -8782,7 +8533,6 @@ async function salvarMatriz() {
         const result = await response.json();
         toast(result.mensagem || 'Matriz salva com sucesso!', 'success');
         
-        // Fechar modal e recarregar
         fecharModalMatriz();
         await carregarMatrizes();
         
@@ -8859,7 +8609,6 @@ function filtrarMatrizes() {
     const nivel = document.getElementById('filtro-matriz-nivel').value;
     
     let filtradas = matrizesData;
-    
     if (ano) filtradas = filtradas.filter(m => m.ano === ano);
     if (disciplina) filtradas = filtradas.filter(m => m.disciplina === disciplina);
     if (nivel) filtradas = filtradas.filter(m => m.nivel === nivel);
@@ -8877,8 +8626,10 @@ function limparFiltrosMatriz() {
 }
 
 // ================================================================
-// 🔥 VISUALIZAR MATRIZ (NOVO)
+// 🔥 VISUALIZAR MATRIZ
 // ================================================================
+
+let visualizarMatrizId = null;
 
 function visualizarMatriz(id) {
     const matriz = matrizesData.find(m => m.id === id);
@@ -8966,33 +8717,27 @@ function imprimirMatrizVisualizada() {
         return;
     }
 
-    // Pegar os dados diretamente do conteúdo renderizado
-    const anos = conteudo.querySelectorAll('.info-grid .value');
-    const ano = anos[0]?.textContent || '—';
-    const disciplina = anos[1]?.textContent || '—';
-    const nivel = anos[2]?.textContent || '—';
-
-    const descritoresItems = conteudo.querySelectorAll('.descritor-item');
-    let descritoresHtml = '';
-    if (descritoresItems.length === 0) {
-        descritoresHtml = '<div style="color:#94a3b8;">Nenhum descritor cadastrado.</div>';
-    } else {
-        descritoresItems.forEach((item, idx) => {
-            const bncc = item.querySelector('.bncc-tag')?.textContent || 'BNCC: —';
-            const desc = item.querySelector('.desc-text')?.textContent || '—';
-            descritoresHtml += `
-                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:10px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-                        <span style="font-weight:700;color:#8b5cf6;">📌 Descritor #${idx+1}</span>
-                        <span style="font-size:11px;background:#ede9fe;padding:2px 12px;border-radius:12px;color:#6d28d9;font-weight:700;">${bncc}</span>
-                    </div>
-                    <div style="margin-top:6px;font-size:14px;line-height:1.5;color:#1e293b;">${desc}</div>
-                </div>
-            `;
-        });
+    // Captura os dados do conteúdo
+    const infoItems = conteudo.querySelectorAll('.info-grid .item');
+    let ano = '—', disciplina = '—', nivel = '—';
+    const badges = conteudo.querySelectorAll('.badge');
+    if (badges.length > 0) {
+        // Pega o último badge (nível)
+        nivel = badges[badges.length - 1]?.textContent || '—';
+    }
+    const values = conteudo.querySelectorAll('.info-grid .value');
+    if (values.length >= 3) {
+        ano = values[0]?.textContent || '—';
+        disciplina = values[1]?.textContent || '—';
+        nivel = values[2]?.textContent || '—';
     }
 
-    const dataAtual = new Date().toLocaleString('pt-BR');
+    // Captura os descritores
+    const descritoresHtml = conteudo.querySelector('.descritores-container')?.innerHTML || 
+                            conteudo.querySelector('[style*="font-size:14px;color:var(--text);line-height:1.5;"]')?.innerHTML || 
+                            '<div style="color:#94a3b8;">Nenhum descritor cadastrado.</div>';
+
+    const style = document.querySelector('link[href="style.css"]')?.href || '';
 
     win.document.write(`
         <!DOCTYPE html>
@@ -9000,12 +8745,12 @@ function imprimirMatrizVisualizada() {
         <head>
             <meta charset="UTF-8">
             <title>${titulo}</title>
+            <link rel="stylesheet" href="${style}">
             <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    padding: 30px;
-                    background: #fff;
+                body { 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
+                    padding: 30px; 
+                    background: #fff; 
                     color: #1e293b;
                 }
                 .container {
@@ -9024,7 +8769,6 @@ function imprimirMatrizVisualizada() {
                 }
                 .header h1 { font-size: 20px; font-weight: 800; color: #1e293b; }
                 .header .sub { font-size: 14px; color: #475569; margin-top: 4px; }
-                .header .sub2 { font-size: 12px; color: #94a3b8; margin-top: 2px; }
                 .info-grid {
                     display: grid;
                     grid-template-columns: 1fr 1fr 1fr;
@@ -9104,7 +8848,6 @@ function imprimirMatrizVisualizada() {
                     body { padding: 10px; }
                     .container { box-shadow: none; border: none; }
                     .descritor-item { break-inside: avoid; }
-                    @page { margin: 8mm; }
                 }
             </style>
         </head>
@@ -9113,7 +8856,7 @@ function imprimirMatrizVisualizada() {
                 <div class="header">
                     <h1>${titulo}</h1>
                     <div class="sub">Matriz de Proficiência — SISAM 2026</div>
-                    <div class="sub2">${dataAtual}</div>
+                    <div class="sub" style="font-size:12px;color:#94a3b8;margin-top:2px;">${new Date().toLocaleString('pt-BR')}</div>
                 </div>
                 <div class="info-grid">
                     <div class="info-card"><div class="label">📚 Ano</div><div class="value">${ano}</div></div>
@@ -9169,30 +8912,23 @@ function toast(mensagem, tipo = 'info') {
     }, 3000);
 }
 
-// ================================================================
-// 🔥 DADOS LOCAIS (FALLBACK PARA TESTES)
-// ================================================================
-
 function carregarMatrizesLocal() {
     const stored = localStorage.getItem('matrizes_data');
     if (stored) {
         try {
             return JSON.parse(stored);
-        } catch (e) {
+        } catch {
             return [];
         }
     }
     return [];
 }
 
-function salvarMatrizesLocal(matrizes) {
-    localStorage.setItem('matrizes_data', JSON.stringify(matrizes));
-}
-
 // ================================================================
 // 🔥 INICIALIZAÇÃO
 // ================================================================
 
+// Carregar matrizes quando a página for carregada
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('page-matriz')) {
         carregarMatrizes();
