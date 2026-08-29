@@ -8257,3 +8257,462 @@ window.addEventListener('resize', function() {
         toggle.innerHTML = '☰';
     }
 });
+
+// ================================================================
+// 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
+// ================================================================
+
+let matrizesData = [];
+let matrizEditId = null;
+let matrizDescritorCounter = 0;
+let matrizParaDeletar = null;
+
+// ================================================================
+// 🔥 CARREGAR MATRIZES DA API
+// ================================================================
+
+async function carregarMatrizes() {
+    try {
+        const response = await fetch('/api/matrizes');
+        if (!response.ok) throw new Error('Erro ao carregar matrizes');
+        matrizesData = await response.json();
+        renderizarMatrizes(matrizesData);
+        atualizarTotalMatrizes(matrizesData.length);
+    } catch (error) {
+        console.error('❌ Erro ao carregar matrizes:', error);
+        // Fallback para dados locais (para testes)
+        matrizesData = carregarMatrizesLocal();
+        renderizarMatrizes(matrizesData);
+        atualizarTotalMatrizes(matrizesData.length);
+    }
+}
+
+// ================================================================
+// 🔥 RENDERIZAR MATRIZES NA TABELA
+// ================================================================
+
+function renderizarMatrizes(matrizes) {
+    const tbody = document.getElementById('tb-matrizes');
+    if (!tbody) return;
+
+    if (!matrizes || matrizes.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">
+                    Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    matrizes.forEach((matriz, index) => {
+        const descritores = matriz.descritores || [];
+        const descritoresPreview = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
+        const totalDescritores = descritores.length;
+
+        // Badge de nível
+        let nivelBadge = 'badge-nivel-basico';
+        if (matriz.nivel === 'Intermediário') nivelBadge = 'badge-nivel-intermediario';
+        else if (matriz.nivel === 'Avançado') nivelBadge = 'badge-nivel-avancado';
+
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td><strong>${matriz.ano || '-'}</strong></td>
+                <td>${matriz.disciplina || '-'}</td>
+                <td><span class="badge ${nivelBadge}">${matriz.nivel || '-'}</span></td>
+                <td>
+                    <span class="badge-descritores">
+                        📋 <span class="count">${totalDescritores}</span>
+                    </span>
+                    ${totalDescritores > 0 ? `<span class="descritores-preview" title="${descritoresPreview}">${descritoresPreview.substring(0, 60)}${descritoresPreview.length > 60 ? '...' : ''}</span>` : 'Nenhum descritor'}
+                </td>
+                <td style="font-size:10px;color:var(--text3);">${formatarData(matriz.created_at)}</td>
+                <td>
+                    <div class="matriz-actions">
+                        <button class="btn btn-sm btn-edit" onclick="editarMatriz(${matriz.id})">✏️</button>
+                        <button class="btn btn-sm btn-delete" onclick="excluirMatriz(${matriz.id})">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+// ================================================================
+// 🔥 ATUALIZAR CONTADOR DE MATRIZES
+// ================================================================
+
+function atualizarTotalMatrizes(total) {
+    const el = document.getElementById('total-matrizes');
+    if (el) el.textContent = `${total} matrizes`;
+}
+
+// ================================================================
+// 🔥 ABRIR MODAL PARA NOVA MATRIZ
+// ================================================================
+
+function abrirModalMatriz() {
+    matrizEditId = null;
+    matrizDescritorCounter = 0;
+    
+    document.getElementById('matriz-modal-title').textContent = '📊 Nova Matriz de Proficiência';
+    document.getElementById('matriz-edit-id').value = '';
+    document.getElementById('matriz-ano').value = '';
+    document.getElementById('matriz-disciplina').value = '';
+    document.getElementById('matriz-nivel').value = '';
+    
+    // Limpar descritores
+    const container = document.getElementById('matriz-descritores-container');
+    container.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+            Clique em "Adicionar Descritor" para começar
+        </div>
+    `;
+    
+    openM('m-matriz');
+}
+
+// ================================================================
+// 🔥 EDITAR MATRIZ
+// ================================================================
+
+function editarMatriz(id) {
+    const matriz = matrizesData.find(m => m.id === id);
+    if (!matriz) {
+        toast('Matriz não encontrada', 'error');
+        return;
+    }
+
+    matrizEditId = id;
+    document.getElementById('matriz-modal-title').textContent = `✏️ Editar Matriz - ${matriz.ano} / ${matriz.disciplina}`;
+    document.getElementById('matriz-edit-id').value = id;
+    document.getElementById('matriz-ano').value = matriz.ano || '';
+    document.getElementById('matriz-disciplina').value = matriz.disciplina || '';
+    document.getElementById('matriz-nivel').value = matriz.nivel || '';
+    
+    // Carregar descritores
+    const container = document.getElementById('matriz-descritores-container');
+    container.innerHTML = '';
+    
+    const descritores = matriz.descritores || [];
+    if (descritores.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+                Nenhum descritor cadastrado. Clique em "Adicionar Descritor" para começar.
+            </div>
+        `;
+    } else {
+        descritores.forEach((d, index) => {
+            adicionarDescritorMatriz(d.bncc, d.descritor);
+        });
+    }
+    
+    openM('m-matriz');
+}
+
+// ================================================================
+// 🔥 ADICIONAR DESCRITOR DINÂMICAMENTE
+// ================================================================
+
+function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
+    const container = document.getElementById('matriz-descritores-container');
+    
+    // Remover o placeholder se existir
+    const placeholder = container.querySelector('.matriz-descritores-empty');
+    if (placeholder) placeholder.remove();
+    
+    const counter = ++matrizDescritorCounter;
+    
+    const item = document.createElement('div');
+    item.className = 'matriz-descritor-item';
+    item.dataset.index = counter;
+    item.innerHTML = `
+        <div class="descritor-header">
+            <span class="descritor-num">📌 Descritor #${counter}</span>
+            <button class="btn-remover-descritor" onclick="removerDescritorMatriz(this)" title="Remover descritor">×</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">BNCC</label>
+                <input class="form-control" type="text" placeholder="Ex: EF01MA01" value="${bnccValue}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descritor</label>
+                <input class="form-control" type="text" placeholder="Descreva a habilidade..." value="${descritorValue}">
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(item);
+    
+    // Scroll para o novo item
+    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ================================================================
+// 🔥 REMOVER DESCRITOR
+// ================================================================
+
+function removerDescritorMatriz(btn) {
+    const item = btn.closest('.matriz-descritor-item');
+    if (!item) return;
+    
+    const num = item.dataset.index;
+    if (confirm(`Remover Descritor #${num}?`)) {
+        item.classList.add('removing');
+        setTimeout(() => {
+            item.remove();
+            // Se não houver mais descritores, mostrar placeholder
+            const container = document.getElementById('matriz-descritores-container');
+            if (container.children.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
+                        Clique em "Adicionar Descritor" para começar
+                    </div>
+                `;
+            }
+            toast('Descritor removido', 'info');
+        }, 300);
+    }
+}
+
+// ================================================================
+// 🔥 SALVAR MATRIZ (CRIAR / ATUALIZAR)
+// ================================================================
+
+async function salvarMatriz() {
+    try {
+        // Validar campos obrigatórios
+        const ano = document.getElementById('matriz-ano').value;
+        const disciplina = document.getElementById('matriz-disciplina').value;
+        const nivel = document.getElementById('matriz-nivel').value;
+        
+        if (!ano) {
+            toast('Selecione o Ano', 'error');
+            return;
+        }
+        if (!disciplina) {
+            toast('Selecione a Disciplina', 'error');
+            return;
+        }
+        if (!nivel) {
+            toast('Selecione o Nível', 'error');
+            return;
+        }
+        
+        // Coletar descritores
+        const container = document.getElementById('matriz-descritores-container');
+        const items = container.querySelectorAll('.matriz-descritor-item');
+        const descritores = [];
+        
+        items.forEach(item => {
+            const inputs = item.querySelectorAll('.form-control');
+            const bncc = inputs[0] ? inputs[0].value.trim() : '';
+            const descritor = inputs[1] ? inputs[1].value.trim() : '';
+            if (bncc || descritor) {
+                descritores.push({ bncc, descritor });
+            }
+        });
+        
+        // Montar objeto
+        const dados = {
+            ano: ano,
+            disciplina: disciplina,
+            nivel: nivel,
+            descritores: descritores
+        };
+        
+        const editId = document.getElementById('matriz-edit-id').value;
+        const url = editId ? `/api/matrizes/${editId}` : '/api/matrizes';
+        const method = editId ? 'PUT' : 'POST';
+        
+        // Mostrar loading
+        if (typeof showToast === 'function') {
+            showToast('Salvando matriz...', 'info');
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.erro || 'Erro ao salvar matriz');
+        }
+        
+        const result = await response.json();
+        toast(result.mensagem || 'Matriz salva com sucesso!', 'success');
+        
+        // Fechar modal e recarregar
+        fecharModalMatriz();
+        await carregarMatrizes();
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar matriz:', error);
+        toast(error.message || 'Erro ao salvar matriz', 'error');
+    }
+}
+
+// ================================================================
+// 🔥 EXCLUIR MATRIZ
+// ================================================================
+
+function excluirMatriz(id) {
+    const matriz = matrizesData.find(m => m.id === id);
+    if (!matriz) {
+        toast('Matriz não encontrada', 'error');
+        return;
+    }
+    
+    matrizParaDeletar = id;
+    const nome = `${matriz.ano} - ${matriz.disciplina} (${matriz.nivel})`;
+    document.getElementById('matriz-deletar-nome').textContent = nome;
+    
+    openM('m-deletar-matriz');
+}
+
+function fecharModalDeletarMatriz() {
+    matrizParaDeletar = null;
+    closeM('m-deletar-matriz');
+}
+
+async function confirmarDeletarMatriz() {
+    if (!matrizParaDeletar) return;
+    
+    try {
+        const id = matrizParaDeletar;
+        const response = await fetch(`/api/matrizes/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.erro || 'Erro ao excluir matriz');
+        }
+        
+        toast('Matriz excluída com sucesso!', 'success');
+        fecharModalDeletarMatriz();
+        await carregarMatrizes();
+        
+    } catch (error) {
+        console.error('❌ Erro ao excluir matriz:', error);
+        toast(error.message || 'Erro ao excluir matriz', 'error');
+        fecharModalDeletarMatriz();
+    }
+}
+
+// ================================================================
+// 🔥 FECHAR MODAL MATRIZ
+// ================================================================
+
+function fecharModalMatriz() {
+    matrizEditId = null;
+    closeM('m-matriz');
+}
+
+// ================================================================
+// 🔥 FILTRAR MATRIZES
+// ================================================================
+
+function filtrarMatrizes() {
+    const ano = document.getElementById('filtro-matriz-ano').value;
+    const disciplina = document.getElementById('filtro-matriz-disciplina').value;
+    const nivel = document.getElementById('filtro-matriz-nivel').value;
+    
+    let filtradas = matrizesData;
+    
+    if (ano) filtradas = filtradas.filter(m => m.ano === ano);
+    if (disciplina) filtradas = filtradas.filter(m => m.disciplina === disciplina);
+    if (nivel) filtradas = filtradas.filter(m => m.nivel === nivel);
+    
+    renderizarMatrizes(filtradas);
+    atualizarTotalMatrizes(filtradas.length);
+}
+
+function limparFiltrosMatriz() {
+    document.getElementById('filtro-matriz-ano').value = '';
+    document.getElementById('filtro-matriz-disciplina').value = '';
+    document.getElementById('filtro-matriz-nivel').value = '';
+    renderizarMatrizes(matrizesData);
+    atualizarTotalMatrizes(matrizesData.length);
+}
+
+// ================================================================
+// 🔥 FUNÇÕES AUXILIARES
+// ================================================================
+
+function formatarData(dataStr) {
+    if (!dataStr) return '-';
+    try {
+        const d = new Date(dataStr);
+        return d.toLocaleDateString('pt-BR');
+    } catch {
+        return dataStr;
+    }
+}
+
+// ================================================================
+// 🔥 TOAST PERSONALIZADO (fallback)
+// ================================================================
+
+function toast(mensagem, tipo = 'info') {
+    if (typeof showToast === 'function') {
+        showToast(mensagem, tipo);
+        return;
+    }
+    // Fallback
+    const container = document.getElementById('toast-c');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${tipo}`;
+    el.textContent = mensagem;
+    container.appendChild(el);
+    setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(40px)';
+        setTimeout(() => el.remove(), 400);
+    }, 3000);
+}
+
+// ================================================================
+// 🔥 DADOS LOCAIS (FALLBACK PARA TESTES)
+// ================================================================
+
+function carregarMatrizesLocal() {
+    const stored = localStorage.getItem('matrizes_data');
+    if (stored) {
+        try {
+            return JSON.parse(stored);
+        } catch (e) {
+            return [];
+        }
+    }
+    return [];
+}
+
+function salvarMatrizesLocal(matrizes) {
+    localStorage.setItem('matrizes_data', JSON.stringify(matrizes));
+}
+
+// ================================================================
+// 🔥 INICIALIZAÇÃO
+// ================================================================
+
+// Carregar matrizes quando a página for carregada
+document.addEventListener('DOMContentLoaded', function() {
+    // Se a página de matrizes estiver ativa, carregar
+    if (document.getElementById('page-matriz')) {
+        carregarMatrizes();
+    }
+});
+
+// ================================================================
+// FIM - MATRIZ DE PROFICIÊNCIA
+// ================================================================
