@@ -8732,7 +8732,6 @@ function visualizarMatriz(id) {
 // ================================================================
 
 function imprimirMatrizVisualizada() {
-    // 🔥 Usa a matriz normalizada da variável global
     const matriz = window.matrizVisualizando;
     if (!matriz) {
         toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
@@ -8746,42 +8745,33 @@ function imprimirMatrizVisualizada() {
         return;
     }
 
-    // 🔥 Garante que os descritores estejam normalizados
     const descritores = (matriz.descritores || []).map(d => ({
         bncc: d.bncc || '',
-        descritor: d.descritor || d.descricao || ''  // fallback
+        descritor: d.descritor || d.descricao || ''
     }));
 
     const nivel = matriz.nivel || '—';
     const ano = matriz.ano || '—';
     const disciplina = matriz.disciplina || '—';
 
+    // 🔥 Construir os parágrafos com fundo alternado
     let descritoresHtml = '';
     if (descritores.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
     } else {
-        descritoresHtml = `
-            <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:13px;">
-                <thead>
-                    <tr style="background:#f1f5f9; border-bottom:2px solid #2563eb;">
-                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:25%;">📌 BNCC</th>
-                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 Descritor</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
         descritores.forEach((d, idx) => {
             const bncc = d.bncc || '—';
             const desc = d.descritor || '—';
-            const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+            // 🔥 Concatena BNCC e descritor com três espaços
+            const textoCompleto = `${bncc}   ${desc}`;
+            // Cor de fundo alternada (cinza claro para índices pares)
+            const bgColor = idx % 2 === 0 ? '#f1f5f9' : '#ffffff';
             descritoresHtml += `
-                <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
-                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top; white-space: pre-wrap; word-wrap: break-word;">${desc}</td>
-                </tr>
+                <div style="padding:10px 16px; margin:0; background-color:${bgColor}; border-bottom:1px solid #e2e8f0; white-space: pre-wrap; word-wrap: break-word; line-height:1.6;">
+                    ${textoCompleto}
+                </div>
             `;
         });
-        descritoresHtml += '</tbody></table>';
     }
 
     const html = `
@@ -8872,23 +8862,11 @@ function imprimirMatrizVisualizada() {
                 padding-bottom: 6px;
                 border-bottom: 2px solid #e2e8f0;
             }
-            .table-wrap {
-                overflow-x: auto;
-                margin-top: 4px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th {
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-                background: #f1f5f9;
-            }
-            td, th {
-                padding: 8px 12px;
-                text-align: left;
+            .descritores-list {
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                overflow: hidden;
+                margin-top: 8px;
             }
             .footer {
                 margin-top: 20px;
@@ -8928,7 +8906,7 @@ function imprimirMatrizVisualizada() {
             </div>
 
             <div class="section-title">📋 Descritores (${descritores.length})</div>
-            <div class="table-wrap">
+            <div class="descritores-list">
                 ${descritoresHtml}
             </div>
 
