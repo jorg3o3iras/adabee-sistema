@@ -8756,28 +8756,58 @@ function imprimirMatrizVisualizada() {
     const ano = matriz.ano || '—';
     const disciplina = matriz.disciplina || '—';
 
-    // 🔥 NOVO: Gera lista de parágrafos com cores alternadas
+    // 🔥 NOVO: Cria uma lista plana de linhas (cada BNCC vira uma linha)
+    const linhas = [];
+    descritores.forEach((d) => {
+        // Divide a string de BNCC por " - " (ou por hífen com espaços)
+        const bnccs = d.bncc.split(/\s*-\s*/).filter(b => b.trim() !== '');
+        if (bnccs.length > 1) {
+            // Se houver múltiplos BNCCs, repete o descritor para cada um
+            bnccs.forEach(bncc => {
+                linhas.push({
+                    bncc: bncc.trim(),
+                    descritor: d.descritor
+                });
+            });
+        } else {
+            // Apenas um BNCC
+            linhas.push({
+                bncc: d.bncc,
+                descritor: d.descritor
+            });
+        }
+    });
+
+    // 🔥 Gera a tabela com uma linha para cada BNCC
     let descritoresHtml = '';
-    if (descritores.length === 0) {
+    if (linhas.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
     } else {
-        descritoresHtml = '<div style="margin-top:8px;">';
-        descritores.forEach((d, idx) => {
-            const bncc = d.bncc || '—';
-            const desc = d.descritor || '—';
-            // Cores alternadas: cinza claro (#f8fafc) e branco (#ffffff)
+        descritoresHtml = `
+            <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:13px;">
+                <thead>
+                    <tr style="background:#f1f5f9; border-bottom:2px solid #2563eb;">
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:25%;">📌 BNCC</th>
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 Descritor</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        linhas.forEach((linha, idx) => {
+            const bncc = linha.bncc || '—';
+            const desc = linha.descritor || '—';
             const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
             descritoresHtml += `
-                <div style="background:${bgColor}; padding:10px 14px; border-bottom:1px solid #e2e8f0; line-height:1.6; white-space: pre-wrap; word-wrap: break-word;">
-                    <span style="font-weight:700; color:#8b5cf6;">${bncc}</span>
-                    <span style="color:#1e293b;">${desc}</span>
-                </div>
+                <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
+                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top; white-space: pre-wrap; word-wrap: break-word;">${desc}</td>
+                </tr>
             `;
         });
-        descritoresHtml += '</div>';
+        descritoresHtml += '</tbody></table>';
     }
 
-    // 🔥 O HTML do PDF permanece IDÊNTICO ao original, exceto o conteúdo de .table-wrap
+    // 🔥 O restante do HTML permanece EXATAMENTE IGUAL ao original
     const html = `
     <!DOCTYPE html>
     <html>
@@ -8870,6 +8900,20 @@ function imprimirMatrizVisualizada() {
                 overflow-x: auto;
                 margin-top: 4px;
             }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                background: #f1f5f9;
+            }
+            td, th {
+                padding: 8px 12px;
+                text-align: left;
+            }
             .footer {
                 margin-top: 20px;
                 padding-top: 12px;
@@ -8907,7 +8951,7 @@ function imprimirMatrizVisualizada() {
                 </div>
             </div>
 
-            <div class="section-title">📋 Descritores (${descritores.length})</div>
+            <div class="section-title">📋 Descritores (${linhas.length})</div>
             <div class="table-wrap">
                 ${descritoresHtml}
             </div>
