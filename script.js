@@ -8689,8 +8689,7 @@ function visualizarMatriz(id) {
                         <span style="font-weight:700;color:var(--purple);">📌 Descritor #${idx+1}</span>
                         <span style="font-size:11px;background:rgba(139,92,246,0.12);padding:2px 12px;border-radius:12px;color:var(--purple);font-weight:700;">BNCC: ${bncc}</span>
                     </div>
-                    <div style="margin-top:6px;font-size:14px;color:var(--text);line-height:1.5;">${desc}</div>
-                </div>
+                    <div style="margin-top:6px;font-size:14px;color:var(--text);line-height:1.5; white-space: pre-wrap; word-wrap: break-word;">${desc}</div>
             `;
         });
         descritoresHtml += '</div>';
@@ -8778,7 +8777,7 @@ function imprimirMatrizVisualizada() {
             descritoresHtml += `
                 <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
                     <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
-                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top;">${desc}</td>
+                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top; white-space: pre-wrap; word-wrap: break-word;">${desc}</td>
                 </tr>
             `;
         });
