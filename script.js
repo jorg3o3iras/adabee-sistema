@@ -8732,6 +8732,7 @@ function visualizarMatriz(id) {
 // ================================================================
 
 function imprimirMatrizVisualizada() {
+    // 🔥 Usa a matriz normalizada da variável global
     const matriz = window.matrizVisualizando;
     if (!matriz) {
         toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
@@ -8745,35 +8746,38 @@ function imprimirMatrizVisualizada() {
         return;
     }
 
+    // 🔥 Garante que os descritores estejam normalizados
     const descritores = (matriz.descritores || []).map(d => ({
         bncc: d.bncc || '',
-        descritor: d.descritor || d.descricao || ''
+        descritor: d.descritor || d.descricao || ''  // fallback
     }));
 
     const nivel = matriz.nivel || '—';
     const ano = matriz.ano || '—';
     const disciplina = matriz.disciplina || '—';
 
-    // 🔥 Construir os parágrafos com fundo alternado
+    // 🔥 NOVO: Gera lista de parágrafos com cores alternadas
     let descritoresHtml = '';
     if (descritores.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
     } else {
+        descritoresHtml = '<div style="margin-top:8px;">';
         descritores.forEach((d, idx) => {
             const bncc = d.bncc || '—';
             const desc = d.descritor || '—';
-            // 🔥 Concatena BNCC e descritor com três espaços
-            const textoCompleto = `${bncc}   ${desc}`;
-            // Cor de fundo alternada (cinza claro para índices pares)
-            const bgColor = idx % 2 === 0 ? '#f1f5f9' : '#ffffff';
+            // Cores alternadas: cinza claro (#f8fafc) e branco (#ffffff)
+            const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
             descritoresHtml += `
-                <div style="padding:10px 16px; margin:0; background-color:${bgColor}; border-bottom:1px solid #e2e8f0; white-space: pre-wrap; word-wrap: break-word; line-height:1.6;">
-                    ${textoCompleto}
+                <div style="background:${bgColor}; padding:10px 14px; border-bottom:1px solid #e2e8f0; line-height:1.6; white-space: pre-wrap; word-wrap: break-word;">
+                    <span style="font-weight:700; color:#8b5cf6;">${bncc}</span>
+                    <span style="color:#1e293b;">${desc}</span>
                 </div>
             `;
         });
+        descritoresHtml += '</div>';
     }
 
+    // 🔥 O HTML do PDF permanece IDÊNTICO ao original, exceto o conteúdo de .table-wrap
     const html = `
     <!DOCTYPE html>
     <html>
@@ -8862,11 +8866,9 @@ function imprimirMatrizVisualizada() {
                 padding-bottom: 6px;
                 border-bottom: 2px solid #e2e8f0;
             }
-            .descritores-list {
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                overflow: hidden;
-                margin-top: 8px;
+            .table-wrap {
+                overflow-x: auto;
+                margin-top: 4px;
             }
             .footer {
                 margin-top: 20px;
@@ -8906,7 +8908,7 @@ function imprimirMatrizVisualizada() {
             </div>
 
             <div class="section-title">📋 Descritores (${descritores.length})</div>
-            <div class="descritores-list">
+            <div class="table-wrap">
                 ${descritoresHtml}
             </div>
 
