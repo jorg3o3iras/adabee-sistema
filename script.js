@@ -948,7 +948,7 @@ async function carregarTurmas() {
                 '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
                 '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
 
-            const turmasVisiveis = turmas.slice(0, 50);
+            const turmasVisiveis = turmas.slice(0, 500);
             
             tbody.innerHTML = turmasVisiveis.map((t, i) => {
                 const totalAlunos = t.total_alunos || 0;
@@ -1068,7 +1068,7 @@ async function carregarAlunos(escolaId = null) {
                 '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
             };
             
-            const alunosVisiveis = alunos.slice(0, 50);
+            const alunosVisiveis = alunos.slice(0, 500);
             
             tbody.innerHTML = alunosVisiveis.map((a, i) => {
                 return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
