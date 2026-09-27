@@ -3604,4 +3604,598 @@ def gerar_gabarito():
         print(f"❌ Erro ao gerar cartão: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-            
+
+
+# ============================================
+# ROTA DE BACKUP
+# ============================================
+
+@app.route('/api/backup', methods=['GET'])
+def backup_database():
+    backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
+    expected_key = os.getenv('BACKUP_KEY', 'backup123')
+
+    if not backup_key or backup_key != expected_key:
+        logging.warning(f"⚠️ Tentativa de backup com chave inválida: {backup_key}")
+        return jsonify({'erro': 'Não autorizado. Chave de backup inválida.'}), 403
+
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
+
+        tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto', 'matrizes']
+        data = {}
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        for table in tables:
+            try:
+                cur.execute(f"SELECT * FROM {table}")
+                rows = cur.fetchall()
+                data[table] = rows
+                logging.info(f"📦 Tabela '{table}': {len(rows)} registros exportados.")
+            except Exception as e:
+                logging.warning(f"⚠️ Tabela '{table}' não encontrada ou erro: {e}")
+                data[table] = []
+
+        cur.close()
+        conn.close()
+
+        json_str = json.dumps(data, default=str, indent=2, ensure_ascii=False)
+
+        memory_file = io.BytesIO()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        json_filename = f"backup_{timestamp}.json"
+        zip_filename = f"backup_{timestamp}.zip"
+
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(json_filename, json_str.encode('utf-8'))
+
+        memory_file.seek(0)
+
+        logging.info(f"✅ Backup gerado com sucesso: {zip_filename}")
+
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=zip_filename
+        )
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao gerar backup: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
+
+
+# ============================================
+# ROTAS PARA MATRIZ DE PROFICIÊNCIA
+# ============================================
+
+@app.route('/api/matrizes', methods=['GET'])
+def listar_matrizes():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, ano, disciplina, nivel, descritores, created_at
+            FROM matrizes ORDER BY created_at DESC
+        """)
+        matrizes = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        for m in matrizes:
+            if m['descritores']:
+                try:
+                    if isinstance(m['descritores'], str):
+                        m['descritores'] = json.loads(m['descritores'])
+                    elif isinstance(m['descritores'], dict):
+                        m['descritores'] = [m['descritores']] if m['descritores'] else []
+                except Exception as e:
+                    print(f"⚠️ Erro ao converter descritores: {e}")
+                    m['descritores'] = []
+            else:
+                m['descritores'] = []
+
+        return jsonify(matrizes)
+    except Exception as e:
+        logging.error(f"Erro ao listar matrizes: {e}")
+        return jsonify([]), 500
+
+
+@app.route('/api/matrizes/<int:id>', methods=['GET'])
+def buscar_matriz_por_id(id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, ano, disciplina, nivel, descritores, created_at
+            FROM matrizes WHERE id = %s
+        """, (id,))
+        matriz = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not matriz:
+            return jsonify({'erro': 'Matriz não encontrada'}), 404
+
+        if matriz['descritores']:
+            try:
+                matriz['descritores'] = json.loads(matriz['descritores'])
+            except Exception:
+                matriz['descritores'] = []
+        else:
+            matriz['descritores'] = []
+
+        return jsonify(matriz)
+    except Exception as e:
+        logging.error(f"Erro ao buscar matriz por ID: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+@app.route('/api/matrizes', methods=['POST'])
+def criar_matriz():
+    try:
+        data = request.json
+        ano = data.get('ano')
+        disciplina = data.get('disciplina')
+        nivel = data.get('nivel')
+        descritores = data.get('descritores', [])
+
+        if not ano or not disciplina or not nivel:
+            return jsonify({'erro': 'Ano, disciplina e nível são obrigatórios'}), 400
+
+        if not isinstance(descritores, list):
+            descritores = []
+
+        descritores_json = json.dumps(descritores, ensure_ascii=False)
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            INSERT INTO matrizes (ano, disciplina, nivel, descritores)
+            VALUES (%s, %s, %s, %s::jsonb) RETURNING id
+        """, (ano, disciplina, nivel, descritores_json))
+
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({'id': result['id'], 'mensagem': 'Matriz criada com sucesso!'})
+    except Exception as e:
+        logging.error(f"Erro ao criar matriz: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+@app.route('/api/matrizes/<int:id>', methods=['PUT'])
+def atualizar_matriz(id):
+    try:
+        data = request.json
+        ano = data.get('ano')
+        disciplina = data.get('disciplina')
+        nivel = data.get('nivel')
+        descritores = data.get('descritores', [])
+
+        if not ano or not disciplina or not nivel:
+            return jsonify({'erro': 'Ano, disciplina e nível são obrigatórios'}), 400
+
+        descritores_json = json.dumps(descritores, ensure_ascii=False)
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            UPDATE matrizes
+            SET ano = %s, disciplina = %s, nivel = %s, descritores = %s::jsonb
+            WHERE id = %s RETURNING id
+        """, (ano, disciplina, nivel, descritores_json, id))
+
+        result = cur.fetchone()
+        if not result:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Matriz não encontrada'}), 404
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({'id': result['id'], 'mensagem': 'Matriz atualizada com sucesso!'})
+    except Exception as e:
+        logging.error(f"Erro ao atualizar matriz: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+@app.route('/api/matrizes/<int:id>', methods=['DELETE'])
+def excluir_matriz(id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("DELETE FROM matrizes WHERE id = %s RETURNING id", (id,))
+        result = cur.fetchone()
+
+        if not result:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Matriz não encontrada'}), 404
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({'sucesso': True, 'mensagem': 'Matriz excluída com sucesso!'})
+    except Exception as e:
+        logging.error(f"Erro ao excluir matriz: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+# ============================================
+# ROTA PRINCIPAL E ARQUIVOS ESTÁTICOS
+# ============================================
+
+@app.route('/')
+def index():
+    try:
+        return send_from_directory('.', 'index.html')
+    except Exception:
+        return jsonify({
+            'mensagem': 'CorrigePro API',
+            'status': 'online',
+            'endpoints': [
+                '/health', '/api/login', '/api/corrigir', '/api/corrigir_manual',
+                '/api/corrigir_redacao', '/api/salvar_correcao_texto', '/api/correcoes_texto',
+                '/api/escolas', '/api/turmas', '/api/alunos', '/api/provas',
+                '/api/gabaritos', '/api/historico', '/api/historico/agrupado',
+                '/api/dashboard', '/api/dashboard/Conceito', '/api/gerar_gabarito',
+                '/api/backup', '/api/usuarios', '/api/matrizes'
+            ]
+        })
+
+
+@app.route('/<path:path>')
+def serve_static(path):
+    try:
+        return send_from_directory('.', path)
+    except Exception:
+        return jsonify({'erro': 'Arquivo não encontrado'}), 404
+
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    conn = get_db_connection()
+    db_ok = conn is not None
+    if conn:
+        conn.close()
+    return jsonify({
+        'status': 'online',
+        'openai': 'disponível' if OPENAI_AVAILABLE else 'indisponível',
+        'openai_modelo': OPENAI_MODEL if OPENAI_AVAILABLE else None,
+        'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
+        'database': 'conectado' if db_ok else 'desconectado',
+        'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX}
+    })
+
+
+# ============================================
+# INICIALIZAÇÃO DO BANCO
+# ============================================
+
+def init_db():
+    conn = get_db_connection()
+    if not conn:
+        print("⚠️ Banco não disponível, usando dados em memória")
+        return
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_name = 'escolas'
+            )
+        """)
+        tabela_existe = cur.fetchone()[0]
+
+        if not tabela_existe:
+            print("🔧 Criando tabelas do banco de dados...")
+
+            cur.execute("""
+                CREATE TABLE escolas (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    inep TEXT,
+                    municipio TEXT,
+                    estado TEXT DEFAULT 'PA',
+                    telefone TEXT,
+                    diretor TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE turmas (
+                    id SERIAL PRIMARY KEY,
+                    escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+                    nome TEXT NOT NULL,
+                    serie TEXT,
+                    turno TEXT DEFAULT 'Manhã',
+                    professor TEXT,
+                    capacidade INTEGER DEFAULT 35,
+                    ano_letivo INTEGER DEFAULT 2025,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE alunos (
+                    id SERIAL PRIMARY KEY,
+                    escola_id INTEGER REFERENCES escolas(id) ON DELETE CASCADE,
+                    turma_id INTEGER REFERENCES turmas(id) ON DELETE CASCADE,
+                    nome TEXT NOT NULL,
+                    matricula TEXT,
+                    numero_chamada INTEGER,
+                    data_nascimento DATE,
+                    genero TEXT,
+                    responsavel TEXT,
+                    telefone TEXT,
+                    email TEXT,
+                    observacoes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE provas (
+                    id SERIAL PRIMARY KEY,
+                    titulo TEXT NOT NULL,
+                    serie TEXT NOT NULL,
+                    disciplina TEXT,
+                    bimestre TEXT,
+                    data_prova DATE,
+                    valor_nota DECIMAL(5,2) DEFAULT 10,
+                    tipo_questoes TEXT DEFAULT '4',
+                    quantidade_questoes INTEGER DEFAULT 20,
+                    gabarito TEXT[],
+                    bncc TEXT[],
+                    textos_questoes TEXT[],
+                    niveis TEXT[],
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE historico (
+                    id SERIAL PRIMARY KEY,
+                    prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                    aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                    respostas TEXT[],
+                    acertos INTEGER,
+                    nota DECIMAL(5,2),
+                    total INTEGER,
+                    tipo_correcao TEXT DEFAULT 'ia',
+                    disciplina TEXT,
+                    tipo_avaliacao TEXT,
+                    questoes_status JSONB DEFAULT '[]',
+                    confianca DECIMAL(5,2),
+                    confianca_por_questao JSONB DEFAULT '[]',
+                    bncc TEXT[],
+                    data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE usuarios (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT,
+                    username TEXT UNIQUE NOT NULL,
+                    senha_hash TEXT NOT NULL,
+                    email TEXT,
+                    perfil TEXT DEFAULT 'usuario',
+                    ativo BOOLEAN DEFAULT TRUE,
+                    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE correcoes_texto (
+                    id SERIAL PRIMARY KEY,
+                    aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                    prova_id INTEGER REFERENCES provas(id) ON DELETE SET NULL,
+                    texto TEXT NOT NULL,
+                    nota DECIMAL(5,2),
+                    metrica_coerencia DECIMAL(5,2),
+                    metrica_estrutura DECIMAL(5,2),
+                    metrica_gramatica DECIMAL(5,2),
+                    metrica_vocabulario DECIMAL(5,2),
+                    feedback TEXT,
+                    tipo_correcao TEXT DEFAULT 'ia',
+                    data_correcao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE matrizes (
+                    id SERIAL PRIMARY KEY,
+                    ano TEXT NOT NULL,
+                    disciplina TEXT NOT NULL,
+                    nivel TEXT NOT NULL,
+                    descritores JSONB DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            print("✅ Tabelas criadas com sucesso!")
+        else:
+            print("📌 Tabelas já existem, verificando colunas...")
+
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'provas' AND column_name = 'bncc'
+            """)
+            if not cur.fetchone():
+                try:
+                    cur.execute("ALTER TABLE provas ADD COLUMN bncc TEXT[]")
+                    print("✅ Coluna bncc adicionada!")
+                except Exception as e:
+                    print(f"⚠️ Erro: {e}")
+
+            for col in ['textos_questoes', 'niveis']:
+                cur.execute("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'provas' AND column_name = %s
+                """, (col,))
+                if not cur.fetchone():
+                    try:
+                        cur.execute(f"ALTER TABLE provas ADD COLUMN {col} TEXT[]")
+                        print(f"✅ Coluna {col} adicionada!")
+                    except Exception as e:
+                        print(f"⚠️ Erro: {e}")
+
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'historico' AND column_name = 'questoes_status'
+            """)
+            if not cur.fetchone():
+                try:
+                    cur.execute("ALTER TABLE historico ADD COLUMN questoes_status JSONB DEFAULT '[]'")
+                    print("✅ Coluna questoes_status adicionada!")
+                except Exception as e:
+                    print(f"⚠️ Erro: {e}")
+
+            for col in ['confianca', 'confianca_por_questao']:
+                cur.execute("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'historico' AND column_name = %s
+                """, (col,))
+                if not cur.fetchone():
+                    try:
+                        if col == 'confianca':
+                            cur.execute("ALTER TABLE historico ADD COLUMN confianca DECIMAL(5,2)")
+                        else:
+                            cur.execute("ALTER TABLE historico ADD COLUMN confianca_por_questao JSONB DEFAULT '[]'")
+                        print(f"✅ Coluna {col} adicionada!")
+                    except Exception as e:
+                        print(f"⚠️ Erro: {e}")
+
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'historico' AND column_name = 'bncc'
+            """)
+            if not cur.fetchone():
+                try:
+                    cur.execute("ALTER TABLE historico ADD COLUMN bncc TEXT[]")
+                    print("✅ Coluna bncc adicionada ao historico!")
+                except Exception as e:
+                    print(f"⚠️ Erro: {e}")
+
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'matrizes'
+                )
+            """)
+            if not cur.fetchone()[0]:
+                try:
+                    cur.execute("""
+                        CREATE TABLE matrizes (
+                            id SERIAL PRIMARY KEY,
+                            ano TEXT NOT NULL,
+                            disciplina TEXT NOT NULL,
+                            nivel TEXT NOT NULL,
+                            descritores JSONB DEFAULT '[]',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    print("✅ Tabela matrizes criada!")
+                except Exception as e:
+                    print(f"⚠️ Erro: {e}")
+
+        for username, dados in USUARIOS_FIXOS.items():
+            cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
+            if not cur.fetchone():
+                cur.execute("""
+                    INSERT INTO usuarios (nome, username, senha_hash, perfil, ativo)
+                    VALUES (%s, %s, %s, %s, TRUE)
+                """, (dados['nome'], username, dados['senha'], dados['perfil']))
+                print(f"✅ Usuário {username} criado!")
+
+        indices = [
+            "CREATE INDEX IF NOT EXISTS idx_alunos_escola_id ON alunos(escola_id)",
+            "CREATE INDEX IF NOT EXISTS idx_alunos_turma_id ON alunos(turma_id)",
+            "CREATE INDEX IF NOT EXISTS idx_turmas_escola_id ON turmas(escola_id)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_aluno_id ON historico(aluno_id)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_prova_id ON historico(prova_id)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_data_correcao ON historico(data_correcao DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_historico_aluno_data ON historico(aluno_id, data_correcao DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_correcoes_texto_data ON correcoes_texto(data_correcao DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_provas_created_at ON provas(created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)",
+            "CREATE INDEX IF NOT EXISTS idx_matrizes_ano ON matrizes(ano)",
+            "CREATE INDEX IF NOT EXISTS idx_matrizes_disciplina ON matrizes(disciplina)",
+            "CREATE INDEX IF NOT EXISTS idx_matrizes_nivel ON matrizes(nivel)"
+        ]
+        for sql in indices:
+            try:
+                cur.execute(sql)
+            except Exception as e:
+                logging.warning("⚠️ Índice não criado: %s", e)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Banco de dados inicializado com sucesso!")
+    except Exception as e:
+        print(f"❌ Erro ao inicializar banco: {e}")
+        traceback.print_exc()
+
+
+# ============================================
+# INICIALIZAÇÃO DO SERVIDOR
+# ============================================
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print("=" * 60)
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO DEFINITIVA)")
+    print("=" * 60)
+    print(f"📌 Porta: {port}")
+    print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
+    print(f"🤖 OpenAI (ChatGPT): {'✅ Disponível' if OPENAI_AVAILABLE else '❌ Indisponível'}")
+    if OPENAI_AVAILABLE:
+        print(f"📌 Modelo: {OPENAI_MODEL}")
+    print(f"🤖 RelayFreeLLM: {'✅ Disponível' if RELAY_AVAILABLE else '❌ Indisponível'}")
+    print("=" * 60)
+    print("📋 ESTRATÉGIA DE CORREÇÃO:")
+    print("   1️⃣ Detecção de círculos (OpenCV)")
+    print("   2️⃣ Cálculo de posições das colunas A, B, C, D")
+    print("   3️⃣ Atribuição direta de letra por posição X")
+    print("   4️⃣ Fallback para IA (OpenAI) se necessário")
+    print("=" * 60)
+    print("✅ MELHORIAS APLICADAS:")
+    print("   - Cálculo automático das colunas A/B/C/D")
+    print("   - Letra atribuída por posição X absoluta")
+    print("   - Tolerância Y adaptativa")
+    print("   - Prompt da IA melhorado (linha por linha)")
+    print("   - IA prioritária na decisão final")
+    print("=" * 60)
+
+    init_db()
+    app.run(host='0.0.0.0', port=port, debug=False)
