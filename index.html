@@ -145,7 +145,7 @@
 
                 <div class="ai-hero no-print">
                     <div class="ai-hero-icon">🤖</div>
-                    <div class="ai-hero-text"><h3>Ferramentas de Inteligência Artificial</h3><p>Corrija cartões resposta, scaneie com câmera e avalie textos com o Gemini AI</p></div>
+                    <div class="ai-hero-text"><h3>Ferramentas de Inteligência Artificial</h3><p>Corrija cartões resposta, scaneie com câmera e avalie textos com o OpenAI</p></div>
                     <div class="ai-hero-actions">
                         <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
                         <button class="btn btn-outline" onclick="go('correcao-texto')">📝 Correção de Texto</button>
@@ -446,7 +446,7 @@
 
             <!-- ========== CORREÇÃO DE TEXTO IA ========== -->
             <div class="page" id="page-correcao-texto">
-                <div class="page-header"><div><div class="page-title">📝 Correção de Texto com IA</div><p class="page-sub">Gemini AI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
+                <div class="page-header"><div><div class="page-title">📝 Correção de Texto com IA</div><p class="page-sub">OpenAI avalia coerência, coesão, gramática e critérios textuais</p></div></div>
                 <div class="g2 no-print">
                     <div>
                         <div class="card">
@@ -469,15 +469,15 @@
                                     <div class="form-group"><label class="form-label">Aluno</label><select class="form-control" id="txt-aluno-select"><option value="">Selecione...</option></select></div>
                                 </div>
                                 <div style="margin-bottom:14px;"><label class="form-label" style="margin-bottom:8px;">Critérios de Avaliação</label><div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked=""> Coerência e Coesão</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked=""> Adequação ao Tema</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked=""> Ortografia e Gramática</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text2);"><input type="checkbox" checked=""> Riqueza Vocabular</label></div></div>
-                                <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com Gemini AI</button>
+                                <button class="btn btn-full btn-lg btn-purple" onclick="avaliarTexto()">🤖 Avaliar com OpenAI</button>
                             </div>
                         </div>
                     </div>
                     <div>
-                        <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div><h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3><p style="font-size:13px;color:var(--text2);">Envie a foto ou cole o texto e clique em <strong>"Avaliar com Gemini AI"</strong></p></div>
-                        <div id="txt-loading" style="display:none;" class="card"><div style="text-align:center;padding:32px;"><div class="spinner" style="margin-bottom:14px;"></div><p style="font-size:14px;font-weight:700;">Gemini AI processando...</p><p style="font-size:12px;color:var(--text2);margin-top:5px;">Analisando critérios textuais</p><div class="progress" style="margin-top:14px;height:4px;"><div class="progress-fill pf-purple" id="txt-pb" style="width:0%;transition:width .15s;"></div></div></div></div>
+                        <div id="txt-waiting" class="card" style="min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><div style="font-size:60px;margin-bottom:14px;opacity:.35;">🤖</div><h3 style="font-size:16px;margin-bottom:8px;">Aguardando texto</h3><p style="font-size:13px;color:var(--text2);">Envie a foto ou cole o texto e clique em <strong>"Avaliar com OpenAI"</strong></p></div>
+                        <div id="txt-loading" style="display:none;" class="card"><div style="text-align:center;padding:32px;"><div class="spinner" style="margin-bottom:14px;"></div><p style="font-size:14px;font-weight:700;">OpenAI processando...</p><p style="font-size:12px;color:var(--text2);margin-top:5px;">Analisando critérios textuais</p><div class="progress" style="margin-top:14px;height:4px;"><div class="progress-fill pf-purple" id="txt-pb" style="width:0%;transition:width .15s;"></div></div></div></div>
                         <div id="txt-res" style="display:none;" class="card card-glow-purple">
-                            <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação Gemini AI</div><span class="badge badge-purple">IA</span></div>
+                            <div class="card-header"><div class="card-title" style="color:#a78bfa;">🤖 Avaliação OpenAI</div><span class="badge badge-purple">IA</span></div>
                             <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;"><div><div style="font-size:60px;font-weight:900;line-height:1;color:#a78bfa;" id="txt-nota">0</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Nota Final</div></div><div style="flex:1;"><div style="font-weight:700;font-size:15px;margin-bottom:8px;" id="txt-aluno-nome">—</div><span class="badge badge-green" id="txt-status">AGUARDANDO</span></div></div>
                             <div class="ai-criteria-grid"><div class="ai-crit"><div class="ai-crit-name">Coerência e Coesão</div><div class="ai-crit-val" id="c-coe">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-coe" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Adequação ao Tema</div><div class="ai-crit-val" id="c-tema">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-tema" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Ortografia e Gramática</div><div class="ai-crit-val" id="c-ort">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-ort" style="width:0%;"></div></div></div><div class="ai-crit"><div class="ai-crit-name">Riqueza Vocabular</div><div class="ai-crit-val" id="c-voc">0</div><div class="progress"><div class="progress-fill pf-purple" id="b-voc" style="width:0%;"></div></div></div></div>
                             <div class="ai-feedback-box"><strong style="color:#a78bfa;">📝 Feedback:</strong><br><br><span id="txt-fb">Aguardando avaliação...</span></div>
@@ -989,7 +989,7 @@
                 <div class="page-header"><div><div class="page-title">⚙️ Configurações</div></div><button class="btn btn-green no-print" onclick="salvarConfiguracoes()">💾 Salvar</button></div>
                 <div class="g2 no-print">
                     <div class="card"><div class="card-header"><div class="card-title">🏫 Instituição</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Secretaria</label><input class="form-control" id="config-secretaria" value="Secretaria Municipal de Educação"></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Município</label><input class="form-control" id="config-municipio" value="São sebastião da Boa Vista  — PA"></div></div></div>
-                    <div class="card"><div class="card-header"><div class="card-title">🤖 IA &amp; Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo Gemini</label><select class="form-control" id="config-modelo"><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key Gemini</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
+                    <div class="card"><div class="card-header"><div class="card-title">🤖 IA &amp; Scanner</div></div><div class="form-row c1"><div class="form-group"><label class="form-label">Modelo OpenAI</label><select class="form-control" id="config-modelo"><option>gpt-4o-mini</option><option>gpt-4o</option></select></div></div><div class="form-row c1"><div class="form-group"><label class="form-label">API Key OpenAI</label><input class="form-control" id="config-api-key" type="password" placeholder="Chave opcional"></div></div></div>
                     <div class="card"><div class="card-header"><div class="card-title">📊 Escala de Notas</div></div><div class="form-row"><div class="form-group"><label class="form-label">Nota Máxima</label><input class="form-control" id="config-nota-max" type="number" value="10"></div><div class="form-group"><label class="form-label">Mínima (Aprovação)</label><input class="form-control" id="config-nota-min" type="number" value="5"></div></div></div>
                     <div class="card"><div class="card-header"><div class="card-title">👥 Usuários</div><button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo</button></div><div class="table-wrap"><table><thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tb-usuarios"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
                 </div>
@@ -1113,7 +1113,7 @@
                     </div>
                 </div>
             </div>
-
+			
         </div>
 
         <!-- ============================================================ -->
