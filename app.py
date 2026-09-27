@@ -641,7 +641,7 @@ def detectar_circulos_preenchidos(imagem_base64):
         else:
             threshold = 0.20
         
-        threshold = max(0.15, min(threshold, 0.45))
+        threshold = max(0.15, min(threshold, 0.60))
         logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
         logging.info(f"📊 Ratios distribuídos: {[f'{r:.3f}' for r in ratios[:30]]}")
         
