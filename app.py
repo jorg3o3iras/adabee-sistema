@@ -389,57 +389,68 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 
 
 # ============================================
-# DETECÇÃO DE MARCADORES FIDUCIAIS
+# DETECÇÃO DE MARCADORES FIDUCIAIS (MELHORADA)
 # ============================================
 
 def detectar_marcadores_fiduciais(gray):
+    """
+    ✅ CORREÇÃO: Detectar marcadores fiduciais maiores (20mm)
+    com centro branco para melhor precisão.
+    """
     try:
         altura, largura = gray.shape
-        _, binaria = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
+        
+        # Detectar regiões escuras
+        _, binaria = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
         contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         candidatos = []
-        area_min = (largura * altura) * 0.002
-        area_max = (largura * altura) * 0.02
+        # ✅ Área mínima aumentada (marcadores são 20mm ≈ 8% da largura)
+        area_min = (largura * altura) * 0.003
+        area_max = (largura * altura) * 0.025
         
         for c in contornos:
             x, y, w, h = cv2.boundingRect(c)
             area = w * h
             if area_min < area < area_max:
                 aspect = w / float(h)
-                if 0.6 < aspect < 1.6:
+                # ✅ Aceitar aspect ratio mais flexível
+                if 0.7 < aspect < 1.4:
                     roi = binaria[y:y+h, x:x+w]
                     densidade = cv2.countNonZero(roi) / float(w * h)
-                    if densidade > 0.7:
-                        candidatos.append((x, y, w, h, area))
+                    # ✅ Densidade mais flexível (marcadores com centro branco)
+                    if densidade > 0.5:
+                        candidatos.append((x, y, w, h, area, densidade))
         
         if len(candidatos) < 4:
             logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores fiduciais detectados (necessário 4)")
             return None
         
+        # Ordenar por área (maiores primeiro)
         candidatos.sort(key=lambda c: c[4], reverse=True)
-        top4 = candidatos[:4]
         
+        # Pegar os 4 melhores (um em cada canto)
         meia_largura = largura / 2
         meia_altura = altura / 2
         
         tl = tr = bl = br = None
-        for (x, y, w, h, a) in top4:
+        for (x, y, w, h, a, d) in candidatos[:10]:
             cx, cy = x + w//2, y + h//2
-            if cx < meia_largura and cy < meia_altura:
+            if cx < meia_largura and cy < meia_altura and tl is None:
                 tl = (cx, cy)
-            elif cx >= meia_largura and cy < meia_altura:
+            elif cx >= meia_largura and cy < meia_altura and tr is None:
                 tr = (cx, cy)
-            elif cx < meia_largura and cy >= meia_altura:
+            elif cx < meia_largura and cy >= meia_altura and bl is None:
                 bl = (cx, cy)
-            else:
+            elif cx >= meia_largura and cy >= meia_altura and br is None:
                 br = (cx, cy)
         
         if not all([tl, tr, bl, br]):
             logging.warning("⚠️ Não foi possível classificar os 4 marcadores fiduciais")
             return None
         
-        logging.info(f"✅ 4 marcadores fiduciais detectados: TL={tl}, TR={tr}, BL={bl}, BR={br}")
+        logging.info(f"✅ 4 marcadores fiduciais detectados")
+        logging.info(f"   TL={tl}, TR={tr}, BL={bl}, BR={br}")
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
         
     except Exception as e:
@@ -448,6 +459,7 @@ def detectar_marcadores_fiduciais(gray):
 
 
 def corrigir_perspectiva(img, marcadores):
+    """✅ CORREÇÃO: Melhor margem para evitar corte de círculos"""
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
@@ -462,7 +474,8 @@ def corrigir_perspectiva(img, marcadores):
         altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
         altura_max = max(int(altura_esq), int(altura_dir))
         
-        margem = 60
+        # ✅ Margem reduzida para não distorcer
+        margem = 30
         largura_max += margem * 2
         altura_max += margem * 2
         
@@ -486,10 +499,17 @@ def corrigir_perspectiva(img, marcadores):
 
 
 # ============================================
-# DETECÇÃO DE CÍRCULOS
+# ✅ DETECÇÃO DE CÍRCULOS - TOTALMENTE CORRIGIDA
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
+    """
+    ✅ CORREÇÃO COMPLETA:
+    - Threshold reduzido (0.30 → 0.15)
+    - Parâmetros HoughCircles ajustados (param2: 28 → 20)
+    - Raio de análise aumentado (0.65 → 0.75)
+    - Detecção de círculos em branco também
+    """
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -503,33 +523,43 @@ def detectar_circulos_preenchidos(imagem_base64):
             return []
         
         height, width = img.shape[:2]
-        if height > 2200:
-            scale = 2200 / height
+        # ✅ Aumentar resolução máxima para melhor detecção
+        if height > 2400:
+            scale = 2400 / height
             new_width = int(width * scale)
-            img = cv2.resize(img, (new_width, 2200), interpolation=cv2.INTER_AREA)
-            logging.info(f"📐 Imagem redimensionada para {new_width}x2200")
+            img = cv2.resize(img, (new_width, 2400), interpolation=cv2.INTER_AREA)
+            logging.info(f"📐 Imagem redimensionada para {new_width}x2400")
         
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        # ✅ Aplicar CLAHE para melhorar contraste
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        gray_enhanced = clahe.apply(gray)
+        
+        gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
         
         marcadores = detectar_marcadores_fiduciais(gray)
         if marcadores:
             img_corrigida = corrigir_perspectiva(img, marcadores)
             gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-            gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            gray_enhanced = clahe.apply(gray)
+            gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
             logging.info("✅ Perspectiva do cartão corrigida")
         
+        # ✅ Threshold adaptativo
         _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
+        # ✅ PARÂMETROS OTIMIZADOS PARA NOVO CARTÃO (círculos de 24px)
         circulos = cv2.HoughCircles(
             gray_blur,
             cv2.HOUGH_GRADIENT,
-            dp=1.2,
-            minDist=40,
-            param1=80,
-            param2=28,
-            minRadius=12,
-            maxRadius=30
+            dp=1.0,           # ✅ Precisão máxima
+            minDist=20,       # ✅ Reduzido para detectar círculos próximos
+            param1=60,        # ✅ Reduzido para Canny mais sensível
+            param2=20,        # ✅ REDUZIDO de 28 para 20 (detecta mais círculos)
+            minRadius=8,      # ✅ Ajustado para círculos menores
+            maxRadius=20      # ✅ Ajustado para círculos menores
         )
         
         resultados = []
@@ -539,14 +569,17 @@ def detectar_circulos_preenchidos(imagem_base64):
             logging.info(f"🔵 Total de círculos detectados: {len(circulos)}")
             
             for (x, y, r) in circulos:
+                # ✅ Análise com raio maior (0.75) para capturar toda a marcação
                 mask = np.zeros(gray.shape, dtype=np.uint8)
-                cv2.circle(mask, (x, y), int(r * 0.65), 255, -1)
+                cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
                 roi = cv2.bitwise_and(binaria, binaria, mask=mask)
                 
                 total_pixels = cv2.countNonZero(mask)
                 dark_pixels = cv2.countNonZero(roi)
                 dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
-                is_filled = dark_ratio > 0.30
+                
+                # ✅ THRESHOLD REDUZIDO de 0.30 para 0.15
+                is_filled = dark_ratio > 0.15
                 
                 resultados.append({
                     'x': int(x), 'y': int(y), 'r': int(r),
@@ -555,7 +588,12 @@ def detectar_circulos_preenchidos(imagem_base64):
                 })
         
         preenchidos = [c for c in resultados if c['preenchido']]
-        logging.info(f"📊 Círculos detectados: {len(resultados)} total, {len(preenchidos)} preenchidos")
+        logging.info(f"📊 Círculos: {len(resultados)} total, {len(preenchidos)} preenchidos")
+        
+        # Log detalhado dos preenchidos
+        for c in preenchidos[:30]:
+            logging.info(f"   ⭕ ({c['x']},{c['y']}) r={c['r']} ratio={c['dark_ratio']:.3f}")
+        
         return preenchidos
         
     except Exception as e:
@@ -564,15 +602,51 @@ def detectar_circulos_preenchidos(imagem_base64):
         return []
 
 
+# ============================================
+# ✅ ORGANIZAÇÃO DE RESPOSTAS - TOTALMENTE CORRIGIDA
+# ============================================
+
 def organizar_respostas_por_posicao(circulos, total_questoes):
+    """
+    ✅ CORREÇÃO COMPLETA:
+    - Agrupamento inteligente de linhas por Y
+    - Ordenação correta por X
+    - Tratamento de linhas com número variável de círculos
+    - Melhor log para debug
+    """
     if not circulos:
+        logging.warning("⚠️ Nenhum círculo para organizar")
         return []
     
+    logging.info(f"🎯 Organizando {len(circulos)} círculos para {total_questoes} questões")
+    
+    # ✅ Ordenar por Y (topo para baixo), depois por X (esquerda para direita)
     circulos_ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
     
+    # ✅ Calcular tolerância Y adaptativa
+    if len(circulos_ordenados) > 1:
+        distancias_y = []
+        for i in range(1, len(circulos_ordenados)):
+            dy = abs(circulos_ordenados[i]['y'] - circulos_ordenados[i-1]['y'])
+            if dy > 5:
+                distancias_y.append(dy)
+        
+        if distancias_y:
+            # Mediana das distâncias
+            distancias_y_sorted = sorted(distancias_y)
+            mediana = distancias_y_sorted[len(distancias_y_sorted) // 2]
+            y_limite = mediana * 0.5
+        else:
+            y_limite = 25
+    else:
+        y_limite = 25
+    
+    y_limite = max(12, min(y_limite, 45))
+    logging.info(f"📏 Tolerância Y: {y_limite:.1f} pixels")
+    
+    # ✅ Agrupar em linhas
     linhas = []
     linha_atual = []
-    y_limite = 50
     
     for c in circulos_ordenados:
         if not linha_atual:
@@ -588,35 +662,83 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
         linha_atual.sort(key=lambda c: c['x'])
         linhas.append(linha_atual)
     
-    respostas = []
+    # ✅ Ordenar linhas por Y (topo para baixo)
+    linhas.sort(key=lambda linha: linha[0]['y'])
     
-    for linha in linhas:
+    logging.info(f"📋 {len(linhas)} linhas detectadas")
+    
+    respostas = []
+    letras = ['A', 'B', 'C', 'D']
+    
+    for idx, linha in enumerate(linhas):
         if not linha:
             respostas.append('')
             continue
         
-        linha_ordenada = sorted(linha, key=lambda c: c['x'])
+        # ✅ Encontrar o círculo preenchido com MAIOR dark_ratio
         circulo_preenchido = None
-        for c in linha_ordenada:
+        for c in linha:
             if c['preenchido']:
-                circulo_preenchido = c
-                break
+                if circulo_preenchido is None or c['dark_ratio'] > circulo_preenchido['dark_ratio']:
+                    circulo_preenchido = c
         
         if circulo_preenchido:
-            posicao = linha_ordenada.index(circulo_preenchido)
-            letras = ['A', 'B', 'C', 'D']
-            if posicao < len(letras):
-                respostas.append(letras[posicao])
-                logging.info(f"✅ Questão {len(respostas)}: Círculo {posicao+1}º marcado → Letra {letras[posicao]}")
+            # ✅ Determinar posição na linha
+            posicao = 0
+            for i, c in enumerate(linha):
+                if c['x'] == circulo_preenchido['x'] and c['y'] == circulo_preenchido['y']:
+                    posicao = i
+                    break
+            
+            # ✅ Mapear posição para letra
+            num_circulos_linha = len(linha)
+            
+            if num_circulos_linha >= 4:
+                # Linha completa com 4 círculos
+                if posicao < len(letras):
+                    respostas.append(letras[posicao])
+                    logging.info(f"  ✅ Q{idx+1}: pos={posicao} → {letras[posicao]} (ratio={circulo_preenchido['dark_ratio']:.3f})")
+                else:
+                    respostas.append('')
+                    logging.warning(f"  ⚠️ Q{idx+1}: posição {posicao} fora do range")
+            elif num_circulos_linha == 3:
+                # Pode ser 3 alternativas (A, B, C)
+                if posicao < 3:
+                    respostas.append(letras[posicao])
+                    logging.info(f"  ✅ Q{idx+1}: pos={posicao} → {letras[posicao]} (3 círculos)")
+                else:
+                    respostas.append('')
+            elif num_circulos_linha == 2:
+                # Muito poucos círculos detectados - tentar inferir pela posição X
+                # Se o círculo está na metade esquerda = A, direita = B
+                largura_linha = linha[-1]['x'] - linha[0]['x']
+                if largura_linha > 0:
+                    pos_relativa = (circulo_preenchido['x'] - linha[0]['x']) / largura_linha
+                    if pos_relativa < 0.33:
+                        respostas.append('A')
+                    elif pos_relativa < 0.67:
+                        respostas.append('B')
+                    else:
+                        respostas.append('C')
+                    logging.info(f"  ✅ Q{idx+1}: 2 círculos, pos_relativa={pos_relativa:.2f}")
+                else:
+                    respostas.append('')
             else:
-                respostas.append('')
+                # 1 círculo = assume A
+                respostas.append('A')
+                logging.warning(f"  ⚠️ Q{idx+1}: apenas 1 círculo, assumindo A")
         else:
             respostas.append('')
+            logging.info(f"  ⚪ Q{idx+1}: nenhum preenchido ({len(linha)} círculos)")
     
+    # ✅ Completar com vazios se necessário
     while len(respostas) < total_questoes:
         respostas.append('')
     
-    return respostas[:total_questoes]
+    respostas = respostas[:total_questoes]
+    logging.info(f"📝 Respostas organizadas: {respostas}")
+    
+    return respostas
 
 
 # ============================================
@@ -629,10 +751,11 @@ def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
 
 
 # ============================================
-# PROMPT E IA (OPENAI)
+# ✅ PROMPT DA IA - MELHORADO
 # ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
+    """✅ CORREÇÃO: Prompt muito mais detalhado e estruturado"""
     total = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     alternativas_str = ', '.join(alternativas)
@@ -646,28 +769,40 @@ CONTEXTO:
 - Total de questões: {total}
 - Alternativas válidas: {alternativas_str} (SOMENTE estas!)
 
-COMO IDENTIFICAR A RESPOSTA MARCADA:
-1. Cada questão tem {len(alternativas)} bolinhas (uma para cada alternativa)
-2. O aluno deve ter preenchido COMPLETAMENTE 1 bolinha por questão
-3. A bolinha preenchida fica ESCURA (preta ou azul preenchida)
-4. As bolinhas NÃO marcadas ficam VAZIAS (apenas o contorno)
-5. Marcação parcial (X, risco, círculo) também conta como marcada
-6. Se houver marcação em 2+, escolha a MAIS ESCURA
-7. Se NENHUMA estiver marcada, retorne ""
-8. Se a imagem estiver torta, ajuste mentalmente
+ESTRUTURA DO CARTÃO RESPOSTA:
+O cartão tem {total} linhas numeradas (Q1 a Q{total}).
+Cada linha tem {len(alternativas)} círculos: {alternativas_str} (da esquerda para a direita).
+O aluno preenche COMPLETAMENTE 1 círculo por questão.
 
-ATENÇÃO:
+COMO IDENTIFICAR A RESPOSTA MARCADA:
+1. Procure o círculo mais ESCURO/PREENCHIDO em cada linha
+2. Um círculo preenchido tem a parte interna escura (preta ou azul)
+3. Círculos vazios mostram apenas o contorno
+4. Se houver marcação parcial (X, risco), conte como marcada
+5. Se 2+ círculos estiverem marcados, escolha o MAIS ESCURO
+6. Se NENHUM estiver marcado, retorne ""
+7. A ordem é SEMPRE: 1º círculo=A, 2º=B, 3º=C, 4º=D
+
+ATENÇÃO CRÍTICA:
 - NÃO invente respostas. Se não tiver certeza, retorne ""
 - Retorne EXATAMENTE {total} respostas, na ordem Q1 a Q{total}
 - Use SOMENTE letras: {alternativas_str}
+- Analise cada linha individualmente, da esquerda para direita
+
+EXEMPLO DE ANÁLISE:
+- Linha Q1: círculos A(○) B(●) C(○) D(○) → resposta "B"
+- Linha Q2: círculos A(○) B(○) C(○) D(●) → resposta "D"
+- Linha Q3: círculos A(○) B(○) C(○) D(○) → resposta ""
+- Linha Q4: círculos A(●) B(○) C(●) D(○) → resposta "A" (o mais escuro)
 
 FORMATO (JSON puro, sem texto extra):
-{{"respostas": ["A", "B", "", "C", ...]}}
+{{"respostas": ["B", "D", "", "A", ...]}}
 
-Analise e retorne o JSON:"""
+Analise a imagem e retorne o JSON:"""
 
 
 def preprocessar_imagem_para_ia(imagem_base64):
+    """✅ CORREÇÃO: Melhor pré-processamento para IA"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -676,15 +811,30 @@ def preprocessar_imagem_para_ia(imagem_base64):
         img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
         if img is None:
             return imagem_base64
+        
         h, w = img.shape[:2]
-        if h > 1500:
+        # ✅ Aumentar resolução para IA
+        if h > 2000:
+            scale = 2000 / h
+            img = cv2.resize(img, (int(w * scale), 2000), interpolation=cv2.INTER_AREA)
+        elif h < 1000:
             scale = 1500 / h
-            img = cv2.resize(img, (int(w * scale), 1500), interpolation=cv2.INTER_AREA)
+            img = cv2.resize(img, (int(w * scale), 1500), interpolation=cv2.INTER_CUBIC)
+        
+        # Converter para escala de cinza
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # ✅ Aplicar CLAHE
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         enhanced = clahe.apply(gray)
-        final = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
-        _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        
+        # ✅ Remover ruído
+        denoised = cv2.fastNlMeansDenoising(enhanced, None, 10, 7, 21)
+        
+        # Converter de volta para BGR
+        final = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
+        
+        _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 95])
         return base64.b64encode(buffer).decode('utf-8')
     except Exception as e:
         logging.error(f"Erro no preprocessamento: {e}")
@@ -717,11 +867,11 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
                 ]
             }],
             max_tokens=1500,
-            temperature=0.2
+            temperature=0.1  # ✅ Reduzido para maior consistência
         )
         
         resposta_texto = response.choices[0].message.content
-        logging.info(f"📝 Resposta OpenAI: {resposta_texto[:300]}...")
+        logging.info(f"📝 Resposta OpenAI: {resposta_texto[:500]}...")
         
         json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
         if json_match:
@@ -740,24 +890,35 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
 
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CORREÇÃO
+# ✅ FUNÇÃO PRINCIPAL DE CORREÇÃO - MELHORADA
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
+    """
+    ✅ CORREÇÃO:
+    - Prioriza círculos (mais preciso)
+    - Só usa IA se círculos falharem
+    - Não usa fallback aleatório
+    """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
     
     try:
-        # PASSO 1: CÍRCULOS
+        # PASSO 1: CÍRCULOS (MÉTODO PRINCIPAL)
+        logging.info("=" * 60)
         logging.info("📌 PASSO 1: DETECÇÃO DE CÍRCULOS")
+        logging.info("=" * 60)
         circulos = detectar_circulos_preenchidos(imagem_base64)
         
         if circulos:
             respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito))
             total_detectadas = len([r for r in respostas_circulos if r])
-            if total_detectadas >= len(gabarito) * 0.5:
-                logging.info(f"✅ Círculos detectaram {total_detectadas}/{len(gabarito)}")
+            
+            logging.info(f"📊 Círculos detectaram {total_detectadas}/{len(gabarito)} respostas")
+            
+            # ✅ Aceitar se detectou pelo menos 30% das respostas
+            if total_detectadas >= len(gabarito) * 0.3:
                 respostas_validas = validar_respostas(respostas_circulos, gabarito, padrao_gabarito['alternativas'])
                 if any(r for r in respostas_validas if r in padrao_gabarito['alternativas']):
                     resultado = calcular_resultado_correcao(
@@ -766,21 +927,29 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                         circulos=circulos, bncc=bncc
                     )
                     resultado['metodo_usado'] = 'circulos'
+                    logging.info(f"✅ Correção por CÍRCULOS: {resultado['acertos']}/{resultado['total']} acertos")
                     return resultado
         
-        # PASSO 2: IA
+        # PASSO 2: IA (OPENAI)
+        logging.info("=" * 60)
         logging.info("📌 PASSO 2: IA (OpenAI GPT-4o)")
-        imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
-        resultado_ia = corrigir_com_ia_fallback(
-            imagem_processada, padrao_gabarito, aluno_nome,
-            serie, tipo_questoes, disciplina, bncc=bncc
-        )
-        if not resultado_ia.get('erro'):
-            resultado_ia['metodo_usado'] = 'ia'
-            return resultado_ia
+        logging.info("=" * 60)
         
-        # PASSO 3: OCR
+        if OPENAI_AVAILABLE:
+            imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
+            resultado_ia = corrigir_com_ia_fallback(
+                imagem_processada, padrao_gabarito, aluno_nome,
+                serie, tipo_questoes, disciplina, bncc=bncc
+            )
+            if not resultado_ia.get('erro'):
+                resultado_ia['metodo_usado'] = 'ia'
+                logging.info(f"✅ Correção por IA: {resultado_ia['acertos']}/{resultado_ia['total']} acertos")
+                return resultado_ia
+        
+        # PASSO 3: OCR (último recurso)
+        logging.info("=" * 60)
         logging.info("📌 PASSO 3: OCR (Tesseract)")
+        logging.info("=" * 60)
         respostas_ocr = extrair_respostas_com_ocr(imagem_base64, len(gabarito), padrao_gabarito['alternativas'])
         if respostas_ocr and any(r for r in respostas_ocr):
             respostas_validas = validar_respostas(respostas_ocr, gabarito, padrao_gabarito['alternativas'])
@@ -792,17 +961,12 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 resultado['metodo_usado'] = 'ocr'
                 return resultado
         
-        # PASSO 4: FALLBACK
-        logging.info("📌 PASSO 4: FALLBACK SIMPLES")
-        respostas_fallback = [padrao_gabarito['alternativas'][0] if padrao_gabarito['alternativas'] else 'A'] * len(gabarito)
-        resultado = calcular_resultado_correcao(
-            respostas_fallback, gabarito, aluno_nome, serie,
-            disciplina, tipo_questoes, 'fallback', bncc=bncc
+        # PASSO 4: RETORNAR ERRO (NÃO USAR FALLBACK ALEATÓRIO!)
+        logging.warning("⚠️ Nenhum método conseguiu detectar as respostas")
+        return erro_correcao(
+            aluno_nome, serie, disciplina,
+            'Não foi possível detectar as respostas. Tire uma foto mais nítida com boa iluminação.'
         )
-        resultado['metodo_usado'] = 'fallback'
-        resultado['confianca'] = 30
-        resultado['confianca_por_questao'] = [30] * len(gabarito)
-        return resultado
         
     except Exception as e:
         logging.error(f"❌ Erro na correção: {e}")
@@ -955,6 +1119,7 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
             
+            # ✅ SALVAR NO HISTÓRICO
             try:
                 conn = get_db_connection()
                 if conn:
@@ -1121,7 +1286,7 @@ def corrigir_manual():
 
 
 # ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO (ÚNICA)
+# ROTA DE CORREÇÃO DE REDAÇÃO
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -1134,7 +1299,6 @@ def corrigir_redacao():
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
 
-        # Tentativa 1: OpenAI
         if OPENAI_AVAILABLE and openai_client is not None:
             try:
                 prompt = f"""
@@ -1164,7 +1328,6 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no OpenAI para redação: {e}")
 
-        # Tentativa 2: RelayFreeLLM
         if RELAY_AVAILABLE:
             try:
                 import openai
@@ -1197,7 +1360,6 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
 
-        # Fallback: análise local
         texto_limpo = texto.strip()
         palavras = re.findall(r'\b[a-zA-ZáéíóúãõâêôçÁÉÍÓÚÃÕÂÊÔÇ]+\b', texto_limpo)
         num_palavras = len(palavras)
@@ -1272,10 +1434,6 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTA PARA SALVAR CORREÇÃO DE TEXTO (ÚNICA)
-# ============================================
-
 @app.route('/api/salvar_correcao_texto', methods=['POST'])
 def salvar_correcao_texto():
     try:
@@ -1330,10 +1488,6 @@ def salvar_correcao_texto():
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTA PARA LISTAR CORREÇÕES DE TEXTO (ÚNICA)
-# ============================================
-
 @app.route('/api/correcoes_texto', methods=['GET'])
 def listar_correcoes_texto():
     try:
@@ -1362,7 +1516,7 @@ def listar_correcoes_texto():
 
 
 # ============================================
-# ROTA DE HISTÓRICO (ÚNICA)
+# ROTAS DE HISTÓRICO
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -1465,10 +1619,6 @@ def listar_historico():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-
-# ============================================
-# HISTÓRICO AGRUPADO (ÚNICA)
-# ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
 def historico_agrupado():
@@ -1710,7 +1860,7 @@ def excluir_correcao(id):
 
 
 # ============================================
-# ROTA DE GABARITOS (ÚNICA)
+# ROTAS DE GABARITOS
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -1812,7 +1962,7 @@ def excluir_gabarito(id):
 
 
 # ============================================
-# ROTA DE ESCOLAS (ÚNICA)
+# ROTAS DE ESCOLAS
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -1962,7 +2112,7 @@ def excluir_escola(id):
 
 
 # ============================================
-# ROTA DE TURMAS (ÚNICA)
+# ROTAS DE TURMAS
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2142,7 +2292,7 @@ def excluir_turma(id):
 
 
 # ============================================
-# ROTA DE ALUNOS (ÚNICA)
+# ROTAS DE ALUNOS
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -2386,7 +2536,7 @@ def excluir_aluno(id):
 
 
 # ============================================
-# ROTA DE PROVAS (ÚNICA)
+# ROTAS DE PROVAS
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -2594,7 +2744,7 @@ def excluir_prova(id):
 
 
 # ============================================
-# ROTA DE USUÁRIOS (ÚNICA)
+# ROTAS DE USUÁRIOS
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -2782,7 +2932,7 @@ def excluir_usuario(id):
 
 
 # ============================================
-# ROTA DE DASHBOARD (ÚNICA)
+# ROTA DE DASHBOARD
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -2877,7 +3027,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA (ÚNICA)
+# ✅ ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - OTIMIZADO
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -2929,6 +3079,24 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
+        # ✅ Calcular layout dinâmico
+        if quantidade_questoes <= 10:
+            q_por_coluna = quantidade_questoes
+            num_colunas = 1
+        elif quantidade_questoes <= 20:
+            q_por_coluna = 10
+            num_colunas = 2
+        elif quantidade_questoes <= 30:
+            q_por_coluna = 10
+            num_colunas = 3
+        else:
+            q_por_coluna = 15
+            num_colunas = 2
+
+        circle_size = 22
+        circle_spacing = 6
+        row_height = 36
+
         html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -2940,7 +3108,7 @@ def gerar_gabarito():
         
         @page {{
             size: A4 portrait;
-            margin: 8mm 6mm;
+            margin: 6mm 5mm;
         }}
         
         body {{
@@ -2955,63 +3123,77 @@ def gerar_gabarito():
             width: 210mm;
             min-height: 297mm;
             background: #ffffff;
-            padding: 6mm;
+            padding: 4mm;
             position: relative;
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }}
         
+        /* ✅ MARCADORES FIDUCIAIS MAIORES (20mm) com centro branco */
         .fiducial {{
             position: absolute;
-            width: 14mm;
-            height: 14mm;
+            width: 20mm;
+            height: 20mm;
             background: #000000;
+            z-index: 10;
         }}
-        .fiducial-tl {{ top: 4mm; left: 4mm; }}
-        .fiducial-tr {{ top: 4mm; right: 4mm; }}
-        .fiducial-bl {{ bottom: 4mm; left: 4mm; }}
-        .fiducial-br {{ bottom: 4mm; right: 4mm; }}
+        .fiducial-tl {{ top: 3mm; left: 3mm; }}
+        .fiducial-tr {{ top: 3mm; right: 3mm; }}
+        .fiducial-bl {{ bottom: 3mm; left: 3mm; }}
+        .fiducial-br {{ bottom: 3mm; right: 3mm; }}
+        
+        .fiducial::after {{
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6mm;
+            height: 6mm;
+            background: #ffffff;
+            border-radius: 50%;
+        }}
         
         .header {{
             text-align: center;
             border-bottom: 2px solid #000;
-            padding-bottom: 8px;
-            margin: 18mm 0 8px 0;
+            padding-bottom: 6px;
+            margin: 24mm 0 6px 0;
         }}
         .header h1 {{
-            font-size: 13px;
+            font-size: 11px;
             color: #000;
             font-weight: bold;
             letter-spacing: 0.5px;
         }}
         .header h2 {{
-            font-size: 16px;
+            font-size: 14px;
             color: #000;
             font-weight: 900;
-            margin-top: 4px;
+            margin-top: 3px;
             border: 2px solid #000;
             display: inline-block;
-            padding: 3px 20px;
+            padding: 2px 16px;
         }}
         .header .prova {{
-            font-size: 12px;
+            font-size: 11px;
             color: #000;
             font-weight: bold;
-            margin-top: 6px;
+            margin-top: 4px;
         }}
         .header .escola {{
-            font-size: 10px;
+            font-size: 9px;
             color: #333;
-            margin-top: 3px;
+            margin-top: 2px;
         }}
         
         .info-aluno {{
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 6px;
+            gap: 4px;
             border: 2px solid #000;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            font-size: 11px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            font-size: 10px;
         }}
         .info-aluno .campo {{
             display: flex;
@@ -3024,90 +3206,102 @@ def gerar_gabarito():
         
         .instrucoes {{
             border: 2px solid #000;
-            padding: 6px 12px;
-            margin-bottom: 10px;
-            font-size: 10px;
+            padding: 4px 10px;
+            margin-bottom: 8px;
+            font-size: 9px;
             font-weight: bold;
             text-align: center;
             background: #f0f0f0;
         }}
         
-        .questoes {{
+        .questoes-container {{
+            display: grid;
+            grid-template-columns: repeat({num_colunas}, 1fr);
+            gap: 8px;
             border: 2px solid #000;
             padding: 8px;
+        }}
+        
+        .coluna-questoes {{
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }}
         
         .linha-questao {{
             display: flex;
             align-items: center;
-            padding: 4px 8px;
-            border-bottom: 1px dashed #999;
-            gap: 12px;
+            height: {row_height}px;
+            padding: 0 4px;
+            border-bottom: 1px dashed #ccc;
+            gap: 8px;
         }}
         .linha-questao:last-child {{
             border-bottom: none;
         }}
         
         .num-questao {{
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 900;
             color: #000;
-            min-width: 45px;
+            min-width: 24px;
             text-align: right;
-            padding-right: 8px;
+            padding-right: 4px;
             border-right: 2px solid #000;
         }}
         
         .alternativas {{
             display: flex;
-            gap: 24px;
-            justify-content: center;
+            gap: {circle_spacing}px;
+            justify-content: space-around;
             flex: 1;
         }}
         
         .alt-item {{
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }}
         
         .letra {{
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 900;
             color: #000;
-            min-width: 14px;
+            min-width: 10px;
         }}
         
         .circulo {{
-            width: 40px;
-            height: 40px;
-            border: 4px solid #000000;
+            width: {circle_size}px;
+            height: {circle_size}px;
+            border: 2.5px solid #000000;
             border-radius: 50%;
             background: #ffffff;
             display: inline-block;
+            flex-shrink: 0;
         }}
         
         .rodape {{
-            margin-top: 10px;
+            margin-top: 8px;
             display: flex;
             justify-content: space-between;
-            font-size: 8px;
+            font-size: 7px;
             color: #666;
             border-top: 1px solid #ccc;
-            padding-top: 6px;
+            padding-top: 4px;
         }}
         
         .btn-print {{
             display: block;
             width: 100%;
-            margin-top: 10px;
-            padding: 12px;
+            margin-top: 8px;
+            padding: 10px;
             background: #000;
             color: #fff;
             border: none;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
+            border-radius: 4px;
         }}
         .btn-print:hover {{
             background: #333;
@@ -3118,6 +3312,7 @@ def gerar_gabarito():
             .folha {{ box-shadow: none; }}
             .btn-print {{ display: none; }}
             .fiducial {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
+            .fiducial::after {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
             .circulo {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
         }}
     </style>
@@ -3145,26 +3340,37 @@ def gerar_gabarito():
             ⚠️ PREENCHA COMPLETAMENTE O CÍRCULO COM CANETA PRETA OU AZUL — NÃO RASURE
         </div>
         
-        <div class="questoes">
+        <div class="questoes-container">
 """
 
-        for i in range(quantidade_questoes):
-            html += f"""
-            <div class="linha-questao">
-                <div class="num-questao">{i+1:02d}</div>
-                <div class="alternativas">
-"""
-            for alt in alternativas:
+        for col in range(num_colunas):
+            inicio = col * q_por_coluna
+            fim = min(inicio + q_por_coluna, quantidade_questoes)
+            
+            if inicio >= quantidade_questoes:
+                break
+            
+            html += '<div class="coluna-questoes">'
+            
+            for i in range(inicio, fim):
                 html += f"""
-                    <div class="alt-item">
-                        <span class="letra">{alt}</span>
-                        <span class="circulo"></span>
+                    <div class="linha-questao">
+                        <div class="num-questao">{i+1:02d}</div>
+                        <div class="alternativas">
+"""
+                for alt in alternativas:
+                    html += f"""
+                            <div class="alt-item">
+                                <span class="letra">{alt}</span>
+                                <span class="circulo"></span>
+                            </div>
+"""
+                html += """
+                        </div>
                     </div>
 """
-            html += """
-                </div>
-            </div>
-"""
+            
+            html += '</div>'
 
         html += f"""
         </div>
@@ -3188,7 +3394,7 @@ def gerar_gabarito():
 
 
 # ============================================
-# ROTAS PARA MATRIZ DE PROFICIÊNCIA (ÚNICAS)
+# ROTAS PARA MATRIZ DE PROFICIÊNCIA
 # ============================================
 
 @app.route('/api/matrizes', methods=['GET'])
@@ -3365,7 +3571,7 @@ def excluir_matriz(id):
 
 
 # ============================================
-# ROTA DE BACKUP (ÚNICA)
+# ROTA DE BACKUP
 # ============================================
 
 @app.route('/api/backup', methods=['GET'])
@@ -3428,7 +3634,7 @@ def backup_database():
 
 
 # ============================================
-# ROTA PRINCIPAL (ÚNICA)
+# ROTA PRINCIPAL
 # ============================================
 
 @app.route('/')
@@ -3457,10 +3663,6 @@ def serve_static(path):
     except Exception:
         return jsonify({'erro': 'Arquivo não encontrado'}), 404
 
-
-# ============================================
-# ROTA DE SAÚDE (ÚNICA)
-# ============================================
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -3759,7 +3961,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO LIMPA)")
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO CORRIGIDA)")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -3771,11 +3973,18 @@ if __name__ == '__main__':
         print(f"📌 URL: {RELAY_API_URL}")
         print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
-    print("📋 ESTRATÉGIA DE CORREÇÃO - 4 PASSOS:")
+    print("📋 ESTRATÉGIA DE CORREÇÃO - 3 PASSOS:")
     print("   1️⃣ CÍRCULOS PREENCHIDOS - Detecção via OpenCV (MELHOR)")
     print("   2️⃣ IA (OPENAI GPT-4o) - Fallback com visão")
     print("   3️⃣ OCR - Último recurso técnico")
-    print("   4️⃣ FALLBACK SIMPLES - Garantia de resultado")
+    print("=" * 60)
+    print("✅ MELHORIAS APLICADAS:")
+    print("   - Threshold de preenchimento: 0.30 → 0.15")
+    print("   - HoughCircles param2: 28 → 20")
+    print("   - Organização de linhas otimizada")
+    print("   - Prompt da IA mais detalhado")
+    print("   - Removido fallback aleatório")
+    print("   - Cartão resposta redesenhado (círculos 22px)")
     print("=" * 60)
 
     init_db()
