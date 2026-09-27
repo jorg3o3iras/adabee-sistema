@@ -666,13 +666,11 @@ def detectar_circulos_preenchidos(imagem_base64):
 
 def organizar_respostas_por_posicao(circulos, total_questoes):
     """
-    ✅ VERSÃO DEFINITIVA com validações rigorosas
-    
-    Retorna VAZIO se a detecção parecer suspeita (forçar uso da IA)
+    ✅ VERSÃO CORRIGIDA - não usa mais 'preenchido' (já foram filtrados)
     """
     if not circulos:
         logging.warning("⚠️ Sem círculos para organizar")
-        return [''] * total_questoes
+        return [''] * total_questoes, [0] * total_questoes
     
     logging.info("=" * 60)
     logging.info(f"🎯 ORGANIZANDO {len(circulos)} CÍRCULOS PARA {total_questoes} QUESTÕES")
@@ -680,7 +678,9 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     
     # Log de todos os círculos
     for i, c in enumerate(sorted(circulos, key=lambda x: (x['y'], x['x']))):
-        logging.info(f"   [{i}] x={c['x']:4d}, y={c['y']:4d}, r={c['r']:2d}, ratio={c['dark_ratio']:.3f}")
+        # ✅ Usar .get() para evitar KeyError
+        ratio = c.get('dark_ratio', 0)
+        logging.info(f"   [{i}] x={c['x']:4d}, y={c['y']:4d}, r={c['r']:2d}, ratio={ratio:.3f}")
     
     # Ordenar por Y depois X
     ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
@@ -695,13 +695,12 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     
     if distancias_y:
         distancias_y.sort()
-        # Usar a MENOR distância para ser conservador
         y_limite = distancias_y[0] * 0.6
     else:
         y_limite = 20
     
     y_limite = max(10, min(y_limite, 35))
-    logging.info(f"📏 Tolerância Y: {y_limite:.1f}px (menor distância: {distancias_y[:5] if distancias_y else 'N/A'})")
+    logging.info(f"📏 Tolerância Y: {y_limite:.1f}px")
     
     # Agrupar em linhas
     linhas = []
@@ -727,59 +726,37 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     for i, linha in enumerate(linhas):
         xs = sorted([c['x'] for c in linha])
         ys_linha = [c['y'] for c in linha]
-        preench = sum(1 for c in linha if c['preenchido'])
-        logging.info(f"   L{i+1}: Y_medio={sum(ys_linha)//len(ys_linha)}, {len(linha)} círculos, X={xs}, preenchidos={preench}")
+        logging.info(f"   L{i+1}: Y_medio={sum(ys_linha)//len(ys_linha)}, {len(linha)} círculos, X={xs}")
     
-    # ✅ VALIDAÇÃO CRÍTICA: Número de linhas
+    # ✅ VALIDAÇÃO: linhas vs questões
     if len(linhas) < total_questoes * 0.6:
         logging.error(f"🚨 POUCAS linhas ({len(linhas)}) para {total_questoes} questões")
-        logging.error("   Retornando VAZIO para forçar uso da IA")
-        return [''] * total_questoes
+        return [''] * total_questoes, [0] * total_questoes
     
     if len(linhas) > total_questoes * 1.8:
         logging.error(f"🚨 MUITAS linhas ({len(linhas)}) para {total_questoes} questões")
-        logging.error("   Retornando VAZIO para forçar uso da IA")
-        return [''] * total_questoes
-    
-    # ✅ VALIDAÇÃO: cada linha deve ter entre 3 e 5 círculos
-    linhas_validas = []
-    for linha in linhas:
-        num = len(linha)
-        if 3 <= num <= 5:
-            linhas_validas.append(linha)
-        elif num == 2:
-            # Aceitar com aviso
-            linhas_validas.append(linha)
-            logging.warning(f"⚠️ Linha com apenas 2 círculos (Y={linha[0]['y']})")
-        else:
-            logging.warning(f"⚠️ Linha com {num} círculos ignorada (Y={linha[0]['y']})")
-    
-    if len(linhas_validas) < total_questoes * 0.7:
-        logging.error(f"🚨 Após validação: apenas {len(linhas_validas)} linhas válidas")
-        logging.error("   Retornando VAZIO para forçar uso da IA")
-        return [''] * total_questoes
+        return [''] * total_questoes, [0] * total_questoes
     
     # ✅ Processar cada linha
     respostas = []
     confiancas = []
     letras = ['A', 'B', 'C', 'D']
     
-    for idx, linha in enumerate(linhas_validas):
+    for idx, linha in enumerate(linhas):
         if idx >= total_questoes:
             break
         
-        preenchidos = [c for c in linha if c['preenchido']]
-        
-        if not preenchidos:
+        if not linha:
             respostas.append('')
             confiancas.append(30)
-            logging.info(f"   Q{idx+1}: VAZIO ({len(linha)} círculos)")
             continue
         
-        # Mais escuro
-        mais_escuro = max(preenchidos, key=lambda c: c['dark_ratio'])
+        # ✅ CORREÇÃO CRÍTICA: usar .get() ou verificar sem 'preenchido'
+        # Como essa função recebe APENAS os círculos preenchidos,
+        # devemos pegar o de maior dark_ratio
+        mais_escuro = max(linha, key=lambda c: c.get('dark_ratio', 0))
         
-        # Ordenar X
+        # Encontrar posição X
         linha_ordenada_x = sorted(linha, key=lambda c: c['x'])
         posicao = 0
         for i, c in enumerate(linha_ordenada_x):
@@ -793,16 +770,14 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
         if num_circ >= 4:
             if posicao < len(letras):
                 letra = letras[posicao]
-                conf = 85 if mais_escuro['dark_ratio'] > 0.35 else 70
+                conf = 85 if mais_escuro.get('dark_ratio', 0) > 0.35 else 70
             else:
                 letra = ''
                 conf = 30
         elif num_circ == 3:
-            # Pode ser A, B, C
             letra = letras[posicao] if posicao < 3 else ''
             conf = 70
         elif num_circ == 2:
-            # Poucos círculos: usar posição relativa
             largura = linha_ordenada_x[-1]['x'] - linha_ordenada_x[0]['x']
             if largura > 0:
                 pos_rel = (mais_escuro['x'] - linha_ordenada_x[0]['x']) / largura
@@ -823,10 +798,7 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
         respostas.append(letra)
         confiancas.append(conf)
         
-        if len(preenchidos) > 1:
-            logging.warning(f"   ⚠️ Q{idx+1}: {len(preenchidos)} preenchidos! Escolhendo o mais escuro")
-        
-        logging.info(f"   Q{idx+1}: pos={posicao}/{num_circ} → '{letra}' (ratio={mais_escuro['dark_ratio']:.3f}, conf={conf}%)")
+        logging.info(f"   Q{idx+1}: pos={posicao}/{num_circ} → '{letra}' (ratio={mais_escuro.get('dark_ratio', 0):.3f})")
     
     # Completar
     while len(respostas) < total_questoes:
@@ -836,7 +808,7 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     respostas = respostas[:total_questoes]
     confiancas = confiancas[:total_questoes]
     
-    # ✅ VALIDAÇÃO FINAL: muitas respostas iguais?
+    # ✅ VALIDAÇÃO: muitas respostas iguais?
     nao_vazias = [r for r in respostas if r]
     if len(nao_vazias) >= 5:
         contagem = Counter(nao_vazias)
@@ -844,14 +816,11 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
         
         if qtd >= len(nao_vazias) * 0.7:
             logging.error(f"🚨 SUSPEITO: {qtd}/{len(nao_vazias)} respostas são '{letra_mais_comum}'")
-            logging.error("   Isso indica problema na detecção. Retornando VAZIO")
             return [''] * total_questoes, [0] * total_questoes
     
-    # Verificar taxa de vazio
     total_vazios = len([r for r in respostas if not r])
     if total_vazios > total_questoes * 0.6:
         logging.error(f"🚨 SUSPEITO: {total_vazios}/{total_questoes} respostas VAZIAS")
-        logging.error("   Retornando VAZIO para forçar uso da IA")
         return [''] * total_questoes, [0] * total_questoes
     
     logging.info("=" * 60)
