@@ -500,14 +500,7 @@ def corrigir_perspectiva(img, marcadores):
 
 def detectar_circulos_preenchidos(imagem_base64):
     """
-    ✅ VERSÃO DEFINITIVA - Diferencia CÍRCULOS de LETRAS
-    
-    Estratégia:
-    1. Detectar todos os candidatos com HoughCircles
-    2. Filtrar por raio (mediana) - letras têm raio diferente
-    3. Filtrar por circularidade
-    4. Remover duplicatas
-    5. Determinar preenchidos com threshold adaptativo
+    ✅ VERSÃO MELHORADA - Aceita caneta azul e preta, ajustes para scanner
     """
     try:
         if ',' in imagem_base64:
@@ -524,12 +517,31 @@ def detectar_circulos_preenchidos(imagem_base64):
         height, width = img.shape[:2]
         logging.info(f"📐 Imagem original: {width}x{height}")
         
-        if height > 2400:
-            scale = 2400 / height
+        # ✅ AUMENTADO: Processar em resolução maior
+        if height > 3000:
+            scale = 3000 / height
             new_width = int(width * scale)
-            img = cv2.resize(img, (new_width, 2400), interpolation=cv2.INTER_AREA)
-            logging.info(f"📐 Redimensionada: {new_width}x2400")
+            img = cv2.resize(img, (new_width, 3000), interpolation=cv2.INTER_AREA)
+            logging.info(f"📐 Redimensionada: {new_width}x3000")
         
+        # ✅ CONVERTER PARA HSV - detecta melhor azul e preto
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        
+        # ✅ MÁSCARA DE AZUL ESCURO (caneta azul)
+        # H: 100-130, S: 50-255, V: 0-150 (escuro)
+        mask_azul = cv2.inRange(hsv, (90, 40, 0), (140, 255, 180))
+        
+        # ✅ MÁSCARA DE PRETO (caneta preta)
+        # V muito baixo (escuro), qualquer H/S
+        mask_preto = cv2.inRange(hsv, (0, 0, 0), (180, 255, 100))
+        
+        # Combinar as duas máscaras
+        mask_marcacao = cv2.bitwise_or(mask_azul, mask_preto)
+        
+        logging.info(f"📊 Máscara azul: {cv2.countNonZero(mask_azul)} pixels")
+        logging.info(f"📊 Máscara preta: {cv2.countNonZero(mask_preto)} pixels")
+        
+        # Converter para grayscale da marcação (só o que foi marcado fica branco)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
         gray_enhanced = clahe.apply(gray)
@@ -540,23 +552,31 @@ def detectar_circulos_preenchidos(imagem_base64):
         if marcadores:
             img = corrigir_perspectiva(img, marcadores)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            
+            # Recalcular máscaras após correção
+            mask_azul = cv2.inRange(hsv, (90, 40, 0), (140, 255, 180))
+            mask_preto = cv2.inRange(hsv, (0, 0, 0), (180, 255, 100))
+            mask_marcacao = cv2.bitwise_or(mask_azul, mask_preto)
+            
             clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
             gray_enhanced = clahe.apply(gray)
             gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
             logging.info("✅ Perspectiva corrigida")
         
+        # ✅ Threshold para detectar círculos vazios (contorno)
         _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # ✅ HoughCircles
+        # ✅ HoughCircles com range MAIOR de raio (para scanner)
         circulos = cv2.HoughCircles(
             gray_blur,
             cv2.HOUGH_GRADIENT,
             dp=1.2,
-            minDist=18,
+            minDist=25,       # ✅ AUMENTADO para evitar duplicatas
             param1=50,
-            param2=18,
-            minRadius=6,
-            maxRadius=25
+            param2=22,        # ✅ AUMENTADO para detecção mais confiável
+            minRadius=10,     # ✅ AUMENTADO para ignorar letras pequenas
+            maxRadius=45      # ✅ AUMENTADO para scanner
         )
         
         if circulos is None:
@@ -566,49 +586,57 @@ def detectar_circulos_preenchidos(imagem_base64):
         circulos = np.round(circulos[0, :]).astype("int")
         logging.info(f"🔵 HoughCircles: {len(circulos)} candidatos")
         
-        # ✅ FILTRO POR CIRCULARIDADE
-        candidatos_validos = []
+        # ✅ Filtrar por tamanho (mediana)
+        raios = [r for (x, y, r) in circulos]
+        if len(raios) >= 8:
+            raios_sorted = sorted(raios)
+            mediana_r = raios_sorted[len(raios_sorted) // 2]
+            r_min = mediana_r * 0.7
+            r_max = mediana_r * 1.4
+            
+            circulos = [(x, y, r) for (x, y, r) in circulos if r_min <= r <= r_max]
+            logging.info(f"📐 Mediana raio: {mediana_r}px → {len(circulos)} após filtro")
         
+        # ✅ Análise de cada círculo
+        resultados = []
         for (x, y, r) in circulos:
             if x < r or y < r or x + r > gray.shape[1] or y + r > gray.shape[0]:
                 continue
             
-            mask = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
-            roi_mask = cv2.bitwise_and(binaria, binaria, mask=mask)
+            # ✅ Usar MÁSCARA DE COR (azul+preto) para detectar preenchimento
+            mask_circ = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.circle(mask_circ, (x, y), int(r * 0.75), 255, -1)
             
-            total_pixels = cv2.countNonZero(mask)
-            dark_pixels = cv2.countNonZero(roi_mask)
-            dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
+            # Verificar quantos pixels de MARCAÇÃO (azul/preto) estão dentro do círculo
+            mask_marcacao_roi = cv2.bitwise_and(mask_marcacao, mask_marcacao, mask=mask_circ)
             
-            candidatos_validos.append({
+            # Também verificar o threshold tradicional (para círculos pretos puros)
+            binaria_roi = cv2.bitwise_and(binaria, binaria, mask=mask_circ)
+            
+            total_pixels = cv2.countNonZero(mask_circ)
+            pixels_marcacao = cv2.countNonZero(mask_marcacao_roi)
+            pixels_binaria = cv2.countNonZero(binaria_roi)
+            
+            # ✅ Usar o MAIOR dos dois (aceita azul e preto)
+            dark_ratio_cor = pixels_marcacao / total_pixels if total_pixels > 0 else 0
+            dark_ratio_bin = pixels_binaria / total_pixels if total_pixels > 0 else 0
+            
+            dark_ratio = max(dark_ratio_cor, dark_ratio_bin)
+            
+            resultados.append({
                 'x': int(x), 'y': int(y), 'r': int(r),
+                'preenchido': False,  # Vai ser definido abaixo
                 'dark_ratio': float(dark_ratio)
             })
         
-        if not candidatos_validos:
+        if not resultados:
             return []
         
-        logging.info(f"✅ Candidatos válidos: {len(candidatos_validos)}")
+        logging.info(f"✅ Candidatos analisados: {len(resultados)}")
         
-        # ✅ FILTRO POR RAIO (mediana)
-        raios = [c['r'] for c in candidatos_validos]
-        raios_sorted = sorted(raios)
-        mediana_r = raios_sorted[len(raios_sorted) // 2]
-        
-        r_min = mediana_r * 0.65
-        r_max = mediana_r * 1.35
-        
-        filtrados_r = [c for c in candidatos_validos if r_min <= c['r'] <= r_max]
-        logging.info(f"📐 Mediana raio: {mediana_r}px → filtrado: {r_min:.0f}-{r_max:.0f} → {len(filtrados_r)}")
-        
-        if len(filtrados_r) < 4:
-            logging.warning("⚠️ Poucos círculos após filtro de raio")
-            return []
-        
-        # ✅ REMOVER DUPLICATAS
+        # ✅ Remover duplicatas
         unicos = []
-        for c in sorted(filtrados_r, key=lambda c: c['dark_ratio'], reverse=True):
+        for c in sorted(resultados, key=lambda c: c['dark_ratio'], reverse=True):
             duplicado = False
             for u in unicos:
                 dist = np.sqrt((c['x'] - u['x'])**2 + (c['y'] - u['y'])**2)
@@ -620,32 +648,33 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         logging.info(f"✅ Após remover duplicatas: {len(unicos)} círculos")
         
-        # ✅ THRESHOLD ADAPTATIVO PARA PREENCHIDO
+        # ✅ Threshold adaptativo
         ratios = sorted([c['dark_ratio'] for c in unicos])
+        logging.info(f"📊 Ratios: {[f'{r:.3f}' for r in ratios]}")
         
         if len(ratios) >= 8:
-            # Analisar a distribuição
             q1_idx = len(ratios) // 4
             q3_idx = (3 * len(ratios)) // 4
-            
             quartil1 = ratios[q1_idx]
             quartil3 = ratios[q3_idx]
             
-            # Se há separação clara, usar o meio
             if quartil3 - quartil1 > 0.15:
                 threshold = (quartil1 + quartil3) / 2
             else:
-                # Sem separação clara, usar 1.5x a mediana
                 mediana = ratios[len(ratios) // 2]
-                threshold = max(0.18, mediana * 1.4)
+                threshold = max(0.25, mediana * 1.5)
         else:
-            threshold = 0.20
+            threshold = 0.30
         
-        threshold = max(0.15, min(threshold, 0.45))
+        # ✅ Threshold MINIMO maior (para evitar falsos positivos)
+        threshold = max(0.25, min(threshold, 0.60))
         logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
-        logging.info(f"📊 Ratios distribuídos: {[f'{r:.3f}' for r in ratios[:30]]}")
         
-        preenchidos = [c for c in unicos if c['dark_ratio'] > threshold]
+        preenchidos = []
+        for c in unicos:
+            if c['dark_ratio'] > threshold:
+                c['preenchido'] = True
+                preenchidos.append(c)
         
         logging.info(f"📊 RESULTADO: {len(unicos)} círculos, {len(preenchidos)} preenchidos")
         
