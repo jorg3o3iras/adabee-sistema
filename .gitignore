@@ -1,9 +1,16 @@
-# Arquivos de ambiente com chaves
+# ============================================
+# Variáveis de ambiente (NUNCA subir para o Git)
+# ============================================
 .env
 .env.*
 *.env
+.env.local
+.env.production
+.env.development
 
+# ============================================
 # Python
+# ============================================
 __pycache__/
 *.pyc
 *.pyo
@@ -17,15 +24,59 @@ build/
 venv/
 env/
 .venv/
+ENV/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+*.mo
+*.pot
+*.py[cod]
 
-# IDE
+# ============================================
+# IDE / Editores
+# ============================================
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.pydevproject
+.settings/
 
-# Logs
+# ============================================
+# Logs e Bancos locais
+# ============================================
 *.log
 *.db
 *.sqlite
 *.sqlite3
+
+# ============================================
+# Sistema Operacional
+# ============================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================
+# Render / Deploy
+# ============================================
+*.env.production
+*.env.staging
+
+# ============================================
+# Backups
+# ============================================
+backup_*.zip
+backup_*.json
