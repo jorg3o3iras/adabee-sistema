@@ -500,7 +500,10 @@ def corrigir_perspectiva(img, marcadores):
 
 def detectar_circulos_preenchidos(imagem_base64):
     """
-    ✅ VERSÃO DEFINITIVA - Exclui marcadores fiduciais e ajusta para scanner
+    ✅ VERSÃO DEFINITIVA - Detecta TODOS os círculos E calcula posições das colunas
+    Retorna:
+    - preenchidos: círculos com ratio alto (com letra calculada)
+    - posicoes_colunas: {A: x_medio, B: x_medio, C: x_medio, D: x_medio}
     """
     try:
         if ',' in imagem_base64:
@@ -512,13 +515,12 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         if img is None:
             logging.error("❌ Imagem inválida")
-            return []
+            return [], {}
         
         height, width = img.shape[:2]
         logging.info(f"📐 Imagem original: {width}x{height}")
         
-        # ✅ Redimensionar para tamanho padrão (evita imagem gigante de scanner)
-        TARGET_HEIGHT = 1500  # ✅ Reduzido de 2400 para 1500
+        TARGET_HEIGHT = 1500
         if height > TARGET_HEIGHT:
             scale = TARGET_HEIGHT / height
             new_width = int(width * scale)
@@ -532,7 +534,6 @@ def detectar_circulos_preenchidos(imagem_base64):
         gray_enhanced = clahe.apply(gray)
         gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
         
-        # ✅ Detectar marcadores fiduciais PRIMEIRO
         marcadores = detectar_marcadores_fiduciais(gray)
         marcadores_xy = []
         
@@ -544,44 +545,36 @@ def detectar_circulos_preenchidos(imagem_base64):
             gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
             height, width = img.shape[:2]
             
-            # ✅ Guardar posições dos marcadores para excluir depois
-            # Os marcadores após correção ficam nos cantos com margem 30
             margem = 30
-            tamanho_marcador = 80  # Margem de segurança
-            
             marcadores_xy = [
-                (margem, margem),                          # TL
-                (width - margem, margem),                  # TR
-                (margem, height - margem),                 # BL
-                (width - margem, height - margem)          # BR
+                (margem, margem),
+                (width - margem, margem),
+                (margem, height - margem),
+                (width - margem, height - margem)
             ]
-            
             logging.info(f"✅ Marcadores para exclusão: {marcadores_xy}")
         
-        # Threshold
         _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # ✅ HoughCircles - raios mais flexíveis
         circulos = cv2.HoughCircles(
             gray_blur,
             cv2.HOUGH_GRADIENT,
             dp=1.2,
-            minDist=20,
+            minDist=18,
             param1=50,
-            param2=20,
+            param2=18,
             minRadius=8,
             maxRadius=35
         )
         
         if circulos is None:
             logging.warning("⚠️ Nenhum círculo detectado")
-            return []
+            return [], {}
         
         circulos = np.round(circulos[0, :]).astype("int")
         logging.info(f"🔵 HoughCircles: {len(circulos)} candidatos")
         
-        # ✅ EXCLUIR círculos próximos aos marcadores fiduciais
-        MARGEM_EXCLUSAO = 100  # pixels
+        MARGEM_EXCLUSAO = 100
         circulos_filtrados = []
         
         for (x, y, r) in circulos:
@@ -595,14 +588,13 @@ def detectar_circulos_preenchidos(imagem_base64):
             if not perto_de_marcador:
                 circulos_filtrados.append((x, y, r))
         
-        logging.info(f"✅ Após excluir marcadores: {len(circulos_filtrados)} (removidos {len(circulos) - len(circulos_filtrados)})")
+        logging.info(f"✅ Após excluir marcadores: {len(circulos_filtrados)}")
         circulos = circulos_filtrados
         
         if len(circulos) < 4:
             logging.warning("⚠️ Poucos círculos após exclusão")
-            return []
+            return [], {}
         
-        # ✅ Filtrar por tamanho (mediana)
         raios = [r for (x, y, r) in circulos]
         raios_sorted = sorted(raios)
         mediana_r = raios_sorted[len(raios_sorted) // 2]
@@ -611,13 +603,12 @@ def detectar_circulos_preenchidos(imagem_base64):
         r_max = mediana_r * 1.3
         
         circulos = [(x, y, r) for (x, y, r) in circulos if r_min <= r <= r_max]
-        logging.info(f"📐 Mediana raio: {mediana_r}px → {len(circulos)} após filtro de tamanho")
+        logging.info(f"📐 Mediana raio: {mediana_r}px → {len(circulos)} após filtro")
         
         if len(circulos) < 4:
-            return []
+            return [], {}
         
-        # ✅ Analisar cada círculo
-        resultados = []
+        todos_circulos = []
         
         for (x, y, r) in circulos:
             if x < r or y < r or x + r > gray.shape[1] or y + r > gray.shape[0]:
@@ -631,15 +622,13 @@ def detectar_circulos_preenchidos(imagem_base64):
             dark_pixels = cv2.countNonZero(roi)
             dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
             
-            resultados.append({
+            todos_circulos.append({
                 'x': int(x), 'y': int(y), 'r': int(r),
-                'preenchido': False,
                 'dark_ratio': float(dark_ratio)
             })
         
-        # ✅ Remover duplicatas
         unicos = []
-        for c in sorted(resultados, key=lambda c: c['dark_ratio'], reverse=True):
+        for c in sorted(todos_circulos, key=lambda c: c['dark_ratio'], reverse=True):
             duplicado = False
             for u in unicos:
                 dist = np.sqrt((c['x'] - u['x'])**2 + (c['y'] - u['y'])**2)
@@ -651,7 +640,41 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         logging.info(f"✅ Após remover duplicatas: {len(unicos)} círculos")
         
-        # ✅ Threshold adaptativo
+        # ✅ CALCULAR as 4 posições das colunas A, B, C, D
+        posicoes_colunas = {}
+        
+        if len(unicos) >= 12:
+            xs_ordenados = sorted(set(c['x'] for c in unicos))
+            
+            x_min = xs_ordenados[0]
+            x_max = xs_ordenados[-1]
+            range_x = x_max - x_min
+            
+            clusters = {0: [], 1: [], 2: [], 3: []}
+            for c in unicos:
+                pos_rel = (c['x'] - x_min) / range_x if range_x > 0 else 0.5
+                if pos_rel < 0.2:
+                    clusters[0].append(c)
+                elif pos_rel < 0.45:
+                    clusters[1].append(c)
+                elif pos_rel < 0.7:
+                    clusters[2].append(c)
+                else:
+                    clusters[3].append(c)
+            
+            letras = ['A', 'B', 'C', 'D']
+            for i, letra in enumerate(letras):
+                if clusters[i]:
+                    xs_cluster = [c['x'] for c in clusters[i]]
+                    posicoes_colunas[letra] = int(sum(xs_cluster) / len(xs_cluster))
+                else:
+                    posicoes_colunas[letra] = int(x_min + range_x * (i / 3))
+            
+            logging.info(f"🎯 Posições das colunas: A={posicoes_colunas['A']}, B={posicoes_colunas['B']}, C={posicoes_colunas['C']}, D={posicoes_colunas['D']}")
+        else:
+            posicoes_colunas = {'A': 100, 'B': 400, 'C': 700, 'D': 1000}
+            logging.warning(f"⚠️ Poucos círculos ({len(unicos)}) para calcular colunas. Usando fallback.")
+        
         ratios = sorted([c['dark_ratio'] for c in unicos])
         
         if len(ratios) >= 8:
@@ -668,32 +691,42 @@ def detectar_circulos_preenchidos(imagem_base64):
         else:
             threshold = 0.30
         
-        threshold = max(0.25, min(threshold, 0.60))
+        threshold = max(0.30, min(threshold, 0.60))
         logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
         logging.info(f"📊 Ratios: {[f'{r:.3f}' for r in ratios]}")
         
-        preenchidos = [c for c in unicos if c['dark_ratio'] > threshold]
+        # ✅ Filtrar apenas preenchidos E adicionar letra baseada em posição X
+        preenchidos = []
+        for c in unicos:
+            if c['dark_ratio'] > threshold:
+                x = c['x']
+                distancias = {letra: abs(x - pos) for letra, pos in posicoes_colunas.items()}
+                letra_mais_proxima = min(distancias, key=distancias.get)
+                c['letra'] = letra_mais_proxima
+                c['coluna_x'] = posicoes_colunas[letra_mais_proxima]
+                c['dist_coluna'] = distancias[letra_mais_proxima]
+                preenchidos.append(c)
         
         logging.info(f"📊 RESULTADO: {len(unicos)} círculos, {len(preenchidos)} preenchidos")
         
         for c in preenchidos[:20]:
-            logging.info(f"   ⭕ ({c['x']},{c['y']}) r={c['r']} ratio={c['dark_ratio']:.3f}")
+            logging.info(f"   ⭕ ({c['x']},{c['y']}) r={c['r']} ratio={c['dark_ratio']:.3f} → '{c.get('letra', '?')}'")
         
-        return preenchidos
+        return preenchidos, posicoes_colunas
         
     except Exception as e:
         logging.error(f"⚠️ Erro na detecção: {e}")
         traceback.print_exc()
-        return []
+        return [], {}
 
 
 # ============================================
 # ✅ ORGANIZAÇÃO DE RESPOSTAS - VERSÃO DEFINITIVA
 # ============================================
 
-def organizar_respostas_por_posicao(circulos, total_questoes):
+def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
     """
-    ✅ VERSÃO DEFINITIVA - Tolerância Y ADAPTATIVA (não fixa)
+    ✅ VERSÃO DEFINITIVA - Usa a LETRA calculada pela posição X absoluta
     """
     if not circulos:
         logging.warning("⚠️ Sem círculos para organizar")
@@ -703,36 +736,31 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     logging.info(f"🎯 ORGANIZANDO {len(circulos)} CÍRCULOS PARA {total_questoes} QUESTÕES")
     logging.info("=" * 60)
     
-    for i, c in enumerate(sorted(circulos, key=lambda x: (x['y'], x['x']))):
-        ratio = c.get('dark_ratio', 0)
-        logging.info(f"   [{i}] x={c['x']:4d}, y={c['y']:4d}, r={c['r']:2d}, ratio={ratio:.3f}")
+    if posicoes_colunas:
+        logging.info(f"📐 Colunas: {posicoes_colunas}")
     
-    ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
+    ordenados = sorted(circulos, key=lambda c: c['y'])
     
-    # ✅ PASSO 1: Detectar as LINHAS REAIS baseado em clusters de Y
-    ys_todos = sorted(set([c['y'] for c in ordenados]))
+    for i, c in enumerate(ordenados):
+        letra = c.get('letra', '?')
+        logging.info(f"   [{i}] x={c['x']:4d}, y={c['y']:4d}, r={c['r']:2d}, ratio={c['dark_ratio']:.3f}, letra={letra}")
     
-    # Encontrar "gaps" grandes em Y (separação entre linhas)
-    gaps = []
-    for i in range(1, len(ys_todos)):
-        gap = ys_todos[i] - ys_todos[i-1]
-        if gap > 15:  # Gap significativo
-            gaps.append(gap)
+    ys = [c['y'] for c in ordenados]
+    distancias_y = []
+    for i in range(1, len(ys)):
+        d = abs(ys[i] - ys[i-1])
+        if d > 5:
+            distancias_y.append(d)
     
-    # ✅ Tolerância Y = mediana dos gaps PEQUENOS
-    if gaps:
-        gaps_pequenos = [g for g in gaps if g < 80]
-        if gaps_pequenos:
-            y_limite = sorted(gaps_pequenos)[len(gaps_pequenos) // 2] * 0.7
-        else:
-            y_limite = 30
+    if distancias_y:
+        distancias_y.sort()
+        y_limite = distancias_y[0] * 0.6
     else:
         y_limite = 30
     
-    y_limite = max(15, min(y_limite, 60))
-    logging.info(f"📏 Tolerância Y adaptativa: {y_limite:.1f}px")
+    y_limite = max(20, min(y_limite, 80))
+    logging.info(f"📏 Tolerância Y: {y_limite:.1f}px")
     
-    # ✅ Agrupar em linhas
     linhas = []
     linha_atual = []
     
@@ -755,58 +783,37 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     logging.info(f"📋 {len(linhas)} linhas agrupadas:")
     for i, linha in enumerate(linhas):
         xs = sorted([c['x'] for c in linha])
-        ys_linha = [c['y'] for c in linha]
-        logging.info(f"   L{i+1}: Y_medio={sum(ys_linha)//len(ys_linha)}, {len(linha)} círculos, X={xs}")
+        letras_linha = [c.get('letra', '?') for c in linha]
+        logging.info(f"   L{i+1}: Y={linha[0]['y']}, {len(linha)} círculos, X={xs}, letras={letras_linha}")
     
-    # ✅ Se temos MAIS linhas que questões, juntar linhas próximas
-    if len(linhas) > total_questoes * 1.3:
-        logging.warning(f"⚠️ Muitas linhas ({len(linhas)}). Reagrupando com tolerância maior...")
-        y_limite_maior = y_limite * 2.5
-        linhas_2 = []
-        linha_atual = []
+    while len(linhas) > total_questoes:
+        menor_gap = float('inf')
+        idx_juntar = -1
         
-        for c in ordenados:
-            if not linha_atual:
-                linha_atual.append(c)
-            elif abs(c['y'] - linha_atual[0]['y']) < y_limite_maior:
-                linha_atual.append(c)
-            else:
-                linha_atual.sort(key=lambda x: x['x'])
-                linhas_2.append(linha_atual)
-                linha_atual = [c]
+        for i in range(len(linhas) - 1):
+            gap = linhas[i+1][0]['y'] - linhas[i][0]['y']
+            if gap < menor_gap:
+                menor_gap = gap
+                idx_juntar = i
         
-        if linha_atual:
-            linha_atual.sort(key=lambda x: x['x'])
-            linhas_2.append(linha_atual)
-        
-        linhas_2.sort(key=lambda l: l[0]['y'])
-        
-        if len(linhas_2) <= total_questoes * 1.3:
-            linhas = linhas_2
-            logging.info(f"✅ Reagrupado para {len(linhas)} linhas")
+        if idx_juntar >= 0:
+            linhas[idx_juntar] = linhas[idx_juntar] + linhas[idx_juntar + 1]
+            linhas[idx_juntar].sort(key=lambda c: c['x'])
+            del linhas[idx_juntar + 1]
+            logging.info(f"   Juntando linhas {idx_juntar+1} e {idx_juntar+2} (gap={menor_gap}px)")
+        else:
+            break
     
-    # ✅ Se ainda tem MUITAS linhas, filtrar por linhas com >= 3 círculos
-    if len(linhas) > total_questoes * 1.3:
-        logging.warning(f"⚠️ Filtrando linhas com menos de 3 círculos...")
-        linhas_filtradas = [l for l in linhas if len(l) >= 2]
-        
-        if len(linhas_filtradas) <= total_questoes * 1.3:
-            linhas = linhas_filtradas
-            logging.info(f"✅ Após filtro: {len(linhas)} linhas")
+    if len(linhas) > total_questoes:
+        logging.warning(f"⚠️ Ainda muitas linhas ({len(linhas)}). Cortando para {total_questoes}")
+        linhas = linhas[:total_questoes]
     
-    # ✅ VALIDAÇÃO FINAL
     if len(linhas) < total_questoes * 0.6:
         logging.error(f"🚨 POUCAS linhas ({len(linhas)}) para {total_questoes} questões")
         return [''] * total_questoes, [0] * total_questoes
     
-    if len(linhas) > total_questoes * 1.5:
-        logging.error(f"🚨 MUITAS linhas ({len(linhas)}) mesmo após reagrupamento")
-        return [''] * total_questoes, [0] * total_questoes
-    
-    # ✅ Processar cada linha
     respostas = []
     confiancas = []
-    letras = ['A', 'B', 'C', 'D']
     
     for idx, linha in enumerate(linhas):
         if idx >= total_questoes:
@@ -817,70 +824,29 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
             confiancas.append(30)
             continue
         
-        # ✅ Pegar o círculo com MAIOR ratio (mais escuro)
         mais_escuro = max(linha, key=lambda c: c.get('dark_ratio', 0))
+        letra = mais_escuro.get('letra', '')
         
-        # Encontrar posição X
-        linha_ordenada_x = sorted(linha, key=lambda c: c['x'])
-        posicao = 0
-        for i, c in enumerate(linha_ordenada_x):
-            if c['x'] == mais_escuro['x'] and c['y'] == mais_escuro['y']:
-                posicao = i
-                break
-        
-        num_circ = len(linha_ordenada_x)
-        
-        # ✅ NOVA LÓGICA: usar POSIÇÃO RELATIVA se tiver muitos círculos
-        if num_circ >= 4:
-            # Encontrar as 4 posições mais prováveis (A, B, C, D)
-            # Distribuir os círculos detectados em 4 grupos por posição X
-            xs = [c['x'] for c in linha_ordenada_x]
-            largura_total = max(xs) - min(xs) if len(xs) > 1 else 1
-            
-            # Posição relativa do círculo mais escuro
-            pos_rel = (mais_escuro['x'] - min(xs)) / largura_total if largura_total > 0 else 0
-            
-            if pos_rel < 0.2:
-                letra = 'A'
-            elif pos_rel < 0.45:
-                letra = 'B'
-            elif pos_rel < 0.7:
-                letra = 'C'
-            else:
-                letra = 'D'
-            
-            conf = 85 if mais_escuro.get('dark_ratio', 0) > 0.5 else 70
-            logging.info(f"   Q{idx+1}: pos_rel={pos_rel:.2f} ({num_circ} círculos) → '{letra}' (ratio={mais_escuro.get('dark_ratio', 0):.3f})")
-        elif num_circ == 3:
-            if posicao < 3:
-                letra = letras[posicao]
-            else:
-                letra = ''
-            conf = 70
-            logging.info(f"   Q{idx+1}: pos={posicao}/3 → '{letra}'")
-        elif num_circ == 2:
-            largura = linha_ordenada_x[-1]['x'] - linha_ordenada_x[0]['x']
-            if largura > 0:
-                pos_rel = (mais_escuro['x'] - linha_ordenada_x[0]['x']) / largura
-                if pos_rel < 0.33:
-                    letra = 'A'
-                elif pos_rel < 0.67:
-                    letra = 'B'
-                else:
-                    letra = 'C'
+        if letra:
+            conf = 90 if mais_escuro.get('dark_ratio', 0) > 0.5 else 75
+            logging.info(f"   Q{idx+1}: x={mais_escuro['x']} → '{letra}' (ratio={mais_escuro['dark_ratio']:.3f}, conf={conf}%)")
+        else:
+            if len(linha) >= 4:
+                linha_ordenada = sorted(linha, key=lambda c: c['x'])
+                posicao = 0
+                for i, c in enumerate(linha_ordenada):
+                    if c['x'] == mais_escuro['x'] and c['y'] == mais_escuro['y']:
+                        posicao = i
+                        break
+                letra = ['A', 'B', 'C', 'D'][posicao] if posicao < 4 else ''
             else:
                 letra = ''
             conf = 50
-            logging.info(f"   Q{idx+1}: 2 círculos → '{letra}'")
-        else:
-            letra = ''
-            conf = 30
-            logging.info(f"   Q{idx+1}: apenas 1 círculo")
+            logging.warning(f"   Q{idx+1}: SEM LETRA → fallback '{letra}'")
         
         respostas.append(letra)
         confiancas.append(conf)
     
-    # Completar
     while len(respostas) < total_questoes:
         respostas.append('')
         confiancas.append(0)
@@ -888,20 +854,14 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     respostas = respostas[:total_questoes]
     confiancas = confiancas[:total_questoes]
     
-    # ✅ VALIDAÇÃO FINAL
     nao_vazias = [r for r in respostas if r]
     if len(nao_vazias) >= 5:
         contagem = Counter(nao_vazias)
         letra_mais_comum, qtd = contagem.most_common(1)[0]
         
-        if qtd >= len(nao_vazias) * 0.7:
+        if qtd >= len(nao_vazias) * 0.85:
             logging.error(f"🚨 SUSPEITO: {qtd}/{len(nao_vazias)} respostas são '{letra_mais_comum}'")
             return [''] * total_questoes, [0] * total_questoes
-    
-    total_vazios = len([r for r in respostas if not r])
-    if total_vazios > total_questoes * 0.6:
-        logging.error(f"🚨 SUSPEITO: {total_vazios}/{total_questoes} respostas VAZIAS")
-        return [''] * total_questoes, [0] * total_questoes
     
     logging.info("=" * 60)
     logging.info(f"📝 RESPOSTAS: {respostas}")
@@ -1075,7 +1035,6 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
             alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
             respostas_validas = validar_respostas(respostas_ia, gabarito, alternativas)
             
-            # Confiança 75 para IA
             confiancas = [75 if r else 30 for r in respostas_validas]
             
             return calcular_resultado_correcao(
@@ -1095,12 +1054,6 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
     """
     ✅ VERSÃO DEFINITIVA com votação entre métodos
-    
-    Estratégia:
-    1. Detectar círculos (método principal)
-    2. Validar resultado (se suspeito, usar IA)
-    3. Comparar com IA se disponível
-    4. Retornar resultado mais confiável
     """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
@@ -1109,30 +1062,25 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
     
     try:
-        # ═══════════════════════════════════════════════════
-        # MÉTODO 1: CÍRCULOS
-        # ═══════════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("📌 MÉTODO 1: DETECÇÃO DE CÍRCULOS")
         logging.info("=" * 60)
         
-        circulos = detectar_circulos_preenchidos(imagem_base64)
+        circulos, posicoes_colunas = detectar_circulos_preenchidos(imagem_base64)
         
         respostas_circulos = [''] * total_questoes
         confiancas_circulos = [0] * total_questoes
         valido_circulos = False
         
         if circulos and len(circulos) >= 4:
-            respostas_circulos, confiancas_circulos = organizar_respostas_por_posicao(circulos, total_questoes)
+            respostas_circulos, confiancas_circulos = organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas)
             
-            # Contar quantas respostas foram detectadas
             total_detectadas = len([r for r in respostas_circulos if r])
             
             logging.info(f"📊 Círculos detectaram {total_detectadas}/{total_questoes} respostas")
             
             if total_detectadas >= total_questoes * 0.7:
                 nao_vazias = [r for r in respostas_circulos if r]
-                # Verificar variedade
                 if len(set(nao_vazias)) >= 2:
                     valido_circulos = True
                     logging.info(f"✅ CÍRCULOS VÁLIDOS")
@@ -1143,9 +1091,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         else:
             logging.warning("⚠️ Nenhum círculo detectado")
         
-        # ═══════════════════════════════════════════════════
-        # MÉTODO 2: IA (OpenAI)
-        # ═══════════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("📌 MÉTODO 2: IA (OpenAI)")
         logging.info("=" * 60)
@@ -1181,29 +1126,22 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         else:
             logging.warning("⚠️ OpenAI não disponível")
         
-        # ═══════════════════════════════════════════════════
-        # DECISÃO FINAL
-        # ═══════════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("🎯 DECISÃO FINAL")
         logging.info("=" * 60)
         
         if valido_circulos and valido_ia:
-            # ✅ COMPARAÇÃO: se forem muito diferentes, priorizar CÍRCULOS
-            # (círculos são mais confiáveis que IA em cartões padronizados)
             respostas_iguais = sum(1 for i in range(total_questoes) 
                                    if respostas_circulos[i] == respostas_ia[i])
             
             logging.info(f"📊 Concordância: {respostas_iguais}/{total_questoes}")
             
             if respostas_iguais >= total_questoes * 0.7:
-                # Alta concordância - usar CÍRCULOS
                 logging.info("✅ ALTA CONCORDÂNCIA - Usando CÍRCULOS")
                 resposta_final = respostas_circulos
                 confiancas_final = [90 if c > 70 else 70 for c in confiancas_circulos]
                 metodo_usado = 'circulos'
             else:
-                # Baixa concordância - usar CÍRCULOS mesmo assim (mais preciso)
                 logging.warning(f"⚠️ BAIXA CONCORDÂNCIA - Usando CÍRCULOS")
                 resposta_final = respostas_circulos
                 confiancas_final = [70 if c > 50 else 50 for c in confiancas_circulos]
@@ -1234,9 +1172,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 '5. O cartão está plano (não amassado)?'
             )
         
-        # ═══════════════════════════════════════════════════
-        # RESULTADO FINAL
-        # ═══════════════════════════════════════════════════
         respostas_validas = validar_respostas(resposta_final, gabarito, padrao_gabarito['alternativas'])
         
         resultado = calcular_resultado_correcao(
@@ -1403,7 +1338,6 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
             
-            # Salvar no histórico
             try:
                 conn = get_db_connection()
                 if conn:
@@ -3311,7 +3245,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - OTIMIZADO
+# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -3363,7 +3297,6 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
-        # ✅ Layout em 1 coluna para 10 questões, 2 colunas para 20
         if quantidade_questoes <= 12:
             q_por_coluna = quantidade_questoes
             num_colunas = 1
@@ -4252,17 +4185,15 @@ if __name__ == '__main__':
     print("=" * 60)
     print("📋 ESTRATÉGIA DE CORREÇÃO:")
     print("   1️⃣ Detecção de círculos (OpenCV)")
-    print("   2️⃣ Validação rigorosa dos resultados")
-    print("   3️⃣ Fallback para IA (OpenAI) se necessário")
-    print("   4️⃣ Comparação entre métodos")
+    print("   2️⃣ Cálculo de posições das colunas A, B, C, D")
+    print("   3️⃣ Atribuição direta de letra por posição X")
+    print("   4️⃣ Fallback para IA (OpenAI) se necessário")
     print("=" * 60)
     print("✅ MELHORIAS APLICADAS:")
-    print("   - Threshold adaptativo de preenchimento")
-    print("   - Filtro de tamanho de círculo (remove letras)")
-    print("   - Validação de linhas e padrões suspeitos")
-    print("   - Prompt da IA descrevendo letra AO LADO do círculo")
-    print("   - Votação entre métodos (círculos vs IA)")
-    print("   - Retorna erro se nada for confiável")
+    print("   - Cálculo automático das colunas A/B/C/D")
+    print("   - Letra atribuída por posição X absoluta")
+    print("   - Tolerância Y adaptativa")
+    print("   - Validação contra padrões suspeitos")
     print("=" * 60)
 
     init_db()
