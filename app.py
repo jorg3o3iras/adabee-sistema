@@ -563,101 +563,12 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
 # ============================================
 
 def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            return []
-        
-        height, width = img.shape[:2]
-        if height > 1200:
-            scale = 1200 / height
-            new_width = int(width * scale)
-            img = cv2.resize(img, (new_width, 1200), interpolation=cv2.INTER_AREA)
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
-        
-        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        binary = cv2.bitwise_not(binary)
-        
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        letras_encontradas = []
-        
-        for cnt in contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            area = w * h
-            if 50 < area < 800 and w > 10 and h > 10:
-                roi = binary[y:y+h, x:x+w]
-                try:
-                    texto = pytesseract.image_to_string(roi, config='--psm 8 -c tessedit_char_whitelist=ABCD')
-                    letra = texto.strip().upper()
-                    if letra in alternativas:
-                        cx = x + w // 2
-                        cy = y + h // 2
-                        letras_encontradas.append({
-                            'letra': letra, 'x': cx, 'y': cy, 'w': w, 'h': h, 'area': area
-                        })
-                except Exception:
-                    continue
-        
-        logging.info(f"📊 OCR encontrou {len(letras_encontradas)} letras")
-        
-        if not letras_encontradas:
-            return []
-        
-        letras_ordenadas = sorted(letras_encontradas, key=lambda l: (l['y'], l['x']))
-        
-        linhas = []
-        linha_atual = []
-        y_limite = 40
-        
-        for l in letras_ordenadas:
-            if not linha_atual:
-                linha_atual.append(l)
-            elif abs(l['y'] - linha_atual[0]['y']) < y_limite:
-                linha_atual.append(l)
-            else:
-                linha_atual.sort(key=lambda l: l['x'])
-                linhas.append(linha_atual)
-                linha_atual = [l]
-        
-        if linha_atual:
-            linha_atual.sort(key=lambda l: l['x'])
-            linhas.append(linha_atual)
-        
-        respostas = []
-        for linha in linhas:
-            if not linha:
-                respostas.append('')
-                continue
-            linha_ordenada = sorted(linha, key=lambda l: l['x'])
-            letra_escolhida = None
-            if len(linha_ordenada) == 1:
-                letra_escolhida = linha_ordenada[0]['letra']
-            else:
-                linha_ordenada.sort(key=lambda l: l['area'], reverse=True)
-                letra_escolhida = linha_ordenada[0]['letra']
-            if letra_escolhida:
-                respostas.append(letra_escolhida)
-            else:
-                respostas.append('')
-        
-        while len(respostas) < total_questoes:
-            respostas.append('')
-        
-        return respostas[:total_questoes]
-        
-    except Exception as e:
-        logging.error(f"⚠️ Erro no OCR: {e}")
-        return []
+    """
+    ⚠️ OCR DESATIVADO - Tesseract removido para economizar memória no Render Free.
+    Retorna lista vazia. Os métodos Círculos (OpenCV) e IA (OpenAI) cobrem todos os casos.
+    """
+    logging.info("⚠️ OCR desativado (Tesseract removido para economizar memória)")
+    return []
 
 
 def validar_respostas(respostas, gabarito, alternativas):
@@ -5221,4 +5132,3 @@ if __name__ == '__main__':
 
     init_db()
     app.run(host='0.0.0.0', port=port, debug=False)
-
