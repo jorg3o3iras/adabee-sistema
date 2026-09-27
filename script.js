@@ -678,6 +678,9 @@ function go(page) {
         case 'corrigir-ia':
             carregarEscolasCorrigir();
             break;
+        case 'matriz':
+            carregarMatrizes();
+            break;
     }
     
     atualizarDatasImpressao();
@@ -1697,7 +1700,7 @@ function limparFiltrosResultados() {
 }
 
 // ============================================
-// CORREÇÃO MANUAL (DENTRO DA IA) - FUNÇÃO PRINCIPAL
+// CORREÇÃO MANUAL (DENTRO DA IA)
 // ============================================
 function abrirCorrecaoManual() {
     if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
@@ -2078,7 +2081,6 @@ function salvarCorrecaoManual() {
 
             limparCache();
            
-
             setTimeout(() => {
                 carregarResultadosComFiltros();
                 carregarDashboard();
@@ -2104,9 +2106,8 @@ function salvarCorrecaoManual() {
 }
 
 // ============================================
-// 🔥 CORREÇÃO MANUAL STANDALONE (MENU)
+// CORREÇÃO MANUAL STANDALONE (MENU)
 // ============================================
-
 function abrirCorrecaoManualStandalone() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
     
@@ -2703,7 +2704,7 @@ function salvarCorrecaoManualStandalone() {
 }
 
 // ============================================
-// FUNÇÃO PARA ABRIR CORREÇÃO MANUAL DIRETAMENTE
+// ABRIR CORREÇÃO MANUAL DIRETAMENTE
 // ============================================
 async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
     try {
@@ -2897,7 +2898,7 @@ async function excluirUsuario(id, username) {
 }
 
 // ============================================
-// FUNÇÕES DE TEXTO IA - OPENAI
+// FUNÇÕES DE TEXTO IA
 // ============================================
 function prevTexto(input) {
     const file = input.files[0];
@@ -3033,7 +3034,7 @@ function processarArq(input) {
 }
 
 // ============================================
-// 🔥 CORREÇÃO COM IA - PROCESSO COMPLETO
+// 🔥 CORREÇÃO COM IA - PROCESSO COMPLETO (CORRIGIDO)
 // ============================================
 async function processarComIA(imagemBase64) {
     const escolaId = document.getElementById('corrigir-escola')?.value;
@@ -3232,6 +3233,7 @@ async function buscarAluno(alunoId) {
     }
 }
 
+// ✅ CORRIGIDO: NÃO usar fallback aleatório
 async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
     try {
         const response = await fetch(`${API_URL}/api/corrigir`, {
@@ -3255,35 +3257,17 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
             throw new Error(dados.erro);
         }
 
-        if (dados.respostas_detectadas || dados.questoes_status) {
-            return dados;
+        // ✅ Se não retornar respostas, lançar erro (NÃO gerar fallback aleatório)
+        if (!dados.respostas_detectadas && !dados.questoes_status) {
+            throw new Error('A IA não conseguiu detectar as respostas. Tire uma foto mais nítida com boa iluminação.');
         }
 
-        console.warn('⚠️ API não retornou respostas, usando fallback');
-        return gerarFallbackRespostas(imagemBase64);
+        return dados;
 
     } catch (e) {
         console.error('❌ Erro na chamada da API:', e);
-        return gerarFallbackRespostas(imagemBase64);
+        throw e;
     }
-}
-
-function gerarFallbackRespostas(imagemBase64) {
-    const respostas = [];
-    const confiancas = [];
-    
-    for (let i = 0; i < 20; i++) {
-        const alternativas = ['A', 'B', 'C', 'D'];
-        const idx = Math.floor(Math.random() * alternativas.length);
-        respostas.push(alternativas[idx]);
-        confiancas.push(Math.floor(Math.random() * 30) + 50);
-    }
-
-    return {
-        respostas_detectadas: respostas,
-        confianca_por_questao: confiancas,
-        aviso: 'Fallback: Detecção simulada'
-    };
 }
 
 function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao) {
@@ -3300,7 +3284,7 @@ function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao) {
             resp = resp.toString().toUpperCase().trim();
             const alternativasValidas = ['A', 'B', 'C', 'D'];
             if (resp && !alternativasValidas.includes(resp)) {
-                resp = 'NÃO_RESPONDEU';
+                resp = '';
             }
         }
 
@@ -3405,6 +3389,7 @@ function atualizarInterfaceCorrecao(dados) {
         else if (totalQuestoes <= 25) colunasPorLinha = 5;
         else colunasPorLinha = 6;
         
+        // Gabarito oficial
         const tituloOficial = document.createElement('div');
         tituloOficial.style.cssText = `
             grid-column: 1 / -1;
@@ -3456,6 +3441,7 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridOficial);
         
+        // Gabarito do aluno
         const tituloAluno = document.createElement('div');
         tituloAluno.style.cssText = `
             grid-column: 1 / -1;
@@ -3530,6 +3516,7 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridAluno);
         
+        // Comparação resumida
         const divComparacao = document.createElement('div');
         divComparacao.style.cssText = `
             grid-column: 1 / -1;
@@ -3570,7 +3557,68 @@ function atualizarInterfaceCorrecao(dados) {
     }
 }
 
-function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
+// ✅ CORRIGIDO: Implementação REAL de salvarCorrecao
+async function salvarCorrecao() {
+    if (!correcaoManualData || !correcaoManualData.respostasAluno) {
+        showToast('❌ Nenhuma correção para salvar!', 'error');
+        return;
+    }
+    
+    const provaId = correcaoManualData.provaId;
+    const alunoId = correcaoManualData.alunoId;
+    const respostas = correcaoManualData.respostasAluno;
+    const gabarito = correcaoManualData.gabarito;
+    const total = correcaoManualData.quantidade;
+    
+    if (!provaId || !alunoId) {
+        showToast('❌ Dados da correção incompletos!', 'error');
+        return;
+    }
+    
+    // Calcular acertos
+    let acertos = 0;
+    for (let i = 0; i < total; i++) {
+        const resp = (i < respostas.length) ? (respostas[i] || '') : '';
+        const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
+        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) {
+            acertos++;
+        }
+    }
+    
+    const nota = Math.min(acertos * (correcaoManualData.valorPorQuestao || (10/total)), 10);
+    
+    try {
+        showToast('💾 Salvando correção...', 'info');
+        
+        const response = await fetch(`${API_URL}/api/corrigir_manual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prova_id: provaId,
+                aluno_id: alunoId,
+                respostas: respostas,
+                acertos: acertos,
+                nota: nota,
+                total: total
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.sucesso) {
+            showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
+            limparCache();
+            carregarResultadosComFiltros();
+            carregarDashboard();
+            carregarUltimasCorrecoes();
+        } else {
+            showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
+        }
+    } catch (erro) {
+        console.error('Erro ao salvar correção:', erro);
+        showToast('❌ Erro ao salvar: ' + erro.message, 'error');
+    }
+}
 
 // ============================================
 // FUNÇÕES DE CRUD - ESCOLA
@@ -4324,8 +4372,7 @@ async function carregarEscolasTexto() {
 }
 
 // ============================================
-// 🔥 FUNÇÕES DE GERAÇÃO DE CARTÃO RESPOSTA
-// 🔥 AGORA CHAMA O BACKEND (que tem o novo layout)
+// FUNÇÕES DE GERAÇÃO DE CARTÃO RESPOSTA
 // ============================================
 async function carregarTurmasLista(escolaId) {
     const select = document.getElementById('lista-turma');
@@ -4480,10 +4527,6 @@ async function gerarListaTurma() {
     }
 }
 
-// ============================================
-// 🔥 NOVO: gerarCartaoResposta agora chama o BACKEND
-// para usar o layout otimizado (com marcadores fiduciais)
-// ============================================
 async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     try {
         const novaAba = window.open('', '_blank');
@@ -4507,7 +4550,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         `);
         novaAba.document.close();
 
-        // 🔥 CHAMA O BACKEND QUE TEM O NOVO LAYOUT
         const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -4525,7 +4567,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
 
         const htmlCartao = await response.text();
 
-        // Escreve o HTML na nova aba
         novaAba.document.open();
         novaAba.document.write(htmlCartao);
         novaAba.document.close();
@@ -4538,9 +4579,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
     }
 }
 
-// ============================================
-// GERAR TODOS OS CARTOES RESPOSTA DA TURMA
-// ============================================
 async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
     try {
         showToast('📄 Gerando cartões para todos os alunos...', 'info');
@@ -4577,15 +4615,6 @@ function switchTab(idx, btn) {
     if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
 }
 
-function openM(id) {
-    document.getElementById(id).classList.add('show');
-    if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
-    if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
-}
-
-// ============================================
-// FUNÇÃO PARA FECHAR MODAL - CORRIGIDA
-// ============================================
 function closeM(id) {
     console.log('🔴 Fechando modal:', id);
     const modal = document.getElementById(id);
@@ -4598,9 +4627,6 @@ function closeM(id) {
     }
 }
 
-// ============================================
-// FUNÇÃO PARA ABRIR MODAL - CORRIGIDA
-// ============================================
 function openM(id) {
     console.log('🟢 Abrindo modal:', id);
     const modal = document.getElementById(id);
@@ -4611,6 +4637,9 @@ function openM(id) {
     } else {
         console.warn('⚠️ Modal não encontrado:', id);
     }
+    
+    if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
+    if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
 }
 
 document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
@@ -4740,9 +4769,6 @@ function carregarUserData() {
     } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
 }
 
-// ============================================
-// CARREGAR COMBOS (COM CACHE)
-// ============================================
 async function carregarCombos() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -4831,9 +4857,6 @@ async function carregarCombos() {
     }
 }
 
-// ============================================
-// CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
-// ============================================
 async function carregarEscolasParaAluno() {
     try {
         console.log('🔄 Carregando escolas para o select de aluno...');
@@ -4886,9 +4909,6 @@ async function carregarEscolasParaAluno() {
     }
 }
 
-// ============================================
-// FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
-// ============================================
 async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
     console.log('🔄 Carregando turmas para escola:', escolaId);
     const selectTurma = document.getElementById(selectTurmaId);
@@ -5068,10 +5088,6 @@ async function carregarRelatorioEscola() {
     } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
 }
 
-
-// ============================================
-// CARREGAR FILTROS DO RELATÓRIO POR TURMA
-// ============================================
 async function carregarFiltrosRelTurma() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -5169,17 +5185,11 @@ async function carregarTurmasRelTurma(escolaId) {
     carregarRelatorioTurmaFiltrado();
 }
 
-// ============================================
-// FUNÇÃO IMPRIMIR RELATÓRIO POR TURMA
-// ============================================
 async function imprimirRelatorioTurma() {
     showToast('🖨️ Imprimindo relatório...', 'info');
     window.print();
 }
 
-// ============================================
-// 🔥 CARREGAR RELATÓRIO POR TURMA FILTRADO - APENAS UMA DISCIPLINA
-// ============================================
 async function carregarRelatorioTurmaFiltrado() {
     try {
         const escolaId = document.getElementById('rel-turma-escola').value;
@@ -5490,9 +5500,6 @@ function limparFiltrosRelTurma() {
     }).catch(e => console.error('Erro ao recarregar provas:', e));
 }
 
-// ============================================
-// 🔥 CORREÇÃO - ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
-// ============================================
 function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao) {
     try {
         const container = document.getElementById('rel-acertos-grid');
@@ -5768,7 +5775,6 @@ async function carregarAlunosDesempenho(turmaId) {
     }
 }
 
-// ===== FUNÇÃO GERAR DESEMPENHO =====
 async function gerarDesempenho() {
     const escolaId = document.getElementById('filtro-escola-desempenho').value;
     const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -6022,7 +6028,6 @@ async function gerarDesempenho() {
     }
 }
 
-// ===== FUNÇÃO GERAR DOCUMENTO =====
 function gerarDocumentoDesempenho() {
     if (gerandoDocumento) {
         showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
@@ -6268,9 +6273,6 @@ async function carregarDados() {
     }
 }
 
-// ============================================
-// DADOS SECUNDÁRIOS (CARREGAR EM SEGUNDO PLANO)
-// ============================================
 async function carregarDadosSecundarios() {
     console.log('🔄 Iniciando carga de dados secundários...');
     
@@ -6652,9 +6654,6 @@ function imprimirAlunos() {
     win.print();
 }
 
-// ============================================
-// 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA
-// ============================================
 function exportarRelatorioPDF() {
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
@@ -7065,9 +7064,6 @@ function clearGab() {
     }
 }
 
-// ============================================
-// SALVAR GABARITO
-// ============================================
 async function saveGab() {
     try {
         const provaSelect = document.getElementById('gab-prova');
@@ -7122,9 +7118,6 @@ async function saveGab() {
     }
 }
 
-// ============================================
-// EDITAR GABARITO
-// ============================================
 function editarGabarito(id) {
     showToast('✏️ Carregando gabarito...', 'info');
     fetch(API_URL + '/api/provas/' + id)
@@ -7186,9 +7179,6 @@ function editarGabarito(id) {
         .catch(e => { showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error'); console.error('Erro ao carregar gabarito:', e); });
 }
 
-// ============================================
-// EXCLUIR GABARITO
-// ============================================
 async function excluirGabarito(id, nome) {
     if (!confirm('Excluir o gabarito da prova "' + nome + '"?')) return;
     try {
@@ -7262,7 +7252,7 @@ window.addEventListener('resize', function() {
 });
 
 // ================================================================
-// 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
+// MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
 // ================================================================
 
 if (typeof matrizesData === 'undefined') { var matrizesData = []; }
@@ -7820,5 +7810,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ================================================================
-// FIM - SCRIPT COMPLETO
+// FIM - SCRIPT COMPLETO CORRIGIDO
 // ================================================================
