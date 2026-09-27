@@ -267,308 +267,16 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
     return padrao
 
 
-# ============================================
-# 🔥 NOVO: DETECÇÃO DE MARCADORES FIDUCIAIS
-# ============================================
-
-def detectar_marcadores_fiduciais(gray):
-    """
-    🔥 Detecta os 4 marcadores pretos nos cantos do cartão.
-    Retorna as coordenadas (top-left, top-right, bottom-left, bottom-right).
-    """
-    try:
-        altura, largura = gray.shape
-        # Binariza para encontrar áreas pretas
-        _, binaria = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
-        
-        # Encontra contornos
-        contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        candidatos = []
-        area_min = (largura * altura) * 0.002   # 0.2% da área (marcador tem 14mm x 14mm em A4)
-        area_max = (largura * altura) * 0.02    # 2% da área
-        
-        for c in contornos:
-            x, y, w, h = cv2.boundingRect(c)
-            area = w * h
-            # Filtra por tamanho e formato (deve ser quadrado-ish)
-            if area_min < area < area_max:
-                aspect = w / float(h)
-                if 0.6 < aspect < 1.6:
-                    # Filtra por densidade (deve ser bem preenchido)
-                    roi = binaria[y:y+h, x:x+w]
-                    densidade = cv2.countNonZero(roi) / float(w * h)
-                    if densidade > 0.7:
-                        candidatos.append((x, y, w, h, area))
-        
-        if len(candidatos) < 4:
-            logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores fiduciais detectados (necessário 4)")
-            return None
-        
-        # Pega os 4 maiores
-        candidatos.sort(key=lambda c: c[4], reverse=True)
-        top4 = candidatos[:4]
-        
-        # Classifica por posição (TL, TR, BL, BR)
-        meia_largura = largura / 2
-        meia_altura = altura / 2
-        
-        tl = tr = bl = br = None
-        for (x, y, w, h, a) in top4:
-            cx, cy = x + w//2, y + h//2
-            if cx < meia_largura and cy < meia_altura:
-                tl = (cx, cy)
-            elif cx >= meia_largura and cy < meia_altura:
-                tr = (cx, cy)
-            elif cx < meia_largura and cy >= meia_altura:
-                bl = (cx, cy)
-            else:
-                br = (cx, cy)
-        
-        if not all([tl, tr, bl, br]):
-            logging.warning("⚠️ Não foi possível classificar os 4 marcadores fiduciais")
-            return None
-        
-        logging.info(f"✅ 4 marcadores fiduciais detectados: TL={tl}, TR={tr}, BL={bl}, BR={br}")
-        return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
-        
-    except Exception as e:
-        logging.error(f"❌ Erro ao detectar marcadores fiduciais: {e}")
-        return None
-
-
-def corrigir_perspectiva(img, marcadores):
-    """
-    🔥 Corrige a perspectiva do cartão usando os 4 marcadores fiduciais.
-    Retorna a imagem "retificada" (visão de cima).
-    """
-    try:
-        tl = marcadores['tl']
-        tr = marcadores['tr']
-        bl = marcadores['bl']
-        br = marcadores['br']
-        
-        # Calcula largura e altura baseado nos marcadores
-        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        largura_max = max(int(largura_topo), int(largura_base))
-        
-        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
-        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
-        altura_max = max(int(altura_esq), int(altura_dir))
-        
-        # Adiciona margem (os marcadores estão dentro do papel)
-        margem = 60
-        largura_max += margem * 2
-        altura_max += margem * 2
-        
-        # Pontos de origem (com os marcadores)
-        origem = np.float32([tl, tr, bl, br])
-        
-        # Pontos de destino (retângulo perfeito)
-        destino = np.float32([
-            [margem, margem],
-            [largura_max - margem, margem],
-            [margem, altura_max - margem],
-            [largura_max - margem, altura_max - margem]
-        ])
-        
-        matriz = cv2.getPerspectiveTransform(origem, destino)
-        img_corrigida = cv2.warpPerspective(img, matriz, (largura_max, altura_max))
-        
-        logging.info(f"✅ Perspectiva corrigida: {largura_max}x{altura_max}")
-        return img_corrigida
-        
-    except Exception as e:
-        logging.error(f"❌ Erro ao corrigir perspectiva: {e}")
-        return img
-
-
-# ============================================
-# 🔥 DETECÇÃO DE CÍRCULOS (VERSÃO OTIMIZADA)
-# ============================================
-
-def detectar_circulos_preenchidos(imagem_base64):
-    """
-    🔥 DETECÇÃO OTIMIZADA PARA O NOVO LAYOUT (Opção B)
-    
-    Estratégia:
-    1. Detecta os 4 marcadores fiduciais
-    2. Corrige a perspectiva (se possível)
-    3. Detecta todos os círculos vazios e preenchidos
-    4. Compara a "escuridão" dentro de cada círculo
-    5. Retorna os círculos com marcação forte
-    """
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            logging.error("❌ Não foi possível decodificar a imagem")
-            return []
-        
-        # Redimensiona se for muito grande
-        height, width = img.shape[:2]
-        if height > 2200:
-            scale = 2200 / height
-            new_width = int(width * scale)
-            img = cv2.resize(img, (new_width, 2200), interpolation=cv2.INTER_AREA)
-            logging.info(f"📐 Imagem redimensionada para {new_width}x2200")
-        
-        # Converte para escala de cinza
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Aplica blur leve para reduzir ruído
-        gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # 🔥 TENTA DETECTAR MARCADORES FIDUCIAIS E CORRIGIR PERSPECTIVA
-        marcadores = detectar_marcadores_fiduciais(gray)
-        if marcadores:
-            img_corrigida = corrigir_perspectiva(img, marcadores)
-            gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-            gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
-            logging.info("✅ Perspectiva do cartão corrigida")
-        
-        # 🔥 BINARIZAÇÃO E DETECÇÃO DE CÍRCULOS
-        # Usa OTSU para se adaptar à iluminação
-        _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        
-        # Detecta círculos usando HoughCircles
-        circulos = cv2.HoughCircles(
-            gray_blur,
-            cv2.HOUGH_GRADIENT,
-            dp=1.2,
-            minDist=40,
-            param1=80,
-            param2=28,
-            minRadius=12,
-            maxRadius=30
-        )
-        
-        resultados = []
-        
-        if circulos is not None:
-            circulos = np.round(circulos[0, :]).astype("int")
-            logging.info(f"🔵 Total de círculos detectados: {len(circulos)}")
-            
-            for (x, y, r) in circulos:
-                # Cria máscara interna do círculo (70% do raio, para pegar só o interior)
-                mask = np.zeros(gray.shape, dtype=np.uint8)
-                cv2.circle(mask, (x, y), int(r * 0.65), 255, -1)
-                
-                # Aplica a máscara na imagem binarizada
-                roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-                
-                # Conta pixels escuros DENTRO do círculo
-                total_pixels = cv2.countNonZero(mask)
-                dark_pixels = cv2.countNonZero(roi)
-                dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
-                
-                # 🔥 LIMIAR: 30% de pixels escuros indica preenchido
-                is_filled = dark_ratio > 0.30
-                
-                resultados.append({
-                    'x': int(x),
-                    'y': int(y),
-                    'r': int(r),
-                    'preenchido': is_filled,
-                    'dark_ratio': float(dark_ratio)
-                })
-        
-        preenchidos = [c for c in resultados if c['preenchido']]
-        
-        logging.info(f"📊 Círculos detectados: {len(resultados)} total, {len(preenchidos)} preenchidos")
-        
-        if preenchidos:
-            for p in preenchidos[:8]:
-                logging.info(f"  ⭕ ({p['x']}, {p['y']}) r={p['r']} esc={p['dark_ratio']:.2f}")
-        
-        return preenchidos
-        
-    except Exception as e:
-        logging.error(f"⚠️ Erro na detecção de círculos: {e}")
-        traceback.print_exc()
-        return []
-
-
-def organizar_respostas_por_posicao(circulos, total_questoes):
-    """
-    🔥 ORGANIZA OS CÍRCULOS PREENCHIDOS POR POSIÇÃO
-    """
-    if not circulos:
-        return []
-    
-    circulos_ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
-    
-    linhas = []
-    linha_atual = []
-    y_limite = 50
-    
-    for c in circulos_ordenados:
-        if not linha_atual:
-            linha_atual.append(c)
-        elif abs(c['y'] - linha_atual[0]['y']) < y_limite:
-            linha_atual.append(c)
-        else:
-            linha_atual.sort(key=lambda c: c['x'])
-            linhas.append(linha_atual)
-            linha_atual = [c]
-    
-    if linha_atual:
-        linha_atual.sort(key=lambda c: c['x'])
-        linhas.append(linha_atual)
-    
-    respostas = []
-    
-    for linha in linhas:
-        if not linha:
-            respostas.append('')
-            continue
-        
-        linha_ordenada = sorted(linha, key=lambda c: c['x'])
-        
-        circulo_preenchido = None
-        for c in linha_ordenada:
-            if c['preenchido']:
-                circulo_preenchido = c
-                break
-        
-        if circulo_preenchido:
-            posicao = linha_ordenada.index(circulo_preenchido)
-            letras = ['A', 'B', 'C', 'D']
-            if posicao < len(letras):
-                respostas.append(letras[posicao])
-                logging.info(f"✅ Questão {len(respostas)}: Círculo {posicao+1}º marcado → Letra {letras[posicao]}")
-            else:
-                respostas.append('')
-                logging.warning(f"⚠️ Posição inválida: {posicao}")
-        else:
-            respostas.append('')
-            logging.info(f"❌ Questão {len(respostas)+1}: Nenhum círculo preenchido")
-    
-    while len(respostas) < total_questoes:
-        respostas.append('')
-    
-    logging.info(f"📊 Respostas organizadas: {respostas}")
-    
-    return respostas[:total_questoes]
-
-
-# ============================================
-# OCR (último recurso)
-# ============================================
-
-def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
-    """
-    ⚠️ OCR DESATIVADO - Tesseract removido para economizar memória no Render Free.
-    Retorna lista vazia. Os métodos Círculos (OpenCV) e IA (OpenAI) cobrem todos os casos.
-    """
-    logging.info("⚠️ OCR desativado (Tesseract removido para economizar memória)")
-    return []
+def validar_gabarito(gabarito):
+    if not gabarito or len(gabarito) == 0:
+        return False
+    alternativas_validas = ['A', 'B', 'C', 'D']
+    for g in gabarito:
+        if not g or str(g).strip() == '':
+            return False
+        if str(g).upper().strip() not in alternativas_validas:
+            return False
+    return True
 
 
 def validar_respostas(respostas, gabarito, alternativas):
@@ -678,6 +386,246 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
         'confianca_por_questao': [], 'modo': 'erro',
         'valor_por_questao': 0, 'bncc': []
     }
+
+
+# ============================================
+# DETECÇÃO DE MARCADORES FIDUCIAIS
+# ============================================
+
+def detectar_marcadores_fiduciais(gray):
+    try:
+        altura, largura = gray.shape
+        _, binaria = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
+        contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        candidatos = []
+        area_min = (largura * altura) * 0.002
+        area_max = (largura * altura) * 0.02
+        
+        for c in contornos:
+            x, y, w, h = cv2.boundingRect(c)
+            area = w * h
+            if area_min < area < area_max:
+                aspect = w / float(h)
+                if 0.6 < aspect < 1.6:
+                    roi = binaria[y:y+h, x:x+w]
+                    densidade = cv2.countNonZero(roi) / float(w * h)
+                    if densidade > 0.7:
+                        candidatos.append((x, y, w, h, area))
+        
+        if len(candidatos) < 4:
+            logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores fiduciais detectados (necessário 4)")
+            return None
+        
+        candidatos.sort(key=lambda c: c[4], reverse=True)
+        top4 = candidatos[:4]
+        
+        meia_largura = largura / 2
+        meia_altura = altura / 2
+        
+        tl = tr = bl = br = None
+        for (x, y, w, h, a) in top4:
+            cx, cy = x + w//2, y + h//2
+            if cx < meia_largura and cy < meia_altura:
+                tl = (cx, cy)
+            elif cx >= meia_largura and cy < meia_altura:
+                tr = (cx, cy)
+            elif cx < meia_largura and cy >= meia_altura:
+                bl = (cx, cy)
+            else:
+                br = (cx, cy)
+        
+        if not all([tl, tr, bl, br]):
+            logging.warning("⚠️ Não foi possível classificar os 4 marcadores fiduciais")
+            return None
+        
+        logging.info(f"✅ 4 marcadores fiduciais detectados: TL={tl}, TR={tr}, BL={bl}, BR={br}")
+        return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
+        
+    except Exception as e:
+        logging.error(f"❌ Erro ao detectar marcadores fiduciais: {e}")
+        return None
+
+
+def corrigir_perspectiva(img, marcadores):
+    try:
+        tl = marcadores['tl']
+        tr = marcadores['tr']
+        bl = marcadores['bl']
+        br = marcadores['br']
+        
+        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        largura_max = max(int(largura_topo), int(largura_base))
+        
+        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
+        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
+        altura_max = max(int(altura_esq), int(altura_dir))
+        
+        margem = 60
+        largura_max += margem * 2
+        altura_max += margem * 2
+        
+        origem = np.float32([tl, tr, bl, br])
+        destino = np.float32([
+            [margem, margem],
+            [largura_max - margem, margem],
+            [margem, altura_max - margem],
+            [largura_max - margem, altura_max - margem]
+        ])
+        
+        matriz = cv2.getPerspectiveTransform(origem, destino)
+        img_corrigida = cv2.warpPerspective(img, matriz, (largura_max, altura_max))
+        
+        logging.info(f"✅ Perspectiva corrigida: {largura_max}x{altura_max}")
+        return img_corrigida
+        
+    except Exception as e:
+        logging.error(f"❌ Erro ao corrigir perspectiva: {e}")
+        return img
+
+
+# ============================================
+# DETECÇÃO DE CÍRCULOS
+# ============================================
+
+def detectar_circulos_preenchidos(imagem_base64):
+    try:
+        if ',' in imagem_base64:
+            imagem_base64 = imagem_base64.split(',')[1]
+        
+        image_data = base64.b64decode(imagem_base64)
+        np_array = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            logging.error("❌ Não foi possível decodificar a imagem")
+            return []
+        
+        height, width = img.shape[:2]
+        if height > 2200:
+            scale = 2200 / height
+            new_width = int(width * scale)
+            img = cv2.resize(img, (new_width, 2200), interpolation=cv2.INTER_AREA)
+            logging.info(f"📐 Imagem redimensionada para {new_width}x2200")
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        marcadores = detectar_marcadores_fiduciais(gray)
+        if marcadores:
+            img_corrigida = corrigir_perspectiva(img, marcadores)
+            gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
+            gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
+            logging.info("✅ Perspectiva do cartão corrigida")
+        
+        _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        circulos = cv2.HoughCircles(
+            gray_blur,
+            cv2.HOUGH_GRADIENT,
+            dp=1.2,
+            minDist=40,
+            param1=80,
+            param2=28,
+            minRadius=12,
+            maxRadius=30
+        )
+        
+        resultados = []
+        
+        if circulos is not None:
+            circulos = np.round(circulos[0, :]).astype("int")
+            logging.info(f"🔵 Total de círculos detectados: {len(circulos)}")
+            
+            for (x, y, r) in circulos:
+                mask = np.zeros(gray.shape, dtype=np.uint8)
+                cv2.circle(mask, (x, y), int(r * 0.65), 255, -1)
+                roi = cv2.bitwise_and(binaria, binaria, mask=mask)
+                
+                total_pixels = cv2.countNonZero(mask)
+                dark_pixels = cv2.countNonZero(roi)
+                dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
+                is_filled = dark_ratio > 0.30
+                
+                resultados.append({
+                    'x': int(x), 'y': int(y), 'r': int(r),
+                    'preenchido': is_filled,
+                    'dark_ratio': float(dark_ratio)
+                })
+        
+        preenchidos = [c for c in resultados if c['preenchido']]
+        logging.info(f"📊 Círculos detectados: {len(resultados)} total, {len(preenchidos)} preenchidos")
+        return preenchidos
+        
+    except Exception as e:
+        logging.error(f"⚠️ Erro na detecção de círculos: {e}")
+        traceback.print_exc()
+        return []
+
+
+def organizar_respostas_por_posicao(circulos, total_questoes):
+    if not circulos:
+        return []
+    
+    circulos_ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
+    
+    linhas = []
+    linha_atual = []
+    y_limite = 50
+    
+    for c in circulos_ordenados:
+        if not linha_atual:
+            linha_atual.append(c)
+        elif abs(c['y'] - linha_atual[0]['y']) < y_limite:
+            linha_atual.append(c)
+        else:
+            linha_atual.sort(key=lambda c: c['x'])
+            linhas.append(linha_atual)
+            linha_atual = [c]
+    
+    if linha_atual:
+        linha_atual.sort(key=lambda c: c['x'])
+        linhas.append(linha_atual)
+    
+    respostas = []
+    
+    for linha in linhas:
+        if not linha:
+            respostas.append('')
+            continue
+        
+        linha_ordenada = sorted(linha, key=lambda c: c['x'])
+        circulo_preenchido = None
+        for c in linha_ordenada:
+            if c['preenchido']:
+                circulo_preenchido = c
+                break
+        
+        if circulo_preenchido:
+            posicao = linha_ordenada.index(circulo_preenchido)
+            letras = ['A', 'B', 'C', 'D']
+            if posicao < len(letras):
+                respostas.append(letras[posicao])
+                logging.info(f"✅ Questão {len(respostas)}: Círculo {posicao+1}º marcado → Letra {letras[posicao]}")
+            else:
+                respostas.append('')
+        else:
+            respostas.append('')
+    
+    while len(respostas) < total_questoes:
+        respostas.append('')
+    
+    return respostas[:total_questoes]
+
+
+# ============================================
+# OCR (último recurso) - DESATIVADO
+# ============================================
+
+def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
+    logging.info("⚠️ OCR desativado (Tesseract removido para economizar memória)")
+    return []
 
 
 # ============================================
@@ -1072,18 +1020,6 @@ def corrigir_com_ia():
         return jsonify({'erro': str(e)}), 500
 
 
-def validar_gabarito(gabarito):
-    if not gabarito or len(gabarito) == 0:
-        return False
-    alternativas_validas = ['A', 'B', 'C', 'D']
-    for i, g in enumerate(gabarito):
-        if not g or str(g).strip() == '':
-            return False
-        if str(g).upper().strip() not in alternativas_validas:
-            return False
-    return True
-
-
 # ============================================
 # CORREÇÃO MANUAL
 # ============================================
@@ -1182,10 +1118,10 @@ def corrigir_manual():
     except Exception as e:
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-		
+
 
 # ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO
+# ROTA DE CORREÇÃO DE REDAÇÃO (ÚNICA)
 # ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
@@ -1198,6 +1134,7 @@ def corrigir_redacao():
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
 
+        # Tentativa 1: OpenAI
         if OPENAI_AVAILABLE and openai_client is not None:
             try:
                 prompt = f"""
@@ -1227,6 +1164,7 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no OpenAI para redação: {e}")
 
+        # Tentativa 2: RelayFreeLLM
         if RELAY_AVAILABLE:
             try:
                 import openai
@@ -1259,6 +1197,7 @@ def corrigir_redacao():
             except Exception as e:
                 print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
 
+        # Fallback: análise local
         texto_limpo = texto.strip()
         palavras = re.findall(r'\b[a-zA-ZáéíóúãõâêôçÁÉÍÓÚÃÕÂÊÔÇ]+\b', texto_limpo)
         num_palavras = len(palavras)
@@ -1334,7 +1273,7 @@ def corrigir_redacao():
 
 
 # ============================================
-# ROTA PARA SALVAR CORREÇÃO DE TEXTO
+# ROTA PARA SALVAR CORREÇÃO DE TEXTO (ÚNICA)
 # ============================================
 
 @app.route('/api/salvar_correcao_texto', methods=['POST'])
@@ -1392,7 +1331,7 @@ def salvar_correcao_texto():
 
 
 # ============================================
-# ROTA PARA LISTAR CORREÇÕES DE TEXTO
+# ROTA PARA LISTAR CORREÇÕES DE TEXTO (ÚNICA)
 # ============================================
 
 @app.route('/api/correcoes_texto', methods=['GET'])
@@ -1423,7 +1362,7 @@ def listar_correcoes_texto():
 
 
 # ============================================
-# ROTA DE HISTÓRICO
+# ROTA DE HISTÓRICO (ÚNICA)
 # ============================================
 
 @app.route('/api/historico', methods=['GET'])
@@ -1528,7 +1467,7 @@ def listar_historico():
 
 
 # ============================================
-# HISTÓRICO AGRUPADO
+# HISTÓRICO AGRUPADO (ÚNICA)
 # ============================================
 
 @app.route('/api/historico/agrupado', methods=['GET'])
@@ -1675,13 +1614,9 @@ def historico_agrupado():
             if tipo not in alunos_map[aluno_key]['avaliacoes']:
                 alunos_map[aluno_key]['avaliacoes'][tipo] = {
                     'nota': float(item.get('nota', 0)),
-                    'acertos': acertos,
-                    'erros': erros,
-                    'total': total_questoes,
-                    'prova': prova_titulo,
-                    'data': item.get('data_correcao', ''),
-                    'disciplina': disciplina,
-                    'questoes_status': questoes_status,
+                    'acertos': acertos, 'erros': erros, 'total': total_questoes,
+                    'prova': prova_titulo, 'data': item.get('data_correcao', ''),
+                    'disciplina': disciplina, 'questoes_status': questoes_status,
                     'bncc': [q['bncc'] for q in questoes_status],
                     'respostas': [q['resposta'] for q in questoes_status],
                     'gabarito': [q['gabarito'] for q in questoes_status]
@@ -1693,13 +1628,9 @@ def historico_agrupado():
                 if data_atual > data_existente:
                     alunos_map[aluno_key]['avaliacoes'][tipo] = {
                         'nota': float(item.get('nota', 0)),
-                        'acertos': acertos,
-                        'erros': erros,
-                        'total': total_questoes,
-                        'prova': prova_titulo,
-                        'data': data_atual,
-                        'disciplina': disciplina,
-                        'questoes_status': questoes_status,
+                        'acertos': acertos, 'erros': erros, 'total': total_questoes,
+                        'prova': prova_titulo, 'data': data_atual,
+                        'disciplina': disciplina, 'questoes_status': questoes_status,
                         'bncc': [q['bncc'] for q in questoes_status],
                         'respostas': [q['resposta'] for q in questoes_status],
                         'gabarito': [q['gabarito'] for q in questoes_status]
@@ -1779,7 +1710,7 @@ def excluir_correcao(id):
 
 
 # ============================================
-# ROTA DE GABARITOS
+# ROTA DE GABARITOS (ÚNICA)
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -1881,7 +1812,7 @@ def excluir_gabarito(id):
 
 
 # ============================================
-# ROTA DE ESCOLAS
+# ROTA DE ESCOLAS (ÚNICA)
 # ============================================
 
 @app.route('/api/escolas', methods=['GET'])
@@ -2031,7 +1962,7 @@ def excluir_escola(id):
 
 
 # ============================================
-# ROTA DE TURMAS
+# ROTA DE TURMAS (ÚNICA)
 # ============================================
 
 @app.route('/api/turmas', methods=['GET'])
@@ -2211,7 +2142,7 @@ def excluir_turma(id):
 
 
 # ============================================
-# ROTA DE ALUNOS
+# ROTA DE ALUNOS (ÚNICA)
 # ============================================
 
 @app.route('/api/alunos', methods=['GET'])
@@ -2452,1280 +2383,10 @@ def excluir_aluno(id):
     except Exception as e:
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-		
-
-# ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO
-# ============================================
-
-@app.route('/api/corrigir_redacao', methods=['POST'])
-def corrigir_redacao():
-    try:
-        data = request.json
-        texto = data.get('texto')
-        aluno_id = data.get('aluno_id')
-
-        if not texto:
-            return jsonify({'erro': 'Texto é obrigatório'}), 400
-
-        if OPENAI_AVAILABLE and openai_client is not None:
-            try:
-                prompt = f"""
-                Avalie a redação abaixo e retorne APENAS um JSON válido:
-                
-                Redação: {texto}
-                
-                Formato exigido:
-                {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
-                """
-                
-                response = openai_client.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=[
-                        {"role": "system", "content": "Você é um professor especialista em avaliar redações. Responda SEMPRE em JSON."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=800,
-                    temperature=0.5,
-                    response_format={"type": "json_object"}
-                )
-                
-                resposta_texto = response.choices[0].message.content
-                resultado = json.loads(resposta_texto)
-                resultado['modo'] = 'openai'
-                return jsonify(resultado)
-            except Exception as e:
-                print(f"⚠️ Erro no OpenAI para redação: {e}")
-
-        if RELAY_AVAILABLE:
-            try:
-                import openai
-
-                prompt = f"""
-                Avalie a redação: {texto}
-                Responda em JSON: {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
-                """
-
-                response = openai.ChatCompletion.create(
-                    model=RELAY_MODEL,
-                    messages=[
-                        {"role": "system", "content": "Você é um professor especializado em avaliar redações."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=300,
-                    temperature=0.5
-                )
-
-                resposta_texto = response.choices[0].message.content
-                json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
-
-                if json_match:
-                    try:
-                        resultado = json.loads(json_match.group())
-                        resultado['modo'] = 'relay'
-                        return jsonify(resultado)
-                    except Exception:
-                        pass
-            except Exception as e:
-                print(f"⚠️ Erro no RelayFreeLLM para redação: {e}")
-
-        texto_limpo = texto.strip()
-        palavras = re.findall(r'\b[a-zA-ZáéíóúãõâêôçÁÉÍÓÚÃÕÂÊÔÇ]+\b', texto_limpo)
-        num_palavras = len(palavras)
-        frases = re.split(r'[.!?;]+', texto_limpo)
-        num_frases = len([f for f in frases if f.strip()])
-
-        palavras_unicas = len(set([p.lower() for p in palavras]))
-        diversidade = palavras_unicas / num_palavras if num_palavras > 0 else 0
-        tamanho_medio = sum(len(p) for p in palavras) / num_palavras if num_palavras > 0 else 0
-
-        contagem = Counter([p.lower() for p in palavras])
-        palavras_repetidas = sum(1 for v in contagem.values() if v > 3)
-
-        nota_coerencia = min(10, max(0, (diversidade * 5) + (min(1, num_frases / 4) * 3) + (min(1, num_palavras / 50) * 2)))
-        nota_estrutura = min(10, max(0, (min(1, num_frases / 3) * 5) + (min(1, tamanho_medio / 6) * 5)))
-        nota_gramatica = min(10, max(0, (min(1, tamanho_medio / 5) * 4) + (min(1, num_palavras / 40) * 4) + (2 - min(2, palavras_repetidas * 0.4))))
-        nota_vocabulario = min(10, max(0, diversidade * 12))
-
-        if num_palavras < 5:
-            nota_coerencia *= 0.2
-            nota_estrutura *= 0.2
-            nota_gramatica *= 0.2
-            nota_vocabulario *= 0.2
-
-        nota_final = round((nota_coerencia * 0.30 + nota_estrutura * 0.25 + nota_gramatica * 0.25 + nota_vocabulario * 0.20), 1)
-        nota_final = min(10, max(0, nota_final))
-
-        feedback_parts = []
-        if num_palavras < 10:
-            feedback_parts.append(f"⚠️ Texto muito curto ({num_palavras} palavras). Escreva pelo menos 20 palavras.")
-        elif num_palavras < 30:
-            feedback_parts.append(f"📝 Bom início! Tente expandir seus argumentos.")
-        else:
-            feedback_parts.append("✅ Bom desenvolvimento textual.")
-
-        if diversidade < 0.4:
-            feedback_parts.append("🔤 Tente usar vocabulário mais variado.")
-        elif diversidade < 0.6:
-            feedback_parts.append("📚 Bom uso do vocabulário.")
-        else:
-            feedback_parts.append("📚 Ótimo vocabulário!")
-
-        if palavras_repetidas > 5:
-            feedback_parts.append("⚠️ Muitas palavras repetidas. Use sinônimos.")
-
-        if nota_final >= 7:
-            feedback_parts.append("🌟 Bom trabalho! Continue praticando.")
-        elif nota_final >= 5:
-            feedback_parts.append("📈 Continue melhorando!")
-        else:
-            feedback_parts.append("📝 Revise seu texto e tente novamente.")
-
-        feedback = " ".join(feedback_parts)
-
-        resultado = {
-            'nota': nota_final,
-            'metricas': {
-                'nota_coerencia': round(nota_coerencia, 1),
-                'nota_estrutura': round(nota_estrutura, 1),
-                'nota_gramatica': round(nota_gramatica, 1),
-                'nota_vocabulario': round(nota_vocabulario, 1)
-            },
-            'feedback': feedback,
-            'modo': 'local'
-        }
-
-        return jsonify(resultado)
-
-    except Exception as e:
-        print(f"❌ Erro na correção de redação: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
 
 
 # ============================================
-# ROTA PARA SALVAR CORREÇÃO DE TEXTO
-# ============================================
-
-@app.route('/api/salvar_correcao_texto', methods=['POST'])
-def salvar_correcao_texto():
-    try:
-        data = request.json
-        aluno_id = data.get('aluno_id')
-        prova_id = data.get('prova_id')
-        texto = data.get('texto')
-        nota = data.get('nota')
-        metricas = data.get('metricas', {})
-        feedback = data.get('feedback', '')
-
-        if not aluno_id:
-            return jsonify({'erro': 'Aluno é obrigatório'}), 400
-
-        if not texto:
-            return jsonify({'erro': 'Texto é obrigatório'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO correcoes_texto
-            (aluno_id, prova_id, texto, nota, metrica_coerencia, metrica_estrutura,
-             metrica_gramatica, metrica_vocabulario, feedback, tipo_correcao)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            aluno_id, prova_id, texto, nota,
-            metricas.get('nota_coerencia', 0),
-            metricas.get('nota_estrutura', 0),
-            metricas.get('nota_gramatica', 0),
-            metricas.get('nota_vocabulario', 0),
-            feedback, 'ia'
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'id': result[0],
-            'mensagem': 'Correção de texto salva com sucesso'
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao salvar correção de texto: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# ROTA PARA LISTAR CORREÇÕES DE TEXTO
-# ============================================
-
-@app.route('/api/correcoes_texto', methods=['GET'])
-def listar_correcoes_texto():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT ct.*, a.nome as aluno_nome, t.serie
-            FROM correcoes_texto ct
-            LEFT JOIN alunos a ON ct.aluno_id = a.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            ORDER BY ct.data_correcao DESC
-        """)
-
-        resultados = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(resultados)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar correções de texto: {e}")
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# ROTA DE HISTÓRICO
-# ============================================
-
-@app.route('/api/historico', methods=['GET'])
-def listar_historico():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        escola_id = request.args.get('escola')
-        turma_id = request.args.get('turma')
-        aluno_id = request.args.get('aluno_id')
-        prova_id = request.args.get('prova_id')
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                h.*,
-                a.nome as aluno_nome,
-                p.titulo as prova_titulo,
-                p.disciplina,
-                p.serie as prova_serie,
-                t.serie,
-                t.nome as turma_nome,
-                e.nome as escola_nome,
-                t.id as turma_id,
-                e.id as escola_id,
-                p.quantidade_questoes as total_questoes,
-                p.tipo_questoes,
-                p.bncc
-            FROM historico h
-            LEFT JOIN alunos a ON h.aluno_id = a.id
-            LEFT JOIN provas p ON h.prova_id = p.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null':
-            try:
-                params.append(int(escola_id))
-                query += " AND e.id = %s"
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null':
-            try:
-                params.append(int(turma_id))
-                query += " AND t.id = %s"
-            except ValueError:
-                pass
-
-        if aluno_id and aluno_id != '' and aluno_id != 'null':
-            try:
-                params.append(int(aluno_id))
-                query += " AND h.aluno_id = %s"
-            except ValueError:
-                pass
-
-        if prova_id and prova_id != '' and prova_id != 'null':
-            try:
-                params.append(int(prova_id))
-                query += " AND h.prova_id = %s"
-            except ValueError:
-                pass
-
-        query += " ORDER BY h.data_correcao DESC LIMIT 100"
-
-        cur.execute(query, params)
-        historico = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        for item in historico:
-            if 'total_questoes' not in item or item['total_questoes'] is None:
-                item['total_questoes'] = 20
-
-            total = item.get('total_questoes', 20)
-            acertos = item.get('acertos', 0)
-            porcentagem = round((acertos / total) * 100) if total > 0 else 0
-
-            conceito = calcular_conceito(porcentagem)
-            item['conceito'] = conceito['nome']
-            item['conceito_rotulo'] = conceito['rotulo']
-            item['conceito_cor'] = conceito['cor']
-            item['porcentagem'] = porcentagem
-
-            if 'tipo_avaliacao' not in item or not item['tipo_avaliacao']:
-                disciplina = item.get('disciplina', '')
-                prova_titulo = item.get('prova_titulo', '')
-                serie = item.get('serie', '')
-                item['tipo_avaliacao'] = identificar_disciplina(prova_titulo, disciplina, serie)
-
-        return jsonify(historico)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar histórico: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# HISTÓRICO AGRUPADO
-# ============================================
-
-@app.route('/api/historico/agrupado', methods=['GET'])
-def historico_agrupado():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        escola_id = request.args.get('escola')
-        turma_id = request.args.get('turma')
-        aluno_id = request.args.get('aluno_id')
-        serie = request.args.get('serie')
-        prova_id = request.args.get('prova')
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                h.*,
-                a.nome as aluno_nome,
-                p.titulo as prova_titulo,
-                p.disciplina,
-                p.serie as prova_serie,
-                p.gabarito as prova_gabarito,
-                p.quantidade_questoes,
-                p.bncc as prova_bncc,
-                t.serie,
-                t.nome as turma_nome,
-                e.nome as escola_nome
-            FROM historico h
-            LEFT JOIN alunos a ON h.aluno_id = a.id
-            LEFT JOIN provas p ON h.prova_id = p.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null':
-            try:
-                params.append(int(escola_id))
-                query += " AND e.id = %s"
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null':
-            try:
-                params.append(int(turma_id))
-                query += " AND t.id = %s"
-            except ValueError:
-                pass
-
-        if aluno_id and aluno_id != '' and aluno_id != 'null':
-            try:
-                params.append(int(aluno_id))
-                query += " AND h.aluno_id = %s"
-            except ValueError:
-                pass
-
-        if serie and serie != '' and serie != 'null':
-            params.append(serie)
-            query += " AND t.serie = %s"
-
-        if prova_id and prova_id != '' and prova_id != 'null':
-            try:
-                params.append(int(prova_id))
-                query += " AND h.prova_id = %s"
-            except ValueError:
-                pass
-
-        query += " ORDER BY a.nome, h.data_correcao DESC"
-
-        cur.execute(query, params)
-        historico = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        alunos_map = {}
-
-        for item in historico:
-            aluno_key = item.get('aluno_id') or item.get('aluno_nome')
-            if not aluno_key:
-                continue
-
-            if aluno_key not in alunos_map:
-                alunos_map[aluno_key] = {
-                    'aluno_id': item.get('aluno_id'),
-                    'aluno_nome': item.get('aluno_nome', 'Aluno'),
-                    'serie': item.get('serie', ''),
-                    'turma': item.get('turma_nome', ''),
-                    'escola': item.get('escola_nome', ''),
-                    'avaliacoes': {}
-                }
-
-            disciplina = item.get('disciplina', '')
-            prova_titulo = item.get('prova_titulo', '')
-            serie_aluno = item.get('serie', '')
-            tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
-
-            respostas = item.get('respostas', [])
-            gabarito = item.get('prova_gabarito', [])
-            if not gabarito or len(gabarito) == 0:
-                gabarito = item.get('gabarito', [])
-
-            total_questoes = item.get('quantidade_questoes', 20)
-            if len(respostas) < total_questoes:
-                respostas = list(respostas) + [''] * (total_questoes - len(respostas))
-            if len(gabarito) < total_questoes:
-                gabarito = list(gabarito) + [''] * (total_questoes - len(gabarito))
-
-            bncc_list = item.get('prova_bncc', [])
-            if len(bncc_list) < total_questoes:
-                bncc_list = list(bncc_list) + [''] * (total_questoes - len(bncc_list))
-
-            questoes_status = []
-            acertos = 0
-            erros = 0
-
-            for i in range(total_questoes):
-                resp = str(respostas[i] if i < len(respostas) else '').strip().upper()
-                gab = str(gabarito[i] if i < len(gabarito) else '').strip().upper()
-
-                is_resposta_valida = resp and resp != '' and resp != '—' and resp != '-'
-                is_correto = is_resposta_valida and resp == gab and gab != ''
-
-                codigo_bncc = bncc_list[i] if i < len(bncc_list) and bncc_list[i] else ''
-
-                if is_correto:
-                    acertos += 1
-                else:
-                    erros += 1
-
-                questoes_status.append({
-                    'numero': i + 1,
-                    'resposta': resp if resp else '—',
-                    'gabarito': gab if gab else '—',
-                    'acertou': is_correto,
-                    'respondida': is_resposta_valida,
-                    'bncc': codigo_bncc,
-                    'status': '✅ ACERTOU' if is_correto else ('❌ ERROU' if is_resposta_valida else '— NÃO RESPONDEU')
-                })
-
-            if tipo not in alunos_map[aluno_key]['avaliacoes']:
-                alunos_map[aluno_key]['avaliacoes'][tipo] = {
-                    'nota': float(item.get('nota', 0)),
-                    'acertos': acertos,
-                    'erros': erros,
-                    'total': total_questoes,
-                    'prova': prova_titulo,
-                    'data': item.get('data_correcao', ''),
-                    'disciplina': disciplina,
-                    'questoes_status': questoes_status,
-                    'bncc': [q['bncc'] for q in questoes_status],
-                    'respostas': [q['resposta'] for q in questoes_status],
-                    'gabarito': [q['gabarito'] for q in questoes_status]
-                }
-            else:
-                existing = alunos_map[aluno_key]['avaliacoes'][tipo]
-                data_atual = item.get('data_correcao', '')
-                data_existente = existing.get('data', '')
-                if data_atual > data_existente:
-                    alunos_map[aluno_key]['avaliacoes'][tipo] = {
-                        'nota': float(item.get('nota', 0)),
-                        'acertos': acertos,
-                        'erros': erros,
-                        'total': total_questoes,
-                        'prova': prova_titulo,
-                        'data': data_atual,
-                        'disciplina': disciplina,
-                        'questoes_status': questoes_status,
-                        'bncc': [q['bncc'] for q in questoes_status],
-                        'respostas': [q['resposta'] for q in questoes_status],
-                        'gabarito': [q['gabarito'] for q in questoes_status]
-                    }
-
-        resultado = []
-        for aluno_key, dados in alunos_map.items():
-            avaliacoes = dados['avaliacoes']
-
-            default = {
-                'nota': 0, 'acertos': 0, 'erros': 0, 'total': 20,
-                'questoes_status': [], 'bncc': [], 'respostas': [], 'gabarito': []
-            }
-
-            portugues = dict(avaliacoes.get('Portugues', default))
-            matematica = dict(avaliacoes.get('Matematica', default))
-            producao = dict(avaliacoes.get('Producao', default))
-            ch = dict(avaliacoes.get('CH', default))
-            cn = dict(avaliacoes.get('CN', default))
-
-            notas = [
-                portugues.get('nota', 0),
-                matematica.get('nota', 0),
-                producao.get('nota', 0),
-                ch.get('nota', 0),
-                cn.get('nota', 0)
-            ]
-            soma = sum(notas)
-            media = soma / 5 if notas else 0
-
-            resultado.append({
-                'aluno_id': dados['aluno_id'],
-                'aluno_nome': dados['aluno_nome'],
-                'serie': dados['serie'],
-                'turma': dados['turma'],
-                'escola': dados['escola'],
-                'portugues': portugues,
-                'matematica': matematica,
-                'producao': producao,
-                'ch': ch,
-                'cn': cn,
-                'soma': round(soma, 1),
-                'media': round(media, 1)
-            })
-
-        return jsonify(resultado)
-
-    except Exception as e:
-        print(f"❌ Erro ao buscar histórico agrupado: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/historico/<int:id>', methods=['DELETE'])
-def excluir_correcao(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM historico WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Correção não encontrada'}), 404
-
-        cur.execute("DELETE FROM historico WHERE id = %s", (id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'mensagem': 'Correção excluída com sucesso', 'id': id})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# ROTA DE GABARITOS
-# ============================================
-
-@app.route('/api/gabaritos', methods=['POST'])
-def salvar_gabarito():
-    try:
-        data = request.json
-        prova_id = data.get('prova_id')
-        respostas = data.get('respostas', [])
-        bncc = data.get('bncc', [])
-        textos_questoes = data.get('textos_questoes', [])
-        niveis = data.get('niveis', [])
-
-        if not prova_id:
-            return jsonify({'erro': 'Prova ID é obrigatório'}), 400
-        if not respostas or len(respostas) == 0:
-            return jsonify({'erro': 'Respostas são obrigatórias'}), 400
-
-        respostas_validas = [str(r).strip().upper() for r in respostas if r]
-        if not respostas_validas:
-            return jsonify({'erro': 'Nenhuma resposta válida'}), 400
-
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-        textos_validos = [str(t).strip() for t in textos_questoes]
-        niveis_validos = [str(n).strip() for n in niveis]
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM provas WHERE id = %s", (prova_id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE provas
-            SET gabarito = %s::text[],
-                quantidade_questoes = %s,
-                bncc = %s::text[],
-                textos_questoes = %s::text[],
-                niveis = %s::text[]
-            WHERE id = %s
-            RETURNING id
-        """, (respostas_validas, len(respostas_validas), bncc_validos,
-              textos_validos, niveis_validos, prova_id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'id': result[0],
-            'mensagem': 'Gabarito salvo com sucesso',
-            'total_questoes': len(respostas_validas)
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao salvar gabarito: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/gabaritos/<int:id>', methods=['DELETE'])
-def excluir_gabarito(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor()
-        cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (id,))
-        prova = cur.fetchone()
-        if not prova:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE provas
-            SET gabarito = NULL, quantidade_questoes = 0, bncc = NULL,
-                textos_questoes = NULL, niveis = NULL
-            WHERE id = %s
-        """, (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Gabarito da prova "{prova[1]}" removido com sucesso!'
-        })
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# ROTA DE ESCOLAS
-# ============================================
-
-@app.route('/api/escolas', methods=['GET'])
-def listar_escolas():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM escolas ORDER BY nome")
-            escolas = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(escolas)
-        except Exception as e:
-            print(f"Erro ao listar escolas: {e}")
-    return jsonify([])
-
-
-@app.route('/api/escolas', methods=['POST'])
-def criar_escola():
-    data = request.json
-    nome = data.get('nome')
-    if not nome:
-        return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO escolas (nome, inep, municipio, estado, telefone, diretor)
-                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-            """, (nome, data.get('inep', ''), data.get('municipio', ''),
-                  data.get('estado', 'PA'), data.get('telefone', ''), data.get('diretor', '')))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Escola criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar escola: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar escola'}), 500
-
-
-@app.route('/api/escolas/<int:id>', methods=['GET'])
-def buscar_escola(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM escolas WHERE id = %s", (id,))
-        escola = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not escola:
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        return jsonify(escola)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/escolas/<int:id>', methods=['PUT'])
-def editar_escola(id):
-    try:
-        data = request.json
-        nome = data.get('nome')
-
-        if not nome:
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE escolas
-            SET nome = %s, inep = %s, municipio = %s, estado = %s,
-                telefone = %s, diretor = %s
-            WHERE id = %s RETURNING id
-        """, (nome, data.get('inep', ''), data.get('municipio', ''),
-              data.get('estado', 'PA'), data.get('telefone', ''), data.get('diretor', ''), id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Escola atualizada com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/escolas/<int:id>', methods=['DELETE'])
-def excluir_escola(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome FROM escolas WHERE id = %s", (id,))
-        escola = cur.fetchone()
-        if not escola:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        escola_id, escola_nome = escola[0], escola[1]
-
-        cur.execute("SELECT COUNT(*) FROM turmas WHERE escola_id = %s", (escola_id,))
-        total_turmas = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE escola_id = %s", (escola_id,))
-        total_alunos = cur.fetchone()[0]
-
-        cur.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Escola "{escola_nome}" excluída com sucesso!',
-            'detalhes': {'turmas_excluidas': total_turmas, 'alunos_excluidos': total_alunos}
-        })
-
-    except Exception as e:
-        conn.rollback()
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# ROTA DE TURMAS
-# ============================================
-
-@app.route('/api/turmas', methods=['GET'])
-def listar_turmas():
-    try:
-        escola_id = request.args.get('escola_id')
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                t.id, t.nome, t.serie, t.turno, t.professor, t.capacidade,
-                t.ano_letivo, t.escola_id, e.nome as escola_nome,
-                COUNT(a.id) as total_alunos
-            FROM turmas t
-            LEFT JOIN escolas e ON t.escola_id = e.id
-            LEFT JOIN alunos a ON a.turma_id = t.id
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-            try:
-                params.append(int(escola_id))
-                query += " WHERE t.escola_id = %s"
-            except ValueError:
-                pass
-
-        query += " GROUP BY t.id, e.nome ORDER BY t.nome"
-
-        cur.execute(query, params)
-        turmas = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(turmas)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar turmas: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-
-@app.route('/api/turmas', methods=['POST'])
-def criar_turma():
-    data = request.json
-    if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
-                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-                  data.get('turno', 'Manhã'), data.get('professor', ''),
-                  data.get('capacidade', 35), data.get('ano_letivo', 2025)))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
-
-
-@app.route('/api/turmas/<int:id>', methods=['GET'])
-def buscar_turma(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT t.id, t.nome, t.serie, t.turno, t.professor, t.capacidade,
-                   t.ano_letivo, t.escola_id, e.nome as escola_nome
-            FROM turmas t
-            LEFT JOIN escolas e ON t.escola_id = e.id
-            WHERE t.id = %s
-        """, (id,))
-        turma = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not turma:
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        return jsonify(turma)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/turmas/<int:id>', methods=['PUT'])
-def editar_turma(id):
-    try:
-        data = request.json
-
-        if not data.get('nome') or not data.get('escola_id'):
-            return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE turmas
-            SET escola_id = %s, nome = %s, serie = %s, turno = %s,
-                professor = %s, capacidade = %s, ano_letivo = %s
-            WHERE id = %s RETURNING id
-        """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-              data.get('turno', 'Manhã'), data.get('professor', ''),
-              data.get('capacidade', 35), data.get('ano_letivo', 2025), id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Turma atualizada com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/turmas/<int:id>', methods=['DELETE'])
-def excluir_turma(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
-        turma = cur.fetchone()
-        if not turma:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        turma_id, turma_nome = turma[0], turma[1]
-
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
-        total_alunos = cur.fetchone()[0]
-
-        cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Turma "{turma_nome}" excluída com sucesso!',
-            'detalhes': {'alunos_excluidos': total_alunos}
-        })
-
-    except Exception as e:
-        conn.rollback()
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ============================================
-# ROTA DE ALUNOS
-# ============================================
-
-@app.route('/api/alunos', methods=['GET'])
-def listar_alunos():
-    try:
-        escola_id = request.args.get('escola_id')
-        turma_id = request.args.get('turma_id')
-        serie = request.args.get('serie')
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify([])
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                a.id, a.nome, a.matricula, a.numero_chamada, a.data_nascimento,
-                a.genero, a.responsavel, a.telefone, a.email, a.observacoes,
-                a.turma_id, a.escola_id,
-                t.nome as turma_nome, t.serie as turma_serie, t.turno as turma_turno,
-                e.nome as escola_nome
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-            try:
-                params.append(int(escola_id))
-                query += " AND a.escola_id = %s"
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
-            try:
-                params.append(int(turma_id))
-                query += " AND a.turma_id = %s"
-            except ValueError:
-                pass
-
-        if serie and serie != '' and serie != 'null' and serie != 'undefined':
-            params.append(serie)
-            query += " AND t.serie = %s"
-
-        query += " ORDER BY a.numero_chamada NULLS LAST, a.nome"
-
-        cur.execute(query, params)
-        alunos = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(alunos)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar alunos: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-
-@app.route('/api/alunos', methods=['POST'])
-def criar_aluno():
-    try:
-        data = request.json
-
-        if not data.get('nome'):
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-        if not data.get('escola_id'):
-            return jsonify({'erro': 'Escola é obrigatória'}), 400
-        if not data.get('turma_id'):
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            INSERT INTO alunos
-            (escola_id, turma_id, nome, matricula, numero_chamada, data_nascimento,
-             genero, responsavel, telefone, email, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            data['escola_id'], data['turma_id'], data['nome'],
-            data.get('matricula', ''), data.get('numero_chamada'),
-            data.get('data_nascimento'), data.get('genero', 'Masculino'),
-            data.get('responsavel', ''), data.get('telefone', ''),
-            data.get('email', ''), data.get('observacoes', '')
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'id': result['id'], 'mensagem': 'Aluno criado com sucesso'})
-
-    except Exception as e:
-        print(f"❌ Erro ao criar aluno: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/alunos/<int:id>', methods=['GET'])
-def buscar_aluno(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie,
-                   e.nome as escola_nome, e.id as escola_id
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE a.id = %s
-        """, (id,))
-        aluno = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not aluno:
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        return jsonify(aluno)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/alunos/<int:id>', methods=['PUT'])
-def editar_aluno(id):
-    try:
-        data = request.json
-
-        if not data.get('nome'):
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-        if not data.get('escola_id'):
-            return jsonify({'erro': 'Escola é obrigatória'}), 400
-        if not data.get('turma_id'):
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM alunos WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE alunos
-            SET escola_id = %s, turma_id = %s, nome = %s, matricula = %s,
-                numero_chamada = %s, data_nascimento = %s, genero = %s,
-                responsavel = %s, telefone = %s, email = %s, observacoes = %s
-            WHERE id = %s RETURNING id
-        """, (
-            data['escola_id'], data['turma_id'], data['nome'],
-            data.get('matricula', ''), data.get('numero_chamada'),
-            data.get('data_nascimento'), data.get('genero', 'Masculino'),
-            data.get('responsavel', ''), data.get('telefone', ''),
-            data.get('email', ''), data.get('observacoes', ''), id
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Aluno atualizado com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@app.route('/api/alunos/<int:id>', methods=['DELETE'])
-def excluir_aluno(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome FROM alunos WHERE id = %s", (id,))
-        aluno = cur.fetchone()
-        if not aluno:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        aluno_nome = aluno[1]
-
-        cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'mensagem': f'Aluno "{aluno_nome}" excluído com sucesso!'})
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-		
-
-# ============================================
-# ROTA DE PROVAS
+# ROTA DE PROVAS (ÚNICA)
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -3933,7 +2594,7 @@ def excluir_prova(id):
 
 
 # ============================================
-# ROTA DE USUÁRIOS
+# ROTA DE USUÁRIOS (ÚNICA)
 # ============================================
 
 @app.route('/api/usuarios', methods=['GET'])
@@ -4121,7 +2782,7 @@ def excluir_usuario(id):
 
 
 # ============================================
-# ROTA DE DASHBOARD
+# ROTA DE DASHBOARD (ÚNICA)
 # ============================================
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -4216,8 +2877,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# 🔥🔥🔥 ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
-# 🔥 NOVO LAYOUT OTIMIZADO PARA IA/OPENCV
+# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA (ÚNICA)
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -4300,7 +2960,6 @@ def gerar_gabarito():
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }}
         
-        /* MARCADORES FIDUCIAIS (4 CANTOS) */
         .fiducial {{
             position: absolute;
             width: 14mm;
@@ -4312,7 +2971,6 @@ def gerar_gabarito():
         .fiducial-bl {{ bottom: 4mm; left: 4mm; }}
         .fiducial-br {{ bottom: 4mm; right: 4mm; }}
         
-        /* Cabeçalho */
         .header {{
             text-align: center;
             border-bottom: 2px solid #000;
@@ -4346,7 +3004,6 @@ def gerar_gabarito():
             margin-top: 3px;
         }}
         
-        /* Info do aluno */
         .info-aluno {{
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -4365,7 +3022,6 @@ def gerar_gabarito():
             font-weight: 900;
         }}
         
-        /* Instruções */
         .instrucoes {{
             border: 2px solid #000;
             padding: 6px 12px;
@@ -4376,7 +3032,6 @@ def gerar_gabarito():
             background: #f0f0f0;
         }}
         
-        /* Grade de questões */
         .questoes {{
             border: 2px solid #000;
             padding: 8px;
@@ -4423,7 +3078,6 @@ def gerar_gabarito():
             min-width: 14px;
         }}
         
-        /* CÍRCULOS OTIMIZADOS PARA OPENCV */
         .circulo {{
             width: 40px;
             height: 40px;
@@ -4433,7 +3087,6 @@ def gerar_gabarito():
             display: inline-block;
         }}
         
-        /* Rodapé */
         .rodape {{
             margin-top: 10px;
             display: flex;
@@ -4471,13 +3124,11 @@ def gerar_gabarito():
 </head>
 <body>
     <div class="folha">
-        <!-- MARCADORES FIDUCIAIS -->
         <div class="fiducial fiducial-tl"></div>
         <div class="fiducial fiducial-tr"></div>
         <div class="fiducial fiducial-bl"></div>
         <div class="fiducial fiducial-br"></div>
         
-        <!-- CABEÇALHO -->
         <div class="header">
             <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</h1>
             <h2>CARTÃO RESPOSTA</h2>
@@ -4485,18 +3136,15 @@ def gerar_gabarito():
             <div class="escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
         </div>
         
-        <!-- INFO DO ALUNO -->
         <div class="info-aluno">
             <div class="campo"><strong>Aluno(a):</strong> <span>{nome_aluno}</span></div>
             <div class="campo"><strong>Data:</strong> <span>{datetime.now().strftime('%d/%m/%Y')}</span></div>
         </div>
         
-        <!-- INSTRUÇÕES -->
         <div class="instrucoes">
             ⚠️ PREENCHA COMPLETAMENTE O CÍRCULO COM CANETA PRETA OU AZUL — NÃO RASURE
         </div>
         
-        <!-- GRADE DE QUESTÕES -->
         <div class="questoes">
 """
 
@@ -4540,7 +3188,7 @@ def gerar_gabarito():
 
 
 # ============================================
-# ROTAS PARA MATRIZ DE PROFICIÊNCIA
+# ROTAS PARA MATRIZ DE PROFICIÊNCIA (ÚNICAS)
 # ============================================
 
 @app.route('/api/matrizes', methods=['GET'])
@@ -4717,7 +3365,7 @@ def excluir_matriz(id):
 
 
 # ============================================
-# ROTA DE BACKUP
+# ROTA DE BACKUP (ÚNICA)
 # ============================================
 
 @app.route('/api/backup', methods=['GET'])
@@ -4780,7 +3428,7 @@ def backup_database():
 
 
 # ============================================
-# ROTA PRINCIPAL
+# ROTA PRINCIPAL (ÚNICA)
 # ============================================
 
 @app.route('/')
@@ -4811,7 +3459,7 @@ def serve_static(path):
 
 
 # ============================================
-# ROTA DE SAÚDE
+# ROTA DE SAÚDE (ÚNICA)
 # ============================================
 
 @app.route('/health', methods=['GET'])
@@ -5111,7 +3759,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO DEFINITIVA)")
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO LIMPA)")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
