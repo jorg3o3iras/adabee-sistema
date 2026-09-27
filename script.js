@@ -1379,17 +1379,11 @@ async function carregarResultadosComFiltros() {
         const totalCorrigidos = (alunos && !alunos.erro && Array.isArray(alunos)) ? alunos.length : 0;
         const diff = Math.max(0, totalAlunosTurma - totalCorrigidos);
 
-        // ============================================
-        // 🔥 CALCULAR PORCENTAGENS
-        // ============================================
         const pctCorrigidos = totalAlunosTurma > 0 ? Math.round((totalCorrigidos / totalAlunosTurma) * 100) : 0;
         const pctSemCorrecao = totalAlunosTurma > 0 ? Math.round((diff / totalAlunosTurma) * 100) : 0;
         const pctFizeram = pctCorrigidos;
         const pctNaoFizeram = pctSemCorrecao;
 
-        // ============================================
-        // 🔥 ATUALIZAR CARDS COM A NOVA ORDEM E PORCENTAGENS
-        // ============================================
         setText('res-total-alunos-turma', totalAlunosTurma);
         setText('res-porcentagem-total', '100% da turma');
         setText('res-total-filtrado', totalCorrigidos);
@@ -2110,14 +2104,12 @@ function salvarCorrecaoManual() {
 }
 
 // ============================================
-// 🔥 CORREÇÃO MANUAL STANDALONE (MENU) - FUNÇÕES CORRIGIDAS
+// 🔥 CORREÇÃO MANUAL STANDALONE (MENU)
 // ============================================
 
 function abrirCorrecaoManualStandalone() {
-    // Fecha qualquer modal aberto
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
     
-    // Limpa os campos anteriores
     document.getElementById('cm-sa-aluno').textContent = '—';
     document.getElementById('cm-sa-turma').textContent = '—';
     document.getElementById('cm-sa-prova').textContent = '—';
@@ -2129,16 +2121,13 @@ function abrirCorrecaoManualStandalone() {
     document.getElementById('cm-sa-status-badge').className = 'badge badge-gray';
     document.getElementById('cm-sa-porcentagem').textContent = '0% de aproveitamento';
     
-    // Esconde as grids e reseta
     document.getElementById('cm-grid-standalone-container').style.display = 'none';
     document.getElementById('cm-info-standalone').style.display = 'none';
     document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
     document.getElementById('cm-grid-standalone').innerHTML = '';
     
-    // Carrega as escolas no select
     carregarEscolasParaCorrecaoManual();
     
-    // Mostra o modal
     document.getElementById('m-correcao-manual-standalone').style.display = 'flex';
 }
 
@@ -2578,7 +2567,6 @@ function revisarApenasDuvidosasSA() {
 // SALVAR CORREÇÃO MANUAL STANDALONE
 // ============================================
 function salvarCorrecaoManualStandalone() {
-    // 🔥 VERIFICA SE OS DADOS EXISTEM
     if (!cmStandaloneData) {
         showToast('❌ Dados não encontrados!', 'error');
         return;
@@ -2587,7 +2575,6 @@ function salvarCorrecaoManualStandalone() {
     const provaId = parseInt(cmStandaloneData.provaId);
     const alunoId = parseInt(cmStandaloneData.alunoId);
 
-    // 🔥 VALIDA OS IDs
     if (!provaId || isNaN(provaId) || provaId <= 0) {
         showToast('❌ ID da prova inválido!', 'error');
         console.error('❌ cmStandaloneData.provaId:', cmStandaloneData.provaId);
@@ -2665,17 +2652,13 @@ function salvarCorrecaoManualStandalone() {
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             
-            // 🔥 LIMPA O CACHE
             limparCache();
                         
-            // 🔥 ATUALIZA TODOS OS DADOS AUTOMATICAMENTE
             setTimeout(() => {
-                // Atualiza a página atual
                 const paginaAtual = document.querySelector('.page.active');
                 if (paginaAtual) {
                     const pageId = paginaAtual.id.replace('page-', '');
                     
-                    // 🔥 RECARREGA OS DADOS CONFORME A PÁGINA ATUAL
                     switch(pageId) {
                         case 'resultados':
                             carregarResultadosComFiltros();
@@ -2914,7 +2897,7 @@ async function excluirUsuario(id, username) {
 }
 
 // ============================================
-// FUNÇÕES DE TEXTO IA
+// FUNÇÕES DE TEXTO IA - OPENAI
 // ============================================
 function prevTexto(input) {
     const file = input.files[0];
@@ -2932,7 +2915,7 @@ async function avaliarTexto() {
 
     const etapas = [
         { nome: '📝 Preparando texto', descricao: 'Validando e preparando o texto para análise...' },
-        { nome: '🤖 Analisando com IA', descricao: 'Gemini AI avaliando critérios textuais...' },
+        { nome: '🤖 Analisando com IA', descricao: 'OpenAI avaliando critérios textuais...' },
         { nome: '📊 Gerando resultados', descricao: 'Calculando nota e gerando feedback...' }
     ];
 
@@ -3070,8 +3053,8 @@ async function processarComIA(imagemBase64) {
 
     const etapas = [
         { nome: '📸 Preparando imagem', descricao: 'Processando a imagem do cartão resposta...' },
-        { nome: '🔍 OCR + Posição', descricao: 'Lendo alternativas marcadas...' },
-        { nome: '🤖 Analisando com IA', descricao: 'Detectando respostas...' },
+        { nome: '🔍 Detectando círculos', descricao: 'Analisando marcadores fiduciais e círculos...' },
+        { nome: '🤖 Analisando com IA', descricao: 'Detectando respostas com OpenAI...' },
         { nome: '📊 Processando resultados', descricao: 'Comparando com o gabarito e calculando nota...' },
         { nome: '💾 Finalizando', descricao: 'Salvando os resultados...' }
     ];
@@ -3198,7 +3181,6 @@ async function processarComIA(imagemBase64) {
             questoes_status: resultadoQuestoes
         });
 
-        // 🔥 ATUALIZAR INTERFACE COM INFORMAÇÕES DO MÉTODO USADO
         const metodoUsado = respostaIA.metodo_usado || respostaIA.modo || 'desconhecido';
         
         atualizarInterfaceCorrecao({
@@ -3366,7 +3348,6 @@ function atualizarInterfaceCorrecao(dados) {
         statusEl.className = 'badge ' + (aprovado ? 'badge-green' : 'badge-red');
     }
 
-    // 🔥 MÉTODO USADO
     const metodo = dados.metodoUsado || 'desconhecido';
     const metodoBadge = document.getElementById('ia-metodo');
     if (metodoBadge) {
@@ -3592,10 +3573,8 @@ function atualizarInterfaceCorrecao(dados) {
 function salvarCorrecao() { showToast('💾 Correção salva com sucesso!', 'success'); }
 
 // ============================================
-// FUNÇÕES DE CRUD
+// FUNÇÕES DE CRUD - ESCOLA
 // ============================================
-
-// ===== ESCOLA =====
 async function salvarEscola() {
     const nome = document.getElementById('escola-nome').value.trim();
     if (!nome) { showToast('❌ O nome da escola é obrigatório!', 'error'); return; }
@@ -3768,7 +3747,9 @@ async function excluirEscola(id, nome) {
     }
 }
 
-// ===== TURMA =====
+// ============================================
+// FUNÇÕES DE CRUD - TURMA
+// ============================================
 async function salvarTurma() {
     const nome = document.getElementById('turma-nome').value.trim();
     if (!nome) { showToast('❌ O nome da turma é obrigatório!', 'error'); return; }
@@ -3940,7 +3921,9 @@ async function excluirTurma(id, nome) {
     }
 }
 
-// ===== ALUNO =====
+// ============================================
+// FUNÇÕES DE CRUD - ALUNO
+// ============================================
 async function salvarAluno() {
     const nome = document.getElementById('aluno-nome').value.trim();
     if (!nome) { showToast('❌ O nome do aluno é obrigatório!', 'error'); return; }
@@ -4145,7 +4128,9 @@ async function excluirAluno(id, nome) {
     }
 }
 
-// ===== PROVA =====
+// ============================================
+// FUNÇÕES DE CRUD - PROVA
+// ============================================
 async function salvarProva() {
     const titulo = document.getElementById('prova-titulo').value.trim();
     if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
@@ -4337,6 +4322,752 @@ async function carregarEscolasTexto() {
         console.error('Erro ao carregar escolas para texto:', erro);
     }
 }
+
+// ============================================
+// 🔥 FUNÇÕES DE GERAÇÃO DE CARTÃO RESPOSTA
+// 🔥 AGORA CHAMA O BACKEND (que tem o novo layout)
+// ============================================
+async function carregarTurmasLista(escolaId) {
+    const select = document.getElementById('lista-turma');
+    select.innerHTML = '<option value="">Selecione a turma</option>';
+    if (!escolaId) return;
+    try {
+        const turmas = await carregarTurmasComCache(escolaId);
+        if (turmas && !turmas.erro) {
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error('Erro ao carregar turmas:', e);
+    }
+}
+
+async function gerarListaTurma() {
+    const escolaId = document.getElementById('lista-escola').value;
+    const turmaId = document.getElementById('lista-turma').value;
+    const provaId = document.getElementById('lista-prova')?.value || '';
+    
+    if (!turmaId) { 
+        showToast('❌ Selecione uma turma!', 'error'); 
+        return; 
+    }
+    if (!escolaId) { 
+        showToast('❌ Selecione uma escola!', 'error'); 
+        return; 
+    }
+    
+    try {
+        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+        const turmas = await carregarTurmasComCache();
+        const turma = turmas.find(t => t.id == turmaId);
+        
+        const container = document.getElementById('lista-resultado');
+        if (!container) return;
+        
+        if (!alunos || alunos.length === 0 || alunos.erro) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
+            showToast('❌ Nenhum aluno na turma!', 'error');
+            return;
+        }
+        
+        const provas = await carregarProvasComCache();
+        const serieTurma = turma?.serie || '';
+        
+        let provasDisponiveis = provas.filter(p => p.serie === serieTurma);
+        if (provasDisponiveis.length === 0) {
+            provasDisponiveis = provas;
+        }
+        
+        let prova = null;
+        if (provaId) {
+            prova = provas.find(p => p.id == provaId);
+        }
+        if (!prova && provasDisponiveis.length > 0) {
+            prova = provasDisponiveis[0];
+        }
+        
+        if (!prova) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:30px;color:var(--orange);">
+                    <div style="font-size:40px;margin-bottom:10px;">📝</div>
+                    <p style="font-weight:700;">Nenhuma prova cadastrada para esta turma</p>
+                    <p style="font-size:12px;color:var(--text3);">Cadastre uma prova para a série <strong>${serieTurma || 'desta turma'}</strong></p>
+                    <button class="btn btn-primary" style="margin-top:10px;" onclick="go('prova-upload')">➕ Cadastrar Prova</button>
+                </div>
+            `;
+            showToast('❌ Nenhuma prova para esta turma!', 'error');
+            return;
+        }
+        
+        const escolas = await carregarEscolasComCache();
+        const escola = escolas.find(e => e.id == turma?.escola_id);
+        
+        let provasOptions = '';
+        provasDisponiveis.forEach(p => {
+            const selected = p.id == prova.id ? 'selected' : '';
+            provasOptions += `<option value="${p.id}" ${selected}>${p.titulo} (${p.disciplina || 'Sem disciplina'})</option>`;
+        });
+
+        let html = `
+            <div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+                <div style="font-size:16px;font-weight:800;">${escola?.nome || 'Escola'}</div>
+                <div style="color:var(--text2);font-size:13px;margin-top:4px;">
+                    Turma: ${turma?.nome || '—'} | Série: ${turma?.serie || '—'}
+                </div>
+                <div style="color:var(--text3);font-size:12px;margin-top:2px;">
+                    Professor(a): ${turma?.professor || '—'} | 
+                    Turno: ${turma?.turno || 'Manhã'} | 
+                    Total: ${alunos.length} alunos
+                </div>
+                <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:12px;font-weight:600;color:var(--text2);">📖 Prova:</label>
+                        <select id="lista-prova-select" class="form-control" style="width:250px;padding:6px 10px;font-size:12px;" onchange="gerarListaTurma()">
+                            ${provasOptions}
+                        </select>
+                    </div>
+                    <button class="btn btn-green" onclick="gerarCartoesTodosAlunos(${escolaId}, ${turmaId}, ${prova.id})">
+                        📄 GERAR TODOS OS CARTOES
+                    </button>
+                    <button class="btn btn-primary" onclick="gerarListaTurma()">🔄 Atualizar</button>
+                </div>
+                <div style="margin-top:8px;color:var(--text3);font-size:11px;">
+                    ✅ Clique em "GERAR TODOS OS CARTOES" para abrir todos os cartões resposta de uma vez
+                </div>
+            </div>
+        `;
+        
+        html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:400px;overflow-y:auto;">';
+        
+        for (let i = 0; i < alunos.length; i++) {
+            const aluno = alunos[i];
+            html += `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                    <div>
+                        <strong>${aluno.nome}</strong> 
+                        <span class="badge badge-blue">Nº ${aluno.numero_chamada || '—'}</span>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(${escolaId}, ${turmaId}, ${aluno.id}, ${prova.id})">
+                        📄 Gerar Cartão
+                    </button>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        
+        html += `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        showToast(`📋 ${alunos.length} alunos encontrados. Clique em "GERAR TODOS OS CARTOES" para gerar todos!`, 'info');
+        
+    } catch (erro) {
+        console.error('Erro ao gerar lista:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
+
+// ============================================
+// 🔥 NOVO: gerarCartaoResposta agora chama o BACKEND
+// para usar o layout otimizado (com marcadores fiduciais)
+// ============================================
+async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
+    try {
+        const novaAba = window.open('', '_blank');
+        if (!novaAba) {
+            showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
+            return;
+        }
+
+        novaAba.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
+            <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
+                <div style="text-align:center;">
+                    <div style="font-size:60px;margin-bottom:20px;">⏳</div>
+                    <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
+                    <p style="color:#64748b;">Aguarde um momento</p>
+                </div>
+            </body>
+            </html>
+        `);
+        novaAba.document.close();
+
+        // 🔥 CHAMA O BACKEND QUE TEM O NOVO LAYOUT
+        const response = await fetch(`${API_URL}/api/gerar_gabarito`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                escola_id: parseInt(escolaId),
+                turma_id: parseInt(turmaId),
+                aluno_id: parseInt(alunoId),
+                prova_id: parseInt(provaId)
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status} ao gerar cartão`);
+        }
+
+        const htmlCartao = await response.text();
+
+        // Escreve o HTML na nova aba
+        novaAba.document.open();
+        novaAba.document.write(htmlCartao);
+        novaAba.document.close();
+
+        showToast('✅ Cartão resposta gerado com sucesso!', 'success');
+
+    } catch (erro) {
+        console.error('Erro ao gerar cartão:', erro);
+        showToast('❌ Erro ao gerar cartão: ' + erro.message, 'error');
+    }
+}
+
+// ============================================
+// GERAR TODOS OS CARTOES RESPOSTA DA TURMA
+// ============================================
+async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
+    try {
+        showToast('📄 Gerando cartões para todos os alunos...', 'info');
+        
+        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+        
+        if (!alunos || alunos.length === 0) {
+            showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
+            return;
+        }
+        
+        for (let i = 0; i < alunos.length; i++) {
+            const aluno = alunos[i];
+            setTimeout(() => {
+                gerarCartaoResposta(escolaId, turmaId, aluno.id, provaId);
+            }, i * 300);
+        }
+        
+        showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
+        
+    } catch (erro) {
+        console.error('Erro ao gerar cartões:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
+    }
+}
+
+// ============================================
+// FUNÇÕES AUXILIARES
+// ============================================
+function switchTab(idx, btn) {
+    const parent = btn.closest('.tab-nav');
+    if (parent) { parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    const card = btn.closest('.card');
+    if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
+}
+
+function openM(id) {
+    document.getElementById(id).classList.add('show');
+    if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
+    if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
+}
+
+// ============================================
+// FUNÇÃO PARA FECHAR MODAL - CORRIGIDA
+// ============================================
+function closeM(id) {
+    console.log('🔴 Fechando modal:', id);
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        console.log('✅ Modal fechado:', id);
+    } else {
+        console.warn('⚠️ Modal não encontrado:', id);
+    }
+}
+
+// ============================================
+// FUNÇÃO PARA ABRIR MODAL - CORRIGIDA
+// ============================================
+function openM(id) {
+    console.log('🟢 Abrindo modal:', id);
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        console.log('✅ Modal aberto:', id);
+    } else {
+        console.warn('⚠️ Modal não encontrado:', id);
+    }
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
+
+function gerarGabaritoModal(tipo) {
+    const grid = document.getElementById('modal-gabarito-grid');
+    if (!grid) return;
+    const numQuestoes = 20;
+    const alts = tipo == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+    grid.innerHTML = '';
+    for (let i = 1; i <= numQuestoes; i++) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 1;
+        input.style.width = '40px';
+        input.style.height = '35px';
+        input.style.textAlign = 'center';
+        input.style.background = 'var(--bg2)';
+        input.style.border = '1.5px solid var(--border2)';
+        input.style.borderRadius = '6px';
+        input.style.color = 'var(--text)';
+        input.style.fontWeight = 'bold';
+        input.style.fontSize = '14px';
+        input.style.textTransform = 'uppercase';
+        input.placeholder = i;
+        input.title = 'Questão ' + i;
+        input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
+        grid.appendChild(input);
+    }
+}
+
+function excluir(btn, tipo, nome) {
+    const row = btn.closest('tr');
+    delTarget = { row, tipo, nome };
+    document.getElementById('del-nome-txt').textContent = '"' + nome + '"';
+    document.getElementById('del-modal').classList.add('show');
+}
+
+function cancelarDel() { document.getElementById('del-modal').classList.remove('show'); delTarget = null; }
+
+function confirmarDel() {
+    document.getElementById('del-modal').classList.remove('show');
+    if (!delTarget) return;
+    const { row, tipo, nome } = delTarget;
+    row.classList.add('deleting');
+    setTimeout(() => { row.remove(); showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error'); delTarget = null; limparCache(); renumerarTabela(row.closest('tbody')); }, 350);
+}
+
+function renumerarTabela(tbody) {
+    if (!tbody) return;
+    tbody.querySelectorAll('tr').forEach((tr, i) => {
+        const badge = tr.querySelector('.badge-blue, .badge-gray');
+        if (badge) {
+            const num = String(i + 1).padStart(2, '0');
+            if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
+        }
+    });
+}
+
+function filtrarTabela(input, tbodyId) {
+    const val = input.value.toLowerCase();
+    document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none'; });
+}
+
+function filtrarSerie(sel) {
+    const val = sel.value;
+    document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
+}
+
+function showToast(msg, type) {
+    type = type || 'info';
+    const c = document.getElementById('toast-c');
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    const icons = { info: 'ℹ️', success: '✅', error: '❌', ai: '🤖', warning: '⚠️' };
+    t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + msg + '</span>';
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3200);
+}
+
+function simUpload() { setTimeout(() => { document.getElementById('up-ok').style.display = 'block'; showToast('✅ Arquivo enviado!', 'success'); }, 600); }
+
+function atualizarInfoAlts() {
+    const s = document.getElementById('prova-serie');
+    const disciplina = document.getElementById('prova-disciplina').value;
+    const info = document.getElementById('info-alts');
+    if (!s || !info) return;
+    if (disciplina === 'Produção de Texto') {
+        info.textContent = '📝 Produção de Texto — Gabarito com resposta descritiva e níveis BNCC';
+        info.style.color = '#a78bfa';
+        info.style.borderColor = 'rgba(139,92,246,.25)';
+        info.style.background = 'rgba(139,92,246,.07)';
+    } else {
+        info.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
+        info.style.color = 'var(--blue)';
+        info.style.borderColor = 'rgba(59,130,246,.25)';
+        info.style.background = 'rgba(59,130,246,.07)';
+    }
+}
+
+function carregarTurmasProva() {
+    const escolaId = document.getElementById('prova-escola').value;
+    if (!escolaId) return;
+    const select = document.getElementById('prova-turma');
+    select.innerHTML = '<option value="">Selecione a turma</option>';
+    carregarTurmasComCache(escolaId).then(turmas => {
+        if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || '—'); select.appendChild(opt); }); }
+    }).catch(e => console.error(e));
+}
+
+function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
+
+function carregarUserData() {
+    console.log('🔄 Carregando dados do usuário...');
+    try {
+        const tbody = document.getElementById('u-tb-turmas');
+        if (tbody) {
+            carregarTurmasComCache().then(turmas => {
+                if (turmas && turmas.length > 0) {
+                    tbody.innerHTML = turmas.map(t => {
+                        const totalAlunos = t.total_alunos || 0;
+                        return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                    }).join('');
+                }
+            }).catch(e => console.error(e));
+        }
+    } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
+}
+
+// ============================================
+// CARREGAR COMBOS (COM CACHE)
+// ============================================
+async function carregarCombos() {
+    try {
+        const escolas = await carregarEscolasComCache();
+
+        ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const current = select.value;
+                select.innerHTML = '<option value="">Selecione a escola</option>';
+                if (escolas && !escolas.erro) {
+                    escolas.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nome;
+                        select.appendChild(opt);
+                    });
+                }
+                if (current) select.value = current;
+            }
+        });
+
+        await carregarEscolasParaAluno();
+
+        const turmas = await carregarTurmasComCache();
+        ['aluno-turma', 'modal-prova-turma', 'lista-turma', 'editar-aluno-turma'].forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const current = select.value;
+                select.innerHTML = '<option value="">Selecione a turma</option>';
+                if (turmas && !turmas.erro) {
+                    turmas.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.nome + ' - ' + (t.serie || '—');
+                        select.appendChild(opt);
+                    });
+                }
+                if (current) select.value = current;
+            }
+        });
+
+        const provas = await carregarProvasComCache();
+        ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const current = select.value;
+                select.innerHTML = '<option value="">Selecione a prova</option>';
+                if (provas && !provas.erro) {
+                    provas.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        const serie = p.serie || 'Série não definida';
+                        opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
+                        opt.dataset.serie = serie;
+                        opt.dataset.quantidade = p.quantidade_questoes || 20;
+                        opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
+                        opt.dataset.tipo = p.tipo_questoes || '4';
+                        opt.dataset.disciplina = p.disciplina || '';
+                        opt.dataset.bncc = JSON.stringify(p.bncc || []);
+                        select.appendChild(opt);
+                    });
+                }
+                if (current) select.value = current;
+            }
+        });
+
+        const alunos = await carregarAlunosComCache();
+        ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const current = select.value;
+                select.innerHTML = '<option value="">Selecione o aluno</option>';
+                if (alunos && !alunos.erro) {
+                    alunos.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.nome;
+                        select.appendChild(opt);
+                    });
+                }
+                if (current) select.value = current;
+            }
+        });
+    } catch (erro) {
+        console.error('Erro ao carregar combos:', erro);
+    }
+}
+
+// ============================================
+// CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
+// ============================================
+async function carregarEscolasParaAluno() {
+    try {
+        console.log('🔄 Carregando escolas para o select de aluno...');
+
+        const escolas = await carregarEscolasComCache();
+
+        if (!escolas || escolas.length === 0 || escolas.erro) {
+            console.warn('⚠️ Nenhuma escola encontrada ou erro na API');
+            return;
+        }
+
+        const selectCadastro = document.getElementById('aluno-escola');
+        if (selectCadastro) {
+            const current = selectCadastro.value;
+            selectCadastro.innerHTML = '<option value="">Selecione a escola</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                selectCadastro.appendChild(opt);
+            });
+            if (current && escolas.some(e => e.id == current)) {
+                selectCadastro.value = current;
+                carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
+            } else {
+                const selectTurma = document.getElementById('aluno-turma');
+                if (selectTurma) selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+            }
+            console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
+        }
+
+        const selectEdicao = document.getElementById('editar-aluno-escola');
+        if (selectEdicao) {
+            const current = selectEdicao.value;
+            selectEdicao.innerHTML = '<option value="">Selecione a escola</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                selectEdicao.appendChild(opt);
+            });
+            if (current && escolas.some(e => e.id == current)) {
+                selectEdicao.value = current;
+                carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
+            }
+        }
+
+    } catch (erro) {
+        console.error('❌ Erro ao carregar escolas para o select de aluno:', erro);
+    }
+}
+
+// ============================================
+// FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
+// ============================================
+async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
+    console.log('🔄 Carregando turmas para escola:', escolaId);
+    const selectTurma = document.getElementById(selectTurmaId);
+    if (!selectTurma) {
+        console.warn('⚠️ Select de turma não encontrado:', selectTurmaId);
+        return;
+    }
+
+    selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
+
+    if (!escolaId || escolaId === '') {
+        console.log('ℹ️ Nenhuma escola selecionada');
+        return;
+    }
+
+    try {
+        const turmas = await carregarTurmasComCache(escolaId);
+
+        if (turmas && !turmas.erro && turmas.length > 0) {
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                opt.dataset.serie = t.serie || '';
+                selectTurma.appendChild(opt);
+            });
+            console.log(`✅ ${turmas.length} turmas carregadas para a escola`);
+        } else {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Nenhuma turma cadastrada';
+            opt.disabled = true;
+            selectTurma.appendChild(opt);
+        }
+    } catch (e) {
+        console.error('❌ Erro ao carregar turmas:', e);
+        showToast('❌ Erro ao carregar turmas: ' + e.message, 'error');
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Erro ao carregar turmas';
+        opt.disabled = true;
+        selectTurma.appendChild(opt);
+    }
+}
+
+// ============================================
+// CARREGAR RELATÓRIOS
+// ============================================
+async function carregarRelatorios() {
+    try {
+        const alunos = await carregarAlunosComCache();
+        const correcoesResp = await fetch(API_URL + '/api/historico');
+        const correcoes = await correcoesResp.json();
+        const totalAlunos = alunos.length || 0;
+        const Habilidades = correcoes.filter(c => c.nota >= 6).length || 0;
+        const recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0;
+        const media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
+
+        setText('rel-total-alunos', totalAlunos);
+        setText('rel-Habilidades', Habilidades);
+        setText('rel-recuperacao', recuperacao);
+        setText('rel-media', media.toFixed(1));
+
+        const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+        correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
+            else if (c.nota < 4) faixas['2-4']++;
+            else if (c.nota < 6) faixas['4-6']++;
+            else if (c.nota < 8) faixas['6-8']++;
+            else faixas['8-10']++; });
+        const maxVal = Math.max(...Object.values(faixas), 1);
+        setText('d0-2', faixas['0-2']);
+        setText('d2-4', faixas['2-4']);
+        setText('d4-6', faixas['4-6']);
+        setText('d6-8', faixas['6-8']);
+        setText('d8-10', faixas['8-10']);
+
+        const bars = document.querySelectorAll('#dist-notas .chart-bar');
+        const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
+        vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
+
+        let totalPtAcertos = 0,
+            totalPtErros = 0,
+            totalPtQuestoes = 0;
+        let totalMatAcertos = 0,
+            totalMatErros = 0,
+            totalMatQuestoes = 0;
+        let totalProdAcertos = 0,
+            totalProdErros = 0,
+            totalProdQuestoes = 0;
+        let totalCHAcertos = 0,
+            totalCHErros = 0,
+            totalCHQuestoes = 0;
+        let totalCNAcertos = 0,
+            totalCNErros = 0,
+            totalCNQuestoes = 0;
+
+        if (correcoes && correcoes.length > 0) {
+            correcoes.forEach(c => {
+                const disciplina = c.disciplina || '';
+                const acertos = c.acertos || 0;
+                const total = c.total || 20;
+                const erros = total - acertos;
+
+                const discLower = disciplina.toLowerCase();
+                if (discLower.includes('português') || discLower.includes('portugues')) {
+                    totalPtAcertos += acertos;
+                    totalPtErros += erros;
+                    totalPtQuestoes += total;
+                } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
+                    totalMatAcertos += acertos;
+                    totalMatErros += erros;
+                    totalMatQuestoes += total;
+                } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
+                    totalProdAcertos += acertos;
+                    totalProdErros += erros;
+                    totalProdQuestoes += total;
+                } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
+                    totalCHAcertos += acertos;
+                    totalCHErros += erros;
+                    totalCHQuestoes += total;
+                } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
+                    totalCNAcertos += acertos;
+                    totalCNErros += erros;
+                    totalCNQuestoes += total;
+                }
+            });
+        }
+
+        const totalCorrecoes = correcoes.length || 1;
+        setText('rel-pt-acertos', totalPtAcertos);
+        setText('rel-pt-erros', totalPtErros);
+        setText('rel-pt-media', totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0');
+
+        setText('rel-mat-acertos', totalMatAcertos);
+        setText('rel-mat-erros', totalMatErros);
+        setText('rel-mat-media', totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0');
+
+        setText('rel-prod-acertos', totalProdAcertos);
+        setText('rel-prod-erros', totalProdErros);
+        setText('rel-prod-media', totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0');
+
+        setText('rel-ch-acertos', totalCHAcertos);
+        setText('rel-ch-erros', totalCHErros);
+        setText('rel-ch-media', totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0');
+
+        setText('rel-cn-acertos', totalCNAcertos);
+        setText('rel-cn-erros', totalCNErros);
+        setText('rel-cn-media', totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0');
+
+        await carregarRelatorioEscola();
+        atualizarDatasImpressao();
+    } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
+}
+
+async function carregarRelatorioEscola() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        const turmas = await carregarTurmasComCache();
+        const alunos = await carregarAlunosComCache();
+        const correcoesResp = await fetch(API_URL + '/api/historico');
+        const correcoes = await correcoesResp.json();
+        const tbody = document.getElementById('tb-rel-escola');
+        if (!tbody) return;
+        if (!escolas || escolas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+        } else {
+            tbody.innerHTML = escolas.map(e => {
+                const turmasEscola = turmas.filter(t => t.escola_id === e.id);
+                const alunosEscola = alunos.filter(a => a.escola_id === e.id);
+                const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
+                const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
+                const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
+                const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
+                return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+            }).join('');
+        }
+    } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
+}
+
 
 // ============================================
 // CARREGAR FILTROS DO RELATÓRIO POR TURMA
@@ -4627,9 +5358,6 @@ async function carregarRelatorioTurmaFiltrado() {
             if (bar) bar.style.width = pct + '%';
         });
 
-        // ============================================
-        // 🔥 ATUALIZAR O CABEÇALHO DA TABELA - APENAS UMA DISCIPLINA
-        // ============================================
         const table = document.querySelector('#tb-rel-alunos')?.closest('table');
         const thead = table?.querySelector('thead');
         if (thead) {
@@ -4713,9 +5441,6 @@ async function carregarRelatorioTurmaFiltrado() {
             </tr>`;
         }).join('');
 
-        // ============================================
-        // ATUALIZAR GRÁFICO DE ACERTOS POR QUESTÃO
-        // ============================================
         atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
 
         document.getElementById('rel-disc-acertos').textContent = totalAcertos;
@@ -4903,20 +5628,10 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
             `;
             
             let corBarra = '#ef4444';
-            let labelPerformance = '🔴 Baixo';
-            if (pctAcertos >= 80) {
-                corBarra = '#10b981';
-                labelPerformance = '🟢 Alto';
-            } else if (pctAcertos >= 60) {
-                corBarra = '#f59e0b';
-                labelPerformance = '🟡 Médio';
-            } else if (pctAcertos >= 40) {
-                corBarra = '#f59e0b';
-                labelPerformance = '🟡 Médio-Baixo';
-            } else if (pctAcertos >= 20) {
-                corBarra = '#ef4444';
-                labelPerformance = '🔴 Crítico';
-            }
+            if (pctAcertos >= 80) corBarra = '#10b981';
+            else if (pctAcertos >= 60) corBarra = '#f59e0b';
+            else if (pctAcertos >= 40) corBarra = '#f59e0b';
+            else if (pctAcertos >= 20) corBarra = '#ef4444';
             
             div.innerHTML = `
                 <div style="font-size: 14px; font-weight: 800; color: var(--text1); margin-bottom: 4px;">
@@ -4956,7 +5671,6 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
 // ============================================
 // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
 // ============================================
-
 async function carregarEscolasDesempenho() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -5100,16 +5814,6 @@ async function gerarDesempenho() {
             const correcao = historico[0];
             respostasAluno = correcao.respostas || [];
             if (correcao.disciplina) disciplina = correcao.disciplina;
-        } else {
-            try {
-                const respostasResp = await fetch(`${API_URL}/api/respostas?aluno_id=${alunoId}&prova_id=${provaId}`);
-                const respostasData = await respostasResp.json();
-                if (respostasData && !respostasData.erro) {
-                    respostasAluno = respostasData.respostas || [];
-                }
-            } catch (e) {
-                console.warn('Nenhuma resposta encontrada:', e);
-            }
         }
 
         while (respostasAluno.length < totalQuestoes) respostasAluno.push('');
@@ -5348,7 +6052,6 @@ function gerarDocumentoDesempenho() {
 
         const { escola, turma, aluno, prova, resultadoQuestoes, acertos, erros, porcentagem, conceito, disciplina, totalQuestoes, gabarito, bncc } = data;
 
-        // Geração do HTML do documento (encurtado para caber)
         let html = `
         <!DOCTYPE html>
         <html>
@@ -5418,7 +6121,6 @@ function gerarDocumentoDesempenho() {
             <div class="questoes-grid">
         `;
 
-        // Questões
         resultadoQuestoes.forEach(q => {
             const acertou = q.acertou;
             const resposta = q.resposta || '—';
@@ -5441,7 +6143,6 @@ function gerarDocumentoDesempenho() {
             <div class="gabarito-grid">
         `;
 
-        // Gabarito
         gabarito.forEach((gab, idx) => {
             const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
             html += `
@@ -5954,11 +6655,7 @@ function imprimirAlunos() {
 // ============================================
 // 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA
 // ============================================
-// ============================================
-// 🔥 FUNÇÃO PARA GERAR PDF PROFISSIONAL DO RELATÓRIO POR TURMA - CORRIGIDA
-// ============================================
 function exportarRelatorioPDF() {
-    // Verifica se há dados para exportar
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
         showToast('❌ Nenhum dado para exportar!', 'error');
@@ -5973,7 +6670,6 @@ function exportarRelatorioPDF() {
 
     showToast('📄 Gerando PDF...', 'info');
 
-    // Obtém os filtros atuais
     const escolaSelect = document.getElementById('rel-turma-escola');
     const serieSelect = document.getElementById('rel-turma-serie');
     const turmaSelect = document.getElementById('rel-turma-turma');
@@ -5983,21 +6679,18 @@ function exportarRelatorioPDF() {
     const serieNome = serieSelect?.options[serieSelect.selectedIndex]?.text || 'Não informado';
     const turmaNome = turmaSelect?.options[turmaSelect.selectedIndex]?.text || 'Não informado';
     
-    // Obtém a disciplina
     let disciplinaNome = 'Português';
     const provaOption = provaSelect?.options[provaSelect.selectedIndex];
     if (provaOption && provaOption.dataset.disciplina) {
         disciplinaNome = provaOption.dataset.disciplina;
     }
 
-    // Obtém os dados do relatório
     const mediaEl = document.getElementById('rel-media');
     const media = mediaEl ? mediaEl.textContent : '0%';
     
     const conceitoEl = document.getElementById('rel-conceito-geral');
     const conceito = conceitoEl ? conceitoEl.textContent : '—';
 
-    // 🔥 COLETA OS DADOS DOS ALUNOS DIRETAMENTE DA TABELA
     const alunosData = [];
     let totalAcertosGeral = 0;
     let totalErrosGeral = 0;
@@ -6010,7 +6703,6 @@ function exportarRelatorioPDF() {
             const nome = cells[2]?.textContent.trim() || '';
             const serie = cells[3]?.textContent.trim() || '';
             
-            // 🔥 PEGA OS ACERTOS E ERROS DA TABELA
             const acertosText = cells[4]?.textContent.trim() || '0';
             const errosText = cells[5]?.textContent.trim() || '0';
             const acertos = parseInt(acertosText) || 0;
@@ -6024,161 +6716,63 @@ function exportarRelatorioPDF() {
             totalErrosGeral += erros;
             
             alunosData.push({ 
-                posicao, 
-                numero, 
-                nome, 
-                serie, 
-                acertos, 
-                erros, 
-                conceito: conceitoAluno, 
-                escola, 
-                turma 
+                posicao, numero, nome, serie, acertos, erros, 
+                conceito: conceitoAluno, escola, turma 
             });
         }
     });
 
     const totalAlunos = alunosData.length;
 
-    // 🔥 COLETA OS DADOS DE ACERTOS POR QUESTÃO DIRETAMENTE DO DOM
     const acertosPorQuestao = [];
     const acertosGrid = document.getElementById('rel-acertos-grid');
     
     if (acertosGrid) {
-        // Procura por todos os cards de questão
-        const items = acertosGrid.querySelectorAll('.acertos-por-questao-item, [style*="padding:12px 10px"], [class*="questao"]');
+        const items = acertosGrid.querySelectorAll('.acertos-por-questao-item');
         
         items.forEach(item => {
-            // Tenta encontrar o número da questão
             let qNum = '';
-            const qNumEl = item.querySelector('.q-num') || item.querySelector('[style*="font-size: 14px; font-weight: 800;"]');
-            if (qNumEl) {
-                qNum = qNumEl.textContent.trim();
-            } else {
-                // Tenta extrair do texto
-                const texto = item.textContent || '';
-                const match = texto.match(/Q(\d+)/i);
-                if (match) {
-                    qNum = 'Q' + match[1];
-                }
-            }
+            const texto = item.textContent || '';
+            const match = texto.match(/Q(\d+)/);
+            if (match) qNum = 'Q' + match[1];
             
-            // Tenta encontrar acertos/erros
             let acertos = '0', erros = '0';
-            const numeros = item.querySelectorAll('[style*="color: var(--green);"], [style*="color: var(--red);"]');
-            if (numeros.length >= 2) {
-                acertos = numeros[0].textContent.trim();
-                erros = numeros[1].textContent.trim();
-            } else {
-                // Tenta extrair do texto "22 / 3"
-                const texto = item.textContent || '';
-                const match = texto.match(/(\d+)\s*\/\s*(\d+)/);
-                if (match) {
-                    acertos = match[1] || '0';
-                    erros = match[2] || '0';
-                }
+            const matchNum = texto.match(/(\d+)\s*\/\s*(\d+)/);
+            if (matchNum) {
+                acertos = matchNum[1] || '0';
+                erros = matchNum[2] || '0';
             }
             
-            // Tenta encontrar total
-            let total = parseInt(acertos) + parseInt(erros);
-            
-            // Tenta encontrar BNCC
             let bncc = 'N/A';
-            const bnccEl = item.querySelector('[style*="color:#8b5cf6;"]') || 
-                           item.querySelector('[style*="background:rgba(139,92,246,0.12);"]');
-            if (bnccEl) {
-                bncc = bnccEl.textContent.trim();
-            } else {
-                const texto = item.textContent || '';
-                const match = texto.match(/(EF\d+[A-Z]+\d+)/);
-                if (match) {
-                    bncc = match[1];
-                }
-            }
+            const matchBncc = texto.match(/(EF\d+[A-Z]+\d+)/);
+            if (matchBncc) bncc = matchBncc[1];
             
-            // Tenta encontrar porcentagens
             let pctAcertos = '0%', pctErros = '0%';
-            const pctElements = item.querySelectorAll('[style*="color: var(--green);"], [style*="color: var(--red);"]');
-            if (pctElements.length >= 4) {
-                pctAcertos = pctElements[2]?.textContent.trim() || '0%';
-                pctErros = pctElements[3]?.textContent.trim() || '0%';
-            } else {
-                const texto = item.textContent || '';
-                const match = texto.match(/(\d+)%\s*[|]\s*(\d+)%/);
-                if (match) {
-                    pctAcertos = match[1] + '%';
-                    pctErros = match[2] + '%';
-                }
+            const matchPct = texto.match(/(\d+)%\s*[|]\s*(\d+)%/);
+            if (matchPct) {
+                pctAcertos = matchPct[1] + '%';
+                pctErros = matchPct[2] + '%';
             }
             
             if (qNum) {
                 acertosPorQuestao.push({ 
-                    numero: qNum, 
-                    acertos: acertos, 
-                    erros: erros, 
-                    total: total,
-                    bncc: bncc,
-                    pctAcertos: pctAcertos,
-                    pctErros: pctErros
+                    numero: qNum, acertos, erros, 
+                    total: parseInt(acertos) + parseInt(erros),
+                    bncc, pctAcertos, pctErros
                 });
             }
         });
     }
 
-    // 🔥 SE NÃO CONSEGUIU PEGAR DOS CARDS, TENTA PEGAR DO CONTEÚDO DIRETO
-    if (acertosPorQuestao.length === 0 && acertosGrid) {
-        const html = acertosGrid.innerHTML;
-        const matches = html.match(/Q(\d+).*?(\d+)\s*\/\s*(\d+).*?(EF\d+[A-Z]+\d+).*?(\d+)%\s*[|]\s*(\d+)%/gs);
-        if (matches) {
-            matches.forEach(match => {
-                const qMatch = match.match(/Q(\d+)/);
-                const numMatch = match.match(/(\d+)\s*\/\s*(\d+)/);
-                const bnccMatch = match.match(/(EF\d+[A-Z]+\d+)/);
-                const pctMatch = match.match(/(\d+)%\s*[|]\s*(\d+)%/);
-                
-                if (qMatch && numMatch) {
-                    acertosPorQuestao.push({
-                        numero: 'Q' + qMatch[1],
-                        acertos: numMatch[1] || '0',
-                        erros: numMatch[2] || '0',
-                        total: parseInt(numMatch[1] || '0') + parseInt(numMatch[2] || '0'),
-                        bncc: bnccMatch ? bnccMatch[1] : 'N/A',
-                        pctAcertos: pctMatch ? pctMatch[1] + '%' : '0%',
-                        pctErros: pctMatch ? pctMatch[2] + '%' : '0%'
-                    });
-                }
-            });
-        }
-    }
-
-    // 🔥 CALCULA A MÉDIA CORRETA
     const totalQuestoesGeral = totalAcertosGeral + totalErrosGeral;
     const mediaCalculada = totalQuestoesGeral > 0 && totalAlunos > 0 ? 
         Math.round((totalAcertosGeral / (totalAlunos * (totalQuestoesGeral / totalAlunos))) * 100) : 0;
 
-    // ============================================
-    // GERAÇÃO DO HTML PARA O PDF
-    // ============================================
     const dataAtual = new Date().toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
     });
 
-    // Função para badge do conceito
-    function getConceitoBadge(conceito) {
-        const conceitos = {
-            'inicial': { label: '🔴 Inicial', color: '#ef4444', bg: '#fef2f2' },
-            'basico': { label: '🟠 Básico', color: '#f59e0b', bg: '#fffbeb' },
-            'proficiente': { label: '🔵 Proficiente', color: '#3b82f6', bg: '#eff6ff' },
-            'avancado': { label: '🟢 Avançado', color: '#10b981', bg: '#ecfdf5' }
-        };
-        const c = conceitos[conceito?.toLowerCase()] || { label: conceito || '—', color: '#64748b', bg: '#f1f5f9' };
-        return `<span style="background:${c.bg}; color:${c.color}; padding:2px 12px; border-radius:12px; font-size:10px; font-weight:700;">${c.label}</span>`;
-    }
-
-    // Gera o HTML do relatório
     let html = `
     <!DOCTYPE html>
     <html>
@@ -6187,414 +6781,64 @@ function exportarRelatorioPDF() {
         <title>Relatório por Turma - ${disciplinaNome}</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                background: #ffffff;
-                padding: 20px;
-                color: #1e293b;
-            }
-            
-            .header {
-                border-bottom: 3px solid #1e293b;
-                padding-bottom: 16px;
-                margin-bottom: 20px;
-            }
-            
-            .header-top {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 6px;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-            
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            
-            .header-left .logo {
-                width: 60px;
-                height: 60px;
-                object-fit: contain;
-                border-radius: 4px;
-            }
-            
-            .header-left .instituicao {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .header-left .instituicao .prefeitura {
-                font-size: 10px;
-                font-weight: 600;
-                color: #475569;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            
-            .header-left .instituicao .secretaria {
-                font-size: 13px;
-                font-weight: 800;
-                color: #1e293b;
-                letter-spacing: 0.3px;
-            }
-            
-            .header-left .instituicao .departamento {
-                font-size: 10px;
-                color: #475569;
-                font-weight: 600;
-            }
-            
-            .header-left .instituicao .sisam {
-                font-size: 14px;
-                font-weight: 900;
-                color: #2563eb;
-                letter-spacing: 0.5px;
-            }
-            
-            .header-right {
-                text-align: right;
-                border-left: 2px solid #e2e8f0;
-                padding-left: 16px;
-            }
-            
-            .header-right .titulo-relatorio {
-                font-size: 18px;
-                font-weight: 800;
-                color: #1e293b;
-                letter-spacing: 0.3px;
-            }
-            
-            .header-right .subtitulo-relatorio {
-                font-size: 11px;
-                color: #475569;
-                font-weight: 600;
-            }
-            
-            .info-grid {
-                display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                gap: 8px 16px;
-                background: #f8fafc;
-                padding: 12px 20px;
-                border-radius: 8px;
-                border: 1px solid #e2e8f0;
-                margin-bottom: 16px;
-            }
-            
-            .info-grid .item {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .info-grid .item .label {
-                font-size: 8px;
-                font-weight: 700;
-                color: #94a3b8;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            
-            .info-grid .item .value {
-                font-size: 12px;
-                font-weight: 700;
-                color: #0f172a;
-                margin-top: 1px;
-            }
-            
-            .section-title {
-                font-size: 14px;
-                font-weight: 800;
-                color: #1e293b;
-                margin: 16px 0 10px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            
-            .section-title .badge {
-                font-size: 9px;
-                background: #eff6ff;
-                color: #2563eb;
-                padding: 2px 12px;
-                border-radius: 12px;
-                font-weight: 700;
-            }
-            
-            .questoes-grid {
-                display: grid;
-                grid-template-columns: repeat(5, 1fr);
-                gap: 10px;
-                margin-bottom: 12px;
-            }
-            
-            .questao-card {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 12px 14px;
-                text-align: center;
-            }
-            
-            .questao-card .q-num {
-                font-size: 13px;
-                font-weight: 800;
-                color: #1e293b;
-                margin-bottom: 4px;
-                background: #e2e8f0;
-                display: inline-block;
-                padding: 0 12px;
-                border-radius: 8px;
-            }
-            
-            .questao-card .q-result {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 6px;
-                font-size: 15px;
-                font-weight: 700;
-                margin: 4px 0;
-            }
-            
-            .questao-card .q-result .acertos {
-                color: #10b981;
-            }
-            
-            .questao-card .q-result .erros {
-                color: #ef4444;
-            }
-            
-            .questao-card .q-result .divider {
-                color: #94a3b8;
-                font-weight: 300;
-            }
-            
-            .questao-card .q-label {
-                font-size: 9px;
-                color: #94a3b8;
-                font-weight: 600;
-                margin-bottom: 4px;
-            }
-            
-            .questao-card .q-total {
-                font-size: 11px;
-                font-weight: 700;
-                color: #3b82f6;
-                margin-bottom: 4px;
-            }
-            
-            .questao-card .q-bncc {
-                font-size: 10px;
-                font-weight: 700;
-                color: #8b5cf6;
-                background: #f5f3ff;
-                padding: 3px 12px;
-                border-radius: 8px;
-                display: inline-block;
-                font-family: 'Courier New', monospace;
-                letter-spacing: 0.3px;
-                border: 1px solid rgba(139,92,246,0.2);
-            }
-            
-            .q-porcentagens {
-                display: flex;
-                justify-content: center;
-                gap: 12px;
-                margin-top: 4px;
-                font-size: 10px;
-                font-weight: 700;
-            }
-            .q-porcentagens .pct-acertos { color: #10b981; }
-            .q-porcentagens .pct-erros { color: #ef4444; }
-            .q-porcentagens .pct-divider { color: #94a3b8; font-weight: 300; }
-            
-            .resumo-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-                margin: 12px 0 16px;
-            }
-            
-            .resumo-card {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 12px 16px;
-                text-align: center;
-            }
-            
-            .resumo-card .valor {
-                font-size: 24px;
-                font-weight: 900;
-            }
-            
+            body { font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; padding: 20px; color: #1e293b; }
+            .header { border-bottom: 3px solid #1e293b; padding-bottom: 16px; margin-bottom: 20px; }
+            .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 10px; }
+            .header-left { display: flex; align-items: center; gap: 12px; }
+            .header-left .instituicao { display: flex; flex-direction: column; }
+            .header-left .instituicao .prefeitura { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+            .header-left .instituicao .secretaria { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: 0.3px; }
+            .header-left .instituicao .departamento { font-size: 10px; color: #475569; font-weight: 600; }
+            .header-left .instituicao .sisam { font-size: 14px; font-weight: 900; color: #2563eb; letter-spacing: 0.5px; }
+            .header-right { text-align: right; border-left: 2px solid #e2e8f0; padding-left: 16px; }
+            .header-right .titulo-relatorio { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: 0.3px; }
+            .header-right .subtitulo-relatorio { font-size: 11px; color: #475569; font-weight: 600; }
+            .info-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px 16px; background: #f8fafc; padding: 12px 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+            .info-grid .item { display: flex; flex-direction: column; }
+            .info-grid .item .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+            .info-grid .item .value { font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 1px; }
+            .section-title { font-size: 14px; font-weight: 800; color: #1e293b; margin: 16px 0 10px; }
+            .questoes-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
+            .questao-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; text-align: center; }
+            .questao-card .q-num { font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 4px; background: #e2e8f0; display: inline-block; padding: 0 12px; border-radius: 8px; }
+            .questao-card .q-result { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; margin: 4px 0; }
+            .questao-card .q-result .acertos { color: #10b981; }
+            .questao-card .q-result .erros { color: #ef4444; }
+            .questao-card .q-bncc { font-size: 10px; font-weight: 700; color: #8b5cf6; background: #f5f3ff; padding: 3px 12px; border-radius: 8px; display: inline-block; font-family: 'Courier New', monospace; }
+            .resumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 12px 0 16px; }
+            .resumo-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; text-align: center; }
+            .resumo-card .valor { font-size: 24px; font-weight: 900; }
             .resumo-card .valor.green { color: #10b981; }
             .resumo-card .valor.red { color: #ef4444; }
             .resumo-card .valor.blue { color: #3b82f6; }
             .resumo-card .valor.purple { color: #8b5cf6; }
-            
-            .resumo-card .label {
-                font-size: 9px;
-                color: #94a3b8;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-                margin-top: 2px;
-            }
-            
-            .table-wrap {
-                overflow-x: auto;
-                margin: 12px 0;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-            }
-            
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 10px;
-            }
-            
-            thead {
-                background: #f1f5f9;
-            }
-            
-            th {
-                padding: 8px 6px;
-                text-align: center;
-                font-weight: 700;
-                color: #475569;
-                border-bottom: 2px solid #e2e8f0;
-                font-size: 8px;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-            }
-            
-            td {
-                padding: 6px 4px;
-                border-bottom: 1px solid #f1f5f9;
-                text-align: center;
-                font-size: 9px;
-                color: #1e293b;
-            }
-            
-            tr:nth-child(even) td {
-                background: #fafbfc;
-            }
-            
-            .pos-medalha {
-                font-size: 16px;
-            }
-            
-            .nome-aluno {
-                font-weight: 600;
-                text-align: left;
-                padding-left: 8px;
-            }
-            
-            .badge-conceito {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 12px;
-                font-size: 8px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.2px;
-            }
-            
+            .resumo-card .label { font-size: 9px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+            .table-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid #e2e8f0; border-radius: 8px; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; }
+            thead { background: #f1f5f9; }
+            th { padding: 8px 6px; text-align: center; font-weight: 700; color: #475569; border-bottom: 2px solid #e2e8f0; font-size: 8px; text-transform: uppercase; }
+            td { padding: 6px 4px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 9px; color: #1e293b; }
+            tr:nth-child(even) td { background: #fafbfc; }
+            .nome-aluno { font-weight: 600; text-align: left; padding-left: 8px; }
+            .badge-conceito { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 8px; font-weight: 700; text-transform: uppercase; }
             .badge-inicial { background: #fef2f2; color: #ef4444; }
             .badge-basico { background: #fffbeb; color: #f59e0b; }
             .badge-proficiente { background: #eff6ff; color: #3b82f6; }
             .badge-avancado { background: #ecfdf5; color: #10b981; }
-            
             .acertos-cell { color: #10b981; font-weight: 700; }
             .erros-cell { color: #ef4444; font-weight: 700; }
-            
-            .col-escola, .col-turma {
-                font-size: 7px;
-                color: #64748b;
-                max-width: 80px;
-            }
-            
-            .assinaturas {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 40px;
-                margin-top: 24px;
-                padding-top: 16px;
-                border-top: 1px solid #e2e8f0;
-                text-align: center;
-            }
-            
-            .assinatura-item {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .assinatura-item .linha {
-                width: 180px;
-                border-bottom: 1.5px solid #1e293b;
-                margin-bottom: 4px;
-            }
-            
-            .assinatura-item .cargo {
-                font-size: 9px;
-                color: #64748b;
-                font-weight: 600;
-            }
-            
-            .assinatura-item .nome-assinatura {
-                font-size: 10px;
-                font-weight: 700;
-                color: #1e293b;
-                margin-bottom: 2px;
-            }
-            
-            .footer {
-                margin-top: 20px;
-                padding-top: 12px;
-                border-top: 1px solid #e2e8f0;
-                display: flex;
-                justify-content: space-between;
-                font-size: 8px;
-                color: #94a3b8;
-                flex-wrap: wrap;
-                gap: 4px;
-            }
-            
-            .footer strong {
-                color: #475569;
-            }
-            
-            @media print {
-                body { padding: 10px; }
-                .no-print { display: none; }
-                .questao-card { break-inside: avoid; }
-                tr { break-inside: avoid; }
-                .assinaturas { break-inside: avoid; }
-                @page { size: A4 landscape; margin: 8mm 6mm; }
-            }
-            
-            @media (max-width: 768px) {
-                .info-grid { grid-template-columns: repeat(3, 1fr); }
-                .resumo-grid { grid-template-columns: repeat(2, 1fr); }
-                .questoes-grid { grid-template-columns: repeat(3, 1fr); }
-                .assinaturas { grid-template-columns: 1fr; gap: 20px; }
-                .header-top { flex-direction: column; align-items: flex-start; }
-                .header-right { border-left: none; padding-left: 0; text-align: left; }
-            }
+            .assinaturas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; }
+            .assinatura-item { display: flex; flex-direction: column; align-items: center; }
+            .assinatura-item .linha { width: 180px; border-bottom: 1.5px solid #1e293b; margin-bottom: 4px; }
+            .assinatura-item .cargo { font-size: 9px; color: #64748b; font-weight: 600; }
+            .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; flex-wrap: wrap; }
+            @media print { body { padding: 10px; } @page { size: A4 landscape; margin: 8mm 6mm; } }
         </style>
     </head>
     <body>
         <div class="header">
             <div class="header-top">
                 <div class="header-left">
-                    <img src="https://github.com/jorg3o3iras/adabee-sistema/blob/main/dgp.jpg?raw=true" alt="DGP" class="logo" style="width:60px;height:60px;object-fit:contain;border-radius:4px;">
                     <div class="instituicao">
                         <span class="prefeitura">PREFEITURA MUNICIPAL DE</span>
                         <span class="secretaria">SÃO SEBASTIÃO DA BOA VISTA</span>
@@ -6605,8 +6849,7 @@ function exportarRelatorioPDF() {
                 </div>
                 <div class="header-right">
                     <div class="titulo-relatorio">📊 RELATÓRIO POR TURMA</div>
-                    <div class="subtitulo-relatorio">Relatório de desempenho dos alunos - ${disciplinaNome}</div>
-                    <div style="font-size:9px; color:#94a3b8; margin-top:2px;">Ano Letivo 2026</div>
+                    <div class="subtitulo-relatorio">Desempenho dos alunos - ${disciplinaNome}</div>
                 </div>
             </div>
         </div>
@@ -6620,24 +6863,11 @@ function exportarRelatorioPDF() {
             <div class="item"><span class="label">📊 BIMESTRE</span><span class="value">1º e 2º bimestre</span></div>
         </div>
 
-        <div class="section-title">
-            📊 Acertos por Questão — ${disciplinaNome}
-            <span class="badge">${totalAlunos} alunos</span>
-        </div>
+        <div class="section-title">📊 Acertos por Questão — ${disciplinaNome} (${totalAlunos} alunos)</div>
 
         <div class="questoes-grid">
             ${acertosPorQuestao.length > 0 ? acertosPorQuestao.map(q => {
                 const total = parseInt(q.acertos) + parseInt(q.erros);
-                let pctAcertos = q.pctAcertos || '0%';
-                let pctErros = q.pctErros || '0%';
-                if (total > 0) {
-                    const calcAcertos = Math.round((parseInt(q.acertos) / total) * 100);
-                    const calcErros = Math.round((parseInt(q.erros) / total) * 100);
-                    if (pctAcertos === '0%' || pctAcertos === '0%') {
-                        pctAcertos = calcAcertos + '%';
-                        pctErros = calcErros + '%';
-                    }
-                }
                 return `
                     <div class="questao-card">
                         <div class="q-num">${q.numero}</div>
@@ -6646,21 +6876,10 @@ function exportarRelatorioPDF() {
                             <span class="divider">/</span>
                             <span class="erros">${q.erros}</span>
                         </div>
-                        <div class="q-label">Acertos / Erros</div>
-                        <div class="q-total">Total: ${total}</div>
                         <div class="q-bncc">${q.bncc}</div>
-                        <div class="q-porcentagens">
-                            <span class="pct-acertos">${pctAcertos}</span>
-                            <span class="pct-divider">|</span>
-                            <span class="pct-erros">${pctErros}</span>
-                        </div>
                     </div>
                 `;
-            }).join('') : `
-                <div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">
-                    Nenhum dado disponível para esta disciplina.
-                </div>
-            `}
+            }).join('') : '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">Nenhum dado disponível.</div>'}
         </div>
 
         <div class="resumo-grid">
@@ -6670,10 +6889,7 @@ function exportarRelatorioPDF() {
             <div class="resumo-card"><div class="valor purple">${conceito}</div><div class="label">📊 Conceito</div></div>
         </div>
 
-        <div class="section-title">
-            📋 Lista de Alunos
-            <span class="badge">${totalAlunos} alunos</span>
-        </div>
+        <div class="section-title">📋 Lista de Alunos (${totalAlunos} alunos)</div>
 
         <div class="table-wrap">
             <table>
@@ -6692,19 +6908,18 @@ function exportarRelatorioPDF() {
                 </thead>
                 <tbody>
                     ${alunosData.map(a => {
-                        const medalha = a.posicao === '🥇' ? '🥇' : a.posicao === '🥈' ? '🥈' : a.posicao === '🥉' ? '🥉' : a.posicao || '—';
                         const conceitoClass = a.conceito ? `badge-${a.conceito.toLowerCase()}` : 'badge-inicial';
                         return `
                             <tr>
-                                <td><span class="pos-medalha">${medalha}</span></td>
+                                <td>${a.posicao}</td>
                                 <td>${a.numero}</td>
                                 <td class="nome-aluno">${a.nome}</td>
                                 <td>${a.serie}</td>
                                 <td class="acertos-cell">${a.acertos}</td>
                                 <td class="erros-cell">${a.erros}</td>
                                 <td><span class="badge-conceito ${conceitoClass}">${a.conceito || '—'}</span></td>
-                                <td class="col-escola">${a.escola}</td>
-                                <td class="col-turma">${a.turma}</td>
+                                <td>${a.escola}</td>
+                                <td>${a.turma}</td>
                             </tr>
                         `;
                     }).join('')}
@@ -6713,22 +6928,19 @@ function exportarRelatorioPDF() {
         </div>
 
         <div class="assinaturas">
-            <div class="assinatura-item"><div class="linha"></div><div class="nome-assinatura">Professor(a) Responsável</div><div class="cargo">Professor(a)</div></div>
-            <div class="assinatura-item"><div class="linha"></div><div class="nome-assinatura">Diretor(a)</div><div class="cargo">Diretor(a)</div></div>
-            <div class="assinatura-item"><div class="linha"></div><div class="nome-assinatura">Secretário(a) de Educação</div><div class="cargo">Secretaria Municipal de Educação</div></div>
+            <div class="assinatura-item"><div class="linha"></div><div class="cargo">Professor(a) Responsável</div></div>
+            <div class="assinatura-item"><div class="linha"></div><div class="cargo">Diretor(a)</div></div>
+            <div class="assinatura-item"><div class="linha"></div><div class="cargo">Secretaria Municipal de Educação</div></div>
         </div>
 
         <div class="footer">
             <span>📄 Documento gerado pelo sistema <strong>CorrigePro</strong></span>
             <span>${dataAtual}</span>
-            <span>© 2026 CorrigePro — Secretaria Municipal de Educação</span>
         </div>
-
     </body>
     </html>
     `;
 
-    // Abrir em nova janela
     const win = window.open('', '_blank');
     if (!win) {
         showToast('⚠️ Permita pop-ups para gerar o PDF.', 'error');
@@ -6737,14 +6949,9 @@ function exportarRelatorioPDF() {
 
     win.document.write(html);
     win.document.close();
-
     win.onload = function() {
-        setTimeout(() => {
-            win.focus();
-            win.print();
-        }, 500);
+        setTimeout(() => { win.focus(); win.print(); }, 500);
     };
-
     showToast('📄 PDF gerado com sucesso!', 'success');
 }
 
@@ -6948,7 +7155,6 @@ function editarGabarito(id) {
                             const titulos = document.querySelectorAll('.gab-titulo');
                             const textareas = document.querySelectorAll('.gab-texto');
                             const niveis = document.querySelectorAll('.gab-nivel');
-                            const observacoes = document.querySelectorAll('.gab-observacao');
 
                             titulos.forEach((inp, i) => {
                                 if (i < gabarito.length) inp.value = 'Q' + (i+1);
@@ -7007,1206 +7213,6 @@ async function excluirGabarito(id, nome) {
 }
 
 // ============================================
-// LISTA POR TURMA
-// ============================================
-async function carregarTurmasLista(escolaId) {
-    const select = document.getElementById('lista-turma');
-    select.innerHTML = '<option value="">Selecione a turma</option>';
-    if (!escolaId) return;
-    try {
-        const turmas = await carregarTurmasComCache(escolaId);
-        if (turmas && !turmas.erro) {
-            turmas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                select.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        console.error('Erro ao carregar turmas:', e);
-    }
-}
-
-async function gerarListaTurma() {
-    const escolaId = document.getElementById('lista-escola').value;
-    const turmaId = document.getElementById('lista-turma').value;
-    const provaId = document.getElementById('lista-prova')?.value || '';
-    
-    if (!turmaId) { 
-        showToast('❌ Selecione uma turma!', 'error'); 
-        return; 
-    }
-    if (!escolaId) { 
-        showToast('❌ Selecione uma escola!', 'error'); 
-        return; 
-    }
-    
-    try {
-        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-        const turmas = await carregarTurmasComCache();
-        const turma = turmas.find(t => t.id == turmaId);
-        
-        const container = document.getElementById('lista-resultado');
-        if (!container) return;
-        
-        if (!alunos || alunos.length === 0 || alunos.erro) {
-            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
-            showToast('❌ Nenhum aluno na turma!', 'error');
-            return;
-        }
-        
-        const provas = await carregarProvasComCache();
-        const serieTurma = turma?.serie || '';
-        
-        let provasDisponiveis = provas.filter(p => p.serie === serieTurma);
-        if (provasDisponiveis.length === 0) {
-            provasDisponiveis = provas;
-        }
-        
-        let prova = null;
-        if (provaId) {
-            prova = provas.find(p => p.id == provaId);
-        }
-        if (!prova && provasDisponiveis.length > 0) {
-            prova = provasDisponiveis[0];
-        }
-        
-        if (!prova) {
-            container.innerHTML = `
-                <div style="text-align:center;padding:30px;color:var(--orange);">
-                    <div style="font-size:40px;margin-bottom:10px;">📝</div>
-                    <p style="font-weight:700;">Nenhuma prova cadastrada para esta turma</p>
-                    <p style="font-size:12px;color:var(--text3);">Cadastre uma prova para a série <strong>${serieTurma || 'desta turma'}</strong></p>
-                    <button class="btn btn-primary" style="margin-top:10px;" onclick="go('prova-upload')">➕ Cadastrar Prova</button>
-                </div>
-            `;
-            showToast('❌ Nenhuma prova para esta turma!', 'error');
-            return;
-        }
-        
-        const escolas = await carregarEscolasComCache();
-        const escola = escolas.find(e => e.id == turma?.escola_id);
-        
-        let provasOptions = '';
-        provasDisponiveis.forEach(p => {
-            const selected = p.id == prova.id ? 'selected' : '';
-            provasOptions += `<option value="${p.id}" ${selected}>${p.titulo} (${p.disciplina || 'Sem disciplina'})</option>`;
-        });
-
-        let html = `
-            <div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">
-                <div style="font-size:16px;font-weight:800;">${escola?.nome || 'Escola'}</div>
-                <div style="color:var(--text2);font-size:13px;margin-top:4px;">
-                    Turma: ${turma?.nome || '—'} | Série: ${turma?.serie || '—'}
-                </div>
-                <div style="color:var(--text3);font-size:12px;margin-top:2px;">
-                    Professor(a): ${turma?.professor || '—'} | 
-                    Turno: ${turma?.turno || 'Manhã'} | 
-                    Total: ${alunos.length} alunos
-                </div>
-                <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <label style="font-size:12px;font-weight:600;color:var(--text2);">📖 Prova:</label>
-                        <select id="lista-prova-select" class="form-control" style="width:250px;padding:6px 10px;font-size:12px;" onchange="gerarListaTurma()">
-                            ${provasOptions}
-                        </select>
-                    </div>
-                    <button class="btn btn-green" onclick="gerarCartoesTodosAlunos(${escolaId}, ${turmaId}, ${prova.id})">
-                        📄 GERAR TODOS OS CARTOES
-                    </button>
-                    <button class="btn btn-primary" onclick="gerarListaTurma()">🔄 Atualizar</button>
-                </div>
-                <div style="margin-top:8px;color:var(--text3);font-size:11px;">
-                    ✅ Clique em "GERAR TODOS OS CARTOES" para abrir todos os cartões resposta de uma vez
-                </div>
-            </div>
-        `;
-        
-        html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:400px;overflow-y:auto;">';
-        
-        for (let i = 0; i < alunos.length; i++) {
-            const aluno = alunos[i];
-            html += `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
-                    <div>
-                        <strong>${aluno.nome}</strong> 
-                        <span class="badge badge-blue">Nº ${aluno.numero_chamada || '—'}</span>
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(${escolaId}, ${turmaId}, ${aluno.id}, ${prova.id})">
-                        📄 Gerar Cartão
-                    </button>
-                </div>
-            `;
-        }
-        
-        html += '</div>';
-        
-        html += `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
-                <div style="text-align:center;">
-                    <div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Professor(a) Responsável</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="border-top:1px solid var(--border2);padding-top:8px;font-size:12px;color:var(--text2);">Diretor(a)</div>
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = html;
-        showToast(`📋 ${alunos.length} alunos encontrados. Clique em "GERAR TODOS OS CARTOES" para gerar todos!`, 'info');
-        
-    } catch (erro) {
-        console.error('Erro ao gerar lista:', erro);
-        showToast('❌ Erro: ' + erro.message, 'error');
-    }
-}
-
-async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
-    try {
-        const novaAba = window.open('', '_blank');
-        if (!novaAba) {
-            showToast('❌ Permita pop-ups para gerar o cartão resposta!', 'error');
-            return;
-        }
-        
-        novaAba.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"><title>Gerando Cartão Resposta...</title></head>
-            <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f0f2f5;">
-                <div style="text-align:center;">
-                    <div style="font-size:60px;margin-bottom:20px;">⏳</div>
-                    <h2 style="color:#1e293b;">Gerando cartão resposta...</h2>
-                    <p style="color:#64748b;">Aguarde um momento</p>
-                </div>
-            </body>
-            </html>
-        `);
-        novaAba.document.close();
-
-        const provas = await carregarProvasComCache();
-        const prova = provas.find(p => p.id == provaId);
-        const qtdQuestoes = prova?.quantidade_questoes || 20;
-        const tipoQuestoes = prova?.tipo_questoes || 4;
-        const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-        const nomeProva = prova?.titulo || 'Prova';
-
-        const [alunoResp, escolaResp, turmaResp] = await Promise.all([
-            fetch(`${API_URL}/api/alunos/${alunoId}`),
-            fetch(`${API_URL}/api/escolas/${escolaId}`),
-            fetch(`${API_URL}/api/turmas/${turmaId}`)
-        ]);
-        
-        const aluno = await alunoResp.json();
-        const escola = await escolaResp.json();
-        const turma = await turmaResp.json();
-
-        const nomeAluno = aluno.nome || 'Aluno';
-        const nomeEscola = escola.nome || 'Escola';
-        const nomeTurma = turma.nome || 'Turma';
-        const serie = turma.serie || prova?.serie || '';
-        const dataAtual = new Date().toLocaleDateString('pt-BR');
-
-        // 🔥 LAYOUT VERTICAL COMPACTO - TODAS AS QUESTÕES EM UMA COLUNA
-        let html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartão Resposta - ${nomeAluno}</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            padding: 8px;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 650px;
-            width: 100%;
-            background: #ffffff;
-            padding: 12px 16px;
-            border-radius: 10px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 6px;
-            margin-bottom: 6px;
-        }
-        
-        .header .brasao { font-size: 20px; }
-        .header h1 { font-size: 10px; color: #1e293b; letter-spacing: 0.5px; font-weight: 700; }
-        .header h2 { 
-            font-size: 12px; 
-            color: #2563eb; 
-            font-weight: 800;
-            background: #eff6ff;
-            display: inline-block;
-            padding: 1px 16px;
-            border-radius: 12px;
-            margin-top: 1px;
-        }
-        .header .prova-nome {
-            font-size: 10px;
-            color: #475569;
-            font-weight: 600;
-            background: #f1f5f9;
-            padding: 1px 12px;
-            border-radius: 8px;
-            display: inline-block;
-            margin-top: 1px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 2px 6px;
-            background: #f8fafc;
-            padding: 4px 10px;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            border: 1px solid #e2e8f0;
-            font-size: 9px;
-        }
-        
-        .info-grid .item { display: flex; flex-direction: column; }
-        .info-grid .label { font-size: 6px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2px; }
-        .info-grid .value { font-size: 9px; font-weight: 700; color: #0f172a; }
-        
-        .instrucoes {
-            background: #eff6ff;
-            border-left: 3px solid #2563eb;
-            padding: 3px 10px;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            font-size: 8px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        
-        .instrucoes .icone { font-size: 12px; }
-        .instrucoes strong { color: #2563eb; }
-        .instrucoes .destaque {
-            background: #dbeafe;
-            padding: 0 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            color: #1d4ed8;
-            font-size: 7px;
-        }
-        
-        .questoes-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            width: 100%;
-            margin: 4px 0;
-        }
-        
-        .questao-linha {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 3px 8px;
-            border-bottom: 1px solid #f1f5f9;
-            background: #ffffff;
-            border-radius: 4px;
-            width: 100%;
-            min-height: 32px;
-        }
-        
-        .questao-linha:hover {
-            background: #f8fafc;
-        }
-        
-        .questao-linha .numero {
-            font-size: 11px;
-            font-weight: 800;
-            color: #1e293b;
-            min-width: 38px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        
-        .questao-linha .numero span {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            padding: 1px 10px;
-            border-radius: 10px;
-            font-size: 9px;
-            box-shadow: 0 1px 4px rgba(37,99,235,0.20);
-        }
-        
-        .opcoes {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-        
-        .opcao {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1px;
-            cursor: pointer;
-            padding: 1px 3px;
-            border-radius: 4px;
-            transition: all 0.15s;
-        }
-        
-        .opcao:hover { transform: scale(1.04); }
-        
-        .opcao .circulo {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2.5px solid #000000 !important;
-            background: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 800;
-            color: #000000;
-            transition: all 0.15s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-        }
-        
-        .opcao input:checked + .circulo {
-            border-color: #000000 !important;
-            background: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: 0 0 0 3px rgba(0,0,0,0.10), 0 1px 6px rgba(0,0,0,0.15);
-            transform: scale(1.04);
-        }
-        
-        .opcao:hover .circulo {
-            border-color: #333333 !important;
-            transform: scale(1.03);
-        }
-        
-        .opcao input:checked:hover .circulo {
-            transform: scale(1.06);
-            box-shadow: 0 0 0 4px rgba(0,0,0,0.08), 0 2px 10px rgba(0,0,0,0.18);
-        }
-        
-        .opcao input[type="radio"] {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .opcao .label-alt {
-            font-size: 8px;
-            font-weight: 700;
-            color: #000000;
-            letter-spacing: 0.2px;
-            margin-top: 1px;
-        }
-        
-        .opcao input:checked + .circulo + .label-alt {
-            color: #000000;
-            font-weight: 900;
-        }
-        
-        .footer {
-            margin-top: 6px;
-            padding-top: 4px;
-            border-top: 1.5px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 3px;
-            font-size: 7px;
-            color: #94a3b8;
-        }
-        
-        .footer strong { color: #475569; }
-        
-        .btn-print {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 4px;
-            width: 100%;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.18);
-        }
-        
-        .btn-print:hover {
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28);
-        }
-        
-        .legenda {
-            text-align: center;
-            margin-top: 4px;
-            font-size: 7px;
-            color: #94a3b8;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 4px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .legenda .dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 2px solid #94a3b8;
-        }
-        
-        .legenda .dot.checked {
-            background: #000000;
-            border-color: #000000;
-        }
-        
-        @media print {
-            body { background: white; padding: 0; margin: 0; }
-            .container { 
-                box-shadow: none; 
-                border: none; 
-                padding: 6px 10px; 
-                border-radius: 0; 
-                max-width: 100%;
-            }
-            .btn-print { display: none; }
-            .questao-linha:hover { background: #ffffff; }
-            .opcao:hover .circulo { transform: none; border-color: #000000 !important; }
-            .opcao input:checked + .circulo { 
-                background: #000000 !important; 
-                border-color: #000000 !important; 
-                color: #ffffff !important; 
-                box-shadow: none; 
-                transform: none;
-            }
-            .opcao input:checked:hover + .circulo { transform: none; box-shadow: none; }
-            .questao-linha { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid #e5e7eb; }
-            .questao-linha .numero span { background: #1e293b; color: white; box-shadow: none; }
-            .header { border-bottom-color: #1e293b; }
-            .header h2 { background: #f1f5f9; color: #1e293b; }
-            .instrucoes { background: #f8fafc; border-left-color: #1e293b; }
-            .footer { border-top-color: #1e293b; }
-            
-            .container { max-height: 100vh; overflow: hidden; }
-            .questoes-container { gap: 1px; }
-            .questao-linha { min-height: 26px; padding: 2px 6px; }
-            .opcao .circulo { width: 24px; height: 24px; font-size: 11px; border-width: 2px; }
-            .opcao .label-alt { font-size: 7px; }
-            .info-grid { padding: 2px 8px; gap: 1px 4px; }
-            .info-grid .value { font-size: 8px; }
-        }
-        
-        @media (max-width: 600px) {
-            .opcao .circulo {
-                width: 26px;
-                height: 26px;
-                font-size: 11px;
-                border-width: 2px;
-            }
-            .opcoes { gap: 5px; }
-            .info-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 1px 4px;
-                padding: 3px 6px;
-                font-size: 8px;
-            }
-            .info-grid .value { font-size: 8px; }
-            .header h2 { font-size: 10px; padding: 1px 12px; }
-            .header h1 { font-size: 8px; }
-            .questao-linha { min-height: 28px; padding: 2px 4px; }
-            .questao-linha .numero { min-width: 30px; font-size: 9px; }
-            .questao-linha .numero span { font-size: 7px; padding: 0 8px; }
-            .container { padding: 8px 10px; }
-            .instrucoes { font-size: 7px; padding: 2px 8px; gap: 4px; }
-        }
-        
-        @media (max-width: 400px) {
-            .opcao .circulo {
-                width: 22px;
-                height: 22px;
-                font-size: 9px;
-                border-width: 1.5px;
-            }
-            .opcao .label-alt { font-size: 6px; }
-            .opcoes { gap: 3px; }
-            .questao-linha { min-height: 24px; padding: 1px 3px; }
-            .questao-linha .numero { min-width: 24px; font-size: 8px; }
-            .questao-linha .numero span { font-size: 6px; padding: 0 6px; }
-            .info-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 1px 3px;
-                padding: 2px 4px;
-                font-size: 7px;
-            }
-            .info-grid .value { font-size: 7px; }
-            .header h2 { font-size: 9px; padding: 0 10px; }
-            .header .prova-nome { font-size: 8px; padding: 0 8px; }
-            .container { padding: 4px 6px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="brasao">🏛️</div>
-            <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO</h1>
-            <h2>📝 SISAM 2026 — CARTÃO RESPOSTA</h2>
-            <div class="prova-nome">${nomeProva}</div>
-        </div>
-
-        <div class="info-grid">
-            <div class="item"><span class="label">🎒 Aluno</span><span class="value">${nomeAluno}</span></div>
-            <div class="item"><span class="label">🏫 Escola</span><span class="value">${nomeEscola}</span></div>
-            <div class="item"><span class="label">👥 Turma</span><span class="value">${nomeTurma}</span></div>
-            <div class="item"><span class="label">📚 Série</span><span class="value">${serie}</span></div>
-            <div class="item"><span class="label">📅 Data</span><span class="value">${dataAtual}</span></div>
-            <div class="item"><span class="label">📝 Qtd</span><span class="value">${qtdQuestoes}</span></div>
-        </div>
-
-        <div class="instrucoes">
-            <span class="icone">✏️</span>
-            <span><strong>Instruções:</strong> Preencha <strong>completamente</strong> o círculo. Use caneta <strong>preta</strong> ou <strong>azul</strong>. Não rasure.</span>
-            <span class="destaque">${qtdQuestoes} questões</span>
-        </div>
-
-        <div class="questoes-container">
-`;
-
-        for (let i = 0; i < qtdQuestoes; i++) {
-            html += `
-            <div class="questao-linha">
-                <div class="numero"><span>Q${i+1}</span></div>
-                <div class="opcoes">
-            `;
-            
-            for (let alt of alternativas) {
-                html += `
-                    <label class="opcao">
-                        <input type="radio" name="q${i+1}" value="${alt}">
-                        <span class="circulo">${alt}</span>
-                        <span class="label-alt">${alt}</span>
-                    </label>
-                `;
-            }
-            
-            html += `
-                </div>
-            </div>
-            `;
-        }
-
-        html += `
-        </div>
-
-        <button class="btn-print" onclick="window.print()">
-            🖨️ IMPRIMIR CARTÃO RESPOSTA
-        </button>
-
-        <div class="footer">
-            <span>📄 Gerado pelo sistema <strong>CorrigePro</strong></span>
-            <span>${new Date().toLocaleString('pt-BR')}</span>
-        </div>
-
-        <div class="legenda">
-            <span><span class="dot"></span> Não preenchido</span>
-            <span><span class="dot checked"></span> Preenchido</span>
-            <span>⚠️ Preencha o círculo completamente</span>
-        </div>
-    </div>
-    <script>
-        window.onload = function() {
-            console.log('✅ Cartão resposta pronto');
-        };
-    <\/script>
-</body>
-</html>
-`;
-
-        novaAba.document.open();
-        novaAba.document.write(html);
-        novaAba.document.close();
-
-        showToast(`✅ Cartão resposta com ${qtdQuestoes} questões gerado!`, 'success');
-
-    } catch (erro) {
-        console.error('Erro ao gerar cartão:', erro);
-        showToast('❌ Erro: ' + erro.message, 'error');
-    }
-}
-
-// ============================================
-// GERAR TODOS OS CARTOES RESPOSTA DA TURMA
-// ============================================
-async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
-    try {
-        showToast('📄 Gerando cartões para todos os alunos...', 'info');
-        
-        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-        
-        if (!alunos || alunos.length === 0) {
-            showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
-            return;
-        }
-        
-        for (let i = 0; i < alunos.length; i++) {
-            const aluno = alunos[i];
-            setTimeout(() => {
-                gerarCartaoResposta(escolaId, turmaId, aluno.id, provaId);
-            }, i * 300);
-        }
-        
-        showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
-        
-    } catch (erro) {
-        console.error('Erro ao gerar cartões:', erro);
-        showToast('❌ Erro: ' + erro.message, 'error');
-    }
-}
-
-// ============================================
-// FUNÇÕES AUXILIARES
-// ============================================
-function switchTab(idx, btn) {
-    const parent = btn.closest('.tab-nav');
-    if (parent) { parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-    const card = btn.closest('.card');
-    if (card) { card.querySelectorAll('.tab-c').forEach((tc, i) => { tc.style.display = i === idx ? 'block' : 'none'; }); }
-}
-
-function openM(id) {
-    document.getElementById(id).classList.add('show');
-    if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
-    if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
-}
-
-// ============================================
-// FUNÇÃO PARA FECHAR MODAL - CORRIGIDA
-// ============================================
-function closeM(id) {
-    console.log('🔴 Fechando modal:', id);
-    const modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-        console.log('✅ Modal fechado:', id);
-    } else {
-        console.warn('⚠️ Modal não encontrado:', id);
-    }
-}
-
-// ============================================
-// FUNÇÃO PARA ABRIR MODAL - CORRIGIDA
-// ============================================
-function openM(id) {
-    console.log('🟢 Abrindo modal:', id);
-    const modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('show');
-        console.log('✅ Modal aberto:', id);
-    } else {
-        console.warn('⚠️ Modal não encontrado:', id);
-    }
-}
-
-document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }); });
-
-function gerarGabaritoModal(tipo) {
-    const grid = document.getElementById('modal-gabarito-grid');
-    if (!grid) return;
-    const numQuestoes = 20;
-    const alts = tipo == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-    grid.innerHTML = '';
-    for (let i = 1; i <= numQuestoes; i++) {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.maxLength = 1;
-        input.style.width = '40px';
-        input.style.height = '35px';
-        input.style.textAlign = 'center';
-        input.style.background = 'var(--bg2)';
-        input.style.border = '1.5px solid var(--border2)';
-        input.style.borderRadius = '6px';
-        input.style.color = 'var(--text)';
-        input.style.fontWeight = 'bold';
-        input.style.fontSize = '14px';
-        input.style.textTransform = 'uppercase';
-        input.placeholder = i;
-        input.title = 'Questão ' + i;
-        input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
-        grid.appendChild(input);
-    }
-}
-
-function excluir(btn, tipo, nome) {
-    const row = btn.closest('tr');
-    delTarget = { row, tipo, nome };
-    document.getElementById('del-nome-txt').textContent = '"' + nome + '"';
-    document.getElementById('del-modal').classList.add('show');
-}
-
-function cancelarDel() { document.getElementById('del-modal').classList.remove('show'); delTarget = null; }
-
-function confirmarDel() {
-    document.getElementById('del-modal').classList.remove('show');
-    if (!delTarget) return;
-    const { row, tipo, nome } = delTarget;
-    row.classList.add('deleting');
-    setTimeout(() => { row.remove(); showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error'); delTarget = null; limparCache(); renumerarTabela(row.closest('tbody')); }, 350);
-}
-
-function renumerarTabela(tbody) {
-    if (!tbody) return;
-    tbody.querySelectorAll('tr').forEach((tr, i) => {
-        const badge = tr.querySelector('.badge-blue, .badge-gray');
-        if (badge) {
-            const num = String(i + 1).padStart(2, '0');
-            if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
-        }
-    });
-}
-
-function filtrarTabela(input, tbodyId) {
-    const val = input.value.toLowerCase();
-    document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none'; });
-}
-
-function filtrarSerie(sel) {
-    const val = sel.value;
-    document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
-}
-
-function showToast(msg, type) {
-    type = type || 'info';
-    const c = document.getElementById('toast-c');
-    const t = document.createElement('div');
-    t.className = 'toast toast-' + type;
-    const icons = { info: 'ℹ️', success: '✅', error: '❌', ai: '🤖', warning: '⚠️' };
-    t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + msg + '</span>';
-    c.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3200);
-}
-
-function simUpload() { setTimeout(() => { document.getElementById('up-ok').style.display = 'block'; showToast('✅ Arquivo enviado!', 'success'); }, 600); }
-
-function atualizarInfoAlts() {
-    const s = document.getElementById('prova-serie');
-    const disciplina = document.getElementById('prova-disciplina').value;
-    const info = document.getElementById('info-alts');
-    if (!s || !info) return;
-    if (disciplina === 'Produção de Texto') {
-        info.textContent = '📝 Produção de Texto — Gabarito com resposta descritiva e níveis BNCC';
-        info.style.color = '#a78bfa';
-        info.style.borderColor = 'rgba(139,92,246,.25)';
-        info.style.background = 'rgba(139,92,246,.07)';
-    } else {
-        info.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
-        info.style.color = 'var(--blue)';
-        info.style.borderColor = 'rgba(59,130,246,.25)';
-        info.style.background = 'rgba(59,130,246,.07)';
-    }
-}
-
-function carregarTurmasProva() {
-    const escolaId = document.getElementById('prova-escola').value;
-    if (!escolaId) return;
-    const select = document.getElementById('prova-turma');
-    select.innerHTML = '<option value="">Selecione a turma</option>';
-    carregarTurmasComCache(escolaId).then(turmas => {
-        if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || '—'); select.appendChild(opt); }); }
-    }).catch(e => console.error(e));
-}
-
-function salvarConfiguracoes() { showToast('✅ Configurações salvas!', 'success'); }
-
-function carregarUserData() {
-    console.log('🔄 Carregando dados do usuário...');
-    try {
-        const tbody = document.getElementById('u-tb-turmas');
-        if (tbody) {
-            carregarTurmasComCache().then(turmas => {
-                if (turmas && turmas.length > 0) {
-                    tbody.innerHTML = turmas.map(t => {
-                        const totalAlunos = t.total_alunos || 0;
-                        return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
-                    }).join('');
-                }
-            }).catch(e => console.error(e));
-        }
-    } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
-}
-
-// ============================================
-// CARREGAR COMBOS (COM CACHE)
-// ============================================
-async function carregarCombos() {
-    try {
-        const escolas = await carregarEscolasComCache();
-
-        ['turma-escola', 'prova-escola', 'lista-escola', 'editar-turma-escola'].forEach(id => {
-            const select = document.getElementById(id);
-            if (select) {
-                const current = select.value;
-                select.innerHTML = '<option value="">Selecione a escola</option>';
-                if (escolas && !escolas.erro) {
-                    escolas.forEach(e => {
-                        const opt = document.createElement('option');
-                        opt.value = e.id;
-                        opt.textContent = e.nome;
-                        select.appendChild(opt);
-                    });
-                }
-                if (current) select.value = current;
-            }
-        });
-
-        await carregarEscolasParaAluno();
-
-        const turmas = await carregarTurmasComCache();
-        ['aluno-turma', 'modal-prova-turma', 'lista-turma', 'editar-aluno-turma'].forEach(id => {
-            const select = document.getElementById(id);
-            if (select) {
-                const current = select.value;
-                select.innerHTML = '<option value="">Selecione a turma</option>';
-                if (turmas && !turmas.erro) {
-                    turmas.forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.nome + ' - ' + (t.serie || '—');
-                        select.appendChild(opt);
-                    });
-                }
-                if (current) select.value = current;
-            }
-        });
-
-        const provas = await carregarProvasComCache();
-        ['gab-prova', 'corrigir-prova', 'rel-prova-select', 'txt-prova', 'rel-aluno-prova', 'filtro-prova-desempenho'].forEach(id => {
-            const select = document.getElementById(id);
-            if (select) {
-                const current = select.value;
-                select.innerHTML = '<option value="">Selecione a prova</option>';
-                if (provas && !provas.erro) {
-                    provas.forEach(p => {
-                        const opt = document.createElement('option');
-                        opt.value = p.id;
-                        const serie = p.serie || 'Série não definida';
-                        opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
-                        opt.dataset.serie = serie;
-                        opt.dataset.quantidade = p.quantidade_questoes || 20;
-                        opt.dataset.gabarito = JSON.stringify(p.gabarito || []);
-                        opt.dataset.tipo = p.tipo_questoes || '4';
-                        opt.dataset.disciplina = p.disciplina || '';
-                        opt.dataset.bncc = JSON.stringify(p.bncc || []);
-                        select.appendChild(opt);
-                    });
-                }
-                if (current) select.value = current;
-            }
-        });
-
-        const alunos = await carregarAlunosComCache();
-        ['corrigir-aluno', 'txt-aluno-select', 'rel-aluno-select', 'filtro-aluno-desempenho'].forEach(id => {
-            const select = document.getElementById(id);
-            if (select) {
-                const current = select.value;
-                select.innerHTML = '<option value="">Selecione o aluno</option>';
-                if (alunos && !alunos.erro) {
-                    alunos.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = a.id;
-                        opt.textContent = a.nome;
-                        select.appendChild(opt);
-                    });
-                }
-                if (current) select.value = current;
-            }
-        });
-    } catch (erro) {
-        console.error('Erro ao carregar combos:', erro);
-    }
-}
-
-// ============================================
-// CARREGAR ESCOLAS PARA O SELECT DE ESCOLA NO CADASTRO DE ALUNO
-// ============================================
-async function carregarEscolasParaAluno() {
-    try {
-        console.log('🔄 Carregando escolas para o select de aluno...');
-
-        const escolas = await carregarEscolasComCache();
-
-        console.log('📥 Escolas recebidas:', escolas);
-
-        if (!escolas || escolas.length === 0 || escolas.erro) {
-            console.warn('⚠️ Nenhuma escola encontrada ou erro na API');
-            return;
-        }
-
-        const selectCadastro = document.getElementById('aluno-escola');
-        if (selectCadastro) {
-            const current = selectCadastro.value;
-            selectCadastro.innerHTML = '<option value="">Selecione a escola</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                selectCadastro.appendChild(opt);
-            });
-            if (current && escolas.some(e => e.id == current)) {
-                selectCadastro.value = current;
-                carregarTurmasPorEscolaParaAluno(current, 'aluno-turma');
-            } else {
-                const selectTurma = document.getElementById('aluno-turma');
-                if (selectTurma) selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
-            }
-            console.log('✅ Select "aluno-escola" atualizado com', escolas.length, 'escolas');
-        } else {
-            console.warn('⚠️ Elemento "aluno-escola" não encontrado no DOM');
-        }
-
-        const selectEdicao = document.getElementById('editar-aluno-escola');
-        if (selectEdicao) {
-            const current = selectEdicao.value;
-            selectEdicao.innerHTML = '<option value="">Selecione a escola</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                selectEdicao.appendChild(opt);
-            });
-            if (current && escolas.some(e => e.id == current)) {
-                selectEdicao.value = current;
-                carregarTurmasPorEscolaParaAluno(current, 'editar-aluno-turma');
-            }
-            console.log('✅ Select "editar-aluno-escola" atualizado com', escolas.length, 'escolas');
-        }
-
-    } catch (erro) {
-        console.error('❌ Erro ao carregar escolas para o select de aluno:', erro);
-    }
-}
-
-// ============================================
-// FUNÇÃO PARA CARREGAR TURMAS POR ESCOLA NO CADASTRO DE ALUNO
-// ============================================
-async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
-    console.log('🔄 Carregando turmas para escola:', escolaId);
-    const selectTurma = document.getElementById(selectTurmaId);
-    if (!selectTurma) {
-        console.warn('⚠️ Select de turma não encontrado:', selectTurmaId);
-        return;
-    }
-
-    selectTurma.innerHTML = '<option value="">Selecione a turma</option>';
-
-    if (!escolaId || escolaId === '') {
-        console.log('ℹ️ Nenhuma escola selecionada');
-        return;
-    }
-
-    try {
-        showToast('🔄 Carregando turmas...', 'info');
-        const turmas = await carregarTurmasComCache(escolaId);
-        console.log('📥 Turmas recebidas:', turmas);
-
-        if (turmas && !turmas.erro && turmas.length > 0) {
-            turmas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                opt.dataset.serie = t.serie || '';
-                selectTurma.appendChild(opt);
-            });
-            console.log(`✅ ${turmas.length} turmas carregadas para a escola`);
-            showToast(`✅ ${turmas.length} turmas encontradas`, 'success');
-        } else {
-            console.log('ℹ️ Nenhuma turma encontrada para esta escola');
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = 'Nenhuma turma cadastrada';
-            opt.disabled = true;
-            selectTurma.appendChild(opt);
-            showToast('ℹ️ Esta escola não possui turmas cadastradas', 'info');
-        }
-    } catch (e) {
-        console.error('❌ Erro ao carregar turmas:', e);
-        showToast('❌ Erro ao carregar turmas: ' + e.message, 'error');
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Erro ao carregar turmas';
-        opt.disabled = true;
-        selectTurma.appendChild(opt);
-    }
-}
-
-// ============================================
-// CARREGAR RELATÓRIOS
-// ============================================
-async function carregarRelatorios() {
-    try {
-        const alunos = await carregarAlunosComCache();
-        const correcoesResp = await fetch(API_URL + '/api/historico');
-        const correcoes = await correcoesResp.json();
-        const totalAlunos = alunos.length || 0;
-        const Habilidades = correcoes.filter(c => c.nota >= 6).length || 0;
-        const recuperacao = correcoes.filter(c => c.nota >= 4 && c.nota < 6).length || 0;
-        const media = correcoes.length > 0 ? (correcoes.reduce((s, c) => s + c.nota, 0) / correcoes.length) : 0;
-
-        setText('rel-total-alunos', totalAlunos);
-        setText('rel-Habilidades', Habilidades);
-        setText('rel-recuperacao', recuperacao);
-        setText('rel-media', media.toFixed(1));
-
-        const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-        correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
-            else if (c.nota < 4) faixas['2-4']++;
-            else if (c.nota < 6) faixas['4-6']++;
-            else if (c.nota < 8) faixas['6-8']++;
-            else faixas['8-10']++; });
-        const maxVal = Math.max(...Object.values(faixas), 1);
-        setText('d0-2', faixas['0-2']);
-        setText('d2-4', faixas['2-4']);
-        setText('d4-6', faixas['4-6']);
-        setText('d6-8', faixas['6-8']);
-        setText('d8-10', faixas['8-10']);
-
-        const bars = document.querySelectorAll('#dist-notas .chart-bar');
-        const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
-        vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
-
-        let totalPtAcertos = 0,
-            totalPtErros = 0,
-            totalPtQuestoes = 0;
-        let totalMatAcertos = 0,
-            totalMatErros = 0,
-            totalMatQuestoes = 0;
-        let totalProdAcertos = 0,
-            totalProdErros = 0,
-            totalProdQuestoes = 0;
-        let totalCHAcertos = 0,
-            totalCHErros = 0,
-            totalCHQuestoes = 0;
-        let totalCNAcertos = 0,
-            totalCNErros = 0,
-            totalCNQuestoes = 0;
-
-        if (correcoes && correcoes.length > 0) {
-            correcoes.forEach(c => {
-                const disciplina = c.disciplina || '';
-                const acertos = c.acertos || 0;
-                const total = c.total || 20;
-                const erros = total - acertos;
-
-                const discLower = disciplina.toLowerCase();
-                if (discLower.includes('português') || discLower.includes('portugues')) {
-                    totalPtAcertos += acertos;
-                    totalPtErros += erros;
-                    totalPtQuestoes += total;
-                } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
-                    totalMatAcertos += acertos;
-                    totalMatErros += erros;
-                    totalMatQuestoes += total;
-                } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
-                    totalProdAcertos += acertos;
-                    totalProdErros += erros;
-                    totalProdQuestoes += total;
-                } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
-                    totalCHAcertos += acertos;
-                    totalCHErros += erros;
-                    totalCHQuestoes += total;
-                } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
-                    totalCNAcertos += acertos;
-                    totalCNErros += erros;
-                    totalCNQuestoes += total;
-                }
-            });
-        }
-
-        const totalCorrecoes = correcoes.length || 1;
-        setText('rel-pt-acertos', totalPtAcertos);
-        setText('rel-pt-erros', totalPtErros);
-        setText('rel-pt-media', totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-mat-acertos', totalMatAcertos);
-        setText('rel-mat-erros', totalMatErros);
-        setText('rel-mat-media', totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-prod-acertos', totalProdAcertos);
-        setText('rel-prod-erros', totalProdErros);
-        setText('rel-prod-media', totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-ch-acertos', totalCHAcertos);
-        setText('rel-ch-erros', totalCHErros);
-        setText('rel-ch-media', totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-cn-acertos', totalCNAcertos);
-        setText('rel-cn-erros', totalCNErros);
-        setText('rel-cn-media', totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        await carregarRelatorioEscola();
-        atualizarDatasImpressao();
-    } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
-}
-
-async function carregarRelatorioEscola() {
-    try {
-        const escolas = await carregarEscolasComCache();
-        const turmas = await carregarTurmasComCache();
-        const alunos = await carregarAlunosComCache();
-        const correcoesResp = await fetch(API_URL + '/api/historico');
-        const correcoes = await correcoesResp.json();
-        const tbody = document.getElementById('tb-rel-escola');
-        if (!tbody) return;
-        if (!escolas || escolas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
-        } else {
-            tbody.innerHTML = escolas.map(e => {
-                const turmasEscola = turmas.filter(t => t.escola_id === e.id);
-                const alunosEscola = alunos.filter(a => a.escola_id === e.id);
-                const correcoesEscola = correcoes.filter(c => { const aluno = alunos.find(a => a.id === c.aluno_id); return aluno && aluno.escola_id === e.id; });
-                const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
-                const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
-                const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
-                return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
-            }).join('');
-        }
-    } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
-}
-
-// ============================================
 // DOM READY
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
@@ -8256,30 +7262,17 @@ window.addEventListener('resize', function() {
 });
 
 // ================================================================
-// 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO (CORRIGIDO)
+// 🔥 MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
 // ================================================================
 
-// 🔥 Variáveis globais (verifica se já existem para evitar duplicação)
-if (typeof matrizesData === 'undefined') {
-    var matrizesData = [];
-}
-if (typeof matrizEditId === 'undefined') {
-    var matrizEditId = null;
-}
-if (typeof matrizDescritorCounter === 'undefined') {
-    var matrizDescritorCounter = 0;
-}
-if (typeof matrizParaDeletar === 'undefined') {
-    var matrizParaDeletar = null;
-}
-
-// ================================================================
-// 🔥 CARREGAR MATRIZES DA API
-// ================================================================
+if (typeof matrizesData === 'undefined') { var matrizesData = []; }
+if (typeof matrizEditId === 'undefined') { var matrizEditId = null; }
+if (typeof matrizDescritorCounter === 'undefined') { var matrizDescritorCounter = 0; }
+if (typeof matrizParaDeletar === 'undefined') { var matrizParaDeletar = null; }
 
 async function carregarMatrizes() {
     try {
-        const response = await fetch('/api/matrizes');
+        const response = await fetch(API_URL + '/api/matrizes');
         if (!response.ok) throw new Error('Erro ao carregar matrizes');
         matrizesData = await response.json();
         renderizarMatrizes(matrizesData);
@@ -8292,10 +7285,6 @@ async function carregarMatrizes() {
     }
 }
 
-// ================================================================
-// 🔥 RENDERIZAR MATRIZES NA TABELA (COM BOTÃO VISUALIZAR)
-// ================================================================
-
 function renderizarMatrizes(matrizes) {
     const tbody = document.getElementById('tb-matrizes');
     if (!tbody) return;
@@ -8307,32 +7296,24 @@ function renderizarMatrizes(matrizes) {
 
     let html = '';
     matrizes.forEach((matriz, index) => {
-        // Normaliza os descritores
         let descritores = [];
         if (matriz.descritores) {
-            if (Array.isArray(matriz.descritores)) {
-                descritores = matriz.descritores;
-            } else if (typeof matriz.descritores === 'string') {
-                try {
-                    descritores = JSON.parse(matriz.descritores);
-                } catch (e) {
-                    descritores = [];
-                }
-            } else if (typeof matriz.descritores === 'object') {
-                descritores = [matriz.descritores];
-            }
+            if (Array.isArray(matriz.descritores)) descritores = matriz.descritores;
+            else if (typeof matriz.descritores === 'string') {
+                try { descritores = JSON.parse(matriz.descritores); } catch (e) { descritores = []; }
+            } else if (typeof matriz.descritores === 'object') descritores = [matriz.descritores];
         }
-        // 🔥 Normaliza cada descritor para ter 'descritor' e 'bncc'
         descritores = descritores.map(d => ({
             bncc: d.bncc || '',
             descritor: d.descritor || d.descricao || ''
         }));
 
         const totalDescritores = descritores.length;
-
         const nivelBadge = {
             'Básico': 'badge-nivel-basico',
+            'Inicial': 'badge-nivel-inicial',
             'Intermediário': 'badge-nivel-intermediario',
+            'Proficiente': 'badge-nivel-proficiente',
             'Avançado': 'badge-nivel-avancado'
         }[matriz.nivel] || 'badge-gray';
 
@@ -8367,18 +7348,10 @@ function renderizarMatrizes(matrizes) {
     tbody.innerHTML = html;
 }
 
-// ================================================================
-// 🔥 ATUALIZAR CONTADOR DE MATRIZES
-// ================================================================
-
 function atualizarTotalMatrizes(total) {
     const el = document.getElementById('total-matrizes');
     if (el) el.textContent = `${total} matrizes`;
 }
-
-// ================================================================
-// 🔥 ABRIR MODAL PARA NOVA MATRIZ
-// ================================================================
 
 function abrirModalMatriz() {
     matrizEditId = null;
@@ -8399,10 +7372,6 @@ function abrirModalMatriz() {
     
     openM('m-matriz');
 }
-
-// ================================================================
-// 🔥 EDITAR MATRIZ
-// ================================================================
 
 function editarMatriz(id) {
     const matriz = matrizesData.find(m => m.id === id);
@@ -8435,13 +7404,8 @@ function editarMatriz(id) {
     openM('m-matriz');
 }
 
-// ================================================================
-// 🔥 ADICIONAR DESCRITOR DINÂMICAMENTE (COM TEXTAREA)
-// ================================================================
-
 function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
     const container = document.getElementById('matriz-descritores-container');
-    
     const placeholder = container.querySelector('.matriz-descritores-empty');
     if (placeholder) placeholder.remove();
     
@@ -8471,10 +7435,6 @@ function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
     item.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ================================================================
-// 🔥 REMOVER DESCRITOR
-// ================================================================
-
 function removerDescritorMatriz(btn) {
     const item = btn.closest('.matriz-descritor-item');
     if (!item) return;
@@ -8497,10 +7457,6 @@ function removerDescritorMatriz(btn) {
     }
 }
 
-// ================================================================
-// 🔥 SALVAR MATRIZ (CRIAR / ATUALIZAR) - CORRIGIDO
-// ================================================================
-
 async function salvarMatriz() {
     try {
         const ano = document.getElementById('matriz-ano').value;
@@ -8516,7 +7472,6 @@ async function salvarMatriz() {
         const descritores = [];
         
         items.forEach((item, index) => {
-            // 🔥 Usa seletores específicos para evitar confusão
             const bnccInput = item.querySelector('input.form-control');
             const descritorInput = item.querySelector('textarea.form-control');
             
@@ -8524,15 +7479,10 @@ async function salvarMatriz() {
             const descritor = descritorInput ? descritorInput.value.trim() : '';
             
             descritores.push({ bncc, descritor });
-            
-            // 🔥 Log para depuração
-            console.log(`📌 Descritor #${index+1}: BNCC="${bncc}", Descritor="${descritor}"`);
         });
         
-        console.log('📦 Dados a enviar:', { ano, disciplina, nivel, descritores });
-        
         const editId = document.getElementById('matriz-edit-id').value;
-        const url = editId ? `/api/matrizes/${editId}` : '/api/matrizes';
+        const url = editId ? `${API_URL}/api/matrizes/${editId}` : `${API_URL}/api/matrizes`;
         const method = editId ? 'PUT' : 'POST';
         
         if (typeof showToast === 'function') showToast('Salvando matriz...', 'info');
@@ -8549,7 +7499,6 @@ async function salvarMatriz() {
         }
         
         const result = await response.json();
-        console.log('✅ Resposta da API:', result);
         toast(result.mensagem || 'Matriz salva com sucesso!', 'success');
         
         fecharModalMatriz();
@@ -8560,10 +7509,6 @@ async function salvarMatriz() {
         toast(error.message || 'Erro ao salvar matriz', 'error');
     }
 }
-
-// ================================================================
-// 🔥 EXCLUIR MATRIZ
-// ================================================================
 
 function excluirMatriz(id) {
     const matriz = matrizesData.find(m => m.id === id);
@@ -8589,9 +7534,7 @@ async function confirmarDeletarMatriz() {
     
     try {
         const id = matrizParaDeletar;
-        const response = await fetch(`/api/matrizes/${id}`, {
-            method: 'DELETE'
-        });
+        const response = await fetch(`${API_URL}/api/matrizes/${id}`, { method: 'DELETE' });
         
         if (!response.ok) {
             const err = await response.json();
@@ -8609,18 +7552,10 @@ async function confirmarDeletarMatriz() {
     }
 }
 
-// ================================================================
-// 🔥 FECHAR MODAL MATRIZ
-// ================================================================
-
 function fecharModalMatriz() {
     matrizEditId = null;
     closeM('m-matriz');
 }
-
-// ================================================================
-// 🔥 FILTRAR MATRIZES
-// ================================================================
 
 function filtrarMatrizes() {
     const ano = document.getElementById('filtro-matriz-ano').value;
@@ -8644,10 +7579,6 @@ function limparFiltrosMatriz() {
     atualizarTotalMatrizes(matrizesData.length);
 }
 
-// ================================================================
-// 🔥 VISUALIZAR MATRIZ
-// ================================================================
-
 let visualizarMatrizId = null;
 
 function visualizarMatriz(id) {
@@ -8657,17 +7588,12 @@ function visualizarMatriz(id) {
         return;
     }
     
-    // 🔥 Normaliza os descritores (aceita 'descritor' ou 'descricao')
     const descritores = (matriz.descritores || []).map(d => ({
         bncc: d.bncc || '',
-        descritor: d.descritor || d.descricao || ''  // fallback para 'descricao'
+        descritor: d.descritor || d.descricao || ''
     }));
     
-    // 🔥 Salva na variável global com os dados normalizados
-    window.matrizVisualizando = {
-        ...matriz,
-        descritores: descritores
-    };
+    window.matrizVisualizando = { ...matriz, descritores: descritores };
     
     visualizarMatrizId = id;
     document.getElementById('visualizar-matriz-titulo').textContent = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
@@ -8690,6 +7616,7 @@ function visualizarMatriz(id) {
                         <span style="font-size:11px;background:rgba(139,92,246,0.12);padding:2px 12px;border-radius:12px;color:var(--purple);font-weight:700;">BNCC: ${bncc}</span>
                     </div>
                     <div style="margin-top:6px;font-size:14px;color:var(--text);line-height:1.5; white-space: pre-wrap; word-wrap: break-word;">${desc}</div>
+                </div>
             `;
         });
         descritoresHtml += '</div>';
@@ -8697,7 +7624,9 @@ function visualizarMatriz(id) {
 
     const nivelBadge = {
         'Básico': 'badge-nivel-basico',
+        'Inicial': 'badge-nivel-inicial',
         'Intermediário': 'badge-nivel-intermediario',
+        'Proficiente': 'badge-nivel-proficiente',
         'Avançado': 'badge-nivel-avancado'
     }[matriz.nivel] || 'badge-gray';
 
@@ -8727,12 +7656,7 @@ function visualizarMatriz(id) {
     openM('m-visualizar-matriz');
 }
 
-// ================================================================
-// 🔥 IMPRIMIR MATRIZ VISUALIZADA (PDF)
-// ================================================================
-
 function imprimirMatrizVisualizada() {
-    // 🔥 Usa a matriz normalizada da variável global
     const matriz = window.matrizVisualizando;
     if (!matriz) {
         toast('❌ Nenhuma matriz para imprimir. Visualize uma matriz primeiro.', 'error');
@@ -8746,39 +7670,27 @@ function imprimirMatrizVisualizada() {
         return;
     }
 
-    // 🔥 Garante que os descritores estejam normalizados
     const descritores = (matriz.descritores || []).map(d => ({
         bncc: d.bncc || '',
-        descritor: d.descritor || d.descricao || ''  // fallback
+        descritor: d.descritor || d.descricao || ''
     }));
 
     const nivel = matriz.nivel || '—';
     const ano = matriz.ano || '—';
     const disciplina = matriz.disciplina || '—';
 
-    // 🔥 NOVO: Cria uma lista plana de linhas (cada BNCC vira uma linha)
     const linhas = [];
     descritores.forEach((d) => {
-        // Divide a string de BNCC por " - " (ou por hífen com espaços)
         const bnccs = d.bncc.split(/\s*-\s*/).filter(b => b.trim() !== '');
         if (bnccs.length > 1) {
-            // Se houver múltiplos BNCCs, repete o descritor para cada um
             bnccs.forEach(bncc => {
-                linhas.push({
-                    bncc: bncc.trim(),
-                    descritor: d.descritor
-                });
+                linhas.push({ bncc: bncc.trim(), descritor: d.descritor });
             });
         } else {
-            // Apenas um BNCC
-            linhas.push({
-                bncc: d.bncc,
-                descritor: d.descritor
-            });
+            linhas.push({ bncc: d.bncc, descritor: d.descritor });
         }
     });
 
-    // 🔥 Gera a tabela com uma linha para cada BNCC
     let descritoresHtml = '';
     if (linhas.length === 0) {
         descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
@@ -8807,7 +7719,6 @@ function imprimirMatrizVisualizada() {
         descritoresHtml += '</tbody></table>';
     }
 
-    // 🔥 O restante do HTML permanece EXATAMENTE IGUAL ao original
     const html = `
     <!DOCTYPE html>
     <html>
@@ -8816,116 +7727,24 @@ function imprimirMatrizVisualizada() {
         <title>${titulo}</title>
         <style>
             * { margin:0; padding:0; box-sizing:border-box; }
-            body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                padding: 30px;
-                background: #fff;
-                color: #1e293b;
-            }
-            .container {
-                max-width: 800px;
-                margin: 0 auto;
-                background: #ffffff;
-                padding: 20px 30px;
-                border-radius: 12px;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            }
-            .header {
-                text-align: center;
-                border-bottom: 3px solid #2563eb;
-                padding-bottom: 15px;
-                margin-bottom: 20px;
-            }
-            .header h1 {
-                font-size: 22px;
-                font-weight: 800;
-                color: #0f172a;
-                letter-spacing: -0.3px;
-            }
-            .header .sub {
-                font-size: 14px;
-                color: #475569;
-                margin-top: 4px;
-            }
-            .header .data {
-                font-size: 12px;
-                color: #94a3b8;
-                margin-top: 4px;
-            }
-            .info-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 15px;
-                margin: 18px 0 22px;
-            }
-            .info-card {
-                background: #f8fafc;
-                border-radius: 8px;
-                padding: 12px 14px;
-                text-align: center;
-                border: 1px solid #e2e8f0;
-            }
-            .info-card .label {
-                font-size: 10px;
-                color: #94a3b8;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-            }
-            .info-card .value {
-                font-size: 18px;
-                font-weight: 800;
-                color: #0f172a;
-                margin-top: 4px;
-            }
-            .info-card .value .badge {
-                display: inline-block;
-                padding: 2px 14px;
-                border-radius: 20px;
-                font-size: 14px;
-                font-weight: 700;
-                background: #e2e8f0;
-                color: #1e293b;
-            }
-            .section-title {
-                font-size: 16px;
-                font-weight: 700;
-                color: #1e293b;
-                margin: 12px 0 6px;
-                padding-bottom: 6px;
-                border-bottom: 2px solid #e2e8f0;
-            }
-            .table-wrap {
-                overflow-x: auto;
-                margin-top: 4px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th {
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-                background: #f1f5f9;
-            }
-            td, th {
-                padding: 8px 12px;
-                text-align: left;
-            }
-            .footer {
-                margin-top: 20px;
-                padding-top: 12px;
-                border-top: 1px solid #e2e8f0;
-                font-size: 10px;
-                color: #94a3b8;
-                text-align: center;
-            }
-            @media print {
-                body { padding: 10px; }
-                .container { box-shadow: none; border: none; }
-            }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: #fff; color: #1e293b; }
+            .container { max-width: 800px; margin: 0 auto; background: #ffffff; padding: 20px 30px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+            .header { text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
+            .header h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+            .header .sub { font-size: 14px; color: #475569; margin-top: 4px; }
+            .header .data { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 18px 0 22px; }
+            .info-card { background: #f8fafc; border-radius: 8px; padding: 12px 14px; text-align: center; border: 1px solid #e2e8f0; }
+            .info-card .label { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+            .info-card .value { font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px; }
+            .info-card .value .badge { display: inline-block; padding: 2px 14px; border-radius: 20px; font-size: 14px; font-weight: 700; background: #e2e8f0; color: #1e293b; }
+            .section-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 12px 0 6px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; }
+            .table-wrap { overflow-x: auto; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; }
+            th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; background: #f1f5f9; }
+            td, th { padding: 8px 12px; text-align: left; }
+            .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+            @media print { body { padding: 10px; } .container { box-shadow: none; border: none; } }
         </style>
     </head>
     <body>
@@ -8937,33 +7756,18 @@ function imprimirMatrizVisualizada() {
             </div>
 
             <div class="info-grid">
-                <div class="info-card">
-                    <div class="label">📚 Ano</div>
-                    <div class="value">${ano}</div>
-                </div>
-                <div class="info-card">
-                    <div class="label">📖 Disciplina</div>
-                    <div class="value">${disciplina}</div>
-                </div>
-                <div class="info-card">
-                    <div class="label">📊 Nível</div>
-                    <div class="value"><span class="badge">${nivel}</span></div>
-                </div>
+                <div class="info-card"><div class="label">📚 Ano</div><div class="value">${ano}</div></div>
+                <div class="info-card"><div class="label">📖 Disciplina</div><div class="value">${disciplina}</div></div>
+                <div class="info-card"><div class="label">📊 Nível</div><div class="value"><span class="badge">${nivel}</span></div></div>
             </div>
 
             <div class="section-title">📋 Descritores (${linhas.length})</div>
-            <div class="table-wrap">
-                ${descritoresHtml}
-            </div>
+            <div class="table-wrap">${descritoresHtml}</div>
 
-            <div class="footer">
-                Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação
-            </div>
+            <div class="footer">Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação</div>
         </div>
         <script>
-            window.onload = function() {
-                window.print();
-            };
+            window.onload = function() { window.print(); };
         <\/script>
     </body>
     </html>
@@ -8972,10 +7776,6 @@ function imprimirMatrizVisualizada() {
     win.document.write(html);
     win.document.close();
 }
-
-// ================================================================
-// 🔥 FUNÇÕES AUXILIARES
-// ================================================================
 
 function formatarData(dataStr) {
     if (!dataStr) return '-';
@@ -9008,20 +7808,11 @@ function toast(mensagem, tipo = 'info') {
 function carregarMatrizesLocal() {
     const stored = localStorage.getItem('matrizes_data');
     if (stored) {
-        try {
-            return JSON.parse(stored);
-        } catch {
-            return [];
-        }
+        try { return JSON.parse(stored); } catch { return []; }
     }
     return [];
 }
 
-// ================================================================
-// 🔥 INICIALIZAÇÃO
-// ================================================================
-
-// Carregar matrizes quando a página for carregada
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('page-matriz')) {
         carregarMatrizes();
@@ -9029,5 +7820,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ================================================================
-// FIM - MATRIZ DE PROFICIÊNCIA
+// FIM - SCRIPT COMPLETO
 // ================================================================
