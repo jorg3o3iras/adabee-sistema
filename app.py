@@ -500,7 +500,7 @@ def corrigir_perspectiva(img, marcadores):
 
 def detectar_circulos_preenchidos(imagem_base64):
     """
-    ✅ VERSÃO MELHORADA - Aceita caneta azul e preta, ajustes para scanner
+    ✅ VERSÃO DEFINITIVA - Exclui marcadores fiduciais e ajusta para scanner
     """
     try:
         if ',' in imagem_base64:
@@ -517,66 +517,60 @@ def detectar_circulos_preenchidos(imagem_base64):
         height, width = img.shape[:2]
         logging.info(f"📐 Imagem original: {width}x{height}")
         
-        # ✅ AUMENTADO: Processar em resolução maior
-        if height > 3000:
-            scale = 3000 / height
+        # ✅ Redimensionar para tamanho padrão (evita imagem gigante de scanner)
+        TARGET_HEIGHT = 1500  # ✅ Reduzido de 2400 para 1500
+        if height > TARGET_HEIGHT:
+            scale = TARGET_HEIGHT / height
             new_width = int(width * scale)
-            img = cv2.resize(img, (new_width, 3000), interpolation=cv2.INTER_AREA)
-            logging.info(f"📐 Redimensionada: {new_width}x3000")
+            img = cv2.resize(img, (new_width, TARGET_HEIGHT), interpolation=cv2.INTER_AREA)
+            logging.info(f"📐 Redimensionada: {new_width}x{TARGET_HEIGHT}")
         
-        # ✅ CONVERTER PARA HSV - detecta melhor azul e preto
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        height, width = img.shape[:2]
         
-        # ✅ MÁSCARA DE AZUL ESCURO (caneta azul)
-        # H: 100-130, S: 50-255, V: 0-150 (escuro)
-        mask_azul = cv2.inRange(hsv, (90, 40, 0), (140, 255, 180))
-        
-        # ✅ MÁSCARA DE PRETO (caneta preta)
-        # V muito baixo (escuro), qualquer H/S
-        mask_preto = cv2.inRange(hsv, (0, 0, 0), (180, 255, 100))
-        
-        # Combinar as duas máscaras
-        mask_marcacao = cv2.bitwise_or(mask_azul, mask_preto)
-        
-        logging.info(f"📊 Máscara azul: {cv2.countNonZero(mask_azul)} pixels")
-        logging.info(f"📊 Máscara preta: {cv2.countNonZero(mask_preto)} pixels")
-        
-        # Converter para grayscale da marcação (só o que foi marcado fica branco)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
         gray_enhanced = clahe.apply(gray)
         gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
         
-        # Tentar corrigir perspectiva
+        # ✅ Detectar marcadores fiduciais PRIMEIRO
         marcadores = detectar_marcadores_fiduciais(gray)
+        marcadores_xy = []
+        
         if marcadores:
             img = corrigir_perspectiva(img, marcadores)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            
-            # Recalcular máscaras após correção
-            mask_azul = cv2.inRange(hsv, (90, 40, 0), (140, 255, 180))
-            mask_preto = cv2.inRange(hsv, (0, 0, 0), (180, 255, 100))
-            mask_marcacao = cv2.bitwise_or(mask_azul, mask_preto)
-            
             clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
             gray_enhanced = clahe.apply(gray)
             gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
-            logging.info("✅ Perspectiva corrigida")
+            height, width = img.shape[:2]
+            
+            # ✅ Guardar posições dos marcadores para excluir depois
+            # Os marcadores após correção ficam nos cantos com margem 30
+            margem = 30
+            tamanho_marcador = 80  # Margem de segurança
+            
+            marcadores_xy = [
+                (margem, margem),                          # TL
+                (width - margem, margem),                  # TR
+                (margem, height - margem),                 # BL
+                (width - margem, height - margem)          # BR
+            ]
+            
+            logging.info(f"✅ Marcadores para exclusão: {marcadores_xy}")
         
-        # ✅ Threshold para detectar círculos vazios (contorno)
+        # Threshold
         _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # ✅ HoughCircles com range MAIOR de raio (para scanner)
+        # ✅ HoughCircles - raios mais flexíveis
         circulos = cv2.HoughCircles(
             gray_blur,
             cv2.HOUGH_GRADIENT,
             dp=1.2,
-            minDist=25,       # ✅ AUMENTADO para evitar duplicatas
+            minDist=20,
             param1=50,
-            param2=22,        # ✅ AUMENTADO para detecção mais confiável
-            minRadius=10,     # ✅ AUMENTADO para ignorar letras pequenas
-            maxRadius=45      # ✅ AUMENTADO para scanner
+            param2=20,
+            minRadius=8,
+            maxRadius=35
         )
         
         if circulos is None:
@@ -586,53 +580,62 @@ def detectar_circulos_preenchidos(imagem_base64):
         circulos = np.round(circulos[0, :]).astype("int")
         logging.info(f"🔵 HoughCircles: {len(circulos)} candidatos")
         
+        # ✅ EXCLUIR círculos próximos aos marcadores fiduciais
+        MARGEM_EXCLUSAO = 100  # pixels
+        circulos_filtrados = []
+        
+        for (x, y, r) in circulos:
+            perto_de_marcador = False
+            for (mx, my) in marcadores_xy:
+                dist = np.sqrt((x - mx)**2 + (y - my)**2)
+                if dist < MARGEM_EXCLUSAO:
+                    perto_de_marcador = True
+                    break
+            
+            if not perto_de_marcador:
+                circulos_filtrados.append((x, y, r))
+        
+        logging.info(f"✅ Após excluir marcadores: {len(circulos_filtrados)} (removidos {len(circulos) - len(circulos_filtrados)})")
+        circulos = circulos_filtrados
+        
+        if len(circulos) < 4:
+            logging.warning("⚠️ Poucos círculos após exclusão")
+            return []
+        
         # ✅ Filtrar por tamanho (mediana)
         raios = [r for (x, y, r) in circulos]
-        if len(raios) >= 8:
-            raios_sorted = sorted(raios)
-            mediana_r = raios_sorted[len(raios_sorted) // 2]
-            r_min = mediana_r * 0.7
-            r_max = mediana_r * 1.4
-            
-            circulos = [(x, y, r) for (x, y, r) in circulos if r_min <= r <= r_max]
-            logging.info(f"📐 Mediana raio: {mediana_r}px → {len(circulos)} após filtro")
+        raios_sorted = sorted(raios)
+        mediana_r = raios_sorted[len(raios_sorted) // 2]
         
-        # ✅ Análise de cada círculo
+        r_min = mediana_r * 0.7
+        r_max = mediana_r * 1.3
+        
+        circulos = [(x, y, r) for (x, y, r) in circulos if r_min <= r <= r_max]
+        logging.info(f"📐 Mediana raio: {mediana_r}px → {len(circulos)} após filtro de tamanho")
+        
+        if len(circulos) < 4:
+            return []
+        
+        # ✅ Analisar cada círculo
         resultados = []
+        
         for (x, y, r) in circulos:
             if x < r or y < r or x + r > gray.shape[1] or y + r > gray.shape[0]:
                 continue
             
-            # ✅ Usar MÁSCARA DE COR (azul+preto) para detectar preenchimento
-            mask_circ = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.circle(mask_circ, (x, y), int(r * 0.75), 255, -1)
+            mask = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
+            roi = cv2.bitwise_and(binaria, binaria, mask=mask)
             
-            # Verificar quantos pixels de MARCAÇÃO (azul/preto) estão dentro do círculo
-            mask_marcacao_roi = cv2.bitwise_and(mask_marcacao, mask_marcacao, mask=mask_circ)
-            
-            # Também verificar o threshold tradicional (para círculos pretos puros)
-            binaria_roi = cv2.bitwise_and(binaria, binaria, mask=mask_circ)
-            
-            total_pixels = cv2.countNonZero(mask_circ)
-            pixels_marcacao = cv2.countNonZero(mask_marcacao_roi)
-            pixels_binaria = cv2.countNonZero(binaria_roi)
-            
-            # ✅ Usar o MAIOR dos dois (aceita azul e preto)
-            dark_ratio_cor = pixels_marcacao / total_pixels if total_pixels > 0 else 0
-            dark_ratio_bin = pixels_binaria / total_pixels if total_pixels > 0 else 0
-            
-            dark_ratio = max(dark_ratio_cor, dark_ratio_bin)
+            total_pixels = cv2.countNonZero(mask)
+            dark_pixels = cv2.countNonZero(roi)
+            dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
             
             resultados.append({
                 'x': int(x), 'y': int(y), 'r': int(r),
-                'preenchido': False,  # Vai ser definido abaixo
+                'preenchido': False,
                 'dark_ratio': float(dark_ratio)
             })
-        
-        if not resultados:
-            return []
-        
-        logging.info(f"✅ Candidatos analisados: {len(resultados)}")
         
         # ✅ Remover duplicatas
         unicos = []
@@ -640,7 +643,7 @@ def detectar_circulos_preenchidos(imagem_base64):
             duplicado = False
             for u in unicos:
                 dist = np.sqrt((c['x'] - u['x'])**2 + (c['y'] - u['y'])**2)
-                if dist < u['r'] * 1.4:
+                if dist < u['r'] * 1.5:
                     duplicado = True
                     break
             if not duplicado:
@@ -650,7 +653,6 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         # ✅ Threshold adaptativo
         ratios = sorted([c['dark_ratio'] for c in unicos])
-        logging.info(f"📊 Ratios: {[f'{r:.3f}' for r in ratios]}")
         
         if len(ratios) >= 8:
             q1_idx = len(ratios) // 4
@@ -666,15 +668,11 @@ def detectar_circulos_preenchidos(imagem_base64):
         else:
             threshold = 0.30
         
-        # ✅ Threshold MINIMO maior (para evitar falsos positivos)
         threshold = max(0.25, min(threshold, 0.60))
         logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
+        logging.info(f"📊 Ratios: {[f'{r:.3f}' for r in ratios]}")
         
-        preenchidos = []
-        for c in unicos:
-            if c['dark_ratio'] > threshold:
-                c['preenchido'] = True
-                preenchidos.append(c)
+        preenchidos = [c for c in unicos if c['dark_ratio'] > threshold]
         
         logging.info(f"📊 RESULTADO: {len(unicos)} círculos, {len(preenchidos)} preenchidos")
         
@@ -695,7 +693,7 @@ def detectar_circulos_preenchidos(imagem_base64):
 
 def organizar_respostas_por_posicao(circulos, total_questoes):
     """
-    ✅ VERSÃO CORRIGIDA - não usa mais 'preenchido' (já foram filtrados)
+    ✅ VERSÃO DEFINITIVA - Tolerância Y ADAPTATIVA (não fixa)
     """
     if not circulos:
         logging.warning("⚠️ Sem círculos para organizar")
@@ -705,33 +703,36 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     logging.info(f"🎯 ORGANIZANDO {len(circulos)} CÍRCULOS PARA {total_questoes} QUESTÕES")
     logging.info("=" * 60)
     
-    # Log de todos os círculos
     for i, c in enumerate(sorted(circulos, key=lambda x: (x['y'], x['x']))):
-        # ✅ Usar .get() para evitar KeyError
         ratio = c.get('dark_ratio', 0)
         logging.info(f"   [{i}] x={c['x']:4d}, y={c['y']:4d}, r={c['r']:2d}, ratio={ratio:.3f}")
     
-    # Ordenar por Y depois X
     ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
     
-    # Calcular tolerância Y
-    ys = [c['y'] for c in ordenados]
-    distancias_y = []
-    for i in range(1, len(ys)):
-        d = abs(ys[i] - ys[i-1])
-        if d > 5:
-            distancias_y.append(d)
+    # ✅ PASSO 1: Detectar as LINHAS REAIS baseado em clusters de Y
+    ys_todos = sorted(set([c['y'] for c in ordenados]))
     
-    if distancias_y:
-        distancias_y.sort()
-        y_limite = distancias_y[0] * 0.6
+    # Encontrar "gaps" grandes em Y (separação entre linhas)
+    gaps = []
+    for i in range(1, len(ys_todos)):
+        gap = ys_todos[i] - ys_todos[i-1]
+        if gap > 15:  # Gap significativo
+            gaps.append(gap)
+    
+    # ✅ Tolerância Y = mediana dos gaps PEQUENOS
+    if gaps:
+        gaps_pequenos = [g for g in gaps if g < 80]
+        if gaps_pequenos:
+            y_limite = sorted(gaps_pequenos)[len(gaps_pequenos) // 2] * 0.7
+        else:
+            y_limite = 30
     else:
-        y_limite = 20
+        y_limite = 30
     
-    y_limite = max(10, min(y_limite, 35))
-    logging.info(f"📏 Tolerância Y: {y_limite:.1f}px")
+    y_limite = max(15, min(y_limite, 60))
+    logging.info(f"📏 Tolerância Y adaptativa: {y_limite:.1f}px")
     
-    # Agrupar em linhas
+    # ✅ Agrupar em linhas
     linhas = []
     linha_atual = []
     
@@ -751,19 +752,55 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     
     linhas.sort(key=lambda l: l[0]['y'])
     
-    logging.info(f"📋 {len(linhas)} LINHAS agrupadas:")
+    logging.info(f"📋 {len(linhas)} linhas agrupadas:")
     for i, linha in enumerate(linhas):
         xs = sorted([c['x'] for c in linha])
         ys_linha = [c['y'] for c in linha]
         logging.info(f"   L{i+1}: Y_medio={sum(ys_linha)//len(ys_linha)}, {len(linha)} círculos, X={xs}")
     
-    # ✅ VALIDAÇÃO: linhas vs questões
+    # ✅ Se temos MAIS linhas que questões, juntar linhas próximas
+    if len(linhas) > total_questoes * 1.3:
+        logging.warning(f"⚠️ Muitas linhas ({len(linhas)}). Reagrupando com tolerância maior...")
+        y_limite_maior = y_limite * 2.5
+        linhas_2 = []
+        linha_atual = []
+        
+        for c in ordenados:
+            if not linha_atual:
+                linha_atual.append(c)
+            elif abs(c['y'] - linha_atual[0]['y']) < y_limite_maior:
+                linha_atual.append(c)
+            else:
+                linha_atual.sort(key=lambda x: x['x'])
+                linhas_2.append(linha_atual)
+                linha_atual = [c]
+        
+        if linha_atual:
+            linha_atual.sort(key=lambda x: x['x'])
+            linhas_2.append(linha_atual)
+        
+        linhas_2.sort(key=lambda l: l[0]['y'])
+        
+        if len(linhas_2) <= total_questoes * 1.3:
+            linhas = linhas_2
+            logging.info(f"✅ Reagrupado para {len(linhas)} linhas")
+    
+    # ✅ Se ainda tem MUITAS linhas, filtrar por linhas com >= 3 círculos
+    if len(linhas) > total_questoes * 1.3:
+        logging.warning(f"⚠️ Filtrando linhas com menos de 3 círculos...")
+        linhas_filtradas = [l for l in linhas if len(l) >= 2]
+        
+        if len(linhas_filtradas) <= total_questoes * 1.3:
+            linhas = linhas_filtradas
+            logging.info(f"✅ Após filtro: {len(linhas)} linhas")
+    
+    # ✅ VALIDAÇÃO FINAL
     if len(linhas) < total_questoes * 0.6:
         logging.error(f"🚨 POUCAS linhas ({len(linhas)}) para {total_questoes} questões")
         return [''] * total_questoes, [0] * total_questoes
     
-    if len(linhas) > total_questoes * 1.8:
-        logging.error(f"🚨 MUITAS linhas ({len(linhas)}) para {total_questoes} questões")
+    if len(linhas) > total_questoes * 1.5:
+        logging.error(f"🚨 MUITAS linhas ({len(linhas)}) mesmo após reagrupamento")
         return [''] * total_questoes, [0] * total_questoes
     
     # ✅ Processar cada linha
@@ -780,9 +817,7 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
             confiancas.append(30)
             continue
         
-        # ✅ CORREÇÃO CRÍTICA: usar .get() ou verificar sem 'preenchido'
-        # Como essa função recebe APENAS os círculos preenchidos,
-        # devemos pegar o de maior dark_ratio
+        # ✅ Pegar o círculo com MAIOR ratio (mais escuro)
         mais_escuro = max(linha, key=lambda c: c.get('dark_ratio', 0))
         
         # Encontrar posição X
@@ -795,17 +830,34 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
         
         num_circ = len(linha_ordenada_x)
         
-        # Mapear posição para letra
+        # ✅ NOVA LÓGICA: usar POSIÇÃO RELATIVA se tiver muitos círculos
         if num_circ >= 4:
-            if posicao < len(letras):
+            # Encontrar as 4 posições mais prováveis (A, B, C, D)
+            # Distribuir os círculos detectados em 4 grupos por posição X
+            xs = [c['x'] for c in linha_ordenada_x]
+            largura_total = max(xs) - min(xs) if len(xs) > 1 else 1
+            
+            # Posição relativa do círculo mais escuro
+            pos_rel = (mais_escuro['x'] - min(xs)) / largura_total if largura_total > 0 else 0
+            
+            if pos_rel < 0.2:
+                letra = 'A'
+            elif pos_rel < 0.45:
+                letra = 'B'
+            elif pos_rel < 0.7:
+                letra = 'C'
+            else:
+                letra = 'D'
+            
+            conf = 85 if mais_escuro.get('dark_ratio', 0) > 0.5 else 70
+            logging.info(f"   Q{idx+1}: pos_rel={pos_rel:.2f} ({num_circ} círculos) → '{letra}' (ratio={mais_escuro.get('dark_ratio', 0):.3f})")
+        elif num_circ == 3:
+            if posicao < 3:
                 letra = letras[posicao]
-                conf = 85 if mais_escuro.get('dark_ratio', 0) > 0.35 else 70
             else:
                 letra = ''
-                conf = 30
-        elif num_circ == 3:
-            letra = letras[posicao] if posicao < 3 else ''
             conf = 70
+            logging.info(f"   Q{idx+1}: pos={posicao}/3 → '{letra}'")
         elif num_circ == 2:
             largura = linha_ordenada_x[-1]['x'] - linha_ordenada_x[0]['x']
             if largura > 0:
@@ -816,18 +868,17 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
                     letra = 'B'
                 else:
                     letra = 'C'
-                conf = 50
             else:
                 letra = ''
-                conf = 30
+            conf = 50
+            logging.info(f"   Q{idx+1}: 2 círculos → '{letra}'")
         else:
             letra = ''
             conf = 30
+            logging.info(f"   Q{idx+1}: apenas 1 círculo")
         
         respostas.append(letra)
         confiancas.append(conf)
-        
-        logging.info(f"   Q{idx+1}: pos={posicao}/{num_circ} → '{letra}' (ratio={mais_escuro.get('dark_ratio', 0):.3f})")
     
     # Completar
     while len(respostas) < total_questoes:
@@ -837,7 +888,7 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
     respostas = respostas[:total_questoes]
     confiancas = confiancas[:total_questoes]
     
-    # ✅ VALIDAÇÃO: muitas respostas iguais?
+    # ✅ VALIDAÇÃO FINAL
     nao_vazias = [r for r in respostas if r]
     if len(nao_vazias) >= 5:
         contagem = Counter(nao_vazias)
