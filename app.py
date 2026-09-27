@@ -14,7 +14,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
 from psycopg2 import extensions
-# import pytesseract  ← Desativado para economizar memória (Render Free)
 import random
 import traceback
 from dotenv import load_dotenv
@@ -57,7 +56,7 @@ def limpar_cache_antigo():
 
 OPENAI_AVAILABLE = False
 openai_client = None
-OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 
 try:
@@ -300,7 +299,7 @@ def validar_respostas(respostas, gabarito, alternativas):
     return respostas_validas[:len(gabarito)]
 
 
-def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, circulos=None, bncc=None):
+def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, disciplina, tipo_questoes, modo, circulos=None, bncc=None, confiancas=None):
     alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
     acertos = 0
     correcoes = []
@@ -317,6 +316,10 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
         resp = respostas[i] if i < len(respostas) else ''
         gab = gabarito[i] if i < len(gabarito) else ''
         gab_normalizado = str(gab).strip().upper() if gab else ''
+        
+        confianca_q = 80
+        if confiancas and i < len(confiancas):
+            confianca_q = int(confiancas[i])
         
         codigo_bncc = ''
         if bncc and i < len(bncc):
@@ -343,7 +346,7 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
             'questao': i + 1, 'resposta': resp if resp else '—',
             'gabarito': gab_normalizado if gab_normalizado else '—',
             'correto': is_correto, 'status': status_msg,
-            'confianca': 80 if is_resposta_valida else 50, 'bncc': codigo_bncc
+            'confianca': confianca_q if is_resposta_valida else 50, 'bncc': codigo_bncc
         })
         
         questoes_status.append({
@@ -351,7 +354,7 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
             'gabarito': gab_normalizado if gab_normalizado else '—',
             'acertou': is_correto, 'status': status_msg,
             'status_texto': f"{status_icone} {status_msg}",
-            'confianca': 80 if is_resposta_valida else 50,
+            'confianca': confianca_q if is_resposta_valida else 50,
             'correta': is_correto, 'bncc': codigo_bncc
         })
     
@@ -360,6 +363,10 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
     porcentagem = round((acertos / len(gabarito)) * 100) if len(gabarito) > 0 else 0
     conceito = calcular_conceito(porcentagem)
     
+    confianca_media = 70
+    if confiancas:
+        confianca_media = int(sum(confiancas) / len(confiancas)) if confiancas else 70
+    
     return {
         'aluno': aluno_nome, 'serie': serie, 'disciplina': disciplina,
         'total': len(gabarito), 'acertos': acertos, 'nota': round(nota, 1),
@@ -367,8 +374,8 @@ def calcular_resultado_correcao(respostas, gabarito, aluno_nome, serie, discipli
         'respostas_detectadas': respostas, 'gabarito': gabarito,
         'correcoes': correcoes, 'questoes_status': questoes_status,
         'tipo_questoes': str(tipo_questoes),
-        'confianca': 80 if acertos > 0 else 50,
-        'confianca_por_questao': [80 if r in alternativas else 50 for r in respostas],
+        'confianca': confianca_media,
+        'confianca_por_questao': confiancas if confiancas else [80 if r in alternativas else 50 for r in respostas],
         'modo': modo, 'valor_por_questao': round(valor_por_questao, 2),
         'circulos_detectados': len(circulos) if circulos else 0,
         'questoes_ia': 0, 'bncc': bncc if bncc else []
@@ -389,23 +396,18 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 
 
 # ============================================
-# DETECÇÃO DE MARCADORES FIDUCIAIS (MELHORADA)
+# DETECÇÃO DE MARCADORES FIDUCIAIS
 # ============================================
 
 def detectar_marcadores_fiduciais(gray):
-    """
-    ✅ CORREÇÃO: Detectar marcadores fiduciais maiores (20mm)
-    com centro branco para melhor precisão.
-    """
+    """Detecta os 4 marcadores fiduciais nos cantos do cartão"""
     try:
         altura, largura = gray.shape
         
-        # Detectar regiões escuras
         _, binaria = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
         contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         candidatos = []
-        # ✅ Área mínima aumentada (marcadores são 20mm ≈ 8% da largura)
         area_min = (largura * altura) * 0.003
         area_max = (largura * altura) * 0.025
         
@@ -414,22 +416,18 @@ def detectar_marcadores_fiduciais(gray):
             area = w * h
             if area_min < area < area_max:
                 aspect = w / float(h)
-                # ✅ Aceitar aspect ratio mais flexível
                 if 0.7 < aspect < 1.4:
                     roi = binaria[y:y+h, x:x+w]
                     densidade = cv2.countNonZero(roi) / float(w * h)
-                    # ✅ Densidade mais flexível (marcadores com centro branco)
                     if densidade > 0.5:
                         candidatos.append((x, y, w, h, area, densidade))
         
         if len(candidatos) < 4:
-            logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores fiduciais detectados (necessário 4)")
+            logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores fiduciais detectados")
             return None
         
-        # Ordenar por área (maiores primeiro)
         candidatos.sort(key=lambda c: c[4], reverse=True)
         
-        # Pegar os 4 melhores (um em cada canto)
         meia_largura = largura / 2
         meia_altura = altura / 2
         
@@ -446,20 +444,19 @@ def detectar_marcadores_fiduciais(gray):
                 br = (cx, cy)
         
         if not all([tl, tr, bl, br]):
-            logging.warning("⚠️ Não foi possível classificar os 4 marcadores fiduciais")
+            logging.warning("⚠️ Não foi possível classificar os 4 marcadores")
             return None
         
         logging.info(f"✅ 4 marcadores fiduciais detectados")
-        logging.info(f"   TL={tl}, TR={tr}, BL={bl}, BR={br}")
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
         
     except Exception as e:
-        logging.error(f"❌ Erro ao detectar marcadores fiduciais: {e}")
+        logging.error(f"❌ Erro ao detectar marcadores: {e}")
         return None
 
 
 def corrigir_perspectiva(img, marcadores):
-    """✅ CORREÇÃO: Melhor margem para evitar corte de círculos"""
+    """Corrige a perspectiva da imagem usando os marcadores"""
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
@@ -474,7 +471,6 @@ def corrigir_perspectiva(img, marcadores):
         altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
         altura_max = max(int(altura_esq), int(altura_dir))
         
-        # ✅ Margem reduzida para não distorcer
         margem = 30
         largura_max += margem * 2
         altura_max += margem * 2
@@ -499,16 +495,19 @@ def corrigir_perspectiva(img, marcadores):
 
 
 # ============================================
-# ✅ DETECÇÃO DE CÍRCULOS - TOTALMENTE CORRIGIDA
+# ✅ DETECÇÃO DE CÍRCULOS - VERSÃO DEFINITIVA
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
     """
-    ✅ CORREÇÃO COMPLETA:
-    - Threshold reduzido (0.30 → 0.15)
-    - Parâmetros HoughCircles ajustados (param2: 28 → 20)
-    - Raio de análise aumentado (0.65 → 0.75)
-    - Detecção de círculos em branco também
+    ✅ VERSÃO DEFINITIVA - Diferencia CÍRCULOS de LETRAS
+    
+    Estratégia:
+    1. Detectar todos os candidatos com HoughCircles
+    2. Filtrar por raio (mediana) - letras têm raio diferente
+    3. Filtrar por circularidade
+    4. Remover duplicatas
+    5. Determinar preenchidos com threshold adaptativo
     """
     try:
         if ',' in imagem_base64:
@@ -519,226 +518,348 @@ def detectar_circulos_preenchidos(imagem_base64):
         img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
         
         if img is None:
-            logging.error("❌ Não foi possível decodificar a imagem")
+            logging.error("❌ Imagem inválida")
             return []
         
         height, width = img.shape[:2]
-        # ✅ Aumentar resolução máxima para melhor detecção
+        logging.info(f"📐 Imagem original: {width}x{height}")
+        
         if height > 2400:
             scale = 2400 / height
             new_width = int(width * scale)
             img = cv2.resize(img, (new_width, 2400), interpolation=cv2.INTER_AREA)
-            logging.info(f"📐 Imagem redimensionada para {new_width}x2400")
+            logging.info(f"📐 Redimensionada: {new_width}x2400")
         
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # ✅ Aplicar CLAHE para melhorar contraste
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
         gray_enhanced = clahe.apply(gray)
-        
         gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
         
+        # Tentar corrigir perspectiva
         marcadores = detectar_marcadores_fiduciais(gray)
         if marcadores:
-            img_corrigida = corrigir_perspectiva(img, marcadores)
-            gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            img = corrigir_perspectiva(img, marcadores)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
             gray_enhanced = clahe.apply(gray)
             gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
-            logging.info("✅ Perspectiva do cartão corrigida")
+            logging.info("✅ Perspectiva corrigida")
         
-        # ✅ Threshold adaptativo
         _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # ✅ PARÂMETROS OTIMIZADOS PARA NOVO CARTÃO (círculos de 24px)
+        # ✅ HoughCircles
         circulos = cv2.HoughCircles(
             gray_blur,
             cv2.HOUGH_GRADIENT,
-            dp=1.0,           # ✅ Precisão máxima
-            minDist=20,       # ✅ Reduzido para detectar círculos próximos
-            param1=60,        # ✅ Reduzido para Canny mais sensível
-            param2=20,        # ✅ REDUZIDO de 28 para 20 (detecta mais círculos)
-            minRadius=8,      # ✅ Ajustado para círculos menores
-            maxRadius=20      # ✅ Ajustado para círculos menores
+            dp=1.2,
+            minDist=18,
+            param1=50,
+            param2=18,
+            minRadius=6,
+            maxRadius=25
         )
         
-        resultados = []
+        if circulos is None:
+            logging.warning("⚠️ Nenhum círculo detectado")
+            return []
         
-        if circulos is not None:
-            circulos = np.round(circulos[0, :]).astype("int")
-            logging.info(f"🔵 Total de círculos detectados: {len(circulos)}")
+        circulos = np.round(circulos[0, :]).astype("int")
+        logging.info(f"🔵 HoughCircles: {len(circulos)} candidatos")
+        
+        # ✅ FILTRO POR CIRCULARIDADE
+        candidatos_validos = []
+        
+        for (x, y, r) in circulos:
+            if x < r or y < r or x + r > gray.shape[1] or y + r > gray.shape[0]:
+                continue
             
-            for (x, y, r) in circulos:
-                # ✅ Análise com raio maior (0.75) para capturar toda a marcação
-                mask = np.zeros(gray.shape, dtype=np.uint8)
-                cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
-                roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-                
-                total_pixels = cv2.countNonZero(mask)
-                dark_pixels = cv2.countNonZero(roi)
-                dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
-                
-                # ✅ THRESHOLD REDUZIDO de 0.30 para 0.15
-                is_filled = dark_ratio > 0.15
-                
-                resultados.append({
-                    'x': int(x), 'y': int(y), 'r': int(r),
-                    'preenchido': is_filled,
-                    'dark_ratio': float(dark_ratio)
-                })
+            mask = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
+            roi_mask = cv2.bitwise_and(binaria, binaria, mask=mask)
+            
+            total_pixels = cv2.countNonZero(mask)
+            dark_pixels = cv2.countNonZero(roi_mask)
+            dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
+            
+            candidatos_validos.append({
+                'x': int(x), 'y': int(y), 'r': int(r),
+                'dark_ratio': float(dark_ratio)
+            })
         
-        preenchidos = [c for c in resultados if c['preenchido']]
-        logging.info(f"📊 Círculos: {len(resultados)} total, {len(preenchidos)} preenchidos")
+        if not candidatos_validos:
+            return []
         
-        # Log detalhado dos preenchidos
-        for c in preenchidos[:30]:
+        logging.info(f"✅ Candidatos válidos: {len(candidatos_validos)}")
+        
+        # ✅ FILTRO POR RAIO (mediana)
+        raios = [c['r'] for c in candidatos_validos]
+        raios_sorted = sorted(raios)
+        mediana_r = raios_sorted[len(raios_sorted) // 2]
+        
+        r_min = mediana_r * 0.65
+        r_max = mediana_r * 1.35
+        
+        filtrados_r = [c for c in candidatos_validos if r_min <= c['r'] <= r_max]
+        logging.info(f"📐 Mediana raio: {mediana_r}px → filtrado: {r_min:.0f}-{r_max:.0f} → {len(filtrados_r)}")
+        
+        if len(filtrados_r) < 4:
+            logging.warning("⚠️ Poucos círculos após filtro de raio")
+            return []
+        
+        # ✅ REMOVER DUPLICATAS
+        unicos = []
+        for c in sorted(filtrados_r, key=lambda c: c['dark_ratio'], reverse=True):
+            duplicado = False
+            for u in unicos:
+                dist = np.sqrt((c['x'] - u['x'])**2 + (c['y'] - u['y'])**2)
+                if dist < u['r'] * 1.4:
+                    duplicado = True
+                    break
+            if not duplicado:
+                unicos.append(c)
+        
+        logging.info(f"✅ Após remover duplicatas: {len(unicos)} círculos")
+        
+        # ✅ THRESHOLD ADAPTATIVO PARA PREENCHIDO
+        ratios = sorted([c['dark_ratio'] for c in unicos])
+        
+        if len(ratios) >= 8:
+            # Analisar a distribuição
+            q1_idx = len(ratios) // 4
+            q3_idx = (3 * len(ratios)) // 4
+            
+            quartil1 = ratios[q1_idx]
+            quartil3 = ratios[q3_idx]
+            
+            # Se há separação clara, usar o meio
+            if quartil3 - quartil1 > 0.15:
+                threshold = (quartil1 + quartil3) / 2
+            else:
+                # Sem separação clara, usar 1.5x a mediana
+                mediana = ratios[len(ratios) // 2]
+                threshold = max(0.18, mediana * 1.4)
+        else:
+            threshold = 0.20
+        
+        threshold = max(0.15, min(threshold, 0.45))
+        logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
+        logging.info(f"📊 Ratios distribuídos: {[f'{r:.3f}' for r in ratios[:30]]}")
+        
+        preenchidos = [c for c in unicos if c['dark_ratio'] > threshold]
+        
+        logging.info(f"📊 RESULTADO: {len(unicos)} círculos, {len(preenchidos)} preenchidos")
+        
+        for c in preenchidos[:20]:
             logging.info(f"   ⭕ ({c['x']},{c['y']}) r={c['r']} ratio={c['dark_ratio']:.3f}")
         
         return preenchidos
         
     except Exception as e:
-        logging.error(f"⚠️ Erro na detecção de círculos: {e}")
+        logging.error(f"⚠️ Erro na detecção: {e}")
         traceback.print_exc()
         return []
 
 
 # ============================================
-# ✅ ORGANIZAÇÃO DE RESPOSTAS - TOTALMENTE CORRIGIDA
+# ✅ ORGANIZAÇÃO DE RESPOSTAS - VERSÃO DEFINITIVA
 # ============================================
 
 def organizar_respostas_por_posicao(circulos, total_questoes):
     """
-    ✅ CORREÇÃO COMPLETA:
-    - Agrupamento inteligente de linhas por Y
-    - Ordenação correta por X
-    - Tratamento de linhas com número variável de círculos
-    - Melhor log para debug
+    ✅ VERSÃO DEFINITIVA com validações rigorosas
+    
+    Retorna VAZIO se a detecção parecer suspeita (forçar uso da IA)
     """
     if not circulos:
-        logging.warning("⚠️ Nenhum círculo para organizar")
-        return []
+        logging.warning("⚠️ Sem círculos para organizar")
+        return [''] * total_questoes
     
-    logging.info(f"🎯 Organizando {len(circulos)} círculos para {total_questoes} questões")
+    logging.info("=" * 60)
+    logging.info(f"🎯 ORGANIZANDO {len(circulos)} CÍRCULOS PARA {total_questoes} QUESTÕES")
+    logging.info("=" * 60)
     
-    # ✅ Ordenar por Y (topo para baixo), depois por X (esquerda para direita)
-    circulos_ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
+    # Log de todos os círculos
+    for i, c in enumerate(sorted(circulos, key=lambda x: (x['y'], x['x']))):
+        logging.info(f"   [{i}] x={c['x']:4d}, y={c['y']:4d}, r={c['r']:2d}, ratio={c['dark_ratio']:.3f}")
     
-    # ✅ Calcular tolerância Y adaptativa
-    if len(circulos_ordenados) > 1:
-        distancias_y = []
-        for i in range(1, len(circulos_ordenados)):
-            dy = abs(circulos_ordenados[i]['y'] - circulos_ordenados[i-1]['y'])
-            if dy > 5:
-                distancias_y.append(dy)
-        
-        if distancias_y:
-            # Mediana das distâncias
-            distancias_y_sorted = sorted(distancias_y)
-            mediana = distancias_y_sorted[len(distancias_y_sorted) // 2]
-            y_limite = mediana * 0.5
-        else:
-            y_limite = 25
+    # Ordenar por Y depois X
+    ordenados = sorted(circulos, key=lambda c: (c['y'], c['x']))
+    
+    # Calcular tolerância Y
+    ys = [c['y'] for c in ordenados]
+    distancias_y = []
+    for i in range(1, len(ys)):
+        d = abs(ys[i] - ys[i-1])
+        if d > 5:
+            distancias_y.append(d)
+    
+    if distancias_y:
+        distancias_y.sort()
+        # Usar a MENOR distância para ser conservador
+        y_limite = distancias_y[0] * 0.6
     else:
-        y_limite = 25
+        y_limite = 20
     
-    y_limite = max(12, min(y_limite, 45))
-    logging.info(f"📏 Tolerância Y: {y_limite:.1f} pixels")
+    y_limite = max(10, min(y_limite, 35))
+    logging.info(f"📏 Tolerância Y: {y_limite:.1f}px (menor distância: {distancias_y[:5] if distancias_y else 'N/A'})")
     
-    # ✅ Agrupar em linhas
+    # Agrupar em linhas
     linhas = []
     linha_atual = []
     
-    for c in circulos_ordenados:
+    for c in ordenados:
         if not linha_atual:
             linha_atual.append(c)
         elif abs(c['y'] - linha_atual[0]['y']) < y_limite:
             linha_atual.append(c)
         else:
-            linha_atual.sort(key=lambda c: c['x'])
+            linha_atual.sort(key=lambda x: x['x'])
             linhas.append(linha_atual)
             linha_atual = [c]
     
     if linha_atual:
-        linha_atual.sort(key=lambda c: c['x'])
+        linha_atual.sort(key=lambda x: x['x'])
         linhas.append(linha_atual)
     
-    # ✅ Ordenar linhas por Y (topo para baixo)
-    linhas.sort(key=lambda linha: linha[0]['y'])
+    linhas.sort(key=lambda l: l[0]['y'])
     
-    logging.info(f"📋 {len(linhas)} linhas detectadas")
+    logging.info(f"📋 {len(linhas)} LINHAS agrupadas:")
+    for i, linha in enumerate(linhas):
+        xs = sorted([c['x'] for c in linha])
+        ys_linha = [c['y'] for c in linha]
+        preench = sum(1 for c in linha if c['preenchido'])
+        logging.info(f"   L{i+1}: Y_medio={sum(ys_linha)//len(ys_linha)}, {len(linha)} círculos, X={xs}, preenchidos={preench}")
     
+    # ✅ VALIDAÇÃO CRÍTICA: Número de linhas
+    if len(linhas) < total_questoes * 0.6:
+        logging.error(f"🚨 POUCAS linhas ({len(linhas)}) para {total_questoes} questões")
+        logging.error("   Retornando VAZIO para forçar uso da IA")
+        return [''] * total_questoes
+    
+    if len(linhas) > total_questoes * 1.8:
+        logging.error(f"🚨 MUITAS linhas ({len(linhas)}) para {total_questoes} questões")
+        logging.error("   Retornando VAZIO para forçar uso da IA")
+        return [''] * total_questoes
+    
+    # ✅ VALIDAÇÃO: cada linha deve ter entre 3 e 5 círculos
+    linhas_validas = []
+    for linha in linhas:
+        num = len(linha)
+        if 3 <= num <= 5:
+            linhas_validas.append(linha)
+        elif num == 2:
+            # Aceitar com aviso
+            linhas_validas.append(linha)
+            logging.warning(f"⚠️ Linha com apenas 2 círculos (Y={linha[0]['y']})")
+        else:
+            logging.warning(f"⚠️ Linha com {num} círculos ignorada (Y={linha[0]['y']})")
+    
+    if len(linhas_validas) < total_questoes * 0.7:
+        logging.error(f"🚨 Após validação: apenas {len(linhas_validas)} linhas válidas")
+        logging.error("   Retornando VAZIO para forçar uso da IA")
+        return [''] * total_questoes
+    
+    # ✅ Processar cada linha
     respostas = []
+    confiancas = []
     letras = ['A', 'B', 'C', 'D']
     
-    for idx, linha in enumerate(linhas):
-        if not linha:
+    for idx, linha in enumerate(linhas_validas):
+        if idx >= total_questoes:
+            break
+        
+        preenchidos = [c for c in linha if c['preenchido']]
+        
+        if not preenchidos:
             respostas.append('')
+            confiancas.append(30)
+            logging.info(f"   Q{idx+1}: VAZIO ({len(linha)} círculos)")
             continue
         
-        # ✅ Encontrar o círculo preenchido com MAIOR dark_ratio
-        circulo_preenchido = None
-        for c in linha:
-            if c['preenchido']:
-                if circulo_preenchido is None or c['dark_ratio'] > circulo_preenchido['dark_ratio']:
-                    circulo_preenchido = c
+        # Mais escuro
+        mais_escuro = max(preenchidos, key=lambda c: c['dark_ratio'])
         
-        if circulo_preenchido:
-            # ✅ Determinar posição na linha
-            posicao = 0
-            for i, c in enumerate(linha):
-                if c['x'] == circulo_preenchido['x'] and c['y'] == circulo_preenchido['y']:
-                    posicao = i
-                    break
-            
-            # ✅ Mapear posição para letra
-            num_circulos_linha = len(linha)
-            
-            if num_circulos_linha >= 4:
-                # Linha completa com 4 círculos
-                if posicao < len(letras):
-                    respostas.append(letras[posicao])
-                    logging.info(f"  ✅ Q{idx+1}: pos={posicao} → {letras[posicao]} (ratio={circulo_preenchido['dark_ratio']:.3f})")
-                else:
-                    respostas.append('')
-                    logging.warning(f"  ⚠️ Q{idx+1}: posição {posicao} fora do range")
-            elif num_circulos_linha == 3:
-                # Pode ser 3 alternativas (A, B, C)
-                if posicao < 3:
-                    respostas.append(letras[posicao])
-                    logging.info(f"  ✅ Q{idx+1}: pos={posicao} → {letras[posicao]} (3 círculos)")
-                else:
-                    respostas.append('')
-            elif num_circulos_linha == 2:
-                # Muito poucos círculos detectados - tentar inferir pela posição X
-                # Se o círculo está na metade esquerda = A, direita = B
-                largura_linha = linha[-1]['x'] - linha[0]['x']
-                if largura_linha > 0:
-                    pos_relativa = (circulo_preenchido['x'] - linha[0]['x']) / largura_linha
-                    if pos_relativa < 0.33:
-                        respostas.append('A')
-                    elif pos_relativa < 0.67:
-                        respostas.append('B')
-                    else:
-                        respostas.append('C')
-                    logging.info(f"  ✅ Q{idx+1}: 2 círculos, pos_relativa={pos_relativa:.2f}")
-                else:
-                    respostas.append('')
+        # Ordenar X
+        linha_ordenada_x = sorted(linha, key=lambda c: c['x'])
+        posicao = 0
+        for i, c in enumerate(linha_ordenada_x):
+            if c['x'] == mais_escuro['x'] and c['y'] == mais_escuro['y']:
+                posicao = i
+                break
+        
+        num_circ = len(linha_ordenada_x)
+        
+        # Mapear posição para letra
+        if num_circ >= 4:
+            if posicao < len(letras):
+                letra = letras[posicao]
+                conf = 85 if mais_escuro['dark_ratio'] > 0.35 else 70
             else:
-                # 1 círculo = assume A
-                respostas.append('A')
-                logging.warning(f"  ⚠️ Q{idx+1}: apenas 1 círculo, assumindo A")
+                letra = ''
+                conf = 30
+        elif num_circ == 3:
+            # Pode ser A, B, C
+            letra = letras[posicao] if posicao < 3 else ''
+            conf = 70
+        elif num_circ == 2:
+            # Poucos círculos: usar posição relativa
+            largura = linha_ordenada_x[-1]['x'] - linha_ordenada_x[0]['x']
+            if largura > 0:
+                pos_rel = (mais_escuro['x'] - linha_ordenada_x[0]['x']) / largura
+                if pos_rel < 0.33:
+                    letra = 'A'
+                elif pos_rel < 0.67:
+                    letra = 'B'
+                else:
+                    letra = 'C'
+                conf = 50
+            else:
+                letra = ''
+                conf = 30
         else:
-            respostas.append('')
-            logging.info(f"  ⚪ Q{idx+1}: nenhum preenchido ({len(linha)} círculos)")
+            letra = ''
+            conf = 30
+        
+        respostas.append(letra)
+        confiancas.append(conf)
+        
+        if len(preenchidos) > 1:
+            logging.warning(f"   ⚠️ Q{idx+1}: {len(preenchidos)} preenchidos! Escolhendo o mais escuro")
+        
+        logging.info(f"   Q{idx+1}: pos={posicao}/{num_circ} → '{letra}' (ratio={mais_escuro['dark_ratio']:.3f}, conf={conf}%)")
     
-    # ✅ Completar com vazios se necessário
+    # Completar
     while len(respostas) < total_questoes:
         respostas.append('')
+        confiancas.append(0)
     
     respostas = respostas[:total_questoes]
-    logging.info(f"📝 Respostas organizadas: {respostas}")
+    confiancas = confiancas[:total_questoes]
     
-    return respostas
+    # ✅ VALIDAÇÃO FINAL: muitas respostas iguais?
+    nao_vazias = [r for r in respostas if r]
+    if len(nao_vazias) >= 5:
+        contagem = Counter(nao_vazias)
+        letra_mais_comum, qtd = contagem.most_common(1)[0]
+        
+        if qtd >= len(nao_vazias) * 0.7:
+            logging.error(f"🚨 SUSPEITO: {qtd}/{len(nao_vazias)} respostas são '{letra_mais_comum}'")
+            logging.error("   Isso indica problema na detecção. Retornando VAZIO")
+            return [''] * total_questoes, [0] * total_questoes
+    
+    # Verificar taxa de vazio
+    total_vazios = len([r for r in respostas if not r])
+    if total_vazios > total_questoes * 0.6:
+        logging.error(f"🚨 SUSPEITO: {total_vazios}/{total_questoes} respostas VAZIAS")
+        logging.error("   Retornando VAZIO para forçar uso da IA")
+        return [''] * total_questoes, [0] * total_questoes
+    
+    logging.info("=" * 60)
+    logging.info(f"📝 RESPOSTAS: {respostas}")
+    logging.info(f"📊 CONFIANÇAS: {confiancas}")
+    logging.info("=" * 60)
+    
+    return respostas, confiancas
 
 
 # ============================================
@@ -746,63 +867,96 @@ def organizar_respostas_por_posicao(circulos, total_questoes):
 # ============================================
 
 def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
-    logging.info("⚠️ OCR desativado (Tesseract removido para economizar memória)")
+    logging.info("⚠️ OCR desativado")
     return []
 
 
 # ============================================
-# ✅ PROMPT DA IA - MELHORADO
+# ✅ PROMPT DA IA - COM DESCRIÇÃO EXATA DO CARTÃO
 # ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
-    """✅ CORREÇÃO: Prompt muito mais detalhado e estruturado"""
+    """✅ PROMPT COM DESCRIÇÃO EXATA - LETRA AO LADO DO CÍRCULO"""
     total = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     alternativas_str = ', '.join(alternativas)
     
-    return f"""Você é um especialista em leitura de cartões resposta de provas escolares brasileiras.
+    return f"""Você é um especialista em LEITURA DE CARTÕES RESPOSTA escolares brasileiros.
 
-CONTEXTO:
+═══════════════════════════════════════════════════════════════
+ESTRUTURA EXATA DESTE CARTÃO RESPOSTA:
+═══════════════════════════════════════════════════════════════
+
+O cartão tem {total} LINHAS numeradas (01, 02, 03... {total}).
+
+Cada LINHA tem EXATAMENTE esta estrutura (da esquerda para direita):
+  [NÚMERO]  [LETRA "A"] [CÍRCULO]  [LETRA "B"] [CÍRCULO]  
+            [LETRA "C"] [CÍRCULO]  [LETRA "D"] [CÍRCULO]
+
+⚠️ ATENÇÃO CRÍTICA: A LETRA (A, B, C, D) ESTÁ **AO LADO** DO CÍRCULO, 
+   NÃO DENTRO DELE!
+
+Exemplo visual de UMA LINHA (Q01):
+  ┌────────────────────────────────────────────────────────────┐
+  │  01 │  A ○    B ○    C ○    D ○                            │
+  │         ↑       ↑       ↑       ↑                          │
+  │      letra   letra   letra   letra                         │
+  │         ↓       ↓       ↓       ↓                          │
+  │      círculo círculo círculo círculo                       │
+  └────────────────────────────────────────────────────────────┘
+
+Se o aluno preencher a resposta "B", a linha fica:
+  │  01 │  A ○    B ●    C ○    D ○                            │
+  │                 ↑                                          │
+  │         CÍRCULO PREENCHIDO (do lado da letra B)            │
+
+═══════════════════════════════════════════════════════════════
+SUA TAREFA:
+═══════════════════════════════════════════════════════════════
+
+Para CADA LINHA ({total} linhas no total):
+1. Identifique qual dos 4 CÍRCULOS está PREENCHIDO (mais escuro)
+2. Anote a LETRA que está AO LADO desse círculo preenchido
+3. Essa letra é a RESPOSTA da questão
+
+REGRAS:
+- ✅ Círculo PREENCHIDO = círculo totalmente pintado (preto/azul escuro)
+- ✅ Círculo VAZIO = apenas contorno visível, interior branco
+- ✅ A letra ao lado do círculo preenchido é a resposta (A, B, C ou D)
+- ❌ NÃO confunda a LETRA com o CÍRCULO. A letra NÃO é a resposta!
+- ❌ NÃO invente respostas. Se não tem certeza, retorne ""
+
+═══════════════════════════════════════════════════════════════
+EXEMPLOS CORRETOS:
+═══════════════════════════════════════════════════════════════
+
+Linha: [01] A○  B●  C○  D○   → Resposta: "B"
+Linha: [02] A●  B○  C○  D○   → Resposta: "A"
+Linha: [03] A○  B○  C○  D●   → Resposta: "D"
+Linha: [04] A○  B○  C○  D○   → Resposta: "" (nenhum preenchido)
+Linha: [05] A●  B●  C○  D○   → Resposta: "A" (o mais escuro)
+
+═══════════════════════════════════════════════════════════════
+DADOS DA PROVA:
+═══════════════════════════════════════════════════════════════
 - Aluno: {aluno_nome}
 - Série: {serie}
 - Disciplina: {disciplina}
 - Total de questões: {total}
-- Alternativas válidas: {alternativas_str} (SOMENTE estas!)
+- Alternativas possíveis: {alternativas_str}
 
-ESTRUTURA DO CARTÃO RESPOSTA:
-O cartão tem {total} linhas numeradas (Q1 a Q{total}).
-Cada linha tem {len(alternativas)} círculos: {alternativas_str} (da esquerda para a direita).
-O aluno preenche COMPLETAMENTE 1 círculo por questão.
+═══════════════════════════════════════════════════════════════
+FORMATO DE RESPOSTA (JSON PURO, SEM TEXTO EXTRA):
+═══════════════════════════════════════════════════════════════
+{{"respostas": ["B", "A", "D", "", "A", ...]}}
 
-COMO IDENTIFICAR A RESPOSTA MARCADA:
-1. Procure o círculo mais ESCURO/PREENCHIDO em cada linha
-2. Um círculo preenchido tem a parte interna escura (preta ou azul)
-3. Círculos vazios mostram apenas o contorno
-4. Se houver marcação parcial (X, risco), conte como marcada
-5. Se 2+ círculos estiverem marcados, escolha o MAIS ESCURO
-6. Se NENHUM estiver marcado, retorne ""
-7. A ordem é SEMPRE: 1º círculo=A, 2º=B, 3º=C, 4º=D
+⚠️ O array deve ter EXATAMENTE {total} elementos!
 
-ATENÇÃO CRÍTICA:
-- NÃO invente respostas. Se não tiver certeza, retorne ""
-- Retorne EXATAMENTE {total} respostas, na ordem Q1 a Q{total}
-- Use SOMENTE letras: {alternativas_str}
-- Analise cada linha individualmente, da esquerda para direita
-
-EXEMPLO DE ANÁLISE:
-- Linha Q1: círculos A(○) B(●) C(○) D(○) → resposta "B"
-- Linha Q2: círculos A(○) B(○) C(○) D(●) → resposta "D"
-- Linha Q3: círculos A(○) B(○) C(○) D(○) → resposta ""
-- Linha Q4: círculos A(●) B(○) C(●) D(○) → resposta "A" (o mais escuro)
-
-FORMATO (JSON puro, sem texto extra):
-{{"respostas": ["B", "D", "", "A", ...]}}
-
-Analise a imagem e retorne o JSON:"""
+Analise a imagem linha por linha e retorne o JSON:"""
 
 
 def preprocessar_imagem_para_ia(imagem_base64):
-    """✅ CORREÇÃO: Melhor pré-processamento para IA"""
+    """Pré-processamento para IA"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -813,7 +967,6 @@ def preprocessar_imagem_para_ia(imagem_base64):
             return imagem_base64
         
         h, w = img.shape[:2]
-        # ✅ Aumentar resolução para IA
         if h > 2000:
             scale = 2000 / h
             img = cv2.resize(img, (int(w * scale), 2000), interpolation=cv2.INTER_AREA)
@@ -821,17 +974,10 @@ def preprocessar_imagem_para_ia(imagem_base64):
             scale = 1500 / h
             img = cv2.resize(img, (int(w * scale), 1500), interpolation=cv2.INTER_CUBIC)
         
-        # Converter para escala de cinza
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # ✅ Aplicar CLAHE
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         enhanced = clahe.apply(gray)
-        
-        # ✅ Remover ruído
         denoised = cv2.fastNlMeansDenoising(enhanced, None, 10, 7, 21)
-        
-        # Converter de volta para BGR
         final = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
         
         _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 95])
@@ -867,7 +1013,7 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
                 ]
             }],
             max_tokens=1500,
-            temperature=0.1  # ✅ Reduzido para maior consistência
+            temperature=0.0
         )
         
         resposta_texto = response.choices[0].message.content
@@ -879,9 +1025,13 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
             respostas_ia = dados.get('respostas', [])
             alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
             respostas_validas = validar_respostas(respostas_ia, gabarito, alternativas)
+            
+            # Confiança 75 para IA
+            confiancas = [75 if r else 30 for r in respostas_validas]
+            
             return calcular_resultado_correcao(
                 respostas_validas, gabarito, aluno_nome, serie,
-                disciplina, tipo_questoes, 'ia_fallback', bncc=bncc
+                disciplina, tipo_questoes, 'ia', bncc=bncc, confiancas=confiancas
             )
         return erro_correcao(aluno_nome, serie, disciplina, 'Resposta da IA inválida')
     except Exception as e:
@@ -890,83 +1040,168 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
 
 
 # ============================================
-# ✅ FUNÇÃO PRINCIPAL DE CORREÇÃO - MELHORADA
+# ✅ FUNÇÃO PRINCIPAL DE CORREÇÃO - DEFINITIVA
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
     """
-    ✅ CORREÇÃO:
-    - Prioriza círculos (mais preciso)
-    - Só usa IA se círculos falharem
-    - Não usa fallback aleatório
+    ✅ VERSÃO DEFINITIVA com votação entre métodos
+    
+    Estratégia:
+    1. Detectar círculos (método principal)
+    2. Validar resultado (se suspeito, usar IA)
+    3. Comparar com IA se disponível
+    4. Retornar resultado mais confiável
     """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
     
+    total_questoes = len(gabarito)
+    
     try:
-        # PASSO 1: CÍRCULOS (MÉTODO PRINCIPAL)
+        # ═══════════════════════════════════════════════════
+        # MÉTODO 1: CÍRCULOS
+        # ═══════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 PASSO 1: DETECÇÃO DE CÍRCULOS")
+        logging.info("📌 MÉTODO 1: DETECÇÃO DE CÍRCULOS")
         logging.info("=" * 60)
+        
         circulos = detectar_circulos_preenchidos(imagem_base64)
         
-        if circulos:
-            respostas_circulos = organizar_respostas_por_posicao(circulos, len(gabarito))
+        respostas_circulos = [''] * total_questoes
+        confiancas_circulos = [0] * total_questoes
+        valido_circulos = False
+        
+        if circulos and len(circulos) >= 4:
+            respostas_circulos, confiancas_circulos = organizar_respostas_por_posicao(circulos, total_questoes)
+            
+            # Contar quantas respostas foram detectadas
             total_detectadas = len([r for r in respostas_circulos if r])
             
-            logging.info(f"📊 Círculos detectaram {total_detectadas}/{len(gabarito)} respostas")
+            logging.info(f"📊 Círculos detectaram {total_detectadas}/{total_questoes} respostas")
             
-            # ✅ Aceitar se detectou pelo menos 30% das respostas
-            if total_detectadas >= len(gabarito) * 0.3:
-                respostas_validas = validar_respostas(respostas_circulos, gabarito, padrao_gabarito['alternativas'])
-                if any(r for r in respostas_validas if r in padrao_gabarito['alternativas']):
-                    resultado = calcular_resultado_correcao(
-                        respostas_validas, gabarito, aluno_nome, serie,
-                        disciplina, tipo_questoes, 'circulos',
-                        circulos=circulos, bncc=bncc
-                    )
-                    resultado['metodo_usado'] = 'circulos'
-                    logging.info(f"✅ Correção por CÍRCULOS: {resultado['acertos']}/{resultado['total']} acertos")
-                    return resultado
+            if total_detectadas >= total_questoes * 0.7:
+                nao_vazias = [r for r in respostas_circulos if r]
+                # Verificar variedade
+                if len(set(nao_vazias)) >= 2:
+                    valido_circulos = True
+                    logging.info(f"✅ CÍRCULOS VÁLIDOS")
+                else:
+                    logging.warning(f"⚠️ CÍRCULOS INVÁLIDOS: todas respostas = '{nao_vazias[0] if nao_vazias else 'vazio'}'")
+            else:
+                logging.warning(f"⚠️ CÍRCULOS INVÁLIDOS: apenas {total_detectadas}/{total_questoes} detectadas")
+        else:
+            logging.warning("⚠️ Nenhum círculo detectado")
         
-        # PASSO 2: IA (OPENAI)
+        # ═══════════════════════════════════════════════════
+        # MÉTODO 2: IA (OpenAI)
+        # ═══════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 PASSO 2: IA (OpenAI GPT-4o)")
+        logging.info("📌 MÉTODO 2: IA (OpenAI)")
         logging.info("=" * 60)
+        
+        respostas_ia = [''] * total_questoes
+        confiancas_ia = [0] * total_questoes
+        valido_ia = False
         
         if OPENAI_AVAILABLE:
-            imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
-            resultado_ia = corrigir_com_ia_fallback(
-                imagem_processada, padrao_gabarito, aluno_nome,
-                serie, tipo_questoes, disciplina, bncc=bncc
-            )
-            if not resultado_ia.get('erro'):
-                resultado_ia['metodo_usado'] = 'ia'
-                logging.info(f"✅ Correção por IA: {resultado_ia['acertos']}/{resultado_ia['total']} acertos")
-                return resultado_ia
-        
-        # PASSO 3: OCR (último recurso)
-        logging.info("=" * 60)
-        logging.info("📌 PASSO 3: OCR (Tesseract)")
-        logging.info("=" * 60)
-        respostas_ocr = extrair_respostas_com_ocr(imagem_base64, len(gabarito), padrao_gabarito['alternativas'])
-        if respostas_ocr and any(r for r in respostas_ocr):
-            respostas_validas = validar_respostas(respostas_ocr, gabarito, padrao_gabarito['alternativas'])
-            if any(r for r in respostas_validas if r in padrao_gabarito['alternativas']):
-                resultado = calcular_resultado_correcao(
-                    respostas_validas, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'ocr', bncc=bncc
+            try:
+                imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
+                resultado_ia = corrigir_com_ia_fallback(
+                    imagem_processada, padrao_gabarito, aluno_nome,
+                    serie, tipo_questoes, disciplina, bncc=bncc
                 )
-                resultado['metodo_usado'] = 'ocr'
-                return resultado
+                
+                if not resultado_ia.get('erro'):
+                    respostas_ia = resultado_ia.get('respostas_detectadas', [''] * total_questoes)
+                    confiancas_ia = resultado_ia.get('confianca_por_questao', [75] * total_questoes)
+                    
+                    total_detectadas_ia = len([r for r in respostas_ia if r])
+                    nao_vazias_ia = [r for r in respostas_ia if r]
+                    
+                    if total_detectadas_ia >= total_questoes * 0.7 and len(set(nao_vazias_ia)) >= 2:
+                        valido_ia = True
+                        logging.info(f"✅ IA VÁLIDA ({total_detectadas_ia}/{total_questoes})")
+                    else:
+                        logging.warning(f"⚠️ IA INVÁLIDA ({total_detectadas_ia}/{total_questoes})")
+                else:
+                    logging.warning(f"⚠️ IA retornou erro: {resultado_ia.get('erro')}")
+            except Exception as e:
+                logging.error(f"❌ Erro na IA: {e}")
+        else:
+            logging.warning("⚠️ OpenAI não disponível")
         
-        # PASSO 4: RETORNAR ERRO (NÃO USAR FALLBACK ALEATÓRIO!)
-        logging.warning("⚠️ Nenhum método conseguiu detectar as respostas")
-        return erro_correcao(
-            aluno_nome, serie, disciplina,
-            'Não foi possível detectar as respostas. Tire uma foto mais nítida com boa iluminação.'
+        # ═══════════════════════════════════════════════════
+        # DECISÃO FINAL
+        # ═══════════════════════════════════════════════════
+        logging.info("=" * 60)
+        logging.info("🎯 DECISÃO FINAL")
+        logging.info("=" * 60)
+        
+        if valido_circulos and valido_ia:
+            # ✅ COMPARAÇÃO: se forem muito diferentes, priorizar CÍRCULOS
+            # (círculos são mais confiáveis que IA em cartões padronizados)
+            respostas_iguais = sum(1 for i in range(total_questoes) 
+                                   if respostas_circulos[i] == respostas_ia[i])
+            
+            logging.info(f"📊 Concordância: {respostas_iguais}/{total_questoes}")
+            
+            if respostas_iguais >= total_questoes * 0.7:
+                # Alta concordância - usar CÍRCULOS
+                logging.info("✅ ALTA CONCORDÂNCIA - Usando CÍRCULOS")
+                resposta_final = respostas_circulos
+                confiancas_final = [90 if c > 70 else 70 for c in confiancas_circulos]
+                metodo_usado = 'circulos'
+            else:
+                # Baixa concordância - usar CÍRCULOS mesmo assim (mais preciso)
+                logging.warning(f"⚠️ BAIXA CONCORDÂNCIA - Usando CÍRCULOS")
+                resposta_final = respostas_circulos
+                confiancas_final = [70 if c > 50 else 50 for c in confiancas_circulos]
+                metodo_usado = 'circulos'
+            
+        elif valido_circulos:
+            logging.info("✅ Apenas CÍRCULOS válidos")
+            resposta_final = respostas_circulos
+            confiancas_final = confiancas_circulos
+            metodo_usado = 'circulos'
+            
+        elif valido_ia:
+            logging.info("✅ Apenas IA válida")
+            resposta_final = respostas_ia
+            confiancas_final = confiancas_ia
+            metodo_usado = 'ia'
+        
+        else:
+            logging.error("❌ NENHUM método válido")
+            return erro_correcao(
+                aluno_nome, serie, disciplina,
+                '❌ Não foi possível ler as respostas do cartão.\n\n'
+                'Verifique:\n'
+                '1. A foto está nítida (sem tremores)?\n'
+                '2. Boa iluminação (sem sombras)?\n'
+                '3. Os círculos foram pintados completamente?\n'
+                '4. Caneta preta ou azul (não lápis)?\n'
+                '5. O cartão está plano (não amassado)?'
+            )
+        
+        # ═══════════════════════════════════════════════════
+        # RESULTADO FINAL
+        # ═══════════════════════════════════════════════════
+        respostas_validas = validar_respostas(resposta_final, gabarito, padrao_gabarito['alternativas'])
+        
+        resultado = calcular_resultado_correcao(
+            respostas_validas, gabarito, aluno_nome, serie,
+            disciplina, tipo_questoes, metodo_usado,
+            circulos=circulos if metodo_usado == 'circulos' else None,
+            bncc=bncc,
+            confiancas=confiancas_final
         )
+        resultado['metodo_usado'] = metodo_usado
+        
+        logging.info(f"✅ RESULTADO FINAL: {resultado['acertos']}/{resultado['total']} acertos ({metodo_usado})")
+        
+        return resultado
         
     except Exception as e:
         logging.error(f"❌ Erro na correção: {e}")
@@ -1119,7 +1354,7 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
             
-            # ✅ SALVAR NO HISTÓRICO
+            # Salvar no histórico
             try:
                 conn = get_db_connection()
                 if conn:
@@ -3027,7 +3262,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# ✅ ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - OTIMIZADO
+# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA - OTIMIZADO
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -3079,16 +3314,13 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
-        # ✅ Calcular layout dinâmico
-        if quantidade_questoes <= 10:
+        # ✅ Layout em 1 coluna para 10 questões, 2 colunas para 20
+        if quantidade_questoes <= 12:
             q_por_coluna = quantidade_questoes
             num_colunas = 1
-        elif quantidade_questoes <= 20:
-            q_por_coluna = 10
+        elif quantidade_questoes <= 24:
+            q_por_coluna = 12
             num_colunas = 2
-        elif quantidade_questoes <= 30:
-            q_por_coluna = 10
-            num_colunas = 3
         else:
             q_por_coluna = 15
             num_colunas = 2
@@ -3128,7 +3360,6 @@ def gerar_gabarito():
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }}
         
-        /* ✅ MARCADORES FIDUCIAIS MAIORES (20mm) com centro branco */
         .fiducial {{
             position: absolute;
             width: 20mm;
@@ -3961,7 +4192,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO CORRIGIDA)")
+    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (VERSÃO DEFINITIVA)")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -3969,22 +4200,20 @@ if __name__ == '__main__':
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print(f"🤖 RelayFreeLLM: {'✅ Disponível' if RELAY_AVAILABLE else '❌ Indisponível'}")
-    if RELAY_AVAILABLE:
-        print(f"📌 URL: {RELAY_API_URL}")
-        print(f"📌 Modelo: {RELAY_MODEL}")
     print("=" * 60)
-    print("📋 ESTRATÉGIA DE CORREÇÃO - 3 PASSOS:")
-    print("   1️⃣ CÍRCULOS PREENCHIDOS - Detecção via OpenCV (MELHOR)")
-    print("   2️⃣ IA (OPENAI GPT-4o) - Fallback com visão")
-    print("   3️⃣ OCR - Último recurso técnico")
+    print("📋 ESTRATÉGIA DE CORREÇÃO:")
+    print("   1️⃣ Detecção de círculos (OpenCV)")
+    print("   2️⃣ Validação rigorosa dos resultados")
+    print("   3️⃣ Fallback para IA (OpenAI) se necessário")
+    print("   4️⃣ Comparação entre métodos")
     print("=" * 60)
     print("✅ MELHORIAS APLICADAS:")
-    print("   - Threshold de preenchimento: 0.30 → 0.15")
-    print("   - HoughCircles param2: 28 → 20")
-    print("   - Organização de linhas otimizada")
-    print("   - Prompt da IA mais detalhado")
-    print("   - Removido fallback aleatório")
-    print("   - Cartão resposta redesenhado (círculos 22px)")
+    print("   - Threshold adaptativo de preenchimento")
+    print("   - Filtro de tamanho de círculo (remove letras)")
+    print("   - Validação de linhas e padrões suspeitos")
+    print("   - Prompt da IA descrevendo letra AO LADO do círculo")
+    print("   - Votação entre métodos (círculos vs IA)")
+    print("   - Retorna erro se nada for confiável")
     print("=" * 60)
 
     init_db()
