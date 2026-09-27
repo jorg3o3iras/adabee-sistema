@@ -14,7 +14,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
 from psycopg2 import extensions
-import pytesseract
+# import pytesseract  ← Desativado para economizar memória (Render Free)
 import random
 import traceback
 from dotenv import load_dotenv
