@@ -495,12 +495,12 @@ def corrigir_perspectiva(img, marcadores):
 
 
 # ============================================
-# ✅ DETECÇÃO DE CÍRCULOS - VERSÃO DEFINITIVA
+# DETECÇÃO DE CÍRCULOS - VERSÃO DEFINITIVA
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
     """
-    ✅ VERSÃO DEFINITIVA - Detecta TODOS os círculos E calcula posições das colunas
+    Detecta TODOS os círculos E calcula posições das colunas
     Retorna:
     - preenchidos: círculos com ratio alto (com letra calculada)
     - posicoes_colunas: {A: x_medio, B: x_medio, C: x_medio, D: x_medio}
@@ -640,7 +640,6 @@ def detectar_circulos_preenchidos(imagem_base64):
         
         logging.info(f"✅ Após remover duplicatas: {len(unicos)} círculos")
         
-        # ✅ CALCULAR as 4 posições das colunas A, B, C, D
         posicoes_colunas = {}
         
         if len(unicos) >= 12:
@@ -695,7 +694,6 @@ def detectar_circulos_preenchidos(imagem_base64):
         logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
         logging.info(f"📊 Ratios: {[f'{r:.3f}' for r in ratios]}")
         
-        # ✅ Filtrar apenas preenchidos E adicionar letra baseada em posição X
         preenchidos = []
         for c in unicos:
             if c['dark_ratio'] > threshold:
@@ -721,13 +719,11 @@ def detectar_circulos_preenchidos(imagem_base64):
 
 
 # ============================================
-# ✅ ORGANIZAÇÃO DE RESPOSTAS - VERSÃO DEFINITIVA
+# ORGANIZAÇÃO DE RESPOSTAS
 # ============================================
 
 def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
-    """
-    ✅ VERSÃO DEFINITIVA - Usa a LETRA calculada pela posição X absoluta
-    """
+    """Organiza as respostas usando a letra calculada pela posição X"""
     if not circulos:
         logging.warning("⚠️ Sem círculos para organizar")
         return [''] * total_questoes, [0] * total_questoes
@@ -881,91 +877,79 @@ def extrair_respostas_com_ocr(imagem_base64, total_questoes, alternativas):
 
 
 # ============================================
-# ✅ PROMPT DA IA - COM DESCRIÇÃO EXATA DO CARTÃO
+# PROMPT DA IA
 # ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
-    """✅ PROMPT COM DESCRIÇÃO EXATA - LETRA AO LADO DO CÍRCULO"""
+    """Prompt detalhado para leitura linha por linha"""
     total = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     alternativas_str = ', '.join(alternativas)
     
-    return f"""Você é um especialista em LEITURA DE CARTÕES RESPOSTA escolares brasileiros.
+    return f"""Analise esta foto de cartão resposta escolar brasileiro com MUITA ATENÇÃO.
 
 ═══════════════════════════════════════════════════════════════
-ESTRUTURA EXATA DESTE CARTÃO RESPOSTA:
+ESTRUTURA DO CARTÃO:
 ═══════════════════════════════════════════════════════════════
 
-O cartão tem {total} LINHAS numeradas (01, 02, 03... {total}).
+O cartão tem {total} linhas numeradas: 01, 02, 03... até {total}.
 
-Cada LINHA tem EXATAMENTE esta estrutura (da esquerda para direita):
-  [NÚMERO]  [LETRA "A"] [CÍRCULO]  [LETRA "B"] [CÍRCULO]  
-            [LETRA "C"] [CÍRCULO]  [LETRA "D"] [CÍRCULO]
+Cada linha contém (da ESQUERDA para DIREITA):
+  [número da questão] | [letra A] [círculo A] | [letra B] [círculo B] | [letra C] [círculo C] | [letra D] [círculo D]
 
-⚠️ ATENÇÃO CRÍTICA: A LETRA (A, B, C, D) ESTÁ **AO LADO** DO CÍRCULO, 
-   NÃO DENTRO DELE!
-
-Exemplo visual de UMA LINHA (Q01):
-  ┌────────────────────────────────────────────────────────────┐
-  │  01 │  A ○    B ○    C ○    D ○                            │
-  │         ↑       ↑       ↑       ↑                          │
-  │      letra   letra   letra   letra                         │
-  │         ↓       ↓       ↓       ↓                          │
-  │      círculo círculo círculo círculo                       │
-  └────────────────────────────────────────────────────────────┘
-
-Se o aluno preencher a resposta "B", a linha fica:
-  │  01 │  A ○    B ●    C ○    D ○                            │
-  │                 ↑                                          │
-  │         CÍRCULO PREENCHIDO (do lado da letra B)            │
+IMPORTANTE: a letra (A, B, C, D) está ANTES do círculo correspondente.
+Se o círculo ao lado da letra "B" está preenchido, a resposta é "B".
 
 ═══════════════════════════════════════════════════════════════
-SUA TAREFA:
+COMO IDENTIFICAR A RESPOSTA MARCADA:
 ═══════════════════════════════════════════════════════════════
 
-Para CADA LINHA ({total} linhas no total):
-1. Identifique qual dos 4 CÍRCULOS está PREENCHIDO (mais escuro)
-2. Anote a LETRA que está AO LADO desse círculo preenchido
-3. Essa letra é a RESPOSTA da questão
+Para CADA LINHA:
+1. Olhe os 4 círculos (ao lado de A, B, C, D)
+2. Identifique qual está PREENCHIDO (com marcação escura dentro)
+3. Se o círculo ao lado de "A" está preenchido → resposta "A"
+4. Se o círculo ao lado de "B" está preenchido → resposta "B"
+5. E assim por diante...
 
-REGRAS:
-- ✅ Círculo PREENCHIDO = círculo totalmente pintado (preto/azul escuro)
-- ✅ Círculo VAZIO = apenas contorno visível, interior branco
-- ✅ A letra ao lado do círculo preenchido é a resposta (A, B, C ou D)
-- ❌ NÃO confunda a LETRA com o CÍRCULO. A letra NÃO é a resposta!
-- ❌ NÃO invente respostas. Se não tem certeza, retorne ""
-
-═══════════════════════════════════════════════════════════════
-EXEMPLOS CORRETOS:
-═══════════════════════════════════════════════════════════════
-
-Linha: [01] A○  B●  C○  D○   → Resposta: "B"
-Linha: [02] A●  B○  C○  D○   → Resposta: "A"
-Linha: [03] A○  B○  C○  D●   → Resposta: "D"
-Linha: [04] A○  B○  C○  D○   → Resposta: "" (nenhum preenchido)
-Linha: [05] A●  B●  C○  D○   → Resposta: "A" (o mais escuro)
+DICAS PARA IDENTIFICAR CORRETAMENTE:
+- O círculo PREENCHIDO tem o INTERIOR escuro/colorido
+- O círculo VAZIO tem o interior branco (só o contorno visível)
+- Pode ser marcação em caneta PRETA, AZUL ou até LÁPIS
+- Se dois círculos parecem marcados, escolha o MAIS ESCURO
+- Se NENHUM estiver marcado, retorne ""
+- NÃO confunda a LETRA com o CÍRCULO
 
 ═══════════════════════════════════════════════════════════════
-DADOS DA PROVA:
+EXEMPLO PRÁTICO DE UMA LINHA:
 ═══════════════════════════════════════════════════════════════
-- Aluno: {aluno_nome}
-- Série: {serie}
-- Disciplina: {disciplina}
-- Total de questões: {total}
-- Alternativas possíveis: {alternativas_str}
+
+Se a linha for:
+  01 | A ○    B ●    C ○    D ○
+         ↑       ↑
+      letra   círculo preenchido
+
+Então a resposta é "B" (porque o círculo ao lado da letra B está preenchido).
 
 ═══════════════════════════════════════════════════════════════
-FORMATO DE RESPOSTA (JSON PURO, SEM TEXTO EXTRA):
+MUITO IMPORTANTE:
 ═══════════════════════════════════════════════════════════════
-{{"respostas": ["B", "A", "D", "", "A", ...]}}
 
-⚠️ O array deve ter EXATAMENTE {total} elementos!
+1. NÃO invente respostas. Se não tiver 100% de certeza, retorne ""
+2. Analise uma linha de cada vez, começando pela linha 01
+3. Retorne EXATAMENTE {total} respostas (mesmo as vazias)
+4. Use SOMENTE as letras: {alternativas_str}
+5. Se a marcação for fraca/ambígua, retorne ""
 
-Analise a imagem linha por linha e retorne o JSON:"""
+═══════════════════════════════════════════════════════════════
+FORMATO DA RESPOSTA (APENAS O JSON):
+═══════════════════════════════════════════════════════════════
+{{"respostas": ["B", "A", "D", "", "A", "B", "", "", "C", "B"]}}
+
+Analise a imagem linha por linha com muito cuidado e retorne APENAS o JSON acima."""
 
 
 def preprocessar_imagem_para_ia(imagem_base64):
-    """Pré-processamento para IA"""
+    """Processa imagem em resolução alta para IA"""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -976,20 +960,27 @@ def preprocessar_imagem_para_ia(imagem_base64):
             return imagem_base64
         
         h, w = img.shape[:2]
-        if h > 2000:
+        logging.info(f"🖼️ IA - Imagem original: {w}x{h}")
+        
+        if h > 3000:
+            scale = 3000 / h
+            img = cv2.resize(img, (int(w * scale), 3000), interpolation=cv2.INTER_AREA)
+            logging.info(f"🖼️ IA - Redimensionada: {int(w * scale)}x3000")
+        elif h < 2000:
             scale = 2000 / h
-            img = cv2.resize(img, (int(w * scale), 2000), interpolation=cv2.INTER_AREA)
-        elif h < 1000:
-            scale = 1500 / h
-            img = cv2.resize(img, (int(w * scale), 1500), interpolation=cv2.INTER_CUBIC)
+            img = cv2.resize(img, (int(w * scale), 2000), interpolation=cv2.INTER_CUBIC)
+            logging.info(f"🖼️ IA - Aumentada: {int(w * scale)}x2000")
         
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
         enhanced = clahe.apply(gray)
-        denoised = cv2.fastNlMeansDenoising(enhanced, None, 10, 7, 21)
-        final = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
         
-        _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        kernel_sharpen = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        sharpened = cv2.filter2D(enhanced, -1, kernel_sharpen)
+        
+        final = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
+        
+        _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 100])
         return base64.b64encode(buffer).decode('utf-8')
     except Exception as e:
         logging.error(f"Erro no preprocessamento: {e}")
@@ -1048,13 +1039,11 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
 
 
 # ============================================
-# ✅ FUNÇÃO PRINCIPAL DE CORREÇÃO - DEFINITIVA
+# FUNÇÃO PRINCIPAL DE CORREÇÃO
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
-    """
-    ✅ VERSÃO DEFINITIVA com votação entre métodos
-    """
+    """Correção com votação entre círculos e IA (IA prioritária)"""
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -1130,34 +1119,35 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         logging.info("🎯 DECISÃO FINAL")
         logging.info("=" * 60)
         
-        if valido_circulos and valido_ia:
+        # IA é PRIORITÁRIA (mais confiável que círculos)
+        if valido_ia and valido_circulos:
             respostas_iguais = sum(1 for i in range(total_questoes) 
                                    if respostas_circulos[i] == respostas_ia[i])
             
             logging.info(f"📊 Concordância: {respostas_iguais}/{total_questoes}")
             
-            if respostas_iguais >= total_questoes * 0.7:
-                logging.info("✅ ALTA CONCORDÂNCIA - Usando CÍRCULOS")
-                resposta_final = respostas_circulos
-                confiancas_final = [90 if c > 70 else 70 for c in confiancas_circulos]
-                metodo_usado = 'circulos'
+            if respostas_iguais >= total_questoes * 0.6:
+                logging.info("✅ ALTA CONCORDÂNCIA - Usando IA")
+                resposta_final = respostas_ia
+                confiancas_final = [95 if c > 70 else 80 for c in confiancas_ia]
+                metodo_usado = 'ia'
             else:
-                logging.warning(f"⚠️ BAIXA CONCORDÂNCIA - Usando CÍRCULOS")
-                resposta_final = respostas_circulos
-                confiancas_final = [70 if c > 50 else 50 for c in confiancas_circulos]
-                metodo_usado = 'circulos'
-            
-        elif valido_circulos:
-            logging.info("✅ Apenas CÍRCULOS válidos")
-            resposta_final = respostas_circulos
-            confiancas_final = confiancas_circulos
-            metodo_usado = 'circulos'
+                logging.warning(f"⚠️ BAIXA CONCORDÂNCIA - Usando IA (mais confiável)")
+                resposta_final = respostas_ia
+                confiancas_final = confiancas_ia
+                metodo_usado = 'ia'
             
         elif valido_ia:
             logging.info("✅ Apenas IA válida")
             resposta_final = respostas_ia
             confiancas_final = confiancas_ia
             metodo_usado = 'ia'
+            
+        elif valido_circulos:
+            logging.info("✅ Apenas CÍRCULOS válidos (IA falhou)")
+            resposta_final = respostas_circulos
+            confiancas_final = confiancas_circulos
+            metodo_usado = 'circulos'
         
         else:
             logging.error("❌ NENHUM método válido")
@@ -4193,7 +4183,8 @@ if __name__ == '__main__':
     print("   - Cálculo automático das colunas A/B/C/D")
     print("   - Letra atribuída por posição X absoluta")
     print("   - Tolerância Y adaptativa")
-    print("   - Validação contra padrões suspeitos")
+    print("   - Prompt da IA melhorado (linha por linha)")
+    print("   - IA prioritária na decisão final")
     print("=" * 60)
 
     init_db()
