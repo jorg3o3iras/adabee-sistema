@@ -850,9 +850,8 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
 
 def preprocessar_imagem_para_ia(imagem_base64):
     """
-    Prepara imagem para IA: SEM filtros agressivos.
-    GPT-4o lê melhor imagem crua em boa resolução.
-    Robusto contra formatos variados.
+    Prepara imagem para IA: auto-contraste leve + normalização de brilho.
+    Não usa filtros agressivos. Só ajusta exposição para o GPT-4o ver melhor.
     """
     try:
         raw = imagem_base64
@@ -877,24 +876,43 @@ def preprocessar_imagem_para_ia(imagem_base64):
         img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
 
         if img is None:
-            logging.warning("⚠️ OpenCV falhou, tentando PIL...")
             try:
                 from PIL import Image as PILImage
                 pil_img = PILImage.open(io.BytesIO(image_data))
                 if pil_img.mode != 'RGB':
                     pil_img = pil_img.convert('RGB')
                 img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-                logging.info("✅ PIL conseguiu decodificar")
             except Exception as e_pil:
                 logging.error(f"❌ PIL também falhou: {e_pil}")
                 return '', 'image/jpeg'
 
         if img is None or img.size == 0:
-            logging.error("❌ Imagem decodificada mas vazia")
             return '', 'image/jpeg'
 
         h, w = img.shape[:2]
         logging.info(f"🖼️ IA - Imagem original: {w}x{h}")
+
+        # ═══ Auto-correção de exposição ═══
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        brilho_medio = float(np.mean(gray))
+        logging.info(f"🖼️ IA - Brilho médio: {brilho_medio:.1f}")
+
+        if brilho_medio < 100:
+            alpha = min(130.0 / max(brilho_medio, 1), 2.0)
+            img = cv2.convertScaleAbs(img, alpha=alpha, beta=20)
+            logging.info(f"🖼️ IA - Corrigido escuro: alpha={alpha:.2f}")
+        elif brilho_medio > 220:
+            alpha = 200.0 / max(brilho_medio, 1)
+            img = cv2.convertScaleAbs(img, alpha=alpha, beta=-10)
+            logging.info(f"🖼️ IA - Corrigido claro: alpha={alpha:.2f}")
+
+        # CLAHE suave (sem halos)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        img = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
+        logging.info(f"🖼️ IA - CLAHE aplicado (clipLimit=1.5)")
 
         TARGET = 2400
         if h > TARGET:
@@ -914,7 +932,6 @@ def preprocessar_imagem_para_ia(imagem_base64):
         traceback.print_exc()
         raw = imagem_base64.split(',', 1)[1] if ',' in imagem_base64 else imagem_base64
         return raw, extrair_mimetype(imagem_base64)
-
 
 # ============================================
 # PROMPT DA IA - VERSÃO PROFISSIONAL (OMR)
@@ -3644,15 +3661,15 @@ def gerar_gabarito():
 
         .fiducial {{
             position: absolute;
-            width: 20mm;
-            height: 20mm;
+            width: 12mm;
+            height: 12mm;
             background: #000000;
             z-index: 10;
         }}
-        .fiducial-tl {{ top: 3mm; left: 3mm; }}
-        .fiducial-tr {{ top: 3mm; right: 3mm; }}
-        .fiducial-bl {{ bottom: 3mm; left: 3mm; }}
-        .fiducial-br {{ bottom: 3mm; right: 3mm; }}
+        .fiducial-tl {{ top: 32mm; left: 8mm; }}
+        .fiducial-tr {{ top: 32mm; right: 8mm; }}
+        .fiducial-bl {{ bottom: 8mm; left: 8mm; }}
+        .fiducial-br {{ bottom: 8mm; right: 8mm; }}
 
         .fiducial::after {{
             content: '';
@@ -3660,8 +3677,8 @@ def gerar_gabarito():
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 6mm;
-            height: 6mm;
+            width: 4mm;
+            height: 4mm;
             background: #ffffff;
             border-radius: 50%;
         }}
