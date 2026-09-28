@@ -845,29 +845,57 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
 
 
 # ============================================
-# PREPROCESSAMENTO DE IMAGEM PARA IA (CORRIGIDO)
+# PREPROCESSAMENTO DE IMAGEM PARA IA
 # ============================================
 
 def preprocessar_imagem_para_ia(imagem_base64):
     """
     Prepara imagem para IA: SEM filtros agressivos.
     GPT-4o lê melhor imagem crua em boa resolução.
+    Robusto contra formatos variados.
     """
     try:
         raw = imagem_base64
-        if ',' in raw:
+        if isinstance(raw, tuple):
+            raw = raw[0]
+        if not raw or not isinstance(raw, str):
+            logging.error("❌ preprocessar_imagem_para_ia: entrada vazia")
+            return '', 'image/jpeg'
+
+        if ',' in raw and raw.strip().startswith('data:'):
             raw = raw.split(',', 1)[1]
-        image_data = base64.b64decode(raw)
+
+        raw = raw.strip().replace('\n', '').replace('\r', '').replace(' ', '')
+
+        try:
+            image_data = base64.b64decode(raw, validate=False)
+        except Exception as e:
+            logging.error(f"❌ Base64 inválido: {e}")
+            return '', 'image/jpeg'
+
         np_array = np.frombuffer(image_data, np.uint8)
         img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+
         if img is None:
-            logging.error("❌ preprocessar_imagem_para_ia: imagem inválida")
-            return raw, 'image/jpeg'
+            logging.warning("⚠️ OpenCV falhou, tentando PIL...")
+            try:
+                from PIL import Image as PILImage
+                pil_img = PILImage.open(io.BytesIO(image_data))
+                if pil_img.mode != 'RGB':
+                    pil_img = pil_img.convert('RGB')
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+                logging.info("✅ PIL conseguiu decodificar")
+            except Exception as e_pil:
+                logging.error(f"❌ PIL também falhou: {e_pil}")
+                return '', 'image/jpeg'
+
+        if img is None or img.size == 0:
+            logging.error("❌ Imagem decodificada mas vazia")
+            return '', 'image/jpeg'
 
         h, w = img.shape[:2]
         logging.info(f"🖼️ IA - Imagem original: {w}x{h}")
 
-        # Resolução alvo: mantém detalhes sem estourar tokens
         TARGET = 2400
         if h > TARGET:
             scale = TARGET / float(h)
@@ -877,8 +905,6 @@ def preprocessar_imagem_para_ia(imagem_base64):
             scale = 1600 / float(h)
             img = cv2.resize(img, (int(w * scale), 1600), interpolation=cv2.INTER_CUBIC)
             logging.info(f"🖼️ IA - Aumentada para: {img.shape[1]}x{img.shape[0]}")
-
-        # NENHUM filtro. Imagem crua. GPT-4o faz OCR melhor sem nossa "ajuda".
 
         _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 95])
         b64 = base64.b64encode(buffer).decode('utf-8')
@@ -891,61 +917,107 @@ def preprocessar_imagem_para_ia(imagem_base64):
 
 
 # ============================================
-# PROMPT DA IA - MELHORADO E DETALHADO
+# PROMPT DA IA - VERSÃO PROFISSIONAL (OMR)
 # ============================================
 
-def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
+def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina, aviso_extra=None):
+    """
+    Prompt profissional para OMR com GPT-4o.
+    Usa chain-of-thought forçado + regras anti-alucinação.
+    """
     total = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     alternativas_str = ', '.join(alternativas)
     num_alts = len(alternativas)
 
-    return f"""Você é um sistema OMR (Optical Mark Recognition) especializado em cartões-resposta escolares brasileiros.
+    exemplo_linha = f"""
+Linha 01: vejo 4 bolhas → A(branca) B(PRETA/preenchida) C(branca) D(branca) → resposta: B
+Linha 02: vejo 4 bolhas → A(PRETA/preenchida) B(branca) C(branca) D(branca) → resposta: A
+..."""
 
-CONTEXTO DA IMAGEM:
+    aviso_bloco = ""
+    if aviso_extra:
+        aviso_bloco = f"""
+⚠️ ATENÇÃO — ERRO NA TENTATIVA ANTERIOR:
+{aviso_extra}
+Você precisa OLHAR A IMAGEM COM MAIS ATENÇÃO desta vez.
+Se você não consegue distinguir as bolhas, retorne todas "" ao invés de chutar.
+"""
+
+    return f"""Você é um sistema OMR (Optical Mark Recognition) de nível profissional, especializado em cartões-resposta escolares brasileiros.
+
+═══════════════════════════════════════════════════════
+CONTEXTO DA IMAGEM
+═══════════════════════════════════════════════════════
 - É uma foto de celular de um cartão-resposta impresso em folha A4.
-- O cartão tem 4 marcadores fiduciais PRETOS nos cantos (quadrados pretos de ~2cm).
-- Entre os marcadores existe uma grade com {total} linhas numeradas (01, 02, ..., {total:02d}).
-- Cada linha tem {num_alts} bolhas circulares com a LETRA IMPRESSA DENTRO da bolha: {alternativas_str}.
-- A bolha marcada tem o INTERIOR preenchido com caneta preta/azul ou lápis escuro.
-- A bolha NÃO marcada tem interior branco (só o contorno preto e a letra preta).
+- O cartão tem 4 MARCADORES FIDUCIAIS PRETOS nos cantos (quadrados pretos com furo branco no meio).
+- Entre os marcadores existe uma grade com EXATAMENTE {total} linhas numeradas (01, 02, ..., {total:02d}).
+- Cada linha tem {num_alts} bolhas circulares com a LETRA IMPRESSA DENTRO: {alternativas_str}.
+- Bolha MARCADA: o INTERIOR está preenchido com tinta escura (caneta preta/azul ou lápis).
+- Bolha NÃO MARCADA: o interior está BRANCO, apenas com o contorno preto e a letra preta.
 
-PROCEDIMENTO OBRIGATÓRIO (execute mentalmente ANTES de responder):
-1. Localize os 4 marcadores fiduciais pretos nos cantos.
-2. Localize a grade de bolhas entre eles.
-3. Para CADA linha (de 01 a {total}), de cima para baixo:
-   a. Identifique as {num_alts} bolhas dessa linha.
-   b. Para cada bolha, avalie: o INTERIOR está escuro/preenchido (mais de 60% da área interna)?
-   c. Escolha a bolha com MAIOR preenchimento.
-   d. Se NENHUMA bolha estiver preenchida, retorne "" para essa questão.
-   e. Se DUAS bolhas estiverem preenchidas, escolha a mais escura. Se empatarem, retorne "".
-4. Conte as linhas para garantir que retornou exatamente {total} itens.
+═══════════════════════════════════════════════════════
+PROCEDIMENTO OBRIGATÓRIO — PENSE PASSO A PASSO
+═══════════════════════════════════════════════════════
+Antes de responder, SIMULE MENTALMENTE esta análise:
 
-REGRAS CRÍTICAS:
-- IGNORE marcas fora das bolhas (rabiscos, dobras, sombras).
-- NÃO confunda a LETRA IMPRESSA dentro da bolha com a marcação. A letra impressa está em TODAS as bolhas; o que muda é o INTERIOR.
-- NÃO invente. Se não tem certeza, retorne "".
-- Use SOMENTE estes valores: {alternativas_str} ou "".
-- Se a imagem estiver cortada/ilegível, retorne "" em todas.
+PASSO 1: Localize os 4 marcadores pretos nos cantos. Eles delimitam a área útil.
+PASSO 2: Localize a grade de bolhas entre os marcadores.
+PASSO 3: Conte quantas linhas horizontais existem. Deve dar EXATAMENTE {total}.
+PASSO 4: Para CADA linha, de cima para baixo, faça esta análise:
+   a) Vejo as {num_alts} bolhas: {alternativas_str}
+   b) Para CADA bolha, avalie o INTERIOR (ignore a letra impressa e o contorno):
+      - Interior PRETO/ESCURO (>60% da área) → marcada
+      - Interior BRANCO → não marcada
+   c) Identifique QUAL bolha está com interior escuro.
+   d) Se NENHUMA estiver escura → resposta = ""
+   e) Se DUAS ou mais estiverem escuras → escolha a MAIS escura. Se empatar → ""
+   f) Anote a letra escolhida.
 
-FORMATO DE SAÍDA (JSON estrito, sem markdown, sem texto extra):
+Exemplo de raciocínio interno (só pra você pensar, NÃO colocar na resposta):
+{exemplo_linha}
+
+PASSO 5: Conte suas respostas. Deve ter EXATAMENTE {total} itens.
+PASSO 6: Responda em JSON.
+{aviso_bloco}
+═══════════════════════════════════════════════════════
+REGRAS CRÍTICAS — LEIA COM ATENÇÃO
+═══════════════════════════════════════════════════════
+🚫 NUNCA invente. Se não tem CERTEZA de qual bolha está marcada, retorne "".
+🚫 NUNCA responda o mesmo valor para TODAS as questões. Isso é IMPOSSÍVEL num cartão real.
+🚫 NUNCA confunda a LETRA IMPRESSA com a MARCAÇÃO. Todas as bolhas têm letra. Só uma tem o interior escuro.
+🚫 NUNCA responda "A" por padrão. Se não sabe, responda "".
+🚫 IGNORE rabiscos, dobras, sombras, marcas fora das bolhas.
+
+✅ Use SOMENTE estes valores: {alternativas_str} ou "".
+✅ Se a imagem estiver cortada, girada, ou ilegível, retorne "" em todas.
+✅ A confiança deve refletir a certeza REAL. Se você não tem certeza: use 30 ou menos.
+
+═══════════════════════════════════════════════════════
+FORMATO DE SAÍDA (JSON puro, sem markdown, sem texto extra)
+═══════════════════════════════════════════════════════
 {{
-  "respostas": ["A", "B", ...],
-  "confianca_por_questao": [95, 87, 60, ...]
+  "respostas": ["B", "A", "C", ...],
+  "confianca_por_questao": [88, 92, 85, ...]
 }}
 
-Você DEVE retornar EXATAMENTE {total} itens em "respostas" e {total} itens em "confianca_por_questao" (0-100).
+Você DEVE retornar EXATAMENTE {total} itens em "respostas" e {total} itens em "confianca_por_questao".
+A confiança é um inteiro de 0 a 100.
 
-Agora analise a imagem linha por linha e retorne o JSON.""".strip()
+Agora analise a imagem linha por linha e retorne SOMENTE o JSON.""".strip()
 
 
 def _parse_respostas_ia(texto, total_esperado, alternativas):
-    """Extrai e valida o array de respostas do texto da IA. Tolerante."""
+    """
+    Extrai e valida o array de respostas do texto da IA.
+    Ultra-tolerante: aceita variações, JSON com comentários, markdown etc.
+    """
     if not texto:
         return None
+
     texto = texto.strip()
     texto = re.sub(r'^```(?:json)?\s*', '', texto, flags=re.IGNORECASE)
-    texto = re.sub(r'\s*```$', '', texto)
+    texto = re.sub(r'\s*```\s*$', '', texto)
 
     dados = None
     try:
@@ -957,6 +1029,16 @@ def _parse_respostas_ia(texto, total_esperado, alternativas):
                 dados = json.loads(m.group(0))
             except Exception:
                 pass
+
+    if not isinstance(dados, dict):
+        m = re.search(r'"respostas"\s*:\s*\[([^\]]*)\]', texto)
+        if m:
+            raw = m.group(1)
+            itens = re.findall(r'"([^"]*)"|\'([^\']*)\'', raw)
+            respostas = [a or b for a, b in itens]
+            if respostas:
+                dados = {'respostas': respostas}
+
     if not isinstance(dados, dict):
         return None
 
@@ -969,7 +1051,6 @@ def _parse_respostas_ia(texto, total_esperado, alternativas):
     if not isinstance(respostas, list):
         return None
 
-    # Normalização TOLERANTE
     alternativas_upper = [a.upper() for a in alternativas]
     normalizadas = []
     for r in respostas:
@@ -978,47 +1059,97 @@ def _parse_respostas_ia(texto, total_esperado, alternativas):
             continue
         s = str(r).strip().upper()
         s = re.sub(r'^[\(\[]*', '', s)
-        s = re.sub(r'[\)\]\.\,\;\:\-]*$', '', s)
+        s = re.sub(r'[\)\]\.\,\;\:\-\s]*$', '', s)
+        s = s.strip()
+
         if not s:
             normalizadas.append('')
             continue
+
         if s in alternativas_upper:
             normalizadas.append(s)
             continue
-        encontrou = ''
+
         for alt in alternativas_upper:
-            if alt in s:
-                encontrou = alt
+            if s == alt or s.startswith(alt + ')') or s.startswith(alt + '.') or s == f'LETRA {alt}' or s == f'ALTERNATIVA {alt}':
+                normalizadas.append(alt)
                 break
-        normalizadas.append(encontrou)
+        else:
+            letras_encontradas = [alt for alt in alternativas_upper if alt in s]
+            if len(letras_encontradas) == 1:
+                normalizadas.append(letras_encontradas[0])
+            else:
+                normalizadas.append('')
 
     return normalizadas
 
 
 def _parse_confiancas_ia(texto, total_esperado):
-    """Extrai confiança por questão do JSON da IA."""
+    """Extrai confiança por questão do JSON da IA. Tolerante a falhas."""
+    if not texto:
+        return None
+
+    dados = None
     try:
         dados = json.loads(texto)
     except Exception:
-        m = re.search(r'\{[\s\S]*\}', texto or '')
+        m = re.search(r'\{[\s\S]*\}', texto)
+        if m:
+            try:
+                dados = json.loads(m.group(0))
+            except Exception:
+                pass
+
+    if not isinstance(dados, dict):
+        m = re.search(r'"confianca_por_questao"\s*:\s*\[([^\]]*)\]', texto)
         if not m:
             return None
-        try:
-            dados = json.loads(m.group(0))
-        except Exception:
+        raw = m.group(1)
+        nums = re.findall(r'-?\d+(?:\.\d+)?', raw)
+        confs = [int(float(n)) for n in nums]
+    else:
+        confs = dados.get('confianca_por_questao')
+        if not isinstance(confs, list):
             return None
-    if not isinstance(dados, dict):
-        return None
-    confs = dados.get('confianca_por_questao')
-    if not isinstance(confs, list):
-        return None
-    out = []
-    for c in confs[:total_esperado]:
-        try:
-            out.append(int(float(c)))
-        except (ValueError, TypeError):
-            out.append(75)
-    return out
+        confs = []
+        for c in dados.get('confianca_por_questao', []):
+            try:
+                confs.append(int(float(c)))
+            except (ValueError, TypeError):
+                confs.append(75)
+
+    while len(confs) < total_esperado:
+        confs.append(50)
+    return confs[:total_esperado]
+
+
+def _detectar_alucinacao(respostas, confiancas):
+    """
+    Detecta se a IA está alucinando (respostas repetitivas com confiança alta).
+    Retorna (bool, str) — (True, motivo) se suspeitar.
+    """
+    nao_vazias = [r for r in respostas if r]
+    if not nao_vazias:
+        return False, ""
+
+    if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
+        letra = nao_vazias[0]
+        return True, f"Todas as {len(nao_vazias)} respostas são '{letra}' — impossível num cartão real"
+
+    if len(nao_vazias) >= 6:
+        from collections import Counter
+        contagem = Counter(nao_vazias)
+        letra_mais_comum, qtd = contagem.most_common(1)[0]
+        if qtd / len(nao_vazias) >= 0.85:
+            conf_media = sum(confiancas) / len(confiancas) if confiancas else 0
+            if conf_media >= 85:
+                return True, f"{qtd}/{len(nao_vazias)} respostas são '{letra_mais_comum}' com confiança média {conf_media:.0f}% — suspeito"
+
+    if len(nao_vazias) >= 6:
+        if nao_vazias == ['A', 'B'] * (len(nao_vazias) // 2):
+            return True, "Padrão alternado A,B,A,B detectado — provável alucinação"
+
+    return False, ""
 
 
 # ============================================
@@ -1026,6 +1157,11 @@ def _parse_confiancas_ia(texto, total_esperado):
 # ============================================
 
 def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
+    """
+    Correção com IA. Faz 2 tentativas:
+    - 1ª tentativa: prompt normal
+    - 2ª tentativa (só se alucinou): prompt com aviso extra pedindo atenção
+    """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -1033,80 +1169,54 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
         return erro_correcao(aluno_nome, serie, disciplina, 'IA OpenAI não disponível')
 
     try:
-        prompt = gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina)
         total_questoes = len(gabarito)
         alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
 
         if isinstance(imagem_base64, tuple):
             imagem_limpa, mimetype = imagem_base64
         else:
-            if ',' in imagem_base64:
+            if ',' in imagem_base64 and imagem_base64.strip().startswith('data:'):
                 mimetype = extrair_mimetype(imagem_base64)
                 imagem_limpa = imagem_base64.split(',', 1)[1]
             else:
                 imagem_limpa = imagem_base64
                 mimetype = 'image/jpeg'
 
+        if not imagem_limpa or len(imagem_limpa) < 100:
+            return erro_correcao(aluno_nome, serie, disciplina, 'Imagem inválida ou vazia')
+
         data_url = f"data:{mimetype};base64,{imagem_limpa}"
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Você é um sistema OMR especializado em cartões-resposta. "
-                    "Responda APENAS com JSON no formato {\"respostas\": [\"A\",\"B\",...], \"confianca_por_questao\": [90, 85, ...]} "
-                    "com exatamente o número de itens pedido. Sem markdown."
-                )
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": data_url,
-                            "detail": "high"
-                        }
-                    }
-                ]
-            }
-        ]
+        respostas_validas, confiancas_ia, texto_resposta = _executar_chamada_openai(
+            data_url, padrao_gabarito, aluno_nome, serie, disciplina, tipo_questoes, aviso_extra=None
+        )
 
-        create_kwargs = {
-            "model": OPENAI_MODEL,
-            "messages": messages,
-            "max_tokens": 2000,
-            "temperature": 0.0,
-        }
-        try:
-            create_kwargs["response_format"] = {"type": "json_object"}
-            response = openai_client.chat.completions.create(**create_kwargs)
-        except Exception as e_fmt:
-            logging.warning(f"⚠️ response_format não suportado, tentando sem: {e_fmt}")
-            create_kwargs.pop("response_format", None)
-            response = openai_client.chat.completions.create(**create_kwargs)
-
-        resposta_texto = (response.choices[0].message.content or "").strip()
-        logging.info(f"📝 Resposta OpenAI ({len(resposta_texto)} chars): {resposta_texto[:600]}...")
-
-        respostas_validas = _parse_respostas_ia(resposta_texto, total_questoes, alternativas)
         if respostas_validas is None:
-            logging.error(f"❌ Não foi possível parsear JSON da IA: {resposta_texto[:300]}")
             return erro_correcao(aluno_nome, serie, disciplina, 'Resposta da IA inválida (JSON)')
 
-        # Confianças da IA
-        confiancas_ia = _parse_confiancas_ia(resposta_texto, total_questoes)
-        if not confiancas_ia:
-            confiancas_ia = [85 if r else 25 for r in respostas_validas]
+        alucinou, motivo = _detectar_alucinacao(respostas_validas, confiancas_ia)
+        if alucinou:
+            logging.warning(f"🚨 ALUCINAÇÃO detectada na tentativa 1: {motivo}")
+            logging.info("🔄 Tentando novamente com prompt endurecido...")
 
-        while len(respostas_validas) < total_questoes:
-            respostas_validas.append('')
-        respostas_validas = respostas_validas[:total_questoes]
+            respostas_2, confiancas_2, texto_2 = _executar_chamada_openai(
+                data_url, padrao_gabarito, aluno_nome, serie, disciplina, tipo_questoes,
+                aviso_extra=motivo
+            )
 
-        while len(confiancas_ia) < total_questoes:
-            confiancas_ia.append(25)
-        confiancas_ia = confiancas_ia[:total_questoes]
+            if respostas_2 is not None:
+                alucinou_2, motivo_2 = _detectar_alucinacao(respostas_2, confiancas_2)
+                if not alucinou_2:
+                    logging.info(f"✅ Tentativa 2 resolveu! Respostas: {respostas_2}")
+                    respostas_validas = respostas_2
+                    confiancas_ia = confiancas_2
+                    texto_resposta = texto_2
+                else:
+                    logging.warning(f"⚠️ Tentativa 2 também alucinou: {motivo_2}")
+                    respostas_validas = respostas_2
+                    confiancas_ia = confiancas_2
+                    texto_resposta = texto_2
+                    confiancas_ia = [min(c, 40) for c in confiancas_ia]
 
         total_detectadas = sum(1 for r in respostas_validas if r)
         logging.info(f"✅ IA detectou {total_detectadas}/{total_questoes}: {respostas_validas}")
@@ -1115,10 +1225,87 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
             respostas_validas, gabarito, aluno_nome, serie,
             disciplina, tipo_questoes, 'ia', bncc=bncc, confiancas=confiancas_ia
         )
+
     except Exception as e:
         logging.error(f"❌ Erro no fallback OpenAI: {e}")
         traceback.print_exc()
         return erro_correcao(aluno_nome, serie, disciplina, str(e))
+
+
+def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome, serie, disciplina, tipo_questoes, aviso_extra=None):
+    """
+    Executa UMA chamada à OpenAI. Retorna (respostas, confiancas, texto) ou (None, None, None) se falhar.
+    """
+    total_questoes = padrao_gabarito['total_questoes']
+    alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
+
+    prompt = gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina, aviso_extra=aviso_extra)
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Você é um sistema OMR profissional. Analise cartões-resposta com precisão. "
+                "Responda APENAS com JSON válido no formato "
+                "{\"respostas\": [\"A\",\"B\",...], \"confianca_por_questao\": [90, 85, ...]}. "
+                "Sem markdown, sem texto extra, sem explicações."
+            )
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": data_url,
+                        "detail": "high"
+                    }
+                }
+            ]
+        }
+    ]
+
+    create_kwargs = {
+        "model": OPENAI_MODEL,
+        "messages": messages,
+        "max_tokens": 2000,
+        "temperature": 0.0,
+    }
+
+    try:
+        create_kwargs["response_format"] = {"type": "json_object"}
+        response = openai_client.chat.completions.create(**create_kwargs)
+    except Exception as e_fmt:
+        logging.warning(f"⚠️ response_format não suportado, tentando sem: {e_fmt}")
+        create_kwargs.pop("response_format", None)
+        try:
+            response = openai_client.chat.completions.create(**create_kwargs)
+        except Exception as e2:
+            logging.error(f"❌ Erro na chamada OpenAI: {e2}")
+            return None, None, None
+
+    resposta_texto = (response.choices[0].message.content or "").strip()
+    logging.info(f"📝 Resposta OpenAI ({len(resposta_texto)} chars): {resposta_texto[:600]}")
+
+    respostas_validas = _parse_respostas_ia(resposta_texto, total_questoes, alternativas)
+    if respostas_validas is None:
+        logging.error(f"❌ Não foi possível parsear JSON da IA")
+        return None, None, resposta_texto
+
+    confiancas_ia = _parse_confiancas_ia(resposta_texto, total_questoes)
+    if not confiancas_ia:
+        confiancas_ia = [85 if r else 25 for r in respostas_validas]
+
+    while len(respostas_validas) < total_questoes:
+        respostas_validas.append('')
+    respostas_validas = respostas_validas[:total_questoes]
+
+    while len(confiancas_ia) < total_questoes:
+        confiancas_ia.append(25)
+    confiancas_ia = confiancas_ia[:total_questoes]
+
+    return respostas_validas, confiancas_ia, resposta_texto
 
 
 # ============================================
@@ -1137,9 +1324,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
 
     try:
-        # ═══════════════════════════════════════════════
-        # MÉTODO 1 (PRIMÁRIO): IA OpenAI
-        # ═══════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("📌 MÉTODO 1 (PRIMÁRIO): IA OpenAI")
         logging.info("=" * 60)
@@ -1170,7 +1354,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     total_detectadas_ia = sum(1 for r in respostas_ia if r)
                     media_conf_ia = sum(confiancas_ia) / len(confiancas_ia) if confiancas_ia else 0
 
-                    # Validação TOLERANTE: aceita se ≥40% detectadas OU confiança média alta
                     if total_detectadas_ia >= int(total_questoes * 0.4) or media_conf_ia >= 75:
                         valido_ia = True
                         logging.info(
@@ -1190,10 +1373,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         else:
             logging.warning("⚠️ OpenAI não disponível")
 
-        # ═══════════════════════════════════════════════
-        # MÉTODO 2 (FALLBACK): Círculos OpenCV
-        # Só roda se a IA NÃO foi válida
-        # ═══════════════════════════════════════════════
         respostas_circulos = [''] * total_questoes
         confiancas_circulos = [0] * total_questoes
         valido_circulos = False
@@ -1221,9 +1400,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             except Exception as e:
                 logging.error(f"❌ Erro nos círculos: {e}")
 
-        # ═══════════════════════════════════════════════
-        # DECISÃO FINAL: IA PRIORITÁRIA
-        # ═══════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("🎯 DECISÃO FINAL")
         logging.info("=" * 60)
@@ -1233,7 +1409,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         metodo_usado = 'erro'
 
         if valido_ia and valido_circulos:
-            # Fusão questão-a-questão, IA SEMPRE VENCE
             for i in range(total_questoes):
                 r_i = respostas_ia[i] if i < len(respostas_ia) else ''
                 r_c = respostas_circulos[i] if i < len(respostas_circulos) else ''
@@ -1244,11 +1419,9 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     resposta_final[i] = r_i
                     confiancas_final[i] = min(99, max(c_i, c_c) + 10)
                 elif r_i:
-                    # IA vence sempre
                     resposta_final[i] = r_i
                     confiancas_final[i] = c_i
                 elif r_c:
-                    # Só círculos tem — usa como complemento
                     resposta_final[i] = r_c
                     confiancas_final[i] = c_c
                 else:
@@ -1271,7 +1444,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             metodo_usado = 'circulos'
 
         else:
-            # Nem IA nem círculos — escolhe o "menos pior"
             det_i = sum(1 for r in respostas_ia if r)
             det_c = sum(1 for r in respostas_circulos if r)
             if det_i > 0 and det_i >= det_c:
