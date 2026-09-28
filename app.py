@@ -3661,15 +3661,15 @@ def gerar_gabarito():
 
         .fiducial {{
             position: absolute;
-            width: 12mm;
-            height: 12mm;
+            width: 10mm;
+            height: 10mm;
             background: #000000;
             z-index: 10;
         }}
-        .fiducial-tl {{ top: 32mm; left: 8mm; }}
-        .fiducial-tr {{ top: 32mm; right: 8mm; }}
-        .fiducial-bl {{ bottom: 8mm; left: 8mm; }}
-        .fiducial-br {{ bottom: 8mm; right: 8mm; }}
+        .fiducial-tl {{ top: 38mm; left: 5mm; }}
+        .fiducial-tr {{ top: 38mm; right: 5mm; }}
+        .fiducial-bl {{ bottom: 5mm; left: 5mm; }}
+        .fiducial-br {{ bottom: 5mm; right: 5mm; }}
 
         .fiducial::after {{
             content: '';
