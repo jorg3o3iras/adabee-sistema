@@ -885,116 +885,119 @@ def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina):
     total = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     alternativas_str = ', '.join(alternativas)
-    
-    return f"""Analise esta foto de cartão resposta escolar brasileiro com MUITA ATENÇÃO.
+    exemplo_itens = []
+    for i in range(min(5, total)):
+        exemplo_itens.append(f'"{alternativas[i % len(alternativas)]}"')
+    if total > 5:
+        exemplo_itens.append('...')
+    exemplo_lista = ', '.join(exemplo_itens)
 
-═══════════════════════════════════════════════════════════════
-ESTRUTURA DO CARTÃO (NOVO LAYOUT):
-═══════════════════════════════════════════════════════════════
+    return f"""Você é um especialista em leitura de cartões-resposta escolares brasileiros (OMR).
 
-O cartão tem {total} linhas numeradas: 01, 02, 03... até {total}.
+TAREFA: Ler EXATAMENTE {total} respostas deste cartão-resposta.
 
-Cada linha contém 4 BOLHAS CIRCULARES. Cada bolha tem uma LETRA DENTRO dela:
-  ┌────────────────────────────────────────────────────────┐
-  │  01 │  (Ⓐ)    (Ⓑ)    (Ⓒ)    (Ⓓ)                        │
-  │  02 │  (Ⓐ)    (Ⓑ)    (Ⓒ)    (Ⓓ)                        │
-  └────────────────────────────────────────────────────────┘
+LAYOUT DO CARTÃO:
+- Há {total} linhas numeradas (01, 02, 03, ... {total:02d}).
+- Cada linha tem {len(alternativas)} bolhas circulares com a LETRA DENTRO da bolha: {alternativas_str}.
+- Ordem da esquerda para a direita: {' → '.join(alternativas)}.
+- A resposta marcada é a letra da bolha cujo INTERIOR está preenchido (escuro: caneta preta/azul ou lápis).
+- Bolha vazia = interior branco, só o contorno.
 
-IMPORTANTE: A LETRA (A, B, C, D) ESTÁ **DENTRO** DA BOLHA CIRCULAR.
-Se a bolha com a letra "B" está preenchida, a resposta é "B".
+REGRAS OBRIGATÓRIAS:
+1. Analise UMA linha de cada vez, de cima para baixo (questão 1 até {total}).
+2. Em cada linha, escolha a bolha MAIS ESCURA (maior preenchimento).
+3. Se nenhuma bolha estiver claramente preenchida, use string vazia "".
+4. Se duas bolhas parecerem marcadas, escolha a mais escura; se empatadas, use "".
+5. NÃO invente respostas. Só use: {alternativas_str} ou "".
+6. Retorne EXATAMENTE {total} itens no array "respostas" (preencha com "" se faltar).
+7. Responda SOMENTE com JSON válido, sem markdown e sem texto extra.
 
-═══════════════════════════════════════════════════════════════
-COMO IDENTIFICAR A RESPOSTA MARCADA:
-═══════════════════════════════════════════════════════════════
+Exemplo de formato (com {total} elementos):
+{{"respostas": [{exemplo_lista}]}}
 
-Para CADA LINHA:
-1. Olhe as 4 bolhas
-2. Identifique qual bolha está PREENCHIDA (com marcação escura dentro)
-3. Veja QUAL LETRA está dentro dessa bolha preenchida
-4. Essa letra é a RESPOSTA
-
-EXEMPLO 1:
-  Linha 01: (Ⓐ) (Ⓑ preenchida) (Ⓒ) (Ⓓ)
-  → Resposta: "B" (porque a bolha com B está preenchida)
-
-EXEMPLO 2:
-  Linha 02: (Ⓐ) (Ⓑ) (Ⓒ) (Ⓓ preenchida)
-  → Resposta: "D"
-
-EXEMPLO 3:
-  Linha 03: (Ⓐ preenchida) (Ⓑ) (Ⓒ) (Ⓓ)
-  → Resposta: "A"
-
-EXEMPLO 4 (nenhuma):
-  Linha 04: (Ⓐ) (Ⓑ) (Ⓒ) (Ⓓ) - todas vazias
-  → Resposta: ""
-
-═══════════════════════════════════════════════════════════════
-DICAS PARA IDENTIFICAR CORRETAMENTE:
-═══════════════════════════════════════════════════════════════
-
-- ✅ A bolha PREENCHIDA tem o INTERIOR escuro (preto/azul)
-- ✅ A bolha VAZIA tem o interior branco (só o contorno visível)
-- ✅ Pode ser marcação em caneta PRETA, AZUL ou LÁPIS
-- ✅ A LETRA dentro da bolha é o que importa
-- ✅ Se dois círculos parecem marcados, escolha o MAIS ESCURO
-- ✅ Se NENHUM estiver marcado, retorne ""
-
-═══════════════════════════════════════════════════════════════
-MUITO IMPORTANTE:
-═══════════════════════════════════════════════════════════════
-
-1. NÃO invente respostas. Se não tiver 100% de certeza, retorne ""
-2. Analise uma linha de cada vez, começando pela linha 01
-3. Retorne EXATAMENTE {total} respostas (mesmo as vazias)
-4. Use SOMENTE as letras: {alternativas_str}
-5. Se a marcação for fraca/ambígua, retorne ""
-
-═══════════════════════════════════════════════════════════════
-FORMATO DA RESPOSTA (APENAS O JSON):
-═══════════════════════════════════════════════════════════════
-{{"respostas": ["B", "D", "A", "", "C", ...]}}
-
-Analise a imagem linha por linha com muito cuidado e retorne APENAS o JSON acima."""
+Agora leia a imagem e retorne o JSON."""
 
 
 def preprocessar_imagem_para_ia(imagem_base64):
-    """Processa imagem em resolução alta para IA"""
+    """Prepara imagem para IA: mantém cor, contraste moderado, resolução adequada para OCR.
+    Retorna (base64_str, mimetype).
+    """
     try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-        image_data = base64.b64decode(imagem_base64)
+        raw = imagem_base64
+        if ',' in raw:
+            raw = raw.split(',', 1)[1]
+        image_data = base64.b64decode(raw)
         np_array = np.frombuffer(image_data, np.uint8)
         img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
         if img is None:
-            return imagem_base64
-        
+            logging.error("❌ preprocessar_imagem_para_ia: imagem inválida")
+            return raw, 'image/jpeg'
+
         h, w = img.shape[:2]
         logging.info(f"🖼️ IA - Imagem original: {w}x{h}")
-        
-        if h > 3000:
-            scale = 3000 / h
-            img = cv2.resize(img, (int(w * scale), 3000), interpolation=cv2.INTER_AREA)
-            logging.info(f"🖼️ IA - Redimensionada: {int(w * scale)}x3000")
-        elif h < 2000:
-            scale = 2000 / h
-            img = cv2.resize(img, (int(w * scale), 2000), interpolation=cv2.INTER_CUBIC)
-            logging.info(f"🖼️ IA - Aumentada: {int(w * scale)}x2000")
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
-        
-        kernel_sharpen = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-        sharpened = cv2.filter2D(enhanced, -1, kernel_sharpen)
-        
-        final = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
-        
-        _, buffer = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 100])
-        return base64.b64encode(buffer).decode('utf-8')
+
+        TARGET = 2200
+        if h > TARGET:
+            scale = TARGET / float(h)
+            img = cv2.resize(img, (int(w * scale), TARGET), interpolation=cv2.INTER_AREA)
+            logging.info(f"🖼️ IA - Redimensionada para: {img.shape[1]}x{img.shape[0]}")
+        elif h < 1200:
+            scale = 1200 / float(h)
+            img = cv2.resize(img, (int(w * scale), 1200), interpolation=cv2.INTER_CUBIC)
+            logging.info(f"🖼️ IA - Aumentada para: {img.shape[1]}x{img.shape[0]}")
+
+        # Contraste suave em LAB (preserva cor da caneta azul/preta)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        img = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
+
+        # Nitidez leve
+        blur = cv2.GaussianBlur(img, (0, 0), 1.0)
+        img = cv2.addWeighted(img, 1.4, blur, -0.4, 0)
+
+        _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        b64 = base64.b64encode(buffer).decode('utf-8')
+        return b64, 'image/jpeg'
     except Exception as e:
-        logging.error(f"Erro no preprocessamento: {e}")
-        return imagem_base64
+        logging.error(f"Erro no preprocessamento IA: {e}")
+        traceback.print_exc()
+        raw = imagem_base64.split(',', 1)[1] if ',' in imagem_base64 else imagem_base64
+        return raw, extrair_mimetype(imagem_base64)
+
+
+def _parse_respostas_ia(texto, total_esperado, alternativas):
+    """Extrai e valida o array de respostas do texto da IA."""
+    if not texto:
+        return None
+    texto = texto.strip()
+    texto = re.sub(r'^```(?:json)?\s*', '', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'\s*```$', '', texto)
+
+    dados = None
+    try:
+        dados = json.loads(texto)
+    except Exception:
+        m = re.search(r'\{[\s\S]*\}', texto)
+        if m:
+            try:
+                dados = json.loads(m.group(0))
+            except Exception:
+                pass
+    if not isinstance(dados, dict):
+        return None
+
+    respostas = dados.get('respostas')
+    if respostas is None:
+        for k in ('answers', 'resposta', 'resultado', 'data'):
+            if k in dados and isinstance(dados[k], list):
+                respostas = dados[k]
+                break
+    if not isinstance(respostas, list):
+        return None
+
+    return validar_respostas(respostas, [''] * total_esperado, alternativas)
 
 
 def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, tipo_questoes=4, disciplina='', bncc=None):
@@ -1003,48 +1006,86 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome, serie, 
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
     if not OPENAI_AVAILABLE or openai_client is None:
         return erro_correcao(aluno_nome, serie, disciplina, 'IA OpenAI não disponível')
-    
+
     try:
         prompt = gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina)
-        
-        imagem_limpa = imagem_base64
-        if ',' in imagem_base64:
-            imagem_limpa = imagem_base64.split(',')[1]
-        
-        mimetype = extrair_mimetype(imagem_base64)
-        
-        response = openai_client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[{
+        total_questoes = len(gabarito)
+        alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
+
+        if isinstance(imagem_base64, tuple):
+            imagem_limpa, mimetype = imagem_base64
+        else:
+            if ',' in imagem_base64:
+                mimetype = extrair_mimetype(imagem_base64)
+                imagem_limpa = imagem_base64.split(',', 1)[1]
+            else:
+                imagem_limpa = imagem_base64
+                mimetype = 'image/jpeg'
+
+        data_url = f"data:{mimetype};base64,{imagem_limpa}"
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Você lê cartões-resposta escolares com precisão. "
+                    "Responda APENAS com JSON no formato {\"respostas\": [\"A\",\"B\",...]} "
+                    "com exatamente o número de itens pedido. Sem markdown."
+                )
+            },
+            {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:{mimetype};base64,{imagem_limpa}"}}
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_url,
+                            "detail": "high"
+                        }
+                    }
                 ]
-            }],
-            max_tokens=1500,
-            temperature=0.0
+            }
+        ]
+
+        create_kwargs = {
+            "model": OPENAI_MODEL,
+            "messages": messages,
+            "max_tokens": 2000,
+            "temperature": 0.0,
+        }
+        try:
+            create_kwargs["response_format"] = {"type": "json_object"}
+            response = openai_client.chat.completions.create(**create_kwargs)
+        except Exception as e_fmt:
+            logging.warning(f"⚠️ response_format não suportado, tentando sem: {e_fmt}")
+            create_kwargs.pop("response_format", None)
+            response = openai_client.chat.completions.create(**create_kwargs)
+
+        resposta_texto = (response.choices[0].message.content or "").strip()
+        logging.info(f"📝 Resposta OpenAI ({len(resposta_texto)} chars): {resposta_texto[:600]}...")
+
+        respostas_validas = _parse_respostas_ia(resposta_texto, total_questoes, alternativas)
+        if respostas_validas is None:
+            logging.error(f"❌ Não foi possível parsear JSON da IA: {resposta_texto[:300]}")
+            return erro_correcao(aluno_nome, serie, disciplina, 'Resposta da IA inválida (JSON)')
+
+        while len(respostas_validas) < total_questoes:
+            respostas_validas.append('')
+        respostas_validas = respostas_validas[:total_questoes]
+
+        total_detectadas = sum(1 for r in respostas_validas if r)
+        logging.info(f"✅ IA detectou {total_detectadas}/{total_questoes}: {respostas_validas}")
+
+        confiancas = [85 if r else 25 for r in respostas_validas]
+
+        return calcular_resultado_correcao(
+            respostas_validas, gabarito, aluno_nome, serie,
+            disciplina, tipo_questoes, 'ia', bncc=bncc, confiancas=confiancas
         )
-        
-        resposta_texto = response.choices[0].message.content
-        logging.info(f"📝 Resposta OpenAI: {resposta_texto[:500]}...")
-        
-        json_match = re.search(r'\{.*\}', resposta_texto, re.DOTALL)
-        if json_match:
-            dados = json.loads(json_match.group())
-            respostas_ia = dados.get('respostas', [])
-            alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
-            respostas_validas = validar_respostas(respostas_ia, gabarito, alternativas)
-            
-            confiancas = [75 if r else 30 for r in respostas_validas]
-            
-            return calcular_resultado_correcao(
-                respostas_validas, gabarito, aluno_nome, serie,
-                disciplina, tipo_questoes, 'ia', bncc=bncc, confiancas=confiancas
-            )
-        return erro_correcao(aluno_nome, serie, disciplina, 'Resposta da IA inválida')
     except Exception as e:
         logging.error(f"❌ Erro no fallback OpenAI: {e}")
+        traceback.print_exc()
         return erro_correcao(aluno_nome, serie, disciplina, str(e))
 
 
@@ -1093,100 +1134,139 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         logging.info("=" * 60)
         logging.info("📌 MÉTODO 2: IA (OpenAI)")
         logging.info("=" * 60)
-        
+
         respostas_ia = [''] * total_questoes
         confiancas_ia = [0] * total_questoes
         valido_ia = False
-        
+
         if OPENAI_AVAILABLE:
             try:
+                # Retorna (base64_jpeg, mimetype)
                 imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
                 resultado_ia = corrigir_com_ia_fallback(
                     imagem_processada, padrao_gabarito, aluno_nome,
                     serie, tipo_questoes, disciplina, bncc=bncc
                 )
-                
+
                 if not resultado_ia.get('erro'):
                     respostas_ia = resultado_ia.get('respostas_detectadas', [''] * total_questoes)
                     confiancas_ia = resultado_ia.get('confianca_por_questao', [75] * total_questoes)
-                    
-                    total_detectadas_ia = len([r for r in respostas_ia if r])
+                    while len(respostas_ia) < total_questoes:
+                        respostas_ia.append('')
+                    respostas_ia = respostas_ia[:total_questoes]
+                    while len(confiancas_ia) < total_questoes:
+                        confiancas_ia.append(30)
+                    confiancas_ia = confiancas_ia[:total_questoes]
+
+                    total_detectadas_ia = sum(1 for r in respostas_ia if r)
                     nao_vazias_ia = [r for r in respostas_ia if r]
-                    
-                    if total_detectadas_ia >= total_questoes * 0.7 and len(set(nao_vazias_ia)) >= 2:
+                    diversidade = len(set(nao_vazias_ia)) if nao_vazias_ia else 0
+
+                    if total_detectadas_ia >= max(1, int(total_questoes * 0.5)) and (diversidade >= 2 or total_detectadas_ia < 5):
                         valido_ia = True
-                        logging.info(f"✅ IA VÁLIDA ({total_detectadas_ia}/{total_questoes})")
+                        logging.info(f"✅ IA VÁLIDA ({total_detectadas_ia}/{total_questoes}) divers={diversidade}")
                     else:
-                        logging.warning(f"⚠️ IA INVÁLIDA ({total_detectadas_ia}/{total_questoes})")
+                        logging.warning(
+                            f"⚠️ IA suspeita ({total_detectadas_ia}/{total_questoes}, divers={diversidade}): {respostas_ia}"
+                        )
                 else:
                     logging.warning(f"⚠️ IA retornou erro: {resultado_ia.get('erro')}")
             except Exception as e:
                 logging.error(f"❌ Erro na IA: {e}")
+                traceback.print_exc()
         else:
             logging.warning("⚠️ OpenAI não disponível")
-        
+
         logging.info("=" * 60)
         logging.info("🎯 DECISÃO FINAL")
         logging.info("=" * 60)
-        
-        # IA é PRIORITÁRIA (mais confiável que círculos)
+
+        resposta_final = [''] * total_questoes
+        confiancas_final = [0] * total_questoes
+        metodo_usado = 'erro'
+
         if valido_ia and valido_circulos:
-            respostas_iguais = sum(1 for i in range(total_questoes) 
-                                   if respostas_circulos[i] == respostas_ia[i])
-            
-            logging.info(f"📊 Concordância: {respostas_iguais}/{total_questoes}")
-            
-            if respostas_iguais >= total_questoes * 0.6:
-                logging.info("✅ ALTA CONCORDÂNCIA - Usando IA")
-                resposta_final = respostas_ia
-                confiancas_final = [95 if c > 70 else 80 for c in confiancas_ia]
-                metodo_usado = 'ia'
-            else:
-                logging.warning(f"⚠️ BAIXA CONCORDÂNCIA - Usando IA (mais confiável)")
-                resposta_final = respostas_ia
-                confiancas_final = confiancas_ia
-                metodo_usado = 'ia'
-            
+            iguais = 0
+            for i in range(total_questoes):
+                r_c = respostas_circulos[i] if i < len(respostas_circulos) else ''
+                r_i = respostas_ia[i] if i < len(respostas_ia) else ''
+                c_c = confiancas_circulos[i] if i < len(confiancas_circulos) else 0
+                c_i = confiancas_ia[i] if i < len(confiancas_ia) else 0
+
+                if r_c and r_i and r_c == r_i:
+                    resposta_final[i] = r_i
+                    confiancas_final[i] = min(99, max(c_i, c_c) + 15)
+                    iguais += 1
+                elif r_i:
+                    resposta_final[i] = r_i
+                    confiancas_final[i] = c_i
+                elif r_c:
+                    resposta_final[i] = r_c
+                    confiancas_final[i] = c_c
+                else:
+                    resposta_final[i] = ''
+                    confiancas_final[i] = 20
+
+            logging.info(f"📊 Concordância questão a questão: {iguais}/{total_questoes}")
+            metodo_usado = 'hibrido'
+            logging.info("✅ Usando fusão híbrida (IA + círculos)")
+
         elif valido_ia:
             logging.info("✅ Apenas IA válida")
-            resposta_final = respostas_ia
-            confiancas_final = confiancas_ia
+            resposta_final = list(respostas_ia)
+            confiancas_final = list(confiancas_ia)
             metodo_usado = 'ia'
-            
+
         elif valido_circulos:
             logging.info("✅ Apenas CÍRCULOS válidos (IA falhou)")
-            resposta_final = respostas_circulos
-            confiancas_final = confiancas_circulos
+            resposta_final = list(respostas_circulos)
+            confiancas_final = list(confiancas_circulos)
             metodo_usado = 'circulos'
-        
+
         else:
-            logging.error("❌ NENHUM método válido")
-            return erro_correcao(
-                aluno_nome, serie, disciplina,
-                '❌ Não foi possível ler as respostas do cartão.\n\n'
-                'Verifique:\n'
-                '1. A foto está nítida (sem tremores)?\n'
-                '2. Boa iluminação (sem sombras)?\n'
-                '3. Os círculos foram pintados completamente?\n'
-                '4. Caneta preta ou azul (não lápis)?\n'
-                '5. O cartão está plano (não amassado)?'
-            )
-        
+            det_c = sum(1 for r in respostas_circulos if r)
+            det_i = sum(1 for r in respostas_ia if r)
+            if det_i >= det_c and det_i > 0:
+                logging.warning(f"⚠️ Fallback parcial IA ({det_i} respostas)")
+                resposta_final = list(respostas_ia)
+                confiancas_final = list(confiancas_ia) if confiancas_ia else [40] * total_questoes
+                metodo_usado = 'ia_parcial'
+            elif det_c > 0:
+                logging.warning(f"⚠️ Fallback parcial círculos ({det_c} respostas)")
+                resposta_final = list(respostas_circulos)
+                confiancas_final = list(confiancas_circulos) if confiancas_circulos else [40] * total_questoes
+                metodo_usado = 'circulos_parcial'
+            else:
+                logging.error("❌ NENHUM método válido")
+                return erro_correcao(
+                    aluno_nome, serie, disciplina,
+                    '❌ Não foi possível ler as respostas do cartão.\n\n'
+                    'Verifique:\n'
+                    '1. A foto está nítida (sem tremores)?\n'
+                    '2. Boa iluminação (sem sombras)?\n'
+                    '3. Os círculos foram pintados completamente?\n'
+                    '4. Caneta preta ou azul (não lápis)?\n'
+                    '5. O cartão está plano (não amassado)?'
+                )
+
         respostas_validas = validar_respostas(resposta_final, gabarito, padrao_gabarito['alternativas'])
-        
+
         resultado = calcular_resultado_correcao(
             respostas_validas, gabarito, aluno_nome, serie,
             disciplina, tipo_questoes, metodo_usado,
-            circulos=circulos if metodo_usado == 'circulos' else None,
+            circulos=circulos if 'circulos' in metodo_usado else None,
             bncc=bncc,
             confiancas=confiancas_final
         )
         resultado['metodo_usado'] = metodo_usado
-        
+        resultado['respostas_ia'] = respostas_ia
+        resultado['respostas_circulos'] = respostas_circulos
+
         logging.info(f"✅ RESULTADO FINAL: {resultado['acertos']}/{resultado['total']} acertos ({metodo_usado})")
-        
+        logging.info(f"📝 Respostas: {respostas_validas}")
+
         return resultado
-        
+
     except Exception as e:
         logging.error(f"❌ Erro na correção: {e}")
         traceback.print_exc()
