@@ -11,6 +11,26 @@ let gerandoDocumento = false;
 let paginaAtual = 'dashboard';
 
 // ============================================
+// ═══ NOVO: SEGURANÇA — ESCAPE HTML (anti-XSS) ═══
+// ============================================
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+function escapeAttr(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// ============================================
 // SISTEMA DE PROGRESSO VISUAL
 // ============================================
 class ProgressManager {
@@ -87,7 +107,7 @@ class ProgressManager {
 
         if (index < this.etapas.length) {
             this.textoEtapa.textContent = this.etapas[index].descricao || this.etapas[index].nome;
-            
+
             if (index > 0) {
                 const etapaAnterior = document.getElementById(`progress-etapa-${index-1}`);
                 if (etapaAnterior) {
@@ -118,11 +138,11 @@ class ProgressManager {
             const elapsed = (Date.now() - this.tempoInicio) / 1000;
             const total = this.etapas.length;
             const atual = this.etapaAtual + 1;
-            
+
             if (atual > 0 && atual <= total) {
                 const mediaPorEtapa = elapsed / atual;
                 const restante = (total - atual) * mediaPorEtapa;
-                
+
                 if (restante > 0) {
                     const minutos = Math.floor(restante / 60);
                     const segundos = Math.floor(restante % 60);
@@ -188,7 +208,7 @@ class ProgressManager {
         this.textoTempo.textContent = '❌ falhou';
         this.fecharBtn.style.display = 'inline-flex';
         this.cancelarBtn.style.display = 'none';
-        
+
         const etapaAtualEl = document.getElementById(`progress-etapa-${this.etapaAtual}`);
         if (etapaAtualEl) {
             const icon = document.getElementById(`progress-icon-${this.etapaAtual}`);
@@ -243,14 +263,14 @@ class TableFeedback {
             row.style.background = '';
             row.style.borderLeft = '';
             row.style.boxShadow = '';
-            
+
             const badge = firstCell?.querySelector('.save-badge');
             if (badge) {
                 badge.style.transition = 'opacity 0.5s ease';
                 badge.style.opacity = '0';
                 setTimeout(() => badge.remove(), 500);
             }
-            
+
             this.animations.delete(rowId);
         }, 3000);
 
@@ -408,7 +428,8 @@ let correcaoManualData = {
     valorPorQuestao: 0.5,
     serie: '1º Ano',
     disciplina: '',
-    confianca_por_questao: []
+    confianca_por_questao: [],
+    questoes_suspeitas: []
 };
 
 let cmStandaloneData = {
@@ -430,7 +451,8 @@ let cmStandaloneData = {
     provaTitulo: '',
     provaData: '',
     disciplina: '',
-    confianca_por_questao: []
+    confianca_por_questao: [],
+    questoes_suspeitas: []
 };
 
 let desempenhoData = {
@@ -590,7 +612,7 @@ function shakeCard() {
     setTimeout(() => c.style.animation = 'shake .4s ease', 10);
 }
 
-document.getElementById('lp').addEventListener('keydown', e => {
+document.getElementById('lp')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
 });
 
@@ -639,9 +661,9 @@ function go(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const el = document.getElementById('page-' + page);
     if (el) el.classList.add('active');
-    
+
     document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
-    
+
     switch(page) {
         case 'escola':
             carregarEscolas();
@@ -682,10 +704,10 @@ function go(page) {
             carregarMatrizes();
             break;
     }
-    
+
     atualizarDatasImpressao();
     paginaAtual = page;
-    
+
     if (window.innerWidth <= 900) {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('menuOverlay');
@@ -903,6 +925,7 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
 
 // ============================================
 // CARREGAR ESCOLAS (COM CACHE)
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarEscolas() {
     try {
@@ -919,15 +942,15 @@ async function carregarEscolas() {
             tbody.innerHTML = escolas.map((e, i) => {
                 const turmasCount = turmas.filter(t => t.escola_id === e.id).length;
                 const alunosCount = alunos.filter(a => a.escola_id === e.id).length;
-                return '<tr data-id="' + e.id + '" data-nome="' + e.nome + '">' +
+                return '<tr data-id="' + e.id + '" data-nome="' + escapeAttr(e.nome) + '">' +
                     '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
-                    '<td><strong>' + e.nome + '</strong></td>' +
-                    '<td>' + (e.municipio || '—') + (e.estado ? ' — ' + e.estado : '') + '</td>' +
-                    '<td><span class="chip">' + (e.inep || '—') + '</span></td>' +
-                    '<td>' + (e.diretor || '—') + '</td>' +
+                    '<td><strong>' + escapeHtml(e.nome) + '</strong></td>' +
+                    '<td>' + escapeHtml(e.municipio || '—') + (e.estado ? ' — ' + escapeHtml(e.estado) : '') + '</td>' +
+                    '<td><span class="chip">' + escapeHtml(e.inep || '—') + '</span></td>' +
+                    '<td>' + escapeHtml(e.diretor || '—') + '</td>' +
                     '<td>' + turmasCount + '</td>' +
                     '<td>' + alunosCount + '</td>' +
-                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarEscola(' + e.id + ')">✏️ Editar</button><button class="btn-del" onclick="excluirEscola(' + e.id + ', \'' + e.nome + '\')" title="Excluir">🗑️</button></div></td></tr>';
+                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarEscola(' + e.id + ')">✏️ Editar</button><button class="btn-del" onclick="excluirEscola(' + e.id + ', \'' + escapeAttr(e.nome) + '\')" title="Excluir">🗑️</button></div></td></tr>';
             }).join('');
         }
     } catch (erro) {
@@ -937,6 +960,7 @@ async function carregarEscolas() {
 
 // ============================================
 // CARREGAR TURMAS (COM CACHE E LIMITE)
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarTurmas() {
     try {
@@ -952,24 +976,24 @@ async function carregarTurmas() {
                 '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange' };
 
             const turmasVisiveis = turmas.slice(0, 500);
-            
+
             tbody.innerHTML = turmasVisiveis.map((t, i) => {
                 const totalAlunos = t.total_alunos || 0;
-                return '<tr data-id="' + t.id + '" data-nome="' + t.nome + '" data-serie="' + (t.serie || '') + '" data-escola="' + (t.escola_id || '') + '">' +
+                return '<tr data-id="' + t.id + '" data-nome="' + escapeAttr(t.nome) + '" data-serie="' + escapeAttr(t.serie || '') + '" data-escola="' + (t.escola_id || '') + '">' +
                     '<td><span class="badge badge-gray">' + String(i + 1).padStart(2, '0') + '</span></td>' +
-                    '<td><strong>' + t.nome + '</strong></td>' +
-                    '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + (t.serie || '—') + '</span></td>' +
-                    '<td>' + (t.turno || 'Manhã') + '</td>' +
-                    '<td>' + (t.escola_nome || '—') + '</td>' +
-                    '<td>' + (t.professor || '—') + '</td>' +
+                    '<td><strong>' + escapeHtml(t.nome) + '</strong></td>' +
+                    '<td><span class="badge ' + (corMap[t.serie] || 'badge-blue') + '">' + escapeHtml(t.serie || '—') + '</span></td>' +
+                    '<td>' + escapeHtml(t.turno || 'Manhã') + '</td>' +
+                    '<td>' + escapeHtml(t.escola_nome || '—') + '</td>' +
+                    '<td>' + escapeHtml(t.professor || '—') + '</td>' +
                     '<td><span class="badge badge-blue">' + totalAlunos + '</span></td>' +
                     '<td><div class="btn-group">' +
                     '<button class="btn btn-outline btn-sm" onclick="editarTurma(' + t.id + ')">✏️</button>' +
                     '<button class="btn btn-green btn-sm" onclick="verAlunosDaTurma(' + t.id + ')" title="Lista de Alunos">📋</button>' +
-                    '<button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + t.nome + '\')">🗑️</button>' +
+                    '<button class="btn-del" onclick="excluirTurma(' + t.id + ', \'' + escapeAttr(t.nome) + '\')">🗑️</button>' +
                     '</div></td></tr>';
             }).join('');
-            
+
             if (turmas.length > 50) {
                 tbody.innerHTML += `<tr><td colspan="8" style="text-align:center;padding:8px;color:var(--text3);font-size:11px;">⚠️ Mostrando 50 de ${turmas.length} turmas. Use o filtro para buscar mais.</td></tr>`;
             }
@@ -1042,6 +1066,7 @@ function limparFiltrosTurmas() {
 
 // ============================================
 // CARREGAR ALUNOS (COM CACHE E LIMITE)
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarAlunos(escolaId = null) {
     try {
@@ -1070,21 +1095,21 @@ async function carregarAlunos(escolaId = null) {
                 '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
                 '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
             };
-            
+
             const alunosVisiveis = alunos.slice(0, 500);
-            
+
             tbody.innerHTML = alunosVisiveis.map((a, i) => {
-                return '<tr data-id="' + a.id + '" data-nome="' + a.nome + '">' +
+                return '<tr data-id="' + a.id + '" data-nome="' + escapeAttr(a.nome) + '">' +
                     '<td><span class="badge badge-blue">' + String(a.numero_chamada || i + 1).padStart(2, '0') + '</span></td>' +
-                    '<td><span class="chip">' + (a.matricula || '—') + '</span></td>' +
-                    '<td><strong>' + a.nome + '</strong></td>' +
-                    '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + (a.turma_serie || '—') + '</span></td>' +
-                    '<td>' + (a.turma_nome || '—') + '</td>' +
-                    '<td><span class="badge badge-gray">' + (a.escola_nome || '—') + '</span></td>' +
+                    '<td><span class="chip">' + escapeHtml(a.matricula || '—') + '</span></td>' +
+                    '<td><strong>' + escapeHtml(a.nome) + '</strong></td>' +
+                    '<td><span class="badge ' + (corMap[a.turma_serie] || 'badge-blue') + '">' + escapeHtml(a.turma_serie || '—') + '</span></td>' +
+                    '<td>' + escapeHtml(a.turma_nome || '—') + '</td>' +
+                    '<td><span class="badge badge-gray">' + escapeHtml(a.escola_nome || '—') + '</span></td>' +
                     '<td>' + (a.data_nascimento ? new Date(a.data_nascimento).toLocaleDateString() : '—') + '</td>' +
-                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + a.nome + '\')">🗑️</button></div></td></tr>';
+                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarAluno(' + a.id + ')">✏️</button><button class="btn-del" onclick="excluirAluno(' + a.id + ', \'' + escapeAttr(a.nome) + '\')">🗑️</button></div></td></tr>';
             }).join('');
-            
+
             if (alunos.length > 50) {
                 tbody.innerHTML += `<tr><td colspan="8" style="text-align:center;padding:8px;color:var(--text3);font-size:11px;">⚠️ Mostrando 50 de ${alunos.length} alunos. Use os filtros para buscar mais.</td></tr>`;
             }
@@ -1156,6 +1181,7 @@ function filtrarAlunosPorSerie(serie) {
 
 // ============================================
 // CARREGAR PROVAS (COM CACHE)
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarProvas() {
     try {
@@ -1167,14 +1193,14 @@ async function carregarProvas() {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma prova cadastrada</td></tr>';
         } else {
             tbody.innerHTML = provas.map((p, i) => {
-                return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                return '<tr data-id="' + p.id + '" data-nome="' + escapeAttr(p.titulo) + '">' +
                     '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
-                    '<td><strong>' + p.titulo + '</strong></td>' +
-                    '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
-                    '<td><span class="badge badge-gray">' + (p.disciplina || '—') + '</span></td>' +
-                    '<td>' + (p.data_prova || '—') + '</td>' +
+                    '<td><strong>' + escapeHtml(p.titulo) + '</strong></td>' +
+                    '<td><span class="badge badge-purple">' + escapeHtml(p.serie || '—') + '</span></td>' +
+                    '<td><span class="badge badge-gray">' + escapeHtml(p.disciplina || '—') + '</span></td>' +
+                    '<td>' + escapeHtml(p.data_prova || '—') + '</td>' +
                     '<td><span class="badge ' + (p.gabarito && p.gabarito.length > 0 ? 'badge-green' : 'badge-orange') + '">' + (p.gabarito && p.gabarito.length > 0 ? 'Com Gabarito' : 'Sem Gabarito') + '</span></td>' +
-                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="visualizarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="visualizarProva(' + p.id + ')">👁️</button>' + (p.gabarito && p.gabarito.length > 0 ? '' : '<button class="btn btn-primary btn-sm" onclick="go(\'gabarito\')">+ Gabarito</button>') + '<button class="btn-del" onclick="excluirProva(' + p.id + ', \'' + escapeAttr(p.titulo) + '\')">🗑️</button></div></td></tr>';
             }).join('');
         }
     } catch (erro) {
@@ -1221,9 +1247,9 @@ async function visualizarProva(id) {
                     gabHtml += `
                         <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
                             <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;">Q${i+1}</div>
-                            <div style="font-weight:700;font-size:14px;color:var(--green);">${texto}</div>
-                            ${codigo ? `<div style="font-size:10px;color:var(--purple);margin-top:4px;">BNCC: ${codigo}</div>` : ''}
-                            <div style="font-size:9px;color:var(--text3);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">Nível BNCC: ${codigo || 'Não definido'}</div>
+                            <div style="font-weight:700;font-size:14px;color:var(--green);">${escapeHtml(texto)}</div>
+                            ${codigo ? `<div style="font-size:10px;color:var(--purple);margin-top:4px;">BNCC: ${escapeHtml(codigo)}</div>` : ''}
+                            <div style="font-size:9px;color:var(--text3);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">Nível BNCC: ${escapeHtml(codigo || 'Não definido')}</div>
                         </div>
                     `;
                 }
@@ -1235,8 +1261,8 @@ async function visualizarProva(id) {
                     const codigo = (i < bncc.length && bncc[i]) ? bncc[i] : '';
                     gabHtml += `<div style="background:var(--bg2);border-radius:6px;padding:4px 6px;text-align:center;border:1px solid var(--border);">
                         <div style="font-size:8px;color:var(--text3);font-weight:700;">Q${i+1}</div>
-                        <div style="font-weight:700;font-size:12px;color:var(--green);">${texto}</div>
-                        ${codigo ? `<div style="font-size:7px;color:var(--purple);margin-top:2px;">BNCC: ${codigo}</div>` : ''}
+                        <div style="font-weight:700;font-size:12px;color:var(--green);">${escapeHtml(texto)}</div>
+                        ${codigo ? `<div style="font-size:7px;color:var(--purple);margin-top:2px;">BNCC: ${escapeHtml(codigo)}</div>` : ''}
                     </div>`;
                 }
                 gabHtml += '</div>';
@@ -1248,11 +1274,11 @@ async function visualizarProva(id) {
 
         conteudo.innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-                <div><strong style="color:var(--text2);">📝 Título</strong><br>${prova.titulo || '—'}</div>
-                <div><strong style="color:var(--text2);">📚 Disciplina</strong><br>${prova.disciplina || '—'}</div>
-                <div><strong style="color:var(--text2);">🎓 Série</strong><br>${prova.serie || '—'}</div>
-                <div><strong style="color:var(--text2);">📅 Data</strong><br>${prova.data_prova || '—'}</div>
-                <div><strong style="color:var(--text2);">📊 Bimestre</strong><br>${prova.bimestre || '—'}</div>
+                <div><strong style="color:var(--text2);">📝 Título</strong><br>${escapeHtml(prova.titulo || '—')}</div>
+                <div><strong style="color:var(--text2);">📚 Disciplina</strong><br>${escapeHtml(prova.disciplina || '—')}</div>
+                <div><strong style="color:var(--text2);">🎓 Série</strong><br>${escapeHtml(prova.serie || '—')}</div>
+                <div><strong style="color:var(--text2);">📅 Data</strong><br>${escapeHtml(prova.data_prova || '—')}</div>
+                <div><strong style="color:var(--text2);">📊 Bimestre</strong><br>${escapeHtml(prova.bimestre || '—')}</div>
                 <div><strong style="color:var(--text2);">🔢 Questões</strong><br>${prova.quantidade_questoes || 20}</div>
                 <div><strong style="color:var(--text2);">📈 Nota Máxima</strong><br>${prova.nota_maxima || 10}</div>
                 <div><strong style="color:var(--text2);">📋 Tipo</strong><br>${isProducao ? '📝 Produção de Texto' : (prova.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D')}</div>
@@ -1298,6 +1324,7 @@ async function carregarDashboard() {
 
 // ============================================
 // CARREGAR GABARITOS
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarGabaritos() {
     try {
@@ -1315,15 +1342,15 @@ async function carregarGabaritos() {
                     if (codigos.length > 0) bnccText = codigos.join(', ');
                 }
                 const tipoTexto = p.disciplina === 'Produção de Texto' ? 'Texto' : (p.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D');
-                return '<tr data-id="' + p.id + '" data-nome="' + p.titulo + '">' +
+                return '<tr data-id="' + p.id + '" data-nome="' + escapeAttr(p.titulo) + '">' +
                     '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
-                    '<td>' + p.titulo + '</td>' +
-                    '<td><span class="badge badge-purple">' + (p.serie || '—') + '</span></td>' +
+                    '<td>' + escapeHtml(p.titulo) + '</td>' +
+                    '<td><span class="badge badge-purple">' + escapeHtml(p.serie || '—') + '</span></td>' +
                     '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
                     '<td><span class="badge ' + (tipoTexto === 'Texto' ? 'badge-purple' : (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue')) + '">' + tipoTexto + '</span></td>' +
-                    '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + bnccText + '</td>' +
-                    '<td>' + (p.data_prova || '—') + '</td>' +
-                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + p.titulo + '\')">🗑️</button></div></td></tr>';
+                    '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + escapeHtml(bnccText) + '</td>' +
+                    '<td>' + escapeHtml(p.data_prova || '—') + '</td>' +
+                    '<td><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="editarGabarito(' + p.id + ')">✏️</button><button class="btn-del" onclick="excluirGabarito(' + p.id + ', \'' + escapeAttr(p.titulo) + '\')">🗑️</button></div></td></tr>';
             }).join('');
         }
     } catch (erro) {
@@ -1333,6 +1360,7 @@ async function carregarGabaritos() {
 
 // ============================================
 // CARREGAR RESULTADOS COM FILTROS
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarResultadosComFiltros() {
     try {
@@ -1527,8 +1555,8 @@ async function carregarResultadosComFiltros() {
             return '<tr>' +
                 '<td>' + medalha + '</td>' +
                 '<td>' + (index + 1) + '</td>' +
-                '<td style="text-align:left;"><strong>' + (aluno.aluno_nome || 'Aluno') + '</strong></td>' +
-                '<td><span class="badge badge-purple">' + (aluno.serie || '—') + '</span></td>' +
+                '<td style="text-align:left;"><strong>' + escapeHtml(aluno.aluno_nome || 'Aluno') + '</strong></td>' +
+                '<td><span class="badge badge-purple">' + escapeHtml(aluno.serie || '—') + '</span></td>' +
                 '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-blue">' + portugues.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge badge-red">' + portugues.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(59,130,246,0.03);"><span class="badge ' + badgeConceito(portugues.conceito) + '">' + portugues.conceito + '</span></td>' +
@@ -1544,8 +1572,8 @@ async function carregarResultadosComFiltros() {
                 '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-teal">' + cn.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge badge-red">' + cn.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(20,184,166,0.03);"><span class="badge ' + badgeConceito(cn.conceito) + '">' + cn.conceito + '</span></td>' +
-                '<td style="font-size:10px;color:var(--text2);">' + (nomeEscola || '—') + '</td>' +
-                '<td style="font-size:10px;color:var(--text2);">' + (nomeTurma || '—') + '</td>' +
+                '<td style="font-size:10px;color:var(--text2);">' + escapeHtml(nomeEscola || '—') + '</td>' +
+                '<td style="font-size:10px;color:var(--text2);">' + escapeHtml(nomeTurma || '—') + '</td>' +
                 '</tr>';
         }).join('');
 
@@ -1553,7 +1581,7 @@ async function carregarResultadosComFiltros() {
         console.error('❌ Erro ao carregar resultados com filtros:', erro);
         const tbody = document.getElementById('tb-resultados-filtrado');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + erro.message + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + escapeHtml(erro.message) + '</td></tr>';
         }
     }
 }
@@ -1729,31 +1757,37 @@ function abrirCorrecaoManual() {
     }, 300);
 }
 
+// ═══ CORRIGIDO: usar questoes_suspeitas do backend ═══
 function destacarQuestoesDuvidosas() {
     const confiancas = correcaoManualData.confianca_por_questao || [];
+    const suspeitas = correcaoManualData.questoes_suspeitas || [];
     const itens = document.querySelectorAll('.correcao-manual-item');
     let totalDuvidosas = 0;
 
     itens.forEach((item, index) => {
         const confianca = confiancas[index] || 100;
+        const numQuestao = index + 1;
         item.style.borderColor = '';
         item.style.borderWidth = '';
         item.style.boxShadow = '';
-        
+
         const oldBadge = item.querySelector('.confianca-badge');
         if (oldBadge) oldBadge.remove();
 
-        if (confianca < 70) {
+        // ═══ Prioriza lista de suspeitas do backend ═══
+        const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
+
+        if (isSuspeita) {
             totalDuvidosas++;
             item.style.borderColor = 'var(--orange)';
             item.style.borderWidth = '2px';
             item.style.boxShadow = '0 0 20px rgba(245,158,11,0.2)';
-            
+
             const badge = document.createElement('div');
             badge.className = 'confianca-badge confianca-baixa';
             badge.style.cssText = 'font-size:8px; font-weight:700; margin-top:4px; padding:2px 8px; border-radius:12px; background:rgba(239,68,68,0.15); color:#ef4444;';
             badge.textContent = `⚠️ Confiança: ${confianca}%`;
-            
+
             const select = item.querySelector('.q-select');
             if (select) {
                 item.insertBefore(badge, select);
@@ -1774,12 +1808,16 @@ function destacarQuestoesDuvidosas() {
 
 function revisarApenasDuvidosas() {
     const confiancas = correcaoManualData.confianca_por_questao || [];
+    const suspeitas = correcaoManualData.questoes_suspeitas || [];
     const itens = document.querySelectorAll('.correcao-manual-item');
     let totalDuvidosas = 0;
 
     itens.forEach((item, index) => {
         const confianca = confiancas[index] || 100;
-        if (confianca < 70) {
+        const numQuestao = index + 1;
+        const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
+
+        if (isSuspeita) {
             item.style.display = '';
             totalDuvidosas++;
             if (totalDuvidosas === 1) {
@@ -1831,7 +1869,7 @@ function gerarGridCorrecaoManual() {
         const respostaAluno = (i < respostas.length) ? respostas[i] : '';
         const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
 
-        const isCorreto = respostaAluno && respostaGabarito && 
+        const isCorreto = respostaAluno && respostaGabarito &&
                          respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
 
         if (isProducao) {
@@ -1846,8 +1884,8 @@ function gerarGridCorrecaoManual() {
 
             div.innerHTML = `
                 <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
-                <div style="font-size:10px;color:var(--text3);">Gabarito: ${respostaGabarito || '—'}</div>
-                <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${respostaAluno}</textarea>
+                <div style="font-size:10px;color:var(--text3);">Gabarito: ${escapeHtml(respostaGabarito || '—')}</div>
+                <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${escapeHtml(respostaAluno)}</textarea>
                 <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
                     <option value="">Nível BNCC</option>
                     <option value="Inicial">Inicial</option>
@@ -1873,28 +1911,28 @@ function gerarGridCorrecaoManual() {
             let statusClass = '';
             let statusText = '';
             if (respostaAluno) {
-                if (isCorreto) { 
-                    statusClass = 'correta'; 
-                    statusText = '✅'; 
-                } else { 
-                    statusClass = 'errada'; 
-                    statusText = '❌'; 
+                if (isCorreto) {
+                    statusClass = 'correta';
+                    statusText = '✅';
+                } else {
+                    statusClass = 'errada';
+                    statusText = '❌';
                 }
             }
 
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
-                <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${respostaAluno || '—'}</div>
+                <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${escapeHtml(respostaAluno || '—')}</div>
                 <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
                 <div class="q-status ${statusClass}">${statusText}</div>
             `;
 
             const select = div.querySelector('.q-select');
             if (select) {
-                if (respostaAluno && isCorreto) { 
-                    select.className = 'q-select correta'; 
-                } else if (respostaAluno) { 
-                    select.className = 'q-select errada'; 
+                if (respostaAluno && isCorreto) {
+                    select.className = 'q-select correta';
+                } else if (respostaAluno) {
+                    select.className = 'q-select errada';
                 }
             }
         }
@@ -2080,7 +2118,7 @@ function salvarCorrecaoManual() {
             progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
 
             limparCache();
-           
+
             setTimeout(() => {
                 carregarResultadosComFiltros();
                 carregarDashboard();
@@ -2110,7 +2148,7 @@ function salvarCorrecaoManual() {
 // ============================================
 function abrirCorrecaoManualStandalone() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-    
+
     document.getElementById('cm-sa-aluno').textContent = '—';
     document.getElementById('cm-sa-turma').textContent = '—';
     document.getElementById('cm-sa-prova').textContent = '—';
@@ -2121,14 +2159,15 @@ function abrirCorrecaoManualStandalone() {
     document.getElementById('cm-sa-status-badge').textContent = 'AGUARDANDO';
     document.getElementById('cm-sa-status-badge').className = 'badge badge-gray';
     document.getElementById('cm-sa-porcentagem').textContent = '0% de aproveitamento';
-    
+
     document.getElementById('cm-grid-standalone-container').style.display = 'none';
     document.getElementById('cm-info-standalone').style.display = 'none';
     document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
     document.getElementById('cm-grid-standalone').innerHTML = '';
-    
+    document.getElementById('cm-selects-container').style.display = 'block';
+
     carregarEscolasParaCorrecaoManual();
-    
+
     document.getElementById('m-correcao-manual-standalone').style.display = 'flex';
 }
 
@@ -2333,6 +2372,7 @@ function iniciarCorrecaoManualStandalone() {
 
 // ============================================
 // GERAR GRID CORREÇÃO MANUAL STANDALONE
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 function gerarGridCorrecaoManualSA() {
     const grid = document.getElementById('cm-grid-standalone');
@@ -2379,8 +2419,8 @@ function gerarGridCorrecaoManualSA() {
 
             div.innerHTML = `
                 <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
-                <div style="font-size:10px;color:var(--text3);">Gabarito: ${gab || '—'}</div>
-                <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${resp}</textarea>
+                <div style="font-size:10px;color:var(--text3);">Gabarito: ${escapeHtml(gab || '—')}</div>
+                <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${escapeHtml(resp)}</textarea>
                 <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
                     <option value="">Nível BNCC</option>
                     <option value="Inicial">Inicial</option>
@@ -2412,7 +2452,7 @@ function gerarGridCorrecaoManualSA() {
 
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
-                <div class="q-gabarito">${gab || '—'}</div>
+                <div class="q-gabarito">${escapeHtml(gab || '—')}</div>
                 <select class="${selectClass}" data-questao="${i}" onchange="atualizarRespostaManualSA(this)">
                     ${options}
                 </select>
@@ -2537,15 +2577,20 @@ function limparRespostasManualSA() {
 
 // ============================================
 // REVISAR APENAS DUVIDOSAS SA
+// ═══ CORRIGIDO: usar questoes_suspeitas ═══
 // ============================================
 function revisarApenasDuvidosasSA() {
     const confiancas = cmStandaloneData.confianca_por_questao || [];
+    const suspeitas = cmStandaloneData.questoes_suspeitas || [];
     const itens = document.querySelectorAll('.cm-item-standalone');
     let totalDuvidosas = 0;
 
     itens.forEach((item, index) => {
         const confianca = confiancas[index] || 100;
-        if (confianca < 70) {
+        const numQuestao = index + 1;
+        const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
+
+        if (isSuspeita) {
             item.style.display = '';
             totalDuvidosas++;
             if (totalDuvidosas === 1) {
@@ -2593,9 +2638,9 @@ function salvarCorrecaoManualStandalone() {
     const gabarito = cmStandaloneData.gabarito || [];
 
     const temResposta = respostas.some(r => r && r.trim() !== '');
-    if (!temResposta) { 
-        showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); 
-        return; 
+    if (!temResposta) {
+        showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning');
+        return;
     }
 
     let acertos = 0;
@@ -2606,7 +2651,7 @@ function salvarCorrecaoManualStandalone() {
             acertos++;
         }
     }
-    
+
     const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
     const nota = Math.min((acertos * valorPorQuestao), cmStandaloneData.notaMaxima || 10);
 
@@ -2625,7 +2670,7 @@ function salvarCorrecaoManualStandalone() {
 
     fetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
-        headers: { 
+        headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(dadosCorrecao)
@@ -2652,14 +2697,14 @@ function salvarCorrecaoManualStandalone() {
     .then(data => {
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
-            
+
             limparCache();
-                        
+
             setTimeout(() => {
                 const paginaAtual = document.querySelector('.page.active');
                 if (paginaAtual) {
                     const pageId = paginaAtual.id.replace('page-', '');
-                    
+
                     switch(pageId) {
                         case 'resultados':
                             carregarResultadosComFiltros();
@@ -2687,10 +2732,10 @@ function salvarCorrecaoManualStandalone() {
                     carregarDashboard();
                     carregarUltimasCorrecoes();
                 }
-                
+
                 carregarConceitoReal();
                 carregarUltimasCorrecoes();
-                
+
                 console.log('✅ Todos os dados foram atualizados automaticamente!');
             }, 300);
         } else {
@@ -2792,6 +2837,7 @@ async function editarGabaritoDesempenho() {
 
 // ============================================
 // FUNÇÕES DE USUÁRIO
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 function abrirModalUsuario() {
     usuarioEditandoId = null;
@@ -2967,7 +3013,7 @@ async function avaliarTexto() {
             const bVoc = document.getElementById('b-voc'); if (bVoc) bVoc.style.width = ((dados.metricas.nota_vocabulario || 0) / 10 * 100) + '%';
         }
         const fb = document.getElementById('txt-fb');
-        if (fb) fb.innerHTML = dados.feedback || 'Feedback gerado automaticamente.';
+        if (fb) fb.innerHTML = escapeHtml(dados.feedback || 'Feedback gerado automaticamente.');
         if (alunoId) {
             try {
                 const alunos = await carregarAlunosComCache();
@@ -3054,8 +3100,9 @@ async function processarComIA(imagemBase64) {
 
     const etapas = [
         { nome: '📸 Preparando imagem', descricao: 'Processando a imagem do cartão resposta...' },
-        { nome: '🔍 Detectando círculos', descricao: 'Analisando marcadores fiduciais e círculos...' },
-        { nome: '🤖 Analisando com IA', descricao: 'Detectando respostas com OpenAI...' },
+        { nome: '🎯 Template + Marcadores', descricao: 'Detectando marcadores e aplicando template...' },
+        { nome: '🔍 Validação OpenCV', descricao: 'Cruzando com HoughCircles...' },
+        { nome: '🤖 IA (se necessário)', descricao: 'Analisando casos difíceis com OpenAI...' },
         { nome: '📊 Processando resultados', descricao: 'Comparando com o gabarito e calculando nota...' },
         { nome: '💾 Finalizando', descricao: 'Salvando os resultados...' }
     ];
@@ -3095,16 +3142,18 @@ async function processarComIA(imagemBase64) {
         await sleep(300);
 
         const respostaIA = await enviarParaCorrecao(imagemEnvio, provaId, alunoId);
-        
+
         if (respostaIA.erro) {
             throw new Error(respostaIA.erro);
         }
+
+        progressManager.atualizarEtapa(3);
+        await sleep(200);
 
         let respostasDetectadas = respostaIA.respostas_detectadas || [];
         let confiancas = respostaIA.confianca_por_questao || [];
         let questoesStatus = [];
 
-        // ═══ MUDANÇA #1: Passar tipoQuestoes para normalização ═══
         const { respostasNormalizadas, confiancasNormalizadas } = normalizarRespostas(
             respostasDetectadas,
             confiancas,
@@ -3163,7 +3212,7 @@ async function processarComIA(imagemBase64) {
         const porcentagem = Math.round((acertos / totalQuestoes) * 100);
         const conceito = calcularConceito(porcentagem);
 
-        progressManager.atualizarEtapa(3);
+        progressManager.atualizarEtapa(4);
         await sleep(300);
 
         salvarDadosCorrecaoManual({
@@ -3181,11 +3230,12 @@ async function processarComIA(imagemBase64) {
             serie: prova.serie || '1º Ano',
             disciplina: prova.disciplina || '',
             confianca_por_questao: confiancasNormalizadas,
+            questoes_suspeitas: respostaIA.questoes_suspeitas || [],
             questoes_status: resultadoQuestoes
         });
 
         const metodoUsado = respostaIA.metodo_usado || respostaIA.modo || 'desconhecido';
-        
+
         atualizarInterfaceCorrecao({
             aluno: aluno,
             prova: prova,
@@ -3196,11 +3246,16 @@ async function processarComIA(imagemBase64) {
             porcentagem: porcentagem,
             conceito: conceito,
             confiancas: confiancasNormalizadas,
-            metodoUsado: metodoUsado
+            metodoUsado: metodoUsado,
+            requerRevisao: respostaIA.requer_revisao_manual || false,
+            questoesSuspeitas: respostaIA.questoes_suspeitas || []
         });
 
+        progressManager.atualizarEtapa(5);
+        await sleep(200);
+
         progressManager.finalizar(`✅ Correção concluída! ${acertos}/${totalQuestoes} acertos — Nota: ${nota.toFixed(1)}`);
-        
+
         carregarDashboard();
         carregarResultadosComFiltros();
         carregarUltimasCorrecoes();
@@ -3253,7 +3308,7 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
         }
 
         const dados = await response.json();
-        
+
         if (dados.erro) {
             throw new Error(dados.erro);
         }
@@ -3270,7 +3325,7 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
     }
 }
 
-// ═══ MUDANÇA #2: Normalização TOLERANTE (mesma do backend) ═══
+// Normalização TOLERANTE (mesma do backend)
 function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao, tipoQuestoes = 4) {
     let respostasNormalizadas = [];
     let confiancasNormalizadas = [];
@@ -3284,7 +3339,6 @@ function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao, t
         if (isProducao) {
             resp = resp.toString().trim();
         } else {
-            // Normalização tolerante: aceita "A", "a", "A)", "letra A", etc.
             let s = resp.toString().trim().toUpperCase();
             s = s.replace(/^[\(\[]*/, '').replace(/[\)\]\.\,\;\:\-]*$/, '');
 
@@ -3322,11 +3376,13 @@ function salvarDadosCorrecaoManual(dados) {
         serie: dados.serie,
         disciplina: dados.disciplina,
         confianca_por_questao: dados.confianca_por_questao,
+        questoes_suspeitas: dados.questoes_suspeitas || [],
         bncc: dados.bncc || [],
         questoes_status: dados.questoes_status || []
     };
 }
 
+// ═══ CORRIGIDO: adicionar badge de revisão manual ═══
 function atualizarInterfaceCorrecao(dados) {
     const box = document.getElementById('ia-result');
     if (box) box.style.display = 'block';
@@ -3347,6 +3403,8 @@ function atualizarInterfaceCorrecao(dados) {
     const metodoBadge = document.getElementById('ia-metodo');
     if (metodoBadge) {
         const metodoLabels = {
+            'template': '🎯 Template',
+            'template+cv': '🎯 Template+CV',
             'ia': '🤖 IA',
             'ia+circulos': '🤖 IA + Círculos',
             'ia_parcial': '🤖 IA (Parcial)',
@@ -3355,7 +3413,10 @@ function atualizarInterfaceCorrecao(dados) {
             'manual': '✏️ Manual'
         };
         metodoBadge.textContent = metodoLabels[metodo] || `📌 ${metodo}`;
-        metodoBadge.className = `badge ${metodo === 'ia' ? 'badge-purple' : metodo.includes('circulos') ? 'badge-orange' : 'badge-gray'}`;
+        const classe = metodo === 'template' || metodo === 'template+cv' ? 'badge-green' :
+                       metodo === 'ia' ? 'badge-purple' :
+                       metodo.includes('circulos') ? 'badge-orange' : 'badge-gray';
+        metodoBadge.className = `badge ${classe}`;
     }
 
     const confiancaMedia = dados.confiancas.reduce((a, b) => a + b, 0) / dados.confiancas.length || 0;
@@ -3367,13 +3428,20 @@ function atualizarInterfaceCorrecao(dados) {
 
     const resumoConfianca = document.getElementById('ia-resumo-confianca');
     if (resumoConfianca) {
-        const totalDuvidosas = dados.confiancas.filter(c => c < 70).length;
+        const totalDuvidosas = dados.questoesSuspeitas.length || dados.confiancas.filter(c => c < 70).length;
         resumoConfianca.style.display = 'flex';
+
+        let alertaRevisao = '';
+        if (dados.requerRevisao) {
+            alertaRevisao = `<span style="color:var(--orange);font-weight:700;">⚠️ REVISÃO MANUAL RECOMENDADA</span>`;
+        }
+
         resumoConfianca.innerHTML = `
             <span>📊 Confiança média: <strong style="color:${confiancaMedia >= 70 ? 'var(--green)' : confiancaMedia >= 50 ? 'var(--orange)' : 'var(--red)'};">${confiancaMedia.toFixed(1)}%</strong></span>
             ${totalDuvidosas > 0 ? `<span>⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)</span>` : '<span>✅ Todas as questões têm alta confiança!</span>'}
             <span>🎯 Acertos: <strong style="color:var(--green);">${dados.acertos}</strong> / ${dados.totalQuestoes}</span>
             <span>📌 Método: <strong>${metodo}</strong></span>
+            ${alertaRevisao}
         `;
     }
 
@@ -3384,18 +3452,18 @@ function atualizarInterfaceCorrecao(dados) {
             const corTexto = q.acertou ? 'var(--green)' : 'var(--red)';
             const icone = q.acertou ? '✅' : (q.respondida ? '❌' : '—');
             const confColor = q.confianca < 70 ? 'var(--orange)' : 'var(--text2)';
-            return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${q.resposta || '—'} ${icone}<span style="font-size:8px;color:${confColor};">${q.confianca}%</span></span>`;
+            return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${escapeHtml(q.resposta || '—')} ${icone}<span style="font-size:8px;color:${confColor};">${q.confianca}%</span></span>`;
         }).join('');
     }
 
     const grid = document.getElementById('ia-comp');
     if (grid) {
         grid.innerHTML = '';
-        
+
         const totalQuestoes = dados.resultadoQuestoes.length;
         let colunasPorLinha = 5;
         if (totalQuestoes > 25) colunasPorLinha = 6;
-        
+
         // Gabarito oficial
         const tituloOficial = document.createElement('div');
         tituloOficial.style.cssText = `
@@ -3411,10 +3479,10 @@ function atualizarInterfaceCorrecao(dados) {
         tituloOficial.innerHTML = `
             <span style="font-size:12px;font-weight:800;color:var(--blue);letter-spacing:0.3px;">📋 GABARITO OFICIAL GERADO PELO SISTEMA</span>
             <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">(${totalQuestoes} questões)</span>
-            <span style="font-size:9px;color:var(--text3);margin-left:8px;">📌 ${dados.metodoUsado || 'ia'}</span>
+            <span style="font-size:9px;color:var(--text3);margin-left:8px;">📌 ${escapeHtml(dados.metodoUsado || 'ia')}</span>
         `;
         grid.appendChild(tituloOficial);
-        
+
         const gridOficial = document.createElement('div');
         gridOficial.style.cssText = `
             grid-column: 1 / -1;
@@ -3426,7 +3494,7 @@ function atualizarInterfaceCorrecao(dados) {
             border-radius: 4px;
             border: 1px solid rgba(59,130,246,0.06);
         `;
-        
+
         dados.resultadoQuestoes.forEach((q) => {
             const div = document.createElement('div');
             div.style.cssText = `
@@ -3442,12 +3510,12 @@ function atualizarInterfaceCorrecao(dados) {
             `;
             div.innerHTML = `
                 <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
-                <div style="font-size:16px;font-weight:900;color:var(--green);line-height:1.1;">${q.gabarito || '—'}</div>
+                <div style="font-size:16px;font-weight:900;color:var(--green);line-height:1.1;">${escapeHtml(q.gabarito || '—')}</div>
             `;
             gridOficial.appendChild(div);
         });
         grid.appendChild(gridOficial);
-        
+
         // Gabarito do aluno
         const tituloAluno = document.createElement('div');
         tituloAluno.style.cssText = `
@@ -3462,11 +3530,11 @@ function atualizarInterfaceCorrecao(dados) {
         `;
         tituloAluno.innerHTML = `
             <span style="font-size:12px;font-weight:800;color:var(--purple);letter-spacing:0.3px;">📋 GABARITO DO ALUNO</span>
-            <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">${dados.aluno.nome || 'Aluno'}</span>
-            <span style="font-size:9px;color:var(--text3);margin-left:8px;">📌 ${dados.metodoUsado || 'ia'}</span>
+            <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">${escapeHtml(dados.aluno.nome || 'Aluno')}</span>
+            <span style="font-size:9px;color:var(--text3);margin-left:8px;">📌 ${escapeHtml(dados.metodoUsado || 'ia')}</span>
         `;
         grid.appendChild(tituloAluno);
-        
+
         const gridAluno = document.createElement('div');
         gridAluno.style.cssText = `
             grid-column: 1 / -1;
@@ -3478,12 +3546,12 @@ function atualizarInterfaceCorrecao(dados) {
             border-radius: 4px;
             border: 1px solid rgba(139,92,246,0.06);
         `;
-        
+
         dados.resultadoQuestoes.forEach((q) => {
             const acertou = q.acertou;
             const resposta = q.resposta || '—';
             const confianca = q.confianca || 100;
-            
+
             let corBg, corTexto, icone;
             if (acertou) {
                 corBg = 'rgba(16,185,129,0.10)';
@@ -3498,9 +3566,9 @@ function atualizarInterfaceCorrecao(dados) {
                 corTexto = 'var(--text3)';
                 icone = '—';
             }
-            
+
             const confColor = confianca < 70 ? 'var(--orange)' : 'var(--text3)';
-            
+
             const div = document.createElement('div');
             div.style.cssText = `
                 background: ${corBg};
@@ -3515,14 +3583,14 @@ function atualizarInterfaceCorrecao(dados) {
             `;
             div.innerHTML = `
                 <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
-                <div style="font-size:16px;font-weight:900;color:${corTexto};line-height:1.1;">${resposta}</div>
+                <div style="font-size:16px;font-weight:900;color:${corTexto};line-height:1.1;">${escapeHtml(resposta)}</div>
                 <div style="font-size:6px;font-weight:700;color:${corTexto};">${icone}</div>
                 <div style="font-size:6px;color:${confColor};">${Math.round(confianca)}%</div>
             `;
             gridAluno.appendChild(div);
         });
         grid.appendChild(gridAluno);
-        
+
         // Comparação resumida
         const divComparacao = document.createElement('div');
         divComparacao.style.cssText = `
@@ -3536,12 +3604,12 @@ function atualizarInterfaceCorrecao(dados) {
             border-radius: 6px;
             border: 1px solid var(--border);
         `;
-        
+
         const acertos = dados.acertos;
-        const erros = dados.totalQuestoes - acertos - (dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length);
         const naoRespondidas = dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length;
+        const erros = dados.totalQuestoes - acertos - naoRespondidas;
         const porcentagem = dados.porcentagem;
-        
+
         divComparacao.innerHTML = `
             <div style="text-align:center;padding:4px;background:rgba(16,185,129,0.06);border-radius:4px;border:1px solid rgba(16,185,129,0.10);">
                 <div style="font-size:18px;font-weight:900;color:var(--green);">${acertos}</div>
@@ -3569,18 +3637,18 @@ async function salvarCorrecao() {
         showToast('❌ Nenhuma correção para salvar!', 'error');
         return;
     }
-    
+
     const provaId = correcaoManualData.provaId;
     const alunoId = correcaoManualData.alunoId;
     const respostas = correcaoManualData.respostasAluno;
     const gabarito = correcaoManualData.gabarito;
     const total = correcaoManualData.quantidade;
-    
+
     if (!provaId || !alunoId) {
         showToast('❌ Dados da correção incompletos!', 'error');
         return;
     }
-    
+
     let acertos = 0;
     for (let i = 0; i < total; i++) {
         const resp = (i < respostas.length) ? (respostas[i] || '') : '';
@@ -3589,12 +3657,12 @@ async function salvarCorrecao() {
             acertos++;
         }
     }
-    
+
     const nota = Math.min(acertos * (correcaoManualData.valorPorQuestao || (10/total)), 10);
-    
+
     try {
         showToast('💾 Salvando correção...', 'info');
-        
+
         const response = await fetch(`${API_URL}/api/corrigir_manual`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3607,9 +3675,9 @@ async function salvarCorrecao() {
                 total: total
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             limparCache();
@@ -3627,6 +3695,7 @@ async function salvarCorrecao() {
 
 // ============================================
 // FUNÇÕES DE CRUD - ESCOLA
+// ═══ CORRIGIDO: escapeHtml e escapeAttr ═══
 // ============================================
 async function salvarEscola() {
     const nome = document.getElementById('escola-nome').value.trim();
@@ -4398,42 +4467,43 @@ async function carregarTurmasLista(escolaId) {
     }
 }
 
+// ═══ CORRIGIDO: escapeHtml ═══
 async function gerarListaTurma() {
     const escolaId = document.getElementById('lista-escola').value;
     const turmaId = document.getElementById('lista-turma').value;
     const provaId = document.getElementById('lista-prova')?.value || '';
-    
-    if (!turmaId) { 
-        showToast('❌ Selecione uma turma!', 'error'); 
-        return; 
+
+    if (!turmaId) {
+        showToast('❌ Selecione uma turma!', 'error');
+        return;
     }
-    if (!escolaId) { 
-        showToast('❌ Selecione uma escola!', 'error'); 
-        return; 
+    if (!escolaId) {
+        showToast('❌ Selecione uma escola!', 'error');
+        return;
     }
-    
+
     try {
         const alunos = await carregarAlunosComCache({ turma_id: turmaId });
         const turmas = await carregarTurmasComCache();
         const turma = turmas.find(t => t.id == turmaId);
-        
+
         const container = document.getElementById('lista-resultado');
         if (!container) return;
-        
+
         if (!alunos || alunos.length === 0 || alunos.erro) {
             container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado nesta turma</div>';
             showToast('❌ Nenhum aluno na turma!', 'error');
             return;
         }
-        
+
         const provas = await carregarProvasComCache();
         const serieTurma = turma?.serie || '';
-        
+
         let provasDisponiveis = provas.filter(p => p.serie === serieTurma);
         if (provasDisponiveis.length === 0) {
             provasDisponiveis = provas;
         }
-        
+
         let prova = null;
         if (provaId) {
             prova = provas.find(p => p.id == provaId);
@@ -4441,38 +4511,38 @@ async function gerarListaTurma() {
         if (!prova && provasDisponiveis.length > 0) {
             prova = provasDisponiveis[0];
         }
-        
+
         if (!prova) {
             container.innerHTML = `
                 <div style="text-align:center;padding:30px;color:var(--orange);">
                     <div style="font-size:40px;margin-bottom:10px;">📝</div>
                     <p style="font-weight:700;">Nenhuma prova cadastrada para esta turma</p>
-                    <p style="font-size:12px;color:var(--text3);">Cadastre uma prova para a série <strong>${serieTurma || 'desta turma'}</strong></p>
+                    <p style="font-size:12px;color:var(--text3);">Cadastre uma prova para a série <strong>${escapeHtml(serieTurma || 'desta turma')}</strong></p>
                     <button class="btn btn-primary" style="margin-top:10px;" onclick="go('prova-upload')">➕ Cadastrar Prova</button>
                 </div>
             `;
             showToast('❌ Nenhuma prova para esta turma!', 'error');
             return;
         }
-        
+
         const escolas = await carregarEscolasComCache();
         const escola = escolas.find(e => e.id == turma?.escola_id);
-        
+
         let provasOptions = '';
         provasDisponiveis.forEach(p => {
             const selected = p.id == prova.id ? 'selected' : '';
-            provasOptions += `<option value="${p.id}" ${selected}>${p.titulo} (${p.disciplina || 'Sem disciplina'})</option>`;
+            provasOptions += `<option value="${p.id}" ${selected}>${escapeHtml(p.titulo)} (${escapeHtml(p.disciplina || 'Sem disciplina')})</option>`;
         });
 
         let html = `
             <div style="text-align:center;padding:12px 0 18px;border-bottom:1px solid var(--border);margin-bottom:14px;">
-                <div style="font-size:16px;font-weight:800;">${escola?.nome || 'Escola'}</div>
+                <div style="font-size:16px;font-weight:800;">${escapeHtml(escola?.nome || 'Escola')}</div>
                 <div style="color:var(--text2);font-size:13px;margin-top:4px;">
-                    Turma: ${turma?.nome || '—'} | Série: ${turma?.serie || '—'}
+                    Turma: ${escapeHtml(turma?.nome || '—')} | Série: ${escapeHtml(turma?.serie || '—')}
                 </div>
                 <div style="color:var(--text3);font-size:12px;margin-top:2px;">
-                    Professor(a): ${turma?.professor || '—'} | 
-                    Turno: ${turma?.turno || 'Manhã'} | 
+                    Professor(a): ${escapeHtml(turma?.professor || '—')} | 
+                    Turno: ${escapeHtml(turma?.turno || 'Manhã')} | 
                     Total: ${alunos.length} alunos
                 </div>
                 <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -4492,16 +4562,16 @@ async function gerarListaTurma() {
                 </div>
             </div>
         `;
-        
+
         html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:400px;overflow-y:auto;">';
-        
+
         for (let i = 0; i < alunos.length; i++) {
             const aluno = alunos[i];
             html += `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
                     <div>
-                        <strong>${aluno.nome}</strong> 
-                        <span class="badge badge-blue">Nº ${aluno.numero_chamada || '—'}</span>
+                        <strong>${escapeHtml(aluno.nome)}</strong> 
+                        <span class="badge badge-blue">Nº ${escapeHtml(aluno.numero_chamada || '—')}</span>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="gerarCartaoResposta(${escolaId}, ${turmaId}, ${aluno.id}, ${prova.id})">
                         📄 Gerar Cartão
@@ -4509,9 +4579,9 @@ async function gerarListaTurma() {
                 </div>
             `;
         }
-        
+
         html += '</div>';
-        
+
         html += `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
                 <div style="text-align:center;">
@@ -4522,10 +4592,10 @@ async function gerarListaTurma() {
                 </div>
             </div>
         `;
-        
+
         container.innerHTML = html;
         showToast(`📋 ${alunos.length} alunos encontrados. Clique em "GERAR TODOS OS CARTOES" para gerar todos!`, 'info');
-        
+
     } catch (erro) {
         console.error('Erro ao gerar lista:', erro);
         showToast('❌ Erro: ' + erro.message, 'error');
@@ -4587,23 +4657,23 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
 async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
     try {
         showToast('📄 Gerando cartões para todos os alunos...', 'info');
-        
+
         const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-        
+
         if (!alunos || alunos.length === 0) {
             showToast('❌ Nenhum aluno encontrado nesta turma!', 'error');
             return;
         }
-        
+
         for (let i = 0; i < alunos.length; i++) {
             const aluno = alunos[i];
             setTimeout(() => {
                 gerarCartaoResposta(escolaId, turmaId, aluno.id, provaId);
             }, i * 300);
         }
-        
+
         showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
-        
+
     } catch (erro) {
         console.error('Erro ao gerar cartões:', erro);
         showToast('❌ Erro: ' + erro.message, 'error');
@@ -4642,7 +4712,7 @@ function openM(id) {
     } else {
         console.warn('⚠️ Modal não encontrado:', id);
     }
-    
+
     if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
     if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
 }
@@ -4714,13 +4784,15 @@ function filtrarSerie(sel) {
     document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
 }
 
+// ═══ CORRIGIDO: toast com escape ═══
 function showToast(msg, type) {
     type = type || 'info';
     const c = document.getElementById('toast-c');
+    if (!c) return;
     const t = document.createElement('div');
     t.className = 'toast toast-' + type;
     const icons = { info: 'ℹ️', success: '✅', error: '❌', ai: '🤖', warning: '⚠️' };
-    t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + msg + '</span>';
+    t.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + escapeHtml(msg) + '</span>';
     c.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3200);
 }
@@ -4766,7 +4838,7 @@ function carregarUserData() {
                 if (turmas && turmas.length > 0) {
                     tbody.innerHTML = turmas.map(t => {
                         const totalAlunos = t.total_alunos || 0;
-                        return '<tr><td><strong>' + t.nome + '</strong></td><td><span class="badge badge-purple">' + (t.serie || '—') + '</span></td><td>' + (t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                        return '<tr><td><strong>' + escapeHtml(t.nome) + '</strong></td><td><span class="badge badge-purple">' + escapeHtml(t.serie || '—') + '</span></td><td>' + escapeHtml(t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
                     }).join('');
                 }
             }).catch(e => console.error(e));
@@ -4961,6 +5033,7 @@ async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
 
 // ============================================
 // CARREGAR RELATÓRIOS
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarRelatorios() {
     try {
@@ -5068,6 +5141,7 @@ async function carregarRelatorios() {
     } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
 }
 
+// ═══ CORRIGIDO: escapeHtml ═══
 async function carregarRelatorioEscola() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -5087,7 +5161,7 @@ async function carregarRelatorioEscola() {
                 const media = correcoesEscola.length > 0 ? (correcoesEscola.reduce((s, c) => s + c.nota, 0) / correcoesEscola.length) : 0;
                 const Habilidades = correcoesEscola.filter(c => c.nota >= 6).length;
                 const perc = correcoesEscola.length > 0 ? Math.round((Habilidades / correcoesEscola.length) * 100) : 0;
-                return '<tr><td><strong>' + e.nome + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
+                return '<tr><td><strong>' + escapeHtml(e.nome) + '</strong></td><td>' + turmasEscola.length + '</td><td>' + alunosEscola.length + '</td><td><strong style="color:' + (media >= 6 ? 'var(--green)' : 'var(--orange)') + ';">' + media.toFixed(1) + '</strong></td><td>' + perc + '%</td><td><div class="progress" style="width:140px;"><div class="progress-fill ' + (perc >= 70 ? 'pf-green' : 'pf-orange') + '" style="width:' + perc + '%;"></div></div></td></tr>';
             }).join('');
         }
     } catch (erro) { console.error('Erro ao carregar relatório por escola:', erro); }
@@ -5195,6 +5269,7 @@ async function imprimirRelatorioTurma() {
     window.print();
 }
 
+// ═══ CORRIGIDO: escapeHtml em todas as tabelas ═══
 async function carregarRelatorioTurmaFiltrado() {
     try {
         const escolaId = document.getElementById('rel-turma-escola').value;
@@ -5207,7 +5282,7 @@ async function carregarRelatorioTurmaFiltrado() {
         let corDisciplina = '#3b82f6';
         let bgDisciplina = 'rgba(59,130,246,0.05)';
         let iconDisciplina = '📖';
-        
+
         const selectProva = document.getElementById('rel-turma-prova');
         const optionProva = selectProva.options[selectProva.selectedIndex];
         if (optionProva && optionProva.dataset.disciplina) {
@@ -5406,7 +5481,7 @@ async function carregarRelatorioTurmaFiltrado() {
         if (!tbody) return;
 
         const todosAlunos = [...alunosComCorrecao, ...alunosSemCorrecao];
-        
+
         if (todosAlunos.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>`;
             document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
@@ -5434,7 +5509,7 @@ async function carregarRelatorioTurmaFiltrado() {
 
         tbody.innerHTML = todosAlunos.map((aluno, index) => {
             const d = aluno.disciplinaData;
-            
+
             let medalha = '';
             if (index === 0) medalha = '🥇';
             else if (index === 1) medalha = '🥈';
@@ -5446,13 +5521,13 @@ async function carregarRelatorioTurmaFiltrado() {
             return `<tr>
                 <td style="font-size:14px;">${medalha}</td>
                 <td>${index + 1}</td>
-                <td style="text-align:left;font-weight:600;">${aluno.aluno_nome || 'Aluno'}</td>
-                <td><span class="badge badge-purple" style="font-size:9px;">${aluno.serie || '—'}</span></td>
+                <td style="text-align:left;font-weight:600;">${escapeHtml(aluno.aluno_nome || 'Aluno')}</td>
+                <td><span class="badge badge-purple" style="font-size:9px;">${escapeHtml(aluno.serie || '—')}</span></td>
                 <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
                 <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
                 <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>
-                <td style="font-size:9px;color:var(--text2);">${aluno.escola || '—'}</td>
-                <td style="font-size:9px;color:var(--text2);">${aluno.turma || '—'}</td>
+                <td style="font-size:9px;color:var(--text2);">${escapeHtml(aluno.escola || '—')}</td>
+                <td style="font-size:9px;color:var(--text2);">${escapeHtml(aluno.turma || '—')}</td>
             </tr>`;
         }).join('');
 
@@ -5505,6 +5580,7 @@ function limparFiltrosRelTurma() {
     }).catch(e => console.error('Erro ao recarregar provas:', e));
 }
 
+// ═══ CORRIGIDO: escapeHtml em todas as células ═══
 function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao) {
     try {
         const container = document.getElementById('rel-acertos-grid');
@@ -5546,17 +5622,17 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
                         questoesMap.set(num, { acertos: 0, erros: 0 });
                     }
                     const data = questoesMap.get(num);
-                    
+
                     if (!bnccMap.has(num)) {
                         const bncc = q.bncc || q.codigo_bncc || (bnccList[idx] || 'N/A');
                         bnccMap.set(num, bncc);
                     }
-                    
+
                     const resp = q.resposta || '';
                     const gab = q.gabarito || '';
                     const isRespondida = resp && resp !== '' && resp !== '—' && resp !== '-';
                     const isCorreta = isRespondida && resp.toUpperCase() === gab.toUpperCase();
-                    
+
                     if (isCorreta || q.acertou === true || q.correta === true) {
                         data.acertos++;
                         totalAcertos++;
@@ -5572,25 +5648,25 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
                 const respostas = discData.respostas || [];
                 const gabarito = discData.gabarito || [];
                 const total = discData.total || 20;
-                
+
                 for (let i = 0; i < Math.min(respostas.length, gabarito.length, total); i++) {
                     const num = i + 1;
                     if (!questoesMap.has(num)) {
                         questoesMap.set(num, { acertos: 0, erros: 0 });
                     }
                     const data = questoesMap.get(num);
-                    
+
                     if (!bnccMap.has(num)) {
                         const bncc = (bnccList[i] || 'N/A');
                         bnccMap.set(num, bncc);
                     }
-                    
+
                     const resp = String(respostas[i] || '').trim().toUpperCase();
                     const gab = String(gabarito[i] || '').trim().toUpperCase();
-                    
+
                     const isRespostaValida = resp && resp !== '' && resp !== '—' && resp !== '-';
                     const isCorreta = isRespostaValida && resp === gab && gab !== '';
-                    
+
                     if (isCorreta) {
                         data.acertos++;
                         totalAcertos++;
@@ -5608,7 +5684,7 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
         totalAcertosEl.textContent = totalAcertos;
         totalErrosEl.textContent = totalErros;
 
-        const media = totalAlunos > 0 && totalQuestoes > 0 ? 
+        const media = totalAlunos > 0 && totalQuestoes > 0 ?
             Math.round((totalAcertos / (totalAlunos * totalQuestoes)) * 100) : 0;
         mediaEl.textContent = media + '%';
 
@@ -5624,7 +5700,7 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
             const data = questoesMap.get(num);
             const total = data.acertos + data.erros;
             const bnccCode = bnccMap.get(num) || 'N/A';
-            
+
             const pctAcertos = total > 0 ? Math.round((data.acertos / total) * 100) : 0;
             const pctErros = total > 0 ? Math.round((data.erros / total) * 100) : 0;
 
@@ -5638,13 +5714,13 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
                 text-align: center;
                 transition: all 0.2s ease;
             `;
-            
+
             let corBarra = '#ef4444';
             if (pctAcertos >= 80) corBarra = '#10b981';
             else if (pctAcertos >= 60) corBarra = '#f59e0b';
             else if (pctAcertos >= 40) corBarra = '#f59e0b';
             else if (pctAcertos >= 20) corBarra = '#ef4444';
-            
+
             div.innerHTML = `
                 <div style="font-size: 14px; font-weight: 800; color: var(--text1); margin-bottom: 4px;">
                     Q${num}
@@ -5657,7 +5733,7 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
                 <div style="font-size: 9px; color: var(--text3); font-weight: 600; margin-bottom: 4px;">Acertos / Erros</div>
                 <div style="font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 4px;">Total: ${total}</div>
                 <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; background: rgba(139,92,246,0.12); padding: 3px 12px; border-radius: 8px; display: inline-block; margin-bottom: 4px; font-family: 'Courier New', monospace; letter-spacing: 0.3px;">
-                    ${bnccCode}
+                    ${escapeHtml(bnccCode)}
                 </div>
                 <div class="progress" style="height: 8px; background: var(--bg2); border-radius: 6px; overflow: hidden; margin: 6px 0;">
                     <div class="progress-fill" style="width: ${Math.max(pctAcertos, 2)}%; background: ${corBarra}; border-radius: 6px; transition: width 0.8s ease;"></div>
@@ -5675,13 +5751,14 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
         console.error('❌ Erro ao atualizar gráfico de acertos:', erro);
         const container = document.getElementById('rel-acertos-grid');
         if (container) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--red);">Erro ao carregar dados: ${erro.message}</div>`;
+            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--red);">Erro ao carregar dados: ${escapeHtml(erro.message)}</div>`;
         }
     }
 }
 
 // ============================================
 // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarEscolasDesempenho() {
     try {
@@ -5919,7 +5996,7 @@ async function gerarDesempenho() {
 
                 let bnccHtml = '';
                 if (q.bncc && q.bncc.trim() !== '') {
-                    bnccHtml = `<div style="font-size:9px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:2px 6px; border-radius:4px;">BNCC: ${q.bncc}</div>`;
+                    bnccHtml = `<div style="font-size:9px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:2px 6px; border-radius:4px;">BNCC: ${escapeHtml(q.bncc)}</div>`;
                 }
 
                 div.innerHTML = `
@@ -5928,10 +6005,10 @@ async function gerarDesempenho() {
                         <span class="q-status-text" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:${q.acertou ? 'rgba(16,185,129,0.15)' : (q.respondida ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)')}; color:${q.acertou ? 'var(--green)' : (q.respondida ? 'var(--red)' : 'var(--text3)')};">${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '—')}
                     </span>
                     </div>
-                    <div style="font-size:11px; color:var(--text3);">Resposta: <strong>${q.resposta}</strong></div>
-                    <div style="font-size:11px; color:var(--text3);">Gabarito: <strong style="color:var(--green);">${q.gabarito}</strong></div>
+                    <div style="font-size:11px; color:var(--text3);">Resposta: <strong>${escapeHtml(q.resposta)}</strong></div>
+                    <div style="font-size:11px; color:var(--text3);">Gabarito: <strong style="color:var(--green);">${escapeHtml(q.gabarito)}</strong></div>
                     ${bnccHtml}
-                    <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${q.bncc || 'Não definido'}</div>
+                    <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${escapeHtml(q.bncc || 'Não definido')}</div>
                 `;
                 grid.appendChild(div);
             });
@@ -5946,12 +6023,12 @@ async function gerarDesempenho() {
                 div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
                 let bnccHtml = '';
                 if (q.bncc && q.bncc.trim() !== '') {
-                    bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${q.bncc}</div>`;
+                    bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${escapeHtml(q.bncc)}</div>`;
                 }
                 div.innerHTML = `
                     <div class="q-num">Q${q.numero}</div>
-                    <div class="q-resp">${q.resposta}</div>
-                    <div class="q-gab">${q.gabarito}</div>
+                    <div class="q-resp">${escapeHtml(q.resposta)}</div>
+                    <div class="q-gab">${escapeHtml(q.gabarito)}</div>
                     <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}</span>
                     ${bnccHtml}
                 `;
@@ -5999,9 +6076,9 @@ async function gerarDesempenho() {
 
                 div.innerHTML = `
                     <div style="font-weight:700; color:var(--text2);">Q${idx+1}</div>
-                    <div style="font-size:13px; font-weight:700; color:var(--green);">${gab || '—'}</div>
-                    ${codigoBncc ? `<div style="font-size:9px; color:var(--purple);">BNCC: ${codigoBncc}</div>` : ''}
-                    <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${codigoBncc || 'Não definido'}</div>
+                    <div style="font-size:13px; font-weight:700; color:var(--green);">${escapeHtml(gab || '—')}</div>
+                    ${codigoBncc ? `<div style="font-size:9px; color:var(--purple);">BNCC: ${escapeHtml(codigoBncc)}</div>` : ''}
+                    <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${escapeHtml(codigoBncc || 'Não definido')}</div>
                 `;
                 gabGrid.appendChild(div);
             });
@@ -6017,9 +6094,9 @@ async function gerarDesempenho() {
                 div.className = 'questao-item';
                 div.innerHTML = `
                     <div class="q-num">Q${idx+1}</div>
-                    <div class="q-resp" style="color: var(--green);">${gab || '—'}</div>
+                    <div class="q-resp" style="color: var(--green);">${escapeHtml(gab || '—')}</div>
                     <div class="q-gab">Oficial</div>
-                    ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${codigoBncc}</div>` : ''}
+                    ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${escapeHtml(codigoBncc)}</div>` : ''}
                 `;
                 gabGrid.appendChild(div);
             });
@@ -6067,7 +6144,7 @@ function gerarDocumentoDesempenho() {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Relatório de Desempenho - ${aluno.nome}</title>
+            <title>Relatório de Desempenho - ${escapeHtml(aluno.nome)}</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body { font-family: Arial, sans-serif; padding: 30px; background: #fff; color: #333; }
@@ -6108,15 +6185,15 @@ function gerarDocumentoDesempenho() {
         <body>
             <div class="header">
                 <h1>📊 RELATÓRIO DE DESEMPENHO</h1>
-                <h2>${prova.titulo || 'Prova'}</h2>
-                <div class="sub">${disciplina}</div>
+                <h2>${escapeHtml(prova.titulo || 'Prova')}</h2>
+                <div class="sub">${escapeHtml(disciplina)}</div>
             </div>
 
             <div class="info-grid">
-                <div class="item"><span class="label">🏫 Escola:</span> <span class="value">${escola.nome || '—'}</span></div>
-                <div class="item"><span class="label">👥 Turma:</span> <span class="value">${(turma.nome || '') + ' - ' + (turma.serie || '')}</span></div>
-                <div class="item"><span class="label">🎒 Aluno:</span> <span class="value">${aluno.nome || '—'}</span></div>
-                <div class="item"><span class="label">📄 Prova:</span> <span class="value">${prova.titulo || '—'}</span></div>
+                <div class="item"><span class="label">🏫 Escola:</span> <span class="value">${escapeHtml(escola.nome || '—')}</span></div>
+                <div class="item"><span class="label">👥 Turma:</span> <span class="value">${escapeHtml((turma.nome || '') + ' - ' + (turma.serie || ''))}</span></div>
+                <div class="item"><span class="label">🎒 Aluno:</span> <span class="value">${escapeHtml(aluno.nome || '—')}</span></div>
+                <div class="item"><span class="label">📄 Prova:</span> <span class="value">${escapeHtml(prova.titulo || '—')}</span></div>
                 <div class="item"><span class="label">📅 Data:</span> <span class="value">${new Date().toLocaleDateString('pt-BR')}</span></div>
             </div>
 
@@ -6124,10 +6201,10 @@ function gerarDocumentoDesempenho() {
                 <div class="card"><div class="valor blue">${porcentagem}%</div><div class="label">Porcentagem de Acertos</div></div>
                 <div class="card"><div class="valor green">${acertos}</div><div class="label">Acertos</div></div>
                 <div class="card"><div class="valor red">${erros}</div><div class="label">Erros</div></div>
-                <div class="card"><div class="valor purple">${conceito}</div><div class="label">Conceito</div></div>
+                <div class="card"><div class="valor purple">${escapeHtml(conceito)}</div><div class="label">Conceito</div></div>
             </div>
 
-            <h3 style="margin: 20px 0 10px;">📖 ${disciplina}</h3>
+            <h3 style="margin: 20px 0 10px;">📖 ${escapeHtml(disciplina)}</h3>
             <div class="questoes-grid">
         `;
 
@@ -6138,10 +6215,10 @@ function gerarDocumentoDesempenho() {
             html += `
                 <div class="questao-item ${acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">
                     <div class="q-num">Q${q.numero}</div>
-                    <div class="q-resp">${resposta}</div>
-                    <div class="q-gab">${gab}</div>
+                    <div class="q-resp">${escapeHtml(resposta)}</div>
+                    <div class="q-gab">${escapeHtml(gab)}</div>
                     <span class="q-status-text">${acertou ? '✅' : (q.respondida ? '❌' : '—')}</span>
-                    ${q.bncc ? `<div style="font-size:6px; color:#8b5cf6; margin-top:2px;">BNCC: ${q.bncc}</div>` : ''}
+                    ${q.bncc ? `<div style="font-size:6px; color:#8b5cf6; margin-top:2px;">BNCC: ${escapeHtml(q.bncc)}</div>` : ''}
                 </div>
             `;
         });
@@ -6158,8 +6235,8 @@ function gerarDocumentoDesempenho() {
             html += `
                 <div class="gabarito-item">
                     <div class="q-num">Q${idx+1}</div>
-                    <div class="q-resp">${gab || '—'}</div>
-                    ${codigoBncc ? `<div style="font-size:6px; color:#8b5cf6; margin-top:2px;">BNCC: ${codigoBncc}</div>` : ''}
+                    <div class="q-resp">${escapeHtml(gab || '—')}</div>
+                    ${codigoBncc ? `<div style="font-size:6px; color:#8b5cf6; margin-top:2px;">BNCC: ${escapeHtml(codigoBncc)}</div>` : ''}
                 </div>
             `;
         });
@@ -6248,10 +6325,10 @@ async function carregarAlunosPorTurmaTexto(turmaId) {
 // ============================================
 async function carregarDados() {
     console.log('🔄 Carregando dados do sistema...');
-    
+
     try {
         console.log('📌 Carregando dados essenciais...');
-        
+
         await Promise.all([
             carregarEscolas(),
             carregarTurmas(),
@@ -6259,19 +6336,19 @@ async function carregarDados() {
             carregarProvas(),
             carregarDashboard()
         ]);
-        
+
         console.log('✅ Dados essenciais carregados!');
-        
+
         atualizarDatasImpressao();
-        
+
         console.log('📌 Carregando dados secundários em segundo plano...');
-        
+
         setTimeout(() => {
             carregarDadosSecundarios();
         }, 300);
-        
+
         console.log('✅ Interface principal carregada!');
-        
+
     } catch (erro) {
         console.error('❌ Erro ao carregar dados essenciais:', erro);
         showToast('⚠️ Erro ao carregar dados essenciais. Recarregue a página.', 'error');
@@ -6280,7 +6357,7 @@ async function carregarDados() {
 
 async function carregarDadosSecundarios() {
     console.log('🔄 Iniciando carga de dados secundários...');
-    
+
     try {
         await Promise.all([
             carregarResultadosComFiltros(),
@@ -6289,13 +6366,13 @@ async function carregarDadosSecundarios() {
             carregarConceitoReal()
         ]);
         console.log('✅ Dados de resultados carregados!');
-        
+
         await Promise.all([
             carregarUsuarios(),
             carregarCombos()
         ]);
         console.log('✅ Dados de usuários carregados!');
-        
+
         await Promise.all([
             carregarRelatorios(),
             carregarUserData(),
@@ -6305,16 +6382,16 @@ async function carregarDadosSecundarios() {
             carregarEscolasParaCorrecaoManual()
         ]);
         console.log('✅ Dados de formulários carregados!');
-        
+
         await Promise.all([
             carregarFiltrosRelTurma(),
             carregarFiltroEscolaTurmas(),
             carregarEscolasDesempenho()
         ]);
         console.log('✅ Dados de filtros carregados!');
-        
+
         console.log('✅ TODOS OS DADOS CARREGADOS COM SUCESSO!');
-        
+
     } catch (erro) {
         console.warn('⚠️ Erro ao carregar dados secundários:', erro);
     }
@@ -6322,6 +6399,7 @@ async function carregarDadosSecundarios() {
 
 // ============================================
 // CARREGAR CONCEITO REAL
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarConceitoReal() {
     try {
@@ -6417,10 +6495,10 @@ async function carregarConceitoReal() {
             const porcentagem = turma.porcentagem || 0;
             const altura = Math.max(20, (porcentagem / 100) * 130);
             const cor = cores[index % cores.length];
-            html += `<div class="chart-bar-item" title="${nome} - Média: ${turma.media || 0}">
+            html += `<div class="chart-bar-item" title="${escapeAttr(nome)} - Média: ${turma.media || 0}">
                 <div class="chart-bar-val">${porcentagem}%</div>
                 <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
-                <div class="chart-bar-lbl">${nome}</div>
+                <div class="chart-bar-lbl">${escapeHtml(nome)}</div>
             </div>`;
         });
         html += '</div>';
@@ -6441,6 +6519,7 @@ async function carregarConceitoReal() {
 
 // ============================================
 // CARREGAR ÚLTIMAS CORREÇÕES
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarUltimasCorrecoes() {
     try {
@@ -6457,35 +6536,36 @@ async function carregarUltimasCorrecoes() {
                 const total = item.total || 20;
                 const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
                 const conceito = calcularConceito(porcentagem);
-                const badgeMap = { 
-                    'inicial': 'badge-conceito-inicial', 
-                    'basico': 'badge-conceito-basico', 
-                    'proficiente': 'badge-conceito-proficiente', 
-                    'avancado': 'badge-conceito-avancado' 
+                const badgeMap = {
+                    'inicial': 'badge-conceito-inicial',
+                    'basico': 'badge-conceito-basico',
+                    'proficiente': 'badge-conceito-proficiente',
+                    'avancado': 'badge-conceito-avancado'
                 };
-                const nomeConceito = { 
-                    'inicial': '🔴 Inicial', 
-                    'basico': '🟠 Básico', 
-                    'proficiente': '🔵 Proficiente', 
-                    'avancado': '🟢 Avançado' 
+                const nomeConceito = {
+                    'inicial': '🔴 Inicial',
+                    'basico': '🟠 Básico',
+                    'proficiente': '🔵 Proficiente',
+                    'avancado': '🟢 Avançado'
                 };
                 const badge = badgeMap[conceito] || 'badge-gray';
                 const label = nomeConceito[conceito] || 'Indefinido';
                 return `<tr>
-                    <td><strong>${item.aluno_nome || 'Aluno'}</strong></td>
-                    <td>${item.prova_titulo || 'Prova'}</td>
+                    <td><strong>${escapeHtml(item.aluno_nome || 'Aluno')}</strong></td>
+                    <td>${escapeHtml(item.prova_titulo || 'Prova')}</td>
                     <td><strong>${porcentagem}%</strong></td>
                     <td><span class="badge ${badge}">${label}</span></td>
                 </tr>`;
             }).join('');
         }
-    } catch (erro) { 
-        console.error('Erro ao carregar últimas correções:', erro); 
+    } catch (erro) {
+        console.error('Erro ao carregar últimas correções:', erro);
     }
 }
 
 // ============================================
 // CARREGAR USUÁRIOS
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarUsuarios() {
     try {
@@ -6502,13 +6582,13 @@ async function carregarUsuarios() {
             const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
             const statusText = u.ativo ? 'Ativo' : 'Inativo';
             const isAdmin = u.username === 'admin';
-            return '<tr data-id="' + u.id + '" data-username="' + u.username + '">' +
-                '<td><strong>' + u.username + '</strong><br><small style="color:var(--text3);font-size:10px;">' + (u.nome || '') + '</small></td>' +
+            return '<tr data-id="' + u.id + '" data-username="' + escapeAttr(u.username) + '">' +
+                '<td><strong>' + escapeHtml(u.username) + '</strong><br><small style="color:var(--text3);font-size:10px;">' + escapeHtml(u.nome || '') + '</small></td>' +
                 '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
                 '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
                 '<td>' +
                 '<div class="btn-group">' +
-                (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + u.username + '\')">🗑️</button>') +
+                (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + escapeAttr(u.username) + '\')">🗑️</button>') +
                 '</div>' +
                 '</td></tr>';
         }).join('');
@@ -6597,9 +6677,9 @@ function imprimirAlunos() {
     <body>
         <h1>📋 Lista de Alunos</h1>
         <div class="filtros">
-            <strong>Escola:</strong> ${escolaNome} &nbsp;|&nbsp;
-            <strong>Turma:</strong> ${turmaNome} &nbsp;|&nbsp;
-            <strong>Série:</strong> ${serieNome}
+            <strong>Escola:</strong> ${escapeHtml(escolaNome)} &nbsp;|&nbsp;
+            <strong>Turma:</strong> ${escapeHtml(turmaNome)} &nbsp;|&nbsp;
+            <strong>Série:</strong> ${escapeHtml(serieNome)}
         </div>
         <table>
             <thead>
@@ -6627,13 +6707,13 @@ function imprimirAlunos() {
             const dataNasc = cells[6].textContent.trim();
             html += `
                 <tr>
-                    <td>${numero}</td>
-                    <td>${matricula}</td>
-                    <td>${nome}</td>
-                    <td>${serie}</td>
-                    <td>${turma}</td>
-                    <td>${escola}</td>
-                    <td>${dataNasc}</td>
+                    <td>${escapeHtml(numero)}</td>
+                    <td>${escapeHtml(matricula)}</td>
+                    <td>${escapeHtml(nome)}</td>
+                    <td>${escapeHtml(serie)}</td>
+                    <td>${escapeHtml(turma)}</td>
+                    <td>${escapeHtml(escola)}</td>
+                    <td>${escapeHtml(dataNasc)}</td>
                 </tr>
             `;
         }
@@ -6659,6 +6739,7 @@ function imprimirAlunos() {
     win.print();
 }
 
+// ═══ CORRIGIDO: escapeHtml no exportarRelatorioPDF ═══
 function exportarRelatorioPDF() {
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
@@ -6682,7 +6763,7 @@ function exportarRelatorioPDF() {
     const escolaNome = escolaSelect?.options[escolaSelect.selectedIndex]?.text || 'Não informado';
     const serieNome = serieSelect?.options[serieSelect.selectedIndex]?.text || 'Não informado';
     const turmaNome = turmaSelect?.options[turmaSelect.selectedIndex]?.text || 'Não informado';
-    
+
     let disciplinaNome = 'Português';
     const provaOption = provaSelect?.options[provaSelect.selectedIndex];
     if (provaOption && provaOption.dataset.disciplina) {
@@ -6691,14 +6772,14 @@ function exportarRelatorioPDF() {
 
     const mediaEl = document.getElementById('rel-media');
     const media = mediaEl ? mediaEl.textContent : '0%';
-    
+
     const conceitoEl = document.getElementById('rel-conceito-geral');
     const conceito = conceitoEl ? conceitoEl.textContent : '—';
 
     const alunosData = [];
     let totalAcertosGeral = 0;
     let totalErrosGeral = 0;
-    
+
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 9) {
@@ -6706,22 +6787,22 @@ function exportarRelatorioPDF() {
             const numero = cells[1]?.textContent.trim() || '';
             const nome = cells[2]?.textContent.trim() || '';
             const serie = cells[3]?.textContent.trim() || '';
-            
+
             const acertosText = cells[4]?.textContent.trim() || '0';
             const errosText = cells[5]?.textContent.trim() || '0';
             const acertos = parseInt(acertosText) || 0;
             const erros = parseInt(errosText) || 0;
-            
+
             const conceitoAluno = cells[6]?.textContent.trim() || '';
             const escola = cells[7]?.textContent.trim() || '';
             const turma = cells[8]?.textContent.trim() || '';
-            
+
             totalAcertosGeral += acertos;
             totalErrosGeral += erros;
-            
-            alunosData.push({ 
-                posicao, numero, nome, serie, acertos, erros, 
-                conceito: conceitoAluno, escola, turma 
+
+            alunosData.push({
+                posicao, numero, nome, serie, acertos, erros,
+                conceito: conceitoAluno, escola, turma
             });
         }
     });
@@ -6730,37 +6811,37 @@ function exportarRelatorioPDF() {
 
     const acertosPorQuestao = [];
     const acertosGrid = document.getElementById('rel-acertos-grid');
-    
+
     if (acertosGrid) {
         const items = acertosGrid.querySelectorAll('.acertos-por-questao-item');
-        
+
         items.forEach(item => {
             let qNum = '';
             const texto = item.textContent || '';
             const match = texto.match(/Q(\d+)/);
             if (match) qNum = 'Q' + match[1];
-            
+
             let acertos = '0', erros = '0';
             const matchNum = texto.match(/(\d+)\s*\/\s*(\d+)/);
             if (matchNum) {
                 acertos = matchNum[1] || '0';
                 erros = matchNum[2] || '0';
             }
-            
+
             let bncc = 'N/A';
             const matchBncc = texto.match(/(EF\d+[A-Z]+\d+)/);
             if (matchBncc) bncc = matchBncc[1];
-            
+
             let pctAcertos = '0%', pctErros = '0%';
             const matchPct = texto.match(/(\d+)%\s*[|]\s*(\d+)%/);
             if (matchPct) {
                 pctAcertos = matchPct[1] + '%';
                 pctErros = matchPct[2] + '%';
             }
-            
+
             if (qNum) {
-                acertosPorQuestao.push({ 
-                    numero: qNum, acertos, erros, 
+                acertosPorQuestao.push({
+                    numero: qNum, acertos, erros,
                     total: parseInt(acertos) + parseInt(erros),
                     bncc, pctAcertos, pctErros
                 });
@@ -6769,7 +6850,7 @@ function exportarRelatorioPDF() {
     }
 
     const totalQuestoesGeral = totalAcertosGeral + totalErrosGeral;
-    const mediaCalculada = totalQuestoesGeral > 0 && totalAlunos > 0 ? 
+    const mediaCalculada = totalQuestoesGeral > 0 && totalAlunos > 0 ?
         Math.round((totalAcertosGeral / (totalAlunos * (totalQuestoesGeral / totalAlunos))) * 100) : 0;
 
     const dataAtual = new Date().toLocaleString('pt-BR', {
@@ -6782,7 +6863,7 @@ function exportarRelatorioPDF() {
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Relatório por Turma - ${disciplinaNome}</title>
+        <title>Relatório por Turma - ${escapeHtml(disciplinaNome)}</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; padding: 20px; color: #1e293b; }
@@ -6853,34 +6934,33 @@ function exportarRelatorioPDF() {
                 </div>
                 <div class="header-right">
                     <div class="titulo-relatorio">📊 RELATÓRIO POR TURMA</div>
-                    <div class="subtitulo-relatorio">Desempenho dos alunos - ${disciplinaNome}</div>
+                    <div class="subtitulo-relatorio">Desempenho dos alunos - ${escapeHtml(disciplinaNome)}</div>
                 </div>
             </div>
         </div>
 
         <div class="info-grid">
-            <div class="item"><span class="label">🏫 ESCOLA</span><span class="value">${escolaNome}</span></div>
-            <div class="item"><span class="label">📚 SÉRIE</span><span class="value">${serieNome}</span></div>
-            <div class="item"><span class="label">📖 DISCIPLINA</span><span class="value">${disciplinaNome}</span></div>
-            <div class="item"><span class="label">👥 TURMA</span><span class="value">${turmaNome}</span></div>
+            <div class="item"><span class="label">🏫 ESCOLA</span><span class="value">${escapeHtml(escolaNome)}</span></div>
+            <div class="item"><span class="label">📚 SÉRIE</span><span class="value">${escapeHtml(serieNome)}</span></div>
+            <div class="item"><span class="label">📖 DISCIPLINA</span><span class="value">${escapeHtml(disciplinaNome)}</span></div>
+            <div class="item"><span class="label">👥 TURMA</span><span class="value">${escapeHtml(turmaNome)}</span></div>
             <div class="item"><span class="label">📅 DATA</span><span class="value">${new Date().toLocaleDateString('pt-BR')}</span></div>
             <div class="item"><span class="label">📊 BIMESTRE</span><span class="value">1º e 2º bimestre</span></div>
         </div>
 
-        <div class="section-title">📊 Acertos por Questão — ${disciplinaNome} (${totalAlunos} alunos)</div>
+        <div class="section-title">📊 Acertos por Questão — ${escapeHtml(disciplinaNome)} (${totalAlunos} alunos)</div>
 
         <div class="questoes-grid">
             ${acertosPorQuestao.length > 0 ? acertosPorQuestao.map(q => {
-                const total = parseInt(q.acertos) + parseInt(q.erros);
                 return `
                     <div class="questao-card">
-                        <div class="q-num">${q.numero}</div>
+                        <div class="q-num">${escapeHtml(q.numero)}</div>
                         <div class="q-result">
-                            <span class="acertos">${q.acertos}</span>
+                            <span class="acertos">${escapeHtml(q.acertos)}</span>
                             <span class="divider">/</span>
-                            <span class="erros">${q.erros}</span>
+                            <span class="erros">${escapeHtml(q.erros)}</span>
                         </div>
-                        <div class="q-bncc">${q.bncc}</div>
+                        <div class="q-bncc">${escapeHtml(q.bncc)}</div>
                     </div>
                 `;
             }).join('') : '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">Nenhum dado disponível.</div>'}
@@ -6889,8 +6969,8 @@ function exportarRelatorioPDF() {
         <div class="resumo-grid">
             <div class="resumo-card"><div class="valor green">${totalAcertosGeral}</div><div class="label">✅ Total de Acertos</div></div>
             <div class="resumo-card"><div class="valor red">${totalErrosGeral}</div><div class="label">❌ Total de Erros</div></div>
-            <div class="resumo-card"><div class="valor blue">${media || mediaCalculada + '%'}</div><div class="label">📊 Média da Turma</div></div>
-            <div class="resumo-card"><div class="valor purple">${conceito}</div><div class="label">📊 Conceito</div></div>
+            <div class="resumo-card"><div class="valor blue">${escapeHtml(media || mediaCalculada + '%')}</div><div class="label">📊 Média da Turma</div></div>
+            <div class="resumo-card"><div class="valor purple">${escapeHtml(conceito)}</div><div class="label">📊 Conceito</div></div>
         </div>
 
         <div class="section-title">📋 Lista de Alunos (${totalAlunos} alunos)</div>
@@ -6915,15 +6995,15 @@ function exportarRelatorioPDF() {
                         const conceitoClass = a.conceito ? `badge-${a.conceito.toLowerCase()}` : 'badge-inicial';
                         return `
                             <tr>
-                                <td>${a.posicao}</td>
-                                <td>${a.numero}</td>
-                                <td class="nome-aluno">${a.nome}</td>
-                                <td>${a.serie}</td>
+                                <td>${escapeHtml(a.posicao)}</td>
+                                <td>${escapeHtml(a.numero)}</td>
+                                <td class="nome-aluno">${escapeHtml(a.nome)}</td>
+                                <td>${escapeHtml(a.serie)}</td>
                                 <td class="acertos-cell">${a.acertos}</td>
                                 <td class="erros-cell">${a.erros}</td>
-                                <td><span class="badge-conceito ${conceitoClass}">${a.conceito || '—'}</span></td>
-                                <td>${a.escola}</td>
-                                <td>${a.turma}</td>
+                                <td><span class="badge-conceito ${conceitoClass}">${escapeHtml(a.conceito || '—')}</span></td>
+                                <td>${escapeHtml(a.escola)}</td>
+                                <td>${escapeHtml(a.turma)}</td>
                             </tr>
                         `;
                     }).join('')}
@@ -6961,6 +7041,7 @@ function exportarRelatorioPDF() {
 
 // ============================================
 // GABARITO - BUILD GRID
+// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
@@ -6983,8 +7064,8 @@ function buildGabGrid() {
         headerContainer.innerHTML = `
             <div class="gab-header-title">
                 <span class="icon">📝</span>
-                <span>Gabarito: <span class="prova-nome">${provaNome}</span></span>
-                <span class="badge-disciplina">${disciplinaLabel}</span>
+                <span>Gabarito: <span class="prova-nome">${escapeHtml(provaNome)}</span></span>
+                <span class="badge-disciplina">${escapeHtml(disciplinaLabel)}</span>
             </div>
         `;
     }
@@ -7258,6 +7339,7 @@ window.addEventListener('resize', function() {
 
 // ================================================================
 // MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
+// ═══ CORRIGIDO: escapeHtml ═══
 // ================================================================
 
 if (typeof matrizesData === 'undefined') { var matrizesData = []; }
@@ -7315,15 +7397,15 @@ function renderizarMatrizes(matrizes) {
         let descritoresPreview = 'Nenhum descritor';
         if (totalDescritores > 0) {
             const previewText = descritores.map(d => `${d.bncc || ''}: ${d.descritor || ''}`).join('; ');
-            descritoresPreview = `<span class="descritores-preview" title="${previewText}">${previewText.substring(0, 60)}${previewText.length > 60 ? '...' : ''}</span>`;
+            descritoresPreview = `<span class="descritores-preview" title="${escapeAttr(previewText)}">${escapeHtml(previewText.substring(0, 60))}${previewText.length > 60 ? '...' : ''}</span>`;
         }
 
         html += `
             <tr>
                 <td>${index + 1}</td>
-                <td><strong>${matriz.ano || '-'}</strong></td>
-                <td>${matriz.disciplina || '-'}</td>
-                <td><span class="badge ${nivelBadge}">${matriz.nivel || '-'}</span></td>
+                <td><strong>${escapeHtml(matriz.ano || '-')}</strong></td>
+                <td>${escapeHtml(matriz.disciplina || '-')}</td>
+                <td><span class="badge ${nivelBadge}">${escapeHtml(matriz.nivel || '-')}</span></td>
                 <td>
                     <span class="badge-descritores">📋 <span class="count">${totalDescritores}</span></span>
                     ${descritoresPreview}
@@ -7351,20 +7433,20 @@ function atualizarTotalMatrizes(total) {
 function abrirModalMatriz() {
     matrizEditId = null;
     matrizDescritorCounter = 0;
-    
+
     document.getElementById('matriz-modal-title').textContent = '📊 Nova Matriz de Proficiência';
     document.getElementById('matriz-edit-id').value = '';
     document.getElementById('matriz-ano').value = '';
     document.getElementById('matriz-disciplina').value = '';
     document.getElementById('matriz-nivel').value = '';
-    
+
     const container = document.getElementById('matriz-descritores-container');
     container.innerHTML = `
         <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
             Clique em "Adicionar Descritor" para começar
         </div>
     `;
-    
+
     openM('m-matriz');
 }
 
@@ -7376,15 +7458,15 @@ function editarMatriz(id) {
     }
 
     matrizEditId = id;
-    document.getElementById('matriz-modal-title').textContent = `✏️ Editar Matriz - ${matriz.ano} / ${matriz.disciplina}`;
+    document.getElementById('matriz-modal-title').textContent = `✏️ Editar Matriz - ${escapeHtml(matriz.ano)} / ${escapeHtml(matriz.disciplina)}`;
     document.getElementById('matriz-edit-id').value = id;
     document.getElementById('matriz-ano').value = matriz.ano || '';
     document.getElementById('matriz-disciplina').value = matriz.disciplina || '';
     document.getElementById('matriz-nivel').value = matriz.nivel || '';
-    
+
     const container = document.getElementById('matriz-descritores-container');
     container.innerHTML = '';
-    
+
     const descritores = matriz.descritores || [];
     if (descritores.length === 0) {
         container.innerHTML = `
@@ -7395,7 +7477,7 @@ function editarMatriz(id) {
     } else {
         descritores.forEach(d => adicionarDescritorMatriz(d.bncc, d.descritor));
     }
-    
+
     openM('m-matriz');
 }
 
@@ -7403,9 +7485,9 @@ function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
     const container = document.getElementById('matriz-descritores-container');
     const placeholder = container.querySelector('.matriz-descritores-empty');
     if (placeholder) placeholder.remove();
-    
+
     const counter = ++matrizDescritorCounter;
-    
+
     const item = document.createElement('div');
     item.className = 'matriz-descritor-item';
     item.dataset.index = counter;
@@ -7417,15 +7499,15 @@ function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">BNCC</label>
-                <input class="form-control" type="text" placeholder="Ex: EF01MA01" value="${bnccValue}">
+                <input class="form-control" type="text" placeholder="Ex: EF01MA01" value="${escapeAttr(bnccValue)}">
             </div>
             <div class="form-group">
                 <label class="form-label">Descritor</label>
-                <textarea class="form-control" placeholder="Descreva a habilidade..." rows="4" style="resize:vertical; min-height:70px;">${descritorValue}</textarea>
+                <textarea class="form-control" placeholder="Descreva a habilidade..." rows="4" style="resize:vertical; min-height:70px;">${escapeHtml(descritorValue)}</textarea>
             </div>
         </div>
     `;
-    
+
     container.appendChild(item);
     item.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -7433,7 +7515,7 @@ function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
 function removerDescritorMatriz(btn) {
     const item = btn.closest('.matriz-descritor-item');
     if (!item) return;
-    
+
     const num = item.dataset.index;
     if (confirm(`Remover Descritor #${num}?`)) {
         item.classList.add('removing');
@@ -7457,48 +7539,48 @@ async function salvarMatriz() {
         const ano = document.getElementById('matriz-ano').value;
         const disciplina = document.getElementById('matriz-disciplina').value;
         const nivel = document.getElementById('matriz-nivel').value;
-        
+
         if (!ano) { toast('Selecione o Ano', 'error'); return; }
         if (!disciplina) { toast('Selecione a Disciplina', 'error'); return; }
         if (!nivel) { toast('Selecione o Nível', 'error'); return; }
-        
+
         const container = document.getElementById('matriz-descritores-container');
         const items = container.querySelectorAll('.matriz-descritor-item');
         const descritores = [];
-        
+
         items.forEach((item, index) => {
             const bnccInput = item.querySelector('input.form-control');
             const descritorInput = item.querySelector('textarea.form-control');
-            
+
             const bncc = bnccInput ? bnccInput.value.trim() : '';
             const descritor = descritorInput ? descritorInput.value.trim() : '';
-            
+
             descritores.push({ bncc, descritor });
         });
-        
+
         const editId = document.getElementById('matriz-edit-id').value;
         const url = editId ? `${API_URL}/api/matrizes/${editId}` : `${API_URL}/api/matrizes`;
         const method = editId ? 'PUT' : 'POST';
-        
+
         if (typeof showToast === 'function') showToast('Salvando matriz...', 'info');
-        
+
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ano, disciplina, nivel, descritores })
         });
-        
+
         if (!response.ok) {
             const err = await response.json();
             throw new Error(err.erro || 'Erro ao salvar matriz');
         }
-        
+
         const result = await response.json();
         toast(result.mensagem || 'Matriz salva com sucesso!', 'success');
-        
+
         fecharModalMatriz();
         await carregarMatrizes();
-        
+
     } catch (error) {
         console.error('❌ Erro ao salvar matriz:', error);
         toast(error.message || 'Erro ao salvar matriz', 'error');
@@ -7511,11 +7593,11 @@ function excluirMatriz(id) {
         toast('Matriz não encontrada', 'error');
         return;
     }
-    
+
     matrizParaDeletar = id;
     const nome = `${matriz.ano} - ${matriz.disciplina} (${matriz.nivel})`;
     document.getElementById('matriz-deletar-nome').textContent = nome;
-    
+
     openM('m-deletar-matriz');
 }
 
@@ -7526,20 +7608,20 @@ function fecharModalDeletarMatriz() {
 
 async function confirmarDeletarMatriz() {
     if (!matrizParaDeletar) return;
-    
+
     try {
         const id = matrizParaDeletar;
         const response = await fetch(`${API_URL}/api/matrizes/${id}`, { method: 'DELETE' });
-        
+
         if (!response.ok) {
             const err = await response.json();
             throw new Error(err.erro || 'Erro ao excluir matriz');
         }
-        
+
         toast('Matriz excluída com sucesso!', 'success');
         fecharModalDeletarMatriz();
         await carregarMatrizes();
-        
+
     } catch (error) {
         console.error('❌ Erro ao excluir matriz:', error);
         toast(error.message || 'Erro ao excluir matriz', 'error');
@@ -7556,12 +7638,12 @@ function filtrarMatrizes() {
     const ano = document.getElementById('filtro-matriz-ano').value;
     const disciplina = document.getElementById('filtro-matriz-disciplina').value;
     const nivel = document.getElementById('filtro-matriz-nivel').value;
-    
+
     let filtradas = matrizesData;
     if (ano) filtradas = filtradas.filter(m => m.ano === ano);
     if (disciplina) filtradas = filtradas.filter(m => m.disciplina === disciplina);
     if (nivel) filtradas = filtradas.filter(m => m.nivel === nivel);
-    
+
     renderizarMatrizes(filtradas);
     atualizarTotalMatrizes(filtradas.length);
 }
@@ -7576,20 +7658,21 @@ function limparFiltrosMatriz() {
 
 let visualizarMatrizId = null;
 
+// ═══ CORRIGIDO: escapeHtml ═══
 function visualizarMatriz(id) {
     const matriz = matrizesData.find(m => m.id === id);
     if (!matriz) {
         toast('Matriz não encontrada', 'error');
         return;
     }
-    
+
     const descritores = (matriz.descritores || []).map(d => ({
         bncc: d.bncc || '',
         descritor: d.descritor || d.descricao || ''
     }));
-    
+
     window.matrizVisualizando = { ...matriz, descritores: descritores };
-    
+
     visualizarMatrizId = id;
     document.getElementById('visualizar-matriz-titulo').textContent = `📊 Matriz: ${matriz.ano} - ${matriz.disciplina}`;
 
@@ -7608,9 +7691,9 @@ function visualizarMatriz(id) {
                 <div style="background:var(--bg2);border-radius:8px;padding:12px 16px;border:1px solid var(--border);">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
                         <span style="font-weight:700;color:var(--purple);">📌 Descritor #${idx+1}</span>
-                        <span style="font-size:11px;background:rgba(139,92,246,0.12);padding:2px 12px;border-radius:12px;color:var(--purple);font-weight:700;">BNCC: ${bncc}</span>
+                        <span style="font-size:11px;background:rgba(139,92,246,0.12);padding:2px 12px;border-radius:12px;color:var(--purple);font-weight:700;">BNCC: ${escapeHtml(bncc)}</span>
                     </div>
-                    <div style="margin-top:6px;font-size:14px;color:var(--text);line-height:1.5; white-space: pre-wrap; word-wrap: break-word;">${desc}</div>
+                    <div style="margin-top:6px;font-size:14px;color:var(--text);line-height:1.5; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(desc)}</div>
                 </div>
             `;
         });
@@ -7629,15 +7712,15 @@ function visualizarMatriz(id) {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
             <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;text-align:center;">
                 <div style="font-size:11px;color:var(--text3);font-weight:600;">📚 ANO</div>
-                <div style="font-size:18px;font-weight:800;color:var(--text);">${matriz.ano || '—'}</div>
+                <div style="font-size:18px;font-weight:800;color:var(--text);">${escapeHtml(matriz.ano || '—')}</div>
             </div>
             <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;text-align:center;">
                 <div style="font-size:11px;color:var(--text3);font-weight:600;">📖 DISCIPLINA</div>
-                <div style="font-size:18px;font-weight:800;color:var(--text);">${matriz.disciplina || '—'}</div>
+                <div style="font-size:18px;font-weight:800;color:var(--text);">${escapeHtml(matriz.disciplina || '—')}</div>
             </div>
             <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;text-align:center;">
                 <div style="font-size:11px;color:var(--text3);font-weight:600;">📊 NÍVEL</div>
-                <div style="font-size:18px;font-weight:800;color:var(--text);"><span class="badge ${nivelBadge}">${matriz.nivel || '—'}</span></div>
+                <div style="font-size:18px;font-weight:800;color:var(--text);"><span class="badge ${nivelBadge}">${escapeHtml(matriz.nivel || '—')}</span></div>
             </div>
         </div>
         <div style="border-top:1px solid var(--border);padding-top:12px;">
@@ -7651,6 +7734,7 @@ function visualizarMatriz(id) {
     openM('m-visualizar-matriz');
 }
 
+// ═══ CORRIGIDO: escapeHtml no PDF ═══
 function imprimirMatrizVisualizada() {
     const matriz = window.matrizVisualizando;
     if (!matriz) {
@@ -7706,8 +7790,8 @@ function imprimirMatrizVisualizada() {
             const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
             descritoresHtml += `
                 <tr style="background:${bgColor}; border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${bncc}</td>
-                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top; white-space: pre-wrap; word-wrap: break-word;">${desc}</td>
+                    <td style="padding:8px 12px; font-weight:600; color:#8b5cf6; vertical-align:top;">${escapeHtml(bncc)}</td>
+                    <td style="padding:8px 12px; color:#1e293b; line-height:1.5; vertical-align:top; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(desc)}</td>
                 </tr>
             `;
         });
@@ -7719,7 +7803,7 @@ function imprimirMatrizVisualizada() {
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>${titulo}</title>
+        <title>${escapeHtml(titulo)}</title>
         <style>
             * { margin:0; padding:0; box-sizing:border-box; }
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: #fff; color: #1e293b; }
@@ -7745,15 +7829,15 @@ function imprimirMatrizVisualizada() {
     <body>
         <div class="container">
             <div class="header">
-                <h1>${titulo}</h1>
+                <h1>${escapeHtml(titulo)}</h1>
                 <div class="sub">Matriz de Proficiência — SISAM 2026</div>
                 <div class="data">${new Date().toLocaleString('pt-BR')}</div>
             </div>
 
             <div class="info-grid">
-                <div class="info-card"><div class="label">📚 Ano</div><div class="value">${ano}</div></div>
-                <div class="info-card"><div class="label">📖 Disciplina</div><div class="value">${disciplina}</div></div>
-                <div class="info-card"><div class="label">📊 Nível</div><div class="value"><span class="badge">${nivel}</span></div></div>
+                <div class="info-card"><div class="label">📚 Ano</div><div class="value">${escapeHtml(ano)}</div></div>
+                <div class="info-card"><div class="label">📖 Disciplina</div><div class="value">${escapeHtml(disciplina)}</div></div>
+                <div class="info-card"><div class="label">📊 Nível</div><div class="value"><span class="badge">${escapeHtml(nivel)}</span></div></div>
             </div>
 
             <div class="section-title">📋 Descritores (${linhas.length})</div>
