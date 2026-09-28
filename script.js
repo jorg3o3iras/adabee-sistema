@@ -3034,7 +3034,7 @@ function processarArq(input) {
 }
 
 // ============================================
-// 🔥 CORREÇÃO COM IA - PROCESSO COMPLETO (CORRIGIDO)
+// 🔥 CORREÇÃO COM IA - PROCESSO COMPLETO
 // ============================================
 async function processarComIA(imagemBase64) {
     const escolaId = document.getElementById('corrigir-escola')?.value;
@@ -3104,11 +3104,13 @@ async function processarComIA(imagemBase64) {
         let confiancas = respostaIA.confianca_por_questao || [];
         let questoesStatus = [];
 
+        // ═══ MUDANÇA #1: Passar tipoQuestoes para normalização ═══
         const { respostasNormalizadas, confiancasNormalizadas } = normalizarRespostas(
             respostasDetectadas,
             confiancas,
             totalQuestoes,
-            isProducao
+            isProducao,
+            tipoQuestoes
         );
 
         let acertos = 0;
@@ -3233,7 +3235,6 @@ async function buscarAluno(alunoId) {
     }
 }
 
-// ✅ CORRIGIDO: NÃO usar fallback aleatório
 async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
     try {
         const response = await fetch(`${API_URL}/api/corrigir`, {
@@ -3257,7 +3258,6 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
             throw new Error(dados.erro);
         }
 
-        // ✅ Se não retornar respostas, lançar erro (NÃO gerar fallback aleatório)
         if (!dados.respostas_detectadas && !dados.questoes_status) {
             throw new Error('A IA não conseguiu detectar as respostas. Tire uma foto mais nítida com boa iluminação.');
         }
@@ -3270,9 +3270,12 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
     }
 }
 
-function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao) {
+// ═══ MUDANÇA #2: Normalização TOLERANTE (mesma do backend) ═══
+function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao, tipoQuestoes = 4) {
     let respostasNormalizadas = [];
     let confiancasNormalizadas = [];
+
+    const alternativasValidas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
     for (let i = 0; i < totalQuestoes; i++) {
         let resp = (i < respostas.length) ? (respostas[i] || '') : '';
@@ -3281,11 +3284,19 @@ function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao) {
         if (isProducao) {
             resp = resp.toString().trim();
         } else {
-            resp = resp.toString().toUpperCase().trim();
-            const alternativasValidas = ['A', 'B', 'C', 'D'];
-            if (resp && !alternativasValidas.includes(resp)) {
-                resp = '';
+            // Normalização tolerante: aceita "A", "a", "A)", "letra A", etc.
+            let s = resp.toString().trim().toUpperCase();
+            s = s.replace(/^[\(\[]*/, '').replace(/[\)\]\.\,\;\:\-]*$/, '');
+
+            let encontrou = '';
+            if (alternativasValidas.includes(s)) {
+                encontrou = s;
+            } else {
+                for (const alt of alternativasValidas) {
+                    if (s.includes(alt)) { encontrou = alt; break; }
+                }
             }
+            resp = encontrou;
         }
 
         respostasNormalizadas.push(resp);
@@ -3336,15 +3347,15 @@ function atualizarInterfaceCorrecao(dados) {
     const metodoBadge = document.getElementById('ia-metodo');
     if (metodoBadge) {
         const metodoLabels = {
-            'ocr': '📖 OCR',
-            'circulos': '⭕ Círculos',
             'ia': '🤖 IA',
-            'ia_fallback': '🤖 IA (Fallback)',
-            'fallback': '⚠️ Fallback',
+            'ia+circulos': '🤖 IA + Círculos',
+            'ia_parcial': '🤖 IA (Parcial)',
+            'circulos': '⭕ Círculos',
+            'circulos_parcial': '⭕ Círculos (Parcial)',
             'manual': '✏️ Manual'
         };
         metodoBadge.textContent = metodoLabels[metodo] || `📌 ${metodo}`;
-        metodoBadge.className = `badge ${metodo === 'fallback' ? 'badge-red' : metodo === 'ia' ? 'badge-purple' : 'badge-gray'}`;
+        metodoBadge.className = `badge ${metodo === 'ia' ? 'badge-purple' : metodo.includes('circulos') ? 'badge-orange' : 'badge-gray'}`;
     }
 
     const confiancaMedia = dados.confiancas.reduce((a, b) => a + b, 0) / dados.confiancas.length || 0;
@@ -3383,11 +3394,7 @@ function atualizarInterfaceCorrecao(dados) {
         
         const totalQuestoes = dados.resultadoQuestoes.length;
         let colunasPorLinha = 5;
-        if (totalQuestoes <= 10) colunasPorLinha = 5;
-        else if (totalQuestoes <= 15) colunasPorLinha = 5;
-        else if (totalQuestoes <= 20) colunasPorLinha = 5;
-        else if (totalQuestoes <= 25) colunasPorLinha = 5;
-        else colunasPorLinha = 6;
+        if (totalQuestoes > 25) colunasPorLinha = 6;
         
         // Gabarito oficial
         const tituloOficial = document.createElement('div');
@@ -3557,7 +3564,6 @@ function atualizarInterfaceCorrecao(dados) {
     }
 }
 
-// ✅ CORRIGIDO: Implementação REAL de salvarCorrecao
 async function salvarCorrecao() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
         showToast('❌ Nenhuma correção para salvar!', 'error');
@@ -3575,7 +3581,6 @@ async function salvarCorrecao() {
         return;
     }
     
-    // Calcular acertos
     let acertos = 0;
     for (let i = 0; i < total; i++) {
         const resp = (i < respostas.length) ? (respostas[i] || '') : '';
