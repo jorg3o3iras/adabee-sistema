@@ -1127,8 +1127,15 @@
                 <div class="cam-video-wrap"><video id="cam-video" autoplay="" playsinline=""></video><div class="cam-frame"><div class="cam-corner cc-tl"></div><div class="cam-corner cc-tr"></div><div class="cam-corner cc-bl"></div><div class="cam-corner cc-br"></div></div><div class="cam-scan-line"></div></div>
                 <div class="cam-controls"><button class="btn btn-red" onclick="fecharCamera()">✕ Cancelar</button><button class="btn btn-outline" onclick="trocarCamera()" style="color:var(--cyan);border-color:var(--cyan);">🔄 Virar</button><button class="btn btn-green btn-lg" onclick="capturarFoto()">📸 Capturar</button></div>
                 <p class="cam-hint">Enquadre o cartão resposta na moldura verde</p>
+                <div style="text-align:center; font-size:11px; color:var(--orange); margin-top:8px; padding:8px; background:rgba(245,158,11,0.1); border-radius:6px;">
+                    ⚠️ <strong>Dicas de iluminação:</strong><br>
+                    • Coloque o cartão perto de uma janela (luz natural)<br>
+                    • Evite sua sombra em cima do cartão<br>
+                    • Não use flash direto (cria reflexo)<br>
+                    • Segure o celular com as duas mãos para não tremer
+                </div>
+                <canvas id="cam-canvas" style="display:none;"></canvas>
             </div>
-            <canvas id="cam-canvas" style="display:none;"></canvas>
         </div>
 
         <!-- CORREÇÃO MANUAL (DENTRO DA IA) -->
