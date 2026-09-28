@@ -850,8 +850,8 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
 
 def preprocessar_imagem_para_ia(imagem_base64):
     """
-    Prepara imagem para IA: auto-contraste leve + normalização de brilho.
-    Não usa filtros agressivos. Só ajusta exposição para o GPT-4o ver melhor.
+    Prepara imagem para IA com normalização AGRESSIVA de iluminação.
+    Corrige sombras, reflexos e variações de exposição antes de enviar ao GPT-4o.
     """
     try:
         raw = imagem_base64
@@ -892,28 +892,64 @@ def preprocessar_imagem_para_ia(imagem_base64):
         h, w = img.shape[:2]
         logging.info(f"🖼️ IA - Imagem original: {w}x{h}")
 
-        # ═══ Auto-correção de exposição ═══
+        # ═══════════════════════════════════════════════════
+        # ETAPA 1: AUTO-CORREÇÃO DE EXPOSIÇÃO GLOBAL
+        # ═══════════════════════════════════════════════════
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         brilho_medio = float(np.mean(gray))
         logging.info(f"🖼️ IA - Brilho médio: {brilho_medio:.1f}")
 
+        # Corrige exposição extrema
         if brilho_medio < 100:
-            alpha = min(130.0 / max(brilho_medio, 1), 2.0)
-            img = cv2.convertScaleAbs(img, alpha=alpha, beta=20)
-            logging.info(f"🖼️ IA - Corrigido escuro: alpha={alpha:.2f}")
+            alpha = min(140.0 / max(brilho_medio, 1), 2.2)
+            img = cv2.convertScaleAbs(img, alpha=alpha, beta=25)
+            logging.info(f"🖼️ IA - Corrigido escuro: alpha={alpha:.2f}, beta=25")
         elif brilho_medio > 220:
             alpha = 200.0 / max(brilho_medio, 1)
-            img = cv2.convertScaleAbs(img, alpha=alpha, beta=-10)
-            logging.info(f"🖼️ IA - Corrigido claro: alpha={alpha:.2f}")
+            img = cv2.convertScaleAbs(img, alpha=alpha, beta=-15)
+            logging.info(f"🖼️ IA - Corrigido claro: alpha={alpha:.2f}, beta=-15")
 
-        # CLAHE suave (sem halos)
+        # ═══════════════════════════════════════════════════
+        # ETAPA 2: CORREÇÃO DE ILUMINAÇÃO IRREGULAR (SOMBRAS)
+        # ═══════════════════════════════════════════════════
+        # Técnica: divide a imagem pela sua versão "borrada"
+        # Isso remove gradientes de iluminação mantendo detalhes locais
+        gray2 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Kernel grande pra estimar iluminação de fundo
+        bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
+        bg = cv2.morphologyEx(gray2, cv2.MORPH_CLOSE, bg_kernel)
+        bg = cv2.GaussianBlur(bg, (51, 51), 0)
+
+        # Divide (evita divisão por zero)
+        bg = np.where(bg == 0, 1, bg).astype(np.float32)
+        gray_norm = (gray2.astype(np.float32) / bg) * 200.0
+        gray_norm = np.clip(gray_norm, 0, 255).astype(np.uint8)
+
+        # Reconstrói a imagem colorida mantendo o ratio original
+        img_float = img.astype(np.float32)
+        gray_float = gray2.astype(np.float32)
+        gray_float = np.where(gray_float == 0, 1, gray_float)
+        ratio = gray_norm.astype(np.float32) / gray_float
+        ratio = np.clip(ratio, 0.3, 3.0)
+        img = np.clip(img_float * ratio[:, :, None], 0, 255).astype(np.uint8)
+
+        logging.info(f"🖼️ IA - Correção de iluminação irregular aplicada")
+
+        # ═══════════════════════════════════════════════════
+        # ETAPA 3: CLAHE MODERADO (contraste local)
+        # ═══════════════════════════════════════════════════
         lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         l = clahe.apply(l)
         img = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
-        logging.info(f"🖼️ IA - CLAHE aplicado (clipLimit=1.5)")
 
+        logging.info(f"🖼️ IA - CLAHE moderado aplicado")
+
+        # ═══════════════════════════════════════════════════
+        # ETAPA 4: REDIMENSIONAMENTO
+        # ═══════════════════════════════════════════════════
         TARGET = 2400
         if h > TARGET:
             scale = TARGET / float(h)
@@ -923,6 +959,29 @@ def preprocessar_imagem_para_ia(imagem_base64):
             scale = 1600 / float(h)
             img = cv2.resize(img, (int(w * scale), 1600), interpolation=cv2.INTER_CUBIC)
             logging.info(f"🖼️ IA - Aumentada para: {img.shape[1]}x{img.shape[0]}")
+
+        # ═══════════════════════════════════════════════════
+        # ETAPA 5: BINARIZAÇÃO ADAPTATIVA (para destacar bolhas)
+        # ═══════════════════════════════════════════════════
+        # Cria uma máscara que realça as bolhas escuras
+        gray_final = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Threshold adaptativo: cada região tem seu próprio limite
+        binary = cv2.adaptiveThreshold(
+            gray_final, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            blockSize=25,
+            C=8
+        )
+
+        # Converte binária de volta pra BGR (3 canais) pra GPT-4o não estranhar
+        binary_bgr = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+
+        # Mescla: 70% original + 30% binária (dá "guia" pra IA onde estão as bolhas)
+        img = cv2.addWeighted(img, 0.7, binary_bgr, 0.3, 0)
+
+        logging.info(f"🖼️ IA - Binarização adaptativa mesclada (30%)")
 
         _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 95])
         b64 = base64.b64encode(buffer).decode('utf-8')
