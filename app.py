@@ -358,9 +358,6 @@ def gerar_padrao_gabarito(gabarito, tipo_questoes=4):
 
 
 def validar_gabarito(gabarito, tipo_questoes=4):
-    """
-    CORRIGIDO: aceita 3, 4 ou 5 alternativas conforme tipo_questoes.
-    """
     if not gabarito or len(gabarito) == 0:
         return False
     try:
@@ -604,13 +601,32 @@ def corrigir_perspectiva(img, marcadores):
 
 
 # ============================================
-# TEMPLATE MAPPING — correção por geometria conhecida
+# TEMPLATE MAPPING — ALINHADO COM O CARTÃO HTML
 # ============================================
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     """
-    Gera mapa padrão normalizado (0-1) para cartões gerados pelo sistema.
-    Coordenadas normalizadas relativas à área ENTRE os 4 marcadores fiduciais.
+    Gera mapa de posições (0-1) EXATAMENTE alinhado com o HTML gerado por
+    /api/gerar_gabarito.
+
+    ┌──────────────────────────────────────────────────────┐
+    │  ESTRUTURA DO CARTÃO (após correção de perspectiva): │
+    │                                                       │
+    │  0%  ┌────────────────────────────────────┐          │
+    │      │ [MARCADOR TL]      [MARCADOR TR]   │          │
+    │      │                                    │          │
+    │      │         HEADER + INFO              │          │
+    │  24% │                                    │          │
+    │      ├────────────────────────────────────┤          │
+    │      │  Q01  ○ A  ○ B  ○ C  ○ D           │          │
+    │      │  Q02  ○ A  ○ B  ○ C  ○ D           │          │
+    │      │  ...                                │          │
+    │  92% │  Q10  ○ A  ○ B  ○ C  ○ D           │          │
+    │      ├────────────────────────────────────┤          │
+    │      │           RODAPÉ                   │          │
+    │ 100% │ [MARCADOR BL]      [MARCADOR BR]   │          │
+    │      └────────────────────────────────────┘          │
+    └──────────────────────────────────────────────────────┘
     """
     mapa = []
 
@@ -625,13 +641,23 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
     num_alts = len(alternativas)
 
-    margem_x = 0.06
-    margem_topo = 0.42
-    margem_base = 0.06
+    # ═══ CALIBRAÇÃO FINA (baseada na geometria do HTML) ═══
+    # O bloco de questões ocupa de 24% a 92% da altura da área útil
+    topo_questoes = 0.24
+    base_questoes = 0.92
+    altura_questoes = base_questoes - topo_questoes
 
-    largura_util = 1.0 - 2 * margem_x
-    largura_coluna = largura_util / num_colunas
-    altura_util = 1.0 - margem_topo - margem_base
+    # As bolhas ficam entre 10% e 95% da largura da área útil
+    coluna_inicio = 0.10
+    coluna_fim = 0.95
+    largura_colunas = coluna_fim - coluna_inicio
+
+    if num_colunas == 2:
+        largura_por_coluna = largura_colunas / 2
+        pad = 0.01
+    else:
+        largura_por_coluna = largura_colunas
+        pad = 0.01
 
     for col in range(num_colunas):
         inicio_col = col * q_por_coluna
@@ -641,22 +667,22 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
         if num_questoes_col <= 0:
             continue
 
-        x_col_inicio = margem_x + col * largura_coluna
-        pad_interno = 0.02
-        x_bolha_area = x_col_inicio + pad_interno
-        x_bolha_area_fim = x_col_inicio + largura_coluna - pad_interno
-        largura_bolhas = x_bolha_area_fim - x_bolha_area
-        espacamento = largura_bolhas / num_alts
+        x_col_inicio = coluna_inicio + col * largura_por_coluna + pad
+        x_col_fim = coluna_inicio + (col + 1) * largura_por_coluna - pad
+
+        largura_bolhas = x_col_fim - x_col_inicio
+        espacamento_bolha = largura_bolhas / num_alts
 
         for i in range(num_questoes_col):
             num_questao = inicio_col + i + 1
+
             if num_questoes_col > 1:
-                y = margem_topo + (i / (num_questoes_col - 1)) * altura_util
+                y = topo_questoes + (i / (num_questoes_col - 1)) * altura_questoes
             else:
-                y = margem_topo + altura_util / 2
+                y = topo_questoes + altura_questoes / 2
 
             for j, letra in enumerate(alternativas):
-                x = x_bolha_area + (j + 0.5) * espacamento
+                x = x_col_inicio + (j + 0.5) * espacamento_bolha
                 mapa.append({
                     'questao': num_questao,
                     'alternativa': letra,
@@ -667,18 +693,84 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     return mapa
 
 
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
-    """Amostra uma bolha usando coordenadas normalizadas (0-1)."""
+def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes, num_colunas, mapa_template):
+    """Salva o mapa do template no banco para uso futuro na correção."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logging.warning("⚠️ Sem conexão para salvar mapa")
+            return False
+
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO cartoes_template 
+            (prova_id, aluno_id, tipo_questoes, quantidade_questoes, num_colunas, mapa_template)
+            VALUES (%s, %s, %s, %s, %s, %s::jsonb)
+            ON CONFLICT (prova_id, aluno_id) 
+            DO UPDATE SET 
+                mapa_template = EXCLUDED.mapa_template,
+                tipo_questoes = EXCLUDED.tipo_questoes,
+                quantidade_questoes = EXCLUDED.quantidade_questoes,
+                num_colunas = EXCLUDED.num_colunas,
+                created_at = CURRENT_TIMESTAMP
+        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes, 
+              num_colunas, json.dumps(mapa_template)))
+        conn.commit()
+        cur.close()
+        conn.close()
+        logging.info(f"💾 Mapa salvo: prova={prova_id}, aluno={aluno_id}, {len(mapa_template)} bolhas")
+        return True
+    except Exception as e:
+        logging.error(f"❌ Erro ao salvar mapa template: {e}")
+        traceback.print_exc()
+        return False
+
+
+def carregar_mapa_template(prova_id, aluno_id):
+    """Carrega o mapa do template do banco."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return None
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT mapa_template, num_colunas
+            FROM cartoes_template
+            WHERE prova_id = %s AND aluno_id = %s
+            LIMIT 1
+        """, (prova_id, aluno_id))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if row and row['mapa_template']:
+            mapa = row['mapa_template']
+            if isinstance(mapa, str):
+                mapa = json.loads(mapa)
+            logging.info(f"✅ Mapa CARREGADO do banco: {len(mapa)} bolhas")
+            return mapa
+        return None
+    except Exception as e:
+        logging.warning(f"⚠️ Erro ao carregar mapa: {e}")
+        return None
+
+
+def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
+    """
+    Amostra uma bolha usando coordenadas normalizadas (0-1).
+    Retorna o ratio de pixels escuros dentro do círculo amostrado.
+    """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
-    r = max(6, min(int(raio_fracao * min(w, h)), 25))
+    r = max(8, min(int(raio_fracao * min(w, h)), 30))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.75), 255, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.7), 255, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
@@ -727,20 +819,18 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         min_ratio = min(ratios)
         max_ratio = max(ratios)
 
-        if max_ratio - min_ratio < 0.10:
-            threshold_local = max(min_ratio + 0.20, 0.30)
-            confianca = 40
+        separacao = max_ratio - min_ratio
+
+        if separacao > 0.50:
+            confianca = 98
+        elif separacao > 0.35:
+            confianca = 92
+        elif separacao > 0.20:
+            confianca = 80
+        elif separacao > 0.10:
+            confianca = 65
         else:
-            threshold_local = min_ratio + (max_ratio - min_ratio) * 0.60
-            separacao = max_ratio - min_ratio
-            if separacao > 0.50:
-                confianca = 98
-            elif separacao > 0.35:
-                confianca = 92
-            elif separacao > 0.20:
-                confianca = 80
-            else:
-                confianca = 65
+            confianca = 40
 
         letra_escolhida = medidas[0][0]
         ratio_escolhida = medidas[0][1]
@@ -814,22 +904,35 @@ def preparar_imagem_para_template(imagem_base64):
 
 def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                    tipo_questoes=4, disciplina='', bncc=None,
-                                   mapa_template=None, debug=False):
-    """Correção via Template Mapping (rápido, gratuito)."""
+                                   mapa_template=None, prova_id=None, aluno_id=None):
+    """
+    Correção via Template Mapping.
+
+    ⚡ PRIORIDADE: se temos prova_id e aluno_id, busca o mapa EXATO
+    que foi salvo quando o cartão foi gerado.
+    """
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
 
-    img_corrigida, ok = preparar_imagem_para_template(imagem_base64)
-    if not ok:
-        logging.warning("⚠️ Template: falha ao preparar imagem")
-        return None
+    # ═══ BUSCA O MAPA DO BANCO ═══
+    if not mapa_template and prova_id and aluno_id:
+        mapa_template = carregar_mapa_template(prova_id, aluno_id)
+        if mapa_template:
+            logging.info(f"⚡ Usando mapa EXATO salvo no banco ({len(mapa_template)} bolhas)")
 
+    # Fallback: gera mapa padrão
     if not mapa_template:
         if total_questoes <= 12:
             num_colunas = 1
         else:
             num_colunas = 2
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
+        logging.info(f"⚠️ Usando mapa PADRÃO gerado ({len(mapa_template)} bolhas)")
+
+    img_corrigida, ok = preparar_imagem_para_template(imagem_base64)
+    if not ok:
+        logging.warning("⚠️ Template: falha ao preparar imagem")
+        return None
 
     respostas, confiancas = corrigir_por_template(
         img_corrigida, mapa_template, alternativas, debug=False
@@ -857,10 +960,7 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
-    """
-    Detecta TODAS as bolhas E calcula posições das colunas.
-    Retorna: (preenchidos, posicoes_colunas)
-    """
+    """Detecta TODAS as bolhas E calcula posições das colunas."""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -881,7 +981,6 @@ def detectar_circulos_preenchidos(imagem_base64):
             scale = TARGET_HEIGHT / height
             new_width = int(width * scale)
             img = cv2.resize(img, (new_width, TARGET_HEIGHT), interpolation=cv2.INTER_AREA)
-            logging.info(f"📐 Redimensionada: {new_width}x{TARGET_HEIGHT}")
 
         height, width = img.shape[:2]
 
@@ -908,7 +1007,6 @@ def detectar_circulos_preenchidos(imagem_base64):
                 (margem, height - margem),
                 (width - margem, height - margem)
             ]
-            logging.info(f"✅ Marcadores para exclusão: {marcadores_xy}")
 
         _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
@@ -944,7 +1042,6 @@ def detectar_circulos_preenchidos(imagem_base64):
             if not perto_de_marcador:
                 circulos_filtrados.append((x, y, r))
 
-        logging.info(f"✅ Após excluir marcadores: {len(circulos_filtrados)}")
         circulos = circulos_filtrados
 
         if len(circulos) < 4:
@@ -959,7 +1056,6 @@ def detectar_circulos_preenchidos(imagem_base64):
         r_max = mediana_r * 1.2
 
         circulos = [(x, y, r) for (x, y, r) in circulos if r_min <= r <= r_max]
-        logging.info(f"📐 Mediana raio: {mediana_r}px → {len(circulos)} após filtro")
 
         if len(circulos) < 4:
             return [], {}
@@ -994,13 +1090,10 @@ def detectar_circulos_preenchidos(imagem_base64):
             if not duplicado:
                 unicos.append(c)
 
-        logging.info(f"✅ Após remover duplicatas: {len(unicos)} círculos")
-
         posicoes_colunas = {}
 
         if len(unicos) >= 12:
             xs_ordenados = sorted(set(c['x'] for c in unicos))
-
             x_min = xs_ordenados[0]
             x_max = xs_ordenados[-1]
             range_x = x_max - x_min
@@ -1024,11 +1117,8 @@ def detectar_circulos_preenchidos(imagem_base64):
                     posicoes_colunas[letra] = int(sum(xs_cluster) / len(xs_cluster))
                 else:
                     posicoes_colunas[letra] = int(x_min + range_x * (i / 3))
-
-            logging.info(f"🎯 Posições das colunas: A={posicoes_colunas['A']}, B={posicoes_colunas['B']}, C={posicoes_colunas['C']}, D={posicoes_colunas['D']}")
         else:
             posicoes_colunas = {'A': 100, 'B': 400, 'C': 700, 'D': 1000}
-            logging.warning(f"⚠️ Poucos círculos ({len(unicos)}) para calcular colunas. Usando fallback.")
 
         ratios = sorted([c['dark_ratio'] for c in unicos])
 
@@ -1047,7 +1137,6 @@ def detectar_circulos_preenchidos(imagem_base64):
             threshold = 0.30
 
         threshold = max(0.30, min(threshold, 0.60))
-        logging.info(f"📊 Threshold adaptativo: {threshold:.3f}")
 
         preenchidos = []
         for c in unicos:
@@ -1056,11 +1145,7 @@ def detectar_circulos_preenchidos(imagem_base64):
                 distancias = {letra: abs(x - pos) for letra, pos in posicoes_colunas.items()}
                 letra_mais_proxima = min(distancias, key=distancias.get)
                 c['letra'] = letra_mais_proxima
-                c['coluna_x'] = posicoes_colunas[letra_mais_proxima]
-                c['dist_coluna'] = distancias[letra_mais_proxima]
                 preenchidos.append(c)
-
-        logging.info(f"📊 RESULTADO: {len(unicos)} círculos, {len(preenchidos)} preenchidos")
 
         return preenchidos, posicoes_colunas
 
@@ -1077,12 +1162,7 @@ def detectar_circulos_preenchidos(imagem_base64):
 def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
     """Organiza as respostas usando a letra calculada pela posição X"""
     if not circulos:
-        logging.warning("⚠️ Sem círculos para organizar")
         return [''] * total_questoes, [0] * total_questoes
-
-    logging.info("=" * 60)
-    logging.info(f"🎯 ORGANIZANDO {len(circulos)} CÍRCULOS PARA {total_questoes} QUESTÕES")
-    logging.info("=" * 60)
 
     ordenados = sorted(circulos, key=lambda c: c['y'])
 
@@ -1100,7 +1180,6 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
         y_limite = 30
 
     y_limite = max(20, min(y_limite, 80))
-    logging.info(f"📏 Tolerância Y: {y_limite:.1f}px")
 
     linhas = []
     linha_atual = []
@@ -1120,8 +1199,6 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
         linhas.append(linha_atual)
 
     linhas.sort(key=lambda l: l[0]['y'])
-
-    logging.info(f"📋 {len(linhas)} linhas agrupadas")
 
     while len(linhas) > total_questoes:
         menor_gap = float('inf')
@@ -1144,7 +1221,6 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
         linhas = linhas[:total_questoes]
 
     if len(linhas) < total_questoes * 0.6:
-        logging.error(f"🚨 POUCAS linhas ({len(linhas)}) para {total_questoes} questões")
         return [''] * total_questoes, [0] * total_questoes
 
     respostas = []
@@ -1191,13 +1267,8 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
     if len(nao_vazias) >= 5:
         contagem = Counter(nao_vazias)
         letra_mais_comum, qtd = contagem.most_common(1)[0]
-
         if qtd >= len(nao_vazias) * 0.85:
-            logging.error(f"🚨 SUSPEITO: {qtd}/{len(nao_vazias)} respostas são '{letra_mais_comum}'")
             return [''] * total_questoes, [0] * total_questoes
-
-    logging.info(f"📝 RESPOSTAS CÍRCULOS: {respostas}")
-    logging.info(f"📊 CONFIANÇAS: {confiancas}")
 
     return respostas, confiancas
 
@@ -1213,7 +1284,6 @@ def preprocessar_imagem_para_ia(imagem_base64):
         if isinstance(raw, tuple):
             raw = raw[0]
         if not raw or not isinstance(raw, str):
-            logging.error("❌ preprocessar_imagem_para_ia: entrada vazia")
             return '', 'image/jpeg'
 
         if ',' in raw and raw.strip().startswith('data:'):
@@ -1249,16 +1319,13 @@ def preprocessar_imagem_para_ia(imagem_base64):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         brilho_medio = float(np.mean(gray))
-        logging.info(f"🖼️ IA - Brilho médio: {brilho_medio:.1f}")
 
         if brilho_medio < 100:
             alpha = min(140.0 / max(brilho_medio, 1), 2.2)
             img = cv2.convertScaleAbs(img, alpha=alpha, beta=25)
-            logging.info(f"🖼️ IA - Corrigido escuro: alpha={alpha:.2f}, beta=25")
         elif brilho_medio > 220:
             alpha = 200.0 / max(brilho_medio, 1)
             img = cv2.convertScaleAbs(img, alpha=alpha, beta=-15)
-            logging.info(f"🖼️ IA - Corrigido claro: alpha={alpha:.2f}, beta=-15")
 
         gray2 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
@@ -1275,25 +1342,19 @@ def preprocessar_imagem_para_ia(imagem_base64):
         ratio = np.clip(ratio, 0.3, 3.0)
         img = np.clip(img_float * ratio[:, :, None], 0, 255).astype(np.uint8)
 
-        logging.info(f"🖼️ IA - Correção de iluminação irregular aplicada")
-
         lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         l = clahe.apply(l)
         img = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
 
-        logging.info(f"🖼️ IA - CLAHE moderado aplicado")
-
         TARGET = 2400
         if h > TARGET:
             scale = TARGET / float(h)
             img = cv2.resize(img, (int(w * scale), TARGET), interpolation=cv2.INTER_AREA)
-            logging.info(f"🖼️ IA - Redimensionada para: {img.shape[1]}x{img.shape[0]}")
         elif h < 1600:
             scale = 1600 / float(h)
             img = cv2.resize(img, (int(w * scale), 1600), interpolation=cv2.INTER_CUBIC)
-            logging.info(f"🖼️ IA - Aumentada para: {img.shape[1]}x{img.shape[0]}")
 
         gray_final = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -1308,8 +1369,6 @@ def preprocessar_imagem_para_ia(imagem_base64):
         binary_bgr = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
         img = cv2.addWeighted(img, 0.7, binary_bgr, 0.3, 0)
 
-        logging.info(f"🖼️ IA - Binarização adaptativa mesclada (30%)")
-
         _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 95])
         b64 = base64.b64encode(buffer).decode('utf-8')
         return b64, 'image/jpeg'
@@ -1321,7 +1380,7 @@ def preprocessar_imagem_para_ia(imagem_base64):
 
 
 # ============================================
-# PROMPT DA IA - VERSÃO PROFISSIONAL (OMR) v2.0
+# PROMPT DA IA
 # ============================================
 
 def gerar_prompt_otimizado(padrao_gabarito, aluno_nome, serie, disciplina, aviso_extra=None):
@@ -1353,27 +1412,12 @@ A bolha MARCADA tem o INTERIOR ESCURO (caneta/lápis).
 A bolha NÃO MARCADA tem o INTERIOR BRANCO.
 
 ═══════════════════════════════════════════════════════
-REGRA CRÍTICA — LEIA 3 VEZES
+REGRA CRÍTICA
 ═══════════════════════════════════════════════════════
 🚨 Se você NÃO TEM CERTEZA ABSOLUTA de qual bolha está marcada,
    retorne null para aquela questão.
-🚨 NUNCA chute. NUNCA invente. NUNCA "suponha".
+🚨 NUNCA chute. NUNCA invente.
 🚨 É MELHOR retornar null do que errar.
-🚨 Um sistema que retorna null em 50% das questões mas acerta
-   100% das que respondeu é MELHOR que um que responde tudo errado.
-🚨 Se a imagem estiver ruim (escura, tremida, cortada), retorne
-   null em TODAS as questões.
-
-═══════════════════════════════════════════════════════
-PROCEDIMENTO
-═══════════════════════════════════════════════════════
-Para CADA questão (linha 01 até {total:02d}):
-1. Localize a linha numerada.
-2. Olhe CADA bolha: o INTERIOR está escuro ou branco?
-3. Se EXATAMENTE UMA bolha está escura → resposta = letra dela
-4. Se NENHUMA está escura → resposta = null
-5. Se DUAS ou mais estão escuras → resposta = null (ambíguo)
-6. Se NÃO CONSEGUE VER → resposta = null
 
 ═══════════════════════════════════════════════════════
 FORMATO DE SAÍDA (JSON puro)
@@ -1388,11 +1432,9 @@ REGRAS DO JSON:
 - Cada item é uma letra ({alternativas_str}) OU null
 - "confianca_por_questao" DEVE ter {total} números de 0 a 100
 - Se você respondeu null, a confiança DEVE ser 0
-- Se você respondeu uma letra, a confiança DEVE ser ≥ 70
-  (se for menor, retorne null em vez da letra)
 
 {aviso_bloco}
-Retorne SOMENTE o JSON, sem markdown, sem explicações.""".strip()
+Retorne SOMENTE o JSON.""".strip()
 
 
 def _parse_respostas_ia(texto, total_esperado, alternativas):
@@ -1425,7 +1467,6 @@ def _parse_respostas_ia(texto, total_esperado, alternativas):
     normalizadas = []
 
     for r in respostas:
-        # ✅ Aceita null explicitamente
         if r is None:
             normalizadas.append('')
             continue
@@ -1502,35 +1543,8 @@ def _parse_confiancas_ia(texto, total_esperado):
     return confs[:total_esperado]
 
 
-def _detectar_alucinacao(respostas, confiancas):
-    nao_vazias = [r for r in respostas if r]
-    if not nao_vazias:
-        return False, ""
-
-    if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
-        letra = nao_vazias[0]
-        return True, f"Todas as {len(nao_vazias)} respostas são '{letra}' — impossível num cartão real"
-
-    if len(nao_vazias) >= 6:
-        contagem = Counter(nao_vazias)
-        letra_mais_comum, qtd = contagem.most_common(1)[0]
-        if qtd / len(nao_vazias) >= 0.85:
-            conf_media = sum(confiancas) / len(confiancas) if confiancas else 0
-            if conf_media >= 85:
-                return True, f"{qtd}/{len(nao_vazias)} respostas são '{letra_mais_comum}' com confiança média {conf_media:.0f}% — suspeito"
-
-    if len(nao_vazias) >= 6:
-        if nao_vazias == ['A', 'B'] * (len(nao_vazias) // 2):
-            return True, "Padrão alternado A,B,A,B detectado — provável alucinação"
-
-    return False, ""
-
-
 def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
-    """
-    Valida se a resposta da IA é plausível.
-    Retorna (suspeito: bool, motivo: str).
-    """
+    """Valida se a resposta da IA é plausível."""
     if not respostas:
         return True, "Resposta vazia"
 
@@ -1538,23 +1552,19 @@ def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
     if not nao_vazias:
         return True, "Nenhuma resposta detectada"
 
-    # 1. Todas iguais
     if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
         return True, f"Todas as {len(nao_vazias)} respostas são '{nao_vazias[0]}'"
 
-    # 2. Padrão alternado A,B,A,B
     if len(nao_vazias) >= 6:
         if nao_vazias == ['A', 'B'] * (len(nao_vazias) // 2):
             return True, "Padrão alternado A,B detectado"
 
-    # 3. Concentração excessiva em uma letra
     if len(nao_vazias) >= 6:
         contagem = Counter(nao_vazias)
         letra, qtd = contagem.most_common(1)[0]
         if qtd / len(nao_vazias) >= 0.85:
             return True, f"{qtd}/{len(nao_vazias)} respostas são '{letra}'"
 
-    # 4. Comparar com gabarito: se a IA errou MUITO, é suspeito
     if gabarito and len(gabarito) == len(respostas):
         acertos = sum(
             1 for r, g in zip(respostas, gabarito)
@@ -1602,7 +1612,6 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
         }
     ]
 
-    # ⚠️ NÃO usar response_format=json_object (força preenchimento)
     create_kwargs = {
         "model": OPENAI_MODEL,
         "messages": messages,
@@ -1628,7 +1637,6 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
     if not confiancas_ia:
         confiancas_ia = [85 if r else 0 for r in respostas_validas]
 
-    # ✅ Se a IA retornou "" para uma questão, força confiança 0
     for i, r in enumerate(respostas_validas):
         if not r:
             confiancas_ia[i] = 0
@@ -1670,13 +1678,9 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
         if respostas_validas is None:
             return erro_correcao(aluno_nome, serie, disciplina, 'Resposta da IA inválida (JSON)')
 
-        # ✅ VALIDAÇÃO CONTRA GABARITO
-        suspeito, motivo = _validar_resposta_ia_contra_gabarito(
-            respostas_validas, gabarito
-        )
+        suspeito, motivo = _validar_resposta_ia_contra_gabarito(respostas_validas, gabarito)
         if suspeito:
             logging.warning(f"🚨 Tentativa 1 suspeita: {motivo}")
-            logging.info("🔄 Tentando novamente com prompt endurecido...")
 
             respostas_2, confiancas_2, texto_2 = _executar_chamada_openai(
                 data_url, padrao_gabarito, aluno_nome, serie, disciplina,
@@ -1684,30 +1688,22 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
             )
 
             if respostas_2 is not None:
-                suspeito_2, motivo_2 = _validar_resposta_ia_contra_gabarito(
-                    respostas_2, gabarito
-                )
+                suspeito_2, motivo_2 = _validar_resposta_ia_contra_gabarito(respostas_2, gabarito)
                 if not suspeito_2:
-                    logging.info(f"✅ Tentativa 2 resolveu! Respostas: {respostas_2}")
                     respostas_validas = respostas_2
                     confiancas_ia = confiancas_2
-                    texto_resposta = texto_2
                 else:
-                    logging.warning(f"⚠️ Tentativa 2 também suspeita: {motivo_2}")
                     return erro_correcao(
                         aluno_nome, serie, disciplina,
-                        f'IA não conseguiu ler o cartão com confiança. '
-                        f'({motivo_2}) Tire uma foto mais nítida.'
+                        f'IA não conseguiu ler o cartão com confiança. ({motivo_2})'
                     )
 
         total_detectadas = sum(1 for r in respostas_validas if r)
-        logging.info(f"✅ IA detectou {total_detectadas}/{total_questoes}: {respostas_validas}")
 
         if total_detectadas < total_questoes * 0.3:
             return erro_correcao(
                 aluno_nome, serie, disciplina,
-                f'IA detectou apenas {total_detectadas}/{total_questoes} respostas. '
-                f'Tire uma foto mais nítida.'
+                f'IA detectou apenas {total_detectadas}/{total_questoes} respostas.'
             )
 
         return calcular_resultado_correcao(
@@ -1722,25 +1718,14 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CORREÇÃO (CASCATA v2.0)
+# FUNÇÃO PRINCIPAL DE CORREÇÃO
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
-                                     mapa_template=None):
+                                     mapa_template=None, prova_id=None, aluno_id=None):
     """
-    CASCATA DE CONFIANÇA — VERSÃO CORRIGIDA (v2.0)
-
-    REGRA DE OURO: Template Mapping é a fonte de verdade.
-    OpenCV e IA só entram quando Template FALHOU completamente.
-
-    Fluxo:
-      1. Template Mapping → se confiança ALTA em TODAS → RETORNA
-      2. Template + OpenCV → se concordam ≥90% → RETORNA fusão
-      3. Template isolado → se confiança razoável → RETORNA
-      4. OpenCV isolado → se confiança razoável → RETORNA
-      5. IA OpenAI → APENAS se TUDO acima falhou
-      6. Fallback → erro claro
+    CASCATA DE CONFIANÇA v3.0 — ALINHADA COM CARTÃO GERADO
     """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
@@ -1750,17 +1735,18 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
 
     try:
         # ═══════════════════════════════════════════════════════
-        # ETAPA 1: TEMPLATE MAPPING (FONTE DE VERDADE)
+        # ETAPA 1: TEMPLATE MAPPING
         # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 1: Template Mapping (fonte de verdade)")
+        logging.info("📌 ETAPA 1: Template Mapping (mapa exato do banco)")
         logging.info("=" * 60)
 
         resultado_template = None
         try:
             resultado_template = corrigir_com_template_mapping(
                 imagem_base64, padrao_gabarito, aluno_nome, serie,
-                tipo_questoes, disciplina, bncc, mapa_template
+                tipo_questoes, disciplina, bncc, mapa_template,
+                prova_id=prova_id, aluno_id=aluno_id
             )
         except Exception as e:
             logging.warning(f"⚠️ Template falhou: {e}")
@@ -1772,9 +1758,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             conf_min_tm = min(confs_tm) if confs_tm else 0
             detectadas_tm = sum(1 for r in resp_tm if r)
 
-            # ✅ CRITÉRIO RIGOROSO: exige confiança ALTA em TODAS as questões
-            if (conf_media_tm >= 80 and conf_min_tm >= 70
-                    and detectadas_tm >= total_questoes * 0.8):
+            if (conf_media_tm >= 75 and conf_min_tm >= 55
+                    and detectadas_tm >= total_questoes * 0.7):
                 logging.info(
                     f"✅ Template aprovado — média={conf_media_tm:.1f}%, "
                     f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
@@ -1786,14 +1771,12 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 )
             else:
                 logging.info(
-                    f"⚠️ Template com confiança média — "
-                    f"média={conf_media_tm:.1f}%, mín={conf_min_tm}%, "
-                    f"detectadas={detectadas_tm}/{total_questoes}. "
-                    f"Buscando segunda opinião."
+                    f"⚠️ Template inseguro — média={conf_media_tm:.1f}%, "
+                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
                 )
 
         # ═══════════════════════════════════════════════════════
-        # ETAPA 2: OPENCV (VALIDAÇÃO — NUNCA SOBRESCREVE TEMPLATE)
+        # ETAPA 2: OPENCV (VALIDAÇÃO)
         # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("📌 ETAPA 2: OpenCV (validação)")
@@ -1814,16 +1797,12 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     nao_vazias_cv = [r for r in respostas_cv if r]
                     if len(set(nao_vazias_cv)) >= 2:
                         valido_cv = True
-                        logging.info(f"✅ OpenCV OK — {detectadas_cv}/{total_questoes} detectadas")
-                    else:
-                        logging.warning("⚠️ OpenCV: todas iguais")
-                else:
-                    logging.warning(f"⚠️ OpenCV: poucas detectadas ({detectadas_cv})")
+                        logging.info(f"✅ OpenCV OK — {detectadas_cv}/{total_questoes}")
         except Exception as e:
             logging.warning(f"⚠️ OpenCV falhou: {e}")
 
         # ═══════════════════════════════════════════════════════
-        # ETAPA 3: DECISÃO — TEMPLATE vs OPENCV
+        # ETAPA 3: DECISÃO TEMPLATE vs OPENCV
         # ═══════════════════════════════════════════════════════
         if resultado_template and valido_cv:
             resp_tm = resultado_template['respostas']
@@ -1840,13 +1819,9 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                         iguais += 1
 
             concordancia = iguais / total_comp if total_comp > 0 else 0
-            logging.info(
-                f"📊 Concordância Template vs OpenCV: "
-                f"{concordancia*100:.1f}% ({iguais}/{total_comp})"
-            )
+            logging.info(f"📊 Concordância Template vs OpenCV: {concordancia*100:.1f}%")
 
-            # ✅ REGRA: se concordam ≥ 90%, confiamos na fusão
-            if concordancia >= 0.90 and total_comp >= total_questoes * 0.7:
+            if concordancia >= 0.80 and total_comp >= total_questoes * 0.6:
                 respostas_fusao = []
                 confs_fusao = []
                 for i in range(total_questoes):
@@ -1855,7 +1830,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     c_tm = confs_tm[i] if i < len(confs_tm) else 0
                     c_cv = confs_cv[i] if i < len(confs_cv) else 0
 
-                    # Prioriza Template (é geometricamente correto)
                     if r_tm and r_cv and r_tm == r_cv:
                         respostas_fusao.append(r_tm)
                         confs_fusao.append(min(99, max(c_tm, c_cv) + 5))
@@ -1866,20 +1840,15 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                         respostas_fusao.append(r_cv)
                         confs_fusao.append(c_cv)
 
-                logging.info("✅ Fusão Template+OpenCV aprovada (concordância ≥ 90%)")
+                logging.info("✅ Fusão Template+OpenCV")
                 return calcular_resultado_correcao(
                     respostas_fusao, gabarito, aluno_nome, serie,
                     disciplina, tipo_questoes, 'template+cv',
                     bncc=bncc, confiancas=confs_fusao
                 )
-            else:
-                logging.info(
-                    f"⚠️ Concordância insuficiente ({concordancia*100:.1f}%). "
-                    f"Não vamos fundir — vamos usar Template isolado ou IA."
-                )
 
         # ═══════════════════════════════════════════════════════
-        # ETAPA 4: TEMPLATE ISOLADO (se razoavelmente confiável)
+        # ETAPA 4: TEMPLATE ISOLADO
         # ═══════════════════════════════════════════════════════
         if resultado_template:
             confs_tm = resultado_template['confiancas']
@@ -1887,13 +1856,9 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             conf_min = min(confs_tm) if confs_tm else 0
             detectadas = sum(1 for r in resultado_template['respostas'] if r)
 
-            if (conf_media >= 65 and conf_min >= 40
-                    and detectadas >= total_questoes * 0.6):
-                logging.info(
-                    f"✅ Usando Template isolado — "
-                    f"média={conf_media:.1f}%, mín={conf_min}, "
-                    f"detectadas={detectadas}/{total_questoes}"
-                )
+            if (conf_media >= 55 and conf_min >= 30
+                    and detectadas >= total_questoes * 0.5):
+                logging.info(f"✅ Template isolado — média={conf_media:.1f}%")
                 return calcular_resultado_correcao(
                     resultado_template['respostas'], gabarito, aluno_nome, serie,
                     disciplina, tipo_questoes, 'template',
@@ -1901,12 +1866,12 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 )
 
         # ═══════════════════════════════════════════════════════
-        # ETAPA 5: OPENCV ISOLADO (último recurso sem IA)
+        # ETAPA 5: OPENCV ISOLADO
         # ═══════════════════════════════════════════════════════
         if valido_cv:
             conf_media_cv = sum(confs_cv) / len(confs_cv) if confs_cv else 0
-            if conf_media_cv >= 60:
-                logging.info(f"✅ Usando OpenCV isolado (conf={conf_media_cv:.1f}%)")
+            if conf_media_cv >= 55:
+                logging.info(f"✅ OpenCV isolado (conf={conf_media_cv:.1f}%)")
                 return calcular_resultado_correcao(
                     respostas_cv, gabarito, aluno_nome, serie,
                     disciplina, tipo_questoes, 'circulos',
@@ -1914,7 +1879,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 )
 
         # ═══════════════════════════════════════════════════════
-        # ETAPA 6: IA (ÚLTIMO RECURSO — SÓ QUANDO TUDO FALHOU)
+        # ETAPA 6: IA (ÚLTIMO RECURSO)
         # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
         logging.info("📌 ETAPA 6: IA OpenAI (último recurso)")
@@ -1931,16 +1896,13 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     resultado_ia['metodo_usado'] = 'ia'
                     logging.info("✅ IA resolveu o cartão")
                     return resultado_ia
-                else:
-                    logging.warning(f"⚠️ IA falhou: {resultado_ia.get('erro')}")
             except Exception as e:
                 logging.error(f"❌ Erro na IA: {e}")
 
         # ═══════════════════════════════════════════════════════
-        # ETAPA 7: FALLBACK FINAL — RETORNA O QUE TEMOS
+        # FALLBACK FINAL
         # ═══════════════════════════════════════════════════════
         if resultado_template:
-            logging.warning("⚠️ Usando Template mesmo com baixa confiança (último recurso)")
             return calcular_resultado_correcao(
                 resultado_template['respostas'], gabarito, aluno_nome, serie,
                 disciplina, tipo_questoes, 'template_baixa_conf',
@@ -1951,9 +1913,9 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             aluno_nome, serie, disciplina,
             '❌ Não foi possível ler as respostas do cartão.\n\n'
             'Verifique:\n'
-            '1. A foto está nítida (sem tremores)?\n'
-            '2. Boa iluminação (sem sombras)?\n'
-            '3. Os 4 marcadores pretos estão visíveis nos cantos?\n'
+            '1. A foto está nítida?\n'
+            '2. Boa iluminação?\n'
+            '3. Os 4 marcadores pretos estão visíveis?\n'
             '4. Os círculos foram pintados completamente?\n'
             '5. Caneta preta ou azul (não lápis)?'
         )
@@ -2040,7 +2002,6 @@ def corrigir_com_ia():
         imagem_hash = hashlib.md5(imagem_base64.encode()).hexdigest()
         cache_key = get_cache_key(imagem_hash, prova_id, aluno_id)
 
-        # Cache persistente
         cached = get_cache_correcao(cache_key)
         if cached:
             logging.info(f"💾 Cache HIT: {cache_key[:30]}...")
@@ -2097,10 +2058,11 @@ def corrigir_com_ia():
             disciplina = prova.get('disciplina', '')
             prova_titulo = prova.get('titulo', '')
 
-            # ⚠️ Nova cascata v2.0
+            # ⚡ CHAMA A CASCATA v3.0 COM prova_id e aluno_id
             resultado = corrigir_com_gemini_com_padrao(
                 imagem_base64, padrao_gabarito, nome_aluno,
-                serie, tipo_questoes, disciplina, bncc=bncc_gabarito
+                serie, tipo_questoes, disciplina, bncc=bncc_gabarito,
+                prova_id=prova_id, aluno_id=aluno_id
             )
 
             if resultado.get('erro'):
@@ -2113,7 +2075,6 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
 
-            # Salva no histórico
             try:
                 conn = get_db_connection()
                 if conn:
@@ -2168,7 +2129,6 @@ def corrigir_com_ia():
             resultado['disciplina'] = disciplina
             resultado['bncc'] = bncc_gabarito
 
-            # Salva cache
             set_cache_correcao(cache_key, resultado)
 
             return jsonify(resultado)
@@ -2192,8 +2152,6 @@ def corrigir_lote():
             return jsonify({'erro': 'Envie entre 1 e 20 cartões'}), 400
         if len(itens) > 20:
             return jsonify({'erro': 'Máximo de 20 cartões por lote'}), 400
-
-        logging.info(f"📦 Lote: processando {len(itens)} cartões")
 
         gabaritos_cache = {}
         conn = get_db_connection()
@@ -2287,7 +2245,8 @@ def corrigir_lote():
 
                 resultado = corrigir_com_gemini_com_padrao(
                     imagem, padrao_gabarito, nome_aluno, serie,
-                    tipo_questoes, disciplina, bncc=bncc_gabarito
+                    tipo_questoes, disciplina, bncc=bncc_gabarito,
+                    prova_id=prova_id, aluno_id=aluno_id
                 )
 
                 if resultado.get('erro'):
@@ -2312,7 +2271,6 @@ def corrigir_lote():
                 })
 
         sucessos = sum(1 for r in resultados if r.get('sucesso'))
-        logging.info(f"✅ Lote concluído: {sucessos}/{len(resultados)} sucessos")
 
         return jsonify({
             'resultados': resultados,
@@ -2343,9 +2301,6 @@ def corrigir_manual():
 
         if not prova_id or not aluno_id:
             return jsonify({'erro': 'Prova e aluno são obrigatórios'}), 400
-
-        if total and len(respostas) != total:
-            return jsonify({'erro': f'Número de respostas ({len(respostas)}) ≠ total ({total})'}), 400
 
         conn = get_db_connection()
         if not conn:
@@ -3666,6 +3621,7 @@ def excluir_aluno(id):
 
         cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
         cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
+        cur.execute("DELETE FROM cartoes_template WHERE aluno_id = %s", (id,))
         cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
 
         conn.commit()
@@ -3873,6 +3829,7 @@ def excluir_prova(id):
 
         cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
+        cur.execute("DELETE FROM cartoes_template WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM provas WHERE id = %s", (id,))
 
         conn.commit()
@@ -4171,7 +4128,7 @@ def dashboard_conceito():
 
 
 # ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
+# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA (v3.0 ALINHADO)
 # ============================================
 
 @app.route('/api/gerar_gabarito', methods=['POST'])
@@ -4220,9 +4177,10 @@ def gerar_gabarito():
         titulo_prova = prova.get('titulo', 'Prova')
 
         tipo_questoes = int(prova.get('tipo_questoes', 4))
-        alternativas = ['A', 'B', 'C', 'D'][:tipo_questoes]
+        alternativas = ['A', 'B', 'C', 'D', 'E'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
+        # Layout de colunas
         if quantidade_questoes <= 12:
             q_por_coluna = quantidade_questoes
             num_colunas = 1
@@ -4233,56 +4191,56 @@ def gerar_gabarito():
             q_por_coluna = 15
             num_colunas = 2
 
-        circle_size = 26
-        circle_spacing = 10
-        row_height = 40
+        # ═══ GERA E SALVA O MAPA DO TEMPLATE ═══
+        mapa_template = gerar_mapa_template_padrao(
+            quantidade_questoes, alternativas, num_colunas
+        )
 
-        mapa_template = gerar_mapa_template_padrao(quantidade_questoes, alternativas, num_colunas)
-        mapa_template_json = json.dumps(mapa_template)
+        salvar_mapa_template(
+            prova_id, aluno_id, tipo_questoes, quantidade_questoes,
+            num_colunas, mapa_template
+        )
 
+        logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
+
+        # ═══ HTML DO CARTÃO — LAYOUT CALIBRADO ═══
         html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartão Resposta - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-
+        
         @page {{
             size: A4 portrait;
-            margin: 6mm 5mm;
+            margin: 0;
         }}
-
+        
         body {{
-            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-family: Arial, sans-serif;
             background: #f5f5f5;
             padding: 10px;
             display: flex;
             justify-content: center;
         }}
-
+        
         .folha {{
             width: 210mm;
-            min-height: 297mm;
-            background: #ffffff;
-            padding: 4mm;
+            height: 297mm;
+            background: #fff;
             position: relative;
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }}
-
+        
+        /* ═══ MARCADORES ═══ */
         .fiducial {{
             position: absolute;
             width: 10mm;
             height: 10mm;
-            background: #000000;
-            z-index: 10;
+            background: #000;
+            z-index: 100;
         }}
-        .fiducial-tl {{ top: 38mm; left: 5mm; }}
-        .fiducial-tr {{ top: 38mm; right: 5mm; }}
-        .fiducial-bl {{ bottom: 5mm; left: 5mm; }}
-        .fiducial-br {{ bottom: 5mm; right: 5mm; }}
-
         .fiducial::after {{
             content: '';
             position: absolute;
@@ -4291,166 +4249,186 @@ def gerar_gabarito():
             transform: translate(-50%, -50%);
             width: 4mm;
             height: 4mm;
-            background: #ffffff;
+            background: #fff;
             border-radius: 50%;
         }}
-
-        .header {{
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 6px;
-            margin: 24mm 0 6px 0;
+        
+        .fiducial-tl {{ top: 38mm; left: 5mm; }}
+        .fiducial-tr {{ top: 38mm; right: 5mm; }}
+        .fiducial-bl {{ bottom: 5mm; left: 5mm; }}
+        .fiducial-br {{ bottom: 5mm; right: 5mm; }}
+        
+        /* ═══ ÁREA ÚTIL (ENTRE MARCADORES) ═══ */
+        /* Marcador tem 10mm × 10mm */
+        /* Área útil: 210-5-5-10-10 = 180mm largura */
+        /*            297-38-5-10-10 = 234mm altura */
+        .area-util {{
+            position: absolute;
+            top: 48mm;
+            left: 15mm;
+            width: 180mm;
+            height: 234mm;
+            display: flex;
+            flex-direction: column;
         }}
-        .header h1 {{
-            font-size: 11px;
-            color: #000;
+        
+        /* ═══ HEADER (24% do topo) ═══ */
+        .header-bloco {{
+            height: 24%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 2mm;
+            border-bottom: 1.5px solid #000;
+        }}
+        
+        .header-titulo {{
+            font-size: 8pt;
             font-weight: bold;
+            text-align: center;
             letter-spacing: 0.5px;
         }}
-        .header h2 {{
-            font-size: 14px;
-            color: #000;
+        .header-cartao {{
+            font-size: 12pt;
             font-weight: 900;
-            margin-top: 3px;
+            text-align: center;
             border: 2px solid #000;
             display: inline-block;
-            padding: 2px 16px;
+            padding: 1mm 6mm;
+            margin: 1mm auto;
         }}
-        .header .prova {{
-            font-size: 11px;
-            color: #000;
+        .header-prova {{
+            font-size: 8pt;
             font-weight: bold;
-            margin-top: 4px;
+            text-align: center;
+            margin-top: 1mm;
         }}
-        .header .escola {{
-            font-size: 9px;
+        .header-escola {{
+            font-size: 7pt;
+            text-align: center;
             color: #333;
-            margin-top: 2px;
         }}
-
+        
         .info-aluno {{
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px;
-            border: 2px solid #000;
-            padding: 6px 10px;
-            margin-bottom: 6px;
-            font-size: 10px;
+            gap: 2mm;
+            padding: 1mm 0;
+            font-size: 7pt;
+            margin-top: 1mm;
         }}
-        .info-aluno .campo {{
-            display: flex;
-            gap: 6px;
-        }}
-        .info-aluno .campo strong {{
-            color: #000;
+        .info-aluno strong {{
             font-weight: 900;
         }}
-
+        
         .instrucoes {{
-            border: 2px solid #000;
-            padding: 4px 10px;
-            margin-bottom: 8px;
-            font-size: 9px;
+            font-size: 6pt;
             font-weight: bold;
             text-align: center;
+            padding: 0.8mm;
             background: #f0f0f0;
+            border: 1px solid #999;
+            margin-top: 0.5mm;
         }}
-
-        .questoes-container {{
+        
+        /* ═══ QUESTÕES (68% do meio) ═══ */
+        .questoes-bloco {{
+            flex: 1;
             display: grid;
             grid-template-columns: repeat({num_colunas}, 1fr);
-            gap: 8px;
-            border: 2px solid #000;
-            padding: 8px;
+            gap: 4mm;
+            padding: 3mm 0;
+            min-height: 0;
         }}
-
+        
         .coluna-questoes {{
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            justify-content: space-between;
+            height: 100%;
+            min-height: 0;
         }}
-
+        
         .linha-questao {{
             display: flex;
             align-items: center;
-            height: {row_height}px;
-            padding: 0 4px;
-            border-bottom: 1px dashed #ccc;
-            gap: 8px;
+            height: {100 / max(q_por_coluna, 1):.4f}%;
+            gap: 2mm;
+            min-height: 0;
         }}
-        .linha-questao:last-child {{
-            border-bottom: none;
-        }}
-
+        
         .num-questao {{
-            font-size: 12px;
+            font-size: 9pt;
             font-weight: 900;
-            color: #000;
-            min-width: 24px;
+            min-width: 8mm;
             text-align: right;
-            padding-right: 4px;
-            border-right: 2px solid #000;
+            border-right: 1.5px solid #000;
+            padding-right: 1mm;
+            line-height: 1;
         }}
-
+        
         .alternativas {{
             display: flex;
-            gap: {circle_spacing}px;
-            justify-content: space-around;
             flex: 1;
+            justify-content: space-around;
+            align-items: center;
         }}
-
+        
         .bolha {{
-            width: {circle_size}px;
-            height: {circle_size}px;
-            border: 2.5px solid #000000;
+            width: 7mm;
+            height: 7mm;
+            border: 2px solid #000;
             border-radius: 50%;
-            background: #ffffff;
+            background: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 9pt;
             font-weight: 900;
-            color: #000000;
-            font-family: 'Arial', sans-serif;
+            color: #000;
             flex-shrink: 0;
             line-height: 1;
-            user-select: none;
         }}
-
-        .rodape {{
-            margin-top: 8px;
+        
+        /* ═══ RODAPÉ (8%) ═══ */
+        .rodape-bloco {{
+            height: 8%;
             display: flex;
             justify-content: space-between;
-            font-size: 7px;
+            align-items: flex-end;
+            font-size: 5pt;
             color: #666;
             border-top: 1px solid #ccc;
-            padding-top: 4px;
+            padding-top: 1mm;
         }}
-
+        
         .btn-print {{
-            display: block;
-            width: 100%;
-            margin-top: 8px;
-            padding: 10px;
+            position: absolute;
+            bottom: 5mm;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 3mm 10mm;
             background: #000;
             color: #fff;
             border: none;
-            font-size: 13px;
+            font-size: 11pt;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 2mm;
         }}
-        .btn-print:hover {{
-            background: #333;
-        }}
-
+        
         @media print {{
             body {{ background: #fff; padding: 0; }}
             .folha {{ box-shadow: none; }}
             .btn-print {{ display: none; }}
-            .fiducial {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
-            .fiducial::after {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
-            .bolha {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
+            .fiducial, .fiducial::after {{ 
+                print-color-adjust: exact; 
+                -webkit-print-color-adjust: exact; 
+            }}
+            .bolha {{ 
+                print-color-adjust: exact; 
+                -webkit-print-color-adjust: exact; 
+            }}
         }}
     </style>
 </head>
@@ -4460,24 +4438,27 @@ def gerar_gabarito():
         <div class="fiducial fiducial-tr"></div>
         <div class="fiducial fiducial-bl"></div>
         <div class="fiducial fiducial-br"></div>
-
-        <div class="header">
-            <h1>SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</h1>
-            <h2>CARTÃO RESPOSTA</h2>
-            <div class="prova">{titulo_prova}</div>
-            <div class="escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
-        </div>
-
-        <div class="info-aluno">
-            <div class="campo"><strong>Aluno(a):</strong> <span>{nome_aluno}</span></div>
-            <div class="campo"><strong>Data:</strong> <span>{datetime.now().strftime('%d/%m/%Y')}</span></div>
-        </div>
-
-        <div class="instrucoes">
-            ⚠️ PREENCHA COMPLETAMENTE A BOLHA COM A LETRA DA RESPOSTA — CANETA PRETA OU AZUL — NÃO RASURE
-        </div>
-
-        <div class="questoes-container">
+        
+        <div class="area-util">
+            <div class="header-bloco">
+                <div class="header-titulo">SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</div>
+                <div style="text-align: center;">
+                    <div class="header-cartao">CARTÃO RESPOSTA</div>
+                </div>
+                <div class="header-prova">{titulo_prova}</div>
+                <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
+                
+                <div class="info-aluno">
+                    <span><strong>Aluno(a):</strong> {nome_aluno}</span>
+                    <span><strong>Data:</strong> {datetime.now().strftime('%d/%m/%Y')}</span>
+                </div>
+                
+                <div class="instrucoes">
+                    ⚠️ PREENCHA COMPLETAMENTE A BOLHA — CANETA PRETA OU AZUL — NÃO RASURE
+                </div>
+            </div>
+            
+            <div class="questoes-bloco">
 """
 
         for col in range(num_colunas):
@@ -4490,36 +4471,34 @@ def gerar_gabarito():
             html += '<div class="coluna-questoes">'
 
             for i in range(inicio, fim):
-                html += f"""
-                    <div class="linha-questao">
-                        <div class="num-questao">{i+1:02d}</div>
-                        <div class="alternativas">
-"""
+                html += f'''
+                <div class="linha-questao">
+                    <div class="num-questao">{i+1:02d}</div>
+                    <div class="alternativas">
+'''
                 for alt in alternativas:
-                    html += f"""
-                            <span class="bolha">{alt}</span>
-"""
-                html += """
-                        </div>
+                    html += f'<span class="bolha">{alt}</span>'
+                html += '''
                     </div>
-"""
+                </div>
+'''
 
             html += '</div>'
 
-        html += f"""
+        html += f'''
+            </div>
+            
+            <div class="rodape-bloco">
+                <span>Gerado por CorrigePro — {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+                <span>Página 1/1</span>
+            </div>
         </div>
-
-        <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR CARTÃO RESPOSTA</button>
-
-        <div class="rodape">
-            <span>Gerado pelo sistema CorrigePro — {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
-            <span>Página 1/1</span>
-        </div>
+        
+        <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
     </div>
-    <script id="template-map" type="application/json">{mapa_template_json}</script>
 </body>
 </html>
-"""
+'''
         return html, 200, {'Content-Type': 'text/html'}
 
     except Exception as e:
@@ -4779,15 +4758,7 @@ def index():
     except Exception:
         return jsonify({
             'mensagem': 'CorrigePro API',
-            'status': 'online',
-            'endpoints': [
-                '/health', '/api/login', '/api/corrigir', '/api/corrigir-lote',
-                '/api/corrigir_manual', '/api/corrigir_redacao', '/api/salvar_correcao_texto',
-                '/api/correcoes_texto', '/api/escolas', '/api/turmas', '/api/alunos',
-                '/api/provas', '/api/gabaritos', '/api/historico',
-                '/api/historico/agrupado', '/api/dashboard', '/api/dashboard/Conceito',
-                '/api/gerar_gabarito', '/api/backup', '/api/usuarios', '/api/matrizes'
-            ]
+            'status': 'online'
         })
 
 
@@ -4812,7 +4783,7 @@ def health_check():
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v2.0 (template → opencv → ia com validação)'
+        'correcao': 'cascata v3.0 (mapa exato do banco)'
     })
 
 
@@ -5051,6 +5022,26 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
+        # ═══ CRIA TABELA cartoes_template (SEMPRE verifica) ═══
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS cartoes_template (
+                id SERIAL PRIMARY KEY,
+                prova_id INTEGER REFERENCES provas(id) ON DELETE CASCADE,
+                aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+                tipo_questoes INTEGER NOT NULL,
+                quantidade_questoes INTEGER NOT NULL,
+                num_colunas INTEGER NOT NULL,
+                mapa_template JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(prova_id, aluno_id)
+            )
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_cartoes_template_prova_aluno
+            ON cartoes_template(prova_id, aluno_id)
+        """)
+        print("✅ Tabela cartoes_template pronta")
+
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
@@ -5097,22 +5088,19 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 INICIANDO SERVIDOR CORRIGEPRO (CASCATA v2.0 CONFIÁVEL)")
+    print("🚀 SERVIDOR CORRIGEPRO v3.0 — CARTÃO ALINHADO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
     print(f"🤖 OpenAI (ChatGPT): {'✅ Disponível' if OPENAI_AVAILABLE else '❌ Indisponível'}")
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
-    print(f"🤖 RelayFreeLLM: {'✅ Disponível' if RELAY_AVAILABLE else '❌ Indisponível'}")
     print("=" * 60)
-    print("📋 CASCATA DE CORREÇÃO (v2.0 - CONFIÁVEL):")
-    print("   1️⃣ Template Mapping (fonte de verdade — geometria exata)")
-    print("   2️⃣ OpenCV HoughCircles (validação — nunca sobrescreve)")
-    print("   3️⃣ IA OpenAI (APENAS quando tudo falhou + validação pós-IA)")
-    print("   ✅ IA retorna null quando não tem certeza (não chuta!)")
-    print("   ✅ Resposta suspeita da IA é rejeitada automaticamente")
-    print("   ✅ Cache persistente no PostgreSQL")
+    print("🎯 NOVA ARQUITETURA v3.0:")
+    print("   ✅ Cartão HTML e mapa de template ALINHADOS matematicamente")
+    print("   ✅ Mapa salvo no banco quando o cartão é gerado")
+    print("   ✅ Correção usa o mapa EXATO do cartão do aluno")
+    print("   ✅ Impossível ler lugar errado!")
     print("=" * 60)
 
     init_db()
