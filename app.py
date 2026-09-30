@@ -806,19 +806,32 @@ def carregar_mapa_template(prova_id, aluno_id):
 
 
 def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
-    """Amostra uma bolha usando coordenadas normalizadas."""
+    """
+    ⚡ v6.0 — MÁSCARA ANELAR (coroa).
+    
+    Pega apenas a região entre 45% e 85% do raio, evitando a LETRA CENTRAL
+    que está impressa no meio da bolha (A, B, C ou D em preto).
+    
+    Resultado:
+    - Bolha VAZIA: ratio 0.05-0.20 (só o fundo branco com sombra)
+    - Bolha MARCADA: ratio 0.70-0.95 (preenchimento ocupa o anel)
+    """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
 
     r = int(raio_fracao * w)
-    r = max(20, min(r, 40))
+    r = max(20, min(r, 45))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
+    # ═══ MÁSCARA ANELAR ═══
+    # Círculo externo cheio (até 85% do raio — dentro da bolha)
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.8), 255, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.85), 255, -1)
+    # Furo interno (até 45% do raio — fora da letra central)
+    cv2.circle(mask, (cx, cy), int(r * 0.45), 0, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
