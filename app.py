@@ -34,13 +34,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ============================================
 # CACHE PERSISTENTE DE CORREÇÕES (PostgreSQL)
 # ============================================
-CORRECOES_CACHE_TTL_HORAS = 168
-
-# ⚡ DEBUG: CACHE DESATIVADO TEMPORARIAMENTE
-CACHE_ENABLED = False
+CORRECOES_CACHE_TTL_HORAS = 168  # 7 dias
 
 
 def init_cache_table():
+    """Cria a tabela de cache se não existir"""
     conn = get_db_connection()
     if not conn:
         return
@@ -58,6 +56,10 @@ def init_cache_table():
             CREATE INDEX IF NOT EXISTS idx_correcoes_cache_hash 
             ON correcoes_cache(chave_hash, created_at DESC)
         """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_correcoes_cache_created 
+            ON correcoes_cache(created_at DESC)
+        """)
         conn.commit()
         cur.close()
         conn.close()
@@ -71,8 +73,7 @@ def get_cache_key(imagem_hash, prova_id, aluno_id):
 
 
 def get_cache_correcao(chave):
-    if not CACHE_ENABLED:
-        return None
+    """Busca correção no cache persistente"""
     conn = get_db_connection()
     if not conn:
         return None
@@ -97,8 +98,7 @@ def get_cache_correcao(chave):
 
 
 def set_cache_correcao(chave, resultado):
-    if not CACHE_ENABLED:
-        return
+    """Salva correção no cache persistente"""
     conn = get_db_connection()
     if not conn:
         return
@@ -116,6 +116,7 @@ def set_cache_correcao(chave, resultado):
 
 
 def limpar_cache_antigo():
+    """Remove entradas antigas do cache"""
     conn = get_db_connection()
     if not conn:
         return
@@ -161,10 +162,15 @@ try:
         print("⚠️ OPENAI_API_KEY não encontrada ou inválida no .env")
 except ImportError as e:
     print(f"❌ Erro ao importar openai: {e}")
+    print("💡 Execute: pip install openai")
     OPENAI_AVAILABLE = False
 except Exception as e:
     print(f"⚠️ Erro ao configurar OpenAI: {e}")
     OPENAI_AVAILABLE = False
+
+# ============================================
+# CONFIGURAÇÃO RELAYFREELLM
+# ============================================
 
 RELAY_AVAILABLE = False
 RELAY_API_URL = os.getenv('RELAY_API_URL', '')
@@ -178,6 +184,10 @@ try:
 except Exception as e:
     print(f"⚠️ RelayFreeLLM não disponível: {e}")
     RELAY_AVAILABLE = False
+
+# ============================================
+# CONFIGURAÇÃO DO BANCO DE DADOS
+# ============================================
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 DB_POOL = None
@@ -259,11 +269,19 @@ def get_db_connection():
         return None
 
 
+# ============================================
+# USUÁRIOS FIXOS
+# ============================================
+
 USUARIOS_FIXOS = {
     'admin': {'senha': 'admin', 'perfil': 'admin', 'nome': 'Administrador'},
     'usuario': {'senha': '123', 'perfil': 'usuario', 'nome': 'Usuário'},
     'professor1': {'senha': '123', 'perfil': 'usuario', 'nome': 'Professor 1'}
 }
+
+# ============================================
+# FUNÇÕES AUXILIARES
+# ============================================
 
 
 def calcular_conceito(porcentagem):
@@ -488,60 +506,68 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 # ============================================
 
 def detectar_marcadores_fiduciais(gray):
-    """Detecta os 4 marcadores fiduciais nos cantos do cartão."""
+    """
+    Detecta os 4 marcadores fiduciais nos cantos do cartão.
+    
+    VERSÃO v3.1 — Corrigida: area_min/area_max fora do if hierarquia.
+    """
     try:
         altura, largura = gray.shape
         logging.info(f"🔍 Procurando marcadores em {largura}x{altura}...")
-
+        
         area_imagem = largura * altura
+        
+        # ═══ LIMITES DE ÁREA (usados nos 2 métodos) ═══
         area_min = area_imagem * 0.0015
         area_max = area_imagem * 0.05
-
+        
         candidatos = []
-
+        
+        # ═══ MÉTODO 1: Threshold + contornos com hierarquia ═══
         _, binaria = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
-
+        
         contornos, hierarquia = cv2.findContours(
             binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
-
+        
         if hierarquia is not None and len(contornos) > 0:
             hierarquia = hierarquia[0]
-
+            
             for i, c in enumerate(contornos):
                 x, y, w, h = cv2.boundingRect(c)
                 area = w * h
-
+                
                 if not (area_min < area < area_max):
                     continue
-
+                
                 aspect = w / float(h) if h > 0 else 0
                 if not (0.6 < aspect < 1.5):
                     continue
-
+                
                 area_contorno = cv2.contourArea(c)
                 if area_contorno < area * 0.3:
                     continue
-
+                
                 roi = binaria[y:y+h, x:x+w]
                 densidade = cv2.countNonZero(roi) / float(w * h)
-
+                
                 tem_filho = False
                 if i < len(hierarquia):
                     filho_idx = hierarquia[i][2]
                     if filho_idx != -1:
                         tem_filho = True
-
+                
                 if densidade > 0.6 or (tem_filho and densidade > 0.3):
                     candidatos.append((x, y, w, h, area, densidade, tem_filho))
-
+        
         logging.info(f"🔍 Encontrados {len(candidatos)} candidatos (método 1)")
-
+        
+        # ═══ MÉTODO 2 (FALLBACK): Threshold adaptativo ═══
         if len(candidatos) < 4:
             logging.info("🔄 Tentando método alternativo...")
-
+            
             binaria2 = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -550,92 +576,96 @@ def detectar_marcadores_fiduciais(gray):
             )
             kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
             binaria2 = cv2.morphologyEx(binaria2, cv2.MORPH_CLOSE, kernel2)
-
+            
             contornos2, _ = cv2.findContours(
                 binaria2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
-
+            
             for c in contornos2:
                 x, y, w, h = cv2.boundingRect(c)
                 area = w * h
-
+                
                 if not (area_min < area < area_max):
                     continue
-
+                
                 aspect = w / float(h) if h > 0 else 0
                 if not (0.5 < aspect < 2.0):
                     continue
-
+                
                 roi = binaria2[y:y+h, x:x+w]
                 densidade = cv2.countNonZero(roi) / float(w * h)
-
+                
                 if densidade > 0.4:
                     candidatos.append((x, y, w, h, area, densidade, False))
-
+            
             logging.info(f"🔍 Após método 2: {len(candidatos)} candidatos")
-
+        
         if len(candidatos) < 4:
             logging.warning(f"⚠️ Apenas {len(candidatos)} candidatos — falhou")
             return None
-
+        
+        # ═══ ORDENA E CLASSIFICA ═══
         candidatos.sort(key=lambda c: c[4], reverse=True)
         candidatos = candidatos[:20]
-
+        
         meia_largura = largura / 2
         meia_altura = altura / 2
-
+        
         tl = tr = bl = br = None
         tl_s = tr_s = bl_s = br_s = -1
-
+        
         for (x, y, w, h, a, d, furo) in candidatos:
             cx, cy = x + w // 2, y + h // 2
-
+            
             bonus_furo = 500 if furo else 0
-
+            
             if cx < meia_largura and cy < meia_altura:
                 score = bonus_furo + a / 1000 - (cx + cy) / 10
                 if score > tl_s:
                     tl = (cx, cy); tl_s = score
-
+            
             elif cx >= meia_largura and cy < meia_altura:
                 score = bonus_furo + a / 1000 - ((largura - cx) + cy) / 10
                 if score > tr_s:
                     tr = (cx, cy); tr_s = score
-
+            
             elif cx < meia_largura and cy >= meia_altura:
                 score = bonus_furo + a / 1000 - (cx + (altura - cy)) / 10
                 if score > bl_s:
                     bl = (cx, cy); bl_s = score
-
+            
             elif cx >= meia_largura and cy >= meia_altura:
                 score = bonus_furo + a / 1000 - ((largura - cx) + (altura - cy)) / 10
                 if score > br_s:
                     br = (cx, cy); br_s = score
-
+        
         if not all([tl, tr, bl, br]):
             logging.warning(f"⚠️ Não achou os 4 cantos: tl={tl} tr={tr} bl={bl} br={br}")
             return None
-
+        
+        # ═══ VALIDAÇÃO ═══
         largura_topo = ((tr[0] - tl[0]) ** 2 + (tr[1] - tl[1]) ** 2) ** 0.5
         largura_base = ((br[0] - bl[0]) ** 2 + (br[1] - bl[1]) ** 2) ** 0.5
         altura_esq = ((bl[0] - tl[0]) ** 2 + (bl[1] - tl[1]) ** 2) ** 0.5
         altura_dir = ((br[0] - tr[0]) ** 2 + (br[1] - tr[1]) ** 2) ** 0.5
-
+        
         dist_min = min(largura, altura) * 0.4
-
+        
         if largura_topo < dist_min or altura_esq < dist_min:
             logging.warning(
                 f"⚠️ Marcadores muito próximos: "
                 f"topo={largura_topo:.0f}px, esq={altura_esq:.0f}px (min={dist_min:.0f})"
             )
             return None
-
+        
         logging.info(f"✅ 4 marcadores detectados:")
         logging.info(f"   TL={tl}  TR={tr}")
         logging.info(f"   BL={bl}  BR={br}")
-
+        logging.info(f"   Largura: topo={largura_topo:.0f} base={largura_base:.0f}")
+        logging.info(f"   Altura: esq={altura_esq:.0f} dir={altura_dir:.0f}")
+        
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
-
+    
     except Exception as e:
         logging.error(f"❌ Erro detectar_marcadores: {e}")
         traceback.print_exc()
@@ -643,32 +673,37 @@ def detectar_marcadores_fiduciais(gray):
 
 
 def corrigir_perspectiva(img, marcadores):
-    """
-    Corrige perspectiva com DIMENSÕES FIXAS (1900x2440).
-    Garante que toda imagem corrigida tenha as mesmas proporções.
-    """
+    """Corrige a perspectiva da imagem usando os marcadores"""
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
         bl = marcadores['bl']
         br = marcadores['br']
 
-        LARGURA_TOTAL = 1900
-        ALTURA_TOTAL = 2440
-        MARGEM = 50
+        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        largura_max = max(int(largura_topo), int(largura_base))
+
+        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
+        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
+        altura_max = max(int(altura_esq), int(altura_dir))
+
+        margem = 30
+        largura_max += margem * 2
+        altura_max += margem * 2
 
         origem = np.float32([tl, tr, bl, br])
         destino = np.float32([
-            [MARGEM, MARGEM],
-            [LARGURA_TOTAL - MARGEM, MARGEM],
-            [MARGEM, ALTURA_TOTAL - MARGEM],
-            [LARGURA_TOTAL - MARGEM, ALTURA_TOTAL - MARGEM]
+            [margem, margem],
+            [largura_max - margem, margem],
+            [margem, altura_max - margem],
+            [largura_max - margem, altura_max - margem]
         ])
 
         matriz = cv2.getPerspectiveTransform(origem, destino)
-        img_corrigida = cv2.warpPerspective(img, matriz, (LARGURA_TOTAL, ALTURA_TOTAL))
+        img_corrigida = cv2.warpPerspective(img, matriz, (largura_max, altura_max))
 
-        logging.info(f"✅ Perspectiva corrigida (FIXA): {LARGURA_TOTAL}x{ALTURA_TOTAL}")
+        logging.info(f"✅ Perspectiva corrigida: {largura_max}x{altura_max}")
         return img_corrigida
 
     except Exception as e:
@@ -745,6 +780,7 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
 
 def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes, num_colunas, mapa_template):
+    """Salva o mapa do template no banco para uso futuro na correção."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -763,7 +799,7 @@ def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes,
                 quantidade_questoes = EXCLUDED.quantidade_questoes,
                 num_colunas = EXCLUDED.num_colunas,
                 created_at = CURRENT_TIMESTAMP
-        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes,
+        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes, 
               num_colunas, json.dumps(mapa_template)))
         conn.commit()
         cur.close()
@@ -777,6 +813,7 @@ def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes,
 
 
 def carregar_mapa_template(prova_id, aluno_id):
+    """Carrega o mapa do template do banco."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -805,33 +842,18 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
-    """
-    ⚡ v6.0 — MÁSCARA ANELAR (coroa).
-    
-    Pega apenas a região entre 45% e 85% do raio, evitando a LETRA CENTRAL
-    que está impressa no meio da bolha (A, B, C ou D em preto).
-    
-    Resultado:
-    - Bolha VAZIA: ratio 0.05-0.20 (só o fundo branco com sombra)
-    - Bolha MARCADA: ratio 0.70-0.95 (preenchimento ocupa o anel)
-    """
+def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
+    """Amostra uma bolha usando coordenadas normalizadas."""
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
-
-    r = int(raio_fracao * w)
-    r = max(20, min(r, 45))
+    r = max(8, min(int(raio_fracao * min(w, h)), 30))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
-    # ═══ MÁSCARA ANELAR ═══
-    # Círculo externo cheio (até 85% do raio — dentro da bolha)
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.85), 255, -1)
-    # Furo interno (até 45% do raio — fora da letra central)
-    cv2.circle(mask, (cx, cy), int(r * 0.45), 0, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.7), 255, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
@@ -841,9 +863,7 @@ def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
 
 
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
-    """
-    v5.0 — ADAPTATIVO: Detecta as bolhas REAIS do cartão e usa como referência.
-    """
+    """Corrige cartão usando mapa de posições normalizadas."""
     h, w = img_corrigida.shape[:2]
     gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
@@ -860,235 +880,26 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         blockSize=25, C=10
     )
 
-    # ═══════════════════════════════════════════════════════
-    # PASSO 1: DETECTAR BOLHAS REAIS POR HOUGHCIRCLES
-    # ═══════════════════════════════════════════════════════
-    gray_blur = cv2.GaussianBlur(gray_norm, (5, 5), 0)
+    por_questao = {}
+    for b in mapa_template:
+        por_questao.setdefault(b['questao'], []).append(b)
 
-    raio_esperado = int(h * 0.014)
-    raio_min = max(8, int(raio_esperado * 0.6))
-    raio_max = max(15, int(raio_esperado * 1.6))
-
-    circulos = cv2.HoughCircles(
-        gray_blur,
-        cv2.HOUGH_GRADIENT,
-        dp=1.0,
-        minDist=int(raio_esperado * 1.5),
-        param1=80,
-        param2=25,
-        minRadius=raio_min,
-        maxRadius=raio_max
-    )
-
-    bolhas_detectadas = []
-
-    if circulos is not None:
-        circulos = np.round(circulos[0, :]).astype("int")
-
-        for (x, y, r) in circulos:
-            if (x < w * 0.05 and y < h * 0.05) or \
-               (x > w * 0.95 and y < h * 0.05) or \
-               (x < w * 0.05 and y > h * 0.95) or \
-               (x > w * 0.95 and y > h * 0.95):
-                continue
-
-            mask = np.zeros(binaria.shape, dtype=np.uint8)
-            cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
-            roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-            total_px = cv2.countNonZero(mask)
-            if total_px == 0:
-                continue
-            ratio = cv2.countNonZero(roi) / total_px
-
-            bolhas_detectadas.append({
-                'x': int(x),
-                'y': int(y),
-                'r': int(r),
-                'ratio': float(ratio)
-            })
-
-    logging.info(f"🔍 HoughCircles: {len(bolhas_detectadas)} bolhas detectadas")
-    logging.info(f"   Raio esperado: {raio_esperado}px (min={raio_min}, max={raio_max})")
-
-    # ═══════════════════════════════════════════════════════
-    # PASSO 2: FALLBACK — Mapa teórico se poucas bolhas
-    # ═══════════════════════════════════════════════════════
-    if len(bolhas_detectadas) < len(mapa_template) * 0.5:
-        logging.warning(f"⚠️ Poucas bolhas detectadas ({len(bolhas_detectadas)}) — usando mapa teórico")
-
-        por_questao = {}
-        for b in mapa_template:
-            por_questao.setdefault(b['questao'], []).append(b)
-
-        respostas = []
-        confiancas = []
-        debug_info = []
-
-        for q in sorted(por_questao.keys()):
-            bolhas = por_questao[q]
-            medidas = []
-            for b in bolhas:
-                ratio = amostrar_bolha_template(binaria, b['x'], b['y'])
-                medidas.append((b['alternativa'], ratio, b))
-
-            medidas.sort(key=lambda m: m[1], reverse=True)
-            max_ratio = medidas[0][1]
-            min_ratio = medidas[-1][1]
-            separacao = max_ratio - min_ratio
-
-            if separacao > 0.50:
-                confianca = 98
-            elif separacao > 0.35:
-                confianca = 92
-            elif separacao > 0.20:
-                confianca = 80
-            elif separacao > 0.10:
-                confianca = 65
-            else:
-                confianca = 40
-
-            letra_escolhida = medidas[0][0]
-
-            # ⚡ CORREÇÃO #3: threshold 0.25
-            if max_ratio < 0.25:
-                respostas.append('')
-                confiancas.append(30)
-                debug_info.append({
-                    'questao': q, 'resposta': '', 'motivo': 'todas vazias',
-                    'medidas': [(m[0], round(m[1], 3)) for m in medidas]
-                })
-            else:
-                respostas.append(letra_escolhida)
-                confiancas.append(confianca)
-                debug_info.append({
-                    'questao': q, 'resposta': letra_escolhida,
-                    'confianca': confianca,
-                    'medidas': [(m[0], round(m[1], 3)) for m in medidas]
-                })
-
-        if debug:
-            return respostas, confiancas, debug_info
-        return respostas, confiancas
-
-    # ═══════════════════════════════════════════════════════
-    # PASSO 3: ORGANIZAR BOLHAS EM GRID
-    # ═══════════════════════════════════════════════════════
-    raios = [b['r'] for b in bolhas_detectadas]
-    raio_mediano = sorted(raios)[len(raios) // 2]
-
-    bolhas_detectadas = [
-        b for b in bolhas_detectadas
-        if raio_mediano * 0.7 <= b['r'] <= raio_mediano * 1.4
-    ]
-
-    logging.info(f"🔍 Após filtro de raio: {len(bolhas_detectadas)} bolhas")
-
-    bolhas_detectadas.sort(key=lambda b: b['y'])
-
-    ys = [b['y'] for b in bolhas_detectadas]
-    gaps = [ys[i+1] - ys[i] for i in range(len(ys)-1) if ys[i+1] - ys[i] > 5]
-
-    if gaps:
-        gaps.sort()
-        y_tol = gaps[0] * 0.5
-    else:
-        y_tol = 30
-
-    y_tol = max(15, min(y_tol, 60))
-
-    linhas = []
-    for b in bolhas_detectadas:
-        if not linhas:
-            linhas.append([b])
-            continue
-
-        linha_atual = linhas[-1]
-        y_media = sum(x['y'] for x in linha_atual) / len(linha_atual)
-
-        if abs(b['y'] - y_media) < y_tol:
-            linha_atual.append(b)
-        else:
-            linhas.append([b])
-
-    for linha in linhas:
-        linha.sort(key=lambda b: b['x'])
-
-    logging.info(f"🔍 Linhas detectadas: {len(linhas)}")
-
-    linhas = [l for l in linhas if len(l) >= 3]
-
-    logging.info(f"🔍 Linhas com 3+ bolhas: {len(linhas)}")
-
-    total_questoes = len(mapa_template) // len(alternativas)
-    num_alts = len(alternativas)
-
-    logging.info(f"🔍 Total questões no mapa: {total_questoes}, alternativas: {alternativas}")
-
-    # ═══════════════════════════════════════════════════════
-    # PASSO 4: MAPEAR CADA BOLHA A UMA QUESTÃO
-    # ═══════════════════════════════════════════════════════
     respostas = []
     confiancas = []
     debug_info = []
 
-    if len(linhas) < total_questoes:
-        logging.warning(f"⚠️ Apenas {len(linhas)} linhas para {total_questoes} questões")
-        respostas = [''] * total_questoes
-        confiancas = [30] * total_questoes
-        if debug:
-            return respostas, confiancas, []
-        return respostas, confiancas
-
-    linhas_usar = linhas[:total_questoes]
-
-    xs_todas = [b['x'] for b in bolhas_detectadas]
-
-    x_min = min(xs_todas)
-    x_max = max(xs_todas)
-    range_x = x_max - x_min
-
-    colunas = {letra: [] for letra in alternativas}
-
-    for x in xs_todas:
-        pos_rel = (x - x_min) / range_x if range_x > 0 else 0.5
-        idx = min(int(pos_rel * num_alts), num_alts - 1)
-        colunas[alternativas[idx]].append(x)
-
-    posicoes_colunas = {}
-    for letra in alternativas:
-        if colunas[letra]:
-            posicoes_colunas[letra] = sum(colunas[letra]) / len(colunas[letra])
-        else:
-            posicoes_colunas[letra] = x_min + (range_x / (num_alts - 1)) * alternativas.index(letra) if num_alts > 1 else x_min
-
-    logging.info(f"🔍 Posições colunas: {posicoes_colunas}")
-
-    for idx_linha, linha in enumerate(linhas_usar):
-        if idx_linha >= total_questoes:
-            break
-
+    for q in sorted(por_questao.keys()):
+        bolhas = por_questao[q]
         medidas = []
-
-        for letra in alternativas:
-            x_esperado = posicoes_colunas[letra]
-
-            melhor_bolha = None
-            melhor_dist = float('inf')
-
-            for b in linha:
-                dist = abs(b['x'] - x_esperado)
-                if dist < melhor_dist:
-                    melhor_dist = dist
-                    melhor_bolha = b
-
-            if melhor_bolha:
-                medidas.append((letra, melhor_bolha['ratio'], melhor_bolha))
-            else:
-                medidas.append((letra, 0.0, None))
+        for b in bolhas:
+            ratio = amostrar_bolha_template(binaria, b['x'], b['y'])
+            medidas.append((b['alternativa'], ratio, b))
 
         medidas.sort(key=lambda m: m[1], reverse=True)
-        max_ratio = medidas[0][1]
-        min_ratio = medidas[-1][1]
+        ratios = [m[1] for m in medidas]
+        min_ratio = min(ratios)
+        max_ratio = max(ratios)
+
         separacao = max_ratio - min_ratio
 
         if separacao > 0.50:
@@ -1103,25 +914,23 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
             confianca = 40
 
         letra_escolhida = medidas[0][0]
+        ratio_escolhida = medidas[0][1]
 
-        # ⚡ CORREÇÃO #3: threshold 0.25 (era 0.50)
-        if max_ratio < 0.25:
+        if ratio_escolhida < 0.30:
             respostas.append('')
             confiancas.append(30)
             debug_info.append({
-                'questao': idx_linha + 1, 'resposta': '', 'motivo': f'max_ratio={max_ratio:.2f} < 0.25',
+                'questao': q, 'resposta': '', 'motivo': 'todas vazias',
                 'medidas': [(m[0], round(m[1], 3)) for m in medidas]
             })
         else:
             respostas.append(letra_escolhida)
             confiancas.append(confianca)
             debug_info.append({
-                'questao': idx_linha + 1, 'resposta': letra_escolhida,
+                'questao': q, 'resposta': letra_escolhida,
                 'confianca': confianca,
                 'medidas': [(m[0], round(m[1], 3)) for m in medidas]
             })
-
-    logging.info(f"✅ Template ADAPTATIVO: {sum(1 for r in respostas if r)}/{total_questoes} detectadas")
 
     if debug:
         return respostas, confiancas, debug_info
@@ -1129,6 +938,7 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
 
 
 def preparar_imagem_para_template(imagem_base64):
+    """Decodifica imagem, detecta marcadores e corrige perspectiva."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -1203,22 +1013,15 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     )
 
     nao_vazias = [r for r in respostas if r]
-
-    logging.info("=" * 60)
-    logging.info(f"🔬 TEMPLATE RESULTADO FINAL:")
-    logging.info(f"   Respostas: {respostas}")
-    logging.info(f"   Não vazias: {len(nao_vazias)}/{total_questoes}")
-    logging.info("=" * 60)
-
-    # ⚡ CORREÇÃO #1: Aceita Template SEMPRE (0 respostas incluído para cartão em branco)
-    if len(nao_vazias) >= 8 and len(set(nao_vazias)) == 1:
-        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}' — rejeitando")
+    if len(nao_vazias) < total_questoes * 0.3:
+        logging.warning(f"⚠️ Template: apenas {len(nao_vazias)}/{total_questoes} detectadas")
         return None
 
-    if len(nao_vazias) == 0:
-        logging.info("✅ Template: 0 respostas (cartão em branco) — ACEITANDO")
+    if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
+        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}'")
+        return None
 
-    logging.info(f"✅ Template Mapping ACEITO: {len(nao_vazias)}/{total_questoes} detectadas")
+    logging.info(f"✅ Template Mapping: {len(nao_vazias)}/{total_questoes} detectadas")
     return {
         'respostas': respostas,
         'confiancas': confiancas,
@@ -1227,11 +1030,11 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
 
 
 # ============================================
-# DETECÇÃO DE BOLHAS (OPENCV - FALLBACK DESATIVADO)
+# DETECÇÃO DE BOLHAS (OPENCV - FALLBACK)
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
-    """Detecção OpenCV (mantida mas não usada como fallback)."""
+    """Detecta TODAS as bolhas E calcula posições das colunas."""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -1426,8 +1229,12 @@ def detectar_circulos_preenchidos(imagem_base64):
         return [], {}
 
 
+# ============================================
+# ORGANIZAÇÃO DE RESPOSTAS (OPENCV)
+# ============================================
+
 def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
-    """Organiza respostas do OpenCV."""
+    """Organiza as respostas usando a letra calculada pela posição X"""
     if not circulos:
         return [''] * total_questoes, [0] * total_questoes
 
@@ -1545,6 +1352,7 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
 # ============================================
 
 def preprocessar_imagem_para_ia(imagem_base64):
+    """Prepara imagem para IA com normalização de iluminação."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -1810,6 +1618,7 @@ def _parse_confiancas_ia(texto, total_esperado):
 
 
 def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
+    """Valida se a resposta da IA é plausível."""
     if not respostas:
         return True, "Resposta vazia"
 
@@ -1850,6 +1659,7 @@ def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
 
 def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
                               serie, disciplina, tipo_questoes, aviso_extra=None):
+    """Executa chamada OpenAI com retry em caso de resposta vazia."""
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
 
@@ -1877,6 +1687,7 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
         }
     ]
 
+    # ═══ TENTA 3 VEZES ═══
     for tentativa in range(1, 4):
         try:
             logging.info(f"🤖 OpenAI tentativa {tentativa}/3...")
@@ -2003,15 +1814,13 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CORREÇÃO — v4.1
+# FUNÇÃO PRINCIPAL DE CORREÇÃO
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
-    """
-    CASCATA v4.1 — Template com PRIORIDADE ABSOLUTA, OpenCV DESATIVADO.
-    """
+    """CASCATA DE CONFIANÇA v3.0"""
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -2019,11 +1828,9 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
 
     try:
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 1: TEMPLATE MAPPING (PRIORIDADE ABSOLUTA)
-        # ═══════════════════════════════════════════════════════
+        # ETAPA 1: TEMPLATE MAPPING
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 1: Template Mapping (PRIORIDADE ABSOLUTA)")
+        logging.info("📌 ETAPA 1: Template Mapping (mapa exato do banco)")
         logging.info("=" * 60)
 
         resultado_template = None
@@ -2039,36 +1846,125 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         if resultado_template:
             resp_tm = resultado_template['respostas']
             confs_tm = resultado_template['confiancas']
+            conf_media_tm = sum(confs_tm) / len(confs_tm) if confs_tm else 0
+            conf_min_tm = min(confs_tm) if confs_tm else 0
             detectadas_tm = sum(1 for r in resp_tm if r)
 
-            logging.info(
-                f"✅ Template retornou: detectadas={detectadas_tm}/{total_questoes}"
-            )
-            logging.info(f"📋 Respostas Template: {resp_tm}")
-            logging.info(f"📋 Confianças Template: {confs_tm}")
+            if (conf_media_tm >= 75 and conf_min_tm >= 55
+                    and detectadas_tm >= total_questoes * 0.7):
+                logging.info(
+                    f"✅ Template aprovado — média={conf_media_tm:.1f}%, "
+                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
+                )
+                return calcular_resultado_correcao(
+                    resp_tm, gabarito, aluno_nome, serie,
+                    disciplina, tipo_questoes, 'template',
+                    bncc=bncc, confiancas=confs_tm
+                )
+            else:
+                logging.info(
+                    f"⚠️ Template inseguro — média={conf_media_tm:.1f}%, "
+                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
+                )
 
-            # ⚡ CORREÇÃO #1: Aceita Template com 0+ respostas
-            logging.info("🎯 USANDO TEMPLATE (OpenCV ignorado!)")
-            return calcular_resultado_correcao(
-                resp_tm, gabarito, aluno_nome, serie,
-                disciplina, tipo_questoes, 'template',
-                bncc=bncc, confiancas=confs_tm
-            )
-        else:
-            logging.warning("⚠️ Template retornou None — caindo para IA")
-
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 2: OPENCV — DESATIVADO INTENCIONALMENTE
-        # ═══════════════════════════════════════════════════════
+        # ETAPA 2: OPENCV
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 2: OpenCV — DESATIVADO (Template adaptativo é mais preciso)")
+        logging.info("📌 ETAPA 2: OpenCV (validação)")
         logging.info("=" * 60)
 
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 3: IA (último recurso)
-        # ═══════════════════════════════════════════════════════
+        respostas_cv = [''] * total_questoes
+        confs_cv = [0] * total_questoes
+        valido_cv = False
+
+        try:
+            circulos, posicoes_colunas = detectar_circulos_preenchidos(imagem_base64)
+            if circulos and len(circulos) >= 4:
+                respostas_cv, confs_cv = organizar_respostas_por_posicao(
+                    circulos, total_questoes, posicoes_colunas
+                )
+                detectadas_cv = len([r for r in respostas_cv if r])
+                if detectadas_cv >= total_questoes * 0.5:
+                    nao_vazias_cv = [r for r in respostas_cv if r]
+                    if len(set(nao_vazias_cv)) >= 2:
+                        valido_cv = True
+                        logging.info(f"✅ OpenCV OK — {detectadas_cv}/{total_questoes}")
+        except Exception as e:
+            logging.warning(f"⚠️ OpenCV falhou: {e}")
+
+        # ETAPA 3: DECISÃO
+        if resultado_template and valido_cv:
+            resp_tm = resultado_template['respostas']
+            confs_tm = resultado_template['confiancas']
+
+            iguais = 0
+            total_comp = 0
+            for i in range(total_questoes):
+                r1 = resp_tm[i] if i < len(resp_tm) else ''
+                r2 = respostas_cv[i] if i < len(respostas_cv) else ''
+                if r1 and r2:
+                    total_comp += 1
+                    if r1 == r2:
+                        iguais += 1
+
+            concordancia = iguais / total_comp if total_comp > 0 else 0
+            logging.info(f"📊 Concordância Template vs OpenCV: {concordancia*100:.1f}%")
+
+            if concordancia >= 0.80 and total_comp >= total_questoes * 0.6:
+                respostas_fusao = []
+                confs_fusao = []
+                for i in range(total_questoes):
+                    r_tm = resp_tm[i] if i < len(resp_tm) else ''
+                    r_cv = respostas_cv[i] if i < len(respostas_cv) else ''
+                    c_tm = confs_tm[i] if i < len(confs_tm) else 0
+                    c_cv = confs_cv[i] if i < len(confs_cv) else 0
+
+                    if r_tm and r_cv and r_tm == r_cv:
+                        respostas_fusao.append(r_tm)
+                        confs_fusao.append(min(99, max(c_tm, c_cv) + 5))
+                    elif r_tm:
+                        respostas_fusao.append(r_tm)
+                        confs_fusao.append(c_tm)
+                    else:
+                        respostas_fusao.append(r_cv)
+                        confs_fusao.append(c_cv)
+
+                logging.info("✅ Fusão Template+OpenCV")
+                return calcular_resultado_correcao(
+                    respostas_fusao, gabarito, aluno_nome, serie,
+                    disciplina, tipo_questoes, 'template+cv',
+                    bncc=bncc, confiancas=confs_fusao
+                )
+
+        # ETAPA 4: TEMPLATE ISOLADO
+        if resultado_template:
+            confs_tm = resultado_template['confiancas']
+            conf_media = sum(confs_tm) / len(confs_tm) if confs_tm else 0
+            conf_min = min(confs_tm) if confs_tm else 0
+            detectadas = sum(1 for r in resultado_template['respostas'] if r)
+
+            if (conf_media >= 55 and conf_min >= 30
+                    and detectadas >= total_questoes * 0.5):
+                logging.info(f"✅ Template isolado — média={conf_media:.1f}%")
+                return calcular_resultado_correcao(
+                    resultado_template['respostas'], gabarito, aluno_nome, serie,
+                    disciplina, tipo_questoes, 'template',
+                    bncc=bncc, confiancas=confs_tm
+                )
+
+        # ETAPA 5: OPENCV ISOLADO
+        if valido_cv:
+            conf_media_cv = sum(confs_cv) / len(confs_cv) if confs_cv else 0
+            if conf_media_cv >= 55:
+                logging.info(f"✅ OpenCV isolado (conf={conf_media_cv:.1f}%)")
+                return calcular_resultado_correcao(
+                    respostas_cv, gabarito, aluno_nome, serie,
+                    disciplina, tipo_questoes, 'circulos',
+                    bncc=bncc, confiancas=confs_cv
+                )
+
+        # ETAPA 6: IA
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 3: IA OpenAI (último recurso)")
+        logging.info("📌 ETAPA 6: IA OpenAI (último recurso)")
         logging.info("=" * 60)
 
         if OPENAI_AVAILABLE and openai_client is not None:
@@ -2085,9 +1981,23 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             except Exception as e:
                 logging.error(f"❌ Erro na IA: {e}")
 
+        # FALLBACK FINAL
+        if resultado_template:
+            return calcular_resultado_correcao(
+                resultado_template['respostas'], gabarito, aluno_nome, serie,
+                disciplina, tipo_questoes, 'template_baixa_conf',
+                bncc=bncc, confiancas=resultado_template['confiancas']
+            )
+
         return erro_correcao(
             aluno_nome, serie, disciplina,
-            '❌ Não foi possível ler as respostas do cartão.'
+            '❌ Não foi possível ler as respostas do cartão.\n\n'
+            'Verifique:\n'
+            '1. A foto está nítida?\n'
+            '2. Boa iluminação?\n'
+            '3. Os 4 marcadores pretos estão visíveis?\n'
+            '4. Os círculos foram pintados completamente?\n'
+            '5. Caneta preta ou azul (não lápis)?'
         )
 
     except Exception as e:
@@ -2453,6 +2363,10 @@ def corrigir_lote():
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# CORREÇÃO MANUAL
+# ============================================
+
 @app.route('/api/corrigir_manual', methods=['POST'])
 def corrigir_manual():
     try:
@@ -2548,6 +2462,10 @@ def corrigir_manual():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+
+# ============================================
+# ROTA DE CORREÇÃO DE REDAÇÃO
+# ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
@@ -2774,6 +2692,10 @@ def listar_correcoes_texto():
         print(f"❌ Erro ao listar correções de texto: {e}")
         return jsonify({'erro': str(e)}), 500
 
+
+# ============================================
+# ROTAS DE HISTÓRICO
+# ============================================
 
 @app.route('/api/historico', methods=['GET'])
 def listar_historico():
@@ -3115,6 +3037,10 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# ROTAS DE GABARITOS
+# ============================================
+
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     try:
@@ -3212,6 +3138,10 @@ def excluir_gabarito(id):
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+
+# ============================================
+# ROTAS DE ESCOLAS
+# ============================================
 
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
@@ -3358,6 +3288,10 @@ def excluir_escola(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+
+# ============================================
+# ROTAS DE TURMAS
+# ============================================
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
@@ -3534,6 +3468,10 @@ def excluir_turma(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+
+# ============================================
+# ROTAS DE ALUNOS
+# ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
@@ -3776,6 +3714,10 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# ROTAS DE PROVAS
+# ============================================
+
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     try:
@@ -3981,6 +3923,10 @@ def excluir_prova(id):
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# ROTAS DE USUÁRIOS
+# ============================================
+
 @app.route('/api/usuarios', methods=['GET'])
 def listar_usuarios():
     conn = get_db_connection()
@@ -4165,6 +4111,10 @@ def excluir_usuario(id):
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# ROTA DE DASHBOARD
+# ============================================
+
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     now = datetime.now().timestamp()
@@ -4256,6 +4206,10 @@ def dashboard_conceito():
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
+# ============================================
+
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
@@ -4315,6 +4269,7 @@ def gerar_gabarito():
             q_por_coluna = 15
             num_colunas = 2
 
+        # ═══ GERA E SALVA O MAPA DO TEMPLATE ═══
         mapa_template = gerar_mapa_template_padrao(
             quantidade_questoes, alternativas, num_colunas
         )
@@ -4615,6 +4570,10 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 
+# ============================================
+# ROTA DE BACKUP
+# ============================================
+
 @app.route('/api/backup', methods=['GET'])
 def backup_database():
     backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
@@ -4673,6 +4632,10 @@ def backup_database():
         traceback.print_exc()
         return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
 
+
+# ============================================
+# ROTAS PARA MATRIZ DE PROFICIÊNCIA
+# ============================================
 
 @app.route('/api/matrizes', methods=['GET'])
 def listar_matrizes():
@@ -4848,7 +4811,7 @@ def excluir_matriz(id):
 
 
 # ============================================
-# ARQUIVOS ESTÁTICOS
+# ROTAS DE ARQUIVOS ESTÁTICOS (MIME TYPE CORRETO)
 # ============================================
 
 MIME_TYPES = {
@@ -4874,12 +4837,14 @@ MIME_TYPES = {
 
 
 def _get_mimetype(filename):
+    """Retorna o MIME type correto baseado na extensão."""
     _, ext = os.path.splitext(filename.lower())
     return MIME_TYPES.get(ext, None)
 
 
 @app.route('/')
 def index():
+    """Serve o index.html."""
     try:
         if os.path.isfile('index.html'):
             return send_file('index.html', mimetype='text/html')
@@ -4895,34 +4860,47 @@ def index():
 
 @app.route('/style.css')
 def serve_css():
+    """Serve o style.css com MIME type correto."""
     try:
         if os.path.isfile('style.css'):
+            logging.info("✅ Servindo style.css")
             return send_file('style.css', mimetype='text/css')
-        return "/* não encontrado */", 404, {'Content-Type': 'text/css'}
+        logging.warning("⚠️ style.css não encontrado")
+        return "/* style.css não encontrado */", 404, {'Content-Type': 'text/css'}
     except Exception as e:
+        logging.error(f"❌ Erro ao servir style.css: {e}")
         return "/* erro */", 500, {'Content-Type': 'text/css'}
 
 
 @app.route('/script.js')
 def serve_js():
+    """Serve o script.js com MIME type correto."""
     try:
         if os.path.isfile('script.js'):
+            logging.info("✅ Servindo script.js")
             return send_file('script.js', mimetype='application/javascript')
-        return "// não encontrado", 404, {'Content-Type': 'application/javascript'}
+        logging.warning("⚠️ script.js não encontrado")
+        return "// script.js não encontrado", 404, {'Content-Type': 'application/javascript'}
     except Exception as e:
+        logging.error(f"❌ Erro ao servir script.js: {e}")
         return "// erro", 500, {'Content-Type': 'application/javascript'}
 
 
 @app.route('/<path:filename>')
 def serve_static_file(filename):
+    """Serve outros arquivos estáticos, detectando MIME type pelo sufixo."""
     try:
         if '..' in filename or filename.startswith('/'):
+            logging.warning(f"⚠️ Path traversal bloqueado: {filename}")
             return jsonify({'erro': 'Caminho inválido'}), 400
 
         mimetype = _get_mimetype(filename)
 
         if os.path.isfile(filename):
+            logging.info(f"✅ Servindo: {filename} ({mimetype})")
             return send_file(filename, mimetype=mimetype)
+
+        logging.warning(f"⚠️ Arquivo não encontrado: {filename}")
 
         if filename.endswith('.css'):
             return "/* não encontrado */", 404, {'Content-Type': 'text/css'}
@@ -4932,6 +4910,7 @@ def serve_static_file(filename):
         return jsonify({'erro': 'Arquivo não encontrado', 'path': filename}), 404
 
     except Exception as e:
+        logging.error(f"❌ Erro ao servir {filename}: {e}")
         if filename.endswith('.css'):
             return "/* erro */", 500, {'Content-Type': 'text/css'}
         if filename.endswith('.js'):
@@ -4959,8 +4938,7 @@ def health_check():
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v4.1 (template adaptativo + opencv desativado)',
-        'cache': 'DESATIVADO' if not CACHE_ENABLED else 'ativo',
+        'correcao': 'cascata v3.1 (mapa exato do banco)',
         'arquivos': arquivos
     })
 
@@ -5125,6 +5103,7 @@ def init_db():
             if not cur.fetchone():
                 try:
                     cur.execute("ALTER TABLE provas ADD COLUMN bncc TEXT[]")
+                    print("✅ Coluna bncc adicionada!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
@@ -5136,6 +5115,7 @@ def init_db():
                 if not cur.fetchone():
                     try:
                         cur.execute(f"ALTER TABLE provas ADD COLUMN {col} TEXT[]")
+                        print(f"✅ Coluna {col} adicionada!")
                     except Exception as e:
                         print(f"⚠️ Erro: {e}")
 
@@ -5146,6 +5126,7 @@ def init_db():
             if not cur.fetchone():
                 try:
                     cur.execute("ALTER TABLE historico ADD COLUMN questoes_status JSONB DEFAULT '[]'")
+                    print("✅ Coluna questoes_status adicionada!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
@@ -5160,6 +5141,7 @@ def init_db():
                             cur.execute("ALTER TABLE historico ADD COLUMN confianca DECIMAL(5,2)")
                         else:
                             cur.execute("ALTER TABLE historico ADD COLUMN confianca_por_questao JSONB DEFAULT '[]'")
+                        print(f"✅ Coluna {col} adicionada!")
                     except Exception as e:
                         print(f"⚠️ Erro: {e}")
 
@@ -5170,6 +5152,7 @@ def init_db():
             if not cur.fetchone():
                 try:
                     cur.execute("ALTER TABLE historico ADD COLUMN bncc TEXT[]")
+                    print("✅ Coluna bncc adicionada ao historico!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
@@ -5191,9 +5174,11 @@ def init_db():
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    print("✅ Tabela matrizes criada!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
+        # ═══ CRIA TABELA cartoes_template ═══
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cartoes_template (
                 id SERIAL PRIMARY KEY,
@@ -5259,7 +5244,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v4.1 — TEMPLATE ADAPTATIVO + OPENCV OFF")
+    print("🚀 SERVIDOR CORRIGEPRO v3.1 — CARTÃO ALINHADO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -5267,12 +5252,10 @@ if __name__ == '__main__':
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print("=" * 60)
-    print("🎯 v4.1 — CORREÇÕES APLICADAS:")
-    print("   ✅ Template adaptativo (detecta bolhas reais)")
-    print("   ✅ Template SEMPRE aceito (mesmo com 0 respostas)")
-    print("   ✅ Threshold de amostragem em 0.25 (mais permissivo)")
-    print("   ✅ OpenCV DESATIVADO (era muito impreciso)")
-    print(f"   ✅ Cache: {'ATIVO' if CACHE_ENABLED else 'DESATIVADO'}")
+    print("🎯 v3.1 — CORREÇÕES APLICADAS:")
+    print("   ✅ Bug area_min/area_max corrigido")
+    print("   ✅ Rotas de arquivos estáticos com MIME type correto")
+    print("   ✅ /health mostra status dos arquivos")
     print("=" * 60)
 
     init_db()
