@@ -40,7 +40,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     align-items:center;
     justify-content:center;
     background: var(--bg);
-    background-image: url('https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/bandeira.jpeg');
+    background-image: url('https://raw.githubusercontent.com/jorg3o3iras/adabee-sistema/main/bandeira.webp');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
