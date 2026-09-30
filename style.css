@@ -411,7 +411,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     left: 50%;
     transform: translate(-50%, -50%);
     width: 94%;
-    aspect-ratio: 14 / 10;   /* ⚡ MAIS LARGO — proporção 1.4 */
+    aspect-ratio: 10 / 14;   /* ⚡ MAIS LARGO — proporção 1.4 */
     border: 3px dashed rgba(16, 185, 129, 0.85);
     border-radius: 14px;
     pointer-events: none;
@@ -453,14 +453,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 @media (max-width: 900px) {
     .cam-frame {
         width: 95%;
-        aspect-ratio: 14 / 10;   /* ⚡ MANTÉM LARGO NO TABLET */
+        aspect-ratio: 10 / 14;   /* ⚡ MANTÉM LARGO NO TABLET */
     }
 }
 
 @media (max-width: 480px) {
     .cam-frame {
         width: 96%;
-        aspect-ratio: 14 / 10;   /* ⚡ MANTÉM LARGO NO CELULAR */
+        aspect-ratio: 10 / 14;   /* ⚡ MANTÉM LARGO NO CELULAR */
     }
     .cam-container { padding: 14px; }
     .cam-corner { width: 26px; height: 26px; }
