@@ -404,16 +404,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 .cam-video-wrap video { width:100%; display:block; border-radius:12px; }
 
-/* ═══ RETÂNGULO DA CÂMERA CORRIGIDO: PROPORÇÃO A4 (210x297) ═══ */
+/* ═══ RETÂNGULO DA CÂMERA — MAIS LARGO (paisagem) ═══ */
 .cam-frame {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80%;
-    aspect-ratio: 210 / 297;
-    border: 3px dashed rgba(16,185,129,0.8);
-    border-radius: 12px;
+    width: 92%;
+    aspect-ratio: 14 / 10;   /* ⚡ MAIS LARGO — proporção 1.4 */
+    border: 3px dashed rgba(16, 185, 129, 0.85);
+    border-radius: 14px;
     pointer-events: none;
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
     z-index: 5;
