@@ -36,9 +36,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ============================================
 CORRECOES_CACHE_TTL_HORAS = 168  # 7 dias
 
+# ⚡ DEBUG: CACHE DESATIVADO TEMPORARIAMENTE
+CACHE_ENABLED = False
+
 
 def init_cache_table():
-    """Cria a tabela de cache se não existir"""
     conn = get_db_connection()
     if not conn:
         return
@@ -56,10 +58,6 @@ def init_cache_table():
             CREATE INDEX IF NOT EXISTS idx_correcoes_cache_hash 
             ON correcoes_cache(chave_hash, created_at DESC)
         """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_correcoes_cache_created 
-            ON correcoes_cache(created_at DESC)
-        """)
         conn.commit()
         cur.close()
         conn.close()
@@ -73,7 +71,8 @@ def get_cache_key(imagem_hash, prova_id, aluno_id):
 
 
 def get_cache_correcao(chave):
-    """Busca correção no cache persistente"""
+    if not CACHE_ENABLED:
+        return None
     conn = get_db_connection()
     if not conn:
         return None
@@ -98,7 +97,8 @@ def get_cache_correcao(chave):
 
 
 def set_cache_correcao(chave, resultado):
-    """Salva correção no cache persistente"""
+    if not CACHE_ENABLED:
+        return
     conn = get_db_connection()
     if not conn:
         return
@@ -116,7 +116,6 @@ def set_cache_correcao(chave, resultado):
 
 
 def limpar_cache_antigo():
-    """Remove entradas antigas do cache"""
     conn = get_db_connection()
     if not conn:
         return
@@ -162,15 +161,10 @@ try:
         print("⚠️ OPENAI_API_KEY não encontrada ou inválida no .env")
 except ImportError as e:
     print(f"❌ Erro ao importar openai: {e}")
-    print("💡 Execute: pip install openai")
     OPENAI_AVAILABLE = False
 except Exception as e:
     print(f"⚠️ Erro ao configurar OpenAI: {e}")
     OPENAI_AVAILABLE = False
-
-# ============================================
-# CONFIGURAÇÃO RELAYFREELLM
-# ============================================
 
 RELAY_AVAILABLE = False
 RELAY_API_URL = os.getenv('RELAY_API_URL', '')
@@ -184,10 +178,6 @@ try:
 except Exception as e:
     print(f"⚠️ RelayFreeLLM não disponível: {e}")
     RELAY_AVAILABLE = False
-
-# ============================================
-# CONFIGURAÇÃO DO BANCO DE DADOS
-# ============================================
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 DB_POOL = None
@@ -269,19 +259,11 @@ def get_db_connection():
         return None
 
 
-# ============================================
-# USUÁRIOS FIXOS
-# ============================================
-
 USUARIOS_FIXOS = {
     'admin': {'senha': 'admin', 'perfil': 'admin', 'nome': 'Administrador'},
     'usuario': {'senha': '123', 'perfil': 'usuario', 'nome': 'Usuário'},
     'professor1': {'senha': '123', 'perfil': 'usuario', 'nome': 'Professor 1'}
 }
-
-# ============================================
-# FUNÇÕES AUXILIARES
-# ============================================
 
 
 def calcular_conceito(porcentagem):
@@ -506,68 +488,60 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 # ============================================
 
 def detectar_marcadores_fiduciais(gray):
-    """
-    Detecta os 4 marcadores fiduciais nos cantos do cartão.
-    
-    VERSÃO v3.1 — Corrigida: area_min/area_max fora do if hierarquia.
-    """
+    """Detecta os 4 marcadores fiduciais nos cantos do cartão."""
     try:
         altura, largura = gray.shape
         logging.info(f"🔍 Procurando marcadores em {largura}x{altura}...")
-        
+
         area_imagem = largura * altura
-        
-        # ═══ LIMITES DE ÁREA (usados nos 2 métodos) ═══
         area_min = area_imagem * 0.0015
         area_max = area_imagem * 0.05
-        
+
         candidatos = []
-        
-        # ═══ MÉTODO 1: Threshold + contornos com hierarquia ═══
+
         _, binaria = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
-        
+
         contornos, hierarquia = cv2.findContours(
             binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
-        
+
         if hierarquia is not None and len(contornos) > 0:
             hierarquia = hierarquia[0]
-            
+
             for i, c in enumerate(contornos):
                 x, y, w, h = cv2.boundingRect(c)
                 area = w * h
-                
+
                 if not (area_min < area < area_max):
                     continue
-                
+
                 aspect = w / float(h) if h > 0 else 0
                 if not (0.6 < aspect < 1.5):
                     continue
-                
+
                 area_contorno = cv2.contourArea(c)
                 if area_contorno < area * 0.3:
                     continue
-                
+
                 roi = binaria[y:y+h, x:x+w]
                 densidade = cv2.countNonZero(roi) / float(w * h)
-                
+
                 tem_filho = False
                 if i < len(hierarquia):
                     filho_idx = hierarquia[i][2]
                     if filho_idx != -1:
                         tem_filho = True
-                
+
                 if densidade > 0.6 or (tem_filho and densidade > 0.3):
                     candidatos.append((x, y, w, h, area, densidade, tem_filho))
-        
+
         logging.info(f"🔍 Encontrados {len(candidatos)} candidatos (método 1)")
-        
-        # ═══ MÉTODO 2 (FALLBACK): Threshold adaptativo ═══
+
         if len(candidatos) < 4:
             logging.info("🔄 Tentando método alternativo...")
-            
+
             binaria2 = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -576,96 +550,92 @@ def detectar_marcadores_fiduciais(gray):
             )
             kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
             binaria2 = cv2.morphologyEx(binaria2, cv2.MORPH_CLOSE, kernel2)
-            
+
             contornos2, _ = cv2.findContours(
                 binaria2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
-            
+
             for c in contornos2:
                 x, y, w, h = cv2.boundingRect(c)
                 area = w * h
-                
+
                 if not (area_min < area < area_max):
                     continue
-                
+
                 aspect = w / float(h) if h > 0 else 0
                 if not (0.5 < aspect < 2.0):
                     continue
-                
+
                 roi = binaria2[y:y+h, x:x+w]
                 densidade = cv2.countNonZero(roi) / float(w * h)
-                
+
                 if densidade > 0.4:
                     candidatos.append((x, y, w, h, area, densidade, False))
-            
+
             logging.info(f"🔍 Após método 2: {len(candidatos)} candidatos")
-        
+
         if len(candidatos) < 4:
             logging.warning(f"⚠️ Apenas {len(candidatos)} candidatos — falhou")
             return None
-        
-        # ═══ ORDENA E CLASSIFICA ═══
+
         candidatos.sort(key=lambda c: c[4], reverse=True)
         candidatos = candidatos[:20]
-        
+
         meia_largura = largura / 2
         meia_altura = altura / 2
-        
+
         tl = tr = bl = br = None
         tl_s = tr_s = bl_s = br_s = -1
-        
+
         for (x, y, w, h, a, d, furo) in candidatos:
             cx, cy = x + w // 2, y + h // 2
-            
+
             bonus_furo = 500 if furo else 0
-            
+
             if cx < meia_largura and cy < meia_altura:
                 score = bonus_furo + a / 1000 - (cx + cy) / 10
                 if score > tl_s:
                     tl = (cx, cy); tl_s = score
-            
+
             elif cx >= meia_largura and cy < meia_altura:
                 score = bonus_furo + a / 1000 - ((largura - cx) + cy) / 10
                 if score > tr_s:
                     tr = (cx, cy); tr_s = score
-            
+
             elif cx < meia_largura and cy >= meia_altura:
                 score = bonus_furo + a / 1000 - (cx + (altura - cy)) / 10
                 if score > bl_s:
                     bl = (cx, cy); bl_s = score
-            
+
             elif cx >= meia_largura and cy >= meia_altura:
                 score = bonus_furo + a / 1000 - ((largura - cx) + (altura - cy)) / 10
                 if score > br_s:
                     br = (cx, cy); br_s = score
-        
+
         if not all([tl, tr, bl, br]):
             logging.warning(f"⚠️ Não achou os 4 cantos: tl={tl} tr={tr} bl={bl} br={br}")
             return None
-        
-        # ═══ VALIDAÇÃO ═══
+
         largura_topo = ((tr[0] - tl[0]) ** 2 + (tr[1] - tl[1]) ** 2) ** 0.5
         largura_base = ((br[0] - bl[0]) ** 2 + (br[1] - bl[1]) ** 2) ** 0.5
         altura_esq = ((bl[0] - tl[0]) ** 2 + (bl[1] - tl[1]) ** 2) ** 0.5
         altura_dir = ((br[0] - tr[0]) ** 2 + (br[1] - tr[1]) ** 2) ** 0.5
-        
+
         dist_min = min(largura, altura) * 0.4
-        
+
         if largura_topo < dist_min or altura_esq < dist_min:
             logging.warning(
                 f"⚠️ Marcadores muito próximos: "
                 f"topo={largura_topo:.0f}px, esq={altura_esq:.0f}px (min={dist_min:.0f})"
             )
             return None
-        
+
         logging.info(f"✅ 4 marcadores detectados:")
         logging.info(f"   TL={tl}  TR={tr}")
         logging.info(f"   BL={bl}  BR={br}")
-        logging.info(f"   Largura: topo={largura_topo:.0f} base={largura_base:.0f}")
-        logging.info(f"   Altura: esq={altura_esq:.0f} dir={altura_dir:.0f}")
-        
+
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
-    
+
     except Exception as e:
         logging.error(f"❌ Erro detectar_marcadores: {e}")
         traceback.print_exc()
@@ -673,37 +643,35 @@ def detectar_marcadores_fiduciais(gray):
 
 
 def corrigir_perspectiva(img, marcadores):
-    """Corrige a perspectiva da imagem usando os marcadores"""
+    """
+    ⚡ v2.0 — Corrige perspectiva com DIMENSÕES FIXAS.
+    
+    Sempre gera imagem 1900x2440, garantindo que o mapa do template
+    (gerado com coordenadas normalizadas) sempre alinhe.
+    """
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
         bl = marcadores['bl']
         br = marcadores['br']
 
-        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        largura_max = max(int(largura_topo), int(largura_base))
-
-        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
-        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
-        altura_max = max(int(altura_esq), int(altura_dir))
-
-        margem = 30
-        largura_max += margem * 2
-        altura_max += margem * 2
+        # ═══ DIMENSÕES FIXAS ═══
+        LARGURA_TOTAL = 1900
+        ALTURA_TOTAL = 2440
+        MARGEM = 50
 
         origem = np.float32([tl, tr, bl, br])
         destino = np.float32([
-            [margem, margem],
-            [largura_max - margem, margem],
-            [margem, altura_max - margem],
-            [largura_max - margem, altura_max - margem]
+            [MARGEM, MARGEM],
+            [LARGURA_TOTAL - MARGEM, MARGEM],
+            [MARGEM, ALTURA_TOTAL - MARGEM],
+            [LARGURA_TOTAL - MARGEM, ALTURA_TOTAL - MARGEM]
         ])
 
         matriz = cv2.getPerspectiveTransform(origem, destino)
-        img_corrigida = cv2.warpPerspective(img, matriz, (largura_max, altura_max))
+        img_corrigida = cv2.warpPerspective(img, matriz, (LARGURA_TOTAL, ALTURA_TOTAL))
 
-        logging.info(f"✅ Perspectiva corrigida: {largura_max}x{altura_max}")
+        logging.info(f"✅ Perspectiva corrigida (FIXA): {LARGURA_TOTAL}x{ALTURA_TOTAL}")
         return img_corrigida
 
     except Exception as e:
@@ -780,7 +748,6 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
 
 def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes, num_colunas, mapa_template):
-    """Salva o mapa do template no banco para uso futuro na correção."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -799,7 +766,7 @@ def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes,
                 quantidade_questoes = EXCLUDED.quantidade_questoes,
                 num_colunas = EXCLUDED.num_colunas,
                 created_at = CURRENT_TIMESTAMP
-        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes, 
+        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes,
               num_colunas, json.dumps(mapa_template)))
         conn.commit()
         cur.close()
@@ -813,7 +780,6 @@ def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes,
 
 
 def carregar_mapa_template(prova_id, aluno_id):
-    """Carrega o mapa do template do banco."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -842,18 +808,22 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
-    """Amostra uma bolha usando coordenadas normalizadas."""
+def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
+    """
+    ⚡ v2.0 — Amostra com raio calibrado para imagem 1900x2440.
+    """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
-    r = max(8, min(int(raio_fracao * min(w, h)), 30))
+
+    r = int(raio_fracao * w)
+    r = max(20, min(r, 40))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.7), 255, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.8), 255, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
@@ -932,13 +902,23 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
                 'medidas': [(m[0], round(m[1], 3)) for m in medidas]
             })
 
+    # ═══ LOG DETALHADO PARA DEBUG ═══
+    logging.info("=" * 60)
+    logging.info(f"🔬 TEMPLATE DEBUG:")
+    logging.info(f"   Imagem: {w}x{h}")
+    logging.info(f"   Mapa: {len(mapa_template)} bolhas")
+    logging.info(f"   Respostas: {respostas}")
+    logging.info(f"   Confianças: {confiancas}")
+    for info in debug_info:
+        logging.info(f"   Q{info['questao']}: {info.get('medidas', [])}")
+    logging.info("=" * 60)
+
     if debug:
         return respostas, confiancas, debug_info
     return respostas, confiancas
 
 
 def preparar_imagem_para_template(imagem_base64):
-    """Decodifica imagem, detecta marcadores e corrige perspectiva."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -1013,15 +993,24 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     )
 
     nao_vazias = [r for r in respostas if r]
-    if len(nao_vazias) < total_questoes * 0.3:
-        logging.warning(f"⚠️ Template: apenas {len(nao_vazias)}/{total_questoes} detectadas")
+
+    logging.info("=" * 60)
+    logging.info(f"🔬 TEMPLATE RESULTADO FINAL:")
+    logging.info(f"   Respostas: {respostas}")
+    logging.info(f"   Não vazias: {len(nao_vazias)}/{total_questoes}")
+    logging.info("=" * 60)
+
+    # ⚡ MAIS PERMISSIVO: aceita se detectou 2+ respostas
+    if len(nao_vazias) < 2:
+        logging.warning(f"⚠️ Template: apenas {len(nao_vazias)}/{total_questoes} — rejeitando")
         return None
 
-    if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
-        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}'")
+    # Só rejeita se TODAS iguais E muitas
+    if len(nao_vazias) >= 8 and len(set(nao_vazias)) == 1:
+        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}' — suspeito")
         return None
 
-    logging.info(f"✅ Template Mapping: {len(nao_vazias)}/{total_questoes} detectadas")
+    logging.info(f"✅ Template Mapping ACEITO: {len(nao_vazias)}/{total_questoes} detectadas")
     return {
         'respostas': respostas,
         'confiancas': confiancas,
@@ -1034,7 +1023,6 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
-    """Detecta TODAS as bolhas E calcula posições das colunas."""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -1229,12 +1217,7 @@ def detectar_circulos_preenchidos(imagem_base64):
         return [], {}
 
 
-# ============================================
-# ORGANIZAÇÃO DE RESPOSTAS (OPENCV)
-# ============================================
-
 def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
-    """Organiza as respostas usando a letra calculada pela posição X"""
     if not circulos:
         return [''] * total_questoes, [0] * total_questoes
 
@@ -1352,7 +1335,6 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
 # ============================================
 
 def preprocessar_imagem_para_ia(imagem_base64):
-    """Prepara imagem para IA com normalização de iluminação."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -1618,7 +1600,6 @@ def _parse_confiancas_ia(texto, total_esperado):
 
 
 def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
-    """Valida se a resposta da IA é plausível."""
     if not respostas:
         return True, "Resposta vazia"
 
@@ -1659,7 +1640,6 @@ def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
 
 def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
                               serie, disciplina, tipo_questoes, aviso_extra=None):
-    """Executa chamada OpenAI com retry em caso de resposta vazia."""
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
 
@@ -1687,7 +1667,6 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
         }
     ]
 
-    # ═══ TENTA 3 VEZES ═══
     for tentativa in range(1, 4):
         try:
             logging.info(f"🤖 OpenAI tentativa {tentativa}/3...")
@@ -1814,13 +1793,20 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CORREÇÃO
+# FUNÇÃO PRINCIPAL DE CORREÇÃO — v4.0
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
-    """CASCATA DE CONFIANÇA v3.0"""
+    """
+    CASCATA v4.0 — Template tem PRIORIDADE ABSOLUTA.
+    
+    Ordem:
+    1. Template Mapping (sempre usado se detectar 2+ respostas)
+    2. OpenCV (só se Template falhou completamente)
+    3. IA (último recurso)
+    """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -1828,9 +1814,11 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
 
     try:
-        # ETAPA 1: TEMPLATE MAPPING
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 1: TEMPLATE MAPPING (PRIORIDADE ABSOLUTA)
+        # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 1: Template Mapping (mapa exato do banco)")
+        logging.info("📌 ETAPA 1: Template Mapping (PRIORIDADE ABSOLUTA)")
         logging.info("=" * 60)
 
         resultado_template = None
@@ -1846,30 +1834,32 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         if resultado_template:
             resp_tm = resultado_template['respostas']
             confs_tm = resultado_template['confiancas']
-            conf_media_tm = sum(confs_tm) / len(confs_tm) if confs_tm else 0
-            conf_min_tm = min(confs_tm) if confs_tm else 0
             detectadas_tm = sum(1 for r in resp_tm if r)
 
-            if (conf_media_tm >= 75 and conf_min_tm >= 55
-                    and detectadas_tm >= total_questoes * 0.7):
-                logging.info(
-                    f"✅ Template aprovado — média={conf_media_tm:.1f}%, "
-                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
-                )
+            logging.info(
+                f"✅ Template retornou: detectadas={detectadas_tm}/{total_questoes}"
+            )
+            logging.info(f"📋 Respostas Template: {resp_tm}")
+            logging.info(f"📋 Confianças Template: {confs_tm}")
+
+            # ⚡ PRIORIDADE ABSOLUTA: usa Template se detectou 2+ respostas
+            if detectadas_tm >= 2:
+                logging.info("🎯 USANDO TEMPLATE (OpenCV ignorado!)")
                 return calcular_resultado_correcao(
                     resp_tm, gabarito, aluno_nome, serie,
                     disciplina, tipo_questoes, 'template',
                     bncc=bncc, confiancas=confs_tm
                 )
             else:
-                logging.info(
-                    f"⚠️ Template inseguro — média={conf_media_tm:.1f}%, "
-                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
-                )
+                logging.warning(f"⚠️ Template detectou apenas {detectadas_tm} — caindo para OpenCV")
+        else:
+            logging.warning("⚠️ Template retornou None — caindo para OpenCV")
 
-        # ETAPA 2: OPENCV
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 2: OPENCV (fallback)
+        # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 2: OpenCV (validação)")
+        logging.info("📌 ETAPA 2: OpenCV (fallback)")
         logging.info("=" * 60)
 
         respostas_cv = [''] * total_questoes
@@ -1891,80 +1881,20 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         except Exception as e:
             logging.warning(f"⚠️ OpenCV falhou: {e}")
 
-        # ETAPA 3: DECISÃO
-        if resultado_template and valido_cv:
-            resp_tm = resultado_template['respostas']
-            confs_tm = resultado_template['confiancas']
-
-            iguais = 0
-            total_comp = 0
-            for i in range(total_questoes):
-                r1 = resp_tm[i] if i < len(resp_tm) else ''
-                r2 = respostas_cv[i] if i < len(respostas_cv) else ''
-                if r1 and r2:
-                    total_comp += 1
-                    if r1 == r2:
-                        iguais += 1
-
-            concordancia = iguais / total_comp if total_comp > 0 else 0
-            logging.info(f"📊 Concordância Template vs OpenCV: {concordancia*100:.1f}%")
-
-            if concordancia >= 0.80 and total_comp >= total_questoes * 0.6:
-                respostas_fusao = []
-                confs_fusao = []
-                for i in range(total_questoes):
-                    r_tm = resp_tm[i] if i < len(resp_tm) else ''
-                    r_cv = respostas_cv[i] if i < len(respostas_cv) else ''
-                    c_tm = confs_tm[i] if i < len(confs_tm) else 0
-                    c_cv = confs_cv[i] if i < len(confs_cv) else 0
-
-                    if r_tm and r_cv and r_tm == r_cv:
-                        respostas_fusao.append(r_tm)
-                        confs_fusao.append(min(99, max(c_tm, c_cv) + 5))
-                    elif r_tm:
-                        respostas_fusao.append(r_tm)
-                        confs_fusao.append(c_tm)
-                    else:
-                        respostas_fusao.append(r_cv)
-                        confs_fusao.append(c_cv)
-
-                logging.info("✅ Fusão Template+OpenCV")
-                return calcular_resultado_correcao(
-                    respostas_fusao, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'template+cv',
-                    bncc=bncc, confiancas=confs_fusao
-                )
-
-        # ETAPA 4: TEMPLATE ISOLADO
-        if resultado_template:
-            confs_tm = resultado_template['confiancas']
-            conf_media = sum(confs_tm) / len(confs_tm) if confs_tm else 0
-            conf_min = min(confs_tm) if confs_tm else 0
-            detectadas = sum(1 for r in resultado_template['respostas'] if r)
-
-            if (conf_media >= 55 and conf_min >= 30
-                    and detectadas >= total_questoes * 0.5):
-                logging.info(f"✅ Template isolado — média={conf_media:.1f}%")
-                return calcular_resultado_correcao(
-                    resultado_template['respostas'], gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'template',
-                    bncc=bncc, confiancas=confs_tm
-                )
-
-        # ETAPA 5: OPENCV ISOLADO
         if valido_cv:
             conf_media_cv = sum(confs_cv) / len(confs_cv) if confs_cv else 0
-            if conf_media_cv >= 55:
-                logging.info(f"✅ OpenCV isolado (conf={conf_media_cv:.1f}%)")
-                return calcular_resultado_correcao(
-                    respostas_cv, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'circulos',
-                    bncc=bncc, confiancas=confs_cv
-                )
+            logging.info(f"✅ Usando OpenCV (conf={conf_media_cv:.1f}%)")
+            return calcular_resultado_correcao(
+                respostas_cv, gabarito, aluno_nome, serie,
+                disciplina, tipo_questoes, 'circulos',
+                bncc=bncc, confiancas=confs_cv
+            )
 
-        # ETAPA 6: IA
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 3: IA (último recurso)
+        # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 6: IA OpenAI (último recurso)")
+        logging.info("📌 ETAPA 3: IA OpenAI (último recurso)")
         logging.info("=" * 60)
 
         if OPENAI_AVAILABLE and openai_client is not None:
@@ -1980,14 +1910,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     return resultado_ia
             except Exception as e:
                 logging.error(f"❌ Erro na IA: {e}")
-
-        # FALLBACK FINAL
-        if resultado_template:
-            return calcular_resultado_correcao(
-                resultado_template['respostas'], gabarito, aluno_nome, serie,
-                disciplina, tipo_questoes, 'template_baixa_conf',
-                bncc=bncc, confiancas=resultado_template['confiancas']
-            )
 
         return erro_correcao(
             aluno_nome, serie, disciplina,
@@ -2028,7 +1950,7 @@ def after_request(response):
 
 
 # ============================================
-# ROTAS DE LOGIN E CORREÇÃO
+# ROTAS
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -2363,10 +2285,6 @@ def corrigir_lote():
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# CORREÇÃO MANUAL
-# ============================================
-
 @app.route('/api/corrigir_manual', methods=['POST'])
 def corrigir_manual():
     try:
@@ -2462,10 +2380,6 @@ def corrigir_manual():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-
-# ============================================
-# ROTA DE CORREÇÃO DE REDAÇÃO
-# ============================================
 
 @app.route('/api/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
@@ -2692,10 +2606,6 @@ def listar_correcoes_texto():
         print(f"❌ Erro ao listar correções de texto: {e}")
         return jsonify({'erro': str(e)}), 500
 
-
-# ============================================
-# ROTAS DE HISTÓRICO
-# ============================================
 
 @app.route('/api/historico', methods=['GET'])
 def listar_historico():
@@ -3037,10 +2947,6 @@ def excluir_correcao(id):
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTAS DE GABARITOS
-# ============================================
-
 @app.route('/api/gabaritos', methods=['POST'])
 def salvar_gabarito():
     try:
@@ -3138,10 +3044,6 @@ def excluir_gabarito(id):
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-
-# ============================================
-# ROTAS DE ESCOLAS
-# ============================================
 
 @app.route('/api/escolas', methods=['GET'])
 def listar_escolas():
@@ -3288,10 +3190,6 @@ def excluir_escola(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-
-# ============================================
-# ROTAS DE TURMAS
-# ============================================
 
 @app.route('/api/turmas', methods=['GET'])
 def listar_turmas():
@@ -3468,10 +3366,6 @@ def excluir_turma(id):
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
-
-# ============================================
-# ROTAS DE ALUNOS
-# ============================================
 
 @app.route('/api/alunos', methods=['GET'])
 def listar_alunos():
@@ -3714,10 +3608,6 @@ def excluir_aluno(id):
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTAS DE PROVAS
-# ============================================
-
 @app.route('/api/provas', methods=['GET'])
 def listar_provas():
     try:
@@ -3923,10 +3813,6 @@ def excluir_prova(id):
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTAS DE USUÁRIOS
-# ============================================
-
 @app.route('/api/usuarios', methods=['GET'])
 def listar_usuarios():
     conn = get_db_connection()
@@ -4111,10 +3997,6 @@ def excluir_usuario(id):
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTA DE DASHBOARD
-# ============================================
-
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     now = datetime.now().timestamp()
@@ -4206,10 +4088,6 @@ def dashboard_conceito():
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
-# ============================================
-
 @app.route('/api/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
@@ -4269,7 +4147,6 @@ def gerar_gabarito():
             q_por_coluna = 15
             num_colunas = 2
 
-        # ═══ GERA E SALVA O MAPA DO TEMPLATE ═══
         mapa_template = gerar_mapa_template_padrao(
             quantidade_questoes, alternativas, num_colunas
         )
@@ -4570,10 +4447,6 @@ def gerar_gabarito():
         return jsonify({'erro': str(e)}), 500
 
 
-# ============================================
-# ROTA DE BACKUP
-# ============================================
-
 @app.route('/api/backup', methods=['GET'])
 def backup_database():
     backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
@@ -4632,10 +4505,6 @@ def backup_database():
         traceback.print_exc()
         return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
 
-
-# ============================================
-# ROTAS PARA MATRIZ DE PROFICIÊNCIA
-# ============================================
 
 @app.route('/api/matrizes', methods=['GET'])
 def listar_matrizes():
@@ -4811,7 +4680,7 @@ def excluir_matriz(id):
 
 
 # ============================================
-# ROTAS DE ARQUIVOS ESTÁTICOS (MIME TYPE CORRETO)
+# ARQUIVOS ESTÁTICOS
 # ============================================
 
 MIME_TYPES = {
@@ -4837,14 +4706,12 @@ MIME_TYPES = {
 
 
 def _get_mimetype(filename):
-    """Retorna o MIME type correto baseado na extensão."""
     _, ext = os.path.splitext(filename.lower())
     return MIME_TYPES.get(ext, None)
 
 
 @app.route('/')
 def index():
-    """Serve o index.html."""
     try:
         if os.path.isfile('index.html'):
             return send_file('index.html', mimetype='text/html')
@@ -4860,47 +4727,34 @@ def index():
 
 @app.route('/style.css')
 def serve_css():
-    """Serve o style.css com MIME type correto."""
     try:
         if os.path.isfile('style.css'):
-            logging.info("✅ Servindo style.css")
             return send_file('style.css', mimetype='text/css')
-        logging.warning("⚠️ style.css não encontrado")
-        return "/* style.css não encontrado */", 404, {'Content-Type': 'text/css'}
+        return "/* não encontrado */", 404, {'Content-Type': 'text/css'}
     except Exception as e:
-        logging.error(f"❌ Erro ao servir style.css: {e}")
         return "/* erro */", 500, {'Content-Type': 'text/css'}
 
 
 @app.route('/script.js')
 def serve_js():
-    """Serve o script.js com MIME type correto."""
     try:
         if os.path.isfile('script.js'):
-            logging.info("✅ Servindo script.js")
             return send_file('script.js', mimetype='application/javascript')
-        logging.warning("⚠️ script.js não encontrado")
-        return "// script.js não encontrado", 404, {'Content-Type': 'application/javascript'}
+        return "// não encontrado", 404, {'Content-Type': 'application/javascript'}
     except Exception as e:
-        logging.error(f"❌ Erro ao servir script.js: {e}")
         return "// erro", 500, {'Content-Type': 'application/javascript'}
 
 
 @app.route('/<path:filename>')
 def serve_static_file(filename):
-    """Serve outros arquivos estáticos, detectando MIME type pelo sufixo."""
     try:
         if '..' in filename or filename.startswith('/'):
-            logging.warning(f"⚠️ Path traversal bloqueado: {filename}")
             return jsonify({'erro': 'Caminho inválido'}), 400
 
         mimetype = _get_mimetype(filename)
 
         if os.path.isfile(filename):
-            logging.info(f"✅ Servindo: {filename} ({mimetype})")
             return send_file(filename, mimetype=mimetype)
-
-        logging.warning(f"⚠️ Arquivo não encontrado: {filename}")
 
         if filename.endswith('.css'):
             return "/* não encontrado */", 404, {'Content-Type': 'text/css'}
@@ -4910,7 +4764,6 @@ def serve_static_file(filename):
         return jsonify({'erro': 'Arquivo não encontrado', 'path': filename}), 404
 
     except Exception as e:
-        logging.error(f"❌ Erro ao servir {filename}: {e}")
         if filename.endswith('.css'):
             return "/* erro */", 500, {'Content-Type': 'text/css'}
         if filename.endswith('.js'):
@@ -4938,7 +4791,8 @@ def health_check():
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v3.1 (mapa exato do banco)',
+        'correcao': 'cascata v4.0 (perspectiva fixa + template prioridade)',
+        'cache': 'DESATIVADO' if not CACHE_ENABLED else 'ativo',
         'arquivos': arquivos
     })
 
@@ -5103,7 +4957,6 @@ def init_db():
             if not cur.fetchone():
                 try:
                     cur.execute("ALTER TABLE provas ADD COLUMN bncc TEXT[]")
-                    print("✅ Coluna bncc adicionada!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
@@ -5115,7 +4968,6 @@ def init_db():
                 if not cur.fetchone():
                     try:
                         cur.execute(f"ALTER TABLE provas ADD COLUMN {col} TEXT[]")
-                        print(f"✅ Coluna {col} adicionada!")
                     except Exception as e:
                         print(f"⚠️ Erro: {e}")
 
@@ -5126,7 +4978,6 @@ def init_db():
             if not cur.fetchone():
                 try:
                     cur.execute("ALTER TABLE historico ADD COLUMN questoes_status JSONB DEFAULT '[]'")
-                    print("✅ Coluna questoes_status adicionada!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
@@ -5141,7 +4992,6 @@ def init_db():
                             cur.execute("ALTER TABLE historico ADD COLUMN confianca DECIMAL(5,2)")
                         else:
                             cur.execute("ALTER TABLE historico ADD COLUMN confianca_por_questao JSONB DEFAULT '[]'")
-                        print(f"✅ Coluna {col} adicionada!")
                     except Exception as e:
                         print(f"⚠️ Erro: {e}")
 
@@ -5152,7 +5002,6 @@ def init_db():
             if not cur.fetchone():
                 try:
                     cur.execute("ALTER TABLE historico ADD COLUMN bncc TEXT[]")
-                    print("✅ Coluna bncc adicionada ao historico!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
@@ -5174,11 +5023,9 @@ def init_db():
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
-                    print("✅ Tabela matrizes criada!")
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
-        # ═══ CRIA TABELA cartoes_template ═══
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cartoes_template (
                 id SERIAL PRIMARY KEY,
@@ -5244,7 +5091,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v3.1 — CARTÃO ALINHADO")
+    print("🚀 SERVIDOR CORRIGEPRO v4.0 — TEMPLATE PRIORIDADE ABSOLUTA")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -5252,10 +5099,11 @@ if __name__ == '__main__':
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print("=" * 60)
-    print("🎯 v3.1 — CORREÇÕES APLICADAS:")
-    print("   ✅ Bug area_min/area_max corrigido")
-    print("   ✅ Rotas de arquivos estáticos com MIME type correto")
-    print("   ✅ /health mostra status dos arquivos")
+    print("🎯 v4.0 — CORREÇÕES APLICADAS:")
+    print("   ✅ Perspectiva com dimensão FIXA (1900x2440)")
+    print("   ✅ Raio de amostragem maior")
+    print("   ✅ Template tem PRIORIDADE ABSOLUTA sobre OpenCV")
+    print(f"   ✅ Cache: {'ATIVO' if CACHE_ENABLED else 'DESATIVADO'}")
     print("=" * 60)
 
     init_db()
