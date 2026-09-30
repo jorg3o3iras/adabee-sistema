@@ -506,58 +506,210 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 # ============================================
 
 def detectar_marcadores_fiduciais(gray):
-    """Detecta os 4 marcadores fiduciais nos cantos do cartão"""
+    """
+    Detecta os 4 marcadores fiduciais nos cantos do cartão.
+    
+    VERSÃO v2.0 — Detecta marcadores COM FURO BRANCO NO MEIO.
+    
+    O marcador é um quadrado preto 10mm com círculo branco de 4mm no centro.
+    A detecção anterior falhava porque exigia densidade > 0.5, mas com o furo
+    a densidade fica em ~0.4-0.6.
+    """
     try:
         altura, largura = gray.shape
-
-        _, binaria = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
-        contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+        logging.info(f"🔍 Procurando marcadores em imagem {largura}x{altura}")
+        
+        # ═══ MÉTODO 1: Detecção por contornos com furo ═══
+        # Aplica threshold binário simples (marcadores são bem escuros)
+        _, binaria = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
+        
+        # Aplica morfologia para fechar pequenos ruídos
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
+        
+        contornos, hierarquia = cv2.findContours(
+            binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        )
+        
+        if hierarquia is None:
+            logging.warning("⚠️ Nenhum contorno encontrado")
+            return None
+        
+        hierarquia = hierarquia[0]
+        
         candidatos = []
-        area_min = (largura * altura) * 0.003
-        area_max = (largura * altura) * 0.025
-
-        for c in contornos:
+        area_imagem = largura * altura
+        area_min = area_imagem * 0.002   # 0.2%
+        area_max = area_imagem * 0.05    # 5%
+        
+        for i, c in enumerate(contornos):
             x, y, w, h = cv2.boundingRect(c)
             area = w * h
-            if area_min < area < area_max:
-                aspect = w / float(h)
-                if 0.7 < aspect < 1.4:
-                    roi = binaria[y:y+h, x:x+w]
-                    densidade = cv2.countNonZero(roi) / float(w * h)
-                    if densidade > 0.5:
-                        candidatos.append((x, y, w, h, area, densidade))
-
+            area_contorno = cv2.contourArea(c)
+            
+            # Filtro 1: tamanho aproximado
+            if not (area_min < area < area_max):
+                continue
+            
+            # Filtro 2: deve ser aproximadamente quadrado
+            aspect = w / float(h) if h > 0 else 0
+            if not (0.6 < aspect < 1.5):
+                continue
+            
+            # Filtro 3: contorno externo (não é filho de outro)
+            # mas tem filho (o furo branco interno)
+            tem_filho = False
+            if i < len(hierarquia):
+                filho_idx = hierarquia[i][2]
+                if filho_idx != -1:
+                    tem_filho = True
+            
+            # Filtro 4: preenchimento (área do contorno / área do bbox)
+            # Marcador com furo tem preenchimento em torno de 0.5-0.7
+            preenchimento = area_contorno / area if area > 0 else 0
+            
+            # Aceita marcadores com ou sem furo
+            if tem_filho:
+                # Marcador com furo (tem contorno interno)
+                if preenchimento > 0.35:
+                    densidade_roi = cv2.countNonZero(binaria[y:y+h, x:x+w]) / float(w*h)
+                    candidatos.append((x, y, w, h, area, densidade_roi, True))
+            else:
+                # Marcador sólido (sem furo)
+                densidade_roi = cv2.countNonZero(binaria[y:y+h, x:x+w]) / float(w*h)
+                if densidade_roi > 0.55:
+                    candidatos.append((x, y, w, h, area, densidade_roi, False))
+        
+        logging.info(f"🔍 Encontrados {len(candidatos)} candidatos a marcador")
+        
+        # ═══ FALLBACK: se não achou 4, tenta com threshold adaptativo ═══
         if len(candidatos) < 4:
-            logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores fiduciais detectados")
+            logging.info("🔄 Tentando método alternativo (threshold adaptativo)...")
+            
+            binaria2 = cv2.adaptiveThreshold(
+                gray, 255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY_INV,
+                blockSize=21, C=10
+            )
+            
+            kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+            binaria2 = cv2.morphologyEx(binaria2, cv2.MORPH_CLOSE, kernel2)
+            
+            contornos2, _ = cv2.findContours(
+                binaria2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            
+            for c in contornos2:
+                x, y, w, h = cv2.boundingRect(c)
+                area = w * h
+                
+                if not (area_min < area < area_max):
+                    continue
+                
+                aspect = w / float(h) if h > 0 else 0
+                if not (0.6 < aspect < 1.5):
+                    continue
+                
+                densidade = cv2.countNonZero(binaria2[y:y+h, x:x+w]) / float(w*h)
+                if densidade > 0.5:
+                    candidatos.append((x, y, w, h, area, densidade, False))
+        
+        if len(candidatos) < 4:
+            logging.warning(f"⚠️ Apenas {len(candidatos)} marcadores detectados")
+            # Salva imagem para debug
             return None
-
+        
+        # ═══ CLASSIFICAÇÃO EM 4 CANTOS ═══
+        # Ordena por área (maiores primeiro)
         candidatos.sort(key=lambda c: c[4], reverse=True)
-
+        candidatos = candidatos[:20]  # só os 20 maiores
+        
         meia_largura = largura / 2
         meia_altura = altura / 2
-
+        
         tl = tr = bl = br = None
-        for (x, y, w, h, a, d) in candidatos[:10]:
+        tl_score = tr_score = bl_score = br_score = -1
+        
+        for (x, y, w, h, a, d, tem_furo) in candidatos:
             cx, cy = x + w // 2, y + h // 2
-            if cx < meia_largura and cy < meia_altura and tl is None:
-                tl = (cx, cy)
-            elif cx >= meia_largura and cy < meia_altura and tr is None:
-                tr = (cx, cy)
-            elif cx < meia_largura and cy >= meia_altura and bl is None:
-                bl = (cx, cy)
-            elif cx >= meia_largura and cy >= meia_altura and br is None:
-                br = (cx, cy)
-
+            
+            # Score: quanto mais perto do canto, maior
+            # Marcador com furo ganha bônus
+            bonus_furo = 100 if tem_furo else 0
+            
+            # Canto superior esquerdo
+            if cx < meia_largura and cy < meia_altura:
+                dist_canto = (cx ** 2 + cy ** 2) ** 0.5
+                score = (10**9) / (dist_canto + 1) + bonus_furo + a
+                if score > tl_score:
+                    tl = (cx, cy)
+                    tl_score = score
+            
+            # Canto superior direito
+            elif cx >= meia_largura and cy < meia_altura:
+                dist_canto = ((largura - cx) ** 2 + cy ** 2) ** 0.5
+                score = (10**9) / (dist_canto + 1) + bonus_furo + a
+                if score > tr_score:
+                    tr = (cx, cy)
+                    tr_score = score
+            
+            # Canto inferior esquerdo
+            elif cx < meia_largura and cy >= meia_altura:
+                dist_canto = (cx ** 2 + (altura - cy) ** 2) ** 0.5
+                score = (10**9) / (dist_canto + 1) + bonus_furo + a
+                if score > bl_score:
+                    bl = (cx, cy)
+                    bl_score = score
+            
+            # Canto inferior direito
+            elif cx >= meia_largura and cy >= meia_altura:
+                dist_canto = ((largura - cx) ** 2 + (altura - cy) ** 2) ** 0.5
+                score = (10**9) / (dist_canto + 1) + bonus_furo + a
+                if score > br_score:
+                    br = (cx, cy)
+                    br_score = score
+        
         if not all([tl, tr, bl, br]):
-            logging.warning("⚠️ Não foi possível classificar os 4 marcadores")
+            logging.warning(f"⚠️ Não foi possível classificar os 4 marcadores: tl={tl}, tr={tr}, bl={bl}, br={br}")
             return None
-
-        logging.info(f"✅ 4 marcadores fiduciais detectados")
+        
+        # ═══ VALIDAÇÃO: os 4 marcadores formam um quadrilátero? ═══
+        largura_topo = ((tr[0] - tl[0]) ** 2 + (tr[1] - tl[1]) ** 2) ** 0.5
+        largura_base = ((br[0] - bl[0]) ** 2 + (br[1] - bl[1]) ** 2) ** 0.5
+        altura_esq = ((bl[0] - tl[0]) ** 2 + (bl[1] - tl[1]) ** 2) ** 0.5
+        altura_dir = ((br[0] - tr[0]) ** 2 + (br[1] - tr[1]) ** 2) ** 0.5
+        
+        # Se as larguras ou alturas forem muito diferentes, é suspeito
+        if largura_topo > 0 and largura_base > 0:
+            ratio_largura = min(largura_topo, largura_base) / max(largura_topo, largura_base)
+            if ratio_largura < 0.4:
+                logging.warning(f"⚠️ Marcadores muito desalinhados em largura: ratio={ratio_largura:.2f}")
+        
+        if altura_esq > 0 and altura_dir > 0:
+            ratio_altura = min(altura_esq, altura_dir) / max(altura_esq, altura_dir)
+            if ratio_altura < 0.4:
+                logging.warning(f"⚠️ Marcadores muito desalinhados em altura: ratio={ratio_altura:.2f}")
+        
+        # ═══ VALIDAÇÃO: distância mínima entre marcadores ═══
+        # Os marcadores devem estar afastados (senão pegou coisa errada)
+        dist_min_esperada = min(largura, altura) * 0.3
+        
+        if largura_topo < dist_min_esperada or altura_esq < dist_min_esperada:
+            logging.warning(f"⚠️ Marcadores muito próximos: topo={largura_topo:.0f}px, esq={altura_esq:.0f}px, mínimo esperado={dist_min_esperada:.0f}px")
+            return None
+        
+        logging.info(f"✅ 4 marcadores detectados:")
+        logging.info(f"   TL={tl} TR={tr}")
+        logging.info(f"   BL={bl} BR={br}")
+        logging.info(f"   Larguras: topo={largura_topo:.0f}px base={largura_base:.0f}px")
+        logging.info(f"   Alturas: esq={altura_esq:.0f}px dir={altura_dir:.0f}px")
+        
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
-
+    
     except Exception as e:
         logging.error(f"❌ Erro ao detectar marcadores: {e}")
+        traceback.print_exc()
         return None
 
 
