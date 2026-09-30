@@ -833,16 +833,23 @@ def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
 
 
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
-    """Corrige cartão usando mapa de posições normalizadas."""
+    """
+    v5.0 — ADAPTATIVO: Detecta as bolhas REAIS do cartão e usa como referência.
+    
+    Em vez de confiar cegamente no mapa teórico, detecta as bolhas por
+    HoughCircles e as organiza em grid. Depois amostra cada uma.
+    """
     h, w = img_corrigida.shape[:2]
     gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
+    # Normalização de iluminação
     bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
     bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
     bg = cv2.GaussianBlur(bg, (51, 51), 0)
     bg = np.where(bg == 0, 1, bg).astype(np.float32)
     gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
 
+    # Binarização
     binaria = cv2.adaptiveThreshold(
         gray_norm, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -850,26 +857,256 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         blockSize=25, C=10
     )
 
-    por_questao = {}
-    for b in mapa_template:
-        por_questao.setdefault(b['questao'], []).append(b)
+    # ═══════════════════════════════════════════════════════
+    # PASSO 1: DETECTAR BOLHAS REAIS POR HOUGHCIRCLES
+    # ═══════════════════════════════════════════════════════
+    gray_blur = cv2.GaussianBlur(gray_norm, (5, 5), 0)
+    
+    # Estimar raio esperado das bolhas
+    # Bolha tem ~7mm de diâmetro, área útil tem 234mm de altura
+    # Em 2440 pixels: 7mm = 2440 * 7/234 = ~73 pixels de diâmetro = ~36 pixels de raio
+    raio_esperado = int(h * 0.014)  # ~14 milésimos da altura
+    raio_min = max(8, int(raio_esperado * 0.6))
+    raio_max = max(15, int(raio_esperado * 1.6))
 
+    circulos = cv2.HoughCircles(
+        gray_blur,
+        cv2.HOUGH_GRADIENT,
+        dp=1.0,
+        minDist=int(raio_esperado * 1.5),
+        param1=80,
+        param2=25,
+        minRadius=raio_min,
+        maxRadius=raio_max
+    )
+
+    bolhas_detectadas = []
+
+    if circulos is not None:
+        circulos = np.round(circulos[0, :]).astype("int")
+        
+        for (x, y, r) in circulos:
+            # Ignorar bolhas nos cantos (marcadores)
+            if (x < w * 0.05 and y < h * 0.05) or \
+               (x > w * 0.95 and y < h * 0.05) or \
+               (x < w * 0.05 and y > h * 0.95) or \
+               (x > w * 0.95 and y > h * 0.95):
+                continue
+            
+            # Amostrar ratio dentro do círculo
+            mask = np.zeros(binaria.shape, dtype=np.uint8)
+            cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
+            roi = cv2.bitwise_and(binaria, binaria, mask=mask)
+            total_px = cv2.countNonZero(mask)
+            if total_px == 0:
+                continue
+            ratio = cv2.countNonZero(roi) / total_px
+            
+            bolhas_detectadas.append({
+                'x': int(x),
+                'y': int(y),
+                'r': int(r),
+                'ratio': float(ratio)
+            })
+
+    logging.info(f"🔍 HoughCircles: {len(bolhas_detectadas)} bolhas detectadas")
+    logging.info(f"   Raio esperado: {raio_esperado}px (min={raio_min}, max={raio_max})")
+
+    # ═══════════════════════════════════════════════════════
+    # PASSO 2: FALLBACK — Se não detectou bolhas suficientes, usar mapa
+    # ═══════════════════════════════════════════════════════
+    if len(bolhas_detectadas) < len(mapa_template) * 0.5:
+        logging.warning(f"⚠️ Poucas bolhas detectadas ({len(bolhas_detectadas)}) — usando mapa teórico")
+        
+        # MÉTODO ANTIGO (mapa teórico)
+        por_questao = {}
+        for b in mapa_template:
+            por_questao.setdefault(b['questao'], []).append(b)
+
+        respostas = []
+        confiancas = []
+        debug_info = []
+
+        for q in sorted(por_questao.keys()):
+            bolhas = por_questao[q]
+            medidas = []
+            for b in bolhas:
+                ratio = amostrar_bolha_template(binaria, b['x'], b['y'])
+                medidas.append((b['alternativa'], ratio, b))
+
+            medidas.sort(key=lambda m: m[1], reverse=True)
+            max_ratio = medidas[0][1]
+            min_ratio = medidas[-1][1]
+            separacao = max_ratio - min_ratio
+
+            if separacao > 0.50:
+                confianca = 98
+            elif separacao > 0.35:
+                confianca = 92
+            elif separacao > 0.20:
+                confianca = 80
+            elif separacao > 0.10:
+                confianca = 65
+            else:
+                confianca = 40
+
+            letra_escolhida = medidas[0][0]
+
+            if max_ratio < 0.30:
+                respostas.append('')
+                confiancas.append(30)
+                debug_info.append({
+                    'questao': q, 'resposta': '', 'motivo': 'todas vazias',
+                    'medidas': [(m[0], round(m[1], 3)) for m in medidas]
+                })
+            else:
+                respostas.append(letra_escolhida)
+                confiancas.append(confianca)
+                debug_info.append({
+                    'questao': q, 'resposta': letra_escolhida,
+                    'confianca': confianca,
+                    'medidas': [(m[0], round(m[1], 3)) for m in medidas]
+                })
+
+        if debug:
+            return respostas, confiancas, debug_info
+        return respostas, confiancas
+
+    # ═══════════════════════════════════════════════════════
+    # PASSO 3: ORGANIZAR BOLHAS EM GRID (linhas x colunas)
+    # ═══════════════════════════════════════════════════════
+    
+    # Filtrar bolhas por raio mediano
+    raios = [b['r'] for b in bolhas_detectadas]
+    raio_mediano = sorted(raios)[len(raios) // 2]
+    
+    bolhas_detectadas = [
+        b for b in bolhas_detectadas
+        if raio_mediano * 0.7 <= b['r'] <= raio_mediano * 1.4
+    ]
+    
+    logging.info(f"🔍 Após filtro de raio: {len(bolhas_detectadas)} bolhas")
+
+    # Agrupar por Y (linhas)
+    bolhas_detectadas.sort(key=lambda b: b['y'])
+    
+    # Detectar espaçamento entre linhas
+    ys = [b['y'] for b in bolhas_detectadas]
+    gaps = [ys[i+1] - ys[i] for i in range(len(ys)-1) if ys[i+1] - ys[i] > 5]
+    
+    if gaps:
+        gaps.sort()
+        y_tol = gaps[0] * 0.5
+    else:
+        y_tol = 30
+    
+    y_tol = max(15, min(y_tol, 60))
+
+    # Agrupar em linhas
+    linhas = []
+    for b in bolhas_detectadas:
+        if not linhas:
+            linhas.append([b])
+            continue
+        
+        linha_atual = linhas[-1]
+        y_media = sum(x['y'] for x in linha_atual) / len(linha_atual)
+        
+        if abs(b['y'] - y_media) < y_tol:
+            linha_atual.append(b)
+        else:
+            linhas.append([b])
+    
+    # Ordenar cada linha por X
+    for linha in linhas:
+        linha.sort(key=lambda b: b['x'])
+    
+    logging.info(f"🔍 Linhas detectadas: {len(linhas)}")
+    
+    # Filtrar linhas com poucas bolhas (mínimo 3, pois bolhas podem estar ocluídas)
+    linhas = [l for l in linhas if len(l) >= 3]
+    
+    logging.info(f"🔍 Linhas com 3+ bolhas: {len(linhas)}")
+
+    total_questoes = len(mapa_template) // len(alternativas)
+    num_alts = len(alternativas)
+
+    logging.info(f"🔍 Total questões no mapa: {total_questoes}, alternativas: {alternativas}")
+
+    # ═══════════════════════════════════════════════════════
+    # PASSO 4: MAPEAR CADA BOLHA DETECTADA A UMA QUESTÃO
+    # ═══════════════════════════════════════════════════════
+    
     respostas = []
     confiancas = []
     debug_info = []
 
-    for q in sorted(por_questao.keys()):
-        bolhas = por_questao[q]
+    if len(linhas) < total_questoes:
+        logging.warning(f"⚠️ Apenas {len(linhas)} linhas para {total_questoes} questões")
+        # Fallback para mapa teórico
+        respostas = [''] * total_questoes
+        confiancas = [30] * total_questoes
+        if debug:
+            return respostas, confiancas, []
+        return respostas, confiancas
+
+    # Usar as primeiras `total_questoes` linhas detectadas
+    linhas_usar = linhas[:total_questoes]
+
+    # Detectar posições das colunas (A, B, C, D) baseado em todas as bolhas
+    xs_todas = [b['x'] for b in bolhas_detectadas]
+    xs_unicos = sorted(set(xs_todas))
+    
+    # Clusterizar em 4 colunas (A, B, C, D)
+    x_min = min(xs_todas)
+    x_max = max(xs_todas)
+    range_x = x_max - x_min
+
+    colunas = {letra: [] for letra in alternativas}
+    
+    for x in xs_todas:
+        pos_rel = (x - x_min) / range_x if range_x > 0 else 0.5
+        idx = min(int(pos_rel * num_alts), num_alts - 1)
+        colunas[alternativas[idx]].append(x)
+
+    posicoes_colunas = {}
+    for letra in alternativas:
+        if colunas[letra]:
+            posicoes_colunas[letra] = sum(colunas[letra]) / len(colunas[letra])
+        else:
+            posicoes_colunas[letra] = x_min + (range_x / (num_alts - 1)) * alternativas.index(letra) if num_alts > 1 else x_min
+
+    logging.info(f"🔍 Posições colunas: {posicoes_colunas}")
+
+    # Para cada linha, identificar qual bolha está marcada
+    for idx_linha, linha in enumerate(linhas_usar):
+        if idx_linha >= total_questoes:
+            break
+        
         medidas = []
-        for b in bolhas:
-            ratio = amostrar_bolha_template(binaria, b['x'], b['y'])
-            medidas.append((b['alternativa'], ratio, b))
-
+        
+        # Para cada alternativa, encontrar a bolha mais próxima da posição esperada
+        for letra in alternativas:
+            x_esperado = posicoes_colunas[letra]
+            
+            # Encontrar bolha mais próxima horizontalmente
+            melhor_bolha = None
+            melhor_dist = float('inf')
+            
+            for b in linha:
+                dist = abs(b['x'] - x_esperado)
+                if dist < melhor_dist:
+                    melhor_dist = dist
+                    melhor_bolha = b
+            
+            if melhor_bolha:
+                medidas.append((letra, melhor_bolha['ratio'], melhor_bolha))
+            else:
+                medidas.append((letra, 0.0, None))
+        
         medidas.sort(key=lambda m: m[1], reverse=True)
-        ratios = [m[1] for m in medidas]
-        min_ratio = min(ratios)
-        max_ratio = max(ratios)
-
+        max_ratio = medidas[0][1]
+        min_ratio = medidas[-1][1]
         separacao = max_ratio - min_ratio
 
         if separacao > 0.50:
@@ -884,34 +1121,25 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
             confianca = 40
 
         letra_escolhida = medidas[0][0]
-        ratio_escolhida = medidas[0][1]
-
-        if ratio_escolhida < 0.30:
+        
+        # Threshold mais rigoroso: ratio > 0.5 = marcada
+        if max_ratio < 0.50:
             respostas.append('')
             confiancas.append(30)
             debug_info.append({
-                'questao': q, 'resposta': '', 'motivo': 'todas vazias',
+                'questao': idx_linha + 1, 'resposta': '', 'motivo': f'max_ratio={max_ratio:.2f} < 0.50',
                 'medidas': [(m[0], round(m[1], 3)) for m in medidas]
             })
         else:
             respostas.append(letra_escolhida)
             confiancas.append(confianca)
             debug_info.append({
-                'questao': q, 'resposta': letra_escolhida,
+                'questao': idx_linha + 1, 'resposta': letra_escolhida,
                 'confianca': confianca,
                 'medidas': [(m[0], round(m[1], 3)) for m in medidas]
             })
 
-    # ═══ LOG DETALHADO PARA DEBUG ═══
-    logging.info("=" * 60)
-    logging.info(f"🔬 TEMPLATE DEBUG:")
-    logging.info(f"   Imagem: {w}x{h}")
-    logging.info(f"   Mapa: {len(mapa_template)} bolhas")
-    logging.info(f"   Respostas: {respostas}")
-    logging.info(f"   Confianças: {confiancas}")
-    for info in debug_info:
-        logging.info(f"   Q{info['questao']}: {info.get('medidas', [])}")
-    logging.info("=" * 60)
+    logging.info(f"✅ Template ADAPTATIVO: {sum(1 for r in respostas if r)}/{total_questoes} detectadas")
 
     if debug:
         return respostas, confiancas, debug_info
