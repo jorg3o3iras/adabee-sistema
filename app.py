@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ============================================
 # CACHE PERSISTENTE DE CORREÇÕES (PostgreSQL)
 # ============================================
-CORRECOES_CACHE_TTL_HORAS = 168  # 7 dias
+CORRECOES_CACHE_TTL_HORAS = 168
 
 # ⚡ DEBUG: CACHE DESATIVADO TEMPORARIAMENTE
 CACHE_ENABLED = False
@@ -644,10 +644,8 @@ def detectar_marcadores_fiduciais(gray):
 
 def corrigir_perspectiva(img, marcadores):
     """
-    ⚡ v2.0 — Corrige perspectiva com DIMENSÕES FIXAS.
-    
-    Sempre gera imagem 1900x2440, garantindo que o mapa do template
-    (gerado com coordenadas normalizadas) sempre alinhe.
+    Corrige perspectiva com DIMENSÕES FIXAS (1900x2440).
+    Garante que toda imagem corrigida tenha as mesmas proporções.
     """
     try:
         tl = marcadores['tl']
@@ -655,7 +653,6 @@ def corrigir_perspectiva(img, marcadores):
         bl = marcadores['bl']
         br = marcadores['br']
 
-        # ═══ DIMENSÕES FIXAS ═══
         LARGURA_TOTAL = 1900
         ALTURA_TOTAL = 2440
         MARGEM = 50
@@ -809,9 +806,7 @@ def carregar_mapa_template(prova_id, aluno_id):
 
 
 def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
-    """
-    ⚡ v2.0 — Amostra com raio calibrado para imagem 1900x2440.
-    """
+    """Amostra uma bolha usando coordenadas normalizadas."""
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
@@ -835,21 +830,16 @@ def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
     """
     v5.0 — ADAPTATIVO: Detecta as bolhas REAIS do cartão e usa como referência.
-    
-    Em vez de confiar cegamente no mapa teórico, detecta as bolhas por
-    HoughCircles e as organiza em grid. Depois amostra cada uma.
     """
     h, w = img_corrigida.shape[:2]
     gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
-    # Normalização de iluminação
     bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
     bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
     bg = cv2.GaussianBlur(bg, (51, 51), 0)
     bg = np.where(bg == 0, 1, bg).astype(np.float32)
     gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
 
-    # Binarização
     binaria = cv2.adaptiveThreshold(
         gray_norm, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -861,11 +851,8 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
     # PASSO 1: DETECTAR BOLHAS REAIS POR HOUGHCIRCLES
     # ═══════════════════════════════════════════════════════
     gray_blur = cv2.GaussianBlur(gray_norm, (5, 5), 0)
-    
-    # Estimar raio esperado das bolhas
-    # Bolha tem ~7mm de diâmetro, área útil tem 234mm de altura
-    # Em 2440 pixels: 7mm = 2440 * 7/234 = ~73 pixels de diâmetro = ~36 pixels de raio
-    raio_esperado = int(h * 0.014)  # ~14 milésimos da altura
+
+    raio_esperado = int(h * 0.014)
     raio_min = max(8, int(raio_esperado * 0.6))
     raio_max = max(15, int(raio_esperado * 1.6))
 
@@ -884,16 +871,14 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
 
     if circulos is not None:
         circulos = np.round(circulos[0, :]).astype("int")
-        
+
         for (x, y, r) in circulos:
-            # Ignorar bolhas nos cantos (marcadores)
             if (x < w * 0.05 and y < h * 0.05) or \
                (x > w * 0.95 and y < h * 0.05) or \
                (x < w * 0.05 and y > h * 0.95) or \
                (x > w * 0.95 and y > h * 0.95):
                 continue
-            
-            # Amostrar ratio dentro do círculo
+
             mask = np.zeros(binaria.shape, dtype=np.uint8)
             cv2.circle(mask, (x, y), int(r * 0.75), 255, -1)
             roi = cv2.bitwise_and(binaria, binaria, mask=mask)
@@ -901,7 +886,7 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
             if total_px == 0:
                 continue
             ratio = cv2.countNonZero(roi) / total_px
-            
+
             bolhas_detectadas.append({
                 'x': int(x),
                 'y': int(y),
@@ -913,12 +898,11 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
     logging.info(f"   Raio esperado: {raio_esperado}px (min={raio_min}, max={raio_max})")
 
     # ═══════════════════════════════════════════════════════
-    # PASSO 2: FALLBACK — Se não detectou bolhas suficientes, usar mapa
+    # PASSO 2: FALLBACK — Mapa teórico se poucas bolhas
     # ═══════════════════════════════════════════════════════
     if len(bolhas_detectadas) < len(mapa_template) * 0.5:
         logging.warning(f"⚠️ Poucas bolhas detectadas ({len(bolhas_detectadas)}) — usando mapa teórico")
-        
-        # MÉTODO ANTIGO (mapa teórico)
+
         por_questao = {}
         for b in mapa_template:
             por_questao.setdefault(b['questao'], []).append(b)
@@ -952,7 +936,8 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
 
             letra_escolhida = medidas[0][0]
 
-            if max_ratio < 0.30:
+            # ⚡ CORREÇÃO #3: threshold 0.25
+            if max_ratio < 0.25:
                 respostas.append('')
                 confiancas.append(30)
                 debug_info.append({
@@ -973,59 +958,52 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         return respostas, confiancas
 
     # ═══════════════════════════════════════════════════════
-    # PASSO 3: ORGANIZAR BOLHAS EM GRID (linhas x colunas)
+    # PASSO 3: ORGANIZAR BOLHAS EM GRID
     # ═══════════════════════════════════════════════════════
-    
-    # Filtrar bolhas por raio mediano
     raios = [b['r'] for b in bolhas_detectadas]
     raio_mediano = sorted(raios)[len(raios) // 2]
-    
+
     bolhas_detectadas = [
         b for b in bolhas_detectadas
         if raio_mediano * 0.7 <= b['r'] <= raio_mediano * 1.4
     ]
-    
+
     logging.info(f"🔍 Após filtro de raio: {len(bolhas_detectadas)} bolhas")
 
-    # Agrupar por Y (linhas)
     bolhas_detectadas.sort(key=lambda b: b['y'])
-    
-    # Detectar espaçamento entre linhas
+
     ys = [b['y'] for b in bolhas_detectadas]
     gaps = [ys[i+1] - ys[i] for i in range(len(ys)-1) if ys[i+1] - ys[i] > 5]
-    
+
     if gaps:
         gaps.sort()
         y_tol = gaps[0] * 0.5
     else:
         y_tol = 30
-    
+
     y_tol = max(15, min(y_tol, 60))
 
-    # Agrupar em linhas
     linhas = []
     for b in bolhas_detectadas:
         if not linhas:
             linhas.append([b])
             continue
-        
+
         linha_atual = linhas[-1]
         y_media = sum(x['y'] for x in linha_atual) / len(linha_atual)
-        
+
         if abs(b['y'] - y_media) < y_tol:
             linha_atual.append(b)
         else:
             linhas.append([b])
-    
-    # Ordenar cada linha por X
+
     for linha in linhas:
         linha.sort(key=lambda b: b['x'])
-    
+
     logging.info(f"🔍 Linhas detectadas: {len(linhas)}")
-    
-    # Filtrar linhas com poucas bolhas (mínimo 3, pois bolhas podem estar ocluídas)
+
     linhas = [l for l in linhas if len(l) >= 3]
-    
+
     logging.info(f"🔍 Linhas com 3+ bolhas: {len(linhas)}")
 
     total_questoes = len(mapa_template) // len(alternativas)
@@ -1034,36 +1012,30 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
     logging.info(f"🔍 Total questões no mapa: {total_questoes}, alternativas: {alternativas}")
 
     # ═══════════════════════════════════════════════════════
-    # PASSO 4: MAPEAR CADA BOLHA DETECTADA A UMA QUESTÃO
+    # PASSO 4: MAPEAR CADA BOLHA A UMA QUESTÃO
     # ═══════════════════════════════════════════════════════
-    
     respostas = []
     confiancas = []
     debug_info = []
 
     if len(linhas) < total_questoes:
         logging.warning(f"⚠️ Apenas {len(linhas)} linhas para {total_questoes} questões")
-        # Fallback para mapa teórico
         respostas = [''] * total_questoes
         confiancas = [30] * total_questoes
         if debug:
             return respostas, confiancas, []
         return respostas, confiancas
 
-    # Usar as primeiras `total_questoes` linhas detectadas
     linhas_usar = linhas[:total_questoes]
 
-    # Detectar posições das colunas (A, B, C, D) baseado em todas as bolhas
     xs_todas = [b['x'] for b in bolhas_detectadas]
-    xs_unicos = sorted(set(xs_todas))
-    
-    # Clusterizar em 4 colunas (A, B, C, D)
+
     x_min = min(xs_todas)
     x_max = max(xs_todas)
     range_x = x_max - x_min
 
     colunas = {letra: [] for letra in alternativas}
-    
+
     for x in xs_todas:
         pos_rel = (x - x_min) / range_x if range_x > 0 else 0.5
         idx = min(int(pos_rel * num_alts), num_alts - 1)
@@ -1078,32 +1050,29 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
 
     logging.info(f"🔍 Posições colunas: {posicoes_colunas}")
 
-    # Para cada linha, identificar qual bolha está marcada
     for idx_linha, linha in enumerate(linhas_usar):
         if idx_linha >= total_questoes:
             break
-        
+
         medidas = []
-        
-        # Para cada alternativa, encontrar a bolha mais próxima da posição esperada
+
         for letra in alternativas:
             x_esperado = posicoes_colunas[letra]
-            
-            # Encontrar bolha mais próxima horizontalmente
+
             melhor_bolha = None
             melhor_dist = float('inf')
-            
+
             for b in linha:
                 dist = abs(b['x'] - x_esperado)
                 if dist < melhor_dist:
                     melhor_dist = dist
                     melhor_bolha = b
-            
+
             if melhor_bolha:
                 medidas.append((letra, melhor_bolha['ratio'], melhor_bolha))
             else:
                 medidas.append((letra, 0.0, None))
-        
+
         medidas.sort(key=lambda m: m[1], reverse=True)
         max_ratio = medidas[0][1]
         min_ratio = medidas[-1][1]
@@ -1121,13 +1090,13 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
             confianca = 40
 
         letra_escolhida = medidas[0][0]
-        
-        # Threshold mais rigoroso: ratio > 0.5 = marcada
-        if max_ratio < 0.50:
+
+        # ⚡ CORREÇÃO #3: threshold 0.25 (era 0.50)
+        if max_ratio < 0.25:
             respostas.append('')
             confiancas.append(30)
             debug_info.append({
-                'questao': idx_linha + 1, 'resposta': '', 'motivo': f'max_ratio={max_ratio:.2f} < 0.50',
+                'questao': idx_linha + 1, 'resposta': '', 'motivo': f'max_ratio={max_ratio:.2f} < 0.25',
                 'medidas': [(m[0], round(m[1], 3)) for m in medidas]
             })
         else:
@@ -1228,15 +1197,13 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     logging.info(f"   Não vazias: {len(nao_vazias)}/{total_questoes}")
     logging.info("=" * 60)
 
-    # ⚡ MAIS PERMISSIVO: aceita se detectou 2+ respostas
-    if len(nao_vazias) < 2:
-        logging.warning(f"⚠️ Template: apenas {len(nao_vazias)}/{total_questoes} — rejeitando")
+    # ⚡ CORREÇÃO #1: Aceita Template SEMPRE (0 respostas incluído para cartão em branco)
+    if len(nao_vazias) >= 8 and len(set(nao_vazias)) == 1:
+        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}' — rejeitando")
         return None
 
-    # Só rejeita se TODAS iguais E muitas
-    if len(nao_vazias) >= 8 and len(set(nao_vazias)) == 1:
-        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}' — suspeito")
-        return None
+    if len(nao_vazias) == 0:
+        logging.info("✅ Template: 0 respostas (cartão em branco) — ACEITANDO")
 
     logging.info(f"✅ Template Mapping ACEITO: {len(nao_vazias)}/{total_questoes} detectadas")
     return {
@@ -1247,10 +1214,11 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
 
 
 # ============================================
-# DETECÇÃO DE BOLHAS (OPENCV - FALLBACK)
+# DETECÇÃO DE BOLHAS (OPENCV - FALLBACK DESATIVADO)
 # ============================================
 
 def detectar_circulos_preenchidos(imagem_base64):
+    """Detecção OpenCV (mantida mas não usada como fallback)."""
     try:
         if ',' in imagem_base64:
             imagem_base64 = imagem_base64.split(',')[1]
@@ -1446,6 +1414,7 @@ def detectar_circulos_preenchidos(imagem_base64):
 
 
 def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
+    """Organiza respostas do OpenCV."""
     if not circulos:
         return [''] * total_questoes, [0] * total_questoes
 
@@ -2021,19 +1990,14 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CORREÇÃO — v4.0
+# FUNÇÃO PRINCIPAL DE CORREÇÃO — v4.1
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
     """
-    CASCATA v4.0 — Template tem PRIORIDADE ABSOLUTA.
-    
-    Ordem:
-    1. Template Mapping (sempre usado se detectar 2+ respostas)
-    2. OpenCV (só se Template falhou completamente)
-    3. IA (último recurso)
+    CASCATA v4.1 — Template com PRIORIDADE ABSOLUTA, OpenCV DESATIVADO.
     """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
@@ -2070,53 +2034,22 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             logging.info(f"📋 Respostas Template: {resp_tm}")
             logging.info(f"📋 Confianças Template: {confs_tm}")
 
-            # ⚡ PRIORIDADE ABSOLUTA: usa Template se detectou 2+ respostas
-            if detectadas_tm >= 2:
-                logging.info("🎯 USANDO TEMPLATE (OpenCV ignorado!)")
-                return calcular_resultado_correcao(
-                    resp_tm, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'template',
-                    bncc=bncc, confiancas=confs_tm
-                )
-            else:
-                logging.warning(f"⚠️ Template detectou apenas {detectadas_tm} — caindo para OpenCV")
-        else:
-            logging.warning("⚠️ Template retornou None — caindo para OpenCV")
-
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 2: OPENCV (fallback)
-        # ═══════════════════════════════════════════════════════
-        logging.info("=" * 60)
-        logging.info("📌 ETAPA 2: OpenCV (fallback)")
-        logging.info("=" * 60)
-
-        respostas_cv = [''] * total_questoes
-        confs_cv = [0] * total_questoes
-        valido_cv = False
-
-        try:
-            circulos, posicoes_colunas = detectar_circulos_preenchidos(imagem_base64)
-            if circulos and len(circulos) >= 4:
-                respostas_cv, confs_cv = organizar_respostas_por_posicao(
-                    circulos, total_questoes, posicoes_colunas
-                )
-                detectadas_cv = len([r for r in respostas_cv if r])
-                if detectadas_cv >= total_questoes * 0.5:
-                    nao_vazias_cv = [r for r in respostas_cv if r]
-                    if len(set(nao_vazias_cv)) >= 2:
-                        valido_cv = True
-                        logging.info(f"✅ OpenCV OK — {detectadas_cv}/{total_questoes}")
-        except Exception as e:
-            logging.warning(f"⚠️ OpenCV falhou: {e}")
-
-        if valido_cv:
-            conf_media_cv = sum(confs_cv) / len(confs_cv) if confs_cv else 0
-            logging.info(f"✅ Usando OpenCV (conf={conf_media_cv:.1f}%)")
+            # ⚡ CORREÇÃO #1: Aceita Template com 0+ respostas
+            logging.info("🎯 USANDO TEMPLATE (OpenCV ignorado!)")
             return calcular_resultado_correcao(
-                respostas_cv, gabarito, aluno_nome, serie,
-                disciplina, tipo_questoes, 'circulos',
-                bncc=bncc, confiancas=confs_cv
+                resp_tm, gabarito, aluno_nome, serie,
+                disciplina, tipo_questoes, 'template',
+                bncc=bncc, confiancas=confs_tm
             )
+        else:
+            logging.warning("⚠️ Template retornou None — caindo para IA")
+
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 2: OPENCV — DESATIVADO INTENCIONALMENTE
+        # ═══════════════════════════════════════════════════════
+        logging.info("=" * 60)
+        logging.info("📌 ETAPA 2: OpenCV — DESATIVADO (Template adaptativo é mais preciso)")
+        logging.info("=" * 60)
 
         # ═══════════════════════════════════════════════════════
         # ETAPA 3: IA (último recurso)
@@ -2141,13 +2074,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
 
         return erro_correcao(
             aluno_nome, serie, disciplina,
-            '❌ Não foi possível ler as respostas do cartão.\n\n'
-            'Verifique:\n'
-            '1. A foto está nítida?\n'
-            '2. Boa iluminação?\n'
-            '3. Os 4 marcadores pretos estão visíveis?\n'
-            '4. Os círculos foram pintados completamente?\n'
-            '5. Caneta preta ou azul (não lápis)?'
+            '❌ Não foi possível ler as respostas do cartão.'
         )
 
     except Exception as e:
@@ -2178,7 +2105,7 @@ def after_request(response):
 
 
 # ============================================
-# ROTAS
+# ROTAS DE LOGIN E CORREÇÃO
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -5019,7 +4946,7 @@ def health_check():
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v4.0 (perspectiva fixa + template prioridade)',
+        'correcao': 'cascata v4.1 (template adaptativo + opencv desativado)',
         'cache': 'DESATIVADO' if not CACHE_ENABLED else 'ativo',
         'arquivos': arquivos
     })
@@ -5319,7 +5246,7 @@ def init_db():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v4.0 — TEMPLATE PRIORIDADE ABSOLUTA")
+    print("🚀 SERVIDOR CORRIGEPRO v4.1 — TEMPLATE ADAPTATIVO + OPENCV OFF")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -5327,10 +5254,11 @@ if __name__ == '__main__':
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print("=" * 60)
-    print("🎯 v4.0 — CORREÇÕES APLICADAS:")
-    print("   ✅ Perspectiva com dimensão FIXA (1900x2440)")
-    print("   ✅ Raio de amostragem maior")
-    print("   ✅ Template tem PRIORIDADE ABSOLUTA sobre OpenCV")
+    print("🎯 v4.1 — CORREÇÕES APLICADAS:")
+    print("   ✅ Template adaptativo (detecta bolhas reais)")
+    print("   ✅ Template SEMPRE aceito (mesmo com 0 respostas)")
+    print("   ✅ Threshold de amostragem em 0.25 (mais permissivo)")
+    print("   ✅ OpenCV DESATIVADO (era muito impreciso)")
     print(f"   ✅ Cache: {'ATIVO' if CACHE_ENABLED else 'DESATIVADO'}")
     print("=" * 60)
 
