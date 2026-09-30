@@ -7498,7 +7498,7 @@ function adicionarDescritorMatriz(bnccValue = '', descritorValue = '') {
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label class="form-label">BNCC</label>
+                <label class="form-label">habilidades bncc</label>
                 <input class="form-control" type="text" placeholder="Ex: EF01MA01" value="${escapeAttr(bnccValue)}">
             </div>
             <div class="form-group">
