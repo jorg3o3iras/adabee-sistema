@@ -7735,6 +7735,7 @@ function visualizarMatriz(id) {
 }
 
 // ═══ CORRIGIDO: escapeHtml no PDF ═══
+// ═══ CORRIGIDO: escapeHtml no PDF ═══
 function imprimirMatrizVisualizada() {
     const matriz = window.matrizVisualizando;
     if (!matriz) {
@@ -7772,14 +7773,14 @@ function imprimirMatrizVisualizada() {
 
     let descritoresHtml = '';
     if (linhas.length === 0) {
-        descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhum descritor cadastrado.</p>';
+        descritoresHtml = '<p style="color:#94a3b8;text-align:center;padding:16px;">Nenhuma habilidade cadastrada.</p>';
     } else {
         descritoresHtml = `
             <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:13px;">
                 <thead>
                     <tr style="background:#f1f5f9; border-bottom:2px solid #2563eb;">
-                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:25%;">📌 BNCC</th>
-                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 Descritor</th>
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:25%;">📌 HABILIDADE BNCC</th>
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 HABILIDADES E DESCRITORES</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -7840,7 +7841,7 @@ function imprimirMatrizVisualizada() {
                 <div class="info-card"><div class="label">📊 Nível</div><div class="value"><span class="badge">${escapeHtml(nivel)}</span></div></div>
             </div>
 
-            <div class="section-title">📋 Descritores (${linhas.length})</div>
+            <div class="section-title">📋 HABILIDADES E DESCRITORES (${linhas.length})</div>
             <div class="table-wrap">${descritoresHtml}</div>
 
             <div class="footer">Documento gerado pelo sistema CorrigePro — Secretaria Municipal de Educação</div>
