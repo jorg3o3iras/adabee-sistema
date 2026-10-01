@@ -7735,7 +7735,6 @@ function visualizarMatriz(id) {
 }
 
 // ═══ CORRIGIDO: escapeHtml no PDF ═══
-// ═══ CORRIGIDO: escapeHtml no PDF ═══
 function imprimirMatrizVisualizada() {
     const matriz = window.matrizVisualizando;
     if (!matriz) {
@@ -7780,7 +7779,7 @@ function imprimirMatrizVisualizada() {
                 <thead>
                     <tr style="background:#f1f5f9; border-bottom:2px solid #2563eb;">
                         <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:25%;">📌 HABILIDADE BNCC</th>
-                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 HABILIDADES E DESCRITORES</th>
+                        <th style="padding:8px 12px; text-align:left; font-weight:700; color:#1e293b; width:75%;">📝 DESCRITORES</th>
                     </tr>
                 </thead>
                 <tbody>
