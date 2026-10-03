@@ -71,7 +71,6 @@
                     <div class="sb-item" onclick="go('gabarito')" data-p="gabarito"><span class="sb-ico">✅</span> Gabarito</div>
                     <div class="sb-item" onclick="go('gabaritos')" data-p="gabaritos"><span class="sb-ico">📋</span> Gabaritos</div>
                     
-                    <!-- ═══════ NOVO MENU: MATRIZ DE PROFICIÊNCIA ═══════ -->
                     <div class="sb-section">Matriz de Proficiência</div>
                     <div class="sb-item" onclick="go('matriz')" data-p="matriz" style="border-left: 3px solid var(--purple); background: rgba(139, 92, 246, 0.08);">
                         <span class="sb-ico">📊</span> Matrizes
@@ -316,7 +315,7 @@
                 </div>
             </div>
 
-            <!-- ========== GABARITO (COM CAMPOS Habilidade BNCC) ========== -->
+            <!-- ========== GABARITO ========== -->
             <div class="page" id="page-gabarito">
                 <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas e os códigos Habilidade BNCC (opcional)</p></div></div>
                 <div class="card no-print">
@@ -337,7 +336,6 @@
                             <button class="btn btn-ghost btn-sm" onclick="clearGab()">🗑️ Limpar</button>
                         </div>
                     </div>
-                    <!-- CABEÇALHO COM O NOME DA PROVA -->
                     <div id="gab-header-container"></div>
                     <div class="gab-grid" id="gab-grid"></div>
                     <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
@@ -345,9 +343,52 @@
                 </div>
             </div>
 
-            <!-- ========== CORRIGIR COM IA (COM CAMPOS ESCOLA E TURMA) ========== -->
+            <!-- ========== CORRIGIR COM IA ========== -->
             <div class="page" id="page-corrigir-ia">
                 <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção e correção automática de cartões resposta</p></div></div>
+
+                <!-- ═══ NOVO: CORREÇÃO AUTOMÁTICA POR QR CODE ═══ -->
+                <div class="card no-print" style="margin-bottom:18px; border: 2px solid rgba(139,92,246,0.4);">
+                    <div class="card-header">
+                        <div class="card-title" style="color:#a78bfa; font-size:18px;">⚡ Correção Automática por QR Code</div>
+                        <span class="badge badge-purple" style="font-size:11px;">NOVO</span>
+                    </div>
+                    <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.6;">
+                        <strong style="color:#a78bfa;">Escaneie o cartão e o sistema identifica o aluno, prova, escola e turma automaticamente.</strong>
+                        Não precisa selecionar nada — só tirar a foto.
+                    </p>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+                        <button class="btn btn-lg btn-full" 
+                                style="background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; padding:16px; font-size:15px; font-weight:700; box-shadow:0 6px 24px rgba(139,92,246,0.4);"
+                                onclick="document.getElementById('inp-arq-auto').click()">
+                            📂 ESCOLHER FOTO DO CARTÃO
+                        </button>
+
+                        <button class="btn btn-lg btn-full" 
+                                style="background:linear-gradient(135deg,#06b6d4,#0e7490); color:#fff; padding:16px; font-size:15px; font-weight:700; box-shadow:0 6px 24px rgba(6,182,212,0.4);"
+                                onclick="abrirCameraAutomatico()">
+                            📷 TIRAR FOTO AGORA
+                        </button>
+                    </div>
+
+                    <div id="auto-preview" style="display:none; text-align:center; margin:12px 0; padding:12px; background:var(--bg2); border-radius:10px; border:1px dashed var(--border2);">
+                        <div style="font-size:11px; color:var(--text3); font-weight:700; margin-bottom:8px;">📷 IMAGEM CARREGADA — PRONTA PARA CORRIGIR</div>
+                        <img id="auto-img-prev" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border2);" src="" alt="Preview">
+                        <div style="margin-top:12px;">
+                            <button class="btn btn-green btn-lg" onclick="corrigirAutomatico()" style="padding:14px 32px; font-size:15px; font-weight:700;">
+                                🚀 CORRIGIR AUTOMATICAMENTE
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="auto-resultado" style="display:none; margin-top:16px; padding:16px; background:var(--bg2); border-radius:10px; border:1px solid var(--border2);">
+                        <div id="auto-resultado-conteudo"></div>
+                    </div>
+
+                    <input type="file" id="inp-arq-auto" accept="image/*" style="display:none" onchange="processarArqAutomatico(this)">
+                </div>
+
                 <div class="g2 no-print" style="margin-bottom:18px;">
                     <div class="card card-glow-blue" style="border-color:rgba(6,182,212,.3);">
                         <div class="card-header"><div class="card-title" style="color:var(--cyan);">📱 Câmera do Celular</div><span class="badge badge-cyan">Real-time</span></div>
@@ -498,7 +539,7 @@
                 <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Título</th><th>Série</th><th>Disciplina</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-provas"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3);">Carregando...</td></tr></tbody></table></div></div>
             </div>
 
-            <!-- ========== MATRIZ DE PROFICIÊNCIA (CORRIGIDA) ========== -->
+            <!-- ========== MATRIZ DE PROFICIÊNCIA ========== -->
             <div class="page" id="page-matriz">
                 <div class="page-header">
                     <div>
@@ -514,7 +555,6 @@
                     </div>
                 </div>
 
-                <!-- Filtros -->
                 <div class="card no-print" style="margin-bottom:16px;">
                     <div class="form-row c3">
                         <div class="form-group">
@@ -546,10 +586,10 @@
                             <label class="form-label">Nível</label>
                             <select class="form-control" id="filtro-matriz-nivel" onchange="filtrarMatrizes()">
                                 <option value="">Todos os níveis</option>
-<option value="Inicial">Inicial</option>
-<option value="Básico">Básico</option>
-<option value="Proficiente">Proficiente</option>
-<option value="Avançado">Avançado</option>
+                                <option value="Inicial">Inicial</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Proficiente">Proficiente</option>
+                                <option value="Avançado">Avançado</option>
                             </select>
                         </div>
                     </div>
@@ -559,7 +599,6 @@
                     </div>
                 </div>
 
-                <!-- Tabela de Matrizes -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📋 Matrizes Cadastradas</div>
@@ -651,7 +690,6 @@
                     </div>
                 </div>
 
-                <!-- CARDS REORGANIZADOS -->
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                     <div style="background:var(--surface); border:1px solid rgba(59,130,246,.3); border-radius:var(--r); padding:16px; text-align:center;">
                         <div style="font-size:28px; font-weight:800; color:var(--blue);" id="res-total-alunos-turma">0</div>
@@ -670,7 +708,6 @@
                     </div>
                 </div>
 
-                <!-- ALUNOS QUE FIZERAM E NÃO FIZERAM -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
                     <div style="background:var(--surface); border:1px solid rgba(16,185,129,.2); border-radius:var(--r); padding:16px; text-align:center;">
                         <div style="font-size:24px; font-weight:800; color:var(--green);" id="res-alunos-fizeram">0</div>
@@ -1431,11 +1468,7 @@ Ana Lima" rows="3"></textarea>
             </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- ========== MODAIS DA MATRIZ (CORRIGIDOS) ========== -->
-        <!-- ============================================================ -->
-
-        <!-- MODAL MATRIZ (DESCRITOR AGORA É TEXTAREA) -->
+        <!-- MODAL MATRIZ -->
         <div class="modal-overlay no-print" id="m-matriz">
             <div class="modal" style="max-width:750px;width:95vw;">
                 <div class="modal-header">
@@ -1445,7 +1478,6 @@ Ana Lima" rows="3"></textarea>
                 
                 <input type="hidden" id="matriz-edit-id" value="">
                 
-                <!-- Campos principais -->
                 <div class="form-row c3">
                     <div class="form-group">
                         <label class="form-label">Ano <span class="req">*</span></label>
@@ -1480,7 +1512,6 @@ Ana Lima" rows="3"></textarea>
                         <label class="form-label">Nível <span class="req">*</span></label>
                         <select class="form-control" id="matriz-nivel">
                             <option value="">Selecione...</option>
-                            <!-- Níveis corrigidos: Inicial, Básico, Proficiente, Avançado -->
                             <option value="Inicial">Inicial</option>
                             <option value="Básico">Básico</option>
                             <option value="Proficiente">Proficiente</option>
@@ -1489,7 +1520,6 @@ Ana Lima" rows="3"></textarea>
                     </div>
                 </div>
 
-                <!-- Descritores com Habilidade BNCC -->
                 <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                         <div style="font-size:14px;font-weight:700;color:var(--text2);">📋 Habilidade BNCC</div>
@@ -1499,7 +1529,6 @@ Ana Lima" rows="3"></textarea>
                     </div>
                     
                     <div id="matriz-descritores-container">
-                        <!-- Os descritores serão adicionados dinamicamente aqui -->
                         <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">
                             Clique em "Adicionar Descritor" para começar
                         </div>
@@ -1537,7 +1566,7 @@ Ana Lima" rows="3"></textarea>
             </div>
         </div>
 
-        <!-- ========== MODAL VISUALIZAR MATRIZ (NOVO) ========== -->
+        <!-- MODAL VISUALIZAR MATRIZ -->
         <div class="modal-overlay no-print" id="m-visualizar-matriz">
             <div class="modal" style="max-width:700px;width:95vw;">
                 <div class="modal-header">
