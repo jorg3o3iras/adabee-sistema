@@ -5270,6 +5270,103 @@ def init_db():
         print(f"❌ Erro ao inicializar banco: {e}")
         traceback.print_exc()
 
+# ============================================
+# LEITURA DE QR CODE (CORREÇÃO AUTOMÁTICA)
+# ============================================
+
+def extrair_dados_qrcode(imagem_base64):
+    """Lê o QR Code da imagem e extrai aluno_id, prova_id, escola_id, turma_id."""
+    try:
+        from pyzbar.pyzbar import decode
+
+        if ',' in imagem_base64 and imagem_base64.strip().startswith('data:'):
+            imagem_base64 = imagem_base64.split(',', 1)[1]
+        imagem_base64 = imagem_base64.strip().replace('\n', '').replace('\r', '').replace(' ', '')
+
+        image_data = base64.b64decode(imagem_base64, validate=False)
+        np_array = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+
+        if img is None:
+            logging.warning("⚠️ QR: imagem inválida")
+            return None
+
+        logging.info(f"📷 QR: procurando em imagem {img.shape[1]}x{img.shape[0]}...")
+
+        codigos = decode(img)
+
+        if not codigos:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            gray_enhanced = clahe.apply(gray)
+            codigos = decode(gray_enhanced)
+
+        if not codigos:
+            logging.warning("⚠️ QR: nenhum código encontrado")
+            return None
+
+        for codigo in codigos:
+            dados = codigo.data.decode('utf-8')
+            logging.info(f"📷 QR detectado: {dados}")
+
+            if not dados.startswith('ALUNO:'):
+                continue
+
+            resultado = {}
+            for parte in dados.split('|'):
+                if ':' in parte:
+                    chave, valor = parte.split(':', 1)
+                    chave = chave.strip().upper()
+                    valor = valor.strip()
+                    if valor.isdigit():
+                        if chave == 'ALUNO':
+                            resultado['aluno_id'] = int(valor)
+                        elif chave == 'PROVA':
+                            resultado['prova_id'] = int(valor)
+                        elif chave == 'ESCOLA':
+                            resultado['escola_id'] = int(valor)
+                        elif chave == 'TURMA':
+                            resultado['turma_id'] = int(valor)
+
+            if 'aluno_id' in resultado and 'prova_id' in resultado:
+                logging.info(f"✅ QR: dados extraídos: {resultado}")
+                return resultado
+
+        return None
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao ler QR Code: {e}")
+        traceback.print_exc()
+        return None
+
+
+@app.route('/api/ler-qrcode', methods=['POST'])
+def ler_qrcode():
+    """Rota de teste: recebe uma imagem e retorna os dados do QR Code."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'erro': 'Nenhum dado recebido'}), 400
+
+        imagem_base64 = data.get('imagem')
+        if not imagem_base64:
+            return jsonify({'erro': 'Imagem é obrigatória'}), 400
+
+        info = extrair_dados_qrcode(imagem_base64)
+
+        if not info:
+            return jsonify({
+                'sucesso': False,
+                'erro': 'QR Code não detectado ou ilegível'
+            }), 404
+
+        return jsonify({'sucesso': True, **info})
+
+    except Exception as e:
+        logging.error(f"❌ Erro em /api/ler-qrcode: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
 
 # ============================================
 # INICIALIZAÇÃO DO SERVIDOR
