@@ -509,65 +509,57 @@ def detectar_marcadores_fiduciais(gray):
     """
     Detecta os 4 marcadores fiduciais nos cantos do cartão.
     
-    VERSÃO v3.1 — Corrigida: area_min/area_max fora do if hierarquia.
+    VERSÃO v2.0 — Robusta (inspirada no OMRChecker):
+    - Threshold de Otsu (adapta à iluminação)
+    - RETR_EXTERNAL (ignora o furo interno do marcador)
+    - Validação geométrica rigorosa (proporção dos lados)
+    - Fallback automático para threshold adaptativo
     """
     try:
         altura, largura = gray.shape
-        logging.info(f"🔍 Procurando marcadores em {largura}x{altura}...")
-        
+        logging.info(f"🔍 v2: Procurando marcadores em {largura}x{altura}...")
+
         area_imagem = largura * altura
-        
-        # ═══ LIMITES DE ÁREA (usados nos 2 métodos) ═══
-        area_min = area_imagem * 0.0015
-        area_max = area_imagem * 0.05
-        
+        area_min = area_imagem * 0.0005
+        area_max = area_imagem * 0.02
+
         candidatos = []
-        
-        # ═══ MÉTODO 1: Threshold + contornos com hierarquia ═══
-        _, binaria = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
-        
-        contornos, hierarquia = cv2.findContours(
-            binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+
+        # ═══════════════════════════════════════════
+        # MÉTODO 1: Otsu + Blur (principal)
+        # ═══════════════════════════════════════════
+        blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+        _, binaria = cv2.threshold(
+            blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
         )
-        
-        if hierarquia is not None and len(contornos) > 0:
-            hierarquia = hierarquia[0]
-            
-            for i, c in enumerate(contornos):
-                x, y, w, h = cv2.boundingRect(c)
-                area = w * h
-                
-                if not (area_min < area < area_max):
-                    continue
-                
-                aspect = w / float(h) if h > 0 else 0
-                if not (0.6 < aspect < 1.5):
-                    continue
-                
-                area_contorno = cv2.contourArea(c)
-                if area_contorno < area * 0.3:
-                    continue
-                
-                roi = binaria[y:y+h, x:x+w]
-                densidade = cv2.countNonZero(roi) / float(w * h)
-                
-                tem_filho = False
-                if i < len(hierarquia):
-                    filho_idx = hierarquia[i][2]
-                    if filho_idx != -1:
-                        tem_filho = True
-                
-                if densidade > 0.6 or (tem_filho and densidade > 0.3):
-                    candidatos.append((x, y, w, h, area, densidade, tem_filho))
-        
-        logging.info(f"🔍 Encontrados {len(candidatos)} candidatos (método 1)")
-        
-        # ═══ MÉTODO 2 (FALLBACK): Threshold adaptativo ═══
+
+        contornos, _ = cv2.findContours(
+            binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        for c in contornos:
+            area = cv2.contourArea(c)
+            if area < area_min or area > area_max:
+                continue
+
+            x, y, w, h = cv2.boundingRect(c)
+            aspect_ratio = float(w) / h if h > 0 else 0
+            if not (0.7 < aspect_ratio < 1.3):
+                continue
+
+            peri = cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, 0.04 * peri, True)
+            if len(approx) == 4:
+                candidatos.append((x, y, w, h))
+
+        logging.info(f"🔍 v2: Método 1 (Otsu) → {len(candidatos)} candidatos")
+
+        # ═══════════════════════════════════════════
+        # MÉTODO 2: Threshold adaptativo (fallback)
+        # ═══════════════════════════════════════════
         if len(candidatos) < 4:
-            logging.info("🔄 Tentando método alternativo...")
-            
+            logging.info("🔄 v2: Tentando método alternativo (adaptativo)...")
+
             binaria2 = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -576,98 +568,87 @@ def detectar_marcadores_fiduciais(gray):
             )
             kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
             binaria2 = cv2.morphologyEx(binaria2, cv2.MORPH_CLOSE, kernel2)
-            
+
             contornos2, _ = cv2.findContours(
                 binaria2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
-            
+
             for c in contornos2:
+                area = cv2.contourArea(c)
+                if area < area_min or area > area_max:
+                    continue
+
                 x, y, w, h = cv2.boundingRect(c)
-                area = w * h
-                
-                if not (area_min < area < area_max):
+                aspect_ratio = float(w) / h if h > 0 else 0
+                if not (0.6 < aspect_ratio < 1.5):
                     continue
-                
-                aspect = w / float(h) if h > 0 else 0
-                if not (0.5 < aspect < 2.0):
-                    continue
-                
-                roi = binaria2[y:y+h, x:x+w]
-                densidade = cv2.countNonZero(roi) / float(w * h)
-                
-                if densidade > 0.4:
-                    candidatos.append((x, y, w, h, area, densidade, False))
-            
-            logging.info(f"🔍 Após método 2: {len(candidatos)} candidatos")
-        
+
+                peri = cv2.arcLength(c, True)
+                approx = cv2.approxPolyDP(c, 0.04 * peri, True)
+                if len(approx) == 4:
+                    candidatos.append((x, y, w, h))
+
+            logging.info(f"🔍 v2: Após método 2 → {len(candidatos)} candidatos")
+
         if len(candidatos) < 4:
-            logging.warning(f"⚠️ Apenas {len(candidatos)} candidatos — falhou")
+            logging.warning(f"⚠️ v2: Apenas {len(candidatos)} candidatos — falhou")
             return None
-        
-        # ═══ ORDENA E CLASSIFICA ═══
-        candidatos.sort(key=lambda c: c[4], reverse=True)
-        candidatos = candidatos[:20]
-        
-        meia_largura = largura / 2
-        meia_altura = altura / 2
-        
-        tl = tr = bl = br = None
-        tl_s = tr_s = bl_s = br_s = -1
-        
-        for (x, y, w, h, a, d, furo) in candidatos:
-            cx, cy = x + w // 2, y + h // 2
-            
-            bonus_furo = 500 if furo else 0
-            
-            if cx < meia_largura and cy < meia_altura:
-                score = bonus_furo + a / 1000 - (cx + cy) / 10
-                if score > tl_s:
-                    tl = (cx, cy); tl_s = score
-            
-            elif cx >= meia_largura and cy < meia_altura:
-                score = bonus_furo + a / 1000 - ((largura - cx) + cy) / 10
-                if score > tr_s:
-                    tr = (cx, cy); tr_s = score
-            
-            elif cx < meia_largura and cy >= meia_altura:
-                score = bonus_furo + a / 1000 - (cx + (altura - cy)) / 10
-                if score > bl_s:
-                    bl = (cx, cy); bl_s = score
-            
-            elif cx >= meia_largura and cy >= meia_altura:
-                score = bonus_furo + a / 1000 - ((largura - cx) + (altura - cy)) / 10
-                if score > br_s:
-                    br = (cx, cy); br_s = score
-        
-        if not all([tl, tr, bl, br]):
-            logging.warning(f"⚠️ Não achou os 4 cantos: tl={tl} tr={tr} bl={bl} br={br}")
+
+        # ═══════════════════════════════════════════
+        # Pega os 4 maiores (marcadores são os maiores quadrados)
+        # ═══════════════════════════════════════════
+        candidatos.sort(key=lambda c: c[2] * c[3], reverse=True)
+        candidatos = candidatos[:4]
+
+        centros = [(x + w // 2, y + h // 2) for (x, y, w, h) in candidatos]
+
+        # ═══════════════════════════════════════════
+        # Identifica TL, TR, BL, BR pelas coordenadas
+        # ═══════════════════════════════════════════
+        centros.sort(key=lambda p: p[0] + p[1])
+        tl = centros[0]
+        br = centros[-1]
+
+        restantes = centros[1:3]
+        restantes.sort(key=lambda p: p[0] - p[1])
+        bl = restantes[0]
+        tr = restantes[1]
+
+        # ═══════════════════════════════════════════
+        # Validação geométrica rigorosa
+        # ═══════════════════════════════════════════
+        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
+        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
+
+        # Verifica se lados opostos são similares
+        if abs(largura_topo - largura_base) > min(largura_topo, largura_base) * 0.2:
+            logging.warning("⚠️ v2: lados superior/inferior muito diferentes")
             return None
-        
-        # ═══ VALIDAÇÃO ═══
-        largura_topo = ((tr[0] - tl[0]) ** 2 + (tr[1] - tl[1]) ** 2) ** 0.5
-        largura_base = ((br[0] - bl[0]) ** 2 + (br[1] - bl[1]) ** 2) ** 0.5
-        altura_esq = ((bl[0] - tl[0]) ** 2 + (bl[1] - tl[1]) ** 2) ** 0.5
-        altura_dir = ((br[0] - tr[0]) ** 2 + (br[1] - tr[1]) ** 2) ** 0.5
-        
-        dist_min = min(largura, altura) * 0.4
-        
+        if abs(altura_esq - altura_dir) > min(altura_esq, altura_dir) * 0.2:
+            logging.warning("⚠️ v2: lados esquerdo/direito muito diferentes")
+            return None
+
+        # Verifica tamanho mínimo
+        dist_min = min(largura, altura) * 0.3
         if largura_topo < dist_min or altura_esq < dist_min:
             logging.warning(
-                f"⚠️ Marcadores muito próximos: "
+                f"⚠️ v2: Marcadores muito próximos: "
                 f"topo={largura_topo:.0f}px, esq={altura_esq:.0f}px (min={dist_min:.0f})"
             )
             return None
-        
-        logging.info(f"✅ 4 marcadores detectados:")
+
+        logging.info(f"✅ v2: 4 marcadores detectados:")
         logging.info(f"   TL={tl}  TR={tr}")
         logging.info(f"   BL={bl}  BR={br}")
         logging.info(f"   Largura: topo={largura_topo:.0f} base={largura_base:.0f}")
         logging.info(f"   Altura: esq={altura_esq:.0f} dir={altura_dir:.0f}")
-        
+
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
-    
+
     except Exception as e:
-        logging.error(f"❌ Erro detectar_marcadores: {e}")
+        logging.error(f"❌ Erro detectar_marcadores v2: {e}")
         traceback.print_exc()
         return None
 
