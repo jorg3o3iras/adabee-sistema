@@ -3059,6 +3059,26 @@ function capturarFoto() {
     const foto = canvas.toDataURL('image/jpeg', 0.9);
     fecharCamera();
     showToast('📸 Foto capturada!', 'ai');
+
+    // ═══ NOVO: se estiver em modo automático, vai direto para a correção automática ═══
+    if (autoModoAtivo) {
+        autoModoAtivo = false;
+        window._autoImagem = foto;
+        go('corrigir-ia');
+        setTimeout(() => {
+            const preview = document.getElementById('auto-preview');
+            const img = document.getElementById('auto-img-prev');
+            if (preview && img) {
+                img.src = foto;
+                preview.style.display = 'block';
+            }
+            corrigirAutomatico();
+        }, 500);
+        return;
+    }
+    // ═══ FIM ═══
+
+    // Comportamento normal (correção manual)
     ultimaImagem = foto;
     processarComIA(foto);
     go('corrigir-ia');
@@ -7898,6 +7918,266 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ================================================================
-// FIM - SCRIPT COMPLETO CORRIGIDO
-// ================================================================
+// ============================================
+// CORREÇÃO AUTOMÁTICA POR QR CODE
+// ============================================
+
+let autoModoAtivo = false; // Flag que indica se a câmera está no modo automático
+
+function abrirCameraAutomatico() {
+    autoModoAtivo = true;
+    abrirCamera(); // Reutiliza a câmera existente
+}
+
+function processarArqAutomatico(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+        showToast('❌ Imagem muito grande (máx. 20MB)', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+
+        // Mostra o preview
+        const preview = document.getElementById('auto-preview');
+        const img = document.getElementById('auto-img-prev');
+        if (preview && img) {
+            img.src = base64;
+            preview.style.display = 'block';
+        }
+
+        // Limpa resultado anterior
+        const resultado = document.getElementById('auto-resultado');
+        if (resultado) resultado.style.display = 'none';
+
+        // Guarda a imagem para usar no corrigir
+        window._autoImagem = base64;
+
+        showToast('✅ Imagem carregada! Clique em "CORRIGIR AUTOMATICAMENTE"', 'success');
+    };
+    reader.readAsDataURL(file);
+}
+async function corrigirAutomatico() {
+    const imagem = window._autoImagem;
+
+    if (!imagem) {
+        showToast('❌ Nenhuma imagem carregada', 'error');
+        return;
+    }
+
+    // Esconde resultado anterior e mostra loading
+    const resultadoDiv = document.getElementById('auto-resultado');
+    const conteudoDiv = document.getElementById('auto-resultado-conteudo');
+
+    if (resultadoDiv) resultadoDiv.style.display = 'block';
+    if (conteudoDiv) {
+        conteudoDiv.innerHTML = `
+            <div style="text-align:center; padding:20px;">
+                <div class="spinner" style="margin:0 auto 14px;"></div>
+                <p style="font-size:15px; font-weight:700;">🔍 Lendo o QR Code do cartão...</p>
+                <p style="font-size:13px; color:var(--text2); margin-top:6px;">
+                    Identificando aluno, prova, escola e turma automaticamente
+                </p>
+            </div>
+        `;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/corrigir-automatico`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagem: imagem })
+        });
+
+        const dados = await response.json();
+
+        if (!response.ok || !dados.sucesso) {
+            mostrarErroAutomatico(dados.erro || 'Erro na correção automática', dados.dicas);
+            return;
+        }
+
+        mostrarResultadoAutomatico(dados);
+
+        // Limpa a imagem após sucesso
+        window._autoImagem = null;
+        const preview = document.getElementById('auto-preview');
+        if (preview) preview.style.display = 'none';
+
+    } catch (erro) {
+        console.error('Erro na correção automática:', erro);
+        mostrarErroAutomatico('Erro de conexão: ' + erro.message);
+    }
+}
+
+function mostrarErroAutomatico(mensagem, dicas) {
+    const conteudoDiv = document.getElementById('auto-resultado-conteudo');
+    if (!conteudoDiv) return;
+
+    let dicasHtml = '';
+    if (dicas && Array.isArray(dicas)) {
+        dicasHtml = '<div style="margin-top:14px; padding:12px; background:rgba(245,158,11,0.1); border-radius:8px; border-left:3px solid var(--orange);"><strong style="color:var(--orange);">Dicas:</strong><ul style="margin-top:6px; padding-left:20px; font-size:13px; color:var(--text2); line-height:1.7;">';
+        dicas.forEach(d => {
+            dicasHtml += `<li>${escapeHtml(d)}</li>`;
+        });
+        dicasHtml += '</ul></div>';
+    }
+
+    conteudoDiv.innerHTML = `
+        <div style="padding:16px; background:rgba(239,68,68,0.08); border-radius:10px; border-left:4px solid var(--red);">
+            <div style="font-size:15px; font-weight:700; color:var(--red); margin-bottom:8px;">
+                ❌ ${escapeHtml(mensagem)}
+            </div>
+            ${dicasHtml}
+            <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13px; color:var(--text2);">
+                <strong>Alternativa:</strong> use os campos abaixo (Escola / Turma / Prova / Aluno) 
+                para corrigir manualmente.
+            </div>
+        </div>
+    `;
+}
+
+function mostrarResultadoAutomatico(dados) {
+    const conteudoDiv = document.getElementById('auto-resultado-conteudo');
+    if (!conteudoDiv) return;
+
+    const nota = dados.nota || 0;
+    const acertos = dados.acertos || 0;
+    const total = dados.total || 0;
+    const porcentagem = dados.porcentagem || 0;
+    const conceito = dados.conceito?.nome || 'inicial';
+    const aluno = dados.aluno || 'Aluno';
+    const prova = dados.prova_titulo || 'Prova';
+    const escola = dados.escola_nome || '';
+    const turma = dados.turma_nome || '';
+
+    const conceitoCores = {
+        'inicial': '#ef4444',
+        'basico': '#f59e0b',
+        'proficiente': '#3b82f6',
+        'avancado': '#10b981'
+    };
+    const cor = conceitoCores[conceito] || '#94a3b8';
+    const conceitoLabel = {
+        'inicial': '🔴 Inicial',
+        'basico': '🟠 Básico',
+        'proficiente': '🔵 Proficiente',
+        'avancado': '🟢 Avançado'
+    }[conceito] || conceito;
+
+    // Monta a grade de questões
+    let questoesHtml = '';
+    if (dados.questoes_status && Array.isArray(dados.questoes_status)) {
+        questoesHtml = '<div style="display:grid; grid-template-columns:repeat(10,1fr); gap:4px; margin-top:12px;">';
+        dados.questoes_status.forEach(q => {
+            const acertou = q.acertou;
+            const resp = q.resposta || '—';
+            const cor = acertou ? 'rgba(16,185,129,0.15)' : (q.resposta !== '—' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.1)');
+            const corTexto = acertou ? 'var(--green)' : (q.resposta !== '—' ? 'var(--red)' : 'var(--text3)');
+            const icone = acertou ? '✅' : (q.resposta !== '—' ? '❌' : '—');
+            questoesHtml += `
+                <div style="background:${cor}; border-radius:6px; padding:5px 2px; text-align:center;">
+                    <div style="font-size:8px; font-weight:700; color:var(--text3);">Q${q.numero}</div>
+                    <div style="font-size:13px; font-weight:800; color:${corTexto};">${escapeHtml(resp)}</div>
+                    <div style="font-size:8px;">${icone}</div>
+                </div>
+            `;
+        });
+        questoesHtml += '</div>';
+    }
+
+    // Alerta de revisão manual
+    let alertaHtml = '';
+    if (dados.requer_revisao_manual) {
+        alertaHtml = `
+            <div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.12); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">
+                ⚠️ <strong>Revisão manual recomendada</strong> — algumas questões tiveram baixa confiança.
+            </div>
+        `;
+    }
+
+    conteudoDiv.innerHTML = `
+        <div style="background:linear-gradient(135deg, rgba(139,92,246,0.08), rgba(6,182,212,0.08)); border-radius:12px; padding:16px; border:2px solid rgba(139,92,246,0.3);">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                <div style="font-size:16px; font-weight:800; color:#a78bfa;">
+                    ✅ Correção Automática Concluída!
+                </div>
+                <span class="badge badge-purple" style="font-size:10px;">VIA QR CODE</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; font-size:13px;">
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">ALUNO</div>
+                    <div style="font-weight:700;">${escapeHtml(aluno)}</div>
+                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">PROVA</div>
+                    <div style="font-weight:700;">${escapeHtml(prova)}</div>
+                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">ESCOLA</div>
+                    <div style="font-weight:700; font-size:12px;">${escapeHtml(escola)}</div>
+                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">TURMA</div>
+                    <div style="font-weight:700; font-size:12px;">${escapeHtml(turma)}</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:26px; font-weight:900; color:var(--green);">${acertos}</div>
+                    <div style="font-size:10px; color:var(--text3); font-weight:700;">✅ ACERTOS</div>
+                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:26px; font-weight:900; color:var(--red);">${total - acertos}</div>
+                    <div style="font-size:10px; color:var(--text3); font-weight:700;">❌ ERROS</div>
+                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:26px; font-weight:900; color:var(--blue);">${porcentagem}%</div>
+                    <div style="font-size:10px; color:var(--text3); font-weight:700;">📊 APROVEIT.</div>
+                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:26px; font-weight:900; color:${cor};">${nota.toFixed(1)}</div>
+                    <div style="font-size:10px; color:var(--text3); font-weight:700;">⭐ NOTA</div>
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-bottom:10px;">
+                <span style="background:${cor}20; color:${cor}; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:800;">
+                    ${conceitoLabel}
+                </span>
+            </div>
+
+            ${questoesHtml}
+            ${alertaHtml}
+
+            <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center;">
+                <button class="btn btn-green btn-sm" onclick="go('resultados')">📊 Ver em Resultados</button>
+                <button class="btn btn-outline btn-sm" onclick="limparResultadoAutomatico()">🔄 Nova Correção</button>
+                <button class="btn btn-primary btn-sm" onclick="go('desempenho')">📈 Desempenho do Aluno</button>
+            </div>
+        </div>
+    `;
+
+    conteudoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast(`✅ Corrigido! ${aluno} — Nota ${nota.toFixed(1)}`, 'success');
+}
+
+function limparResultadoAutomatico() {
+    const resultado = document.getElementById('auto-resultado');
+    const preview = document.getElementById('auto-preview');
+    const img = document.getElementById('auto-img-prev');
+    const input = document.getElementById('inp-arq-auto');
+
+    if (resultado) resultado.style.display = 'none';
+    if (preview) preview.style.display = 'none';
+    if (img) img.src = '';
+    if (input) input.value = '';
+
+    window._autoImagem = null;
+    showToast('🔄 Pronto para nova correção', 'info');
+}
