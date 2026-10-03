@@ -4296,7 +4296,7 @@ def gerar_gabarito():
             num_colunas, mapa_template
         )
 
-                logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
+        logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
 
         # ═══ Gera o QR Code com os dados do aluno ═══
         qr_dados = f"ALUNO:{aluno_id}|PROVA:{prova_id}|ESCOLA:{escola_id}|TURMA:{turma_id}"
@@ -4399,13 +4399,21 @@ def gerar_gabarito():
             color: #333;
         }}
         
-        .info-aluno {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2mm;
-            padding: 1mm 0;
-            font-size: 7pt;
-            margin-top: 1mm;
+        .qr-code-bloco {{
+            position: absolute;
+            top: 52mm;
+            right: 5mm;
+            width: 22mm;
+            height: 22mm;
+            z-index: 50;
+        }}
+        .qr-code-bloco img {{
+            width: 100%;
+            height: 100%;
+            display: block;
+            border: 1px solid #000;
+            padding: 1mm;
+            background: #fff;
         }}
         
         .instrucoes {{
@@ -4523,6 +4531,10 @@ def gerar_gabarito():
         <div class="fiducial fiducial-tr"></div>
         <div class="fiducial fiducial-bl"></div>
         <div class="fiducial fiducial-br"></div>
+        
+        <div class="qr-code-bloco">
+            <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
+        </div>
         
         <div class="area-util">
             <div class="header-bloco">
