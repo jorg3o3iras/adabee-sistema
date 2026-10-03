@@ -4186,6 +4186,42 @@ def dashboard_conceito():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+# ============================================
+# GERAÇÃO DE QR CODE PARA O CARTÃO RESPOSTA
+# ============================================
+
+def gerar_qrcode_base64(dados):
+    """
+    Gera um QR Code a partir de uma string e retorna em base64.
+    Usado para embutir no HTML do cartão resposta.
+    """
+    try:
+        import qrcode
+        from io import BytesIO
+
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(dados)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        logging.info(f"✅ QR Code gerado para: {dados[:50]}...")
+        return b64
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao gerar QR Code: {e}")
+        traceback.print_exc()
+        return ""
 
 # ============================================
 # ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
@@ -4260,7 +4296,12 @@ def gerar_gabarito():
             num_colunas, mapa_template
         )
 
-        logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
+                logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
+
+        # ═══ Gera o QR Code com os dados do aluno ═══
+        qr_dados = f"ALUNO:{aluno_id}|PROVA:{prova_id}|ESCOLA:{escola_id}|TURMA:{turma_id}"
+        qr_base64 = gerar_qrcode_base64(qr_dados)
+        logging.info(f"📷 QR Code gerado: {qr_dados}")
 
         html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
