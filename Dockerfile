@@ -1,11 +1,12 @@
 FROM python:3.11-slim
 
-# Instalar Tesseract e dependências
+# Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     libglx-mesa0 \
     libgl1-mesa-dri \
+    libzbar0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
