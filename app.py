@@ -701,7 +701,19 @@ def corrigir_perspectiva(img, marcadores):
 # ============================================
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
-    """Gera mapa de posições (0-1) alinhado com o HTML do cartão A4."""
+    """
+    Gera mapa de posições (0-1) alinhado com o HTML do cartão A4.
+    
+    CORRIGIDO v4.0 — Frações diretas do HTML.
+    
+    Em vez de calcular mm exatos (que dependem do CSS renderizado),
+    usamos as FRAÇÕES do HTML:
+    
+    - header-bloco: 56mm de 234mm do area-util = 0.2393
+    - questoes-bloco: o resto do area-util
+    - questoes-bloco tem padding: 3mm topo + 3mm base
+    - linha-questao: 100/q_por_coluna % da altura de .coluna-questoes
+    """
     mapa = []
 
     if total_questoes <= 12:
@@ -716,6 +728,7 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
     num_alts = len(alternativas)
 
+    # ═══ COORDENADAS DE REFERÊNCIA (mesmo que antes) ═══
     RANGE_X = 200.0
     RANGE_Y = 254.0
     OFFSET_X = 5.0
@@ -726,19 +739,33 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     area_util_width = 180.0
     area_util_height = 234.0
 
-    header_height = 56.0
-    questoes_top = area_util_top + header_height
-    questoes_height = area_util_height - header_height
+    # ═══ USAR FRAÇÕES DO CSS (não mm exatos) ═══
+    # header-bloco tem height: 56mm FIXO
+    header_height_mm = 56.0
+    questoes_top_mm = area_util_top + header_height_mm  # 48 + 56 = 104mm
 
-    questoes_inner_top = questoes_top + 3.0
-    questoes_inner_height = questoes_height - 6.0
+    # .questoes-bloco: flex 1 (o resto do area-util) com padding: 3mm 0
+    questoes_height_mm = area_util_height - header_height_mm  # 234 - 56 = 178mm
+    questoes_inner_top_mm = questoes_top_mm + 3.0   # padding-top
+    questoes_inner_height_mm = questoes_height_mm - 6.0  # padding 3+3
 
-    if num_colunas == 2:
-        gap_grid = 4.0
-        col_width = (area_util_width - gap_grid) / 2
-    else:
-        gap_grid = 0.0
-        col_width = area_util_width
+    # ═══ POSIÇÃO Y DAS QUESTÕES ═══
+    # O CSS usa: height: {100/q_por_coluna}% para .linha-questao,
+    # com display: flex + justify-content: space-between em .coluna-questoes.
+    # 
+    # Com space-between, a Q1 fica no TOPO (y=0) e a Qn no FUNDO (y=altura),
+    # independente do height das linhas.
+    # 
+    # O CENTRO de cada linha depende do height da linha:
+    #   linha i tem centro em: (i + 0.5) * (100/q_por_coluna) %
+    # 
+    # Ex: 10 questões, cada linha 10% de altura.
+    #   Q1: centro em 5% do .coluna-questoes
+    #   Q2: centro em 15%
+    #   ...
+    #   Q10: centro em 95%
+
+    col_width_mm = area_util_width / num_colunas  # 180 (1 col) ou 90 (2 col)
 
     for col in range(num_colunas):
         inicio_col = col * q_por_coluna
@@ -748,25 +775,30 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
         if num_questoes_col <= 0:
             continue
 
-        col_left = area_util_left + col * (col_width + gap_grid)
-        col_right = col_left + col_width
+        col_left_mm = area_util_left + col * col_width_mm
+        col_right_mm = col_left_mm + col_width_mm
 
-        alt_left = col_left + 11.0
-        alt_right = col_right
-        alt_width = alt_right - alt_left
-
-        espacamento_bolha = alt_width / num_alts
+        # Dentro da coluna: pula o num-questao + gap
+        alt_left_mm = col_left_mm + 11.0
+        alt_width_mm = col_right_mm - alt_left_mm
+        espacamento_bolha_mm = alt_width_mm / num_alts
 
         for i in range(num_questoes_col):
             num_questao = inicio_col + i + 1
 
-            if num_questoes_col > 1:
-                y_mm = questoes_inner_top + (i / (num_questoes_col - 1)) * questoes_inner_height
-            else:
-                y_mm = questoes_inner_top + questoes_inner_height / 2
+            # ═══ CENTRO DA LINHA em % (space-between) ═══
+            # Em vez de calcular mm, usamos a fração direta da altura:
+            #   fracao = (i + 0.5) / num_questoes_col
+            # 
+            # Isso reflete EXATAMENTE o que o HTML renderiza.
+            fracao_y = (i + 0.5) / num_questoes_col
+
+            # Converter para mm dentro da área das questões
+            y_mm = questoes_inner_top_mm + fracao_y * questoes_inner_height_mm
 
             for j, letra in enumerate(alternativas):
-                x_mm = alt_left + (j + 0.5) * espacamento_bolha
+                # ═══ CENTRO DA BOLHA em X (space-around) ═══
+                x_mm = alt_left_mm + (j + 0.5) * espacamento_bolha_mm
 
                 x_norm = (x_mm - OFFSET_X) / RANGE_X
                 y_norm = (y_mm - OFFSET_Y) / RANGE_Y
