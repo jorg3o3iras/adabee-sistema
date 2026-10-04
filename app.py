@@ -1801,7 +1801,13 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
-    """CASCATA DE CONFIANÇA v3.0"""
+    """
+    Correção SIMPLIFICADA (estilo EvalBee):
+    1. IA (OpenAI) roda SEMPRE primeiro
+    2. Se confiança alta → retorna
+    3. Senão → Template Mapping como fallback
+    4. Se nada funcionar → erro
+    """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -1809,9 +1815,52 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
 
     try:
-        # ETAPA 1: TEMPLATE MAPPING
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 1: IA (OpenAI) — MÉTODO PRINCIPAL
+        # ═══════════════════════════════════════════════════════
         logging.info("=" * 60)
-        logging.info("📌 ETAPA 1: Template Mapping (mapa exato do banco)")
+        logging.info("📌 ETAPA 1: IA OpenAI (Método Principal)")
+        logging.info("=" * 60)
+
+        resultado_ia = None
+        if OPENAI_AVAILABLE and openai_client is not None:
+            try:
+                imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
+                resultado_ia = corrigir_com_ia_fallback(
+                    imagem_processada, padrao_gabarito, aluno_nome,
+                    serie, tipo_questoes, disciplina, bncc=bncc
+                )
+
+                if not resultado_ia.get('erro'):
+                    confs = resultado_ia.get('confianca_por_questao', [])
+                    conf_media = sum(confs) / len(confs) if confs else 0
+                    detectadas = sum(1 for r in resultado_ia.get('respostas_detectadas', []) if r)
+
+                    logging.info(
+                        f"📊 IA: confiança média={conf_media:.1f}%, "
+                        f"detectadas={detectadas}/{total_questoes}"
+                    )
+
+                    if conf_media >= 70 and detectadas >= total_questoes * 0.7:
+                        logging.info(f"✅ IA APROVADA (confiança={conf_media:.1f}%)")
+                        resultado_ia['metodo_usado'] = 'ia'
+                        return resultado_ia
+                    else:
+                        logging.info(
+                            f"⚠️ IA com confiança baixa — tentando fallback Template"
+                        )
+                else:
+                    logging.warning(f"⚠️ IA retornou erro: {resultado_ia.get('erro')}")
+            except Exception as e:
+                logging.warning(f"⚠️ IA falhou com exceção: {e}")
+        else:
+            logging.warning("⚠️ OpenAI não disponível — pulando IA")
+
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 2: TEMPLATE MAPPING (FALLBACK)
+        # ═══════════════════════════════════════════════════════
+        logging.info("=" * 60)
+        logging.info("📌 ETAPA 2: Template Mapping (Fallback)")
         logging.info("=" * 60)
 
         resultado_template = None
@@ -1821,149 +1870,41 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 tipo_questoes, disciplina, bncc, mapa_template,
                 prova_id=prova_id, aluno_id=aluno_id
             )
+
+            if resultado_template:
+                confs_tm = resultado_template.get('confiancas', [])
+                conf_media_tm = sum(confs_tm) / len(confs_tm) if confs_tm else 0
+                detectadas_tm = sum(1 for r in resultado_template['respostas'] if r)
+
+                logging.info(
+                    f"📊 Template: confiança média={conf_media_tm:.1f}%, "
+                    f"detectadas={detectadas_tm}/{total_questoes}"
+                )
+
+                if conf_media_tm >= 55 and detectadas_tm >= total_questoes * 0.5:
+                    logging.info(f"✅ Template APROVADO")
+                    return calcular_resultado_correcao(
+                        resultado_template['respostas'], gabarito, aluno_nome, serie,
+                        disciplina, tipo_questoes, 'template',
+                        bncc=bncc, confiancas=confs_tm
+                    )
         except Exception as e:
             logging.warning(f"⚠️ Template falhou: {e}")
 
+        # ═══════════════════════════════════════════════════════
+        # ETAPA 3: RETORNAR MELHOR RESULTADO DISPONÍVEL
+        # ═══════════════════════════════════════════════════════
+        logging.info("=" * 60)
+        logging.info("📌 ETAPA 3: Decisão Final")
+        logging.info("=" * 60)
+
+        if resultado_ia and not resultado_ia.get('erro'):
+            logging.info("⚠️ Retornando resultado da IA (baixa confiança)")
+            resultado_ia['metodo_usado'] = 'ia_baixa_conf'
+            return resultado_ia
+
         if resultado_template:
-            resp_tm = resultado_template['respostas']
-            confs_tm = resultado_template['confiancas']
-            conf_media_tm = sum(confs_tm) / len(confs_tm) if confs_tm else 0
-            conf_min_tm = min(confs_tm) if confs_tm else 0
-            detectadas_tm = sum(1 for r in resp_tm if r)
-
-            if (conf_media_tm >= 75 and conf_min_tm >= 55
-                    and detectadas_tm >= total_questoes * 0.7):
-                logging.info(
-                    f"✅ Template aprovado — média={conf_media_tm:.1f}%, "
-                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
-                )
-                return calcular_resultado_correcao(
-                    resp_tm, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'template',
-                    bncc=bncc, confiancas=confs_tm
-                )
-            else:
-                logging.info(
-                    f"⚠️ Template inseguro — média={conf_media_tm:.1f}%, "
-                    f"mín={conf_min_tm}%, detectadas={detectadas_tm}/{total_questoes}"
-                )
-
-        # ETAPA 2: OPENCV
-        logging.info("=" * 60)
-        logging.info("📌 ETAPA 2: OpenCV (validação)")
-        logging.info("=" * 60)
-
-        respostas_cv = [''] * total_questoes
-        confs_cv = [0] * total_questoes
-        valido_cv = False
-
-        try:
-            circulos, posicoes_colunas = detectar_circulos_preenchidos(imagem_base64)
-            if circulos and len(circulos) >= 4:
-                respostas_cv, confs_cv = organizar_respostas_por_posicao(
-                    circulos, total_questoes, posicoes_colunas
-                )
-                detectadas_cv = len([r for r in respostas_cv if r])
-                if detectadas_cv >= total_questoes * 0.5:
-                    nao_vazias_cv = [r for r in respostas_cv if r]
-                    if len(set(nao_vazias_cv)) >= 2:
-                        valido_cv = True
-                        logging.info(f"✅ OpenCV OK — {detectadas_cv}/{total_questoes}")
-        except Exception as e:
-            logging.warning(f"⚠️ OpenCV falhou: {e}")
-
-        # ETAPA 3: DECISÃO
-        if resultado_template and valido_cv:
-            resp_tm = resultado_template['respostas']
-            confs_tm = resultado_template['confiancas']
-
-            iguais = 0
-            total_comp = 0
-            for i in range(total_questoes):
-                r1 = resp_tm[i] if i < len(resp_tm) else ''
-                r2 = respostas_cv[i] if i < len(respostas_cv) else ''
-                if r1 and r2:
-                    total_comp += 1
-                    if r1 == r2:
-                        iguais += 1
-
-            concordancia = iguais / total_comp if total_comp > 0 else 0
-            logging.info(f"📊 Concordância Template vs OpenCV: {concordancia*100:.1f}%")
-
-            if concordancia >= 0.80 and total_comp >= total_questoes * 0.6:
-                respostas_fusao = []
-                confs_fusao = []
-                for i in range(total_questoes):
-                    r_tm = resp_tm[i] if i < len(resp_tm) else ''
-                    r_cv = respostas_cv[i] if i < len(respostas_cv) else ''
-                    c_tm = confs_tm[i] if i < len(confs_tm) else 0
-                    c_cv = confs_cv[i] if i < len(confs_cv) else 0
-
-                    if r_tm and r_cv and r_tm == r_cv:
-                        respostas_fusao.append(r_tm)
-                        confs_fusao.append(min(99, max(c_tm, c_cv) + 5))
-                    elif r_tm:
-                        respostas_fusao.append(r_tm)
-                        confs_fusao.append(c_tm)
-                    else:
-                        respostas_fusao.append(r_cv)
-                        confs_fusao.append(c_cv)
-
-                logging.info("✅ Fusão Template+OpenCV")
-                return calcular_resultado_correcao(
-                    respostas_fusao, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'template+cv',
-                    bncc=bncc, confiancas=confs_fusao
-                )
-
-        # ETAPA 4: TEMPLATE ISOLADO
-        if resultado_template:
-            confs_tm = resultado_template['confiancas']
-            conf_media = sum(confs_tm) / len(confs_tm) if confs_tm else 0
-            conf_min = min(confs_tm) if confs_tm else 0
-            detectadas = sum(1 for r in resultado_template['respostas'] if r)
-
-            if (conf_media >= 55 and conf_min >= 30
-                    and detectadas >= total_questoes * 0.5):
-                logging.info(f"✅ Template isolado — média={conf_media:.1f}%")
-                return calcular_resultado_correcao(
-                    resultado_template['respostas'], gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'template',
-                    bncc=bncc, confiancas=confs_tm
-                )
-
-        # ETAPA 5: OPENCV ISOLADO
-        if valido_cv:
-            conf_media_cv = sum(confs_cv) / len(confs_cv) if confs_cv else 0
-            if conf_media_cv >= 55:
-                logging.info(f"✅ OpenCV isolado (conf={conf_media_cv:.1f}%)")
-                return calcular_resultado_correcao(
-                    respostas_cv, gabarito, aluno_nome, serie,
-                    disciplina, tipo_questoes, 'circulos',
-                    bncc=bncc, confiancas=confs_cv
-                )
-
-        # ETAPA 6: IA
-        logging.info("=" * 60)
-        logging.info("📌 ETAPA 6: IA OpenAI (último recurso)")
-        logging.info("=" * 60)
-
-        if OPENAI_AVAILABLE and openai_client is not None:
-            try:
-                imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
-                resultado_ia = corrigir_com_ia_fallback(
-                    imagem_processada, padrao_gabarito, aluno_nome,
-                    serie, tipo_questoes, disciplina, bncc=bncc
-                )
-                if not resultado_ia.get('erro'):
-                    resultado_ia['metodo_usado'] = 'ia'
-                    logging.info("✅ IA resolveu o cartão")
-                    return resultado_ia
-            except Exception as e:
-                logging.error(f"❌ Erro na IA: {e}")
-
-        # FALLBACK FINAL
-        if resultado_template:
+            logging.info("⚠️ Retornando resultado do Template (baixa confiança)")
             return calcular_resultado_correcao(
                 resultado_template['respostas'], gabarito, aluno_nome, serie,
                 disciplina, tipo_questoes, 'template_baixa_conf',
