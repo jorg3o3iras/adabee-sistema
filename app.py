@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import cv2
+cv2.setNumThreads(1)  # ═══ NOVO: Evita que o OpenCV crie 8 threads (economiza RAM no Render)
 import numpy as np
 import base64
 import json
@@ -508,23 +509,16 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 def detectar_marcadores_fiduciais(gray):
     """
     Detecta os 4 marcadores fiduciais nos cantos do cartão.
-    
-    VERSÃO v3.0 — Ultra-robusta:
-    - Threshold de Otsu + validação geométrica rigorosa
-    - Filtro por POSIÇÃO (marcadores estão nos cantos)
-    - Exige quadrados com lados ~iguais (não trapézios)
-    - Exige tamanhos similares entre os 4
-    - Busca inteligente: pega 1 marcador por canto (TL, TR, BL, BR)
+    VERSÃO v3.0 — Ultra-robusta
     """
     try:
         altura, largura = gray.shape
         logging.info(f"🔍 v3: Procurando marcadores em {largura}x{altura}...")
 
         area_imagem = largura * altura
-        area_min = area_imagem * 0.001   # aumentei: 0.1% (era 0.05%)
-        area_max = area_imagem * 0.015   # diminui: 1.5% (era 2%)
+        area_min = area_imagem * 0.001
+        area_max = area_imagem * 0.015
 
-        # ═══ PASSO 1: Encontra TODOS os quadrados candidatos ═══
         candidatos = []
 
         blurred = cv2.GaussianBlur(gray, (7, 7), 0)
@@ -542,19 +536,15 @@ def detectar_marcadores_fiduciais(gray):
                 continue
 
             x, y, w, h = cv2.boundingRect(c)
-
-            # Aspect ratio próximo de 1 (quadrado)
             aspect_ratio = float(w) / h if h > 0 else 0
             if not (0.85 < aspect_ratio < 1.18):
                 continue
 
-            # approxPolyDP → deve ter 4 vértices
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.03 * peri, True)
             if len(approx) != 4:
                 continue
 
-            # ═══ VALIDAÇÃO EXTRA: lados do quadrilátero devem ser ~iguais ═══
             pts = approx.reshape(4, 2)
             lados = []
             for i in range(4):
@@ -566,10 +556,8 @@ def detectar_marcadores_fiduciais(gray):
             lado_min = min(lados)
             lado_max = max(lados)
             if lado_max > 0 and (lado_min / lado_max) < 0.75:
-                # quadrado muito deformado (trapézio)
                 continue
 
-            # ═══ VALIDAÇÃO EXTRA: preenchimento (marcador é sólido/preto) ═══
             mask = np.zeros(gray.shape, dtype=np.uint8)
             cv2.drawContours(mask, [c], -1, 255, -1)
             mask_eroded = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
@@ -579,7 +567,6 @@ def detectar_marcadores_fiduciais(gray):
             pixels_pretos = cv2.countNonZero(cv2.bitwise_and(binaria, binaria, mask=mask_eroded))
             preenchimento = pixels_pretos / pixels_total
             if preenchimento < 0.65:
-                # não é sólido (muito "oco") → provavelmente é bolha vazia detectada
                 continue
 
             candidatos.append((x, y, w, h, area))
@@ -590,8 +577,6 @@ def detectar_marcadores_fiduciais(gray):
             logging.warning(f"⚠️ v3: Apenas {len(candidatos)} candidatos válidos")
             return None
 
-        # ═══ PASSO 2: Separa candidatos por canto (TL, TR, BL, BR) ═══
-        # Regra: divide a imagem em 4 quadrantes e pega 1 do cada
         cx_imagem = largura / 2
         cy_imagem = altura / 2
 
@@ -611,7 +596,6 @@ def detectar_marcadores_fiduciais(gray):
                 canto = 'br'
             por_canto[canto].append((x, y, w, h, area))
 
-        # Ordena cada canto por "quão no canto" ele está
         def dist_ao_canto(c, canto):
             x, y, w, h, area = c
             cx = x + w / 2
@@ -630,7 +614,6 @@ def detectar_marcadores_fiduciais(gray):
             por_canto[canto].sort(key=lambda c: dist_ao_canto(c, canto))
             melhor[canto] = por_canto[canto][0]
 
-        # ═══ PASSO 3: Verifica que os 4 têm tamanho similar ═══
         areas = [melhor[c][4] for c in ['tl', 'tr', 'bl', 'br']]
         area_med = sum(areas) / 4
         for a in areas:
@@ -638,7 +621,6 @@ def detectar_marcadores_fiduciais(gray):
                 logging.warning(f"⚠️ v3: Tamanhos muito diferentes: {areas}")
                 return None
 
-        # ═══ PASSO 4: Extrai centros e valida geometria final ═══
         tl = (melhor['tl'][0] + melhor['tl'][2] // 2,
               melhor['tl'][1] + melhor['tl'][3] // 2)
         tr = (melhor['tr'][0] + melhor['tr'][2] // 2,
@@ -654,18 +636,15 @@ def detectar_marcadores_fiduciais(gray):
         altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
 
         if abs(largura_topo - largura_base) > min(largura_topo, largura_base) * 0.15:
-            logging.warning(f"⚠️ v3: lados superior/inferior muito diferentes "
-                            f"({largura_topo:.0f} vs {largura_base:.0f})")
+            logging.warning(f"⚠️ v3: lados superior/inferior muito diferentes")
             return None
         if abs(altura_esq - altura_dir) > min(altura_esq, altura_dir) * 0.15:
-            logging.warning(f"⚠️ v3: lados esquerdo/direito muito diferentes "
-                            f"({altura_esq:.0f} vs {altura_dir:.0f})")
+            logging.warning(f"⚠️ v3: lados esquerdo/direito muito diferentes")
             return None
 
         dist_min = min(largura, altura) * 0.3
         if largura_topo < dist_min or altura_esq < dist_min:
-            logging.warning(f"⚠️ v3: Marcadores muito próximos "
-                            f"(topo={largura_topo:.0f}px, esq={altura_esq:.0f}px)")
+            logging.warning(f"⚠️ v3: Marcadores muito próximos")
             return None
 
         logging.info(f"✅ v3: 4 marcadores detectados:")
@@ -698,7 +677,6 @@ def corrigir_perspectiva(img, marcadores):
         altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
         altura_max = max(int(altura_esq), int(altura_dir))
 
-        # ═══ SEM margem: os marcadores ficam EXATAMENTE nos cantos ═══
         origem = np.float32([tl, tr, bl, br])
         destino = np.float32([
             [0, 0],
@@ -723,40 +701,7 @@ def corrigir_perspectiva(img, marcadores):
 # ============================================
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
-    """
-    Gera mapa de posições (0-1) alinhado com o HTML do cartão A4.
-
-    ┌─────────────────────────────────────────────────────────────┐
-    │  MEDIDAS REAIS DO HTML DO CARTÃO (página A4 = 210×297mm)    │
-    ├─────────────────────────────────────────────────────────────┤
-    │  Marcadores fiduciais:                                      │
-    │    TL = (5mm, 38mm)                                         │
-    │    TR = (205mm, 38mm)                                       │
-    │    BL = (5mm, 292mm)                                        │
-    │    BR = (205mm, 292mm)                                      │
-    │                                                             │
-    │  Após warpPerspective (SEM margem), a imagem corrigida      │
-    │  representa EXATAMENTE o retângulo entre marcadores:        │
-    │    Largura = 205 - 5   = 200mm                              │
-    │    Altura  = 292 - 38  = 254mm                              │
-    │                                                             │
-    │  Área útil (onde ficam questões):                           │
-    │    top  = 48mm,  left = 15mm                                │
-    │    width = 180mm, height = 234mm                            │
-    │    header (24%) = 56.16mm                                   │
-    │    questões (76%) = 177.84mm                                │
-    │    padding vertical: 3mm (topo e base)                      │
-    │                                                             │
-    │  Dentro de cada linha de questão:                           │
-    │    .num-questao: min-width 8mm + padding-right 1mm          │
-    │    .linha-questao: gap 2mm                                  │
-    │    → alternativas começam em col_left + 8 + 1 + 2 = +11mm   │
-    │                                                             │
-    │  Colunas (quando 2):                                        │
-    │    .questoes-bloco: gap 4mm                                 │
-    │    → cada coluna tem (180 - 4) / 2 = 88mm                   │
-    └─────────────────────────────────────────────────────────────┘
-    """
+    """Gera mapa de posições (0-1) alinhado com o HTML do cartão A4."""
     mapa = []
 
     if total_questoes <= 12:
@@ -771,11 +716,8 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
     num_alts = len(alternativas)
 
-    # ═══════════════════════════════════════════════════════════
-    # COORDENADAS DO CARTÃO (em mm, página A4)
-    # ═══════════════════════════════════════════════════════════
-    RANGE_X = 200.0   # mm  (205 - 5)
-    RANGE_Y = 254.0   # mm  (292 - 38)  ← CORRIGIDO (era 249)
+    RANGE_X = 200.0
+    RANGE_Y = 254.0
     OFFSET_X = 5.0
     OFFSET_Y = 38.0
 
@@ -784,23 +726,19 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     area_util_width = 180.0
     area_util_height = 234.0
 
-    header_height = 56.0                             # mm FIXO
-    questoes_top = area_util_top + header_height     # 104mm
-    questoes_height = area_util_height - header_height  # 178mm
+    header_height = 56.0
+    questoes_top = area_util_top + header_height
+    questoes_height = area_util_height - header_height
 
-    # padding: 3mm 0 (em cima e embaixo do .questoes-bloco)
-    questoes_inner_top = questoes_top + 3.0          # 107.16mm
-    questoes_inner_height = questoes_height - 6.0    # 171.84mm
+    questoes_inner_top = questoes_top + 3.0
+    questoes_inner_height = questoes_height - 6.0
 
-    # ═══════════════════════════════════════════════════════════
-    # LARGURA DAS COLUNAS (com gap de 4mm entre elas, quando 2)
-    # ═══════════════════════════════════════════════════════════
     if num_colunas == 2:
         gap_grid = 4.0
-        col_width = (area_util_width - gap_grid) / 2  # 88mm
+        col_width = (area_util_width - gap_grid) / 2
     else:
         gap_grid = 0.0
-        col_width = area_util_width                    # 180mm
+        col_width = area_util_width
 
     for col in range(num_colunas):
         inicio_col = col * q_por_coluna
@@ -810,28 +748,18 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
         if num_questoes_col <= 0:
             continue
 
-        # Posição X da coluna em mm (com gap entre colunas)
         col_left = area_util_left + col * (col_width + gap_grid)
         col_right = col_left + col_width
 
-        # ═══════════════════════════════════════════════════════
-        # DENTRO DA COLUNA:
-        #   .num-questao  → min-width 8mm + padding-right 1mm
-        #   .linha-questao gap → 2mm
-        #   Total antes das bolhas: 8 + 1 + 2 = 11mm
-        # ═══════════════════════════════════════════════════════
         alt_left = col_left + 11.0
         alt_right = col_right
         alt_width = alt_right - alt_left
 
-        # As bolhas são distribuídas com justify-content: space-around
-        # → centro da bolha j = alt_left + (j + 0.5) * (alt_width / num_alts)
         espacamento_bolha = alt_width / num_alts
 
         for i in range(num_questoes_col):
             num_questao = inicio_col + i + 1
 
-            # Y da linha (distribuição uniforme dentro da área das questões)
             if num_questoes_col > 1:
                 y_mm = questoes_inner_top + (i / (num_questoes_col - 1)) * questoes_inner_height
             else:
@@ -840,7 +768,6 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
             for j, letra in enumerate(alternativas):
                 x_mm = alt_left + (j + 0.5) * espacamento_bolha
 
-                # Converte para fração da imagem corrigida
                 x_norm = (x_mm - OFFSET_X) / RANGE_X
                 y_norm = (y_mm - OFFSET_Y) / RANGE_Y
 
@@ -855,11 +782,10 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
 
 def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes, num_colunas, mapa_template):
-    """Salva o mapa do template no banco para uso futuro na correção."""
+    """Salva o mapa do template no banco."""
     try:
         conn = get_db_connection()
         if not conn:
-            logging.warning("⚠️ Sem conexão para salvar mapa")
             return False
 
         cur = conn.cursor()
@@ -917,21 +843,21 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
+def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
     """
     Amostra uma bolha usando coordenadas normalizadas.
-    raio_fracao=0.025 (2.5% da menor dimensão da imagem) para bolhas de ~7mm em 2400px
+    CORRIGIDO: raio_fracao=0.015 (menor, mais preciso) e círculo interno 0.65
     """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
-    r = max(10, min(int(raio_fracao * min(w, h)), 40))
+    r = max(8, min(int(raio_fracao * min(w, h)), 30))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.75), 255, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.65), 255, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
@@ -943,121 +869,123 @@ def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
     """
     Corrige cartão usando mapa de posições normalizadas.
-    
-    MELHORIAS v2.0:
-    - Threshold DINÂMICO baseado na mediana de TODAS as bolhas
-    - Amostragem circular mais precisa (raio 0.75 do espaçamento)
-    - Validação de dupla marcação
-    - Retorna confiança real (não inventada)
+    CORRIGIDO v3.0:
+    - Threshold mais permissivo: max(0.18, mediana * 2.0)
+    - Logs de debug para identificar problemas
     """
-    h, w = img_corrigida.shape[:2]
-    gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-
-    # Normalização de iluminação (remove sombras e reflexos)
-    bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
-    bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
-    bg = cv2.GaussianBlur(bg, (51, 51), 0)
-    bg = np.where(bg == 0, 1, bg).astype(np.float32)
-    gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
-
-    # Binarização adaptativa
-    binaria = cv2.adaptiveThreshold(
-        gray_norm, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        blockSize=25, C=10
-    )
-
-    # Agrupa bolhas por questão
-    por_questao = {}
-    for b in mapa_template:
-        por_questao.setdefault(b['questao'], []).append(b)
-
-    # PRIMEIRO PASSO: coleta os valores de todas as bolhas
-    todos_valores = []
-    todas_medidas = {}
-    
-    for q in sorted(por_questao.keys()):
-        bolhas = por_questao[q]
-        medidas = []
-        for b in bolhas:
-            ratio = amostrar_bolha_template(binaria, b['x'], b['y'], raio_fracao=0.025)
-            medidas.append((b['alternativa'], ratio, b))
-            todos_valores.append(ratio)
-        todas_medidas[q] = medidas
-
-    # SEGUNDO PASSO: calcula threshold dinâmico
-    if len(todos_valores) < 4:
-        return [''] * len(por_questao), [0] * len(por_questao), []
-    
-    todos_valores_sorted = sorted(todos_valores)
-    mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
-    
-    # Threshold: metade da mediana + margem
-    # Bolha pintada tem ratio ~0.7-0.9, bolha vazia tem ratio ~0.05-0.15
-    threshold = max(0.25, mediana * 1.2)
-    
-    logging.info(f"📊 Threshold dinâmico: {threshold:.3f} (mediana={mediana:.3f})")
-
-    # TERCEIRO PASSO: classifica cada questão
-    respostas = []
-    confiancas = []
-    debug_info = []
-
-    for q in sorted(por_questao.keys()):
-        medidas = todas_medidas[q]
-        medidas.sort(key=lambda m: m[1], reverse=True)
+    try:
+        h, w = img_corrigida.shape[:2]
+        logging.info(f"🔬 [DEBUG] Entrou em corrigir_por_template: {w}x{h}")
         
-        max_ratio = medidas[0][1]
-        letra_max = medidas[0][0]
+        gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
+
+        bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
+        bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
+        bg = cv2.GaussianBlur(bg, (51, 51), 0)
+        bg = np.where(bg == 0, 1, bg).astype(np.float32)
+        gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
+        logging.info(f"🔬 [DEBUG] Normalizou iluminação")
+
+        binaria = cv2.adaptiveThreshold(
+            gray_norm, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            blockSize=25, C=10
+        )
+
+        por_questao = {}
+        for b in mapa_template:
+            por_questao.setdefault(b['questao'], []).append(b)
+
+        todos_valores = []
+        todas_medidas = {}
         
-        # Verifica se a bolha mais escura passou do threshold
-        if max_ratio < threshold:
-            respostas.append('')
-            confiancas.append(30)
-            debug_info.append({
-                'questao': q, 'resposta': '', 'motivo': 'vazia',
-                'max_ratio': round(max_ratio, 3), 'threshold': round(threshold, 3)
-            })
-            continue
+        for q in sorted(por_questao.keys()):
+            bolhas = por_questao[q]
+            medidas = []
+            for b in bolhas:
+                ratio = amostrar_bolha_template(binaria, b['x'], b['y'], raio_fracao=0.015)
+                medidas.append((b['alternativa'], ratio, b))
+                todos_valores.append(ratio)
+            todas_medidas[q] = medidas
+
+        logging.info(f"🔬 [DEBUG] Amostrou {len(todos_valores)} bolhas")
+
+        if len(todos_valores) < 4:
+            return [''] * len(por_questao), [0] * len(por_questao), []
         
-        # Verifica dupla marcação (segunda bolha muito próxima da primeira)
-        if len(medidas) >= 2:
-            segunda_ratio = medidas[1][1]
-            if segunda_ratio > threshold * 0.8 and (max_ratio - segunda_ratio) < 0.2:
-                # Dupla marcação — ambíguo
-                respostas.append(letra_max)
-                confiancas.append(50)
+        todos_valores_sorted = sorted(todos_valores)
+        mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
+        
+        # CORRIGIDO: threshold mais permissivo
+        threshold = max(0.18, mediana * 2.0)
+        
+        logging.info(f"📊 Threshold dinâmico: {threshold:.3f} (mediana={mediana:.3f})")
+        logging.info(f"🔬 [DEBUG] Top 10 valores: {sorted(todos_valores, reverse=True)[:10]}")
+
+        respostas = []
+        confiancas = []
+        debug_info = []
+
+        for q in sorted(por_questao.keys()):
+            medidas = todas_medidas[q]
+            medidas.sort(key=lambda m: m[1], reverse=True)
+            
+            max_ratio = medidas[0][1]
+            letra_max = medidas[0][0]
+            
+            logging.info(f"🔬 [DEBUG] Q{q}: max={max_ratio:.3f} letra={letra_max}")
+            
+            if max_ratio < threshold:
+                respostas.append('')
+                confiancas.append(30)
                 debug_info.append({
-                    'questao': q, 'resposta': letra_max, 'motivo': 'dupla_marcacao',
-                    'max_ratio': round(max_ratio, 3), 'segunda': round(segunda_ratio, 3)
+                    'questao': q, 'resposta': '', 'motivo': 'vazia',
+                    'max_ratio': round(max_ratio, 3), 'threshold': round(threshold, 3)
                 })
                 continue
-        
-        # Confiança baseada na separação entre a primeira e a segunda bolha
-        if len(medidas) >= 2:
-            separacao = max_ratio - medidas[1][1]
-            if separacao > 0.5:
-                confianca = 98
-            elif separacao > 0.3:
-                confianca = 90
-            elif separacao > 0.15:
-                confianca = 75
+            
+            if len(medidas) >= 2:
+                segunda_ratio = medidas[1][1]
+                if segunda_ratio > threshold * 0.8 and (max_ratio - segunda_ratio) < 0.2:
+                    respostas.append(letra_max)
+                    confiancas.append(50)
+                    debug_info.append({
+                        'questao': q, 'resposta': letra_max, 'motivo': 'dupla_marcacao',
+                        'max_ratio': round(max_ratio, 3), 'segunda': round(segunda_ratio, 3)
+                    })
+                    continue
+            
+            if len(medidas) >= 2:
+                separacao = max_ratio - medidas[1][1]
+                if separacao > 0.5:
+                    confianca = 98
+                elif separacao > 0.3:
+                    confianca = 90
+                elif separacao > 0.15:
+                    confianca = 75
+                else:
+                    confianca = 55
             else:
-                confianca = 55
-        else:
-            confianca = 85
-        
-        respostas.append(letra_max)
-        confiancas.append(confianca)
-        debug_info.append({
-            'questao': q, 'resposta': letra_max, 'motivo': 'ok',
-            'confianca': confianca, 'max_ratio': round(max_ratio, 3)
-        })
+                confianca = 85
+            
+            respostas.append(letra_max)
+            confiancas.append(confianca)
+            debug_info.append({
+                'questao': q, 'resposta': letra_max, 'motivo': 'ok',
+                'confianca': confianca, 'max_ratio': round(max_ratio, 3)
+            })
 
-    if debug:
-        return respostas, confiancas, debug_info
-    return respostas, confiancas
+        logging.info(f"🔬 [DEBUG] Respostas finais: {respostas}")
+
+        if debug:
+            return respostas, confiancas, debug_info
+        return respostas, confiancas
+
+    except Exception as e:
+        logging.error(f"❌ ERRO DENTRO DE corrigir_por_template: {e}")
+        logging.error(traceback.format_exc())
+        raise
 
 
 def preparar_imagem_para_template(imagem_base64):
@@ -1084,7 +1012,6 @@ def preparar_imagem_para_template(imagem_base64):
         if img is None:
             return None, False
 
-        # ═══ CORREÇÃO: detecta marcadores na imagem ORIGINAL (sem resize) ═══
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         marcadores = detectar_marcadores_fiduciais(gray)
 
@@ -1092,12 +1019,10 @@ def preparar_imagem_para_template(imagem_base64):
             logging.warning("⚠️ Template Mapping: marcadores não detectados")
             return None, False
 
-        # Corrige perspectiva na imagem original
         img_corrigida = corrigir_perspectiva(img, marcadores)
 
-        # ═══ AGORA redimensiona a imagem corrigida para tamanho padrão ═══
         h, w = img_corrigida.shape[:2]
-        TARGET_H = 1800  # 1800 é melhor que 1500 para bolhas de 7mm
+        TARGET_H = 1800
         if h > TARGET_H:
             scale = TARGET_H / h
             img_corrigida = cv2.resize(
@@ -1143,11 +1068,13 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     )
 
     nao_vazias = [r for r in respostas if r]
-    if len(nao_vazias) < total_questoes * 0.3:
+    # CORRIGIDO: era 0.3, agora 0.15
+    if len(nao_vazias) < total_questoes * 0.15:
         logging.warning(f"⚠️ Template: apenas {len(nao_vazias)}/{total_questoes} detectadas")
         return None
 
-    if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
+    # CORRIGIDO: era 5, agora 3
+    if len(nao_vazias) >= 3 and len(set(nao_vazias)) == 1:
         logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}'")
         return None
 
@@ -1817,7 +1744,6 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
         }
     ]
 
-    # ═══ TENTA 3 VEZES ═══
     for tentativa in range(1, 4):
         try:
             logging.info(f"🤖 OpenAI tentativa {tentativa}/3...")
@@ -1950,20 +1876,7 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
-    """
-    Correção usando Template Matching como método PRINCIPAL.
-    IA foi REMOVIDA da correção de cartão — ela inventa respostas.
-    
-    Fluxo:
-    1. Carrega mapa do template (salvo quando o cartão foi gerado)
-    2. Detecta marcadores fiduciais
-    3. Corrige perspectiva
-    4. Amostra cada bolha usando o mapa exato
-    5. Aplica threshold dinâmico (mediana das bolhas)
-    6. Retorna respostas detectadas
-    
-    Se falhar → erro explícito pedindo foto nova (NUNCA chuta)
-    """
+    """Correção usando Template Matching como método PRINCIPAL."""
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -1975,7 +1888,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     logging.info("=" * 60)
 
     try:
-        # ETAPA 1: Carrega mapa do template (salvo no banco)
         if not mapa_template and prova_id and aluno_id:
             mapa_template = carregar_mapa_template(prova_id, aluno_id)
             if mapa_template:
@@ -1989,7 +1901,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             mapa_template = gerar_mapa_template_padrao(total_questoes, padrao_gabarito['alternativas'], num_colunas)
             logging.info(f"⚠️ Usando mapa PADRÃO gerado: {len(mapa_template)} bolhas")
 
-        # ETAPA 2: Corrige via template
         resultado_template = corrigir_com_template_mapping(
             imagem_base64, padrao_gabarito, aluno_nome, serie,
             tipo_questoes, disciplina, bncc, mapa_template,
@@ -2007,7 +1918,6 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 '4. Sem reflexo de flash'
             )
 
-        # ETAPA 3: Processa o resultado do template
         respostas = resultado_template['respostas']
         confiancas = resultado_template['confiancas']
 
@@ -2016,24 +1926,23 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         
         logging.info(f"📊 Template: confiança média={conf_media:.1f}%, detectadas={detectadas}/{total_questoes}")
 
-        # Validação: se detectou menos de 40% das questões, é erro
-        if detectadas < total_questoes * 0.4:
+        # CORRIGIDO: era 0.4, agora 0.15
+        if detectadas < total_questoes * 0.15:
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 f'Template detectou apenas {detectadas}/{total_questoes} respostas.\n\n'
                 'Verifique se o cartão foi gerado pelo sistema e tire uma foto mais clara.'
             )
 
-        # Validação: se todas as respostas são iguais, é erro
         nao_vazias = [r for r in respostas if r]
-        if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
+        # CORRIGIDO: era 5, agora 3
+        if len(nao_vazias) >= 3 and len(set(nao_vazias)) == 1:
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 f'Todas as respostas detectadas são "{nao_vazias[0]}". Isso é impossível.\n\n'
                 'Tire uma nova foto com melhor iluminação.'
             )
 
-        # ETAPA 4: Calcula resultado
         return calcular_resultado_correcao(
             respostas, gabarito, aluno_nome, serie,
             disciplina, tipo_questoes, 'template',
@@ -4245,15 +4154,12 @@ def dashboard_conceito():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+
 # ============================================
 # GERAÇÃO DE QR CODE PARA O CARTÃO RESPOSTA
 # ============================================
 
 def gerar_qrcode_base64(dados):
-    """
-    Gera um QR Code a partir de uma string e retorna em base64.
-    Usado para embutir no HTML do cartão resposta.
-    """
     try:
         import qrcode
         from io import BytesIO
@@ -4281,6 +4187,7 @@ def gerar_qrcode_base64(dados):
         logging.error(f"❌ Erro ao gerar QR Code: {e}")
         traceback.print_exc()
         return ""
+
 
 # ============================================
 # ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
@@ -4345,7 +4252,6 @@ def gerar_gabarito():
             q_por_coluna = 15
             num_colunas = 2
 
-        # ═══ GERA E SALVA O MAPA DO TEMPLATE ═══
         mapa_template = gerar_mapa_template_padrao(
             quantidade_questoes, alternativas, num_colunas
         )
@@ -4357,7 +4263,6 @@ def gerar_gabarito():
 
         logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
 
-        # ═══ Gera o QR Code com os dados do aluno ═══
         qr_dados = f"ALUNO:{aluno_id}|PROVA:{prova_id}|ESCOLA:{escola_id}|TURMA:{turma_id}"
         qr_base64 = gerar_qrcode_base64(qr_dados)
         logging.info(f"📷 QR Code gerado: {qr_dados}")
@@ -4931,14 +4836,12 @@ MIME_TYPES = {
 
 
 def _get_mimetype(filename):
-    """Retorna o MIME type correto baseado na extensão."""
     _, ext = os.path.splitext(filename.lower())
     return MIME_TYPES.get(ext, None)
 
 
 @app.route('/')
 def index():
-    """Serve o index.html."""
     try:
         if os.path.isfile('index.html'):
             return send_file('index.html', mimetype='text/html')
@@ -4954,7 +4857,6 @@ def index():
 
 @app.route('/style.css')
 def serve_css():
-    """Serve o style.css com MIME type correto."""
     try:
         if os.path.isfile('style.css'):
             logging.info("✅ Servindo style.css")
@@ -4968,7 +4870,6 @@ def serve_css():
 
 @app.route('/script.js')
 def serve_js():
-    """Serve o script.js com MIME type correto."""
     try:
         if os.path.isfile('script.js'):
             logging.info("✅ Servindo script.js")
@@ -4982,7 +4883,6 @@ def serve_js():
 
 @app.route('/<path:filename>')
 def serve_static_file(filename):
-    """Serve outros arquivos estáticos, detectando MIME type pelo sufixo."""
     try:
         if '..' in filename or filename.startswith('/'):
             logging.warning(f"⚠️ Path traversal bloqueado: {filename}")
@@ -5032,7 +4932,7 @@ def health_check():
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v3.1 (mapa exato do banco)',
+        'correcao': 'cascata v3.2 (debug + threshold permissivo)',
         'arquivos': arquivos
     })
 
@@ -5272,7 +5172,6 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Erro: {e}")
 
-        # ═══ CRIA TABELA cartoes_template ═══
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cartoes_template (
                 id SERIAL PRIMARY KEY,
@@ -5330,12 +5229,12 @@ def init_db():
         print(f"❌ Erro ao inicializar banco: {e}")
         traceback.print_exc()
 
+
 # ============================================
 # LEITURA DE QR CODE (CORREÇÃO AUTOMÁTICA)
 # ============================================
 
 def extrair_dados_qrcode(imagem_base64):
-    """Lê o QR Code da imagem e extrai aluno_id, prova_id, escola_id, turma_id."""
     try:
         from pyzbar.pyzbar import decode
 
@@ -5402,10 +5301,6 @@ def extrair_dados_qrcode(imagem_base64):
 
 @app.route('/api/corrigir-automatico', methods=['POST'])
 def corrigir_automatico():
-    """
-    Rota de correção automática: recebe só a imagem, lê o QR Code,
-    descobre aluno/prova/escola/turma e corrige automaticamente.
-    """
     try:
         data = request.json
         if not data:
@@ -5419,7 +5314,6 @@ def corrigir_automatico():
         logging.info("📷 CORREÇÃO AUTOMÁTICA POR QR CODE")
         logging.info("=" * 60)
 
-        # ETAPA 1: Lê o QR Code
         info_qr = extrair_dados_qrcode(imagem_base64)
 
         if not info_qr:
@@ -5448,7 +5342,6 @@ def corrigir_automatico():
 
         logging.info(f"✅ QR lido: aluno={aluno_id}, prova={prova_id}, escola={escola_id}, turma={turma_id}")
 
-        # ETAPA 2: Busca dados no banco
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -5518,7 +5411,6 @@ def corrigir_automatico():
                 pass
             return jsonify({'erro': str(e)}), 500
 
-        # ETAPA 3: Chama a correção normal
         logging.info(f"🔄 Iniciando correção para {nome_aluno}...")
 
         resultado = corrigir_com_gemini_com_padrao(
@@ -5535,7 +5427,6 @@ def corrigir_automatico():
                 'prova': prova_titulo
             }), 400
 
-        # ETAPA 4: Salva no histórico
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
 
         if 'confianca_por_questao' not in resultado or not resultado['confianca_por_questao']:
@@ -5594,7 +5485,6 @@ def corrigir_automatico():
         except Exception as e:
             logging.error(f"⚠️ Erro ao salvar histórico: {e}")
 
-        # ETAPA 5: Adiciona dados do QR no resultado
         resultado['sucesso'] = True
         resultado['qr_lido'] = info_qr
         resultado['aluno'] = nome_aluno
@@ -5616,6 +5506,7 @@ def corrigir_automatico():
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
 
+
 # ============================================
 # INICIALIZAÇÃO DO SERVIDOR
 # ============================================
@@ -5623,7 +5514,7 @@ def corrigir_automatico():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v3.1 — CARTÃO ALINHADO")
+    print("🚀 SERVIDOR CORRIGEPRO v3.2 — DEBUG + THRESHOLD PERMISSIVO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -5631,10 +5522,13 @@ if __name__ == '__main__':
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print("=" * 60)
-    print("🎯 v3.1 — CORREÇÕES APLICADAS:")
-    print("   ✅ Bug area_min/area_max corrigido")
-    print("   ✅ Rotas de arquivos estáticos com MIME type correto")
-    print("   ✅ /health mostra status dos arquivos")
+    print("🎯 v3.2 — CORREÇÕES APLICADAS:")
+    print("   ✅ cv2.setNumThreads(1) — economiza RAM")
+    print("   ✅ amostrar_bolha_template: raio 0.015 + círculo 0.65")
+    print("   ✅ corrigir_por_template: logs [DEBUG] completos")
+    print("   ✅ threshold: max(0.18, mediana * 2.0) — mais permissivo")
+    print("   ✅ Validação: 0.4 -> 0.15 (aceita testes parciais)")
+    print("   ✅ Validação: 5 -> 3 (aceita testes parciais)")
     print("=" * 60)
 
     init_db()
