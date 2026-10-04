@@ -5281,9 +5281,12 @@ def extrair_dados_qrcode(imagem_base64):
         return None
 
 
-@app.route('/api/ler-qrcode', methods=['POST'])
-def ler_qrcode():
-    """Rota de teste: recebe uma imagem e retorna os dados do QR Code."""
+@app.route('/api/corrigir-automatico', methods=['POST'])
+def corrigir_automatico():
+    """
+    Rota de correção automática: recebe só a imagem, lê o QR Code,
+    descobre aluno/prova/escola/turma e corrige automaticamente.
+    """
     try:
         data = request.json
         if not data:
@@ -5293,21 +5296,206 @@ def ler_qrcode():
         if not imagem_base64:
             return jsonify({'erro': 'Imagem é obrigatória'}), 400
 
-        info = extrair_dados_qrcode(imagem_base64)
+        logging.info("=" * 60)
+        logging.info("📷 CORREÇÃO AUTOMÁTICA POR QR CODE")
+        logging.info("=" * 60)
 
-        if not info:
+        # ETAPA 1: Lê o QR Code
+        info_qr = extrair_dados_qrcode(imagem_base64)
+
+        if not info_qr:
             return jsonify({
                 'sucesso': False,
-                'erro': 'QR Code não detectado ou ilegível'
+                'erro': 'Não foi possível ler o QR Code do cartão.',
+                'dicas': [
+                    '1. O QR Code está visível na foto?',
+                    '2. A foto está nítida e bem iluminada?',
+                    '3. O QR Code não está amassado ou rasgado?',
+                    '4. Você está usando o cartão gerado pelo sistema?'
+                ]
             }), 404
 
-        return jsonify({'sucesso': True, **info})
+        aluno_id = info_qr.get('aluno_id')
+        prova_id = info_qr.get('prova_id')
+        escola_id = info_qr.get('escola_id')
+        turma_id = info_qr.get('turma_id')
+
+        if not aluno_id or not prova_id:
+            return jsonify({
+                'sucesso': False,
+                'erro': 'QR Code não contém dados de aluno e prova',
+                'qr_lido': info_qr
+            }), 400
+
+        logging.info(f"✅ QR lido: aluno={aluno_id}, prova={prova_id}, escola={escola_id}, turma={turma_id}")
+
+        # ETAPA 2: Busca dados no banco
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            cur.execute("""
+                SELECT p.*, a.nome AS aluno_nome, a.turma_id AS aluno_turma_id,
+                       a.escola_id AS aluno_escola_id,
+                       t.serie AS turma_serie, t.nome AS turma_nome,
+                       e.nome AS escola_nome
+                FROM provas p
+                LEFT JOIN alunos a ON a.id = %s
+                LEFT JOIN turmas t ON a.turma_id = t.id
+                LEFT JOIN escolas e ON a.escola_id = e.id
+                WHERE p.id = %s
+            """, (aluno_id, prova_id))
+
+            dados = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if not dados:
+                return jsonify({
+                    'sucesso': False,
+                    'erro': f'Prova {prova_id} ou aluno {aluno_id} não encontrados no banco'
+                }), 404
+
+            prova = dados
+            gabarito = prova.get('gabarito', [])
+
+            if not gabarito or len(gabarito) == 0:
+                return jsonify({
+                    'sucesso': False,
+                    'erro': 'Prova não tem gabarito cadastrado',
+                    'prova_id': prova_id
+                }), 400
+
+            tipo_questoes = prova.get('tipo_questoes') or 4
+            if isinstance(tipo_questoes, str):
+                try:
+                    tipo_questoes = int(tipo_questoes)
+                except Exception:
+                    tipo_questoes = 4
+
+            if not validar_gabarito(gabarito, tipo_questoes):
+                return jsonify({
+                    'sucesso': False,
+                    'erro': 'Gabarito inválido para este tipo de prova'
+                }), 400
+
+            padrao_gabarito = gerar_padrao_gabarito(gabarito, tipo_questoes)
+            nome_aluno = prova.get('aluno_nome') or 'Aluno'
+            serie = prova.get('turma_serie') or prova.get('serie') or '1º Ano'
+            bncc_gabarito = prova.get('bncc', [])
+            disciplina = prova.get('disciplina', '')
+            prova_titulo = prova.get('titulo', '')
+            escola_nome_banco = prova.get('escola_nome', '')
+            turma_nome_banco = prova.get('turma_nome', '')
+
+        except Exception as e:
+            logging.error(f"❌ Erro ao buscar dados: {e}")
+            try:
+                conn.close()
+            except:
+                pass
+            return jsonify({'erro': str(e)}), 500
+
+        # ETAPA 3: Chama a correção normal
+        logging.info(f"🔄 Iniciando correção para {nome_aluno}...")
+
+        resultado = corrigir_com_gemini_com_padrao(
+            imagem_base64, padrao_gabarito, nome_aluno,
+            serie, tipo_questoes, disciplina, bncc=bncc_gabarito,
+            prova_id=prova_id, aluno_id=aluno_id
+        )
+
+        if resultado.get('erro'):
+            return jsonify({
+                'sucesso': False,
+                'erro': resultado.get('erro'),
+                'aluno': nome_aluno,
+                'prova': prova_titulo
+            }), 400
+
+        # ETAPA 4: Salva no histórico
+        tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
+
+        if 'confianca_por_questao' not in resultado or not resultado['confianca_por_questao']:
+            total = resultado.get('total', 20)
+            resultado['confianca_por_questao'] = [70] * total
+            resultado['confianca'] = 70
+
+        try:
+            conn = get_db_connection()
+            if conn:
+                cur = conn.cursor()
+                questoes_status = resultado.get('questoes_status', [])
+                for i, q in enumerate(questoes_status):
+                    if i < len(bncc_gabarito):
+                        q['bncc'] = bncc_gabarito[i] if bncc_gabarito[i] else ''
+                    else:
+                        q['bncc'] = ''
+                questoes_status_json = json.dumps(questoes_status)
+                respostas_detectadas = resultado.get('respostas_detectadas', [])
+
+                cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s", (prova_id, aluno_id))
+                existe = cur.fetchone()
+
+                if existe:
+                    cur.execute("""
+                        UPDATE historico
+                        SET respostas = %s::text[], acertos = %s, nota = %s, total = %s,
+                            tipo_correcao = %s, disciplina = %s, tipo_avaliacao = %s,
+                            questoes_status = %s::jsonb, confianca = %s,
+                            confianca_por_questao = %s::jsonb, bncc = %s::text[],
+                            data_correcao = CURRENT_TIMESTAMP
+                        WHERE prova_id = %s AND aluno_id = %s
+                    """, (respostas_detectadas, resultado.get('acertos', 0), resultado.get('nota', 0),
+                          resultado.get('total', 0), resultado.get('modo', 'ia'), disciplina,
+                          tipo_avaliacao, questoes_status_json, resultado.get('confianca', 70),
+                          json.dumps(resultado.get('confianca_por_questao', [])),
+                          bncc_gabarito, prova_id, aluno_id))
+                else:
+                    cur.execute("""
+                        INSERT INTO historico
+                        (prova_id, aluno_id, respostas, acertos, nota, total,
+                         tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
+                         confianca, confianca_por_questao, bncc)
+                        VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
+                                %s, %s::jsonb, %s::text[])
+                    """, (prova_id, aluno_id, respostas_detectadas, resultado.get('acertos', 0),
+                          resultado.get('nota', 0), resultado.get('total', 0),
+                          resultado.get('modo', 'ia'), disciplina, tipo_avaliacao,
+                          questoes_status_json, resultado.get('confianca', 70),
+                          json.dumps(resultado.get('confianca_por_questao', [])),
+                          bncc_gabarito))
+                conn.commit()
+                cur.close()
+                conn.close()
+                logging.info(f"✅ Histórico salvo")
+        except Exception as e:
+            logging.error(f"⚠️ Erro ao salvar histórico: {e}")
+
+        # ETAPA 5: Adiciona dados do QR no resultado
+        resultado['sucesso'] = True
+        resultado['qr_lido'] = info_qr
+        resultado['aluno'] = nome_aluno
+        resultado['aluno_id'] = aluno_id
+        resultado['prova_id'] = prova_id
+        resultado['prova_titulo'] = prova_titulo
+        resultado['escola_nome'] = escola_nome_banco
+        resultado['turma_nome'] = turma_nome_banco
+        resultado['tipo_avaliacao'] = tipo_avaliacao
+        resultado['disciplina'] = disciplina
+        resultado['bncc'] = bncc_gabarito
+
+        logging.info(f"✅ CORREÇÃO AUTOMÁTICA CONCLUÍDA: {nome_aluno} - Nota {resultado.get('nota')}")
+
+        return jsonify(resultado)
 
     except Exception as e:
-        logging.error(f"❌ Erro em /api/ler-qrcode: {e}")
+        logging.error(f"❌ Erro em /api/corrigir-automatico: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
-
 
 # ============================================
 # INICIALIZAÇÃO DO SERVIDOR
