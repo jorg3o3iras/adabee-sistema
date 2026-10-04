@@ -980,49 +980,60 @@ def buscar_bolha_robusta(binaria, x_norm, y_norm, raio_fracao=0.008):
     """
     Procura a bolha REAL na vizinhança do ponto esperado.
     
-    v7.1:
-    - raio de amostragem 12px (pega o interior da bolha, não a borda)
-    - raio de busca 15px (cobre ±2.7mm, mas não pula para bolha vizinha)
-    - penaliza deslocamentos grandes
+    v8.0 — Busca GRANDE para compensar desalinhamento de impressão.
+    
+    - raio de amostragem: 12px (interior da bolha)
+    - raio de busca: 120px (~21mm) — cobre variações de impressão
+    - passo adaptativo: 5px (perto) até 20px (longe)
+    - penaliza deslocamentos grandes (prefere o ponto original)
     """
     h, w = binaria.shape[:2]
     cx_base = int(x_norm * w)
     cy_base = int(y_norm * h)
 
     r_amostra = 12
-
-    raio_busca = 15
-    passo = 5
+    raio_busca = 120
+    passo_perto = 5
+    passo_longe = 20
 
     melhor_ratio = 0.0
     melhor_dx = 0
     melhor_dy = 0
 
+    # Primeiro tenta o centro exato
     ratio_centro = _amostrar_ratio(binaria, cx_base, cy_base, r_amostra)
     if ratio_centro > 0.7:
         return ratio_centro, 0, 0
     melhor_ratio = ratio_centro
 
-    for dx in range(-raio_busca, raio_busca + 1, passo):
-        for dy in range(-raio_busca, raio_busca + 1, passo):
-            if dx == 0 and dy == 0:
-                continue
+    # Busca em anéis concêntricos — passo fino perto, passo grosso longe
+    import math
+    for raio in range(passo_perto, raio_busca + 1, passo_perto):
+        passo_atual = passo_perto if raio < 30 else passo_longe
+        # Número de pontos no anel
+        num_pontos = max(8, int(2 * math.pi * raio / passo_atual))
+        for k in range(num_pontos):
+            angulo = 2 * math.pi * k / num_pontos
+            dx = int(raio * math.cos(angulo))
+            dy = int(raio * math.sin(angulo))
 
             cx = cx_base + dx
             cy = cy_base + dy
 
-            if (dx * dx + dy * dy) > (raio_busca * raio_busca):
-                continue
-
             ratio = _amostrar_ratio(binaria, cx, cy, r_amostra)
 
-            penalidade = 1.0 - (abs(dx) + abs(dy)) / (2.0 * raio_busca) * 0.15
+            # Penaliza deslocamentos grandes
+            penalidade = 1.0 - (raio / raio_busca) * 0.3
             ratio_ajustado = ratio * penalidade
 
             if ratio_ajustado > melhor_ratio:
                 melhor_ratio = ratio
                 melhor_dx = dx
                 melhor_dy = dy
+
+            # Se já achou algo MUITO bom, para
+            if melhor_ratio > 0.85 and raio < 40:
+                return melhor_ratio, melhor_dx, melhor_dy
 
     return melhor_ratio, melhor_dx, melhor_dy
 
@@ -1077,7 +1088,7 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         todos_valores_sorted = sorted(todos_valores)
         mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
 
-        threshold = max(0.45, mediana * 2.5)
+        threshold = max(0.55, mediana * 3.0)
 
         logging.info(f"📊 Threshold: {threshold:.3f} (mediana={mediana:.3f})")
         logging.info(f"🔬 [DEBUG] Top 10 valores: {sorted(todos_valores, reverse=True)[:10]}")
