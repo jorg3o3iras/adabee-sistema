@@ -702,69 +702,30 @@ def corrigir_perspectiva(img, marcadores):
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     """
-    Gera mapa de posições (0-1) em FRAÇÕES da página A4.
-    
-    ARQUITETURA v6.0 — Posições absolutas em mm.
-    
-    O HTML do cartão vai usar `position: absolute` com `left` e `top` em mm
-    para posicionar cada bolha. Assim:
-      - Python calcula em mm EXATAMENTE onde cada bolha vai
-      - HTML desenha a bolha naquele mm
-      - Python salva no banco a fração correspondente
-      - Na correção, Python procura exatamente ali
-    
-    ZERO adivinhação. ZERO CSS flex. ZERO space-between.
+    Mapa v10.0 — Sincronizado 1:1 com o CSS do HTML.
     """
     mapa = []
 
-    # ═══════════════════════════════════════════════════════════
-    # DIMENSÕES DA PÁGINA A4 (em mm)
-    # ═══════════════════════════════════════════════════════════
     A4_W = 210.0
     A4_H = 297.0
 
-    # ═══════════════════════════════════════════════════════════
-    # POSIÇÃO DOS 4 MARCADORES FIDUCIAIS
-    # ═══════════════════════════════════════════════════════════
-    # Marcadores: 10mm × 10mm nos 4 cantos do cartão
     MARCADOR_SIZE = 10.0
-    MARCADOR_MARGIN_LR = 15.0   # margem lateral
-    MARCADOR_MARGIN_TB = 15.0   # margem topo/base
+    MARCADOR_MARGIN = 15.0
 
-    # TL = (15, 15)
-    # TR = (210-15-10, 15) = (185, 15)
-    # BL = (15, 297-15-10) = (15, 272)
-    # BR = (185, 272)
-    MARKER_TL = (MARCADOR_MARGIN_LR, MARCADOR_MARGIN_TB)
-    MARKER_TR = (A4_W - MARCADOR_MARGIN_LR - MARCADOR_SIZE, MARCADOR_MARGIN_TB)
-    MARKER_BL = (MARCADOR_MARGIN_LR, A4_H - MARCADOR_MARGIN_TB - MARCADOR_SIZE)
-    MARKER_BR = (A4_W - MARCADOR_MARGIN_LR - MARCADOR_SIZE, A4_H - MARCADOR_MARGIN_TB - MARCADOR_SIZE)
+    AREA_LEFT = MARCADOR_MARGIN + MARCADOR_SIZE
+    AREA_TOP = MARCADOR_MARGIN + MARCADOR_SIZE
+    AREA_RIGHT = A4_W - MARCADOR_MARGIN
+    AREA_BOTTOM = A4_H - MARCADOR_MARGIN
+    AREA_WIDTH = AREA_RIGHT - AREA_LEFT
+    AREA_HEIGHT = AREA_BOTTOM - AREA_TOP
 
-    # ═══════════════════════════════════════════════════════════
-    # ÁREA ÚTIL (entre os marcadores)
-    # ═══════════════════════════════════════════════════════════
-    AREA_LEFT = MARKER_TL[0] + MARCADOR_SIZE           # 25mm
-    AREA_TOP = MARKER_TL[1] + MARCADOR_SIZE            # 25mm
-    AREA_RIGHT = MARKER_TR[0]                          # 185mm
-    AREA_BOTTOM = MARKER_BL[1]                         # 272mm
-    AREA_WIDTH = AREA_RIGHT - AREA_LEFT                # 160mm
-    AREA_HEIGHT = AREA_BOTTOM - AREA_TOP               # 247mm
+    HEADER_HEIGHT = 55.0
+    QUESTOES_TOP = AREA_TOP + HEADER_HEIGHT
+    QUESTOES_HEIGHT = AREA_BOTTOM - QUESTOES_TOP
+    QUESTOES_PADDING = 5.0
+    QUESTOES_INNER_TOP = QUESTOES_TOP + QUESTOES_PADDING
+    QUESTOES_INNER_HEIGHT = QUESTOES_HEIGHT - 2 * QUESTOES_PADDING
 
-    # ═══════════════════════════════════════════════════════════
-    # HEADER (cabeçalho dentro da área útil)
-    # ═══════════════════════════════════════════════════════════
-    HEADER_HEIGHT = 55.0   # mm
-    HEADER_TOP = AREA_TOP
-    QUESTOES_TOP = HEADER_TOP + HEADER_HEIGHT          # 25 + 55 = 80mm
-    QUESTOES_HEIGHT = AREA_BOTTOM - QUESTOES_TOP       # 272 - 80 = 192mm
-    QUESTOES_PADDING_TOP = 5.0                         # mm
-    QUESTOES_PADDING_BOTTOM = 5.0                      # mm
-    QUESTOES_INNER_TOP = QUESTOES_TOP + QUESTOES_PADDING_TOP
-    QUESTOES_INNER_HEIGHT = QUESTOES_HEIGHT - QUESTOES_PADDING_TOP - QUESTOES_PADDING_BOTTOM
-
-    # ═══════════════════════════════════════════════════════════
-    # DEFINE COLUNAS E DISTRIBUIÇÃO
-    # ═══════════════════════════════════════════════════════════
     if total_questoes <= 12:
         num_colunas = 1
         q_por_coluna = total_questoes
@@ -776,80 +737,49 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
         q_por_coluna = 15
 
     num_alts = len(alternativas)
+    GAP_COLUNA = 8.0
+    col_width = (AREA_WIDTH - GAP_COLUNA * (num_colunas - 1)) / num_colunas
 
-    # Gap entre colunas
-    GAP_COLUNA = 8.0  # mm
-    if num_colunas == 2:
-        col_width = (AREA_WIDTH - GAP_COLUNA) / 2   # (160 - 8) / 2 = 76mm
-    else:
-        col_width = AREA_WIDTH                       # 160mm
+    NUM_WIDTH = 10.0
+    NUM_PADDING = 1.0
+    NUM_BORDER = 0.5
+    NUM_GAP = 2.0
+    ALT_LEFT_OFFSET = NUM_WIDTH + NUM_PADDING + NUM_BORDER + NUM_GAP
 
-    # ═══════════════════════════════════════════════════════════
-    # DENTRO DE CADA COLUNA
-    # ═══════════════════════════════════════════════════════════
-    NUM_QUESTAO_WIDTH = 12.0    # mm (largura para "01 |")
-    ALT_MARGIN_LEFT = 4.0       # mm (espaço entre número e alternativas)
-
-    # Para a fração da página A4, precisamos converter mm → fração
-    # IMPORTANTE: as frações vão ser relativas à IMAGEM CORRIGIDA,
-    # que corresponde à área ENTRE os marcadores (do canto TL ao BR)
-    # Portanto, a "origem" da imagem é o canto TL do marcador TL
-    # e o "range" é do TL ao BR dos marcadores
-    
-    # TL do marcador = (15, 15)
-    # BR do marcador = (195, 287)  [canto inferior direito do marcador BR]
-    MARKER_TL_CORNER = (MARCADOR_MARGIN_LR, MARCADOR_MARGIN_TB)  # (15, 15)
-    MARKER_BR_CORNER = (A4_W - MARCADOR_MARGIN_LR, A4_H - MARCADOR_MARGIN_TB)  # (195, 287)
-    
-    IMG_RANGE_X = MARKER_BR_CORNER[0] - MARKER_TL_CORNER[0]  # 195 - 15 = 180mm
-    IMG_RANGE_Y = MARKER_BR_CORNER[1] - MARKER_TL_CORNER[1]  # 287 - 15 = 272mm
+    IMG_ORIGIN_X = MARCADOR_MARGIN
+    IMG_ORIGIN_Y = MARCADOR_MARGIN
+    IMG_RANGE_X = A4_W - 2 * MARCADOR_MARGIN
+    IMG_RANGE_Y = A4_H - 2 * MARCADOR_MARGIN
 
     for col in range(num_colunas):
         inicio_col = col * q_por_coluna
         fim_col = min(inicio_col + q_por_coluna, total_questoes)
         num_questoes_col = fim_col - inicio_col
-
         if num_questoes_col <= 0:
             continue
 
-        # Posição X da coluna (em mm)
         col_left = AREA_LEFT + col * (col_width + GAP_COLUNA)
         col_right = col_left + col_width
-
-        # Posição X do início das alternativas
-        alt_left = col_left + NUM_QUESTAO_WIDTH + ALT_MARGIN_LEFT
+        alt_left = col_left + ALT_LEFT_OFFSET
         alt_right = col_right
         alt_width = alt_right - alt_left
-
-        # Espaçamento entre bolhas (space-around simulado)
         espacamento_bolha = alt_width / num_alts
-
-        # Distribuição Y das questões (dado o espaço disponível)
-        if num_questoes_col > 1:
-            espaco_por_linha = QUESTOES_INNER_HEIGHT / num_questoes_col
-        else:
-            espaco_por_linha = QUESTOES_INNER_HEIGHT
+        espaco_por_linha = QUESTOES_INNER_HEIGHT / num_questoes_col
 
         for i in range(num_questoes_col):
             num_questao = inicio_col + i + 1
-
-            # Y do CENTRO da linha (em mm da página A4)
             y_centro = QUESTOES_INNER_TOP + (i + 0.5) * espaco_por_linha
 
             for j, letra in enumerate(alternativas):
-                # X do CENTRO da bolha (em mm)
                 x_centro = alt_left + (j + 0.5) * espacamento_bolha
-
-                # Converte para FRAÇÃO da imagem corrigida
-                x_norm = (x_centro - MARKER_TL_CORNER[0]) / IMG_RANGE_X
-                y_norm = (y_centro - MARKER_TL_CORNER[1]) / IMG_RANGE_Y
+                x_norm = (x_centro - IMG_ORIGIN_X) / IMG_RANGE_X
+                y_norm = (y_centro - IMG_ORIGIN_Y) / IMG_RANGE_Y
 
                 mapa.append({
                     'questao': num_questao,
                     'alternativa': letra,
                     'x': round(x_norm, 5),
                     'y': round(y_norm, 5),
-                    # Coordenadas em mm para o HTML usar (position: absolute)
                     'x_mm': round(x_centro, 2),
                     'y_mm': round(y_centro, 2),
                 })
@@ -978,60 +908,41 @@ def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.008):
 
 def buscar_bolha_robusta(binaria, x_norm, y_norm, raio_fracao=0.008):
     """
-    Procura a bolha REAL na vizinhança do ponto esperado.
-    
-    v8.0 — Busca GRANDE para compensar desalinhamento de impressão.
-    
-    - raio de amostragem: 12px (interior da bolha)
-    - raio de busca: 120px (~21mm) — cobre variações de impressão
-    - passo adaptativo: 5px (perto) até 20px (longe)
-    - penaliza deslocamentos grandes (prefere o ponto original)
+    Busca em vizinhança GRANDE (120px) com penalidade. v10.0
     """
+    import math
     h, w = binaria.shape[:2]
     cx_base = int(x_norm * w)
     cy_base = int(y_norm * h)
 
     r_amostra = 12
     raio_busca = 120
-    passo_perto = 5
-    passo_longe = 20
 
     melhor_ratio = 0.0
     melhor_dx = 0
     melhor_dy = 0
 
-    # Primeiro tenta o centro exato
     ratio_centro = _amostrar_ratio(binaria, cx_base, cy_base, r_amostra)
     if ratio_centro > 0.7:
         return ratio_centro, 0, 0
     melhor_ratio = ratio_centro
 
-    # Busca em anéis concêntricos — passo fino perto, passo grosso longe
-    import math
-    for raio in range(passo_perto, raio_busca + 1, passo_perto):
-        passo_atual = passo_perto if raio < 30 else passo_longe
-        # Número de pontos no anel
-        num_pontos = max(8, int(2 * math.pi * raio / passo_atual))
+    for raio in range(5, raio_busca + 1, 5):
+        passo = 5 if raio < 30 else 15
+        num_pontos = max(8, int(2 * math.pi * raio / passo))
         for k in range(num_pontos):
             angulo = 2 * math.pi * k / num_pontos
             dx = int(raio * math.cos(angulo))
             dy = int(raio * math.sin(angulo))
-
             cx = cx_base + dx
             cy = cy_base + dy
-
             ratio = _amostrar_ratio(binaria, cx, cy, r_amostra)
-
-            # Penaliza deslocamentos grandes
             penalidade = 1.0 - (raio / raio_busca) * 0.3
             ratio_ajustado = ratio * penalidade
-
             if ratio_ajustado > melhor_ratio:
                 melhor_ratio = ratio
                 melhor_dx = dx
                 melhor_dy = dy
-
-            # Se já achou algo MUITO bom, para
             if melhor_ratio > 0.85 and raio < 40:
                 return melhor_ratio, melhor_dx, melhor_dy
 
@@ -4462,7 +4373,7 @@ def gerar_gabarito():
 <head>
     <meta charset="UTF-8">
     <title>Cartão Resposta - {nome_aluno}</title>
-    <style>
+        <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 
         @page {{ size: A4 portrait; margin: 0; }}
@@ -4483,7 +4394,6 @@ def gerar_gabarito():
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }}
 
-        /* ═══ MARCADORES FIDUCIAIS (10×10mm nos cantos) ═══ */
         .fiducial {{
             position: absolute;
             width: 10mm;
@@ -4507,7 +4417,6 @@ def gerar_gabarito():
         .fiducial-bl {{ left: 15mm; bottom: 15mm; }}
         .fiducial-br {{ right: 15mm; bottom: 15mm; }}
 
-        /* ═══ QR CODE ═══ */
         .qr-code-bloco {{
             position: absolute;
             top: 15mm;
@@ -4525,12 +4434,11 @@ def gerar_gabarito():
             background: #fff;
         }}
 
-        /* ═══ CABEÇALHO (posicionamento absoluto) ═══ */
         .header-abs {{
             position: absolute;
             left: 25mm;
             top: 25mm;
-            width: 160mm;
+            width: 170mm;
             height: 55mm;
             text-align: center;
             border-bottom: 1.5px solid #000;
@@ -4538,47 +4446,26 @@ def gerar_gabarito():
             flex-direction: column;
             justify-content: flex-end;
             padding-bottom: 2mm;
+            overflow: hidden;
         }}
-        .header-titulo {{
-            font-size: 8pt;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-        }}
+        .header-titulo {{ font-size: 8pt; font-weight: bold; letter-spacing: 0.5px; }}
         .header-cartao {{
-            font-size: 12pt;
-            font-weight: 900;
+            font-size: 12pt; font-weight: 900;
             border: 2px solid #000;
             display: inline-block;
-            padding: 1mm 6mm;
-            margin: 1mm auto;
+            padding: 1mm 6mm; margin: 1mm auto;
         }}
-        .header-prova {{
-            font-size: 8pt;
-            font-weight: bold;
-            margin-top: 1mm;
-        }}
-        .header-escola {{
-            font-size: 7pt;
-            color: #333;
-        }}
-        .header-aluno {{
-            font-size: 9pt;
-            margin-top: 1mm;
-            text-align: left;
-            padding: 0 2mm;
-        }}
+        .header-prova {{ font-size: 8pt; font-weight: bold; margin-top: 1mm; }}
+        .header-escola {{ font-size: 7pt; color: #333; }}
+        .header-aluno {{ font-size: 9pt; margin-top: 1mm; text-align: left; padding: 0 2mm; }}
         .instrucoes {{
-            font-size: 6pt;
-            font-weight: bold;
-            padding: 0.8mm;
-            background: #f0f0f0;
-            border: 1px solid #999;
-            margin-top: 0.5mm;
+            font-size: 6pt; font-weight: bold;
+            padding: 0.8mm; background: #f0f0f0;
+            border: 1px solid #999; margin-top: 0.5mm;
         }}
 
-        /* ═══ BOLHAS COM POSICIONAMENTO ABSOLUTO ═══ */
         .bolha-abs {{
-             position: absolute;
+            position: absolute;
             width: 7mm;
             height: 7mm;
             border: 1.5px solid #666;
@@ -4587,10 +4474,7 @@ def gerar_gabarito():
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 9pt;
-            font-weight: 900;
-            color: #000;
-            line-height: 1;
+            font-size: 9pt; font-weight: 900; color: #000; line-height: 1;
         }}
 
         .num-abs {{
@@ -4624,13 +4508,9 @@ def gerar_gabarito():
             left: 50%;
             transform: translateX(-50%);
             padding: 3mm 10mm;
-            background: #000;
-            color: #fff;
-            border: none;
-            font-size: 11pt;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 2mm;
+            background: #000; color: #fff;
+            border: none; font-size: 11pt; font-weight: bold;
+            cursor: pointer; border-radius: 2mm;
         }}
 
         @media print {{
