@@ -702,20 +702,69 @@ def corrigir_perspectiva(img, marcadores):
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     """
-    Gera mapa de posições (0-1) alinhado com o HTML do cartão A4.
+    Gera mapa de posições (0-1) em FRAÇÕES da página A4.
     
-    CORRIGIDO v4.0 — Frações diretas do HTML.
+    ARQUITETURA v6.0 — Posições absolutas em mm.
     
-    Em vez de calcular mm exatos (que dependem do CSS renderizado),
-    usamos as FRAÇÕES do HTML:
+    O HTML do cartão vai usar `position: absolute` com `left` e `top` em mm
+    para posicionar cada bolha. Assim:
+      - Python calcula em mm EXATAMENTE onde cada bolha vai
+      - HTML desenha a bolha naquele mm
+      - Python salva no banco a fração correspondente
+      - Na correção, Python procura exatamente ali
     
-    - header-bloco: 56mm de 234mm do area-util = 0.2393
-    - questoes-bloco: o resto do area-util
-    - questoes-bloco tem padding: 3mm topo + 3mm base
-    - linha-questao: 100/q_por_coluna % da altura de .coluna-questoes
+    ZERO adivinhação. ZERO CSS flex. ZERO space-between.
     """
     mapa = []
 
+    # ═══════════════════════════════════════════════════════════
+    # DIMENSÕES DA PÁGINA A4 (em mm)
+    # ═══════════════════════════════════════════════════════════
+    A4_W = 210.0
+    A4_H = 297.0
+
+    # ═══════════════════════════════════════════════════════════
+    # POSIÇÃO DOS 4 MARCADORES FIDUCIAIS
+    # ═══════════════════════════════════════════════════════════
+    # Marcadores: 10mm × 10mm nos 4 cantos do cartão
+    MARCADOR_SIZE = 10.0
+    MARCADOR_MARGIN_LR = 15.0   # margem lateral
+    MARCADOR_MARGIN_TB = 15.0   # margem topo/base
+
+    # TL = (15, 15)
+    # TR = (210-15-10, 15) = (185, 15)
+    # BL = (15, 297-15-10) = (15, 272)
+    # BR = (185, 272)
+    MARKER_TL = (MARCADOR_MARGIN_LR, MARCADOR_MARGIN_TB)
+    MARKER_TR = (A4_W - MARCADOR_MARGIN_LR - MARCADOR_SIZE, MARCADOR_MARGIN_TB)
+    MARKER_BL = (MARCADOR_MARGIN_LR, A4_H - MARCADOR_MARGIN_TB - MARCADOR_SIZE)
+    MARKER_BR = (A4_W - MARCADOR_MARGIN_LR - MARCADOR_SIZE, A4_H - MARCADOR_MARGIN_TB - MARCADOR_SIZE)
+
+    # ═══════════════════════════════════════════════════════════
+    # ÁREA ÚTIL (entre os marcadores)
+    # ═══════════════════════════════════════════════════════════
+    AREA_LEFT = MARKER_TL[0] + MARCADOR_SIZE           # 25mm
+    AREA_TOP = MARKER_TL[1] + MARCADOR_SIZE            # 25mm
+    AREA_RIGHT = MARKER_TR[0]                          # 185mm
+    AREA_BOTTOM = MARKER_BL[1]                         # 272mm
+    AREA_WIDTH = AREA_RIGHT - AREA_LEFT                # 160mm
+    AREA_HEIGHT = AREA_BOTTOM - AREA_TOP               # 247mm
+
+    # ═══════════════════════════════════════════════════════════
+    # HEADER (cabeçalho dentro da área útil)
+    # ═══════════════════════════════════════════════════════════
+    HEADER_HEIGHT = 55.0   # mm
+    HEADER_TOP = AREA_TOP
+    QUESTOES_TOP = HEADER_TOP + HEADER_HEIGHT          # 25 + 55 = 80mm
+    QUESTOES_HEIGHT = AREA_BOTTOM - QUESTOES_TOP       # 272 - 80 = 192mm
+    QUESTOES_PADDING_TOP = 5.0                         # mm
+    QUESTOES_PADDING_BOTTOM = 5.0                      # mm
+    QUESTOES_INNER_TOP = QUESTOES_TOP + QUESTOES_PADDING_TOP
+    QUESTOES_INNER_HEIGHT = QUESTOES_HEIGHT - QUESTOES_PADDING_TOP - QUESTOES_PADDING_BOTTOM
+
+    # ═══════════════════════════════════════════════════════════
+    # DEFINE COLUNAS E DISTRIBUIÇÃO
+    # ═══════════════════════════════════════════════════════════
     if total_questoes <= 12:
         num_colunas = 1
         q_por_coluna = total_questoes
@@ -728,44 +777,32 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
     num_alts = len(alternativas)
 
-    # ═══ COORDENADAS DE REFERÊNCIA (mesmo que antes) ═══
-    RANGE_X = 200.0
-    RANGE_Y = 254.0
-    OFFSET_X = 5.0
-    OFFSET_Y = 38.0
+    # Gap entre colunas
+    GAP_COLUNA = 8.0  # mm
+    if num_colunas == 2:
+        col_width = (AREA_WIDTH - GAP_COLUNA) / 2   # (160 - 8) / 2 = 76mm
+    else:
+        col_width = AREA_WIDTH                       # 160mm
 
-    area_util_left = 15.0
-    area_util_top = 48.0
-    area_util_width = 180.0
-    area_util_height = 234.0
+    # ═══════════════════════════════════════════════════════════
+    # DENTRO DE CADA COLUNA
+    # ═══════════════════════════════════════════════════════════
+    NUM_QUESTAO_WIDTH = 12.0    # mm (largura para "01 |")
+    ALT_MARGIN_LEFT = 4.0       # mm (espaço entre número e alternativas)
 
-    # ═══ USAR FRAÇÕES DO CSS (não mm exatos) ═══
-    # header-bloco tem height: 56mm FIXO
-    header_height_mm = 56.0
-    questoes_top_mm = area_util_top + header_height_mm  # 48 + 56 = 104mm
-
-    # .questoes-bloco: flex 1 (o resto do area-util) com padding: 3mm 0
-    questoes_height_mm = area_util_height - header_height_mm  # 234 - 56 = 178mm
-    questoes_inner_top_mm = questoes_top_mm + 3.0   # padding-top
-    questoes_inner_height_mm = questoes_height_mm - 6.0  # padding 3+3
-
-    # ═══ POSIÇÃO Y DAS QUESTÕES ═══
-    # O CSS usa: height: {100/q_por_coluna}% para .linha-questao,
-    # com display: flex + justify-content: space-between em .coluna-questoes.
-    # 
-    # Com space-between, a Q1 fica no TOPO (y=0) e a Qn no FUNDO (y=altura),
-    # independente do height das linhas.
-    # 
-    # O CENTRO de cada linha depende do height da linha:
-    #   linha i tem centro em: (i + 0.5) * (100/q_por_coluna) %
-    # 
-    # Ex: 10 questões, cada linha 10% de altura.
-    #   Q1: centro em 5% do .coluna-questoes
-    #   Q2: centro em 15%
-    #   ...
-    #   Q10: centro em 95%
-
-    col_width_mm = area_util_width / num_colunas  # 180 (1 col) ou 90 (2 col)
+    # Para a fração da página A4, precisamos converter mm → fração
+    # IMPORTANTE: as frações vão ser relativas à IMAGEM CORRIGIDA,
+    # que corresponde à área ENTRE os marcadores (do canto TL ao BR)
+    # Portanto, a "origem" da imagem é o canto TL do marcador TL
+    # e o "range" é do TL ao BR dos marcadores
+    
+    # TL do marcador = (15, 15)
+    # BR do marcador = (195, 287)  [canto inferior direito do marcador BR]
+    MARKER_TL_CORNER = (MARCADOR_MARGIN_LR, MARCADOR_MARGIN_TB)  # (15, 15)
+    MARKER_BR_CORNER = (A4_W - MARCADOR_MARGIN_LR, A4_H - MARCADOR_MARGIN_TB)  # (195, 287)
+    
+    IMG_RANGE_X = MARKER_BR_CORNER[0] - MARKER_TL_CORNER[0]  # 195 - 15 = 180mm
+    IMG_RANGE_Y = MARKER_BR_CORNER[1] - MARKER_TL_CORNER[1]  # 287 - 15 = 272mm
 
     for col in range(num_colunas):
         inicio_col = col * q_por_coluna
@@ -775,39 +812,46 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
         if num_questoes_col <= 0:
             continue
 
-        col_left_mm = area_util_left + col * col_width_mm
-        col_right_mm = col_left_mm + col_width_mm
+        # Posição X da coluna (em mm)
+        col_left = AREA_LEFT + col * (col_width + GAP_COLUNA)
+        col_right = col_left + col_width
 
-        # Dentro da coluna: pula o num-questao + gap
-        alt_left_mm = col_left_mm + 11.0
-        alt_width_mm = col_right_mm - alt_left_mm
-        espacamento_bolha_mm = alt_width_mm / num_alts
+        # Posição X do início das alternativas
+        alt_left = col_left + NUM_QUESTAO_WIDTH + ALT_MARGIN_LEFT
+        alt_right = col_right
+        alt_width = alt_right - alt_left
+
+        # Espaçamento entre bolhas (space-around simulado)
+        espacamento_bolha = alt_width / num_alts
+
+        # Distribuição Y das questões (dado o espaço disponível)
+        if num_questoes_col > 1:
+            espaco_por_linha = QUESTOES_INNER_HEIGHT / num_questoes_col
+        else:
+            espaco_por_linha = QUESTOES_INNER_HEIGHT
 
         for i in range(num_questoes_col):
             num_questao = inicio_col + i + 1
 
-            # ═══ CENTRO DA LINHA em % (space-between) ═══
-            # Em vez de calcular mm, usamos a fração direta da altura:
-            #   fracao = (i + 0.5) / num_questoes_col
-            # 
-            # Isso reflete EXATAMENTE o que o HTML renderiza.
-            fracao_y = (i + 0.5) / num_questoes_col
-
-            # Converter para mm dentro da área das questões
-            y_mm = questoes_inner_top_mm + fracao_y * questoes_inner_height_mm
+            # Y do CENTRO da linha (em mm da página A4)
+            y_centro = QUESTOES_INNER_TOP + (i + 0.5) * espaco_por_linha
 
             for j, letra in enumerate(alternativas):
-                # ═══ CENTRO DA BOLHA em X (space-around) ═══
-                x_mm = alt_left_mm + (j + 0.5) * espacamento_bolha_mm
+                # X do CENTRO da bolha (em mm)
+                x_centro = alt_left + (j + 0.5) * espacamento_bolha
 
-                x_norm = (x_mm - OFFSET_X) / RANGE_X
-                y_norm = (y_mm - OFFSET_Y) / RANGE_Y
+                # Converte para FRAÇÃO da imagem corrigida
+                x_norm = (x_centro - MARKER_TL_CORNER[0]) / IMG_RANGE_X
+                y_norm = (y_centro - MARKER_TL_CORNER[1]) / IMG_RANGE_Y
 
                 mapa.append({
                     'questao': num_questao,
                     'alternativa': letra,
-                    'x': round(x_norm, 4),
-                    'y': round(y_norm, 4)
+                    'x': round(x_norm, 5),
+                    'y': round(y_norm, 5),
+                    # Coordenadas em mm para o HTML usar (position: absolute)
+                    'x_mm': round(x_centro, 2),
+                    'y_mm': round(y_centro, 2),
                 })
 
     return mapa
@@ -4274,30 +4318,64 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D', 'E'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
-        if quantidade_questoes <= 12:
-            q_por_coluna = quantidade_questoes
-            num_colunas = 1
-        elif quantidade_questoes <= 24:
-            q_por_coluna = 12
-            num_colunas = 2
-        else:
-            q_por_coluna = 15
-            num_colunas = 2
-
+        # ═══ GERA O MAPA (em frações E em mm) ═══
         mapa_template = gerar_mapa_template_padrao(
-            quantidade_questoes, alternativas, num_colunas
+            quantidade_questoes, alternativas, 0  # num_colunas é calculado dentro
         )
 
+        # ═══ SALVA O MAPA NO BANCO ═══
         salvar_mapa_template(
             prova_id, aluno_id, tipo_questoes, quantidade_questoes,
-            num_colunas, mapa_template
+            1 if quantidade_questoes <= 12 else 2,
+            mapa_template
         )
 
-        logging.info(f"🎨 Cartão gerado com mapa ALINHADO para aluno {aluno_id}")
+        logging.info(f"🎨 Cartão gerado: {len(mapa_template)} bolhas salvas")
 
+        # ═══ QR CODE ═══
         qr_dados = f"ALUNO:{aluno_id}|PROVA:{prova_id}|ESCOLA:{escola_id}|TURMA:{turma_id}"
         qr_base64 = gerar_qrcode_base64(qr_dados)
         logging.info(f"📷 QR Code gerado: {qr_dados}")
+
+        # ═══════════════════════════════════════════════════════════════
+        # GERA O HTML DO CARTÃO COM POSICIONAMENTO ABSOLUTO
+        # ═══════════════════════════════════════════════════════════════
+        # Cada bolha tem `position: absolute; left: X mm; top: Y mm`.
+        # Exatamente onde o Python disse que ela está.
+
+        # Constrói as bolhas como HTML absoluto
+        bolhas_html = ""
+        linhas_num_html = ""
+        questoes = {}  # q_num -> lista de bolhas
+
+        for b in mapa_template:
+            q = b['questao']
+            if q not in questoes:
+                questoes[q] = []
+            questoes[q].append(b)
+
+        for q_num in sorted(questoes.keys()):
+            bolhas_q = questoes[q_num]
+            for b in bolhas_q:
+                # O HTML usa coordenadas em mm RELATIVAS À PÁGINA A4
+                x_mm = b['x_mm']
+                y_mm = b['y_mm']
+                # O centro da bolha é (x_mm, y_mm). O círculo tem 7mm de diâmetro
+                # → canto superior esquerdo é (x_mm - 3.5, y_mm - 3.5)
+                left_mm = x_mm - 3.5
+                top_mm = y_mm - 3.5
+
+                bolhas_html += f'''
+                <div class="bolha-abs" style="left:{left_mm}mm; top:{top_mm}mm;">{b['alternativa']}</div>
+                '''
+
+            # Número da questão
+            y_num = bolhas_q[0]['y_mm']
+            # Número fica um pouco à esquerda das bolhas
+            x_num = bolhas_q[0]['x_mm'] - 12.0
+            linhas_num_html += f'''
+            <div class="num-abs" style="left:{x_num}mm; top:{y_num - 3.5}mm;">{q_num:02d}</div>
+            '''
 
         html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -4306,9 +4384,9 @@ def gerar_gabarito():
     <title>Cartão Resposta - {nome_aluno}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        
+
         @page {{ size: A4 portrait; margin: 0; }}
-        
+
         body {{
             font-family: Arial, sans-serif;
             background: #f5f5f5;
@@ -4316,7 +4394,7 @@ def gerar_gabarito():
             display: flex;
             justify-content: center;
         }}
-        
+
         .folha {{
             width: 210mm;
             height: 297mm;
@@ -4324,7 +4402,8 @@ def gerar_gabarito():
             position: relative;
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }}
-        
+
+        /* ═══ MARCADORES FIDUCIAIS (10×10mm nos cantos) ═══ */
         .fiducial {{
             position: absolute;
             width: 10mm;
@@ -4343,63 +4422,16 @@ def gerar_gabarito():
             background: #fff;
             border-radius: 50%;
         }}
-        
-        .fiducial-tl {{ top: 38mm; left: 5mm; }}
-        .fiducial-tr {{ top: 38mm; right: 5mm; }}
-        .fiducial-bl {{ bottom: 5mm; left: 5mm; }}
-        .fiducial-br {{ bottom: 5mm; right: 5mm; }}
-        
-        .area-util {{
-            position: absolute;
-            top: 48mm;
-            left: 15mm;
-            width: 180mm;
-            height: 234mm;
-            display: flex;
-            flex-direction: column;
-        }}
-        
-        .header-bloco {{
-            height: 56mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding-bottom: 2mm;
-            border-bottom: 1.5px solid #000;
-            overflow: hidden;
-        }}
-        
-        .header-titulo {{
-            font-size: 8pt;
-            font-weight: bold;
-            text-align: center;
-            letter-spacing: 0.5px;
-        }}
-        .header-cartao {{
-            font-size: 12pt;
-            font-weight: 900;
-            text-align: center;
-            border: 2px solid #000;
-            display: inline-block;
-            padding: 1mm 6mm;
-            margin: 1mm auto;
-        }}
-        .header-prova {{
-            font-size: 8pt;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 1mm;
-        }}
-        .header-escola {{
-            font-size: 7pt;
-            text-align: center;
-            color: #333;
-        }}
-        
+        .fiducial-tl {{ left: 15mm; top: 15mm; }}
+        .fiducial-tr {{ right: 15mm; top: 15mm; }}
+        .fiducial-bl {{ left: 15mm; bottom: 15mm; }}
+        .fiducial-br {{ right: 15mm; bottom: 15mm; }}
+
+        /* ═══ QR CODE ═══ */
         .qr-code-bloco {{
             position: absolute;
-            top: 52mm;
-            right: 5mm;
+            top: 15mm;
+            right: 28mm;
             width: 22mm;
             height: 22mm;
             z-index: 50;
@@ -4412,60 +4444,61 @@ def gerar_gabarito():
             padding: 1mm;
             background: #fff;
         }}
-        
+
+        /* ═══ CABEÇALHO (posicionamento absoluto) ═══ */
+        .header-abs {{
+            position: absolute;
+            left: 25mm;
+            top: 25mm;
+            width: 160mm;
+            height: 55mm;
+            text-align: center;
+            border-bottom: 1.5px solid #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 2mm;
+        }}
+        .header-titulo {{
+            font-size: 8pt;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }}
+        .header-cartao {{
+            font-size: 12pt;
+            font-weight: 900;
+            border: 2px solid #000;
+            display: inline-block;
+            padding: 1mm 6mm;
+            margin: 1mm auto;
+        }}
+        .header-prova {{
+            font-size: 8pt;
+            font-weight: bold;
+            margin-top: 1mm;
+        }}
+        .header-escola {{
+            font-size: 7pt;
+            color: #333;
+        }}
+        .header-aluno {{
+            font-size: 9pt;
+            margin-top: 1mm;
+            text-align: left;
+            padding: 0 2mm;
+        }}
         .instrucoes {{
             font-size: 6pt;
             font-weight: bold;
-            text-align: center;
             padding: 0.8mm;
             background: #f0f0f0;
             border: 1px solid #999;
             margin-top: 0.5mm;
         }}
-        
-        .questoes-bloco {{
-            flex: 1;
-            display: grid;
-            grid-template-columns: repeat({num_colunas}, 1fr);
-            gap: 4mm;
-            padding: 3mm 0;
-            min-height: 0;
-        }}
-        
-        .coluna-questoes {{
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100%;
-            min-height: 0;
-        }}
-        
-        .linha-questao {{
-            display: flex;
-            align-items: center;
-            height: {100 / max(q_por_coluna, 1):.4f}%;
-            gap: 2mm;
-            min-height: 0;
-        }}
-        
-        .num-questao {{
-            font-size: 9pt;
-            font-weight: 900;
-            min-width: 8mm;
-            text-align: right;
-            border-right: 1.5px solid #000;
-            padding-right: 1mm;
-            line-height: 1;
-        }}
-        
-        .alternativas {{
-            display: flex;
-            flex: 1;
-            justify-content: space-around;
-            align-items: center;
-        }}
-        
-        .bolha {{
+
+        /* ═══ BOLHAS COM POSICIONAMENTO ABSOLUTO ═══ */
+        .bolha-abs {{
+            position: absolute;
             width: 7mm;
             height: 7mm;
             border: 2px solid #000;
@@ -4477,21 +4510,34 @@ def gerar_gabarito():
             font-size: 9pt;
             font-weight: 900;
             color: #000;
-            flex-shrink: 0;
             line-height: 1;
         }}
-        
-        .rodape-bloco {{
-            height: 8%;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            font-size: 5pt;
+
+        .num-abs {{
+            position: absolute;
+            font-size: 9pt;
+            font-weight: 900;
+            line-height: 7mm;
+            height: 7mm;
+            text-align: right;
+            padding-right: 1mm;
+            border-right: 1.5px solid #000;
+            width: 10mm;
+        }}
+
+        .rodape {{
+            position: absolute;
+            left: 25mm;
+            right: 25mm;
+            bottom: 20mm;
+            font-size: 6pt;
             color: #666;
             border-top: 1px solid #ccc;
             padding-top: 1mm;
+            display: flex;
+            justify-content: space-between;
         }}
-        
+
         .btn-print {{
             position: absolute;
             bottom: 5mm;
@@ -4506,93 +4552,58 @@ def gerar_gabarito():
             cursor: pointer;
             border-radius: 2mm;
         }}
-        
+
         @media print {{
             body {{ background: #fff; padding: 0; }}
             .folha {{ box-shadow: none; }}
             .btn-print {{ display: none; }}
-            .fiducial, .fiducial::after {{ 
-                print-color-adjust: exact; 
-                -webkit-print-color-adjust: exact; 
-            }}
-            .bolha {{ 
-                print-color-adjust: exact; 
-                -webkit-print-color-adjust: exact; 
-            }}
+            .fiducial, .fiducial::after {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
+            .bolha-abs {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
         }}
     </style>
 </head>
 <body>
     <div class="folha">
+        <!-- 4 MARCADORES FIDUCIAIS -->
         <div class="fiducial fiducial-tl"></div>
         <div class="fiducial fiducial-tr"></div>
         <div class="fiducial fiducial-bl"></div>
         <div class="fiducial fiducial-br"></div>
-        
+
+        <!-- QR CODE -->
         <div class="qr-code-bloco">
             <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
         </div>
-        
-        <div class="area-util">
-            <div class="header-bloco">
-                <div class="header-titulo">SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</div>
-                <div style="text-align: center;">
-                    <div class="header-cartao">CARTÃO RESPOSTA</div>
-                </div>
-                <div class="header-prova">{titulo_prova}</div>
-                <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
-                
-                <div class="info-aluno">
-                    <span><strong>Aluno(a):</strong> {nome_aluno}</span>
-                    <span><strong>Data:</strong> {datetime.now().strftime('%d/%m/%Y')}</span>
-                </div>
-                
-                <div class="instrucoes">
-                    ⚠️ PREENCHA COMPLETAMENTE A BOLHA — CANETA PRETA OU AZUL — NÃO RASURE
-                </div>
+
+        <!-- CABEÇALHO -->
+        <div class="header-abs">
+            <div class="header-titulo">SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</div>
+            <div class="header-cartao">CARTÃO RESPOSTA</div>
+            <div class="header-prova">{titulo_prova}</div>
+            <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
+            <div class="header-aluno">
+                <strong>Aluno(a):</strong> {nome_aluno} &nbsp;&nbsp; <strong>Data:</strong> {datetime.now().strftime('%d/%m/%Y')}
             </div>
-            
-            <div class="questoes-bloco">
-"""
-
-        for col in range(num_colunas):
-            inicio = col * q_por_coluna
-            fim = min(inicio + q_por_coluna, quantidade_questoes)
-
-            if inicio >= quantidade_questoes:
-                break
-
-            html += '<div class="coluna-questoes">'
-
-            for i in range(inicio, fim):
-                html += f'''
-                <div class="linha-questao">
-                    <div class="num-questao">{i+1:02d}</div>
-                    <div class="alternativas">
-'''
-                for alt in alternativas:
-                    html += f'<span class="bolha">{alt}</span>'
-                html += '''
-                    </div>
-                </div>
-'''
-
-            html += '</div>'
-
-        html += f'''
-            </div>
-            
-            <div class="rodape-bloco">
-                <span>Gerado por CorrigePro — {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
-                <span>Página 1/1</span>
+            <div class="instrucoes">
+                ⚠️ PREENCHA COMPLETAMENTE A BOLHA — CANETA PRETA OU AZUL — NÃO RASURE
             </div>
         </div>
-        
+
+        <!-- BOLHAS (posicionadas em mm absolutos) -->
+        {bolhas_html}
+        {linhas_num_html}
+
+        <!-- RODAPÉ -->
+        <div class="rodape">
+            <span>Gerado por CorrigePro — {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+            <span>Página 1/1</span>
+        </div>
+
         <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
     </div>
 </body>
 </html>
-'''
+"""
         return html, 200, {'Content-Type': 'text/html'}
 
     except Exception as e:
