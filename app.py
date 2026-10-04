@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import cv2
-cv2.setNumThreads(1)  # ═══ NOVO: Evita que o OpenCV crie 8 threads (economiza RAM no Render)
+cv2.setNumThreads(1)
 import numpy as np
 import base64
 import json
@@ -185,6 +185,19 @@ try:
 except Exception as e:
     print(f"⚠️ RelayFreeLLM não disponível: {e}")
     RELAY_AVAILABLE = False
+
+# ============================================
+# VERIFICAÇÃO DE PYZBAR
+# ============================================
+
+PYZBAR_AVAILABLE = False
+try:
+    from pyzbar.pyzbar import decode as _pyzbar_decode
+    PYZBAR_AVAILABLE = True
+    print("✅ pyzbar disponível (leitura de QR Code)")
+except ImportError:
+    print("⚠️ pyzbar não instalado. Leitura automática de QR Code desabilitada.")
+    print("💡 Execute: pip install pyzbar")
 
 # ============================================
 # CONFIGURAÇÃO DO BANCO DE DADOS
@@ -585,7 +598,6 @@ def detectar_marcadores_fiduciais(gray):
         for (x, y, w, h, area) in candidatos:
             cx = x + w / 2
             cy = y + h / 2
-            canto = None
             if cx < cx_imagem and cy < cy_imagem:
                 canto = 'tl'
             elif cx >= cx_imagem and cy < cy_imagem:
@@ -849,56 +861,35 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.008):
-    """
-    Amostra o INTERIOR da bolha (não a borda).
-    
-    A bolha tem ~7mm de diâmetro. Na imagem de ~1004px de largura
-    (que representa 180mm), a escala é 5.58 px/mm.
-    Raio real da bolha: ~19.5px.
-    
-    Usamos raio de 8px (0.008 * 1004) para pegar SÓ o centro pintado,
-    evitando a borda preta.
-    """
-    h, w = binaria.shape[:2]
-    cx = int(x_norm * w)
-    cy = int(y_norm * h)
-    r = max(6, min(int(raio_fracao * min(w, h)), 12))
-
-    if cx < r or cy < r or cx + r > w or cy + r > h:
-        return 0.0
-
-    mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), r, 255, -1)
-
-    roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-    total = cv2.countNonZero(mask)
-    if total == 0:
-        return 0.0
-    return cv2.countNonZero(roi) / total
-
-
 def _amostrar_ratio(binaria, cx, cy, r):
     """Amostra o ratio preto/branco num círculo de raio r centrado em (cx, cy)."""
     h, w = binaria.shape[:2]
-    
-    # Garante que o círculo cabe na imagem
+
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
-    
+
     mask = np.zeros(binaria.shape, dtype=np.uint8)
     cv2.circle(mask, (int(cx), int(cy)), int(r), 255, -1)
-    
+
     total = cv2.countNonZero(mask)
     if total == 0:
         return 0.0
-    
+
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     return cv2.countNonZero(roi) / total
 
 
 def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.008):
-    """Amostra simples no ponto exato."""
+    """
+    Amostra o INTERIOR da bolha (não a borda).
+
+    A bolha tem ~7mm de diâmetro. Na imagem de ~1004px de largura
+    (que representa 180mm), a escala é 5.58 px/mm.
+    Raio real da bolha: ~19.5px.
+
+    Usamos raio de 8px (0.008 * 1004) para pegar SÓ o centro pintado,
+    evitando a borda preta.
+    """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
@@ -948,25 +939,26 @@ def buscar_bolha_robusta(binaria, x_norm, y_norm, raio_fracao=0.008):
 
     return melhor_ratio, melhor_dx, melhor_dy
 
-def detectar_bolhas_na_imagem(img_corrigida):
+
+def detectar_bolhas_na_imagem(img_corrigida, param2=22):
     """
     Detecta TODAS as bolhas na imagem usando Hough Circles.
     Retorna lista de (cx, cy, r, ratio_preenchimento).
+
+    Args:
+        param2: Sensibilidade do HoughCircles (menor = mais círculos). Default 22.
     """
     h, w = img_corrigida.shape[:2]
     gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
-    # Normalização de iluminação
     bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
     bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
     bg = cv2.GaussianBlur(bg, (51, 51), 0)
     bg = np.where(bg == 0, 1, bg).astype(np.float32)
     gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
 
-    # Blur leve para suavizar bordas
     gray_blur = cv2.medianBlur(gray_norm, 5)
 
-    # Binarização
     binaria = cv2.adaptiveThreshold(
         gray_norm, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -974,16 +966,13 @@ def detectar_bolhas_na_imagem(img_corrigida):
         blockSize=25, C=10
     )
 
-    # ═══ HOUGH CIRCLES — detecta as bolhas ═══
-    # A bolha tem 7mm de diâmetro. Em escala 5.58 px/mm: 39px diâmetro = 19.5px raio.
-    # Vamos buscar raios entre 15 e 25px.
     circulos = cv2.HoughCircles(
         gray_blur,
         cv2.HOUGH_GRADIENT,
         dp=1,
-        minDist=25,        # distância mínima entre círculos
+        minDist=25,
         param1=50,
-        param2=25,         # sensibilidade (menor = mais círculos)
+        param2=param2,
         minRadius=15,
         maxRadius=25
     )
@@ -994,7 +983,6 @@ def detectar_bolhas_na_imagem(img_corrigida):
     circulos = np.round(circulos[0, :]).astype("int")
     logging.info(f"🔵 HoughCircles encontrou {len(circulos)} círculos")
 
-    # ═══ Para cada círculo, calcula o ratio de preenchimento ═══
     bolhas = []
     for (cx, cy, r) in circulos:
         if cx < r or cy < r or cx + r > w or cy + r > h:
@@ -1025,15 +1013,12 @@ def agrupar_bolhas_em_grade(bolhas, num_alts):
     if not bolhas:
         return []
 
-    # Ordena por y
     bolhas_ordenadas = sorted(bolhas, key=lambda b: b['cy'])
 
-    # Agrupa em linhas usando um gap adaptativo
     linhas = []
     linha_atual = [bolhas_ordenadas[0]]
 
     for b in bolhas_ordenadas[1:]:
-        # Se a diferença de y é pequena, é a mesma linha
         if abs(b['cy'] - linha_atual[-1]['cy']) < 15:
             linha_atual.append(b)
         else:
@@ -1049,40 +1034,30 @@ def agrupar_bolhas_em_grade(bolhas, num_alts):
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
     """
     CORREÇÃO v12.0 — DETECÇÃO POR HOUGH CIRCLES
-    
-    Em vez de confiar no mapa salvo (que pode estar desalinhado),
-    detecta as bolhas REAIS na imagem e as ordena por posição.
     """
     try:
         h, w = img_corrigida.shape[:2]
         logging.info(f"🔬 v12.0 Entrou em corrigir_por_template: {w}x{h}")
 
-        # ═══ PASSO 1: DETECTA AS BOLHAS REAIS NA IMAGEM ═══
         bolhas_detectadas = detectar_bolhas_na_imagem(img_corrigida)
         logging.info(f"🔬 [DEBUG] {len(bolhas_detectadas)} bolhas detectadas na imagem")
 
         if len(bolhas_detectadas) < 8:
             logging.warning(f"⚠️ Poucas bolhas detectadas: {len(bolhas_detectadas)}")
-            return [''] * len(set(b['questao'] for b in mapa_template)), []
+            num_q = len(set(b['questao'] for b in mapa_template)) if mapa_template else 0
+            return [''] * num_q, [0] * num_q
 
-        # ═══ PASSO 2: DESCOBRE A QUANTIDADE DE LINHAS E COLUNAS ═══
-        # Agrupa em linhas
         linhas = agrupar_bolhas_em_grade(bolhas_detectadas, len(alternativas))
         logging.info(f"🔬 [DEBUG] Agrupou em {len(linhas)} linhas")
 
         if len(linhas) == 0:
             return [], []
 
-        # ═══ PASSO 3: SEPARA EM COLUNAS (se houver 2 colunas) ═══
-        # Verifica se as bolhas estão em 1 ou 2 colunas
         xs = [b['cx'] for b in bolhas_detectadas]
         xs_sorted = sorted(set(xs))
         range_x = max(xs_sorted) - min(xs_sorted)
 
-        # Se a diferença entre o maior e o menor x é maior que 40% da largura,
-        # provavelmente são 2 colunas
         if range_x > w * 0.5:
-            # Duas colunas — separa pelo meio
             meio = w / 2
             linhas_esq = [l for l in linhas if l[0]['cx'] < meio]
             linhas_dir = [l for l in linhas if l[0]['cx'] >= meio]
@@ -1092,9 +1067,6 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
             colunas = [linhas]
             logging.info(f"🔬 [DEBUG] 1 coluna com {len(linhas)} linhas")
 
-        # ═══ PASSO 4: MONTA O MAPA DE RESPOSTAS ═══
-        # Sabemos que cada linha é uma questão e tem N alternativas.
-        # Ordena as bolhas por X dentro de cada linha e associa à alternativa A, B, C, D.
         num_alts = len(alternativas)
         respostas = []
         confiancas = []
@@ -1102,26 +1074,21 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         for coluna in colunas:
             for linha in coluna:
                 if len(linha) < num_alts:
-                    # Linha incompleta — não conseguimos identificar as alternativas
                     respostas.append('')
                     confiancas.append(30)
                     continue
 
-                # Ordena por x e pega as N primeiras (mais confiáveis)
                 linha_ordenada = sorted(linha, key=lambda b: b['cx'])[:num_alts]
 
-                # Encontra a bolha com maior ratio
                 melhor = max(linha_ordenada, key=lambda b: b['ratio'])
                 melhor_idx = linha_ordenada.index(melhor)
                 letra = alternativas[melhor_idx] if melhor_idx < num_alts else ''
 
-                # Threshold — bolha pintada tem ratio > 0.5
                 if melhor['ratio'] < 0.45:
                     respostas.append('')
                     confiancas.append(30)
                 else:
                     respostas.append(letra)
-                    # Confiança baseada na diferença com a segunda maior
                     ratios_ordenados = sorted([b['ratio'] for b in linha_ordenada], reverse=True)
                     if len(ratios_ordenados) >= 2:
                         separacao = ratios_ordenados[0] - ratios_ordenados[1]
@@ -1138,10 +1105,8 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         logging.info(f"🔬 [DEBUG] {len(respostas)} respostas detectadas")
         logging.info(f"🔬 [DEBUG] Respostas: {respostas}")
 
-        # ═══ PASSO 5: VALIDA com o número esperado de questões ═══
-        num_questoes_esperado = len(set(b['questao'] for b in mapa_template))
+        num_questoes_esperado = len(set(b['questao'] for b in mapa_template)) if mapa_template else len(respostas)
 
-        # Ajusta o tamanho
         while len(respostas) < num_questoes_esperado:
             respostas.append('')
             confiancas.append(0)
@@ -1153,110 +1118,7 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
     except Exception as e:
         logging.error(f"❌ ERRO em corrigir_por_template: {e}")
         logging.error(traceback.format_exc())
-        return [], []    """
-    CORREÇÃO ROBUSTA v7.1 — Busca em vizinhança + borda cinza
-    """
-    try:
-        h, w = img_corrigida.shape[:2]
-        logging.info(f"🔬 [DEBUG] Entrou em corrigir_por_template: {w}x{h}")
-
-        gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-
-        # Normalização de iluminação
-        bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
-        bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
-        bg = cv2.GaussianBlur(bg, (51, 51), 0)
-        bg = np.where(bg == 0, 1, bg).astype(np.float32)
-        gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
-        logging.info(f"🔬 [DEBUG] Normalizou iluminação")
-
-        # C=20 para ignorar a borda cinza das bolhas
-        binaria = cv2.adaptiveThreshold(
-            gray_norm, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV,
-            blockSize=25, C=20
-        )
-
-        por_questao = {}
-        for b in mapa_template:
-            por_questao.setdefault(b['questao'], []).append(b)
-
-        todos_valores = []
-        todas_medidas = {}
-
-        for q in sorted(por_questao.keys()):
-            bolhas = por_questao[q]
-            medidas = []
-            for b in bolhas:
-                ratio, dx, dy = buscar_bolha_robusta(binaria, b['x'], b['y'])
-                medidas.append((b['alternativa'], ratio, dx, dy))
-                todos_valores.append(ratio)
-            medidas.sort(key=lambda m: m[1], reverse=True)
-            todas_medidas[q] = medidas
-
-        logging.info(f"🔬 [DEBUG] Amostrou {len(todos_valores)} bolhas")
-
-        if len(todos_valores) < 4:
-            return [''] * len(por_questao), [0] * len(por_questao), []
-
-        todos_valores_sorted = sorted(todos_valores)
-        mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
-
-        threshold = max(0.55, mediana * 3.0)
-
-        logging.info(f"📊 Threshold: {threshold:.3f} (mediana={mediana:.3f})")
-        logging.info(f"🔬 [DEBUG] Top 10 valores: {sorted(todos_valores, reverse=True)[:10]}")
-
-        respostas = []
-        confiancas = []
-
-        for q in sorted(por_questao.keys()):
-            medidas = todas_medidas[q]
-
-            max_ratio = medidas[0][1]
-            letra_max = medidas[0][0]
-            dx_max = medidas[0][2]
-            dy_max = medidas[0][3]
-
-            logging.info(f"🔬 [DEBUG] Q{q}: max={max_ratio:.3f} letra={letra_max} offset=({dx_max},{dy_max})")
-
-            if max_ratio < threshold:
-                respostas.append('')
-                confiancas.append(30)
-                continue
-
-            if len(medidas) >= 2:
-                segunda_ratio = medidas[1][1]
-                if segunda_ratio > threshold * 0.85 and (max_ratio - segunda_ratio) < 0.15:
-                    respostas.append(letra_max)
-                    confiancas.append(50)
-                    continue
-
-            if len(medidas) >= 2:
-                separacao = max_ratio - medidas[1][1]
-                if separacao > 0.4:
-                    confianca = 98
-                elif separacao > 0.25:
-                    confianca = 90
-                elif separacao > 0.1:
-                    confianca = 75
-                else:
-                    confianca = 55
-            else:
-                confianca = 85
-
-            respostas.append(letra_max)
-            confiancas.append(confianca)
-
-        logging.info(f"🔬 [DEBUG] Respostas finais: {respostas}")
-
-        return respostas, confiancas
-
-    except Exception as e:
-        logging.error(f"❌ ERRO DENTRO DE corrigir_por_template: {e}")
-        logging.error(traceback.format_exc())
-        raise
+        return [], []
 
 
 def preparar_imagem_para_template(imagem_base64):
@@ -1952,11 +1814,13 @@ def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
             return True, f"{qtd}/{len(nao_vazias)} respostas são '{letra}'"
 
     if gabarito and len(gabarito) == len(respostas):
-        acertos = sum(
-            1 for r, g in zip(respostas, gabarito)
-            if r and g and r.upper() == g.upper()
-        )
-        total_validas = sum(1 for r in respostas if r)
+        acertos = 0
+        total_validas = 0
+        for r, g in zip(respostas, gabarito):
+            if r and g:
+                total_validas += 1
+                if str(r).upper() == str(g).upper():
+                    acertos += 1
         if total_validas > 0:
             taxa = acertos / total_validas
             if taxa < 0.15 and total_validas >= 5:
@@ -2131,7 +1995,7 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
-    """Correção usando Template Matching como método PRINCIPAL."""
+    """Correção usando Template Matching como método PRINCIPAL, com fallback para IA."""
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -2162,7 +2026,14 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             prova_id=prova_id, aluno_id=aluno_id
         )
 
+        # Se template falhou totalmente, tenta IA como fallback
         if not resultado_template:
+            logging.warning("⚠️ Template falhou completamente. Tentando IA como fallback...")
+            if OPENAI_AVAILABLE and openai_client is not None:
+                return corrigir_com_ia_fallback(
+                    imagem_base64, padrao_gabarito, aluno_nome,
+                    serie, tipo_questoes, disciplina, bncc
+                )
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 '❌ Não foi possível ler as respostas do cartão.\n\n'
@@ -2178,11 +2049,21 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
 
         conf_media = sum(confiancas) / len(confiancas) if confiancas else 0
         detectadas = sum(1 for r in respostas if r)
-        
+
         logging.info(f"📊 Template: confiança média={conf_media:.1f}%, detectadas={detectadas}/{total_questoes}")
 
-        # CORRIGIDO: era 0.4, agora 0.15
+        # Se detectou muito pouco, tenta IA como fallback
         if detectadas < total_questoes * 0.15:
+            logging.warning(f"⚠️ Template detectou apenas {detectadas}/{total_questoes}. Tentando IA...")
+            if OPENAI_AVAILABLE and openai_client is not None:
+                resultado_ia = corrigir_com_ia_fallback(
+                    imagem_base64, padrao_gabarito, aluno_nome,
+                    serie, tipo_questoes, disciplina, bncc
+                )
+                # Se IA conseguiu, usa resultado dela
+                if not resultado_ia.get('erro'):
+                    resultado_ia['modo'] = 'ia_fallback'
+                    return resultado_ia
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 f'Template detectou apenas {detectadas}/{total_questoes} respostas.\n\n'
@@ -2190,8 +2071,16 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             )
 
         nao_vazias = [r for r in respostas if r]
-        # CORRIGIDO: era 5, agora 3
         if len(nao_vazias) >= 3 and len(set(nao_vazias)) == 1:
+            logging.warning(f"⚠️ Todas as respostas detectadas são '{nao_vazias[0]}'. Tentando IA...")
+            if OPENAI_AVAILABLE and openai_client is not None:
+                resultado_ia = corrigir_com_ia_fallback(
+                    imagem_base64, padrao_gabarito, aluno_nome,
+                    serie, tipo_questoes, disciplina, bncc
+                )
+                if not resultado_ia.get('erro'):
+                    resultado_ia['modo'] = 'ia_fallback'
+                    return resultado_ia
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 f'Todas as respostas detectadas são "{nao_vazias[0]}". Isso é impossível.\n\n'
@@ -2207,6 +2096,13 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     except Exception as e:
         logging.error(f"❌ Erro na correção por template: {e}")
         traceback.print_exc()
+        # Em caso de exceção, tenta IA como último recurso
+        if OPENAI_AVAILABLE and openai_client is not None:
+            logging.warning("⚠️ Exceção no template. Tentando IA como fallback...")
+            return corrigir_com_ia_fallback(
+                imagem_base64, padrao_gabarito, aluno_nome,
+                serie, tipo_questoes, disciplina, bncc
+            )
         return erro_correcao(aluno_nome, serie, disciplina, str(e))
 
 
@@ -2472,6 +2368,17 @@ def corrigir_lote():
                     })
                     continue
 
+                # Cache persistente
+                imagem_hash = hashlib.md5(imagem.encode()).hexdigest()
+                cache_key = get_cache_key(imagem_hash, prova_id, aluno_id)
+                cached = get_cache_correcao(cache_key)
+                if cached:
+                    logging.info(f"💾 Cache HIT no lote: aluno={aluno_id}")
+                    cached['aluno_id'] = aluno_id
+                    cached['sucesso'] = True
+                    resultados.append(cached)
+                    continue
+
                 prova = gabaritos_cache.get(prova_id)
                 if not prova:
                     resultados.append({
@@ -2544,6 +2451,12 @@ def corrigir_lote():
                 resultado['aluno_id'] = aluno_id
                 resultado['sucesso'] = True
                 resultados.append(resultado)
+
+                # Salva no cache
+                try:
+                    set_cache_correcao(cache_key, resultado)
+                except Exception:
+                    pass
 
             except Exception as e:
                 logging.error(f"❌ Erro no item {idx}: {e}")
@@ -2692,21 +2605,27 @@ def corrigir_redacao():
                 {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
                 """
 
-                response = openai_client.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=[
+                # response_format só funciona com gpt-4o / gpt-4-turbo
+                create_kwargs = {
+                    "model": OPENAI_MODEL,
+                    "messages": [
                         {"role": "system", "content": "Você é um professor especialista em avaliar redações. Responda SEMPRE em JSON."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_tokens=800,
-                    temperature=0.5,
-                    response_format={"type": "json_object"}
-                )
+                    "max_tokens": 800,
+                    "temperature": 0.5,
+                }
+                if OPENAI_MODEL.startswith('gpt-4o') or 'turbo' in OPENAI_MODEL:
+                    create_kwargs["response_format"] = {"type": "json_object"}
+
+                response = openai_client.chat.completions.create(**create_kwargs)
 
                 resposta_texto = response.choices[0].message.content
-                resultado = json.loads(resposta_texto)
-                resultado['modo'] = 'openai'
-                return jsonify(resultado)
+                json_match = re.search(r'\{[\s\S]*\}', resposta_texto)
+                if json_match:
+                    resultado = json.loads(json_match.group())
+                    resultado['modo'] = 'openai'
+                    return jsonify(resultado)
             except Exception as e:
                 print(f"⚠️ Erro no OpenAI para redação: {e}")
 
@@ -4321,11 +4240,6 @@ def excluir_usuario(id):
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
-    now = datetime.now().timestamp()
-    cached = app.config.get('_dashboard_cache')
-    if cached and now - cached[0] < 30:
-        return jsonify(cached[1])
-
     conn = get_db_connection()
     if not conn:
         return jsonify({'total_escolas': 0, 'total_turmas': 0, 'total_alunos': 0, 'total_provas': 0})
@@ -4349,7 +4263,6 @@ def dashboard():
             'total_alunos': int(row['total_alunos'] or 0),
             'total_provas': int(row['total_provas'] or 0)
         }
-        app.config['_dashboard_cache'] = (now, resultado)
         return jsonify(resultado)
     except Exception as e:
         logging.error("Erro no dashboard: %s", e)
@@ -4497,35 +4410,27 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D', 'E'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
-        # ═══ GERA O MAPA (em frações E em mm) ═══
+        num_colunas_real = 1 if quantidade_questoes <= 12 else 2
+
         mapa_template = gerar_mapa_template_padrao(
-            quantidade_questoes, alternativas, 0  # num_colunas é calculado dentro
+            quantidade_questoes, alternativas, num_colunas_real
         )
 
-        # ═══ SALVA O MAPA NO BANCO ═══
         salvar_mapa_template(
             prova_id, aluno_id, tipo_questoes, quantidade_questoes,
-            1 if quantidade_questoes <= 12 else 2,
+            num_colunas_real,
             mapa_template
         )
 
         logging.info(f"🎨 Cartão gerado: {len(mapa_template)} bolhas salvas")
 
-        # ═══ QR CODE ═══
         qr_dados = f"ALUNO:{aluno_id}|PROVA:{prova_id}|ESCOLA:{escola_id}|TURMA:{turma_id}"
         qr_base64 = gerar_qrcode_base64(qr_dados)
         logging.info(f"📷 QR Code gerado: {qr_dados}")
 
-        # ═══════════════════════════════════════════════════════════════
-        # GERA O HTML DO CARTÃO COM POSICIONAMENTO ABSOLUTO
-        # ═══════════════════════════════════════════════════════════════
-        # Cada bolha tem `position: absolute; left: X mm; top: Y mm`.
-        # Exatamente onde o Python disse que ela está.
-
-        # Constrói as bolhas como HTML absoluto
         bolhas_html = ""
         linhas_num_html = ""
-        questoes = {}  # q_num -> lista de bolhas
+        questoes = {}
 
         for b in mapa_template:
             q = b['questao']
@@ -4536,11 +4441,8 @@ def gerar_gabarito():
         for q_num in sorted(questoes.keys()):
             bolhas_q = questoes[q_num]
             for b in bolhas_q:
-                # O HTML usa coordenadas em mm RELATIVAS À PÁGINA A4
                 x_mm = b['x_mm']
                 y_mm = b['y_mm']
-                # O centro da bolha é (x_mm, y_mm). O círculo tem 7mm de diâmetro
-                # → canto superior esquerdo é (x_mm - 3.5, y_mm - 3.5)
                 left_mm = x_mm - 3.5
                 top_mm = y_mm - 3.5
 
@@ -4548,9 +4450,7 @@ def gerar_gabarito():
                 <div class="bolha-abs" style="left:{left_mm}mm; top:{top_mm}mm;">{b['alternativa']}</div>
                 '''
 
-            # Número da questão
             y_num = bolhas_q[0]['y_mm']
-            # Número fica um pouco à esquerda das bolhas
             x_num = bolhas_q[0]['x_mm'] - 12.0
             linhas_num_html += f'''
             <div class="num-abs" style="left:{x_num}mm; top:{y_num - 3.5}mm;">{q_num:02d}</div>
@@ -4712,18 +4612,15 @@ def gerar_gabarito():
 </head>
 <body>
     <div class="folha">
-        <!-- 4 MARCADORES FIDUCIAIS -->
         <div class="fiducial fiducial-tl"></div>
         <div class="fiducial fiducial-tr"></div>
         <div class="fiducial fiducial-bl"></div>
         <div class="fiducial fiducial-br"></div>
 
-        <!-- QR CODE -->
         <div class="qr-code-bloco">
             <img src="data:image/png;base64,{qr_base64}" alt="QR Code">
         </div>
 
-        <!-- CABEÇALHO -->
         <div class="header-abs">
             <div class="header-titulo">SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</div>
             <div class="header-cartao">CARTÃO RESPOSTA</div>
@@ -4737,11 +4634,9 @@ def gerar_gabarito():
             </div>
         </div>
 
-        <!-- BOLHAS (posicionadas em mm absolutos) -->
         {bolhas_html}
         {linhas_num_html}
 
-        <!-- RODAPÉ -->
         <div class="rodape">
             <span>Gerado por CorrigePro — {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
             <span>Página 1/1</span>
@@ -5121,9 +5016,10 @@ def health_check():
         'openai': 'disponível' if OPENAI_AVAILABLE else 'indisponível',
         'openai_modelo': OPENAI_MODEL if OPENAI_AVAILABLE else None,
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
+        'pyzbar': 'disponível' if PYZBAR_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v3.2 (debug + threshold permissivo)',
+        'correcao': 'cascata v3.3 (template + fallback IA)',
         'arquivos': arquivos
     })
 
@@ -5132,7 +5028,15 @@ def health_check():
 # INICIALIZAÇÃO DO BANCO
 # ============================================
 
+_DB_INITIALIZED = False
+
+
 def init_db():
+    global _DB_INITIALIZED
+    if _DB_INITIALIZED:
+        return
+    _DB_INITIALIZED = True
+
     conn = get_db_connection()
     if not conn:
         print("⚠️ Banco não disponível, usando dados em memória")
@@ -5426,6 +5330,10 @@ def init_db():
 # ============================================
 
 def extrair_dados_qrcode(imagem_base64):
+    if not PYZBAR_AVAILABLE:
+        logging.warning("⚠️ pyzbar não disponível. Instale com: pip install pyzbar")
+        return None
+
     try:
         from pyzbar.pyzbar import decode
 
@@ -5702,27 +5610,36 @@ def corrigir_automatico():
 # INICIALIZAÇÃO DO SERVIDOR
 # ============================================
 
+# Inicializa o banco na importação do módulo (funciona com gunicorn/uwsgi)
+try:
+    init_db()
+    init_cache_table()
+    limpar_cache_antigo()
+except Exception as e:
+    logging.error(f"⚠️ Erro na inicialização automática: {e}")
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v3.2 — DEBUG + THRESHOLD PERMISSIVO")
+    print("🚀 SERVIDOR CORRIGEPRO v3.3 — TEMPLATE + FALLBACK IA")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
     print(f"🤖 OpenAI (ChatGPT): {'✅ Disponível' if OPENAI_AVAILABLE else '❌ Indisponível'}")
     if OPENAI_AVAILABLE:
         print(f"📌 Modelo: {OPENAI_MODEL}")
+    print(f"📷 pyzbar (QR Code): {'✅ Disponível' if PYZBAR_AVAILABLE else '❌ Indisponível'}")
     print("=" * 60)
-    print("🎯 v3.2 — CORREÇÕES APLICADAS:")
-    print("   ✅ cv2.setNumThreads(1) — economiza RAM")
-    print("   ✅ amostrar_bolha_template: raio 0.015 + círculo 0.65")
-    print("   ✅ corrigir_por_template: logs [DEBUG] completos")
-    print("   ✅ threshold: max(0.18, mediana * 2.0) — mais permissivo")
-    print("   ✅ Validação: 0.4 -> 0.15 (aceita testes parciais)")
-    print("   ✅ Validação: 5 -> 3 (aceita testes parciais)")
+    print("🎯 v3.3 — CORREÇÕES APLICADAS:")
+    print("   ✅ Removido bloco duplicado em gerar_prompt_otimizado")
+    print("   ✅ Removida definição duplicada de amostrar_bolha_template")
+    print("   ✅ init_db() movido para nível de módulo (compatível com gunicorn)")
+    print("   ✅ Fallback para IA quando template falha ou detecta pouco")
+    print("   ✅ Aviso no log se pyzbar não estiver instalado")
+    print("   ✅ _validar_resposta_ia_contra_gabarito trata None no gabarito")
+    print("   ✅ corrigir_lote agora usa cache persistente")
+    print("   ✅ dashboard() simplificado (sem cache thread-unsafe)")
     print("=" * 60)
 
-    init_db()
-    init_cache_table()
-    limpar_cache_antigo()
     app.run(host='0.0.0.0', port=port, debug=False)
