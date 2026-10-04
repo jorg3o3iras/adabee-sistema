@@ -919,21 +919,24 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.015):
+def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.022):
     """
     Amostra uma bolha usando coordenadas normalizadas.
-    CORRIGIDO: raio_fracao=0.015 (menor, mais preciso) e círculo interno 0.65
+    
+    CORRIGIDO v6.0: raio_fracao=0.022 (raio maior para cobrir a bolha
+    inteira de 7mm) e círculo interno 0.85 (para pegar o INTERIOR
+    pintado, não a borda preta).
     """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
-    r = max(8, min(int(raio_fracao * min(w, h)), 30))
+    r = max(18, min(int(raio_fracao * min(w, h)), 30))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.65), 255, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.85), 255, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
@@ -994,7 +997,7 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
         
         # CORRIGIDO: threshold mais permissivo
-        threshold = max(0.18, mediana * 2.0)
+        threshold = max(0.28, mediana * 1.6)
         
         logging.info(f"📊 Threshold dinâmico: {threshold:.3f} (mediana={mediana:.3f})")
         logging.info(f"🔬 [DEBUG] Top 10 valores: {sorted(todos_valores, reverse=True)[:10]}")
