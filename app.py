@@ -980,75 +980,60 @@ def buscar_bolha_robusta(binaria, x_norm, y_norm, raio_fracao=0.008):
     """
     Procura a bolha REAL na vizinhança do ponto esperado.
     
-    Se o centro exato não tem ratio alto, testa uma grade 7x7 de offsets
-    (± 3 passos de até 5mm em cada direção) e retorna o MAIOR ratio achado.
-    
-    Isso resolve QUALQUER desalinhamento de até ~5mm.
-    
-    Retorna:
-        - ratio_max: o maior ratio encontrado (0.0 a 1.0)
-        - offset_x: quanto foi deslocado em X (em pixels)
-        - offset_y: quanto foi deslocado em Y (em pixels)
+    v7.1:
+    - raio de amostragem 12px (pega o interior da bolha, não a borda)
+    - raio de busca 15px (cobre ±2.7mm, mas não pula para bolha vizinha)
+    - penaliza deslocamentos grandes
     """
     h, w = binaria.shape[:2]
     cx_base = int(x_norm * w)
     cy_base = int(y_norm * h)
-    
-    # Raio de amostragem (interior da bolha)
-    r = max(6, min(int(raio_fracao * min(w, h)), 12))
-    
-    # Raio da busca (em pixels) — busca numa área de ~5mm ao redor
-    # 5mm * 5.58 px/mm = ~28px. Vamos usar 30px.
-    raio_busca = 30
-    passo = 5  # pixels entre cada tentativa
-    
+
+    r_amostra = 12
+
+    raio_busca = 15
+    passo = 5
+
     melhor_ratio = 0.0
     melhor_dx = 0
     melhor_dy = 0
-    
-    # Primeiro tenta o centro exato (rápido)
-    ratio_centro = _amostrar_ratio(binaria, cx_base, cy_base, r)
-    
-    # Se o centro já dá ratio muito alto (> 0.6), aceita e retorna
-    if ratio_centro > 0.6:
+
+    ratio_centro = _amostrar_ratio(binaria, cx_base, cy_base, r_amostra)
+    if ratio_centro > 0.7:
         return ratio_centro, 0, 0
-    
     melhor_ratio = ratio_centro
-    
-    # Busca na vizinhança — grade de offsets
+
     for dx in range(-raio_busca, raio_busca + 1, passo):
         for dy in range(-raio_busca, raio_busca + 1, passo):
             if dx == 0 and dy == 0:
                 continue
-            
+
             cx = cx_base + dx
             cy = cy_base + dy
-            
-            # Distância euclidiana ao centro — aceita só até o raio de busca
+
             if (dx * dx + dy * dy) > (raio_busca * raio_busca):
                 continue
-            
-            ratio = _amostrar_ratio(binaria, cx, cy, r)
-            
-            if ratio > melhor_ratio:
+
+            ratio = _amostrar_ratio(binaria, cx, cy, r_amostra)
+
+            penalidade = 1.0 - (abs(dx) + abs(dy)) / (2.0 * raio_busca) * 0.15
+            ratio_ajustado = ratio * penalidade
+
+            if ratio_ajustado > melhor_ratio:
                 melhor_ratio = ratio
                 melhor_dx = dx
                 melhor_dy = dy
-    
-    return melhor_ratio, melhor_dx, melhor_dy
 
+    return melhor_ratio, melhor_dx, melhor_dy
 
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
     """
-    CORREÇÃO ROBUSTA v7.0 — Busca em vizinhança
-    
-    Para cada bolha, procura na vizinhança até achar uma bolha de verdade.
-    Isso resolve QUALQUER desalinhamento de mapa.
+    CORREÇÃO ROBUSTA v7.1 — Busca em vizinhança + borda cinza
     """
     try:
         h, w = img_corrigida.shape[:2]
         logging.info(f"🔬 [DEBUG] Entrou em corrigir_por_template: {w}x{h}")
-        
+
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
         # Normalização de iluminação
@@ -1059,88 +1044,69 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
         logging.info(f"🔬 [DEBUG] Normalizou iluminação")
 
+        # C=20 para ignorar a borda cinza das bolhas
         binaria = cv2.adaptiveThreshold(
             gray_norm, 255,
             cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV,
-            blockSize=25, C=10
+            blockSize=25, C=20
         )
 
-        # Agrupa bolhas por questão
         por_questao = {}
         for b in mapa_template:
             por_questao.setdefault(b['questao'], []).append(b)
 
         todos_valores = []
         todas_medidas = {}
-        todos_offsets = {}  # para debug: mostrar onde achou
 
         for q in sorted(por_questao.keys()):
             bolhas = por_questao[q]
             medidas = []
             for b in bolhas:
-                # ═══ BUSCA ROBUSTA ═══
                 ratio, dx, dy = buscar_bolha_robusta(binaria, b['x'], b['y'])
                 medidas.append((b['alternativa'], ratio, dx, dy))
                 todos_valores.append(ratio)
-            
-            # Ordena por ratio decrescente
             medidas.sort(key=lambda m: m[1], reverse=True)
             todas_medidas[q] = medidas
-            todos_offsets[q] = (medidas[0][2], medidas[0][3]) if medidas else (0, 0)
 
         logging.info(f"🔬 [DEBUG] Amostrou {len(todos_valores)} bolhas")
 
         if len(todos_valores) < 4:
             return [''] * len(por_questao), [0] * len(por_questao), []
 
-        # ═══ CALCULA THRESHOLD ═══
         todos_valores_sorted = sorted(todos_valores)
         mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
 
-        # Como agora a amostragem é no interior da bolha, a separação
-        # entre pintadas e vazias é GRANDE:
-        #   - bolha pintada: 0.6 - 0.95
-        #   - bolha vazia: 0.02 - 0.15
-        # Então o threshold pode ser firme em 0.45
         threshold = max(0.45, mediana * 2.5)
-        # Mas se a mediana for muito alta (foto ruim), relaxa um pouco
-        if mediana > 0.5:
-            threshold = max(0.55, mediana * 1.3)
 
         logging.info(f"📊 Threshold: {threshold:.3f} (mediana={mediana:.3f})")
         logging.info(f"🔬 [DEBUG] Top 10 valores: {sorted(todos_valores, reverse=True)[:10]}")
 
-        # ═══ CLASSIFICA CADA QUESTÃO ═══
         respostas = []
         confiancas = []
-        debug_info = []
 
         for q in sorted(por_questao.keys()):
             medidas = todas_medidas[q]
-            
+
             max_ratio = medidas[0][1]
             letra_max = medidas[0][0]
             dx_max = medidas[0][2]
             dy_max = medidas[0][3]
-            
+
             logging.info(f"🔬 [DEBUG] Q{q}: max={max_ratio:.3f} letra={letra_max} offset=({dx_max},{dy_max})")
-            
-            # Se nenhuma bolha passou do threshold, questão em branco
+
             if max_ratio < threshold:
                 respostas.append('')
                 confiancas.append(30)
                 continue
-            
-            # Verifica dupla marcação (segunda bolha muito próxima)
+
             if len(medidas) >= 2:
                 segunda_ratio = medidas[1][1]
                 if segunda_ratio > threshold * 0.85 and (max_ratio - segunda_ratio) < 0.15:
                     respostas.append(letra_max)
                     confiancas.append(50)
                     continue
-            
-            # Confiança pela separação
+
             if len(medidas) >= 2:
                 separacao = max_ratio - medidas[1][1]
                 if separacao > 0.4:
@@ -1153,14 +1119,12 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
                     confianca = 55
             else:
                 confianca = 85
-            
+
             respostas.append(letra_max)
             confiancas.append(confianca)
 
         logging.info(f"🔬 [DEBUG] Respostas finais: {respostas}")
 
-        if debug:
-            return respostas, confiancas, debug_info
         return respostas, confiancas
 
     except Exception as e:
@@ -4603,10 +4567,10 @@ def gerar_gabarito():
 
         /* ═══ BOLHAS COM POSICIONAMENTO ABSOLUTO ═══ */
         .bolha-abs {{
-            position: absolute;
+             position: absolute;
             width: 7mm;
             height: 7mm;
-            border: 2px solid #000;
+            border: 1.5px solid #666;
             border-radius: 50%;
             background: #fff;
             display: inline-flex;
