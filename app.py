@@ -509,25 +509,24 @@ def detectar_marcadores_fiduciais(gray):
     """
     Detecta os 4 marcadores fiduciais nos cantos do cartão.
     
-    VERSÃO v2.0 — Robusta (inspirada no OMRChecker):
-    - Threshold de Otsu (adapta à iluminação)
-    - RETR_EXTERNAL (ignora o furo interno do marcador)
-    - Validação geométrica rigorosa (proporção dos lados)
-    - Fallback automático para threshold adaptativo
+    VERSÃO v3.0 — Ultra-robusta:
+    - Threshold de Otsu + validação geométrica rigorosa
+    - Filtro por POSIÇÃO (marcadores estão nos cantos)
+    - Exige quadrados com lados ~iguais (não trapézios)
+    - Exige tamanhos similares entre os 4
+    - Busca inteligente: pega 1 marcador por canto (TL, TR, BL, BR)
     """
     try:
         altura, largura = gray.shape
-        logging.info(f"🔍 v2: Procurando marcadores em {largura}x{altura}...")
+        logging.info(f"🔍 v3: Procurando marcadores em {largura}x{altura}...")
 
         area_imagem = largura * altura
-        area_min = area_imagem * 0.0005
-        area_max = area_imagem * 0.02
+        area_min = area_imagem * 0.001   # aumentei: 0.1% (era 0.05%)
+        area_max = area_imagem * 0.015   # diminui: 1.5% (era 2%)
 
+        # ═══ PASSO 1: Encontra TODOS os quadrados candidatos ═══
         candidatos = []
 
-        # ═══════════════════════════════════════════
-        # MÉTODO 1: Otsu + Blur (principal)
-        # ═══════════════════════════════════════════
         blurred = cv2.GaussianBlur(gray, (7, 7), 0)
         _, binaria = cv2.threshold(
             blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
@@ -543,103 +542,133 @@ def detectar_marcadores_fiduciais(gray):
                 continue
 
             x, y, w, h = cv2.boundingRect(c)
+
+            # Aspect ratio próximo de 1 (quadrado)
             aspect_ratio = float(w) / h if h > 0 else 0
-            if not (0.7 < aspect_ratio < 1.3):
+            if not (0.85 < aspect_ratio < 1.18):
                 continue
 
+            # approxPolyDP → deve ter 4 vértices
             peri = cv2.arcLength(c, True)
-            approx = cv2.approxPolyDP(c, 0.04 * peri, True)
-            if len(approx) == 4:
-                candidatos.append((x, y, w, h))
+            approx = cv2.approxPolyDP(c, 0.03 * peri, True)
+            if len(approx) != 4:
+                continue
 
-        logging.info(f"🔍 v2: Método 1 (Otsu) → {len(candidatos)} candidatos")
+            # ═══ VALIDAÇÃO EXTRA: lados do quadrilátero devem ser ~iguais ═══
+            pts = approx.reshape(4, 2)
+            lados = []
+            for i in range(4):
+                p1 = pts[i]
+                p2 = pts[(i + 1) % 4]
+                lado = np.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
+                lados.append(lado)
 
-        # ═══════════════════════════════════════════
-        # MÉTODO 2: Threshold adaptativo (fallback)
-        # ═══════════════════════════════════════════
-        if len(candidatos) < 4:
-            logging.info("🔄 v2: Tentando método alternativo (adaptativo)...")
+            lado_min = min(lados)
+            lado_max = max(lados)
+            if lado_max > 0 and (lado_min / lado_max) < 0.75:
+                # quadrado muito deformado (trapézio)
+                continue
 
-            binaria2 = cv2.adaptiveThreshold(
-                gray, 255,
-                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY_INV,
-                blockSize=51, C=10
-            )
-            kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-            binaria2 = cv2.morphologyEx(binaria2, cv2.MORPH_CLOSE, kernel2)
+            # ═══ VALIDAÇÃO EXTRA: preenchimento (marcador é sólido/preto) ═══
+            mask = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.drawContours(mask, [c], -1, 255, -1)
+            mask_eroded = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
+            pixels_total = cv2.countNonZero(mask_eroded)
+            if pixels_total == 0:
+                continue
+            pixels_pretos = cv2.countNonZero(cv2.bitwise_and(binaria, binaria, mask=mask_eroded))
+            preenchimento = pixels_pretos / pixels_total
+            if preenchimento < 0.65:
+                # não é sólido (muito "oco") → provavelmente é bolha vazia detectada
+                continue
 
-            contornos2, _ = cv2.findContours(
-                binaria2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-            )
+            candidatos.append((x, y, w, h, area))
 
-            for c in contornos2:
-                area = cv2.contourArea(c)
-                if area < area_min or area > area_max:
-                    continue
-
-                x, y, w, h = cv2.boundingRect(c)
-                aspect_ratio = float(w) / h if h > 0 else 0
-                if not (0.6 < aspect_ratio < 1.5):
-                    continue
-
-                peri = cv2.arcLength(c, True)
-                approx = cv2.approxPolyDP(c, 0.04 * peri, True)
-                if len(approx) == 4:
-                    candidatos.append((x, y, w, h))
-
-            logging.info(f"🔍 v2: Após método 2 → {len(candidatos)} candidatos")
+        logging.info(f"🔍 v3: {len(candidatos)} candidatos após validação geométrica")
 
         if len(candidatos) < 4:
-            logging.warning(f"⚠️ v2: Apenas {len(candidatos)} candidatos — falhou")
+            logging.warning(f"⚠️ v3: Apenas {len(candidatos)} candidatos válidos")
             return None
 
-        # ═══════════════════════════════════════════
-        # Pega os 4 maiores (marcadores são os maiores quadrados)
-        # ═══════════════════════════════════════════
-        candidatos.sort(key=lambda c: c[2] * c[3], reverse=True)
-        candidatos = candidatos[:4]
+        # ═══ PASSO 2: Separa candidatos por canto (TL, TR, BL, BR) ═══
+        # Regra: divide a imagem em 4 quadrantes e pega 1 do cada
+        cx_imagem = largura / 2
+        cy_imagem = altura / 2
 
-        centros = [(x + w // 2, y + h // 2) for (x, y, w, h) in candidatos]
+        por_canto = {'tl': [], 'tr': [], 'bl': [], 'br': []}
 
-        # ═══════════════════════════════════════════
-        # Identifica TL, TR, BL, BR pelas coordenadas
-        # ═══════════════════════════════════════════
-        centros.sort(key=lambda p: p[0] + p[1])
-        tl = centros[0]
-        br = centros[-1]
+        for (x, y, w, h, area) in candidatos:
+            cx = x + w / 2
+            cy = y + h / 2
+            canto = None
+            if cx < cx_imagem and cy < cy_imagem:
+                canto = 'tl'
+            elif cx >= cx_imagem and cy < cy_imagem:
+                canto = 'tr'
+            elif cx < cx_imagem and cy >= cy_imagem:
+                canto = 'bl'
+            else:
+                canto = 'br'
+            por_canto[canto].append((x, y, w, h, area))
 
-        restantes = centros[1:3]
-        restantes.sort(key=lambda p: p[0] - p[1])
-        bl = restantes[0]
-        tr = restantes[1]
+        # Ordena cada canto por "quão no canto" ele está
+        def dist_ao_canto(c, canto):
+            x, y, w, h, area = c
+            cx = x + w / 2
+            cy = y + h / 2
+            if canto == 'tl':  return cx + cy
+            if canto == 'tr':  return (largura - cx) + cy
+            if canto == 'bl':  return cx + (altura - cy)
+            if canto == 'br':  return (largura - cx) + (altura - cy)
+            return 0
 
-        # ═══════════════════════════════════════════
-        # Validação geométrica rigorosa
-        # ═══════════════════════════════════════════
+        melhor = {}
+        for canto in ['tl', 'tr', 'bl', 'br']:
+            if not por_canto[canto]:
+                logging.warning(f"⚠️ v3: Nenhum candidato no quadrante {canto.upper()}")
+                return None
+            por_canto[canto].sort(key=lambda c: dist_ao_canto(c, canto))
+            melhor[canto] = por_canto[canto][0]
+
+        # ═══ PASSO 3: Verifica que os 4 têm tamanho similar ═══
+        areas = [melhor[c][4] for c in ['tl', 'tr', 'bl', 'br']]
+        area_med = sum(areas) / 4
+        for a in areas:
+            if abs(a - area_med) > area_med * 0.5:
+                logging.warning(f"⚠️ v3: Tamanhos muito diferentes: {areas}")
+                return None
+
+        # ═══ PASSO 4: Extrai centros e valida geometria final ═══
+        tl = (melhor['tl'][0] + melhor['tl'][2] // 2,
+              melhor['tl'][1] + melhor['tl'][3] // 2)
+        tr = (melhor['tr'][0] + melhor['tr'][2] // 2,
+              melhor['tr'][1] + melhor['tr'][3] // 2)
+        bl = (melhor['bl'][0] + melhor['bl'][2] // 2,
+              melhor['bl'][1] + melhor['bl'][3] // 2)
+        br = (melhor['br'][0] + melhor['br'][2] // 2,
+              melhor['br'][1] + melhor['br'][3] // 2)
+
         largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
         largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
         altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
         altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
 
-        # Verifica se lados opostos são similares
-        if abs(largura_topo - largura_base) > min(largura_topo, largura_base) * 0.2:
-            logging.warning("⚠️ v2: lados superior/inferior muito diferentes")
+        if abs(largura_topo - largura_base) > min(largura_topo, largura_base) * 0.15:
+            logging.warning(f"⚠️ v3: lados superior/inferior muito diferentes "
+                            f"({largura_topo:.0f} vs {largura_base:.0f})")
             return None
-        if abs(altura_esq - altura_dir) > min(altura_esq, altura_dir) * 0.2:
-            logging.warning("⚠️ v2: lados esquerdo/direito muito diferentes")
+        if abs(altura_esq - altura_dir) > min(altura_esq, altura_dir) * 0.15:
+            logging.warning(f"⚠️ v3: lados esquerdo/direito muito diferentes "
+                            f"({altura_esq:.0f} vs {altura_dir:.0f})")
             return None
 
-        # Verifica tamanho mínimo
         dist_min = min(largura, altura) * 0.3
         if largura_topo < dist_min or altura_esq < dist_min:
-            logging.warning(
-                f"⚠️ v2: Marcadores muito próximos: "
-                f"topo={largura_topo:.0f}px, esq={altura_esq:.0f}px (min={dist_min:.0f})"
-            )
+            logging.warning(f"⚠️ v3: Marcadores muito próximos "
+                            f"(topo={largura_topo:.0f}px, esq={altura_esq:.0f}px)")
             return None
 
-        logging.info(f"✅ v2: 4 marcadores detectados:")
+        logging.info(f"✅ v3: 4 marcadores detectados:")
         logging.info(f"   TL={tl}  TR={tr}")
         logging.info(f"   BL={bl}  BR={br}")
         logging.info(f"   Largura: topo={largura_topo:.0f} base={largura_base:.0f}")
@@ -648,7 +677,7 @@ def detectar_marcadores_fiduciais(gray):
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
 
     except Exception as e:
-        logging.error(f"❌ Erro detectar_marcadores v2: {e}")
+        logging.error(f"❌ Erro detectar_marcadores v3: {e}")
         traceback.print_exc()
         return None
 
