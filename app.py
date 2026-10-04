@@ -948,8 +948,212 @@ def buscar_bolha_robusta(binaria, x_norm, y_norm, raio_fracao=0.008):
 
     return melhor_ratio, melhor_dx, melhor_dy
 
+def detectar_bolhas_na_imagem(img_corrigida):
+    """
+    Detecta TODAS as bolhas na imagem usando Hough Circles.
+    Retorna lista de (cx, cy, r, ratio_preenchimento).
+    """
+    h, w = img_corrigida.shape[:2]
+    gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
+
+    # Normalização de iluminação
+    bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
+    bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
+    bg = cv2.GaussianBlur(bg, (51, 51), 0)
+    bg = np.where(bg == 0, 1, bg).astype(np.float32)
+    gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
+
+    # Blur leve para suavizar bordas
+    gray_blur = cv2.medianBlur(gray_norm, 5)
+
+    # Binarização
+    binaria = cv2.adaptiveThreshold(
+        gray_norm, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        blockSize=25, C=10
+    )
+
+    # ═══ HOUGH CIRCLES — detecta as bolhas ═══
+    # A bolha tem 7mm de diâmetro. Em escala 5.58 px/mm: 39px diâmetro = 19.5px raio.
+    # Vamos buscar raios entre 15 e 25px.
+    circulos = cv2.HoughCircles(
+        gray_blur,
+        cv2.HOUGH_GRADIENT,
+        dp=1,
+        minDist=25,        # distância mínima entre círculos
+        param1=50,
+        param2=25,         # sensibilidade (menor = mais círculos)
+        minRadius=15,
+        maxRadius=25
+    )
+
+    if circulos is None:
+        return []
+
+    circulos = np.round(circulos[0, :]).astype("int")
+    logging.info(f"🔵 HoughCircles encontrou {len(circulos)} círculos")
+
+    # ═══ Para cada círculo, calcula o ratio de preenchimento ═══
+    bolhas = []
+    for (cx, cy, r) in circulos:
+        if cx < r or cy < r or cx + r > w or cy + r > h:
+            continue
+
+        mask = np.zeros(binaria.shape, dtype=np.uint8)
+        cv2.circle(mask, (cx, cy), int(r * 0.6), 255, -1)
+        total = cv2.countNonZero(mask)
+        if total == 0:
+            continue
+        roi = cv2.bitwise_and(binaria, binaria, mask=mask)
+        ratio = cv2.countNonZero(roi) / total
+        bolhas.append({
+            'cx': int(cx),
+            'cy': int(cy),
+            'r': int(r),
+            'ratio': float(ratio),
+        })
+
+    return bolhas
+
+
+def agrupar_bolhas_em_grade(bolhas, num_alts):
+    """
+    Agrupa as bolhas detectadas em uma grade (linhas × alternativas).
+    Retorna uma lista de linhas, onde cada linha é uma lista de bolhas ordenadas por x.
+    """
+    if not bolhas:
+        return []
+
+    # Ordena por y
+    bolhas_ordenadas = sorted(bolhas, key=lambda b: b['cy'])
+
+    # Agrupa em linhas usando um gap adaptativo
+    linhas = []
+    linha_atual = [bolhas_ordenadas[0]]
+
+    for b in bolhas_ordenadas[1:]:
+        # Se a diferença de y é pequena, é a mesma linha
+        if abs(b['cy'] - linha_atual[-1]['cy']) < 15:
+            linha_atual.append(b)
+        else:
+            linhas.append(sorted(linha_atual, key=lambda x: x['cx']))
+            linha_atual = [b]
+
+    if linha_atual:
+        linhas.append(sorted(linha_atual, key=lambda x: x['cx']))
+
+    return linhas
+
+
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
     """
+    CORREÇÃO v12.0 — DETECÇÃO POR HOUGH CIRCLES
+    
+    Em vez de confiar no mapa salvo (que pode estar desalinhado),
+    detecta as bolhas REAIS na imagem e as ordena por posição.
+    """
+    try:
+        h, w = img_corrigida.shape[:2]
+        logging.info(f"🔬 v12.0 Entrou em corrigir_por_template: {w}x{h}")
+
+        # ═══ PASSO 1: DETECTA AS BOLHAS REAIS NA IMAGEM ═══
+        bolhas_detectadas = detectar_bolhas_na_imagem(img_corrigida)
+        logging.info(f"🔬 [DEBUG] {len(bolhas_detectadas)} bolhas detectadas na imagem")
+
+        if len(bolhas_detectadas) < 8:
+            logging.warning(f"⚠️ Poucas bolhas detectadas: {len(bolhas_detectadas)}")
+            return [''] * len(set(b['questao'] for b in mapa_template)), []
+
+        # ═══ PASSO 2: DESCOBRE A QUANTIDADE DE LINHAS E COLUNAS ═══
+        # Agrupa em linhas
+        linhas = agrupar_bolhas_em_grade(bolhas_detectadas, len(alternativas))
+        logging.info(f"🔬 [DEBUG] Agrupou em {len(linhas)} linhas")
+
+        if len(linhas) == 0:
+            return [], []
+
+        # ═══ PASSO 3: SEPARA EM COLUNAS (se houver 2 colunas) ═══
+        # Verifica se as bolhas estão em 1 ou 2 colunas
+        xs = [b['cx'] for b in bolhas_detectadas]
+        xs_sorted = sorted(set(xs))
+        range_x = max(xs_sorted) - min(xs_sorted)
+
+        # Se a diferença entre o maior e o menor x é maior que 40% da largura,
+        # provavelmente são 2 colunas
+        if range_x > w * 0.5:
+            # Duas colunas — separa pelo meio
+            meio = w / 2
+            linhas_esq = [l for l in linhas if l[0]['cx'] < meio]
+            linhas_dir = [l for l in linhas if l[0]['cx'] >= meio]
+            colunas = [linhas_esq, linhas_dir]
+            logging.info(f"🔬 [DEBUG] 2 colunas: {len(linhas_esq)} + {len(linhas_dir)}")
+        else:
+            colunas = [linhas]
+            logging.info(f"🔬 [DEBUG] 1 coluna com {len(linhas)} linhas")
+
+        # ═══ PASSO 4: MONTA O MAPA DE RESPOSTAS ═══
+        # Sabemos que cada linha é uma questão e tem N alternativas.
+        # Ordena as bolhas por X dentro de cada linha e associa à alternativa A, B, C, D.
+        num_alts = len(alternativas)
+        respostas = []
+        confiancas = []
+
+        for coluna in colunas:
+            for linha in coluna:
+                if len(linha) < num_alts:
+                    # Linha incompleta — não conseguimos identificar as alternativas
+                    respostas.append('')
+                    confiancas.append(30)
+                    continue
+
+                # Ordena por x e pega as N primeiras (mais confiáveis)
+                linha_ordenada = sorted(linha, key=lambda b: b['cx'])[:num_alts]
+
+                # Encontra a bolha com maior ratio
+                melhor = max(linha_ordenada, key=lambda b: b['ratio'])
+                melhor_idx = linha_ordenada.index(melhor)
+                letra = alternativas[melhor_idx] if melhor_idx < num_alts else ''
+
+                # Threshold — bolha pintada tem ratio > 0.5
+                if melhor['ratio'] < 0.45:
+                    respostas.append('')
+                    confiancas.append(30)
+                else:
+                    respostas.append(letra)
+                    # Confiança baseada na diferença com a segunda maior
+                    ratios_ordenados = sorted([b['ratio'] for b in linha_ordenada], reverse=True)
+                    if len(ratios_ordenados) >= 2:
+                        separacao = ratios_ordenados[0] - ratios_ordenados[1]
+                        if separacao > 0.3:
+                            conf = 95
+                        elif separacao > 0.15:
+                            conf = 80
+                        else:
+                            conf = 60
+                    else:
+                        conf = 70
+                    confiancas.append(conf)
+
+        logging.info(f"🔬 [DEBUG] {len(respostas)} respostas detectadas")
+        logging.info(f"🔬 [DEBUG] Respostas: {respostas}")
+
+        # ═══ PASSO 5: VALIDA com o número esperado de questões ═══
+        num_questoes_esperado = len(set(b['questao'] for b in mapa_template))
+
+        # Ajusta o tamanho
+        while len(respostas) < num_questoes_esperado:
+            respostas.append('')
+            confiancas.append(0)
+        respostas = respostas[:num_questoes_esperado]
+        confiancas = confiancas[:num_questoes_esperado]
+
+        return respostas, confiancas
+
+    except Exception as e:
+        logging.error(f"❌ ERRO em corrigir_por_template: {e}")
+        logging.error(traceback.format_exc())
+        return [], []    """
     CORREÇÃO ROBUSTA v7.1 — Busca em vizinhança + borda cinza
     """
     try:
@@ -1108,14 +1312,11 @@ def preparar_imagem_para_template(imagem_base64):
 def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                    tipo_questoes=4, disciplina='', bncc=None,
                                    mapa_template=None, prova_id=None, aluno_id=None):
-    """Correção via Template Mapping."""
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
 
     if not mapa_template and prova_id and aluno_id:
         mapa_template = carregar_mapa_template(prova_id, aluno_id)
-        if mapa_template:
-            logging.info(f"⚡ Usando mapa EXATO salvo no banco ({len(mapa_template)} bolhas)")
 
     if not mapa_template:
         if total_questoes <= 12:
@@ -1123,33 +1324,20 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
         else:
             num_colunas = 2
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
-        logging.info(f"⚠️ Usando mapa PADRÃO gerado ({len(mapa_template)} bolhas)")
 
     img_corrigida, ok = preparar_imagem_para_template(imagem_base64)
     if not ok:
-        logging.warning("⚠️ Template: falha ao preparar imagem")
         return None
 
-    respostas, confiancas = corrigir_por_template(
-        img_corrigida, mapa_template, alternativas, debug=False
-    )
+    respostas, confiancas = corrigir_por_template(img_corrigida, mapa_template, alternativas)
 
-    nao_vazias = [r for r in respostas if r]
-    # CORRIGIDO: era 0.3, agora 0.15
-    if len(nao_vazias) < total_questoes * 0.15:
-        logging.warning(f"⚠️ Template: apenas {len(nao_vazias)}/{total_questoes} detectadas")
+    if not respostas:
         return None
 
-    # CORRIGIDO: era 5, agora 3
-    if len(nao_vazias) >= 3 and len(set(nao_vazias)) == 1:
-        logging.warning(f"⚠️ Template: todas respostas são '{nao_vazias[0]}'")
-        return None
-
-    logging.info(f"✅ Template Mapping: {len(nao_vazias)}/{total_questoes} detectadas")
     return {
         'respostas': respostas,
-        'confiancas': confiancas,
-        'metodo': 'template'
+        'confiancas': confiancas if confiancas else [70] * len(respostas),
+        'metodo': 'hough'
     }
 
 
