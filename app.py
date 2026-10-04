@@ -784,9 +784,9 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     area_util_width = 180.0
     area_util_height = 234.0
 
-    header_height = area_util_height * 0.24          # 56.16mm
-    questoes_top = area_util_top + header_height     # 104.16mm
-    questoes_height = area_util_height * 0.76        # 177.84mm
+    header_height = 56.0                             # mm FIXO
+    questoes_top = area_util_top + header_height     # 104mm
+    questoes_height = area_util_height - header_height  # 178mm
 
     # padding: 3mm 0 (em cima e embaixo do .questoes-bloco)
     questoes_inner_top = questoes_top + 3.0          # 107.16mm
@@ -4423,12 +4423,13 @@ def gerar_gabarito():
         }}
         
         .header-bloco {{
-            height: 24%;
+            height: 56mm;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
             padding-bottom: 2mm;
             border-bottom: 1.5px solid #000;
+            overflow: hidden;
         }}
         
         .header-titulo {{
