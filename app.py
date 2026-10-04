@@ -654,7 +654,7 @@ def detectar_marcadores_fiduciais(gray):
 
 
 def corrigir_perspectiva(img, marcadores):
-    """Corrige a perspectiva da imagem usando os marcadores"""
+    """Corrige a perspectiva da imagem usando os marcadores."""
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
@@ -669,16 +669,13 @@ def corrigir_perspectiva(img, marcadores):
         altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
         altura_max = max(int(altura_esq), int(altura_dir))
 
-        margem = 30
-        largura_max += margem * 2
-        altura_max += margem * 2
-
+        # ═══ SEM margem: os marcadores ficam EXATAMENTE nos cantos ═══
         origem = np.float32([tl, tr, bl, br])
         destino = np.float32([
-            [margem, margem],
-            [largura_max - margem, margem],
-            [margem, altura_max - margem],
-            [largura_max - margem, altura_max - margem]
+            [0, 0],
+            [largura_max - 1, 0],
+            [0, altura_max - 1],
+            [largura_max - 1, altura_max - 1]
         ])
 
         matriz = cv2.getPerspectiveTransform(origem, destino)
@@ -697,34 +694,84 @@ def corrigir_perspectiva(img, marcadores):
 # ============================================
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
-    """Gera mapa de posições (0-1) alinhado com o HTML."""
+    """
+    Gera mapa de posições (0-1) alinhado com o HTML do cartão A4.
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  MEDIDAS REAIS DO HTML DO CARTÃO (página A4 = 210×297mm)    │
+    ├─────────────────────────────────────────────────────────────┤
+    │  Marcadores fiduciais:                                      │
+    │    TL = (5mm, 38mm)                                         │
+    │    TR = (205mm, 38mm)                                       │
+    │    BL = (5mm, 292mm)                                        │
+    │    BR = (205mm, 292mm)                                      │
+    │                                                             │
+    │  Após warpPerspective (SEM margem), a imagem corrigida      │
+    │  representa EXATAMENTE o retângulo entre marcadores:        │
+    │    Largura = 205 - 5   = 200mm                              │
+    │    Altura  = 292 - 38  = 254mm                              │
+    │                                                             │
+    │  Área útil (onde ficam questões):                           │
+    │    top  = 48mm,  left = 15mm                                │
+    │    width = 180mm, height = 234mm                            │
+    │    header (24%) = 56.16mm                                   │
+    │    questões (76%) = 177.84mm                                │
+    │    padding vertical: 3mm (topo e base)                      │
+    │                                                             │
+    │  Dentro de cada linha de questão:                           │
+    │    .num-questao: min-width 8mm + padding-right 1mm          │
+    │    .linha-questao: gap 2mm                                  │
+    │    → alternativas começam em col_left + 8 + 1 + 2 = +11mm   │
+    │                                                             │
+    │  Colunas (quando 2):                                        │
+    │    .questoes-bloco: gap 4mm                                 │
+    │    → cada coluna tem (180 - 4) / 2 = 88mm                   │
+    └─────────────────────────────────────────────────────────────┘
+    """
     mapa = []
 
-    if num_colunas == 1:
+    if total_questoes <= 12:
+        num_colunas = 1
         q_por_coluna = total_questoes
     elif total_questoes <= 24:
+        num_colunas = 2
         q_por_coluna = 12
-        num_colunas = 2
     else:
-        q_por_coluna = 15
         num_colunas = 2
+        q_por_coluna = 15
 
     num_alts = len(alternativas)
 
-    topo_questoes = 0.24
-    base_questoes = 0.92
-    altura_questoes = base_questoes - topo_questoes
+    # ═══════════════════════════════════════════════════════════
+    # COORDENADAS DO CARTÃO (em mm, página A4)
+    # ═══════════════════════════════════════════════════════════
+    RANGE_X = 200.0   # mm  (205 - 5)
+    RANGE_Y = 254.0   # mm  (292 - 38)  ← CORRIGIDO (era 249)
+    OFFSET_X = 5.0
+    OFFSET_Y = 38.0
 
-    coluna_inicio = 0.10
-    coluna_fim = 0.95
-    largura_colunas = coluna_fim - coluna_inicio
+    area_util_left = 15.0
+    area_util_top = 48.0
+    area_util_width = 180.0
+    area_util_height = 234.0
 
+    header_height = area_util_height * 0.24          # 56.16mm
+    questoes_top = area_util_top + header_height     # 104.16mm
+    questoes_height = area_util_height * 0.76        # 177.84mm
+
+    # padding: 3mm 0 (em cima e embaixo do .questoes-bloco)
+    questoes_inner_top = questoes_top + 3.0          # 107.16mm
+    questoes_inner_height = questoes_height - 6.0    # 171.84mm
+
+    # ═══════════════════════════════════════════════════════════
+    # LARGURA DAS COLUNAS (com gap de 4mm entre elas, quando 2)
+    # ═══════════════════════════════════════════════════════════
     if num_colunas == 2:
-        largura_por_coluna = largura_colunas / 2
-        pad = 0.01
+        gap_grid = 4.0
+        col_width = (area_util_width - gap_grid) / 2  # 88mm
     else:
-        largura_por_coluna = largura_colunas
-        pad = 0.01
+        gap_grid = 0.0
+        col_width = area_util_width                    # 180mm
 
     for col in range(num_colunas):
         inicio_col = col * q_por_coluna
@@ -734,27 +781,45 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
         if num_questoes_col <= 0:
             continue
 
-        x_col_inicio = coluna_inicio + col * largura_por_coluna + pad
-        x_col_fim = coluna_inicio + (col + 1) * largura_por_coluna - pad
+        # Posição X da coluna em mm (com gap entre colunas)
+        col_left = area_util_left + col * (col_width + gap_grid)
+        col_right = col_left + col_width
 
-        largura_bolhas = x_col_fim - x_col_inicio
-        espacamento_bolha = largura_bolhas / num_alts
+        # ═══════════════════════════════════════════════════════
+        # DENTRO DA COLUNA:
+        #   .num-questao  → min-width 8mm + padding-right 1mm
+        #   .linha-questao gap → 2mm
+        #   Total antes das bolhas: 8 + 1 + 2 = 11mm
+        # ═══════════════════════════════════════════════════════
+        alt_left = col_left + 11.0
+        alt_right = col_right
+        alt_width = alt_right - alt_left
+
+        # As bolhas são distribuídas com justify-content: space-around
+        # → centro da bolha j = alt_left + (j + 0.5) * (alt_width / num_alts)
+        espacamento_bolha = alt_width / num_alts
 
         for i in range(num_questoes_col):
             num_questao = inicio_col + i + 1
 
+            # Y da linha (distribuição uniforme dentro da área das questões)
             if num_questoes_col > 1:
-                y = topo_questoes + (i / (num_questoes_col - 1)) * altura_questoes
+                y_mm = questoes_inner_top + (i / (num_questoes_col - 1)) * questoes_inner_height
             else:
-                y = topo_questoes + altura_questoes / 2
+                y_mm = questoes_inner_top + questoes_inner_height / 2
 
             for j, letra in enumerate(alternativas):
-                x = x_col_inicio + (j + 0.5) * espacamento_bolha
+                x_mm = alt_left + (j + 0.5) * espacamento_bolha
+
+                # Converte para fração da imagem corrigida
+                x_norm = (x_mm - OFFSET_X) / RANGE_X
+                y_norm = (y_mm - OFFSET_Y) / RANGE_Y
+
                 mapa.append({
                     'questao': num_questao,
                     'alternativa': letra,
-                    'x': round(x, 4),
-                    'y': round(y, 4)
+                    'x': round(x_norm, 4),
+                    'y': round(y_norm, 4)
                 })
 
     return mapa
@@ -824,17 +889,20 @@ def carregar_mapa_template(prova_id, aluno_id):
 
 
 def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
-    """Amostra uma bolha usando coordenadas normalizadas."""
+    """
+    Amostra uma bolha usando coordenadas normalizadas.
+    raio_fracao=0.025 (2.5% da menor dimensão da imagem) para bolhas de ~7mm em 2400px
+    """
     h, w = binaria.shape[:2]
     cx = int(x_norm * w)
     cy = int(y_norm * h)
-    r = max(8, min(int(raio_fracao * min(w, h)), 30))
+    r = max(10, min(int(raio_fracao * min(w, h)), 40))
 
     if cx < r or cy < r or cx + r > w or cy + r > h:
         return 0.0
 
     mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (cx, cy), int(r * 0.7), 255, -1)
+    cv2.circle(mask, (cx, cy), int(r * 0.75), 255, -1)
 
     roi = cv2.bitwise_and(binaria, binaria, mask=mask)
     total = cv2.countNonZero(mask)
@@ -844,16 +912,26 @@ def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.020):
 
 
 def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
-    """Corrige cartão usando mapa de posições normalizadas."""
+    """
+    Corrige cartão usando mapa de posições normalizadas.
+    
+    MELHORIAS v2.0:
+    - Threshold DINÂMICO baseado na mediana de TODAS as bolhas
+    - Amostragem circular mais precisa (raio 0.75 do espaçamento)
+    - Validação de dupla marcação
+    - Retorna confiança real (não inventada)
+    """
     h, w = img_corrigida.shape[:2]
     gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
+    # Normalização de iluminação (remove sombras e reflexos)
     bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
     bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
     bg = cv2.GaussianBlur(bg, (51, 51), 0)
     bg = np.where(bg == 0, 1, bg).astype(np.float32)
     gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
 
+    # Binarização adaptativa
     binaria = cv2.adaptiveThreshold(
         gray_norm, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -861,57 +939,92 @@ def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=Fals
         blockSize=25, C=10
     )
 
+    # Agrupa bolhas por questão
     por_questao = {}
     for b in mapa_template:
         por_questao.setdefault(b['questao'], []).append(b)
 
+    # PRIMEIRO PASSO: coleta os valores de todas as bolhas
+    todos_valores = []
+    todas_medidas = {}
+    
+    for q in sorted(por_questao.keys()):
+        bolhas = por_questao[q]
+        medidas = []
+        for b in bolhas:
+            ratio = amostrar_bolha_template(binaria, b['x'], b['y'], raio_fracao=0.025)
+            medidas.append((b['alternativa'], ratio, b))
+            todos_valores.append(ratio)
+        todas_medidas[q] = medidas
+
+    # SEGUNDO PASSO: calcula threshold dinâmico
+    if len(todos_valores) < 4:
+        return [''] * len(por_questao), [0] * len(por_questao), []
+    
+    todos_valores_sorted = sorted(todos_valores)
+    mediana = todos_valores_sorted[len(todos_valores_sorted) // 2]
+    
+    # Threshold: metade da mediana + margem
+    # Bolha pintada tem ratio ~0.7-0.9, bolha vazia tem ratio ~0.05-0.15
+    threshold = max(0.25, mediana * 1.2)
+    
+    logging.info(f"📊 Threshold dinâmico: {threshold:.3f} (mediana={mediana:.3f})")
+
+    # TERCEIRO PASSO: classifica cada questão
     respostas = []
     confiancas = []
     debug_info = []
 
     for q in sorted(por_questao.keys()):
-        bolhas = por_questao[q]
-        medidas = []
-        for b in bolhas:
-            ratio = amostrar_bolha_template(binaria, b['x'], b['y'])
-            medidas.append((b['alternativa'], ratio, b))
-
+        medidas = todas_medidas[q]
         medidas.sort(key=lambda m: m[1], reverse=True)
-        ratios = [m[1] for m in medidas]
-        min_ratio = min(ratios)
-        max_ratio = max(ratios)
-
-        separacao = max_ratio - min_ratio
-
-        if separacao > 0.50:
-            confianca = 98
-        elif separacao > 0.35:
-            confianca = 92
-        elif separacao > 0.20:
-            confianca = 80
-        elif separacao > 0.10:
-            confianca = 65
-        else:
-            confianca = 40
-
-        letra_escolhida = medidas[0][0]
-        ratio_escolhida = medidas[0][1]
-
-        if ratio_escolhida < 0.30:
+        
+        max_ratio = medidas[0][1]
+        letra_max = medidas[0][0]
+        
+        # Verifica se a bolha mais escura passou do threshold
+        if max_ratio < threshold:
             respostas.append('')
             confiancas.append(30)
             debug_info.append({
-                'questao': q, 'resposta': '', 'motivo': 'todas vazias',
-                'medidas': [(m[0], round(m[1], 3)) for m in medidas]
+                'questao': q, 'resposta': '', 'motivo': 'vazia',
+                'max_ratio': round(max_ratio, 3), 'threshold': round(threshold, 3)
             })
+            continue
+        
+        # Verifica dupla marcação (segunda bolha muito próxima da primeira)
+        if len(medidas) >= 2:
+            segunda_ratio = medidas[1][1]
+            if segunda_ratio > threshold * 0.8 and (max_ratio - segunda_ratio) < 0.2:
+                # Dupla marcação — ambíguo
+                respostas.append(letra_max)
+                confiancas.append(50)
+                debug_info.append({
+                    'questao': q, 'resposta': letra_max, 'motivo': 'dupla_marcacao',
+                    'max_ratio': round(max_ratio, 3), 'segunda': round(segunda_ratio, 3)
+                })
+                continue
+        
+        # Confiança baseada na separação entre a primeira e a segunda bolha
+        if len(medidas) >= 2:
+            separacao = max_ratio - medidas[1][1]
+            if separacao > 0.5:
+                confianca = 98
+            elif separacao > 0.3:
+                confianca = 90
+            elif separacao > 0.15:
+                confianca = 75
+            else:
+                confianca = 55
         else:
-            respostas.append(letra_escolhida)
-            confiancas.append(confianca)
-            debug_info.append({
-                'questao': q, 'resposta': letra_escolhida,
-                'confianca': confianca,
-                'medidas': [(m[0], round(m[1], 3)) for m in medidas]
-            })
+            confianca = 85
+        
+        respostas.append(letra_max)
+        confiancas.append(confianca)
+        debug_info.append({
+            'questao': q, 'resposta': letra_max, 'motivo': 'ok',
+            'confianca': confianca, 'max_ratio': round(max_ratio, 3)
+        })
 
     if debug:
         return respostas, confiancas, debug_info
@@ -942,12 +1055,7 @@ def preparar_imagem_para_template(imagem_base64):
         if img is None:
             return None, False
 
-        h, w = img.shape[:2]
-        TARGET_H = 1500
-        if h > TARGET_H:
-            scale = TARGET_H / h
-            img = cv2.resize(img, (int(w * scale), TARGET_H), interpolation=cv2.INTER_AREA)
-
+        # ═══ CORREÇÃO: detecta marcadores na imagem ORIGINAL (sem resize) ═══
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         marcadores = detectar_marcadores_fiduciais(gray)
 
@@ -955,7 +1063,19 @@ def preparar_imagem_para_template(imagem_base64):
             logging.warning("⚠️ Template Mapping: marcadores não detectados")
             return None, False
 
+        # Corrige perspectiva na imagem original
         img_corrigida = corrigir_perspectiva(img, marcadores)
+
+        # ═══ AGORA redimensiona a imagem corrigida para tamanho padrão ═══
+        h, w = img_corrigida.shape[:2]
+        TARGET_H = 1800  # 1800 é melhor que 1500 para bolhas de 7mm
+        if h > TARGET_H:
+            scale = TARGET_H / h
+            img_corrigida = cv2.resize(
+                img_corrigida, (int(w * scale), TARGET_H),
+                interpolation=cv2.INTER_AREA
+            )
+
         logging.info(f"✅ Template: perspectiva corrigida {img_corrigida.shape[1]}x{img_corrigida.shape[0]}")
         return img_corrigida, True
 
@@ -1802,11 +1922,18 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
     """
-    Correção SIMPLIFICADA (estilo EvalBee):
-    1. IA (OpenAI) roda SEMPRE primeiro
-    2. Se confiança alta → retorna
-    3. Senão → Template Mapping como fallback
-    4. Se nada funcionar → erro
+    Correção usando Template Matching como método PRINCIPAL.
+    IA foi REMOVIDA da correção de cartão — ela inventa respostas.
+    
+    Fluxo:
+    1. Carrega mapa do template (salvo quando o cartão foi gerado)
+    2. Detecta marcadores fiduciais
+    3. Corrige perspectiva
+    4. Amostra cada bolha usando o mapa exato
+    5. Aplica threshold dinâmico (mediana das bolhas)
+    6. Retorna respostas detectadas
+    
+    Se falhar → erro explícito pedindo foto nova (NUNCA chuta)
     """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
@@ -1814,116 +1941,78 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
 
     total_questoes = len(gabarito)
 
+    logging.info("=" * 60)
+    logging.info("📌 CORREÇÃO VIA TEMPLATE MATCHING (OpenCV)")
+    logging.info("=" * 60)
+
     try:
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 1: IA (OpenAI) — MÉTODO PRINCIPAL
-        # ═══════════════════════════════════════════════════════
-        logging.info("=" * 60)
-        logging.info("📌 ETAPA 1: IA OpenAI (Método Principal)")
-        logging.info("=" * 60)
+        # ETAPA 1: Carrega mapa do template (salvo no banco)
+        if not mapa_template and prova_id and aluno_id:
+            mapa_template = carregar_mapa_template(prova_id, aluno_id)
+            if mapa_template:
+                logging.info(f"✅ Mapa carregado do banco: {len(mapa_template)} bolhas")
 
-        resultado_ia = None
-        if OPENAI_AVAILABLE and openai_client is not None:
-            try:
-                imagem_processada = preprocessar_imagem_para_ia(imagem_base64)
-                resultado_ia = corrigir_com_ia_fallback(
-                    imagem_processada, padrao_gabarito, aluno_nome,
-                    serie, tipo_questoes, disciplina, bncc=bncc
-                )
+        if not mapa_template:
+            if total_questoes <= 12:
+                num_colunas = 1
+            else:
+                num_colunas = 2
+            mapa_template = gerar_mapa_template_padrao(total_questoes, padrao_gabarito['alternativas'], num_colunas)
+            logging.info(f"⚠️ Usando mapa PADRÃO gerado: {len(mapa_template)} bolhas")
 
-                if not resultado_ia.get('erro'):
-                    confs = resultado_ia.get('confianca_por_questao', [])
-                    conf_media = sum(confs) / len(confs) if confs else 0
-                    detectadas = sum(1 for r in resultado_ia.get('respostas_detectadas', []) if r)
+        # ETAPA 2: Corrige via template
+        resultado_template = corrigir_com_template_mapping(
+            imagem_base64, padrao_gabarito, aluno_nome, serie,
+            tipo_questoes, disciplina, bncc, mapa_template,
+            prova_id=prova_id, aluno_id=aluno_id
+        )
 
-                    logging.info(
-                        f"📊 IA: confiança média={conf_media:.1f}%, "
-                        f"detectadas={detectadas}/{total_questoes}"
-                    )
-
-                    if conf_media >= 70 and detectadas >= total_questoes * 0.7:
-                        logging.info(f"✅ IA APROVADA (confiança={conf_media:.1f}%)")
-                        resultado_ia['metodo_usado'] = 'ia'
-                        return resultado_ia
-                    else:
-                        logging.info(
-                            f"⚠️ IA com confiança baixa — tentando fallback Template"
-                        )
-                else:
-                    logging.warning(f"⚠️ IA retornou erro: {resultado_ia.get('erro')}")
-            except Exception as e:
-                logging.warning(f"⚠️ IA falhou com exceção: {e}")
-        else:
-            logging.warning("⚠️ OpenAI não disponível — pulando IA")
-
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 2: TEMPLATE MAPPING (FALLBACK)
-        # ═══════════════════════════════════════════════════════
-        logging.info("=" * 60)
-        logging.info("📌 ETAPA 2: Template Mapping (Fallback)")
-        logging.info("=" * 60)
-
-        resultado_template = None
-        try:
-            resultado_template = corrigir_com_template_mapping(
-                imagem_base64, padrao_gabarito, aluno_nome, serie,
-                tipo_questoes, disciplina, bncc, mapa_template,
-                prova_id=prova_id, aluno_id=aluno_id
+        if not resultado_template:
+            return erro_correcao(
+                aluno_nome, serie, disciplina,
+                '❌ Não foi possível ler as respostas do cartão.\n\n'
+                'Tire uma nova foto com:\n'
+                '1. Boa iluminação (luz natural, sem sombra)\n'
+                '2. Os 4 marcadores pretos visíveis nos cantos\n'
+                '3. Foco nítido (segure firme)\n'
+                '4. Sem reflexo de flash'
             )
 
-            if resultado_template:
-                confs_tm = resultado_template.get('confiancas', [])
-                conf_media_tm = sum(confs_tm) / len(confs_tm) if confs_tm else 0
-                detectadas_tm = sum(1 for r in resultado_template['respostas'] if r)
+        # ETAPA 3: Processa o resultado do template
+        respostas = resultado_template['respostas']
+        confiancas = resultado_template['confiancas']
 
-                logging.info(
-                    f"📊 Template: confiança média={conf_media_tm:.1f}%, "
-                    f"detectadas={detectadas_tm}/{total_questoes}"
-                )
+        conf_media = sum(confiancas) / len(confiancas) if confiancas else 0
+        detectadas = sum(1 for r in respostas if r)
+        
+        logging.info(f"📊 Template: confiança média={conf_media:.1f}%, detectadas={detectadas}/{total_questoes}")
 
-                if conf_media_tm >= 55 and detectadas_tm >= total_questoes * 0.5:
-                    logging.info(f"✅ Template APROVADO")
-                    return calcular_resultado_correcao(
-                        resultado_template['respostas'], gabarito, aluno_nome, serie,
-                        disciplina, tipo_questoes, 'template',
-                        bncc=bncc, confiancas=confs_tm
-                    )
-        except Exception as e:
-            logging.warning(f"⚠️ Template falhou: {e}")
-
-        # ═══════════════════════════════════════════════════════
-        # ETAPA 3: RETORNAR MELHOR RESULTADO DISPONÍVEL
-        # ═══════════════════════════════════════════════════════
-        logging.info("=" * 60)
-        logging.info("📌 ETAPA 3: Decisão Final")
-        logging.info("=" * 60)
-
-        if resultado_ia and not resultado_ia.get('erro'):
-            logging.info("⚠️ Retornando resultado da IA (baixa confiança)")
-            resultado_ia['metodo_usado'] = 'ia_baixa_conf'
-            return resultado_ia
-
-        if resultado_template:
-            logging.info("⚠️ Retornando resultado do Template (baixa confiança)")
-            return calcular_resultado_correcao(
-                resultado_template['respostas'], gabarito, aluno_nome, serie,
-                disciplina, tipo_questoes, 'template_baixa_conf',
-                bncc=bncc, confiancas=resultado_template['confiancas']
+        # Validação: se detectou menos de 40% das questões, é erro
+        if detectadas < total_questoes * 0.4:
+            return erro_correcao(
+                aluno_nome, serie, disciplina,
+                f'Template detectou apenas {detectadas}/{total_questoes} respostas.\n\n'
+                'Verifique se o cartão foi gerado pelo sistema e tire uma foto mais clara.'
             )
 
-        return erro_correcao(
-            aluno_nome, serie, disciplina,
-            '❌ Não foi possível ler as respostas do cartão.\n\n'
-            'Verifique:\n'
-            '1. A foto está nítida?\n'
-            '2. Boa iluminação?\n'
-            '3. Os 4 marcadores pretos estão visíveis?\n'
-            '4. Os círculos foram pintados completamente?\n'
-            '5. Caneta preta ou azul (não lápis)?'
+        # Validação: se todas as respostas são iguais, é erro
+        nao_vazias = [r for r in respostas if r]
+        if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
+            return erro_correcao(
+                aluno_nome, serie, disciplina,
+                f'Todas as respostas detectadas são "{nao_vazias[0]}". Isso é impossível.\n\n'
+                'Tire uma nova foto com melhor iluminação.'
+            )
+
+        # ETAPA 4: Calcula resultado
+        return calcular_resultado_correcao(
+            respostas, gabarito, aluno_nome, serie,
+            disciplina, tipo_questoes, 'template',
+            bncc=bncc, confiancas=confiancas
         )
 
     except Exception as e:
-        logging.error(f"❌ Erro na correção: {e}")
+        logging.error(f"❌ Erro na correção por template: {e}")
         traceback.print_exc()
         return erro_correcao(aluno_nome, serie, disciplina, str(e))
 
