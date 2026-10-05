@@ -4877,6 +4877,7 @@ def corrigir_automatico():
         imagem_base64 = data.get('imagem')
         if not imagem_base64:
             return jsonify({'erro': 'Imagem é obrigatória'}), 400
+        salvar_auto = data.get('salvar_auto', True)
 
         logging.info("=" * 60)
         logging.info("📷 CORREÇÃO AUTOMÁTICA POR QR CODE")
@@ -5002,56 +5003,61 @@ def corrigir_automatico():
             resultado['confianca_por_questao'] = [70] * total
             resultado['confianca'] = 70
 
-        try:
-            conn = get_db_connection()
-            if conn:
-                cur = conn.cursor()
-                questoes_status = resultado.get('questoes_status', [])
-                for i, q in enumerate(questoes_status):
-                    if i < len(bncc_gabarito):
-                        q['bncc'] = bncc_gabarito[i] if bncc_gabarito[i] else ''
+        # ⬇️ MODIFICADO: só salva se salvar_auto == True
+        if salvar_auto:
+            try:
+                conn = get_db_connection()
+                if conn:
+                    cur = conn.cursor()
+                    questoes_status = resultado.get('questoes_status', [])
+                    for i, q in enumerate(questoes_status):
+                        if i < len(bncc_gabarito):
+                            q['bncc'] = bncc_gabarito[i] if bncc_gabarito[i] else ''
+                        else:
+                            q['bncc'] = ''
+                    questoes_status_json = json.dumps(questoes_status)
+                    respostas_detectadas = resultado.get('respostas_detectadas', [])
+
+                    cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s", (prova_id, aluno_id))
+                    existe = cur.fetchone()
+
+                    if existe:
+                        cur.execute("""
+                            UPDATE historico
+                            SET respostas = %s::text[], acertos = %s, nota = %s, total = %s,
+                                tipo_correcao = %s, disciplina = %s, tipo_avaliacao = %s,
+                                questoes_status = %s::jsonb, confianca = %s,
+                                confianca_por_questao = %s::jsonb, bncc = %s::text[],
+                                data_correcao = CURRENT_TIMESTAMP
+                            WHERE prova_id = %s AND aluno_id = %s
+                        """, (respostas_detectadas, resultado.get('acertos', 0), resultado.get('nota', 0),
+                              resultado.get('total', 0), resultado.get('modo', 'ia'), disciplina,
+                              tipo_avaliacao, questoes_status_json, resultado.get('confianca', 70),
+                              json.dumps(resultado.get('confianca_por_questao', [])),
+                              bncc_gabarito, prova_id, aluno_id))
                     else:
-                        q['bncc'] = ''
-                questoes_status_json = json.dumps(questoes_status)
-                respostas_detectadas = resultado.get('respostas_detectadas', [])
-
-                cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s", (prova_id, aluno_id))
-                existe = cur.fetchone()
-
-                if existe:
-                    cur.execute("""
-                        UPDATE historico
-                        SET respostas = %s::text[], acertos = %s, nota = %s, total = %s,
-                            tipo_correcao = %s, disciplina = %s, tipo_avaliacao = %s,
-                            questoes_status = %s::jsonb, confianca = %s,
-                            confianca_por_questao = %s::jsonb, bncc = %s::text[],
-                            data_correcao = CURRENT_TIMESTAMP
-                        WHERE prova_id = %s AND aluno_id = %s
-                    """, (respostas_detectadas, resultado.get('acertos', 0), resultado.get('nota', 0),
-                          resultado.get('total', 0), resultado.get('modo', 'ia'), disciplina,
-                          tipo_avaliacao, questoes_status_json, resultado.get('confianca', 70),
-                          json.dumps(resultado.get('confianca_por_questao', [])),
-                          bncc_gabarito, prova_id, aluno_id))
-                else:
-                    cur.execute("""
-                        INSERT INTO historico
-                        (prova_id, aluno_id, respostas, acertos, nota, total,
-                         tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
-                         confianca, confianca_por_questao, bncc)
-                        VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
-                                %s, %s::jsonb, %s::text[])
-                    """, (prova_id, aluno_id, respostas_detectadas, resultado.get('acertos', 0),
-                          resultado.get('nota', 0), resultado.get('total', 0),
-                          resultado.get('modo', 'ia'), disciplina, tipo_avaliacao,
-                          questoes_status_json, resultado.get('confianca', 70),
-                          json.dumps(resultado.get('confianca_por_questao', [])),
-                          bncc_gabarito))
-                conn.commit()
-                cur.close()
-                conn.close()
-                logging.info(f"✅ Histórico salvo")
-        except Exception as e:
-            logging.error(f"⚠️ Erro ao salvar histórico: {e}")
+                        cur.execute("""
+                            INSERT INTO historico
+                            (prova_id, aluno_id, respostas, acertos, nota, total,
+                             tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
+                             confianca, confianca_por_questao, bncc)
+                            VALUES (%s, %s, %s::text[], %s, %s, %s, %s, %s, %s, %s::jsonb,
+                                    %s, %s::jsonb, %s::text[])
+                        """, (prova_id, aluno_id, respostas_detectadas, resultado.get('acertos', 0),
+                              resultado.get('nota', 0), resultado.get('total', 0),
+                              resultado.get('modo', 'ia'), disciplina, tipo_avaliacao,
+                              questoes_status_json, resultado.get('confianca', 70),
+                              json.dumps(resultado.get('confianca_por_questao', [])),
+                              bncc_gabarito))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    logging.info(f"✅ Histórico salvo automaticamente")
+            except Exception as e:
+                logging.error(f"⚠️ Erro ao salvar histórico: {e}")
+        else:
+            logging.info(f"💾 Salvamento automático DESATIVADO (usuário vai revisar antes de salvar)")
+        # ⬆️ MODIFICADO
 
         resultado['sucesso'] = True
         resultado['qr_lido'] = info_qr
@@ -5064,6 +5070,12 @@ def corrigir_automatico():
         resultado['tipo_avaliacao'] = tipo_avaliacao
         resultado['disciplina'] = disciplina
         resultado['bncc'] = bncc_gabarito
+
+        # ⬇️ ADICIONADO: campos para o frontend conseguir usar a correção manual
+        resultado['escola_id'] = escola_id
+        resultado['turma_id'] = turma_id
+        resultado['serie'] = serie
+        # ⬆️ ADICIONADO
 
         logging.info(f"✅ CORREÇÃO AUTOMÁTICA CONCLUÍDA: {nome_aluno} - Nota {resultado.get('nota')}")
 
