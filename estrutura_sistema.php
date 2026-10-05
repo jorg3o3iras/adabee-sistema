@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// LISTADOR COMPLETO DE PASTAS E ARQUIVOS
+// LISTADOR COMPLETO DE PASTAS E ARQUIVO
 // ============================================================
 // Acesse: http://seudominio.com/listar_arquivos.php
 // ============================================================
