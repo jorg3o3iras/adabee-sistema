@@ -22,7 +22,7 @@ import hmac
 import logging
 import zipfile
 import hashlib
-from collections import Counter
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
@@ -39,7 +39,6 @@ CORRECOES_CACHE_TTL_HORAS = 168  # 7 dias
 
 
 def init_cache_table():
-    """Cria a tabela de cache se não existir"""
     conn = get_db_connection()
     if not conn:
         return
@@ -74,7 +73,6 @@ def get_cache_key(imagem_hash, prova_id, aluno_id):
 
 
 def get_cache_correcao(chave):
-    """Busca correção no cache persistente"""
     conn = get_db_connection()
     if not conn:
         return None
@@ -99,7 +97,6 @@ def get_cache_correcao(chave):
 
 
 def set_cache_correcao(chave, resultado):
-    """Salva correção no cache persistente"""
     conn = get_db_connection()
     if not conn:
         return
@@ -117,7 +114,6 @@ def set_cache_correcao(chave, resultado):
 
 
 def limpar_cache_antigo():
-    """Remove entradas antigas do cache"""
     conn = get_db_connection()
     if not conn:
         return
@@ -140,7 +136,6 @@ def limpar_cache_antigo():
 # ============================================
 # CONFIGURAÇÃO OPENAI
 # ============================================
-
 OPENAI_AVAILABLE = False
 openai_client = None
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o')
@@ -172,7 +167,6 @@ except Exception as e:
 # ============================================
 # CONFIGURAÇÃO RELAYFREELLM
 # ============================================
-
 RELAY_AVAILABLE = False
 RELAY_API_URL = os.getenv('RELAY_API_URL', '')
 RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')
@@ -189,7 +183,6 @@ except Exception as e:
 # ============================================
 # VERIFICAÇÃO DE PYZBAR
 # ============================================
-
 PYZBAR_AVAILABLE = False
 try:
     from pyzbar.pyzbar import decode as _pyzbar_decode
@@ -202,7 +195,6 @@ except ImportError:
 # ============================================
 # CONFIGURAÇÃO DO BANCO DE DADOS
 # ============================================
-
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 DB_POOL = None
 DB_POOL_MIN = int(os.getenv('DB_POOL_MIN', '5'))
@@ -286,7 +278,6 @@ def get_db_connection():
 # ============================================
 # USUÁRIOS FIXOS
 # ============================================
-
 USUARIOS_FIXOS = {
     'admin': {'senha': 'admin', 'perfil': 'admin', 'nome': 'Administrador'},
     'usuario': {'senha': '123', 'perfil': 'usuario', 'nome': 'Usuário'},
@@ -516,271 +507,227 @@ def erro_correcao(aluno_nome, serie, disciplina, erro_msg):
 
 
 # ============================================
-# DETECÇÃO DE MARCADORES FIDUCIAIS
+# EVALBEE CORE - DETECÇÃO FIDUCIAL v4.0
 # ============================================
 
-def detectar_marcadores_fiduciais(gray):
+def detectar_marcadores_fiduciais_v4(gray):
     """
-    Detecta os 4 marcadores fiduciais nos cantos do cartão.
-    VERSÃO v3.0 — Ultra-robusta
+    Versão EvalBee-like: adaptativa, tolerante a sombra e blur.
+    Detecta os 4 quadrados pretos nos cantos usando binarização adaptativa
+    + validação geométrica (solidez, aspect ratio, área).
     """
     try:
-        altura, largura = gray.shape
-        logging.info(f"🔍 v3: Procurando marcadores em {largura}x{altura}...")
+        h, w = gray.shape
 
-        area_imagem = largura * altura
-        area_min = area_imagem * 0.001
-        area_max = area_imagem * 0.015
+        # Suaviza levemente para reduzir ruído
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
+        # Binarização ADAPTATIVA invertida — robusta a sombras e iluminação irregular
+        binaria = cv2.adaptiveThreshold(
+            blurred, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            41, 10
+        )
+
+        # Fecha pequenos buracos (marcadores às vezes ficam com centro branco)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
+
+        contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        area_img = w * h
         candidatos = []
-
-        blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-        _, binaria = cv2.threshold(
-            blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-        )
-
-        contornos, _ = cv2.findContours(
-            binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
 
         for c in contornos:
             area = cv2.contourArea(c)
-            if area < area_min or area > area_max:
+
+            # Filtro de área: marcador tem ~10mm em A4 → ~0.05% a 3% da imagem
+            if not (area_img * 0.0005 < area < area_img * 0.03):
                 continue
 
-            x, y, w, h = cv2.boundingRect(c)
-            aspect_ratio = float(w) / h if h > 0 else 0
-            if not (0.85 < aspect_ratio < 1.18):
-                continue
-
+            # Filtro de forma: deve ser quadrilátero
             peri = cv2.arcLength(c, True)
-            approx = cv2.approxPolyDP(c, 0.03 * peri, True)
+            approx = cv2.approxPolyDP(c, 0.02 * peri, True)
             if len(approx) != 4:
                 continue
 
-            pts = approx.reshape(4, 2)
-            lados = []
-            for i in range(4):
-                p1 = pts[i]
-                p2 = pts[(i + 1) % 4]
-                lado = np.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
-                lados.append(lado)
+            x, y, bw, bh = cv2.boundingRect(approx)
 
-            lado_min = min(lados)
-            lado_max = max(lados)
-            if lado_max > 0 and (lado_min / lado_max) < 0.75:
+            # Aspect ratio próximo de 1
+            ar = bw / float(bh) if bh > 0 else 0
+            if not (0.75 < ar < 1.35):
                 continue
 
-            mask = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.drawContours(mask, [c], -1, 255, -1)
-            mask_eroded = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
-            pixels_total = cv2.countNonZero(mask_eroded)
-            if pixels_total == 0:
-                continue
-            pixels_pretos = cv2.countNonZero(cv2.bitwise_and(binaria, binaria, mask=mask_eroded))
-            preenchimento = pixels_pretos / pixels_total
-            if preenchimento < 0.65:
+            # Solidez: área do contorno / área do convex hull (quadrado preenchido ~1)
+            hull = cv2.convexHull(c)
+            solidez = area / (cv2.contourArea(hull) + 1e-6)
+            if solidez < 0.80:
                 continue
 
-            candidatos.append((x, y, w, h, area))
-
-        logging.info(f"🔍 v3: {len(candidatos)} candidatos após validação geométrica")
+            candidatos.append((x, y, bw, bh, area, approx))
 
         if len(candidatos) < 4:
-            logging.warning(f"⚠️ v3: Apenas {len(candidatos)} candidatos válidos")
+            logging.warning(f"⚠️ Fiducial v4: apenas {len(candidatos)} candidatos válidos")
             return None
 
-        cx_imagem = largura / 2
-        cy_imagem = altura / 2
+        cx, cy = w / 2, h / 2
 
-        por_canto = {'tl': [], 'tr': [], 'bl': [], 'br': []}
-
-        for (x, y, w, h, area) in candidatos:
-            cx = x + w / 2
-            cy = y + h / 2
-            if cx < cx_imagem and cy < cy_imagem:
-                canto = 'tl'
-            elif cx >= cx_imagem and cy < cy_imagem:
-                canto = 'tr'
-            elif cx < cx_imagem and cy >= cy_imagem:
-                canto = 'bl'
-            else:
-                canto = 'br'
-            por_canto[canto].append((x, y, w, h, area))
-
-        def dist_ao_canto(c, canto):
-            x, y, w, h, area = c
-            cx = x + w / 2
-            cy = y + h / 2
-            if canto == 'tl':  return cx + cy
-            if canto == 'tr':  return (largura - cx) + cy
-            if canto == 'bl':  return cx + (altura - cy)
-            if canto == 'br':  return (largura - cx) + (altura - cy)
+        def score_dist(c, canto):
+            x, y, bw, bh, _, _ = c
+            ccx = x + bw // 2
+            ccy = y + bh // 2
+            if canto == 'tl': return ccx + ccy
+            if canto == 'tr': return (w - ccx) + ccy
+            if canto == 'bl': return ccx + (h - ccy)
+            if canto == 'br': return (w - ccx) + (h - ccy)
             return 0
 
+        quadrantes = {'tl': [], 'tr': [], 'bl': [], 'br': []}
+        for c in candidatos:
+            x, y, bw, bh, _, _ = c
+            ccx = x + bw // 2
+            ccy = y + bh // 2
+            if ccx < cx and ccy < cy:
+                quadrantes['tl'].append(c)
+            elif ccx >= cx and ccy < cy:
+                quadrantes['tr'].append(c)
+            elif ccx < cx and ccy >= cy:
+                quadrantes['bl'].append(c)
+            else:
+                quadrantes['br'].append(c)
+
         melhor = {}
-        for canto in ['tl', 'tr', 'bl', 'br']:
-            if not por_canto[canto]:
-                logging.warning(f"⚠️ v3: Nenhum candidato no quadrante {canto.upper()}")
+        for k in ['tl', 'tr', 'bl', 'br']:
+            if not quadrantes[k]:
+                logging.warning(f"⚠️ Fiducial v4: nenhum candidato no quadrante {k.upper()}")
                 return None
-            por_canto[canto].sort(key=lambda c: dist_ao_canto(c, canto))
-            melhor[canto] = por_canto[canto][0]
+            quadrantes[k].sort(key=lambda c: score_dist(c, k))
+            melhor[k] = quadrantes[k][0]
 
-        areas = [melhor[c][4] for c in ['tl', 'tr', 'bl', 'br']]
-        area_med = sum(areas) / 4
-        for a in areas:
-            if abs(a - area_med) > area_med * 0.5:
-                logging.warning(f"⚠️ v3: Tamanhos muito diferentes: {areas}")
-                return None
+        # Centro do marcador (EvalBee usa o CENTRO como referência)
+        tl = (melhor['tl'][0] + melhor['tl'][2] // 2, melhor['tl'][1] + melhor['tl'][3] // 2)
+        tr = (melhor['tr'][0] + melhor['tr'][2] // 2, melhor['tr'][1] + melhor['tr'][3] // 2)
+        bl = (melhor['bl'][0] + melhor['bl'][2] // 2, melhor['bl'][1] + melhor['bl'][3] // 2)
+        br = (melhor['br'][0] + melhor['br'][2] // 2, melhor['br'][1] + melhor['br'][3] // 2)
 
-        tl = (melhor['tl'][0] + melhor['tl'][2] // 2,
-              melhor['tl'][1] + melhor['tl'][3] // 2)
-        tr = (melhor['tr'][0] + melhor['tr'][2] // 2,
-              melhor['tr'][1] + melhor['tr'][3] // 2)
-        bl = (melhor['bl'][0] + melhor['bl'][2] // 2,
-              melhor['bl'][1] + melhor['bl'][3] // 2)
-        br = (melhor['br'][0] + melhor['br'][2] // 2,
-              melhor['br'][1] + melhor['br'][3] // 2)
-
-        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
-        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
-
-        if abs(largura_topo - largura_base) > min(largura_topo, largura_base) * 0.15:
-            logging.warning(f"⚠️ v3: lados superior/inferior muito diferentes")
-            return None
-        if abs(altura_esq - altura_dir) > min(altura_esq, altura_dir) * 0.15:
-            logging.warning(f"⚠️ v3: lados esquerdo/direito muito diferentes")
-            return None
-
-        dist_min = min(largura, altura) * 0.3
-        if largura_topo < dist_min or altura_esq < dist_min:
-            logging.warning(f"⚠️ v3: Marcadores muito próximos")
-            return None
-
-        logging.info(f"✅ v3: 4 marcadores detectados:")
-        logging.info(f"   TL={tl}  TR={tr}")
-        logging.info(f"   BL={bl}  BR={br}")
-        logging.info(f"   Largura: topo={largura_topo:.0f} base={largura_base:.0f}")
-        logging.info(f"   Altura: esq={altura_esq:.0f} dir={altura_dir:.0f}")
-
+        logging.info(f"✅ Fiducial v4 OK: TL={tl} TR={tr} BL={bl} BR={br}")
         return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
 
     except Exception as e:
-        logging.error(f"❌ Erro detectar_marcadores v3: {e}")
+        logging.error(f"❌ Fiducial v4 erro: {e}")
         traceback.print_exc()
         return None
 
 
 def corrigir_perspectiva(img, marcadores):
-    """Corrige a perspectiva da imagem usando os marcadores."""
+    """Corrige a perspectiva usando os 4 centros dos marcadores fiduciais."""
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
         bl = marcadores['bl']
         br = marcadores['br']
 
-        largura_topo = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        largura_base = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        largura_max = max(int(largura_topo), int(largura_base))
+        larg_topo = np.linalg.norm(np.array(tr) - np.array(tl))
+        larg_base = np.linalg.norm(np.array(br) - np.array(bl))
+        alt_esq = np.linalg.norm(np.array(bl) - np.array(tl))
+        alt_dir = np.linalg.norm(np.array(br) - np.array(tr))
 
-        altura_esq = np.sqrt(((bl[0] - tl[0]) ** 2) + ((bl[1] - tl[1]) ** 2))
-        altura_dir = np.sqrt(((br[0] - tr[0]) ** 2) + ((br[1] - tr[1]) ** 2))
-        altura_max = max(int(altura_esq), int(altura_dir))
+        larg_max = int(max(larg_topo, larg_base))
+        alt_max = int(max(alt_esq, alt_dir))
 
         origem = np.float32([tl, tr, bl, br])
         destino = np.float32([
             [0, 0],
-            [largura_max - 1, 0],
-            [0, altura_max - 1],
-            [largura_max - 1, altura_max - 1]
+            [larg_max - 1, 0],
+            [0, alt_max - 1],
+            [larg_max - 1, alt_max - 1]
         ])
 
-        matriz = cv2.getPerspectiveTransform(origem, destino)
-        img_corrigida = cv2.warpPerspective(img, matriz, (largura_max, altura_max))
+        M = cv2.getPerspectiveTransform(origem, destino)
+        corrigida = cv2.warpPerspective(img, M, (larg_max, alt_max))
 
-        logging.info(f"✅ Perspectiva corrigida: {largura_max}x{altura_max}")
-        return img_corrigida
+        logging.info(f"✅ Perspectiva corrigida: {larg_max}x{alt_max}")
+        return corrigida
 
     except Exception as e:
-        logging.error(f"❌ Erro ao corrigir perspectiva: {e}")
+        logging.error(f"❌ Perspectiva erro: {e}")
         return img
 
 
 # ============================================
-# TEMPLATE MAPPING
+# TEMPLATE MAPPING - EVALBEE STYLE
 # ============================================
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     """
-    Mapa v10.0 — Sincronizado 1:1 com o CSS do HTML.
+    Mapa v11 - EvalBee style.
+    - Origem = CENTRO do marcador fiducial (não o canto).
+    - Suporta 3, 4 ou 5 alternativas dinamicamente.
     """
     mapa = []
 
-    A4_W = 210.0
-    A4_H = 297.0
-
+    A4_W, A4_H = 210.0, 297.0
     MARCADOR_SIZE = 10.0
     MARCADOR_MARGIN = 15.0
 
-    AREA_LEFT = MARCADOR_MARGIN + MARCADOR_SIZE
-    AREA_TOP = MARCADOR_MARGIN + MARCADOR_SIZE
-    AREA_RIGHT = A4_W - MARCADOR_MARGIN
-    AREA_BOTTOM = A4_H - MARCADOR_MARGIN
+    # CORREÇÃO EVALBEE: origem é o CENTRO do marcador
+    IMG_ORIGIN_X = MARCADOR_MARGIN + MARCADOR_SIZE / 2
+    IMG_ORIGIN_Y = MARCADOR_MARGIN + MARCADOR_SIZE / 2
+    IMG_RANGE_X = A4_W - 2 * IMG_ORIGIN_X
+    IMG_RANGE_Y = A4_H - 2 * IMG_ORIGIN_Y
+
+    AREA_LEFT = MARCADOR_MARGIN + MARCADOR_SIZE + 2
+    AREA_TOP = MARCADOR_MARGIN + MARCADOR_SIZE + 2
+    AREA_RIGHT = A4_W - MARCADOR_MARGIN - 2
+    AREA_BOTTOM = A4_H - MARCADOR_MARGIN - 2
     AREA_WIDTH = AREA_RIGHT - AREA_LEFT
     AREA_HEIGHT = AREA_BOTTOM - AREA_TOP
 
-    HEADER_HEIGHT = 55.0
+    HEADER_HEIGHT = 52.0
     QUESTOES_TOP = AREA_TOP + HEADER_HEIGHT
     QUESTOES_HEIGHT = AREA_BOTTOM - QUESTOES_TOP
     QUESTOES_PADDING = 5.0
     QUESTOES_INNER_TOP = QUESTOES_TOP + QUESTOES_PADDING
     QUESTOES_INNER_HEIGHT = QUESTOES_HEIGHT - 2 * QUESTOES_PADDING
 
+    # Colunas
     if total_questoes <= 12:
         num_colunas = 1
         q_por_coluna = total_questoes
-    elif total_questoes <= 24:
+    elif total_questoes <= 26:
         num_colunas = 2
-        q_por_coluna = 12
+        q_por_coluna = (total_questoes + 1) // 2
     else:
         num_colunas = 2
-        q_por_coluna = 15
+        q_por_coluna = 18
 
     num_alts = len(alternativas)
     GAP_COLUNA = 8.0
     col_width = (AREA_WIDTH - GAP_COLUNA * (num_colunas - 1)) / num_colunas
 
     NUM_WIDTH = 10.0
-    NUM_PADDING = 1.0
-    NUM_BORDER = 0.5
     NUM_GAP = 2.0
-    ALT_LEFT_OFFSET = NUM_WIDTH + NUM_PADDING + NUM_BORDER + NUM_GAP
-
-    IMG_ORIGIN_X = MARCADOR_MARGIN
-    IMG_ORIGIN_Y = MARCADOR_MARGIN
-    IMG_RANGE_X = A4_W - 2 * MARCADOR_MARGIN
-    IMG_RANGE_Y = A4_H - 2 * MARCADOR_MARGIN
+    ALT_LEFT_OFFSET = NUM_WIDTH + NUM_GAP + 2
 
     for col in range(num_colunas):
-        inicio_col = col * q_por_coluna
-        fim_col = min(inicio_col + q_por_coluna, total_questoes)
-        num_questoes_col = fim_col - inicio_col
-        if num_questoes_col <= 0:
+        inicio = col * q_por_coluna
+        fim = min(inicio + q_por_coluna, total_questoes)
+        n_col = fim - inicio
+        if n_col <= 0:
             continue
 
         col_left = AREA_LEFT + col * (col_width + GAP_COLUNA)
         col_right = col_left + col_width
         alt_left = col_left + ALT_LEFT_OFFSET
-        alt_right = col_right
+        alt_right = col_right - 1
         alt_width = alt_right - alt_left
         espacamento_bolha = alt_width / num_alts
-        espaco_por_linha = QUESTOES_INNER_HEIGHT / num_questoes_col
+        espaco_linha = QUESTOES_INNER_HEIGHT / n_col
 
-        for i in range(num_questoes_col):
-            num_questao = inicio_col + i + 1
-            y_centro = QUESTOES_INNER_TOP + (i + 0.5) * espaco_por_linha
+        for i in range(n_col):
+            num_questao = inicio + i + 1
+            y_centro = QUESTOES_INNER_TOP + (i + 0.5) * espaco_linha
 
             for j, letra in enumerate(alternativas):
                 x_centro = alt_left + (j + 0.5) * espacamento_bolha
@@ -800,7 +747,6 @@ def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
 
 
 def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes, num_colunas, mapa_template):
-    """Salva o mapa do template no banco."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -818,7 +764,7 @@ def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes,
                 quantidade_questoes = EXCLUDED.quantidade_questoes,
                 num_colunas = EXCLUDED.num_colunas,
                 created_at = CURRENT_TIMESTAMP
-        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes, 
+        """, (prova_id, aluno_id, tipo_questoes, quantidade_questoes,
               num_colunas, json.dumps(mapa_template)))
         conn.commit()
         cur.close()
@@ -832,7 +778,6 @@ def salvar_mapa_template(prova_id, aluno_id, tipo_questoes, quantidade_questoes,
 
 
 def carregar_mapa_template(prova_id, aluno_id):
-    """Carrega o mapa do template do banco."""
     try:
         conn = get_db_connection()
         if not conn:
@@ -861,268 +806,115 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-def _amostrar_ratio(binaria, cx, cy, r):
-    """Amostra o ratio preto/branco num círculo de raio r centrado em (cx, cy)."""
-    h, w = binaria.shape[:2]
+# ============================================
+# CORREÇÃO EVALBEE — MEDIÇÃO DE FILL (SUBSTITUI HOUGH)
+# ============================================
 
-    if cx < r or cy < r or cx + r > w or cy + r > h:
-        return 0.0
-
-    mask = np.zeros(binaria.shape, dtype=np.uint8)
-    cv2.circle(mask, (int(cx), int(cy)), int(r), 255, -1)
-
-    total = cv2.countNonZero(mask)
-    if total == 0:
-        return 0.0
-
-    roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-    return cv2.countNonZero(roi) / total
-
-
-def amostrar_bolha_template(binaria, x_norm, y_norm, raio_fracao=0.008):
+def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas, debug=False):
     """
-    Amostra o INTERIOR da bolha (não a borda).
+    Correção estilo EvalBee: para cada bolha esperada do template,
+    mede a fração de pixels pretos dentro do círculo correspondente.
+    Escolhe a de maior ratio por questão.
 
-    A bolha tem ~7mm de diâmetro. Na imagem de ~1004px de largura
-    (que representa 180mm), a escala é 5.58 px/mm.
-    Raio real da bolha: ~19.5px.
-
-    Usamos raio de 8px (0.008 * 1004) para pegar SÓ o centro pintado,
-    evitando a borda preta.
-    """
-    h, w = binaria.shape[:2]
-    cx = int(x_norm * w)
-    cy = int(y_norm * h)
-    r = max(6, min(int(raio_fracao * min(w, h)), 12))
-    return _amostrar_ratio(binaria, cx, cy, r)
-
-
-def buscar_bolha_robusta(binaria, x_norm, y_norm, raio_fracao=0.008):
-    """
-    Busca em vizinhança GRANDE (120px) com penalidade. v10.0
-    """
-    import math
-    h, w = binaria.shape[:2]
-    cx_base = int(x_norm * w)
-    cy_base = int(y_norm * h)
-
-    r_amostra = 12
-    raio_busca = 120
-
-    melhor_ratio = 0.0
-    melhor_dx = 0
-    melhor_dy = 0
-
-    ratio_centro = _amostrar_ratio(binaria, cx_base, cy_base, r_amostra)
-    if ratio_centro > 0.7:
-        return ratio_centro, 0, 0
-    melhor_ratio = ratio_centro
-
-    for raio in range(5, raio_busca + 1, 5):
-        passo = 5 if raio < 30 else 15
-        num_pontos = max(8, int(2 * math.pi * raio / passo))
-        for k in range(num_pontos):
-            angulo = 2 * math.pi * k / num_pontos
-            dx = int(raio * math.cos(angulo))
-            dy = int(raio * math.sin(angulo))
-            cx = cx_base + dx
-            cy = cy_base + dy
-            ratio = _amostrar_ratio(binaria, cx, cy, r_amostra)
-            penalidade = 1.0 - (raio / raio_busca) * 0.3
-            ratio_ajustado = ratio * penalidade
-            if ratio_ajustado > melhor_ratio:
-                melhor_ratio = ratio
-                melhor_dx = dx
-                melhor_dy = dy
-            if melhor_ratio > 0.85 and raio < 40:
-                return melhor_ratio, melhor_dx, melhor_dy
-
-    return melhor_ratio, melhor_dx, melhor_dy
-
-
-def detectar_bolhas_na_imagem(img_corrigida, param2=22):
-    """
-    Detecta TODAS as bolhas na imagem usando Hough Circles.
-    Retorna lista de (cx, cy, r, ratio_preenchimento).
-
-    Args:
-        param2: Sensibilidade do HoughCircles (menor = mais círculos). Default 22.
-    """
-    h, w = img_corrigida.shape[:2]
-    gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-
-    bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
-    bg = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
-    bg = cv2.GaussianBlur(bg, (51, 51), 0)
-    bg = np.where(bg == 0, 1, bg).astype(np.float32)
-    gray_norm = np.clip((gray.astype(np.float32) / bg) * 200.0, 0, 255).astype(np.uint8)
-
-    gray_blur = cv2.medianBlur(gray_norm, 5)
-
-    binaria = cv2.adaptiveThreshold(
-        gray_norm, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        blockSize=25, C=10
-    )
-
-    circulos = cv2.HoughCircles(
-        gray_blur,
-        cv2.HOUGH_GRADIENT,
-        dp=1,
-        minDist=25,
-        param1=50,
-        param2=param2,
-        minRadius=15,
-        maxRadius=25
-    )
-
-    if circulos is None:
-        return []
-
-    circulos = np.round(circulos[0, :]).astype("int")
-    logging.info(f"🔵 HoughCircles encontrou {len(circulos)} círculos")
-
-    bolhas = []
-    for (cx, cy, r) in circulos:
-        if cx < r or cy < r or cx + r > w or cy + r > h:
-            continue
-
-        mask = np.zeros(binaria.shape, dtype=np.uint8)
-        cv2.circle(mask, (cx, cy), int(r * 0.6), 255, -1)
-        total = cv2.countNonZero(mask)
-        if total == 0:
-            continue
-        roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-        ratio = cv2.countNonZero(roi) / total
-        bolhas.append({
-            'cx': int(cx),
-            'cy': int(cy),
-            'r': int(r),
-            'ratio': float(ratio),
-        })
-
-    return bolhas
-
-
-def agrupar_bolhas_em_grade(bolhas, num_alts):
-    """
-    Agrupa as bolhas detectadas em uma grade (linhas × alternativas).
-    Retorna uma lista de linhas, onde cada linha é uma lista de bolhas ordenadas por x.
-    """
-    if not bolhas:
-        return []
-
-    bolhas_ordenadas = sorted(bolhas, key=lambda b: b['cy'])
-
-    linhas = []
-    linha_atual = [bolhas_ordenadas[0]]
-
-    for b in bolhas_ordenadas[1:]:
-        if abs(b['cy'] - linha_atual[-1]['cy']) < 15:
-            linha_atual.append(b)
-        else:
-            linhas.append(sorted(linha_atual, key=lambda x: x['cx']))
-            linha_atual = [b]
-
-    if linha_atual:
-        linhas.append(sorted(linha_atual, key=lambda x: x['cx']))
-
-    return linhas
-
-
-def corrigir_por_template(img_corrigida, mapa_template, alternativas, debug=False):
-    """
-    CORREÇÃO v12.0 — DETECÇÃO POR HOUGH CIRCLES
+    Vantagens sobre Hough:
+    - Não depende de detectar círculos com Hough (falha em fotos ruins).
+    - Usa a posição conhecida do template → muito mais estável.
+    - Suporta 3, 4 ou 5 alternativas.
     """
     try:
         h, w = img_corrigida.shape[:2]
-        logging.info(f"🔬 v12.0 Entrou em corrigir_por_template: {w}x{h}")
 
-        bolhas_detectadas = detectar_bolhas_na_imagem(img_corrigida)
-        logging.info(f"🔬 [DEBUG] {len(bolhas_detectadas)} bolhas detectadas na imagem")
+        gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
 
-        if len(bolhas_detectadas) < 8:
-            logging.warning(f"⚠️ Poucas bolhas detectadas: {len(bolhas_detectadas)}")
-            num_q = len(set(b['questao'] for b in mapa_template)) if mapa_template else 0
-            return [''] * num_q, [0] * num_q
+        # Binarização adaptativa invertida (bolha marcada = branco na máscara)
+        binaria = cv2.adaptiveThreshold(
+            gray, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            25, 12
+        )
 
-        linhas = agrupar_bolhas_em_grade(bolhas_detectadas, len(alternativas))
-        logging.info(f"🔬 [DEBUG] Agrupou em {len(linhas)} linhas")
+        # Agrupa bolhas por questão
+        por_questao = defaultdict(list)
+        for b in mapa_template:
+            por_questao[b['questao']].append(b)
 
-        if len(linhas) == 0:
-            return [], []
-
-        xs = [b['cx'] for b in bolhas_detectadas]
-        xs_sorted = sorted(set(xs))
-        range_x = max(xs_sorted) - min(xs_sorted)
-
-        if range_x > w * 0.5:
-            meio = w / 2
-            linhas_esq = [l for l in linhas if l[0]['cx'] < meio]
-            linhas_dir = [l for l in linhas if l[0]['cx'] >= meio]
-            colunas = [linhas_esq, linhas_dir]
-            logging.info(f"🔬 [DEBUG] 2 colunas: {len(linhas_esq)} + {len(linhas_dir)}")
-        else:
-            colunas = [linhas]
-            logging.info(f"🔬 [DEBUG] 1 coluna com {len(linhas)} linhas")
-
-        num_alts = len(alternativas)
         respostas = []
         confiancas = []
 
-        for coluna in colunas:
-            for linha in coluna:
-                if len(linha) < num_alts:
-                    respostas.append('')
-                    confiancas.append(30)
+        for q_num in sorted(por_questao.keys()):
+            bolhas_q = sorted(por_questao[q_num], key=lambda b: b['x'])
+            ratios = []
+
+            for b in bolhas_q:
+                cx = int(b['x'] * w)
+                cy = int(b['y'] * h)
+
+                # Raio proporcional ao tamanho da imagem (evita pegar a borda)
+                r = max(6, int(min(w, h) * 0.018))  # ~18px em imagem 1000px
+
+                # Fora da imagem → ratio zero
+                if cx - r < 0 or cy - r < 0 or cx + r >= w or cy + r >= h:
+                    ratios.append(0.0)
                     continue
 
-                linha_ordenada = sorted(linha, key=lambda b: b['cx'])[:num_alts]
+                mask = np.zeros((h, w), dtype=np.uint8)
+                cv2.circle(mask, (cx, cy), r, 255, -1)
+                total = cv2.countNonZero(mask)
+                if total == 0:
+                    ratios.append(0.0)
+                    continue
 
-                melhor = max(linha_ordenada, key=lambda b: b['ratio'])
-                melhor_idx = linha_ordenada.index(melhor)
-                letra = alternativas[melhor_idx] if melhor_idx < num_alts else ''
+                preto = cv2.countNonZero(cv2.bitwise_and(binaria, binaria, mask=mask))
+                ratio = preto / total
+                ratios.append(ratio)
 
-                if melhor['ratio'] < 0.45:
-                    respostas.append('')
-                    confiancas.append(30)
+            if debug:
+                logging.info(f"Q{q_num}: ratios={['%.2f' % r for r in ratios]}")
+
+            if not ratios:
+                respostas.append('')
+                confiancas.append(0)
+                continue
+
+            idx_max = int(np.argmax(ratios))
+            max_ratio = ratios[idx_max]
+
+            sorted_r = sorted(ratios, reverse=True)
+            separacao = (sorted_r[0] - sorted_r[1]) if len(sorted_r) > 1 else 1.0
+
+            # Thresholds calibrados para 3 e 4 alternativas
+            num_alts = len(alternativas)
+            LIMIAR_MIN = 0.30 if num_alts == 4 else 0.28
+            LIMIAR_CONFIRMA = 0.45 if num_alts == 4 else 0.40
+
+            if max_ratio < LIMIAR_MIN:
+                respostas.append('')
+                confiancas.append(15)
+            else:
+                letra = bolhas_q[idx_max]['alternativa']
+                respostas.append(letra)
+
+                if max_ratio > LIMIAR_CONFIRMA and separacao > 0.25:
+                    conf = 96
+                elif max_ratio > 0.35 and separacao > 0.15:
+                    conf = 82
+                elif separacao > 0.08:
+                    conf = 68
                 else:
-                    respostas.append(letra)
-                    ratios_ordenados = sorted([b['ratio'] for b in linha_ordenada], reverse=True)
-                    if len(ratios_ordenados) >= 2:
-                        separacao = ratios_ordenados[0] - ratios_ordenados[1]
-                        if separacao > 0.3:
-                            conf = 95
-                        elif separacao > 0.15:
-                            conf = 80
-                        else:
-                            conf = 60
-                    else:
-                        conf = 70
-                    confiancas.append(conf)
-
-        logging.info(f"🔬 [DEBUG] {len(respostas)} respostas detectadas")
-        logging.info(f"🔬 [DEBUG] Respostas: {respostas}")
-
-        num_questoes_esperado = len(set(b['questao'] for b in mapa_template)) if mapa_template else len(respostas)
-
-        while len(respostas) < num_questoes_esperado:
-            respostas.append('')
-            confiancas.append(0)
-        respostas = respostas[:num_questoes_esperado]
-        confiancas = confiancas[:num_questoes_esperado]
+                    conf = 50
+                confiancas.append(conf)
 
         return respostas, confiancas
 
     except Exception as e:
-        logging.error(f"❌ ERRO em corrigir_por_template: {e}")
-        logging.error(traceback.format_exc())
+        logging.error(f"❌ EvalBee v2 erro: {e}")
+        traceback.print_exc()
         return [], []
 
 
 def preparar_imagem_para_template(imagem_base64):
-    """Decodifica imagem, detecta marcadores e corrige perspectiva."""
+    """Decodifica imagem, detecta marcadores v4 e corrige perspectiva."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -1139,35 +931,32 @@ def preparar_imagem_para_template(imagem_base64):
         except Exception:
             return None, False
 
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
+        np_arr = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         if img is None:
             return None, False
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        marcadores = detectar_marcadores_fiduciais(gray)
-
+        marcadores = detectar_marcadores_fiduciais_v4(gray)
         if not marcadores:
             logging.warning("⚠️ Template Mapping: marcadores não detectados")
             return None, False
 
-        img_corrigida = corrigir_perspectiva(img, marcadores)
+        img_corr = corrigir_perspectiva(img, marcadores)
 
-        h, w = img_corrigida.shape[:2]
+        # Redimensiona para altura padrão para estabilizar raio
+        h, w = img_corr.shape[:2]
         TARGET_H = 1800
         if h > TARGET_H:
             scale = TARGET_H / h
-            img_corrigida = cv2.resize(
-                img_corrigida, (int(w * scale), TARGET_H),
-                interpolation=cv2.INTER_AREA
-            )
+            img_corr = cv2.resize(img_corr, (int(w * scale), TARGET_H),
+                                  interpolation=cv2.INTER_AREA)
 
-        logging.info(f"✅ Template: perspectiva corrigida {img_corrigida.shape[1]}x{img_corrigida.shape[0]}")
-        return img_corrigida, True
+        logging.info(f"✅ Template: perspectiva corrigida {img_corr.shape[1]}x{img_corr.shape[0]}")
+        return img_corr, True
 
     except Exception as e:
-        logging.error(f"❌ Erro em preparar_imagem_para_template: {e}")
+        logging.error(f"❌ Prepara imagem: {e}")
         return None, False
 
 
@@ -1181,17 +970,16 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
         mapa_template = carregar_mapa_template(prova_id, aluno_id)
 
     if not mapa_template:
-        if total_questoes <= 12:
-            num_colunas = 1
-        else:
-            num_colunas = 2
+        num_colunas = 1 if total_questoes <= 12 else 2
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
 
-    img_corrigida, ok = preparar_imagem_para_template(imagem_base64)
+    img_corr, ok = preparar_imagem_para_template(imagem_base64)
     if not ok:
         return None
 
-    respostas, confiancas = corrigir_por_template(img_corrigida, mapa_template, alternativas)
+    respostas, confiancas = corrigir_por_template_evalbee_v2(
+        img_corr, mapa_template, alternativas
+    )
 
     if not respostas:
         return None
@@ -1199,326 +987,8 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     return {
         'respostas': respostas,
         'confiancas': confiancas if confiancas else [70] * len(respostas),
-        'metodo': 'hough'
+        'metodo': 'evalbee_v4'
     }
-
-
-# ============================================
-# DETECÇÃO DE BOLHAS (OPENCV - FALLBACK)
-# ============================================
-
-def detectar_circulos_preenchidos(imagem_base64):
-    """Detecta TODAS as bolhas E calcula posições das colunas."""
-    try:
-        if ',' in imagem_base64:
-            imagem_base64 = imagem_base64.split(',')[1]
-
-        image_data = base64.b64decode(imagem_base64)
-        np_array = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
-        if img is None:
-            logging.error("❌ Imagem inválida")
-            return [], {}
-
-        height, width = img.shape[:2]
-        logging.info(f"📐 Imagem original: {width}x{height}")
-
-        TARGET_HEIGHT = 1500
-        if height > TARGET_HEIGHT:
-            scale = TARGET_HEIGHT / height
-            new_width = int(width * scale)
-            img = cv2.resize(img, (new_width, TARGET_HEIGHT), interpolation=cv2.INTER_AREA)
-
-        height, width = img.shape[:2]
-
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-        gray_enhanced = clahe.apply(gray)
-        gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
-
-        marcadores = detectar_marcadores_fiduciais(gray)
-        marcadores_xy = []
-
-        if marcadores:
-            img = corrigir_perspectiva(img, marcadores)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-            gray_enhanced = clahe.apply(gray)
-            gray_blur = cv2.GaussianBlur(gray_enhanced, (5, 5), 0)
-            height, width = img.shape[:2]
-
-            margem = 30
-            marcadores_xy = [
-                (margem, margem),
-                (width - margem, margem),
-                (margem, height - margem),
-                (width - margem, height - margem)
-            ]
-
-        _, binaria = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-        circulos = cv2.HoughCircles(
-            gray_blur,
-            cv2.HOUGH_GRADIENT,
-            dp=1.2,
-            minDist=25,
-            param1=50,
-            param2=20,
-            minRadius=12,
-            maxRadius=30
-        )
-
-        if circulos is None:
-            logging.warning("⚠️ Nenhum círculo detectado")
-            return [], {}
-
-        circulos = np.round(circulos[0, :]).astype("int")
-        logging.info(f"🔵 HoughCircles: {len(circulos)} candidatos")
-
-        MARGEM_EXCLUSAO = 100
-        circulos_filtrados = []
-
-        for (x, y, r) in circulos:
-            perto_de_marcador = False
-            for (mx, my) in marcadores_xy:
-                dist = np.sqrt((x - mx) ** 2 + (y - my) ** 2)
-                if dist < MARGEM_EXCLUSAO:
-                    perto_de_marcador = True
-                    break
-
-            if not perto_de_marcador:
-                circulos_filtrados.append((x, y, r))
-
-        circulos = circulos_filtrados
-
-        if len(circulos) < 4:
-            logging.warning("⚠️ Poucos círculos após exclusão")
-            return [], {}
-
-        raios = [r for (x, y, r) in circulos]
-        raios_sorted = sorted(raios)
-        mediana_r = raios_sorted[len(raios_sorted) // 2]
-
-        r_min = mediana_r * 0.8
-        r_max = mediana_r * 1.2
-
-        circulos = [(x, y, r) for (x, y, r) in circulos if r_min <= r <= r_max]
-
-        if len(circulos) < 4:
-            return [], {}
-
-        todos_circulos = []
-
-        for (x, y, r) in circulos:
-            if x < r or y < r or x + r > gray.shape[1] or y + r > gray.shape[0]:
-                continue
-
-            mask = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
-            roi = cv2.bitwise_and(binaria, binaria, mask=mask)
-
-            total_pixels = cv2.countNonZero(mask)
-            dark_pixels = cv2.countNonZero(roi)
-            dark_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
-
-            todos_circulos.append({
-                'x': int(x), 'y': int(y), 'r': int(r),
-                'dark_ratio': float(dark_ratio)
-            })
-
-        unicos = []
-        for c in sorted(todos_circulos, key=lambda c: c['dark_ratio'], reverse=True):
-            duplicado = False
-            for u in unicos:
-                dist = np.sqrt((c['x'] - u['x']) ** 2 + (c['y'] - u['y']) ** 2)
-                if dist < u['r'] * 1.5:
-                    duplicado = True
-                    break
-            if not duplicado:
-                unicos.append(c)
-
-        posicoes_colunas = {}
-
-        if len(unicos) >= 12:
-            xs_ordenados = sorted(set(c['x'] for c in unicos))
-            x_min = xs_ordenados[0]
-            x_max = xs_ordenados[-1]
-            range_x = x_max - x_min
-
-            clusters = {0: [], 1: [], 2: [], 3: []}
-            for c in unicos:
-                pos_rel = (c['x'] - x_min) / range_x if range_x > 0 else 0.5
-                if pos_rel < 0.2:
-                    clusters[0].append(c)
-                elif pos_rel < 0.45:
-                    clusters[1].append(c)
-                elif pos_rel < 0.7:
-                    clusters[2].append(c)
-                else:
-                    clusters[3].append(c)
-
-            letras = ['A', 'B', 'C', 'D']
-            for i, letra in enumerate(letras):
-                if clusters[i]:
-                    xs_cluster = [c['x'] for c in clusters[i]]
-                    posicoes_colunas[letra] = int(sum(xs_cluster) / len(xs_cluster))
-                else:
-                    posicoes_colunas[letra] = int(x_min + range_x * (i / 3))
-        else:
-            posicoes_colunas = {'A': 100, 'B': 400, 'C': 700, 'D': 1000}
-
-        ratios = sorted([c['dark_ratio'] for c in unicos])
-
-        if len(ratios) >= 8:
-            q1_idx = len(ratios) // 4
-            q3_idx = (3 * len(ratios)) // 4
-            quartil1 = ratios[q1_idx]
-            quartil3 = ratios[q3_idx]
-
-            if quartil3 - quartil1 > 0.15:
-                threshold = (quartil1 + quartil3) / 2
-            else:
-                mediana = ratios[len(ratios) // 2]
-                threshold = max(0.25, mediana * 1.5)
-        else:
-            threshold = 0.30
-
-        threshold = max(0.30, min(threshold, 0.60))
-
-        preenchidos = []
-        for c in unicos:
-            if c['dark_ratio'] > threshold:
-                x = c['x']
-                distancias = {letra: abs(x - pos) for letra, pos in posicoes_colunas.items()}
-                letra_mais_proxima = min(distancias, key=distancias.get)
-                c['letra'] = letra_mais_proxima
-                preenchidos.append(c)
-
-        return preenchidos, posicoes_colunas
-
-    except Exception as e:
-        logging.error(f"⚠️ Erro na detecção: {e}")
-        traceback.print_exc()
-        return [], {}
-
-
-# ============================================
-# ORGANIZAÇÃO DE RESPOSTAS (OPENCV)
-# ============================================
-
-def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=None):
-    """Organiza as respostas usando a letra calculada pela posição X"""
-    if not circulos:
-        return [''] * total_questoes, [0] * total_questoes
-
-    ordenados = sorted(circulos, key=lambda c: c['y'])
-
-    ys = [c['y'] for c in ordenados]
-    distancias_y = []
-    for i in range(1, len(ys)):
-        d = abs(ys[i] - ys[i-1])
-        if d > 5:
-            distancias_y.append(d)
-
-    if distancias_y:
-        distancias_y.sort()
-        y_limite = distancias_y[0] * 0.6
-    else:
-        y_limite = 30
-
-    y_limite = max(20, min(y_limite, 80))
-
-    linhas = []
-    linha_atual = []
-
-    for c in ordenados:
-        if not linha_atual:
-            linha_atual.append(c)
-        elif abs(c['y'] - linha_atual[0]['y']) < y_limite:
-            linha_atual.append(c)
-        else:
-            linha_atual.sort(key=lambda x: x['x'])
-            linhas.append(linha_atual)
-            linha_atual = [c]
-
-    if linha_atual:
-        linha_atual.sort(key=lambda x: x['x'])
-        linhas.append(linha_atual)
-
-    linhas.sort(key=lambda l: l[0]['y'])
-
-    while len(linhas) > total_questoes:
-        menor_gap = float('inf')
-        idx_juntar = -1
-
-        for i in range(len(linhas) - 1):
-            gap = linhas[i+1][0]['y'] - linhas[i][0]['y']
-            if gap < menor_gap:
-                menor_gap = gap
-                idx_juntar = i
-
-        if idx_juntar >= 0:
-            linhas[idx_juntar] = linhas[idx_juntar] + linhas[idx_juntar + 1]
-            linhas[idx_juntar].sort(key=lambda c: c['x'])
-            del linhas[idx_juntar + 1]
-        else:
-            break
-
-    if len(linhas) > total_questoes:
-        linhas = linhas[:total_questoes]
-
-    if len(linhas) < total_questoes * 0.6:
-        return [''] * total_questoes, [0] * total_questoes
-
-    respostas = []
-    confiancas = []
-
-    for idx, linha in enumerate(linhas):
-        if idx >= total_questoes:
-            break
-
-        if not linha:
-            respostas.append('')
-            confiancas.append(30)
-            continue
-
-        mais_escuro = max(linha, key=lambda c: c.get('dark_ratio', 0))
-        letra = mais_escuro.get('letra', '')
-
-        if letra:
-            conf = 90 if mais_escuro.get('dark_ratio', 0) > 0.5 else 75
-        else:
-            if len(linha) >= 4:
-                linha_ordenada = sorted(linha, key=lambda c: c['x'])
-                posicao = 0
-                for i, c in enumerate(linha_ordenada):
-                    if c['x'] == mais_escuro['x'] and c['y'] == mais_escuro['y']:
-                        posicao = i
-                        break
-                letra = ['A', 'B', 'C', 'D'][posicao] if posicao < 4 else ''
-            else:
-                letra = ''
-            conf = 50
-
-        respostas.append(letra)
-        confiancas.append(conf)
-
-    while len(respostas) < total_questoes:
-        respostas.append('')
-        confiancas.append(0)
-
-    respostas = respostas[:total_questoes]
-    confiancas = confiancas[:total_questoes]
-
-    nao_vazias = [r for r in respostas if r]
-    if len(nao_vazias) >= 5:
-        contagem = Counter(nao_vazias)
-        letra_mais_comum, qtd = contagem.most_common(1)[0]
-        if qtd >= len(nao_vazias) * 0.85:
-            return [''] * total_questoes, [0] * total_questoes
-
-    return respostas, confiancas
 
 
 # ============================================
@@ -1526,7 +996,6 @@ def organizar_respostas_por_posicao(circulos, total_questoes, posicoes_colunas=N
 # ============================================
 
 def preprocessar_imagem_para_ia(imagem_base64):
-    """Prepara imagem para IA com normalização de iluminação."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -1792,7 +1261,7 @@ def _parse_confiancas_ia(texto, total_esperado):
 
 
 def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
-    """Valida se a resposta da IA é plausível."""
+    """Valida se a resposta da IA é plausível (não chute)."""
     if not respostas:
         return True, "Resposta vazia"
 
@@ -1830,12 +1299,11 @@ def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
 
 
 # ============================================
-# CORREÇÃO COM IA
+# CORREÇÃO COM IA (FALLBACK)
 # ============================================
 
 def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
                               serie, disciplina, tipo_questoes, aviso_extra=None):
-    """Executa chamada OpenAI com retry em caso de resposta vazia."""
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
 
@@ -1989,13 +1457,16 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
 
 
 # ============================================
-# FUNÇÃO PRINCIPAL DE CORREÇÃO
+# FUNÇÃO PRINCIPAL DE CORREÇÃO (CASCATA EVALBEE + IA)
 # ============================================
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
                                      mapa_template=None, prova_id=None, aluno_id=None):
-    """Correção usando Template Matching como método PRINCIPAL, com fallback para IA."""
+    """
+    Correção usando EvalBee v4 (template + fill ratio) como método PRINCIPAL,
+    com fallback para IA quando necessário.
+    """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
         return erro_correcao(aluno_nome, serie, disciplina, 'Gabarito não disponível')
@@ -2003,7 +1474,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
 
     logging.info("=" * 60)
-    logging.info("📌 CORREÇÃO VIA TEMPLATE MATCHING (OpenCV)")
+    logging.info(f"📌 CORREÇÃO EVALBEE v4 - {total_questoes}Q "
+                 f"({','.join(padrao_gabarito['alternativas'])})")
     logging.info("=" * 60)
 
     try:
@@ -2013,11 +1485,10 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 logging.info(f"✅ Mapa carregado do banco: {len(mapa_template)} bolhas")
 
         if not mapa_template:
-            if total_questoes <= 12:
-                num_colunas = 1
-            else:
-                num_colunas = 2
-            mapa_template = gerar_mapa_template_padrao(total_questoes, padrao_gabarito['alternativas'], num_colunas)
+            num_colunas = 1 if total_questoes <= 12 else 2
+            mapa_template = gerar_mapa_template_padrao(
+                total_questoes, padrao_gabarito['alternativas'], num_colunas
+            )
             logging.info(f"⚠️ Usando mapa PADRÃO gerado: {len(mapa_template)} bolhas")
 
         resultado_template = corrigir_com_template_mapping(
@@ -2026,9 +1497,9 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             prova_id=prova_id, aluno_id=aluno_id
         )
 
-        # Se template falhou totalmente, tenta IA como fallback
+        # Template falhou totalmente → tenta IA
         if not resultado_template:
-            logging.warning("⚠️ Template falhou completamente. Tentando IA como fallback...")
+            logging.warning("⚠️ EvalBee falhou. Tentando IA como fallback...")
             if OPENAI_AVAILABLE and openai_client is not None:
                 return corrigir_com_ia_fallback(
                     imagem_base64, padrao_gabarito, aluno_nome,
@@ -2050,29 +1521,30 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         conf_media = sum(confiancas) / len(confiancas) if confiancas else 0
         detectadas = sum(1 for r in respostas if r)
 
-        logging.info(f"📊 Template: confiança média={conf_media:.1f}%, detectadas={detectadas}/{total_questoes}")
+        logging.info(f"📊 EvalBee: média={conf_media:.1f}% "
+                     f"detectadas={detectadas}/{total_questoes} respostas={respostas}")
 
-        # Se detectou muito pouco, tenta IA como fallback
+        # Detectou muito pouco → tenta IA
         if detectadas < total_questoes * 0.15:
-            logging.warning(f"⚠️ Template detectou apenas {detectadas}/{total_questoes}. Tentando IA...")
+            logging.warning(f"⚠️ Só {detectadas}/{total_questoes}. Tentando IA...")
             if OPENAI_AVAILABLE and openai_client is not None:
                 resultado_ia = corrigir_com_ia_fallback(
                     imagem_base64, padrao_gabarito, aluno_nome,
                     serie, tipo_questoes, disciplina, bncc
                 )
-                # Se IA conseguiu, usa resultado dela
                 if not resultado_ia.get('erro'):
                     resultado_ia['modo'] = 'ia_fallback'
                     return resultado_ia
             return erro_correcao(
                 aluno_nome, serie, disciplina,
-                f'Template detectou apenas {detectadas}/{total_questoes} respostas.\n\n'
-                'Verifique se o cartão foi gerado pelo sistema e tire uma foto mais clara.'
+                f'Detectou só {detectadas}/{total_questoes}. '
+                'Tire foto mais clara, com os 4 marcadores visíveis.'
             )
 
+        # Todas as respostas iguais → suspeito
         nao_vazias = [r for r in respostas if r]
         if len(nao_vazias) >= 3 and len(set(nao_vazias)) == 1:
-            logging.warning(f"⚠️ Todas as respostas detectadas são '{nao_vazias[0]}'. Tentando IA...")
+            logging.warning(f"⚠️ Todas respostas = '{nao_vazias[0]}'. Tentando IA...")
             if OPENAI_AVAILABLE and openai_client is not None:
                 resultado_ia = corrigir_com_ia_fallback(
                     imagem_base64, padrao_gabarito, aluno_nome,
@@ -2083,22 +1555,21 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                     return resultado_ia
             return erro_correcao(
                 aluno_nome, serie, disciplina,
-                f'Todas as respostas detectadas são "{nao_vazias[0]}". Isso é impossível.\n\n'
-                'Tire uma nova foto com melhor iluminação.'
+                f'Todas as respostas "{nao_vazias[0]}" — impossível. '
+                'Foto com reflexo?'
             )
 
         return calcular_resultado_correcao(
             respostas, gabarito, aluno_nome, serie,
-            disciplina, tipo_questoes, 'template',
+            disciplina, tipo_questoes, 'template_evalbee_v4',
             bncc=bncc, confiancas=confiancas
         )
 
     except Exception as e:
-        logging.error(f"❌ Erro na correção por template: {e}")
+        logging.error(f"❌ Erro na correção: {e}")
         traceback.print_exc()
-        # Em caso de exceção, tenta IA como último recurso
         if OPENAI_AVAILABLE and openai_client is not None:
-            logging.warning("⚠️ Exceção no template. Tentando IA como fallback...")
+            logging.warning("⚠️ Exceção no template. Tentando IA...")
             return corrigir_com_ia_fallback(
                 imagem_base64, padrao_gabarito, aluno_nome,
                 serie, tipo_questoes, disciplina, bncc
@@ -2368,7 +1839,6 @@ def corrigir_lote():
                     })
                     continue
 
-                # Cache persistente
                 imagem_hash = hashlib.md5(imagem.encode()).hexdigest()
                 cache_key = get_cache_key(imagem_hash, prova_id, aluno_id)
                 cached = get_cache_correcao(cache_key)
@@ -2452,7 +1922,6 @@ def corrigir_lote():
                 resultado['sucesso'] = True
                 resultados.append(resultado)
 
-                # Salva no cache
                 try:
                     set_cache_correcao(cache_key, resultado)
                 except Exception:
@@ -2605,7 +2074,6 @@ def corrigir_redacao():
                 {{"nota": 7.5, "metricas": {{"nota_coerencia": 8, "nota_estrutura": 7.5, "nota_gramatica": 7, "nota_vocabulario": 7.5}}, "feedback": "texto..."}}
                 """
 
-                # response_format só funciona com gpt-4o / gpt-4-turbo
                 create_kwargs = {
                     "model": OPENAI_MODEL,
                     "messages": [
@@ -5019,7 +4487,8 @@ def health_check():
         'pyzbar': 'disponível' if PYZBAR_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'cascata v3.3 (template + fallback IA)',
+        'correcao': 'EvalBee v4 (A,B,C / A,B,C,D / A,B,C,D,E)',
+        'versao': 'v4.0-EvalBee',
         'arquivos': arquivos
     })
 
@@ -5622,7 +5091,7 @@ except Exception as e:
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v3.3 — TEMPLATE + FALLBACK IA")
+    print("🚀 SERVIDOR CORRIGEPRO v4.0 — EVALBEE (A,B,C / A,B,C,D / A,B,C,D,E)")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -5631,15 +5100,14 @@ if __name__ == '__main__':
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print(f"📷 pyzbar (QR Code): {'✅ Disponível' if PYZBAR_AVAILABLE else '❌ Indisponível'}")
     print("=" * 60)
-    print("🎯 v3.3 — CORREÇÕES APLICADAS:")
-    print("   ✅ Removido bloco duplicado em gerar_prompt_otimizado")
-    print("   ✅ Removida definição duplicada de amostrar_bolha_template")
-    print("   ✅ init_db() movido para nível de módulo (compatível com gunicorn)")
-    print("   ✅ Fallback para IA quando template falha ou detecta pouco")
-    print("   ✅ Aviso no log se pyzbar não estiver instalado")
-    print("   ✅ _validar_resposta_ia_contra_gabarito trata None no gabarito")
-    print("   ✅ corrigir_lote agora usa cache persistente")
-    print("   ✅ dashboard() simplificado (sem cache thread-unsafe)")
+    print("🎯 v4.0 — PRINCIPAIS MUDANÇAS:")
+    print("   ✅ Detecção fiducial v4 (adaptativa, robusta a sombra/blur)")
+    print("   ✅ Correção por fill ratio no local esperado do template")
+    print("   ✅ Origem = CENTRO do marcador (não o canto) — EvalBee style")
+    print("   ✅ Suporte completo a 3, 4 ou 5 alternativas")
+    print("   ✅ Removido HoughCircles (fonte de erros em fotos ruins)")
+    print("   ✅ Fallback IA só quando EvalBee falha drasticamente")
+    print("   ✅ Templates gerados usam a MESMA geometria da correção")
     print("=" * 60)
 
     app.run(host='0.0.0.0', port=port, debug=False)
