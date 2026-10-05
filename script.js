@@ -7922,11 +7922,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // CORREÇÃO AUTOMÁTICA POR QR CODE
 // ============================================
 
-let autoModoAtivo = false; // Flag que indica se a câmera está no modo automático
+let autoModoAtivo = false;
 
 function abrirCameraAutomatico() {
     autoModoAtivo = true;
-    abrirCamera(); // Reutiliza a câmera existente
+    abrirCamera();
 }
 
 function processarArqAutomatico(input) {
@@ -7942,7 +7942,6 @@ function processarArqAutomatico(input) {
     reader.onload = function(e) {
         const base64 = e.target.result;
 
-        // Mostra o preview
         const preview = document.getElementById('auto-preview');
         const img = document.getElementById('auto-img-prev');
         if (preview && img) {
@@ -7950,17 +7949,16 @@ function processarArqAutomatico(input) {
             preview.style.display = 'block';
         }
 
-        // Limpa resultado anterior
         const resultado = document.getElementById('auto-resultado');
         if (resultado) resultado.style.display = 'none';
 
-        // Guarda a imagem para usar no corrigir
         window._autoImagem = base64;
 
         showToast('✅ Imagem carregada! Clique em "CORRIGIR AUTOMATICAMENTE"', 'success');
     };
     reader.readAsDataURL(file);
 }
+
 async function corrigirAutomatico() {
     const imagem = window._autoImagem;
 
@@ -7969,7 +7967,6 @@ async function corrigirAutomatico() {
         return;
     }
 
-    // Esconde resultado anterior e mostra loading
     const resultadoDiv = document.getElementById('auto-resultado');
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
 
@@ -7990,7 +7987,10 @@ async function corrigirAutomatico() {
         const response = await fetch(`${API_URL}/api/corrigir-automatico`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imagem: imagem })
+            body: JSON.stringify({
+                imagem: imagem,
+                salvar_auto: false  // ⬅️ ADICIONADO: NÃO salva sozinho — usuário decide pelo botão "💾 Salvar"
+            })
         });
 
         const dados = await response.json();
@@ -8002,7 +8002,6 @@ async function corrigirAutomatico() {
 
         mostrarResultadoAutomatico(dados);
 
-        // Limpa a imagem após sucesso
         window._autoImagem = null;
         const preview = document.getElementById('auto-preview');
         if (preview) preview.style.display = 'none';
@@ -8044,6 +8043,40 @@ function mostrarResultadoAutomatico(dados) {
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
     if (!conteudoDiv) return;
 
+    // ⬇️ ADICIONADO: prepara os dados para reutilizar as funções da Tela 2
+    // (abrirCorrecaoManual e salvarCorrecao já trabalham com correcaoManualData)
+    if (dados.sucesso || !dados.erro) {
+        const gabarito = dados.gabarito || [];
+        const respostas = dados.respostas_detectadas || [];
+        const quantidade = dados.total || gabarito.length || 20;
+        const tipoQuestoes = parseInt(dados.tipo_questoes) || 4;
+        const alternativas = tipoQuestoes === 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+        const valorPorQuestao = quantidade > 0 ? (10 / quantidade) : 0.5;
+
+        correcaoManualData = {
+            alunoId: dados.aluno_id || dados.qr_lido?.aluno_id,
+            alunoNome: dados.aluno || 'Aluno',
+            provaId: dados.prova_id || dados.qr_lido?.prova_id,
+            provaTitulo: dados.prova_titulo || 'Prova',
+            gabarito: gabarito,
+            respostasAluno: respostas.slice(),
+            quantidade: quantidade,
+            alternativas: alternativas,
+            notaMaxima: 10,
+            notaMinima: 5,
+            valorPorQuestao: valorPorQuestao,
+            serie: dados.serie || '',
+            disciplina: dados.disciplina || '',
+            confianca_por_questao: dados.confianca_por_questao || [],
+            questoes_suspeitas: dados.questoes_suspeitas || [],
+            bncc: dados.bncc || [],
+            questoes_status: dados.questoes_status || []
+        };
+
+        window.ultimoResultadoAuto = dados;
+    }
+    // ⬆️ ADICIONADO
+
     const nota = dados.nota || 0;
     const acertos = dados.acertos || 0;
     const total = dados.total || 0;
@@ -8068,7 +8101,6 @@ function mostrarResultadoAutomatico(dados) {
         'avancado': '🟢 Avançado'
     }[conceito] || conceito;
 
-    // Monta a grade de questões
     let questoesHtml = '';
     if (dados.questoes_status && Array.isArray(dados.questoes_status)) {
         questoesHtml = '<div style="display:grid; grid-template-columns:repeat(10,1fr); gap:4px; margin-top:12px;">';
@@ -8089,7 +8121,6 @@ function mostrarResultadoAutomatico(dados) {
         questoesHtml += '</div>';
     }
 
-    // Alerta de revisão manual
     let alertaHtml = '';
     if (dados.requer_revisao_manual) {
         alertaHtml = `
@@ -8156,6 +8187,8 @@ function mostrarResultadoAutomatico(dados) {
             ${alertaHtml}
 
             <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center;">
+                <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()">✏️ Correção Manual</button>
+                <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()">💾 Salvar</button>
                 <button class="btn btn-green btn-sm" onclick="go('resultados')">📊 Ver em Resultados</button>
                 <button class="btn btn-outline btn-sm" onclick="limparResultadoAutomatico()">🔄 Nova Correção</button>
                 <button class="btn btn-primary btn-sm" onclick="go('desempenho')">📈 Desempenho do Aluno</button>
@@ -8180,4 +8213,40 @@ function limparResultadoAutomatico() {
 
     window._autoImagem = null;
     showToast('🔄 Pronto para nova correção', 'info');
+}
+
+// ============================================
+// ═══ ADAPTADORES: Tela 1 (QR Code) → Funções da Tela 2 ═══
+// ============================================
+
+/**
+ * Botão "✏️ Correção Manual" da tela do QR Code.
+ * Reaproveita a função abrirCorrecaoManual() que já existe.
+ */
+function abrirCorrecaoManualAuto() {
+    if (!correcaoManualData || !correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
+        showToast('❌ Nenhuma correção para editar!', 'error');
+        return;
+    }
+    if (!correcaoManualData.gabarito || correcaoManualData.gabarito.length === 0) {
+        showToast('❌ Gabarito não disponível para esta prova!', 'error');
+        return;
+    }
+    abrirCorrecaoManual();
+}
+
+/**
+ * Botão "💾 Salvar" da tela do QR Code.
+ * Reaproveita a função salvarCorrecao() que já existe.
+ */
+async function salvarCorrecaoAuto() {
+    if (!correcaoManualData || !correcaoManualData.respostasAluno) {
+        showToast('❌ Nenhuma correção para salvar!', 'error');
+        return;
+    }
+    if (!correcaoManualData.provaId || !correcaoManualData.alunoId) {
+        showToast('❌ Dados incompletos: prova ou aluno ausentes!', 'error');
+        return;
+    }
+    await salvarCorrecao();
 }
