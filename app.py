@@ -3938,10 +3938,131 @@ def gerar_gabarito():
         turma_nome = aluno['turma_nome'] or ''
         serie = prova.get('serie', '')
         titulo_prova = prova.get('titulo', 'Prova')
+        disciplina_prova = (prova.get('disciplina') or '').strip()
 
         tipo_questoes = int(prova.get('tipo_questoes', 4))
         alternativas = ['A', 'B', 'C', 'D', 'E'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
+
+        # ═══════════════════════════════════════════════════════════
+        # SE FOR REDAÇÃO → GERA FOLHA EM BRANCO (sem bolhas)
+        # ═══════════════════════════════════════════════════════════
+        if disciplina_prova == 'Redação':
+            logging.info(f"📝 Gerando FOLHA DE REDAÇÃO para {nome_aluno}")
+
+            qr_dados_red = f"ALUNO:{aluno_id}|PROVA:{prova_id}|ESCOLA:{escola_id}|TURMA:{turma_id}"
+            qr_base64_red = gerar_qrcode_base64(qr_dados_red)
+
+            num_linhas = quantidade_questoes if quantidade_questoes >= 10 else 30
+            num_linhas = min(num_linhas, 50)
+
+            linhas_pautadas = ""
+            for i in range(1, num_linhas + 1):
+                linhas_pautadas += f'''
+                <div style="display:flex;align-items:center;margin-bottom:1.5mm;">
+                    <div style="width:8mm;font-size:7pt;color:#999;text-align:right;padding-right:1.5mm;font-family:monospace;">{i:02d}</div>
+                    <div style="flex:1;border-bottom:0.25mm solid #ccc;height:7.5mm;"></div>
+                </div>
+                '''
+
+            html_redacao = f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Folha de Redação - {nome_aluno}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        @page {{ size: A4 portrait; margin: 0; }}
+        body {{ font-family: Arial, sans-serif; background: #f5f5f5; padding: 10px; display: flex; justify-content: center; }}
+        .folha {{ width: 210mm; height: 297mm; background: #fff; position: relative; box-shadow: 0 2px 20px rgba(0,0,0,0.15); }}
+
+        .fiducial {{ position: absolute; width: 10mm; height: 10mm; background: #000; z-index: 100; }}
+        .fiducial::after {{ content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4mm; height: 4mm; background: #fff; border-radius: 50%; }}
+        .fiducial-tl {{ left: 15mm; top: 15mm; }}
+        .fiducial-tr {{ right: 15mm; top: 15mm; }}
+        .fiducial-bl {{ left: 15mm; bottom: 15mm; }}
+        .fiducial-br {{ right: 15mm; bottom: 15mm; }}
+
+        .qr-code-bloco {{ position: absolute; top: 28mm; right: 15mm; width: 35mm; height: 35mm; z-index: 50; }}
+        .qr-code-bloco img {{ width: 100%; height: 100%; display: block; border: 0.3mm solid #000; padding: 1mm; background: #fff; }}
+
+        .header {{ position: absolute; left: 25mm; top: 25mm; width: 170mm; height: 42mm; border-bottom: 1.5px solid #000; padding-bottom: 2mm; }}
+        .header-titulo {{ font-size: 8pt; font-weight: bold; text-align: center; letter-spacing: 0.5px; }}
+        .header-cartao {{ font-size: 14pt; font-weight: 900; text-align: center; border: 2px solid #000; display: inline-block; padding: 1mm 8mm; margin: 1mm auto; }}
+        .header-prova {{ font-size: 9pt; font-weight: bold; text-align: center; margin-top: 1mm; }}
+        .header-escola {{ font-size: 7pt; color: #333; text-align: center; }}
+        .header-aluno {{ font-size: 9pt; margin-top: 2.5mm; padding: 0 2mm; }}
+        .header-linha {{ margin-top: 1.5mm; padding: 0 2mm; font-size: 9pt; }}
+        .campo {{ border-bottom: 0.3mm solid #000; display: inline-block; min-width: 40mm; padding: 0 1mm; }}
+
+        .instrucoes {{ position: absolute; left: 25mm; top: 65mm; width: 160mm; font-size: 7pt; padding: 1.5mm 3mm; background: #f0f0f0; border: 0.3mm solid #999; line-height: 1.4; }}
+
+        .area-redacao {{ position: absolute; left: 25mm; top: 73mm; width: 160mm; height: 202mm; }}
+        .area-redacao-titulo {{ font-size: 8pt; font-weight: 700; color: #333; margin-bottom: 2mm; border-bottom: 0.3mm solid #000; padding-bottom: 1mm; }}
+
+        .rodape {{ position: absolute; left: 25mm; right: 25mm; bottom: 20mm; font-size: 6pt; color: #666; border-top: 1px solid #ccc; padding-top: 1mm; display: flex; justify-content: space-between; }}
+
+        .btn-print {{ position: absolute; bottom: 5mm; left: 50%; transform: translateX(-50%); padding: 3mm 10mm; background: #000; color: #fff; border: none; font-size: 11pt; font-weight: bold; cursor: pointer; border-radius: 2mm; }}
+
+        @media print {{
+            body {{ background: #fff; padding: 0; }}
+            .folha {{ box-shadow: none; }}
+            .btn-print {{ display: none; }}
+            .fiducial, .fiducial::after {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="folha">
+        <div class="fiducial fiducial-tl"></div>
+        <div class="fiducial fiducial-tr"></div>
+        <div class="fiducial fiducial-bl"></div>
+        <div class="fiducial fiducial-br"></div>
+
+        <div class="qr-code-bloco">
+            <img src="data:image/png;base64,{qr_base64_red}" alt="QR Code">
+        </div>
+
+        <div class="header">
+            <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div>
+            <div style="text-align:center;">
+                <div class="header-cartao">FOLHA DE REDAÇÃO</div>
+            </div>
+            <div class="header-prova">{titulo_prova}</div>
+            <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
+            <div class="header-aluno"><strong>Aluno(a):</strong> {nome_aluno}</div>
+            <div class="header-linha">
+                <strong>Data:</strong> <span class="campo">{datetime.now().strftime('%d/%m/%Y')}</span>
+                &nbsp;&nbsp;
+                <strong>Nº:</strong> <span class="campo" style="min-width:20mm;"></span>
+            </div>
+        </div>
+
+        <div class="instrucoes">
+            <strong>⚠️ INSTRUÇÕES:</strong>
+            Escreva com caneta <strong>preta ou azul</strong>. Não rasure. Letra legível. Respeite as margens.
+            Use uma linha por linha de texto. Não escreva fora da área pautada.
+        </div>
+
+        <div class="area-redacao">
+            <div class="area-redacao-titulo">✍️ TEXTO DEFINITIVO</div>
+            {linhas_pautadas}
+        </div>
+
+        <div class="rodape">
+            <span>Gerado por CorrigePro — {datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+            <span>Página 1/1</span>
+        </div>
+
+        <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
+    </div>
+</body>
+</html>
+"""
+            return html_redacao, 200, {'Content-Type': 'text/html'}
+        # ═══════════════════════════════════════════════════════════
+        # FLUXO NORMAL: CARTÃO RESPOSTA COM BOLHAS (outras disciplinas)
+        # ═══════════════════════════════════════════════════════════
 
         num_colunas_real = 1 if quantidade_questoes <= 12 else 2
 
@@ -4533,62 +4654,28 @@ def serve_static_file(filename):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    import os as _os
-    
     conn = get_db_connection()
     db_ok = conn is not None
     if conn:
         conn.close()
 
-    _key = _os.getenv('OPENAI_API_KEY', '')
-    
-    # ═══ TESTE REAL DA CHAVE OPENAI ═══
-    teste_openai = {'status': 'não testado'}
-    if _key and _key.startswith('sk-'):
-        try:
-            from openai import OpenAI
-            client = OpenAI(api_key=_key)
-            # Faz uma chamada real e barata
-            models = client.models.list()
-            teste_openai = {
-                'status': 'OK',
-                'modelos_disponiveis': len(list(models))
-            }
-        except Exception as e:
-            teste_openai = {
-                'status': 'ERRO',
-                'tipo': type(e).__name__,
-                'mensagem': str(e)[:300],
-                'repr': repr(e)[:300]
-            }
-    else:
-        teste_openai = {
-            'status': 'chave_ausente_ou_invalida',
-            'tem_chave': bool(_key)
-        }
-    
+    arquivos = {
+        'index.html': os.path.isfile('index.html'),
+        'style.css': os.path.isfile('style.css'),
+        'script.js': os.path.isfile('script.js'),
+    }
+
     return jsonify({
         'status': 'online',
-        'versao': 'v4.0-DEBUG2',
         'openai': 'disponível' if OPENAI_AVAILABLE else 'indisponível',
         'openai_modelo': OPENAI_MODEL if OPENAI_AVAILABLE else None,
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'pyzbar': 'disponível' if PYZBAR_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
-        
-        'debug_openai': {
-            'API_KEY_tamanho': len(_key),
-            'API_KEY_prefixo': _key[:8] if _key else '(vazio)',
-            'API_KEY_sufixo': _key[-4:] if len(_key) > 4 else '(curto)',
-            'vars_com_OPENAI': [k for k in _os.environ.keys() if 'OPENAI' in k.upper()],
-            'teste_real': teste_openai,       # ← AQUI VAI APARECER O ERRO
-        },
-        
-        'arquivos': {
-            'index.html': _os.path.isfile('index.html'),
-            'style.css': _os.path.isfile('style.css'),
-            'script.js': _os.path.isfile('script.js'),
-        }
+        'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
+        'correcao': 'EvalBee v4 (A,B,C / A,B,C,D / A,B,C,D,E)',
+        'versao': 'v4.0-EvalBee',
+        'arquivos': arquivos
     })
 
 
