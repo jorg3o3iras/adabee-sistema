@@ -2201,6 +2201,71 @@ def corrigir_redacao():
         print(f"❌ Erro na correção de redação: {e}")
         traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
+        
+@app.route('/api/extrair_texto_redacao', methods=['POST'])
+def extrair_texto_redacao():
+    """Extrai o texto de uma foto de redação usando OpenAI Vision."""
+    try:
+        data = request.json
+        imagem_base64 = data.get('imagem')
+        if not imagem_base64:
+            return jsonify({'erro': 'Imagem é obrigatória'}), 400
+
+        if not OPENAI_AVAILABLE or openai_client is None:
+            return jsonify({'erro': 'IA OpenAI não disponível'}), 503
+
+        if isinstance(imagem_base64, tuple):
+            imagem_base64 = imagem_base64[0]
+        if ',' in imagem_base64 and imagem_base64.strip().startswith('data:'):
+            mimetype = extrair_mimetype(imagem_base64)
+            imagem_limpa = imagem_base64.split(',', 1)[1]
+        else:
+            imagem_limpa = imagem_base64
+            mimetype = 'image/jpeg'
+
+        data_url = f"data:{mimetype};base64,{imagem_limpa}"
+
+        prompt = (
+            "Você é um sistema OCR profissional. Extraia TODO o texto manuscrito "
+            "ou impresso desta redação. Retorne APENAS o texto puro, sem comentários, "
+            "sem markdown, sem explicações. Preserve quebras de linha e parágrafos. "
+            "Se houver palavras ilegíveis, escreva [ilegível]."
+        )
+
+        response = openai_client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Você é um sistema OCR. Retorne apenas o texto extraído, sem formatação extra."
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}
+                    ]
+                }
+            ],
+            max_tokens=4000,
+            temperature=0.0,
+        )
+
+        texto_extraido = (response.choices[0].message.content or "").strip()
+
+        if not texto_extraido:
+            return jsonify({'erro': 'Não foi possível ler texto na imagem'}), 400
+
+        return jsonify({
+            'sucesso': True,
+            'texto': texto_extraido,
+            'caracteres': len(texto_extraido)
+        })
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao extrair texto: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 
 @app.route('/api/salvar_correcao_texto', methods=['POST'])
