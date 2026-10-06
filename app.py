@@ -4533,28 +4533,52 @@ def serve_static_file(filename):
 
 @app.route('/health', methods=['GET'])
 def health_check():
+    import sys
+    import os as _os
+    
     conn = get_db_connection()
     db_ok = conn is not None
     if conn:
         conn.close()
 
-    arquivos = {
-        'index.html': os.path.isfile('index.html'),
-        'style.css': os.path.isfile('style.css'),
-        'script.js': os.path.isfile('script.js'),
-    }
-
+    # Diagnóstico de variáveis
+    _key = _os.getenv('OPENAI_API_KEY', '')
+    _key_len = len(_key)
+    _key_prefix = _key[:8] if _key else '(vazio)'
+    _key_space = ' ' in _key if _key else False
+    _key_quotes = ('"' in _key or "'" in _key) if _key else False
+    
+    # Lista TODAS as variáveis que contêm "OPENAI" no nome
+    _openai_vars = [k for k in _os.environ.keys() if 'OPENAI' in k.upper()]
+    
     return jsonify({
         'status': 'online',
+        'versao': 'v4.0-DEBUG',           # ← mude isso para saber se o deploy aplicou
         'openai': 'disponível' if OPENAI_AVAILABLE else 'indisponível',
         'openai_modelo': OPENAI_MODEL if OPENAI_AVAILABLE else None,
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'pyzbar': 'disponível' if PYZBAR_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
         'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
-        'correcao': 'EvalBee v4 (A,B,C / A,B,C,D / A,B,C,D,E)',
-        'versao': 'v4.0-EvalBee',
-        'arquivos': arquivos
+        
+        # ═══════════ DIAGNÓSTICO OPENAI ═══════════
+        'debug_openai': {
+            'API_KEY_existe': bool(_key),
+            'API_KEY_tamanho': _key_len,
+            'API_KEY_prefixo': _key_prefix,
+            'API_KEY_tem_espaco': _key_space,
+            'API_KEY_tem_aspas': _key_quotes,
+            'vars_com_OPENAI_no_nome': _openai_vars,
+            'OPENAI_MODEL_env': _os.getenv('OPENAI_MODEL', '(não definido)'),
+            'total_vars_ambiente': len(_os.environ.keys()),
+        },
+        # ══════════════════════════════════════════
+        
+        'arquivos': {
+            'index.html': _os.path.isfile('index.html'),
+            'style.css': _os.path.isfile('style.css'),
+            'script.js': _os.path.isfile('script.js'),
+        }
     })
 
 
