@@ -3085,7 +3085,64 @@ async function avaliarTexto() {
     }
 }
 
-function salvarAvaliacaoTexto() { showToast('💾 Avaliação salva com sucesso!', 'success'); }
+async function salvarAvaliacaoTexto() {
+    // Pega os valores da tela
+    const alunoId = document.getElementById('txt-aluno-select').value;
+    const provaId = document.getElementById('txt-prova').value;
+    const texto = document.getElementById('txt-aluno').value;
+    const nota = parseFloat(document.getElementById('txt-nota').textContent) || 0;
+    const feedback = document.getElementById('txt-fb').innerHTML || '';
+
+    // Pega as métricas
+    const metricas = {
+        nota_coerencia: parseFloat(document.getElementById('c-coe').textContent) || 0,
+        nota_estrutura: parseFloat(document.getElementById('c-tema').textContent) || 0,
+        nota_gramatica: parseFloat(document.getElementById('c-ort').textContent) || 0,
+        nota_vocabulario: parseFloat(document.getElementById('c-voc').textContent) || 0
+    };
+
+    // Validações
+    if (!alunoId) {
+        showToast('⚠️ Selecione o aluno antes de salvar!', 'error');
+        return;
+    }
+    if (!texto || texto.trim().length < 5) {
+        showToast('⚠️ Nenhum texto para salvar!', 'error');
+        return;
+    }
+    if (!nota || nota === 0) {
+        showToast('⚠️ Avalie o texto antes de salvar!', 'error');
+        return;
+    }
+
+    showToast('💾 Salvando avaliação...', 'info');
+
+    try {
+        const response = await fetch(API_URL + '/api/salvar_correcao_texto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: parseInt(alunoId),
+                prova_id: provaId ? parseInt(provaId) : null,
+                texto: texto,
+                nota: nota,
+                metricas: metricas,
+                feedback: feedback
+            })
+        });
+
+        const dados = await response.json();
+
+        if (dados.sucesso) {
+            showToast(`✅ Avaliação salva! Aluno vinculado. Nota: ${nota.toFixed(1)}`, 'success');
+        } else {
+            showToast('❌ Erro ao salvar: ' + (dados.erro || 'Erro desconhecido'), 'error');
+        }
+    } catch (err) {
+        console.error('Erro ao salvar avaliação:', err);
+        showToast('❌ Erro ao salvar: ' + err.message, 'error');
+    }
+}
 
 // ============================================
 // FUNÇÕES DE CÂMERA
