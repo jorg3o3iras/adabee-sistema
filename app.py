@@ -4029,7 +4029,29 @@ def gerar_qrcode_base64(dados):
         logging.error(f"❌ Erro ao gerar QR Code: {e}")
         traceback.print_exc()
         return ""
-
+def carregar_logo_base64(nome_arquivo):
+    """Carrega a logo do disco e devolve como data URL (base64)."""
+    try:
+        if not nome_arquivo or not os.path.isfile(nome_arquivo):
+            logging.warning(f"⚠️ Logo não encontrada: {nome_arquivo}")
+            return ''
+        with open(nome_arquivo, 'rb') as f:
+            dados = f.read()
+        b64 = base64.b64encode(dados).decode('utf-8')
+        ext = nome_arquivo.lower().rsplit('.', 1)[-1]
+        mime = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml',
+            'webp': 'image/webp',
+        }.get(ext, 'image/png')
+        logging.info(f"✅ Logo carregada: {nome_arquivo} ({len(dados)} bytes)")
+        return f"data:{mime};base64,{b64}"
+    except Exception as e:
+        logging.error(f"❌ Erro ao carregar logo: {e}")
+        return ''
 
 # ============================================
 # ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
@@ -4077,6 +4099,15 @@ def gerar_gabarito():
         nome_aluno = aluno['nome']
         escola_nome = aluno['escola_nome'] or ''
         turma_nome = aluno['turma_nome'] or ''
+                # 🖼️ Logo do cabeçalho dos cartões
+        LOGO_ARQUIVO = 'logotipo cartão resposta.png'
+        logo_base64 = carregar_logo_base64(LOGO_ARQUIVO)
+        logo_html = (
+            f'<img src="{logo_base64}" alt="Logo" '
+            f'style="height:16mm; max-width:100%; object-fit:contain; '
+            f'margin:0 auto 1.5mm auto; display:block;">'
+            if logo_base64 else ''
+        )
         serie = prova.get('serie', '')
         titulo_prova = prova.get('titulo', 'Prova')
         disciplina_prova = (prova.get('disciplina') or '').strip()
@@ -4127,7 +4158,7 @@ def gerar_gabarito():
         .qr-code-bloco {{ position: absolute; top: 28mm; right: 15mm; width: 35mm; height: 35mm; z-index: 50; }}
         .qr-code-bloco img {{ width: 100%; height: 100%; display: block; border: 0.3mm solid #000; padding: 1mm; background: #fff; }}
 
-        .header {{ position: absolute; left: 25mm; top: 25mm; width: 170mm; height: 42mm; border-bottom: 1.5px solid #000; padding-bottom: 2mm; }}
+        .header {{ position: absolute; left: 25mm; top: 25mm; width: 170mm; height: 52mm; border-bottom: 1.5px solid #000; padding-bottom: 2mm; }}
         .header-titulo {{ font-size: 8pt; font-weight: bold; text-align: center; letter-spacing: 0.5px; }}
         .header-cartao {{ font-size: 14pt; font-weight: 900; text-align: center; border: 2px solid #000; display: inline-block; padding: 1mm 8mm; margin: 1mm auto; }}
         .header-prova {{ font-size: 9pt; font-weight: bold; text-align: center; margin-top: 1mm; }}
@@ -4136,9 +4167,9 @@ def gerar_gabarito():
         .header-linha {{ margin-top: 1.5mm; padding: 0 2mm; font-size: 9pt; }}
         .campo {{ border-bottom: 0.3mm solid #000; display: inline-block; min-width: 40mm; padding: 0 1mm; }}
 
-        .instrucoes {{ position: absolute; left: 25mm; top: 65mm; width: 160mm; font-size: 7pt; padding: 1.5mm 3mm; background: #f0f0f0; border: 0.3mm solid #999; line-height: 1.4; }}
+        .instrucoes {{ position: absolute; left: 25mm; top: 75mm; width: 160mm; font-size: 7pt; padding: 1.5mm 3mm; background: #f0f0f0; border: 0.3mm solid #999; line-height: 1.4; }}
 
-        .area-redacao {{ position: absolute; left: 25mm; top: 73mm; width: 160mm; height: 202mm; }}
+        .area-redacao {{ position: absolute; left: 25mm; top: 83mm; width: 160mm; height: 202mm; }}
         .area-redacao-titulo {{ font-size: 8pt; font-weight: 700; color: #333; margin-bottom: 2mm; border-bottom: 0.3mm solid #000; padding-bottom: 1mm; }}
 
         .rodape {{ position: absolute; left: 25mm; right: 25mm; bottom: 20mm; font-size: 6pt; color: #666; border-top: 1px solid #ccc; padding-top: 1mm; display: flex; justify-content: space-between; }}
@@ -4165,6 +4196,7 @@ def gerar_gabarito():
         </div>
 
         <div class="header">
+            {logo_html} 
             <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div>
             <div style="text-align:center;">
                 <div class="header-cartao">FOLHA DE REDAÇÃO</div>
@@ -4322,7 +4354,7 @@ def gerar_gabarito():
             left: 25mm;
             top: 25mm;
             width: 170mm;
-            height: 55mm;
+            height: 65mm;
             text-align: center;
             border-bottom: 1.5px solid #000;
             display: flex;
@@ -4417,6 +4449,7 @@ def gerar_gabarito():
         </div>
 
         <div class="header-abs">
+            {logo_html}
             <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div>
             <div class="header-cartao">CARTÃO RESPOSTA</div>
             <div class="header-prova">{titulo_prova}</div>
