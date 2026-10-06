@@ -3978,8 +3978,8 @@ def gerar_gabarito():
             top: 15mm;
             left: 50%;
             transform: translateX(-50%);
-            width: 22mm;
-            height: 22mm;
+            width: 26mm;
+            height: 26mm;
             z-index: 50;
         }}
         .qr-code-bloco img {{
