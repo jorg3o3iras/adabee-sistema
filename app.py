@@ -4090,7 +4090,7 @@ def gerar_gabarito():
         </div>
 
         <div class="header-abs">
-            <div class="header-titulo">SECRETARIA MUNICIPAL DE EDUCAÇÃO — SISAM 2026</div>
+            <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div>
             <div class="header-cartao">CARTÃO RESPOSTA</div>
             <div class="header-prova">{titulo_prova}</div>
             <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
