@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste IA - CorrigePro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 22px; margin-bottom: 6px; color: #60a5fa; }
+        .sub { color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.3); }
+        button:disabled { opacity: 0.5; cursor: wait; transform: none; }
+        button.secondary { background: #334155; }
+        button.secondary:hover { background: #475569; box-shadow: none; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .row.c3 { grid-template-columns: 1fr 1fr 1fr; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            border: 1px solid #334155;
+        }
+        .resultado {
+            display: none;
+            margin-top: 16px;
+        }
+        .resultado.show { display: block; }
+        .status {
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .status.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #6ee7b7; }
+        .status.error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+        .status.info { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); color: #93c5fd; }
+        .status.warning { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #fcd34d; }
+        pre {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 14px;
+            overflow: auto;
+            font-size: 12px;
+            max-height: 400px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #cbd5e1;
+        }
+        .grid-respostas {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .resp-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 6px;
+            text-align: center;
+        }
+        .resp-item .q { font-size: 10px; color: #64748b; font-weight: 700; }
+        .resp-item .r { font-size: 20px; font-weight: 900; color: #60a5fa; line-height: 1.2; }
+        .resp-item .c { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+        .comparacao {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .comp-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 6px;
+            text-align: center;
+        }
+        .comp-item.ok { border-color: #10b981; background: rgba(16,185,129,0.08); }
+        .comp-item.err { border-color: #ef4444; background: rgba(239,68,68,0.08); }
+        .comp-item .q { font-size: 10px; color: #64748b; font-weight: 700; }
+        .comp-item .r { font-size: 16px; font-weight: 800; line-height: 1.2; }
+        .comp-item.ok .r { color: #10b981; }
+        .comp-item.err .r { color: #ef4444; }
+        .comp-item .g { font-size: 9px; color: #94a3b8; }
+        .info-prova {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .info-prova > div {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+        .info-prova .lbl { font-size: 10px; color: #64748b; font-weight: 700; }
+        .info-prova .val { font-size: 14px; color: #e2e8f0; font-weight: 600; margin-top: 2px; }
+    </style>
+</head>
+<body>
+
+<h1>🤖 Teste IA - CorrigePro</h1>
+<p class="sub">Testa a IA de correção direto contra a API do Render, sem passar pelo sistema.</p>
+
+<!-- ============ PASSO 1: SELECIONAR PROVA ============ -->
+<div class="card">
+    <label>🔗 1. URL da API</label>
+    <input type="text" id="apiUrl" value="https://adabee-sistema-3.onrender.com" />
+
+    <div class="btn-group">
+        <button class="secondary" onclick="carregarProvas()">📋 Carregar provas</button>
+        <button class="secondary" onclick="carregarAlunos()">🎒 Carregar alunos</button>
+    </div>
+
+    <div style="margin-top: 14px;">
+        <label>📝 2. Selecione a prova</label>
+        <select id="provaSelect" onchange="mostrarInfoProva()">
+            <option value="">-- Clique em "Carregar provas" primeiro --</option>
+        </select>
+    </div>
+
+    <div style="margin-top: 12px;">
+        <label>🎒 3. Selecione o aluno</label>
+        <select id="alunoSelect">
+            <option value="">-- Clique em "Carregar alunos" primeiro --</option>
+        </select>
+    </div>
+
+    <div id="infoProva" style="margin-top: 14px; display: none;"></div>
+</div>
+
+<!-- ============ PASSO 2: FOTO ============ -->
+<div class="card">
+    <label>📸 4. Foto do cartão resposta</label>
+    <input type="file" id="fotoInput" accept="image/*" onchange="previewImagem(event)" />
+    <img id="preview" />
+
+    <div class="btn-group">
+        <button id="btnCorrigir" onclick="corrigir()">🚀 Corrigir com IA</button>
+        <button class="secondary" onclick="limpar()">🗑️ Limpar</button>
+    </div>
+</div>
+
+<!-- ============ PASSO 3: RESULTADO ============ -->
+<div id="resultado" class="resultado">
+    <div id="statusBox" class="status"></div>
+
+    <div id="conteudoResultado"></div>
+
+    <div class="card">
+        <label>📋 Resposta bruta do servidor</label>
+        <pre id="rawJson"></pre>
+    </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function previewImagem(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        $('preview').src = e.target.result;
+        $('preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function carregarProvas() {
+    const apiUrl = $('apiUrl').value.trim();
+    $('provaSelect').innerHTML = '<option>Carregando...</option>';
+    try {
+        const res = await fetch(apiUrl + '/api/provas');
+        const provas = await res.json();
+        if (!provas || provas.length === 0) {
+            $('provaSelect').innerHTML = '<option value="">Nenhuma prova cadastrada</option>';
+            return;
+        }
+        let html = '<option value="">-- Selecione --</option>';
+        provas.forEach(p => {
+            html += `<option value="${p.id}">${p.titulo} | ${p.serie || '?'} | ${p.disciplina || '?'} | ${p.quantidade_questoes || '?'}q</option>`;
+        });
+        $('provaSelect').innerHTML = html;
+    } catch (e) {
+        $('provaSelect').innerHTML = '<option value="">Erro: ' + e.message + '</option>';
+    }
+}
+
+async function carregarAlunos() {
+    const apiUrl = $('apiUrl').value.trim();
+    $('alunoSelect').innerHTML = '<option>Carregando...</option>';
+    try {
+        const res = await fetch(apiUrl + '/api/alunos');
+        const alunos = await res.json();
+        if (!alunos || alunos.length === 0) {
+            $('alunoSelect').innerHTML = '<option value="">Nenhum aluno cadastrado</option>';
+            return;
+        }
+        let html = '<option value="">-- Selecione --</option>';
+        alunos.forEach(a => {
+            html += `<option value="${a.id}">${a.nome} (Nº ${a.numero_chamada || '—'})</option>`;
+        });
+        $('alunoSelect').innerHTML = html;
+    } catch (e) {
+        $('alunoSelect').innerHTML = '<option value="">Erro: ' + e.message + '</option>';
+    }
+}
+
+async function mostrarInfoProva() {
+    const apiUrl = $('apiUrl').value.trim();
+    const provaId = $('provaSelect').value;
+    if (!provaId) { $('infoProva').style.display = 'none'; return; }
+
+    try {
+        const res = await fetch(`${apiUrl}/api/provas/${provaId}`);
+        const prova = await res.json();
+        const gab = prova.gabarito || [];
+        const bncc = prova.bncc || [];
+
+        let html = `
+            <div class="info-prova">
+                <div><div class="lbl">📝 Prova</div><div class="val">${prova.titulo || '—'}</div></div>
+                <div><div class="lbl">📚 Série</div><div class="val">${prova.serie || '—'}</div></div>
+                <div><div class="lbl">📖 Disciplina</div><div class="val">${prova.disciplina || '—'}</div></div>
+                <div><div class="lbl">🔢 Questões</div><div class="val">${prova.quantidade_questoes || gab.length}</div></div>
+                <div><div class="lbl">📋 Alternativas</div><div class="val">${prova.tipo_questoes == '3' ? 'A, B, C' : 'A, B, C, D'}</div></div>
+            </div>
+            <label>🎯 Gabarito oficial cadastrado</label>
+            <div class="grid-respostas">
+        `;
+        gab.forEach((g, i) => {
+            const codigoBncc = (i < bncc.length) ? bncc[i] : '';
+            html += `
+                <div class="resp-item">
+                    <div class="q">Q${i+1}</div>
+                    <div class="r">${g || '—'}</div>
+                    ${codigoBncc ? `<div class="c">${codigoBncc}</div>` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        $('infoProva').innerHTML = html;
+        $('infoProva').style.display = 'block';
+    } catch (e) {
+        $('infoProva').innerHTML = '<div style="color: #fca5a5;">Erro ao carregar prova: ' + e.message + '</div>';
+        $('infoProva').style.display = 'block';
+    }
+}
+
+function mostrarStatus(tipo, html) {
+    const box = $('statusBox');
+    box.className = 'status ' + tipo;
+    box.innerHTML = html;
+    $('resultado').classList.add('show');
+}
+
+async function corrigir() {
+    const apiUrl = $('apiUrl').value.trim();
+    const provaId = $('provaSelect').value;
+    const alunoId = $('alunoSelect').value;
+    const file = $('fotoInput').files[0];
+
+    if (!provaId) return alert('Selecione a prova!');
+    if (!alunoId) return alert('Selecione o aluno!');
+    if (!file) return alert('Selecione a foto do cartão!');
+
+    $('btnCorrigir').disabled = true;
+    $('btnCorrigir').textContent = '⏳ Processando...';
+    mostrarStatus('info', '⏳ Enviando imagem e aguardando IA...');
+
+    try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const dataUrl = e.target.result;
+            const base64 = dataUrl.split(',')[1];
+
+            const t0 = Date.now();
+
+            try {
+                const res = await fetch(apiUrl + '/api/corrigir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imagem: base64,
+                        prova_id: parseInt(provaId),
+                        aluno_id: parseInt(alunoId)
+                    })
+                });
+
+                const tempo = ((Date.now() - t0) / 1000).toFixed(1);
+                const dados = await res.json();
+
+                $('rawJson').textContent = JSON.stringify(dados, null, 2);
+
+                if (dados.erro) {
+                    mostrarStatus('error', `❌ Erro do servidor: ${dados.erro} <br><small>Tempo: ${tempo}s</small>`);
+                    return;
+                }
+
+                renderizarResultado(dados, tempo);
+
+            } catch (err) {
+                mostrarStatus('error', `❌ Erro na requisição: ${err.message}`);
+            } finally {
+                $('btnCorrigir').disabled = false;
+                $('btnCorrigir').textContent = '🚀 Corrigir com IA';
+            }
+        };
+        reader.readAsDataURL(file);
+    } catch (err) {
+        mostrarStatus('error', `❌ Erro: ${err.message}`);
+        $('btnCorrigir').disabled = false;
+        $('btnCorrigir').textContent = '🚀 Corrigir com IA';
+    }
+}
+
+function renderizarResultado(dados, tempo) {
+    const metodo = dados.metodo_usado || dados.modo || 'desconhecido';
+    const respostas = dados.respostas_detectadas || [];
+    const gabarito = dados.gabarito || [];
+    const acertos = dados.acertos || 0;
+    const total = dados.total || respostas.length;
+    const confiancas = dados.confianca_por_questao || [];
+
+    const porcentagem = total > 0 ? Math.round((acertos / total) * 100) : 0;
+
+    let statusTipo = porcentagem >= 60 ? 'success' : porcentagem > 0 ? 'warning' : 'error';
+    let statusTexto = `${acertos}/${total} acertos (${porcentagem}%)`;
+    if (acertos === total && total > 0) statusTexto = `✅ PERFEITO! ${acertos}/${total} acertos!`;
+
+    mostrarStatus(statusTipo, `🎯 ${statusTexto} &nbsp;•&nbsp; Método: <strong>${metodo}</strong> &nbsp;•&nbsp; Tempo: ${tempo}s`);
+
+    // Comparação visual Q por Q
+    let compHtml = '<label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;margin-top:8px;">📊 Comparação Questão por Questão (IA vs Gabarito)</label>';
+    compHtml += '<div class="comparacao">';
+
+    const maxLen = Math.max(respostas.length, gabarito.length);
+    for (let i = 0; i < maxLen; i++) {
+        const r = respostas[i] || '—';
+        const g = gabarito[i] || '—';
+        const ok = r !== '—' && r === g;
+        const conf = confiancas[i] !== undefined ? confiancas[i] : '-';
+
+        compHtml += `
+            <div class="comp-item ${ok ? 'ok' : 'err'}">
+                <div class="q">Q${i+1}</div>
+                <div class="r">${r} ${ok ? '✓' : '✗'}</div>
+                <div class="g">gab: ${g}</div>
+                <div class="g">${conf}%</div>
+            </div>
+        `;
+    }
+    compHtml += '</div>';
+
+    // Diagnóstico
+    let diagnostico = '';
+    if (acertos === 0 && total > 0) {
+        diagnostico = `
+            <div class="status error" style="margin-top:12px;">
+                ⚠️ <strong>Nenhum acerto.</strong> Possíveis causas:<br>
+                • As respostas que a IA leu NÃO correspondem ao cartão (IA errou leitura)<br>
+                • O gabarito no banco está diferente do que está no cartão<br>
+                • Veja a comparação acima: as respostas da IA batem visualmente com o cartão?
+            </div>
+        `;
+    } else if (acertos === total && total > 0) {
+        diagnostico = `
+            <div class="status success" style="margin-top:12px;">
+                ✅ <strong>Perfeito!</strong> A IA leu corretamente e o gabarito está certo.
+            </div>
+        `;
+    }
+
+    $('conteudoResultado').innerHTML = compHtml + diagnostico;
+    $('resultado').classList.add('show');
+}
+
+function limpar() {
+    $('fotoInput').value = '';
+    $('preview').style.display = 'none';
+    $('preview').src = '';
+    $('resultado').classList.remove('show');
+    $('statusBox').innerHTML = '';
+    $('conteudoResultado').innerHTML = '';
+    $('rawJson').textContent = '';
+}
+
+// Carrega automaticamente ao abrir
+window.addEventListener('DOMContentLoaded', () => {
+    carregarProvas();
+    carregarAlunos();
+});
+</script>
+
+</body>
+</html>
