@@ -4604,7 +4604,7 @@ async function carregarTurmasLista(escolaId) {
 async function gerarListaTurma() {
     const escolaId = document.getElementById('lista-escola').value;
     const turmaId = document.getElementById('lista-turma').value;
-    const provaId = document.getElementById('lista-prova')?.value || '';
+    const provaId = document.getElementById('lista-prova-select')?.value || '';
 
     if (!turmaId) {
         showToast('❌ Selecione uma turma!', 'error');
