@@ -2290,6 +2290,8 @@ def salvar_correcao_texto():
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
         cur = conn.cursor()
+
+        # 1) Salva na tabela específica de redação
         cur.execute("""
             INSERT INTO correcoes_texto
             (aluno_id, prova_id, texto, nota, metrica_coerencia, metrica_estrutura,
@@ -2304,16 +2306,98 @@ def salvar_correcao_texto():
             metricas.get('nota_vocabulario', 0),
             feedback, 'ia'
         ))
-
         result = cur.fetchone()
+        id_correcao_texto = result[0] if result else None
+
+        # ══════════════════════════════════════════════════════════
+        # 2) INTEGRAÇÃO COM HISTÓRICO
+        #    → Faz a nota aparecer em Resultados, Rel. Turma e Desempenho
+        # ══════════════════════════════════════════════════════════
+        if prova_id and nota is not None:
+            try:
+                # Dados da prova
+                cur.execute("SELECT disciplina, titulo, serie FROM provas WHERE id = %s", (prova_id,))
+                prova_row = cur.fetchone()
+
+                # Série da turma do aluno
+                cur.execute("""
+                    SELECT t.serie FROM alunos a
+                    LEFT JOIN turmas t ON a.turma_id = t.id
+                    WHERE a.id = %s
+                """, (aluno_id,))
+                serie_row = cur.fetchone()
+
+                disciplina_hist = (prova_row[0] if prova_row else None) or 'Redação'
+                prova_titulo_hist = (prova_row[1] if prova_row else '') or ''
+                serie_hist = (serie_row[0] if serie_row else None) or (prova_row[2] if prova_row else '') or '1º Ano'
+
+                tipo_avaliacao = identificar_disciplina(prova_titulo_hist, disciplina_hist, serie_hist)
+
+                # Converte a nota (0-10) para "acertos" (0-10) — mesma escala dos cartões
+                nota_float = float(nota or 0)
+                acertos_equiv = int(round(nota_float))  # 0 a 10
+                total_equiv = 10
+
+                # Monta um questoes_status de 1 item representando a redação
+                questoes_status_hist = [{
+                    'numero': 1,
+                    'resposta': f'{nota_float}',
+                    'gabarito': '10.0',
+                    'acertou': nota_float >= 6,
+                    'respondida': True,
+                    'bncc': '',
+                    'status': f'📝 Redação — Nota {nota_float}',
+                    'status_texto': f'📝 Redação — Nota {nota_float}',
+                    'confianca': 100,
+                    'correta': nota_float >= 6
+                }]
+
+                respostas_hist = [f'{nota_float}']
+
+                # Upsert em historico
+                cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s",
+                            (prova_id, aluno_id))
+                existe = cur.fetchone()
+
+                if existe:
+                    cur.execute("""
+                        UPDATE historico
+                        SET respostas = %s::text[], acertos = %s, nota = %s, total = %s,
+                            tipo_correcao = 'ia_redacao', disciplina = %s, tipo_avaliacao = %s,
+                            questoes_status = %s::jsonb, confianca = 100,
+                            confianca_por_questao = %s::jsonb,
+                            data_correcao = CURRENT_TIMESTAMP
+                        WHERE prova_id = %s AND aluno_id = %s
+                    """, (respostas_hist, acertos_equiv, nota_float, total_equiv,
+                          disciplina_hist, tipo_avaliacao,
+                          json.dumps(questoes_status_hist), json.dumps([100]),
+                          prova_id, aluno_id))
+                else:
+                    cur.execute("""
+                        INSERT INTO historico
+                        (prova_id, aluno_id, respostas, acertos, nota, total,
+                         tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
+                         confianca, confianca_por_questao, bncc)
+                        VALUES (%s, %s, %s::text[], %s, %s, %s, 'ia_redacao', %s, %s, %s::jsonb,
+                                100, %s::jsonb, %s::text[])
+                    """, (prova_id, aluno_id, respostas_hist, acertos_equiv, nota_float,
+                          total_equiv, disciplina_hist, tipo_avaliacao,
+                          json.dumps(questoes_status_hist), json.dumps([100]), []))
+
+                logging.info(f"✅ Redação integrada ao histórico: aluno={aluno_id}, prova={prova_id}, nota={nota_float}")
+
+            except Exception as e_int:
+                logging.warning(f"⚠️ Falha ao integrar redação ao histórico: {e_int}")
+        # ══════════════════════════════════════════════════════════
+
         conn.commit()
         cur.close()
         conn.close()
 
         return jsonify({
             'sucesso': True,
-            'id': result[0],
-            'mensagem': 'Correção de texto salva com sucesso'
+            'id': id_correcao_texto,
+            'mensagem': 'Correção de texto salva e integrada ao histórico'
         })
 
     except Exception as e:
@@ -2552,6 +2636,63 @@ def historico_agrupado():
             serie_aluno = item.get('serie', '')
             tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
 
+            # ═══════════════════════════════════════════════════════════
+            # DETECTA SE É REDAÇÃO (não tem questões A/B/C/D, só nota)
+            # ═══════════════════════════════════════════════════════════
+            disc_lower = (disciplina or '').lower()
+            prova_lower = (prova_titulo or '').lower()
+            is_redacao = (
+                'reda' in disc_lower or
+                'reda' in prova_lower or
+                item.get('tipo_correcao') == 'ia_redacao'
+            )
+
+            if is_redacao:
+                # Redação: usa valores armazenados diretamente
+                nota_red = float(item.get('nota') or 0)
+                acertos_red = int(item.get('acertos') or 0)
+                total_red = int(item.get('total') or 10)
+                erros_red = max(0, total_red - acertos_red)
+
+                questoes_status = [{
+                    'numero': 1,
+                    'resposta': f'Nota {nota_red}',
+                    'gabarito': '10.0',
+                    'acertou': nota_red >= 6,
+                    'respondida': True,
+                    'bncc': '',
+                    'status': f'📝 Redação — Nota {nota_red}'
+                }]
+
+                if tipo not in alunos_map[aluno_key]['avaliacoes']:
+                    alunos_map[aluno_key]['avaliacoes'][tipo] = {
+                        'nota': nota_red,
+                        'acertos': acertos_red, 'erros': erros_red, 'total': total_red,
+                        'prova': prova_titulo, 'data': item.get('data_correcao', ''),
+                        'disciplina': disciplina, 'questoes_status': questoes_status,
+                        'bncc': [''],
+                        'respostas': [f'Nota {nota_red}'],
+                        'gabarito': ['10.0']
+                    }
+                else:
+                    existing = alunos_map[aluno_key]['avaliacoes'][tipo]
+                    data_atual = item.get('data_correcao', '')
+                    data_existente = existing.get('data', '')
+                    if data_atual > data_existente:
+                        alunos_map[aluno_key]['avaliacoes'][tipo] = {
+                            'nota': nota_red,
+                            'acertos': acertos_red, 'erros': erros_red, 'total': total_red,
+                            'prova': prova_titulo, 'data': data_atual,
+                            'disciplina': disciplina, 'questoes_status': questoes_status,
+                            'bncc': [''],
+                            'respostas': [f'Nota {nota_red}'],
+                            'gabarito': ['10.0']
+                        }
+                continue  # Pula o resto do processamento de questões
+
+            # ═══════════════════════════════════════════════════════════
+            # FLUXO NORMAL: cartão-resposta com questões A/B/C/D
+            # ═══════════════════════════════════════════════════════════
             respostas = item.get('respostas', [])
             gabarito = item.get('prova_gabarito', [])
             if not gabarito or len(gabarito) == 0:
