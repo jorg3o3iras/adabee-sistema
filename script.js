@@ -2946,19 +2946,75 @@ async function excluirUsuario(id, username) {
 // ============================================
 // FUNÇÕES DE TEXTO IA
 // ============================================
-function prevTexto(input) {
+async function prevTexto(input) {
     const file = input.files[0];
     if (!file) return;
+
     const reader = new FileReader();
-    reader.onload = e => { document.getElementById('txt-img-prev').style.display = 'block';
-        document.getElementById('txt-img').src = e.target.result; };
+    reader.onload = async e => {
+        const base64 = e.target.result;
+        document.getElementById('txt-img-prev').style.display = 'block';
+        document.getElementById('txt-img').src = base64;
+
+        // Extrai o texto da imagem via OpenAI Vision
+        showToast('🔍 Lendo texto da redação...', 'info');
+        try {
+            const response = await fetch(API_URL + '/api/extrair_texto_redacao', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imagem: base64 })
+            });
+            const dados = await response.json();
+
+            if (dados.sucesso && dados.texto) {
+                document.getElementById('txt-aluno').value = dados.texto;
+                showToast(`✅ Texto extraído! ${dados.caracteres} caracteres.`, 'success');
+            } else {
+                showToast('❌ ' + (dados.erro || 'Não foi possível ler a imagem'), 'error');
+            }
+        } catch (err) {
+            console.error('Erro no OCR:', err);
+            showToast('❌ Erro ao processar imagem: ' + err.message, 'error');
+        }
+    };
     reader.readAsDataURL(file);
 }
 
 async function avaliarTexto() {
-    const texto = document.getElementById('txt-aluno').value;
+    let texto = document.getElementById('txt-aluno').value;
     const alunoId = document.getElementById('txt-aluno-select').value;
-    if (!texto || texto.trim().length < 5) { showToast('❌ Digite um texto com pelo menos 5 caracteres!', 'error'); return; }
+
+    // Se não tem texto digitado, mas tem imagem selecionada, extrai via OCR
+    const preview = document.getElementById('txt-img-prev');
+    const imgEl = document.getElementById('txt-img');
+    const temImagem = preview && preview.style.display !== 'none' && imgEl && imgEl.src;
+
+    if ((!texto || texto.trim().length < 5) && temImagem) {
+        showToast('🔍 Lendo texto da imagem...', 'info');
+        try {
+            const response = await fetch(API_URL + '/api/extrair_texto_redacao', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imagem: imgEl.src })
+            });
+            const dados = await response.json();
+            if (dados.sucesso && dados.texto) {
+                texto = dados.texto;
+                document.getElementById('txt-aluno').value = texto;
+            } else {
+                showToast('❌ ' + (dados.erro || 'Não foi possível ler a imagem'), 'error');
+                return;
+            }
+        } catch (err) {
+            showToast('❌ Erro ao processar imagem: ' + err.message, 'error');
+            return;
+        }
+    }
+
+    if (!texto || texto.trim().length < 5) {
+        showToast('❌ Digite um texto, selecione uma foto ou cole o conteúdo!', 'error');
+        return;
+    }
 
     const etapas = [
         { nome: '📝 Preparando texto', descricao: 'Validando e preparando o texto para análise...' },
@@ -3044,7 +3100,7 @@ async function abrirCamera() {
         fecharCamera(); }
 }
 
-function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';
+function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';a
     abrirCamera(); }
 
 function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop());
