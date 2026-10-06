@@ -3976,7 +3976,8 @@ def gerar_gabarito():
         .qr-code-bloco {{
             position: absolute;
             top: 15mm;
-            right: 48mm;
+            left: 50%;
+            transform: translateX(-50%);
             width: 22mm;
             height: 22mm;
             z-index: 50;
