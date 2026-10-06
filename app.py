@@ -4533,7 +4533,6 @@ def serve_static_file(filename):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    import sys
     import os as _os
     
     conn = get_db_connection()
@@ -4541,38 +4540,49 @@ def health_check():
     if conn:
         conn.close()
 
-    # Diagnóstico de variáveis
     _key = _os.getenv('OPENAI_API_KEY', '')
-    _key_len = len(_key)
-    _key_prefix = _key[:8] if _key else '(vazio)'
-    _key_space = ' ' in _key if _key else False
-    _key_quotes = ('"' in _key or "'" in _key) if _key else False
     
-    # Lista TODAS as variáveis que contêm "OPENAI" no nome
-    _openai_vars = [k for k in _os.environ.keys() if 'OPENAI' in k.upper()]
+    # ═══ TESTE REAL DA CHAVE OPENAI ═══
+    teste_openai = {'status': 'não testado'}
+    if _key and _key.startswith('sk-'):
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=_key)
+            # Faz uma chamada real e barata
+            models = client.models.list()
+            teste_openai = {
+                'status': 'OK',
+                'modelos_disponiveis': len(list(models))
+            }
+        except Exception as e:
+            teste_openai = {
+                'status': 'ERRO',
+                'tipo': type(e).__name__,
+                'mensagem': str(e)[:300],
+                'repr': repr(e)[:300]
+            }
+    else:
+        teste_openai = {
+            'status': 'chave_ausente_ou_invalida',
+            'tem_chave': bool(_key)
+        }
     
     return jsonify({
         'status': 'online',
-        'versao': 'v4.0-DEBUG',           # ← mude isso para saber se o deploy aplicou
+        'versao': 'v4.0-DEBUG2',
         'openai': 'disponível' if OPENAI_AVAILABLE else 'indisponível',
         'openai_modelo': OPENAI_MODEL if OPENAI_AVAILABLE else None,
         'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
         'pyzbar': 'disponível' if PYZBAR_AVAILABLE else 'indisponível',
         'database': 'conectado' if db_ok else 'desconectado',
-        'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
         
-        # ═══════════ DIAGNÓSTICO OPENAI ═══════════
         'debug_openai': {
-            'API_KEY_existe': bool(_key),
-            'API_KEY_tamanho': _key_len,
-            'API_KEY_prefixo': _key_prefix,
-            'API_KEY_tem_espaco': _key_space,
-            'API_KEY_tem_aspas': _key_quotes,
-            'vars_com_OPENAI_no_nome': _openai_vars,
-            'OPENAI_MODEL_env': _os.getenv('OPENAI_MODEL', '(não definido)'),
-            'total_vars_ambiente': len(_os.environ.keys()),
+            'API_KEY_tamanho': len(_key),
+            'API_KEY_prefixo': _key[:8] if _key else '(vazio)',
+            'API_KEY_sufixo': _key[-4:] if len(_key) > 4 else '(curto)',
+            'vars_com_OPENAI': [k for k in _os.environ.keys() if 'OPENAI' in k.upper()],
+            'teste_real': teste_openai,       # ← AQUI VAI APARECER O ERRO
         },
-        # ══════════════════════════════════════════
         
         'arquivos': {
             'index.html': _os.path.isfile('index.html'),
