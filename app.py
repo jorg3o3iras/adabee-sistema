@@ -4104,7 +4104,7 @@ def gerar_gabarito():
         logo_base64 = carregar_logo_base64(LOGO_ARQUIVO)
         logo_html = (
             f'<img src="{logo_base64}" alt="Logo" '
-            f'style="height:16mm; max-width:100%; object-fit:contain; '
+            f'style="height:20mm; max-width:100%; object-fit:contain; '
             f'margin:0 auto 1.5mm auto; display:block;">'
             if logo_base64 else ''
         )
