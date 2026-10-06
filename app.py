@@ -3975,11 +3975,10 @@ def gerar_gabarito():
 
         .qr-code-bloco {{
             position: absolute;
-            top: 15mm;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 28mm;
-            height: 28mm;
+            top: 28mm;          /* logo abaixo do fiducial superior direito */
+            right: 25mm;        /* alinhado com a coluna direita */
+            width: 40mm;        /* QR grande e fácil de escanear */
+            height: 40mm;
             z-index: 50;
         }}
         .qr-code-bloco img {{
