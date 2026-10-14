@@ -1,7 +1,7 @@
 // ============================================
 // CONFIGURAÇÃO DA API
 // ============================================
-const API_URL = 'https://adabee-sistema-3.onrender.com';
+const API_URL = 'https://adabee-sistema-wg2a.onrender.com';
 let loginType = 'admin';
 let camStream = null;
 let camFacing = 'environment';
