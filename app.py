@@ -4467,7 +4467,7 @@ def gerar_gabarito():
                 <span style="display:inline-block; border-bottom:1.5px solid #000; width:85mm; height:5mm; margin-left:2mm; vertical-align:bottom;"></span>
             </div>
             <div class="instrucoes">
-                ⚠️ PINTE TODO O CIRCULO — CANETA PRETA OU AZUL — NÃO RASURE 
+                ⚠️ PINTE SOMENTE UM CIRCULO POR QUESTAO — USE CANETA PRETA OU AZUL — NÃO RASURE - 
             </div>
         </div>
 
