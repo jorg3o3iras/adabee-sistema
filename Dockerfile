@@ -22,11 +22,12 @@ COPY . .
 
 EXPOSE 10000
 
-# 2 workers + 4 threads cada, timeout maior para OpenCV
+# 1 worker + 4 threads, timeout maior para OpenCV
+# Reduzido de 2 workers para 1 para evitar OOM no plano Free (512 MB)
 CMD ["gunicorn", "app:app", \
      "--bind", "0.0.0.0:10000", \
      "--timeout", "180", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--threads", "4", \
      "--access-logfile", "-", \
      "--error-logfile", "-"]
