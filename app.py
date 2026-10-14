@@ -4460,7 +4460,7 @@ def gerar_gabarito():
             </div>
             <div class="header-assinatura">
                 <strong>Assinatura do Aluno:</strong>
-                <span style="display:inline-block; border-bottom:1.5px solid #000; width:75mm; height:5mm; margin-left:2mm; vertical-align:bottom;"></span>
+                <span style="display:inline-block; border-bottom:1.5px solid #000; width:85mm; height:5mm; margin-left:2mm; vertical-align:bottom;"></span>
             </div>
             <div class="instrucoes">
                 ⚠️ PREENCHA COMPLETAMENTE A BOLHA — CANETA PRETA OU AZUL — NÃO RASURE
