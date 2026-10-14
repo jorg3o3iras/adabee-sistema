@@ -4373,6 +4373,7 @@ def gerar_gabarito():
         .header-prova {{ font-size: 8pt; font-weight: bold; margin-top: 1mm; }}
         .header-escola {{ font-size: 7pt; color: #333; }}
         .header-aluno {{ font-size: 9pt; margin-top: 1mm; text-align: left; padding: 0 2mm; }}
+		.header-assinatura {{ font-size: 9pt; margin-top: 1mm; padding: 0 2mm; text-align: left; }}
         .instrucoes {{
             font-size: 6pt; font-weight: bold;
             padding: 0.8mm; background: #f0f0f0;
