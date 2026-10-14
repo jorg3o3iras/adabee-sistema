@@ -4459,11 +4459,11 @@ def gerar_gabarito():
                 <strong>Aluno(a):</strong> {nome_aluno} &nbsp;&nbsp; <strong>Data:</strong> {datetime.now().strftime('%d/%m/%Y')}
             </div>
             <div class="header-assinatura">
-                <strong>Assinatura do Aluno:</strong>
+                <strong>Assinatura do Aluno(a):</strong>
                 <span style="display:inline-block; border-bottom:1.5px solid #000; width:85mm; height:5mm; margin-left:2mm; vertical-align:bottom;"></span>
             </div>
             <div class="instrucoes">
-                ⚠️ PREENCHA COMPLETAMENTE A BOLHA — CANETA PRETA OU AZUL — NÃO RASURE
+                ⚠️ PINTE TODO O CIRCULO — CANETA PRETA OU AZUL — NÃO RASURE 
             </div>
         </div>
 
