@@ -29,6 +29,10 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+# ═══ GZIP: comprime respostas JSON grandes ═══
+from flask_compress import Compress
+Compress(app)
+# ═══ FIM GZIP ═══
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
