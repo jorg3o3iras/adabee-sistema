@@ -4454,8 +4454,12 @@ def gerar_gabarito():
             <div class="header-cartao">CARTÃO RESPOSTA</div>
             <div class="header-prova">{titulo_prova}</div>
             <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
-            <div class="header-aluno">
+                        <div class="header-aluno">
                 <strong>Aluno(a):</strong> {nome_aluno} &nbsp;&nbsp; <strong>Data:</strong> {datetime.now().strftime('%d/%m/%Y')}
+            </div>
+            <div class="header-assinatura">
+                <strong>Assinatura do Aluno:</strong>
+                <span style="display:inline-block; border-bottom:1.5px solid #000; width:75mm; height:5mm; margin-left:2mm; vertical-align:bottom;"></span>
             </div>
             <div class="instrucoes">
                 ⚠️ PREENCHA COMPLETAMENTE A BOLHA — CANETA PRETA OU AZUL — NÃO RASURE
