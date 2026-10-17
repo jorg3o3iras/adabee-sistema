@@ -316,19 +316,49 @@
                 </div>
             </div>
 
-            <!-- ========== GABARITO ========== -->
+            <!-- ============================================================ -->
+            <!-- ═══ GABARITO — MODIFICADO PARA PRODUÇÃO DE TEXTO ═══ -->
+            <!-- ============================================================ -->
             <div class="page" id="page-gabarito">
-                <div class="page-header"><div><div class="page-title">✅ Cadastrar / Editar Gabarito</div><p class="page-sub">Preencha as alternativas e os códigos Habilidade BNCC (opcional)</p></div></div>
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">✅ Cadastrar / Editar Gabarito</div>
+                        <p class="page-sub">Preencha as alternativas e os códigos Habilidade BNCC (opcional)</p>
+                    </div>
+                </div>
+
                 <div class="card no-print">
                     <div class="form-row c3">
-                        <div class="form-group"><label class="form-label">Prova <span class="req">*</span></label><select class="form-control" id="gab-prova" onchange="buildGabGrid()"><option value="">Selecione...</option></select></div>
-                        <div class="form-group"><label class="form-label">Série <span class="req">*</span></label><select class="form-control" id="gab-serie" onchange="buildGabGrid()"><option value="1">1º Ano — A, B, C</option><option value="2" selected="">2º Ano — A, B, C, D</option><option value="3">3º Ano — A, B, C, D</option><option value="4">4º Ano — A, B, C, D</option><option value="5">5º Ano — A, B, C, D</option><option value="6">6º Ano — A, B, C, D</option><option value="7">7º Ano — A, B, C, D</option><option value="8">8º Ano — A, B, C, D</option><option value="9">9º Ano — A, B, C, D</option></select></div>
-                        <div class="form-group"><label class="form-label">Nº de Questões</label>
+                        <div class="form-group">
+                            <label class="form-label">Prova <span class="req">*</span></label>
+                            <select class="form-control" id="gab-prova" onchange="buildGabGrid(); atualizarVisibilidadeNotaProducao()">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Série <span class="req">*</span></label>
+                            <select class="form-control" id="gab-serie" onchange="buildGabGrid()">
+                                <option value="1">1º Ano — A, B, C</option>
+                                <option value="2" selected="">2º Ano — A, B, C, D</option>
+                                <option value="3">3º Ano — A, B, C, D</option>
+                                <option value="4">4º Ano — A, B, C, D</option>
+                                <option value="5">5º Ano — A, B, C, D</option>
+                                <option value="6">6º Ano — A, B, C, D</option>
+                                <option value="7">7º Ano — A, B, C, D</option>
+                                <option value="8">8º Ano — A, B, C, D</option>
+                                <option value="9">9º Ano — A, B, C, D</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nº de Questões</label>
                             <select class="form-control" id="gab-total" onchange="buildGabGrid()"></select>
                         </div>
                     </div>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">📝 Gabarito com 4 alternativas: A, B, C, D</div></div>
+                    <div id="gab-info-alts" style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">📝 Gabarito com 4 alternativas: A, B, C, D</div>
+                    </div>
                 </div>
+
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">📝 Gabarito das Questões</div>
@@ -339,16 +369,79 @@
                     </div>
                     <div id="gab-header-container"></div>
                     <div class="gab-grid" id="gab-grid"></div>
-                    <div class="form-row c3 no-print" style="margin-top:18px;"><div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div><div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div><div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div></div>
-                    <div class="btn-group no-print"><button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button><button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button></div>
+                    <div class="form-row c3 no-print" style="margin-top:18px;">
+                        <div class="form-group"><label class="form-label">Pts por Acerto</label><input class="form-control" type="number" value="0.5" step="0.1"></div>
+                        <div class="form-group"><label class="form-label">Penalidade</label><select class="form-control"><option>Sem penalidade</option><option>-0.25</option><option>-0.5</option></select></div>
+                        <div class="form-group"><label class="form-label">Questões Anuladas</label><input class="form-control" placeholder="Ex: 5, 12"></div>
+                    </div>
+                    <div class="btn-group no-print">
+                        <button class="btn btn-green" onclick="saveGab()">💾 Salvar Gabarito</button>
+                        <button class="btn btn-purple" onclick="go('corrigir-ia')">🤖 Corrigir com IA</button>
+                    </div>
                 </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- ═══ BLOCO DE NOTA MANUAL — SÓ PARA PRODUÇÃO DE TEXTO ═══ -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="card no-print" id="gab-nota-manual-container" style="display:none; border:2px solid rgba(245,158,11,0.4); background:rgba(245,158,11,0.03);">
+                    <div class="card-header">
+                        <div class="card-title" style="color:var(--orange); font-size:16px;">⭐ Nota Manual — Produção de Texto</div>
+                        <span class="badge badge-orange" style="font-size:11px;">PROFESSOR</span>
+                    </div>
+                    <p style="font-size:13px; color:var(--text2); margin-bottom:16px; line-height:1.6;">
+                        Selecione o aluno, digite a nota (0 a 10) e clique em <strong>"Salvar Nota"</strong>.
+                        A nota será gravada automaticamente e aparecerá em
+                        <strong>🏆 Resultados</strong>, <strong>📊 Rel. por Turma</strong> e <strong>📊 Desempenho do Aluno</strong>.
+                    </p>
+
+                    <div class="form-row c4">
+                        <div class="form-group">
+                            <label class="form-label">Escola <span class="req">*</span></label>
+                            <select class="form-control" id="nota-producao-escola" onchange="carregarTurmasNotaProducao(this.value)">
+                                <option value="">Selecione a escola...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Turma <span class="req">*</span></label>
+                            <select class="form-control" id="nota-producao-turma" onchange="carregarAlunosNotaProducao(this.value)">
+                                <option value="">Selecione a turma...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Aluno <span class="req">*</span></label>
+                            <select class="form-control" id="nota-producao-aluno">
+                                <option value="">Selecione o aluno...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nota (0 a 10) <span class="req">*</span></label>
+                            <input class="form-control" type="number" id="nota-producao-valor" min="0" max="10" step="0.1" placeholder="Ex: 8.5">
+                        </div>
+                    </div>
+
+                    <div class="form-row c1" style="margin-top:8px;">
+                        <div class="form-group">
+                            <label class="form-label">Observação (opcional)</label>
+                            <input class="form-control" type="text" id="nota-producao-observacao" placeholder="Ex: excelente estrutura textual..." maxlength="200">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; align-items:center;">
+                        <button class="btn btn-lg" style="background:linear-gradient(135deg,var(--orange),#d97706); color:#fff; font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(245,158,11,0.4);" onclick="salvarNotaProducao()">
+                            💾 SALVAR NOTA
+                        </button>
+                        <span style="font-size:12px; color:var(--text3);">→ A nota aparecerá imediatamente em Resultados, Rel. Turma e Desempenho</span>
+                    </div>
+
+                    <div id="nota-producao-status" style="display:none; margin-top:14px; padding:12px 16px; border-radius:8px; font-size:13px; font-weight:600;"></div>
+                </div>
+
             </div>
 
             <!-- ========== CORRIGIR COM IA ========== -->
             <div class="page" id="page-corrigir-ia">
                 <div class="page-header"><div><div class="page-title">🤖 Corrigir com IA</div><p class="page-sub">Detecção e correção automática de cartões resposta</p></div></div>
 
-                <!-- ═══ NOVO: CORREÇÃO AUTOMÁTICA POR QR CODE ═══ -->
                 <div class="card no-print" style="margin-bottom:18px; border: 2px solid rgba(139,92,246,0.4);">
                     <div class="card-header">
                         <div class="card-title" style="color:#a78bfa; font-size:18px;">⚡ Correção Automática por QR Code</div>
