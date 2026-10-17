@@ -2054,6 +2054,157 @@ def corrigir_manual():
 
 
 # ============================================
+# ═══ NOVO: SALVAR NOTA MANUAL DE PRODUÇÃO DE TEXTO ═══
+# ═══ Grava no historico com tipo_avaliacao='Producao' ═══
+# ═══ Faz a nota aparecer em Resultados, Rel. Turma e Desempenho ═══
+# ============================================
+
+@app.route('/api/salvar_nota_producao', methods=['POST'])
+def salvar_nota_producao():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'erro': 'Nenhum dado recebido'}), 400
+
+        aluno_id = data.get('aluno_id')
+        prova_id = data.get('prova_id')
+        nota = data.get('nota')
+        observacao = (data.get('observacao') or '').strip()
+
+        if not aluno_id:
+            return jsonify({'erro': 'Aluno é obrigatório'}), 400
+        if not prova_id:
+            return jsonify({'erro': 'Prova é obrigatória'}), 400
+        if nota is None or nota == '':
+            return jsonify({'erro': 'Nota é obrigatória'}), 400
+
+        try:
+            nota_float = float(nota)
+        except (ValueError, TypeError):
+            return jsonify({'erro': 'Nota inválida'}), 400
+
+        if nota_float < 0 or nota_float > 10:
+            return jsonify({'erro': 'Nota deve estar entre 0 e 10'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute("""
+            SELECT p.disciplina, p.titulo, p.serie AS prova_serie,
+                   p.quantidade_questoes, p.gabarito, p.bncc
+            FROM provas p WHERE p.id = %s
+        """, (prova_id,))
+        prova = cur.fetchone()
+
+        if not prova:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Prova não encontrada'}), 404
+
+        cur.execute("""
+            SELECT a.nome, t.serie AS turma_serie
+            FROM alunos a
+            LEFT JOIN turmas t ON a.turma_id = t.id
+            WHERE a.id = %s
+        """, (aluno_id,))
+        aluno = cur.fetchone()
+
+        if not aluno:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Aluno não encontrado'}), 404
+
+        disciplina = prova.get('disciplina') or 'Produção de Texto'
+        serie = aluno.get('turma_serie') or prova.get('prova_serie') or '1º Ano'
+
+        # Força tipo_avaliacao = 'Producao' — garante aparecer na coluna Produção
+        tipo_avaliacao = 'Producao'
+
+        acertos_equiv = int(round(nota_float))
+        total_equiv = 10
+
+        questoes_status = [{
+            'numero': 1,
+            'resposta': f'{nota_float:.1f}',
+            'gabarito': '10.0',
+            'acertou': nota_float >= 6,
+            'respondida': True,
+            'bncc': '',
+            'status': f'📝 Produção de Texto — Nota Manual {nota_float:.1f}',
+            'status_texto': f'📝 Nota {nota_float:.1f}',
+            'confianca': 100,
+            'correta': nota_float >= 6
+        }]
+
+        if observacao:
+            questoes_status[0]['status_texto'] += f' — {observacao[:200]}'
+
+        respostas_hist = [f'{nota_float:.1f}']
+        questoes_status_json = json.dumps(questoes_status)
+
+        cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s",
+                    (prova_id, aluno_id))
+        existe = cur.fetchone()
+
+        if existe:
+            cur.execute("""
+                UPDATE historico
+                SET respostas = %s::text[], acertos = %s, nota = %s, total = %s,
+                    tipo_correcao = 'manual_producao', disciplina = %s, tipo_avaliacao = %s,
+                    questoes_status = %s::jsonb, confianca = 100,
+                    confianca_por_questao = %s::jsonb,
+                    data_correcao = CURRENT_TIMESTAMP
+                WHERE prova_id = %s AND aluno_id = %s
+            """, (respostas_hist, acertos_equiv, nota_float, total_equiv,
+                  disciplina, tipo_avaliacao, questoes_status_json, json.dumps([100]),
+                  prova_id, aluno_id))
+            hist_id = existe['id']
+        else:
+            cur.execute("""
+                INSERT INTO historico
+                (prova_id, aluno_id, respostas, acertos, nota, total,
+                 tipo_correcao, disciplina, tipo_avaliacao, questoes_status,
+                 confianca, confianca_por_questao, bncc)
+                VALUES (%s, %s, %s::text[], %s, %s, %s, 'manual_producao', %s, %s,
+                        %s::jsonb, 100, %s::jsonb, %s::text[])
+                RETURNING id
+            """, (prova_id, aluno_id, respostas_hist, acertos_equiv, nota_float,
+                  total_equiv, disciplina, tipo_avaliacao, questoes_status_json,
+                  json.dumps([100]), []))
+            hist_id = cur.fetchone()['id']
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        porcentagem = int(round((nota_float / 10) * 100))
+        conceito = calcular_conceito(porcentagem)
+
+        logging.info(f"✅ Nota Produção salva: aluno={aluno_id}, prova={prova_id}, nota={nota_float}")
+
+        return jsonify({
+            'sucesso': True,
+            'id': hist_id,
+            'mensagem': f'Nota {nota_float:.1f} salva com sucesso!',
+            'aluno': aluno.get('nome'),
+            'prova': prova.get('titulo'),
+            'nota': nota_float,
+            'porcentagem': porcentagem,
+            'conceito': conceito,
+            'tipo_avaliacao': tipo_avaliacao,
+            'disciplina': disciplina
+        })
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao salvar nota produção: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
+
+
+# ============================================
 # ROTA DE CORREÇÃO DE REDAÇÃO
 # ============================================
 
@@ -2295,7 +2446,6 @@ def salvar_correcao_texto():
 
         cur = conn.cursor()
 
-        # 1) Salva na tabela específica de redação
         cur.execute("""
             INSERT INTO correcoes_texto
             (aluno_id, prova_id, texto, nota, metrica_coerencia, metrica_estrutura,
@@ -2313,17 +2463,11 @@ def salvar_correcao_texto():
         result = cur.fetchone()
         id_correcao_texto = result[0] if result else None
 
-        # ══════════════════════════════════════════════════════════
-        # 2) INTEGRAÇÃO COM HISTÓRICO
-        #    → Faz a nota aparecer em Resultados, Rel. Turma e Desempenho
-        # ══════════════════════════════════════════════════════════
         if prova_id and nota is not None:
             try:
-                # Dados da prova
                 cur.execute("SELECT disciplina, titulo, serie FROM provas WHERE id = %s", (prova_id,))
                 prova_row = cur.fetchone()
 
-                # Série da turma do aluno
                 cur.execute("""
                     SELECT t.serie FROM alunos a
                     LEFT JOIN turmas t ON a.turma_id = t.id
@@ -2337,12 +2481,10 @@ def salvar_correcao_texto():
 
                 tipo_avaliacao = identificar_disciplina(prova_titulo_hist, disciplina_hist, serie_hist)
 
-                # Converte a nota (0-10) para "acertos" (0-10) — mesma escala dos cartões
                 nota_float = float(nota or 0)
-                acertos_equiv = int(round(nota_float))  # 0 a 10
+                acertos_equiv = int(round(nota_float))
                 total_equiv = 10
 
-                # Monta um questoes_status de 1 item representando a redação
                 questoes_status_hist = [{
                     'numero': 1,
                     'resposta': f'{nota_float}',
@@ -2358,7 +2500,6 @@ def salvar_correcao_texto():
 
                 respostas_hist = [f'{nota_float}']
 
-                # Upsert em historico
                 cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s",
                             (prova_id, aluno_id))
                 existe = cur.fetchone()
@@ -2392,7 +2533,6 @@ def salvar_correcao_texto():
 
             except Exception as e_int:
                 logging.warning(f"⚠️ Falha ao integrar redação ao histórico: {e_int}")
-        # ══════════════════════════════════════════════════════════
 
         conn.commit()
         cur.close()
@@ -2640,9 +2780,6 @@ def historico_agrupado():
             serie_aluno = item.get('serie', '')
             tipo = identificar_disciplina(prova_titulo, disciplina, serie_aluno)
 
-            # ═══════════════════════════════════════════════════════════
-            # DETECTA SE É REDAÇÃO (não tem questões A/B/C/D, só nota)
-            # ═══════════════════════════════════════════════════════════
             disc_lower = (disciplina or '').lower()
             prova_lower = (prova_titulo or '').lower()
             is_redacao = (
@@ -2650,9 +2787,10 @@ def historico_agrupado():
                 'reda' in prova_lower or
                 item.get('tipo_correcao') == 'ia_redacao'
             )
+            # ═══ PRODUÇÃO DE TEXTO com nota manual (tipo_correcao='manual_producao') ═══
+            is_producao_manual = item.get('tipo_correcao') == 'manual_producao'
 
-            if is_redacao:
-                # Redação: usa valores armazenados diretamente
+            if is_redacao or is_producao_manual:
                 nota_red = float(item.get('nota') or 0)
                 acertos_red = int(item.get('acertos') or 0)
                 total_red = int(item.get('total') or 10)
@@ -2665,7 +2803,7 @@ def historico_agrupado():
                     'acertou': nota_red >= 6,
                     'respondida': True,
                     'bncc': '',
-                    'status': f'📝 Redação — Nota {nota_red}'
+                    'status': f'📝 Nota {nota_red}'
                 }]
 
                 if tipo not in alunos_map[aluno_key]['avaliacoes']:
@@ -2692,11 +2830,8 @@ def historico_agrupado():
                             'respostas': [f'Nota {nota_red}'],
                             'gabarito': ['10.0']
                         }
-                continue  # Pula o resto do processamento de questões
+                continue
 
-            # ═══════════════════════════════════════════════════════════
-            # FLUXO NORMAL: cartão-resposta com questões A/B/C/D
-            # ═══════════════════════════════════════════════════════════
             respostas = item.get('respostas', [])
             gabarito = item.get('prova_gabarito', [])
             if not gabarito or len(gabarito) == 0:
@@ -2840,6 +2975,7 @@ def excluir_correcao(id):
 
 # ============================================
 # ROTAS DE GABARITOS
+# ═══ MODIFICADO: Aceita textos_questoes como JSON (Produção de Texto) ═══
 # ============================================
 
 @app.route('/api/gabaritos', methods=['POST'])
@@ -2854,27 +2990,80 @@ def salvar_gabarito():
 
         if not prova_id:
             return jsonify({'erro': 'Prova ID é obrigatório'}), 400
-        if not respostas or len(respostas) == 0:
-            return jsonify({'erro': 'Respostas são obrigatórias'}), 400
-
-        respostas_validas = [str(r).strip().upper() for r in respostas if r]
-        if not respostas_validas:
-            return jsonify({'erro': 'Nenhuma resposta válida'}), 400
-
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-        textos_validos = [str(t).strip() for t in textos_questoes]
-        niveis_validos = [str(n).strip() for n in niveis]
 
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM provas WHERE id = %s", (prova_id,))
-        if not cur.fetchone():
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT id, disciplina FROM provas WHERE id = %s", (prova_id,))
+        prova = cur.fetchone()
+
+        if not prova:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
+
+        is_producao = (prova.get('disciplina') or '').strip() == 'Produção de Texto'
+
+        if is_producao:
+            # ═══ PRODUÇÃO DE TEXTO ═══
+            respostas_serializadas = []
+            for item in respostas:
+                if isinstance(item, str):
+                    respostas_serializadas.append(item.strip())
+                else:
+                    respostas_serializadas.append(str(item).strip() if item else '')
+
+            textos_serializados = []
+            for t in textos_questoes:
+                if isinstance(t, (dict, list)):
+                    textos_serializados.append(json.dumps(t, ensure_ascii=False))
+                else:
+                    textos_serializados.append(str(t).strip() if t else '')
+
+            bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
+            niveis_validos = [str(n).strip().upper() for n in niveis if n and str(n).strip()]
+
+            cur.execute("""
+                UPDATE provas
+                SET gabarito = %s::text[],
+                    quantidade_questoes = %s,
+                    bncc = %s::text[],
+                    textos_questoes = %s::text[],
+                    niveis = %s::text[]
+                WHERE id = %s
+                RETURNING id
+            """, (respostas_serializadas, len(respostas_serializadas),
+                  bncc_validos, textos_serializados, niveis_validos, prova_id))
+
+            result = cur.fetchone()
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            return jsonify({
+                'id': result['id'],
+                'mensagem': 'Gabarito de Produção de Texto salvo com sucesso',
+                'total_questoes': len(respostas_serializadas),
+                'tipo': 'producao'
+            })
+
+        # ═══ OUTRAS DISCIPLINAS (fluxo antigo) ═══
+        if not respostas or len(respostas) == 0:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Respostas são obrigatórias'}), 400
+
+        respostas_validas = [str(r).strip().upper() for r in respostas if r]
+        if not respostas_validas:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Nenhuma resposta válida'}), 400
+
+        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
+        textos_validos = [str(t).strip() for t in textos_questoes]
+        niveis_validos = [str(n).strip() for n in niveis]
 
         cur.execute("""
             UPDATE provas
@@ -2894,7 +3083,7 @@ def salvar_gabarito():
         conn.close()
 
         return jsonify({
-            'id': result[0],
+            'id': result['id'],
             'mensagem': 'Gabarito salvo com sucesso',
             'total_questoes': len(respostas_validas)
         })
@@ -3517,6 +3706,7 @@ def excluir_aluno(id):
 
 # ============================================
 # ROTAS DE PROVAS
+# ═══ MODIFICADO: desserializa textos_questoes ═══
 # ============================================
 
 @app.route('/api/provas', methods=['GET'])
@@ -3537,6 +3727,23 @@ def listar_provas():
         provas = cur.fetchall()
         cur.close()
         conn.close()
+
+        # ═══ DESSERIALIZA textos_questoes (JSON em string → objeto) ═══
+        for p in provas:
+            if p.get('textos_questoes'):
+                try:
+                    novos = []
+                    for t in p['textos_questoes']:
+                        if t and isinstance(t, str) and t.strip().startswith('{'):
+                            try:
+                                novos.append(json.loads(t))
+                            except Exception:
+                                novos.append(t)
+                        else:
+                            novos.append(t)
+                    p['textos_questoes'] = novos
+                except Exception as e:
+                    logging.warning(f"⚠️ Erro ao desserializar textos_questoes: {e}")
 
         return jsonify(provas)
 
@@ -3628,6 +3835,22 @@ def buscar_prova(id):
 
         if not prova:
             return jsonify({'erro': 'Prova não encontrada'}), 404
+
+        # ═══ DESSERIALIZA textos_questoes (JSON em string → objeto) ═══
+        if prova.get('textos_questoes'):
+            try:
+                novos_textos = []
+                for t in prova['textos_questoes']:
+                    if t and isinstance(t, str) and t.strip().startswith('{'):
+                        try:
+                            novos_textos.append(json.loads(t))
+                        except Exception:
+                            novos_textos.append(t)
+                    else:
+                        novos_textos.append(t)
+                prova['textos_questoes'] = novos_textos
+            except Exception as e:
+                logging.warning(f"⚠️ Erro ao desserializar textos_questoes: {e}")
 
         return jsonify(prova)
 
@@ -4033,6 +4256,8 @@ def gerar_qrcode_base64(dados):
         logging.error(f"❌ Erro ao gerar QR Code: {e}")
         traceback.print_exc()
         return ""
+
+
 def carregar_logo_base64(nome_arquivo):
     """Carrega a logo do disco e devolve como data URL (base64)."""
     try:
@@ -4056,6 +4281,7 @@ def carregar_logo_base64(nome_arquivo):
     except Exception as e:
         logging.error(f"❌ Erro ao carregar logo: {e}")
         return ''
+
 
 # ============================================
 # ROTA DE GERAÇÃO DE CARTÃO RESPOSTA
@@ -4103,7 +4329,6 @@ def gerar_gabarito():
         nome_aluno = aluno['nome']
         escola_nome = aluno['escola_nome'] or ''
         turma_nome = aluno['turma_nome'] or ''
-                # 🖼️ Logo do cabeçalho dos cartões
         LOGO_ARQUIVO = 'logotipo cartão resposta.png'
         logo_base64 = carregar_logo_base64(LOGO_ARQUIVO)
         logo_html = (
@@ -4120,9 +4345,6 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D', 'E'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
-        # ═══════════════════════════════════════════════════════════
-        # SE FOR REDAÇÃO → GERA FOLHA EM BRANCO (sem bolhas)
-        # ═══════════════════════════════════════════════════════════
         if disciplina_prova == 'Redação':
             logging.info(f"📝 Gerando FOLHA DE REDAÇÃO para {nome_aluno}")
 
@@ -4237,9 +4459,6 @@ def gerar_gabarito():
 </html>
 """
             return html_redacao, 200, {'Content-Type': 'text/html'}
-        # ═══════════════════════════════════════════════════════════
-        # FLUXO NORMAL: CARTÃO RESPOSTA COM BOLHAS (outras disciplinas)
-        # ═══════════════════════════════════════════════════════════
 
         num_colunas_real = 1 if quantidade_questoes <= 12 else 2
 
@@ -4338,9 +4557,9 @@ def gerar_gabarito():
 
         .qr-code-bloco {{
             position: absolute;
-            top: 28mm;          /* logo abaixo do fiducial superior direito */
-            right: 15mm;        /* alinhado com a coluna direita */
-            width: 41mm;        /* QR grande e fácil de escanear */
+            top: 28mm;
+            right: 15mm;
+            width: 41mm;
             height: 41mm;
             z-index: 50;
         }}
@@ -5372,7 +5591,6 @@ def corrigir_automatico():
             resultado['confianca_por_questao'] = [70] * total
             resultado['confianca'] = 70
 
-        # ⬇️ MODIFICADO: só salva se salvar_auto == True
         if salvar_auto:
             try:
                 conn = get_db_connection()
@@ -5424,9 +5642,6 @@ def corrigir_automatico():
                     logging.info(f"✅ Histórico salvo automaticamente")
             except Exception as e:
                 logging.error(f"⚠️ Erro ao salvar histórico: {e}")
-        else:
-            logging.info(f"💾 Salvamento automático DESATIVADO (usuário vai revisar antes de salvar)")
-        # ⬆️ MODIFICADO
 
         resultado['sucesso'] = True
         resultado['qr_lido'] = info_qr
@@ -5439,12 +5654,9 @@ def corrigir_automatico():
         resultado['tipo_avaliacao'] = tipo_avaliacao
         resultado['disciplina'] = disciplina
         resultado['bncc'] = bncc_gabarito
-
-        # ⬇️ ADICIONADO: campos para o frontend conseguir usar a correção manual
         resultado['escola_id'] = escola_id
         resultado['turma_id'] = turma_id
         resultado['serie'] = serie
-        # ⬆️ ADICIONADO
 
         logging.info(f"✅ CORREÇÃO AUTOMÁTICA CONCLUÍDA: {nome_aluno} - Nota {resultado.get('nota')}")
 
@@ -5460,7 +5672,6 @@ def corrigir_automatico():
 # INICIALIZAÇÃO DO SERVIDOR
 # ============================================
 
-# Inicializa o banco na importação do módulo (funciona com gunicorn/uwsgi)
 try:
     init_db()
     init_cache_table()
@@ -5472,7 +5683,7 @@ except Exception as e:
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
-    print("🚀 SERVIDOR CORRIGEPRO v4.0 — EVALBEE (A,B,C / A,B,C,D / A,B,C,D,E)")
+    print("🚀 SERVIDOR CORRIGEPRO v4.1 — EVALBEE + NOTA MANUAL PRODUÇÃO")
     print("=" * 60)
     print(f"📌 Porta: {port}")
     print(f"📌 Pool de conexões: {DB_POOL_MIN}-{DB_POOL_MAX}")
@@ -5481,14 +5692,11 @@ if __name__ == '__main__':
         print(f"📌 Modelo: {OPENAI_MODEL}")
     print(f"📷 pyzbar (QR Code): {'✅ Disponível' if PYZBAR_AVAILABLE else '❌ Indisponível'}")
     print("=" * 60)
-    print("🎯 v4.0 — PRINCIPAIS MUDANÇAS:")
-    print("   ✅ Detecção fiducial v4 (adaptativa, robusta a sombra/blur)")
-    print("   ✅ Correção por fill ratio no local esperado do template")
-    print("   ✅ Origem = CENTRO do marcador (não o canto) — EvalBee style")
-    print("   ✅ Suporte completo a 3, 4 ou 5 alternativas")
-    print("   ✅ Removido HoughCircles (fonte de erros em fotos ruins)")
-    print("   ✅ Fallback IA só quando EvalBee falha drasticamente")
-    print("   ✅ Templates gerados usam a MESMA geometria da correção")
+    print("🎯 v4.1 — NOVIDADES:")
+    print("   ✅ Gabarito de Produção de Texto: título editável + cabeçalho + alternativas A/B/C")
+    print("   ✅ Situação de Correção A–I (substitui Nível BNCC)")
+    print("   ✅ Nota Manual de Produção de Texto → aparece em Resultados/Rel.Turma/Desempenho")
+    print("   ✅ Nova rota /api/salvar_nota_producao")
     print("=" * 60)
 
     app.run(host='0.0.0.0', port=port, debug=False)
