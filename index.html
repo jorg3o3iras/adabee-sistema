@@ -331,7 +331,7 @@
                     <div class="form-row c3">
                         <div class="form-group">
                             <label class="form-label">Prova <span class="req">*</span></label>
-                            <select class="form-control" id="gab-prova" onchange="buildGabGrid(); atualizarVisibilidadeNotaProducao()">
+                            <select class="form-control" id="gab-prova" onchange="buildGabGrid()">
                                 <option value="">Selecione...</option>
                             </select>
                         </div>
@@ -380,61 +380,7 @@
                     </div>
                 </div>
 
-                <!-- ═══════════════════════════════════════════════════════════ -->
-                <!-- ═══ BLOCO DE NOTA MANUAL — SÓ PARA PRODUÇÃO DE TEXTO ═══ -->
-                <!-- ═══════════════════════════════════════════════════════════ -->
-                <div class="card no-print" id="gab-nota-manual-container" style="display:none; border:2px solid rgba(245,158,11,0.4); background:rgba(245,158,11,0.03);">
-                    <div class="card-header">
-                        <div class="card-title" style="color:var(--orange); font-size:16px;">⭐ Nota Manual — Produção de Texto</div>
-                        <span class="badge badge-orange" style="font-size:11px;">PROFESSOR</span>
-                    </div>
-                    <p style="font-size:13px; color:var(--text2); margin-bottom:16px; line-height:1.6;">
-                        Selecione o aluno, digite a nota (0 a 10) e clique em <strong>"Salvar Nota"</strong>.
-                        A nota será gravada automaticamente e aparecerá em
-                        <strong>🏆 Resultados</strong>, <strong>📊 Rel. por Turma</strong> e <strong>📊 Desempenho do Aluno</strong>.
-                    </p>
-
-                    <div class="form-row c4">
-                        <div class="form-group">
-                            <label class="form-label">Escola <span class="req">*</span></label>
-                            <select class="form-control" id="nota-producao-escola" onchange="carregarTurmasNotaProducao(this.value)">
-                                <option value="">Selecione a escola...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Turma <span class="req">*</span></label>
-                            <select class="form-control" id="nota-producao-turma" onchange="carregarAlunosNotaProducao(this.value)">
-                                <option value="">Selecione a turma...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Aluno <span class="req">*</span></label>
-                            <select class="form-control" id="nota-producao-aluno">
-                                <option value="">Selecione o aluno...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nota (0 a 10) <span class="req">*</span></label>
-                            <input class="form-control" type="number" id="nota-producao-valor" min="0" max="10" step="0.1" placeholder="Ex: 8.5">
-                        </div>
-                    </div>
-
-                    <div class="form-row c1" style="margin-top:8px;">
-                        <div class="form-group">
-                            <label class="form-label">Observação (opcional)</label>
-                            <input class="form-control" type="text" id="nota-producao-observacao" placeholder="Ex: excelente estrutura textual..." maxlength="200">
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; align-items:center;">
-                        <button class="btn btn-lg" style="background:linear-gradient(135deg,var(--orange),#d97706); color:#fff; font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(245,158,11,0.4);" onclick="salvarNotaProducao()">
-                            💾 SALVAR NOTA
-                        </button>
-                        <span style="font-size:12px; color:var(--text3);">→ A nota aparecerá imediatamente em Resultados, Rel. Turma e Desempenho</span>
-                    </div>
-
-                    <div id="nota-producao-status" style="display:none; margin-top:14px; padding:12px 16px; border-radius:8px; font-size:13px; font-weight:600;"></div>
-                </div>
+                <!-- ═══ BLOCO DE NOTA MANUAL REMOVIDO DAQUI (agora fica no modal de correção manual) ═══ -->
 
             </div>
 
@@ -1371,6 +1317,37 @@
                         <span id="cm-sa-status-badge" class="badge badge-gray">AGUARDANDO</span>
                         <span id="cm-sa-porcentagem" style="font-size:12px;color:var(--text2);">0% de aproveitamento</span>
                     </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- ═══ NOVO: BLOCO DE NOTA MANUAL — SÓ PARA PRODUÇÃO ═══ -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div id="cm-nota-manual-container">
+                    <div class="cm-nota-titulo">⭐ Nota Manual — Produção de Texto</div>
+                    <div class="cm-nota-sub">
+                        Digite a nota (0 a 10) e clique em <strong>"Salvar Nota"</strong>.
+                        A nota será gravada automaticamente e aparecerá em <strong>🏆 Resultados</strong>, <strong>📊 Rel. por Turma</strong> e <strong>📊 Desempenho do Aluno</strong>.
+                    </div>
+
+                    <div class="cm-nota-fields">
+                        <div class="form-group">
+                            <label class="form-label">Nota (0 a 10) <span class="req">*</span></label>
+                            <input type="number" class="form-control" id="cm-nota-valor" min="0" max="10" step="0.1" placeholder="8.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Observação (opcional)</label>
+                            <input type="text" class="form-control" id="cm-nota-observacao" placeholder="Ex: excelente estrutura textual..." maxlength="200">
+                        </div>
+                    </div>
+
+                    <div class="cm-nota-actions">
+                        <button class="btn-salvar-nota-cm" id="btn-salvar-nota-cm" onclick="salvarNotaProducaoCM()">
+                            💾 SALVAR NOTA
+                        </button>
+                        <span class="cm-nota-hint">→ A nota aparecerá imediatamente em Resultados, Rel. Turma e Desempenho</span>
+                    </div>
+
+                    <div id="cm-nota-status"></div>
                 </div>
 
                 <div class="modal-footer no-print">
