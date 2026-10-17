@@ -2070,6 +2070,7 @@ def salvar_nota_producao():
         prova_id = data.get('prova_id')
         nota = data.get('nota')
         observacao = (data.get('observacao') or '').strip()
+		questoes_status_recebidas = data.get('questoes_status', [])  # ⬅️ NOVO
 
         if not aluno_id:
             return jsonify({'erro': 'Aluno é obrigatório'}), 400
@@ -2126,18 +2127,26 @@ def salvar_nota_producao():
         acertos_equiv = int(round(nota_float))
         total_equiv = 10
 
-        questoes_status = [{
-            'numero': 1,
-            'resposta': f'{nota_float:.1f}',
-            'gabarito': '10.0',
-            'acertou': nota_float >= 6,
-            'respondida': True,
-            'bncc': '',
-            'status': f'📝 Produção de Texto — Nota Manual {nota_float:.1f}',
-            'status_texto': f'📝 Nota {nota_float:.1f}',
-            'confianca': 100,
-            'correta': nota_float >= 6
-        }]
+                # ═══ USA AS QUESTÕES ENVIADAS PELO FRONTEND (com situações) ═══
+        if questoes_status_recebidas and isinstance(questoes_status_recebidas, list) and len(questoes_status_recebidas) > 0:
+            questoes_status = questoes_status_recebidas
+            # Adiciona info da nota manual em cada item
+            for q in questoes_status:
+                q['nota_manual'] = nota_float
+        else:
+            # Fallback: monta o item único (comportamento antigo)
+            questoes_status = [{
+                'numero': 1,
+                'resposta': f'{nota_float:.1f}',
+                'gabarito': '10.0',
+                'acertou': nota_float >= 6,
+                'respondida': True,
+                'bncc': '',
+                'status': f'📝 Produção de Texto — Nota Manual {nota_float:.1f}',
+                'status_texto': f'📝 Nota {nota_float:.1f}',
+                'confianca': 100,
+                'correta': nota_float >= 6
+            }]
 
         if observacao:
             questoes_status[0]['status_texto'] += f' — {observacao[:200]}'
