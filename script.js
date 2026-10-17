@@ -11,7 +11,7 @@ let gerandoDocumento = false;
 let paginaAtual = 'dashboard';
 
 // ============================================
-// ═══ NOVO: SEGURANÇA — ESCAPE HTML (anti-XSS) ═══
+// ═══ SEGURANÇA — ESCAPE HTML (anti-XSS) ═══
 // ============================================
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -464,6 +464,7 @@ let desempenhoData = {
 };
 
 let usuarioEditandoId = null;
+
 // ═══ NOVO: Dados das questões de Produção de Texto ═══
 let gabProducaoData = {
     questoes: []
@@ -929,7 +930,6 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
 
 // ============================================
 // CARREGAR ESCOLAS (COM CACHE)
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarEscolas() {
     try {
@@ -964,7 +964,6 @@ async function carregarEscolas() {
 
 // ============================================
 // CARREGAR TURMAS (COM CACHE E LIMITE)
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarTurmas() {
     try {
@@ -1070,7 +1069,6 @@ function limparFiltrosTurmas() {
 
 // ============================================
 // CARREGAR ALUNOS (COM CACHE E LIMITE)
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarAlunos(escolaId = null) {
     try {
@@ -1185,7 +1183,6 @@ function filtrarAlunosPorSerie(serie) {
 
 // ============================================
 // CARREGAR PROVAS (COM CACHE)
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarProvas() {
     try {
@@ -1328,7 +1325,6 @@ async function carregarDashboard() {
 
 // ============================================
 // CARREGAR GABARITOS
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarGabaritos() {
     try {
@@ -1364,7 +1360,6 @@ async function carregarGabaritos() {
 
 // ============================================
 // CARREGAR RESULTADOS COM FILTROS
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarResultadosComFiltros() {
     try {
@@ -1778,7 +1773,6 @@ function destacarQuestoesDuvidosas() {
         const oldBadge = item.querySelector('.confianca-badge');
         if (oldBadge) oldBadge.remove();
 
-        // ═══ Prioriza lista de suspeitas do backend ═══
         const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
 
         if (isSuspeita) {
@@ -2170,6 +2164,19 @@ function abrirCorrecaoManualStandalone() {
     document.getElementById('cm-grid-standalone').innerHTML = '';
     document.getElementById('cm-selects-container').style.display = 'block';
 
+    // ═══ NOVO: esconde bloco de nota manual + limpa campos ═══
+    const cmNotaContainer = document.getElementById('cm-nota-manual-container');
+    if (cmNotaContainer) cmNotaContainer.style.display = 'none';
+    const notaValor = document.getElementById('cm-nota-valor');
+    if (notaValor) notaValor.value = '';
+    const notaObs = document.getElementById('cm-nota-observacao');
+    if (notaObs) notaObs.value = '';
+    const statusDiv = document.getElementById('cm-nota-status');
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.textContent = '';
+    }
+
     carregarEscolasParaCorrecaoManual();
 
     document.getElementById('m-correcao-manual-standalone').style.display = 'flex';
@@ -2368,6 +2375,16 @@ function iniciarCorrecaoManualStandalone() {
     document.getElementById('cm-grid-standalone-container').style.display = 'block';
     document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
+    // ═══ NOVO: mostra bloco de nota manual se for Produção ═══
+    const cmNotaContainer = document.getElementById('cm-nota-manual-container');
+    if (cmNotaContainer) {
+        if (cmStandaloneData.disciplina === 'Produção de Texto') {
+            cmNotaContainer.style.display = 'block';
+        } else {
+            cmNotaContainer.style.display = 'none';
+        }
+    }
+
     gerarGridCorrecaoManualSA();
     atualizarResumoCorrecaoManualSA();
 
@@ -2376,7 +2393,7 @@ function iniciarCorrecaoManualStandalone() {
 
 // ============================================
 // GERAR GRID CORREÇÃO MANUAL STANDALONE
-// ═══ CORRIGIDO: escapeHtml ═══
+// ═══ MODIFICADO: Produção mostra gabarito formatado ═══
 // ============================================
 function gerarGridCorrecaoManualSA() {
     const grid = document.getElementById('cm-grid-standalone');
@@ -2391,7 +2408,7 @@ function gerarGridCorrecaoManualSA() {
     if (isProducao) {
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
-        grid.style.gap = '12px';
+        grid.style.gap = '14px';
         grid.style.maxHeight = 'none';
         grid.style.overflowY = 'visible';
     } else {
@@ -2406,41 +2423,58 @@ function gerarGridCorrecaoManualSA() {
 
     for (let i = 0; i < qtd; i++) {
         const div = document.createElement('div');
-        div.className = 'cm-item-standalone';
 
         const gab = (i < gabarito.length) ? gabarito[i] : '';
         const resp = (i < respostas.length) ? respostas[i] : '';
 
         if (isProducao) {
-            div.style.background = 'var(--bg2)';
-            div.style.border = '1px solid var(--border)';
-            div.style.borderRadius = '8px';
-            div.style.padding = '10px 14px';
-            div.style.textAlign = 'left';
-            div.style.display = 'flex';
-            div.style.flexDirection = 'column';
-            div.style.gap = '6px';
+            // ═══ LAYOUT DE PRODUÇÃO DE TEXTO ═══
+            div.className = 'cm-item-producao';
+
+            // Monta o gabarito formatado com A/B/C em blocos separados
+            let gabFormatadoHTML = '';
+            if (gab && gab.trim() !== '') {
+                // Divide o gabarito em blocos A), B), C)...
+                const blocos = gab.split(/\n(?=[A-Z]\))/);
+                blocos.forEach(bloco => {
+                    const match = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
+                    if (match) {
+                        const letra = match[1];
+                        const texto = match[2].trim();
+                        gabFormatadoHTML += `<div class="alt-bloco"><span class="alt-letra-gab">${escapeHtml(letra)}</span><span class="alt-texto-gab">${escapeHtml(texto)}</span></div>`;
+                    } else if (bloco.trim()) {
+                        gabFormatadoHTML += `<div class="alt-bloco">${escapeHtml(bloco.trim())}</div>`;
+                    }
+                });
+            } else {
+                gabFormatadoHTML = '<div style="color:var(--text3);font-style:italic;">Sem gabarito cadastrado</div>';
+            }
 
             div.innerHTML = `
-                <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
-                <div style="font-size:10px;color:var(--text3);">Gabarito: ${escapeHtml(gab || '—')}</div>
-                <textarea class="q-resposta-texto" placeholder="Resposta do aluno..." style="width:100%; min-height:50px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:11px; resize:vertical;">${escapeHtml(resp)}</textarea>
-                <select class="gab-nivel" style="width:100%; padding:2px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:10px;">
-                    <option value="">Nível BNCC</option>
-                    <option value="Inicial">Inicial</option>
-                    <option value="Básico">Básico</option>
-                    <option value="Proficiente">Proficiente</option>
-                    <option value="Avançado">Avançado</option>
-                </select>
-                <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:30px; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:10px; resize:vertical;"></textarea>
+                <div class="cm-q-header">
+                    <span class="cm-q-titulo">Q${i + 1}</span>
+                </div>
+                <div>
+                    <div class="cm-q-resposta-label">📋 Gabarito:</div>
+                    <div class="cm-gabarito-formatado">${gabFormatadoHTML}</div>
+                </div>
+                <div>
+                    <div class="cm-q-resposta-label">✍️ Resposta do aluno:</div>
+                    <textarea class="cm-q-resposta-texto"
+                              placeholder="Digite o que o aluno escreveu..."
+                              data-questao="${i}">${escapeHtml(resp || '')}</textarea>
+                </div>
             `;
-            const textarea = div.querySelector('.q-resposta-texto');
-            textarea.dataset.questao = i;
+
+            const textarea = div.querySelector('.cm-q-resposta-texto');
             textarea.addEventListener('input', function() {
                 cmStandaloneData.respostas[i] = this.value;
                 atualizarResumoCorrecaoManualSA();
             });
         } else {
+            // ═══ LAYOUT TRADICIONAL (A/B/C/D) ═══
+            div.className = 'cm-item-standalone';
+
             let options = '<option value="">—</option>';
             alternativas.forEach(alt => {
                 const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
@@ -2466,7 +2500,6 @@ function gerarGridCorrecaoManualSA() {
         grid.appendChild(div);
     }
 }
-
 // ============================================
 // ATUALIZAR RESPOSTA MANUAL SA
 // ============================================
@@ -2536,7 +2569,7 @@ function preencherGabaritoManualSA() {
     const gabarito = cmStandaloneData.gabarito || [];
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
     if (isProducao) {
-        const inputs = document.querySelectorAll('#cm-grid-standalone .q-resposta-texto');
+        const inputs = document.querySelectorAll('#cm-grid-standalone .cm-q-resposta-texto');
         inputs.forEach((input, i) => {
             if (i < gabarito.length) {
                 input.value = gabarito[i] || '';
@@ -2563,7 +2596,7 @@ function limparRespostasManualSA() {
     const qtd = cmStandaloneData.quantidade || 20;
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
     if (isProducao) {
-        const inputs = document.querySelectorAll('#cm-grid-standalone .q-resposta-texto');
+        const inputs = document.querySelectorAll('#cm-grid-standalone .cm-q-resposta-texto');
         inputs.forEach((input, i) => {
             input.value = '';
             cmStandaloneData.respostas[i] = '';
@@ -2581,12 +2614,11 @@ function limparRespostasManualSA() {
 
 // ============================================
 // REVISAR APENAS DUVIDOSAS SA
-// ═══ CORRIGIDO: usar questoes_suspeitas ═══
 // ============================================
 function revisarApenasDuvidosasSA() {
     const confiancas = cmStandaloneData.confianca_por_questao || [];
     const suspeitas = cmStandaloneData.questoes_suspeitas || [];
-    const itens = document.querySelectorAll('.cm-item-standalone');
+    const itens = document.querySelectorAll('.cm-item-standalone, .cm-item-producao');
     let totalDuvidosas = 0;
 
     itens.forEach((item, index) => {
@@ -2753,6 +2785,105 @@ function salvarCorrecaoManualStandalone() {
 }
 
 // ============================================
+// ═══ NOVO: SALVAR NOTA MANUAL DE PRODUÇÃO (DENTRO DO MODAL) ═══
+// ═══ Aluno e prova vêm do cmStandaloneData (já selecionados no modal) ═══
+// ============================================
+async function salvarNotaProducaoCM() {
+    const notaInput = document.getElementById('cm-nota-valor');
+    const obsInput = document.getElementById('cm-nota-observacao');
+    const statusDiv = document.getElementById('cm-nota-status');
+    const btn = document.getElementById('btn-salvar-nota-cm');
+
+    const nota = notaInput ? notaInput.value : '';
+    const observacao = obsInput ? obsInput.value : '';
+
+    const alunoId = cmStandaloneData.alunoId;
+    const provaId = cmStandaloneData.provaId;
+
+    if (!alunoId || !provaId) {
+        showToast('❌ Dados incompletos: aluno ou prova ausentes!', 'error');
+        return;
+    }
+
+    if (!nota || nota === '') {
+        showToast('❌ Digite a nota!', 'error');
+        if (notaInput) notaInput.focus();
+        return;
+    }
+
+    const notaNum = parseFloat(nota);
+    if (isNaN(notaNum) || notaNum < 0 || notaNum > 10) {
+        showToast('❌ Nota deve estar entre 0 e 10!', 'error');
+        return;
+    }
+
+    if (statusDiv) {
+        statusDiv.className = 'sucesso';
+        statusDiv.textContent = '💾 Salvando nota...';
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(59,130,246,0.12)';
+        statusDiv.style.color = 'var(--blue)';
+        statusDiv.style.border = '1.5px solid rgba(59,130,246,0.3)';
+    }
+    if (btn) btn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_URL}/api/salvar_nota_producao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: parseInt(alunoId),
+                prova_id: parseInt(provaId),
+                nota: notaNum,
+                observacao: observacao || ''
+            })
+        });
+        const dados = await response.json();
+
+        if (dados.sucesso) {
+            showToast(`✅ Nota ${notaNum.toFixed(1)} salva para ${dados.aluno}!`, 'success');
+            if (statusDiv) {
+                statusDiv.className = 'sucesso';
+                statusDiv.textContent = `✅ Nota ${notaNum.toFixed(1)} salva! Já aparece em Resultados, Rel. Turma e Desempenho.`;
+                statusDiv.style.background = 'rgba(16,185,129,0.12)';
+                statusDiv.style.color = 'var(--green)';
+                statusDiv.style.border = '1.5px solid rgba(16,185,129,0.3)';
+            }
+            if (notaInput) notaInput.value = '';
+            if (obsInput) obsInput.value = '';
+
+            limparCache();
+            setTimeout(() => {
+                carregarResultadosComFiltros();
+                carregarDashboard();
+                carregarUltimasCorrecoes();
+            }, 500);
+        } else {
+            showToast('❌ ' + (dados.erro || 'Erro desconhecido'), 'error');
+            if (statusDiv) {
+                statusDiv.className = 'erro';
+                statusDiv.textContent = '❌ ' + (dados.erro || 'Erro ao salvar nota');
+                statusDiv.style.background = 'rgba(239,68,68,0.12)';
+                statusDiv.style.color = 'var(--red)';
+                statusDiv.style.border = '1.5px solid rgba(239,68,68,0.3)';
+            }
+        }
+    } catch (erro) {
+        console.error('Erro ao salvar nota produção:', erro);
+        showToast('❌ Erro ao salvar nota: ' + erro.message, 'error');
+        if (statusDiv) {
+            statusDiv.className = 'erro';
+            statusDiv.textContent = '❌ Erro ao salvar: ' + erro.message;
+            statusDiv.style.background = 'rgba(239,68,68,0.12)';
+            statusDiv.style.color = 'var(--red)';
+            statusDiv.style.border = '1.5px solid rgba(239,68,68,0.3)';
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+// ============================================
 // ABRIR CORREÇÃO MANUAL DIRETAMENTE
 // ============================================
 async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
@@ -2807,6 +2938,16 @@ async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
         document.getElementById('cm-grid-standalone-container').style.display = 'block';
         document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
+        // ═══ NOVO: mostra bloco de nota manual se for Produção ═══
+        const cmNotaContainer = document.getElementById('cm-nota-manual-container');
+        if (cmNotaContainer) {
+            if (cmStandaloneData.disciplina === 'Produção de Texto') {
+                cmNotaContainer.style.display = 'block';
+            } else {
+                cmNotaContainer.style.display = 'none';
+            }
+        }
+
         setText('cm-sa-aluno', cmStandaloneData.alunoNome);
         setText('cm-sa-turma', cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome);
         setText('cm-sa-prova', cmStandaloneData.provaTitulo);
@@ -2841,7 +2982,6 @@ async function editarGabaritoDesempenho() {
 
 // ============================================
 // FUNÇÕES DE USUÁRIO
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 function abrirModalUsuario() {
     usuarioEditandoId = null;
@@ -2960,7 +3100,6 @@ async function prevTexto(input) {
         document.getElementById('txt-img-prev').style.display = 'block';
         document.getElementById('txt-img').src = base64;
 
-        // Extrai o texto da imagem via OpenAI Vision
         showToast('🔍 Lendo texto da redação...', 'info');
         try {
             const response = await fetch(API_URL + '/api/extrair_texto_redacao', {
@@ -2988,7 +3127,6 @@ async function avaliarTexto() {
     let texto = document.getElementById('txt-aluno').value;
     const alunoId = document.getElementById('txt-aluno-select').value;
 
-    // Se não tem texto digitado, mas tem imagem selecionada, extrai via OCR
     const preview = document.getElementById('txt-img-prev');
     const imgEl = document.getElementById('txt-img');
     const temImagem = preview && preview.style.display !== 'none' && imgEl && imgEl.src;
@@ -3090,14 +3228,12 @@ async function avaliarTexto() {
 }
 
 async function salvarAvaliacaoTexto() {
-    // Pega os valores da tela
     const alunoId = document.getElementById('txt-aluno-select').value;
     const provaId = document.getElementById('txt-prova').value;
     const texto = document.getElementById('txt-aluno').value;
     const nota = parseFloat(document.getElementById('txt-nota').textContent) || 0;
     const feedback = document.getElementById('txt-fb').innerHTML || '';
 
-    // Pega as métricas
     const metricas = {
         nota_coerencia: parseFloat(document.getElementById('c-coe').textContent) || 0,
         nota_estrutura: parseFloat(document.getElementById('c-tema').textContent) || 0,
@@ -3105,7 +3241,6 @@ async function salvarAvaliacaoTexto() {
         nota_vocabulario: parseFloat(document.getElementById('c-voc').textContent) || 0
     };
 
-    // Validações
     if (!alunoId) {
         showToast('⚠️ Selecione o aluno antes de salvar!', 'error');
         return;
@@ -3161,7 +3296,7 @@ async function abrirCamera() {
         fecharCamera(); }
 }
 
-function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';a
+function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';
     abrirCamera(); }
 
 function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop());
@@ -3177,7 +3312,6 @@ function capturarFoto() {
     fecharCamera();
     showToast('📸 Foto capturada!', 'ai');
 
-    // ═══ NOVO: se estiver em modo automático, vai direto para a correção automática ═══
     if (autoModoAtivo) {
         autoModoAtivo = false;
         window._autoImagem = foto;
@@ -3193,9 +3327,7 @@ function capturarFoto() {
         }, 500);
         return;
     }
-    // ═══ FIM ═══
 
-    // Comportamento normal (correção manual)
     ultimaImagem = foto;
     processarComIA(foto);
     go('corrigir-ia');
@@ -3462,7 +3594,6 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
     }
 }
 
-// Normalização TOLERANTE (mesma do backend)
 function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao, tipoQuestoes = 4) {
     let respostasNormalizadas = [];
     let confiancasNormalizadas = [];
@@ -3519,7 +3650,6 @@ function salvarDadosCorrecaoManual(dados) {
     };
 }
 
-// ═══ CORRIGIDO: adicionar badge de revisão manual ═══
 function atualizarInterfaceCorrecao(dados) {
     const box = document.getElementById('ia-result');
     if (box) box.style.display = 'block';
@@ -3601,7 +3731,6 @@ function atualizarInterfaceCorrecao(dados) {
         let colunasPorLinha = 5;
         if (totalQuestoes > 25) colunasPorLinha = 6;
 
-        // Gabarito oficial
         const tituloOficial = document.createElement('div');
         tituloOficial.style.cssText = `
             grid-column: 1 / -1;
@@ -3653,7 +3782,6 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridOficial);
 
-        // Gabarito do aluno
         const tituloAluno = document.createElement('div');
         tituloAluno.style.cssText = `
             grid-column: 1 / -1;
@@ -3728,7 +3856,6 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridAluno);
 
-        // Comparação resumida
         const divComparacao = document.createElement('div');
         divComparacao.style.cssText = `
             grid-column: 1 / -1;
@@ -3832,7 +3959,6 @@ async function salvarCorrecao() {
 
 // ============================================
 // FUNÇÕES DE CRUD - ESCOLA
-// ═══ CORRIGIDO: escapeHtml e escapeAttr ═══
 // ============================================
 async function salvarEscola() {
     const nome = document.getElementById('escola-nome').value.trim();
@@ -4604,7 +4730,6 @@ async function carregarTurmasLista(escolaId) {
     }
 }
 
-// ═══ CORRIGIDO: escapeHtml ═══
 async function gerarListaTurma() {
     const escolaId = document.getElementById('lista-escola').value;
     const turmaId = document.getElementById('lista-turma').value;
@@ -4921,7 +5046,6 @@ function filtrarSerie(sel) {
     document.querySelectorAll('#tb-turmas tr').forEach(row => { row.style.display = (!val || row.dataset.serie === val) ? '' : 'none'; });
 }
 
-// ═══ CORRIGIDO: toast com escape ═══
 function showToast(msg, type) {
     type = type || 'info';
     const c = document.getElementById('toast-c');
@@ -5170,7 +5294,6 @@ async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
 
 // ============================================
 // CARREGAR RELATÓRIOS
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarRelatorios() {
     try {
@@ -5278,7 +5401,6 @@ async function carregarRelatorios() {
     } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
 }
 
-// ═══ CORRIGIDO: escapeHtml ═══
 async function carregarRelatorioEscola() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -5406,7 +5528,6 @@ async function imprimirRelatorioTurma() {
     window.print();
 }
 
-// ═══ CORRIGIDO: escapeHtml em todas as tabelas ═══
 async function carregarRelatorioTurmaFiltrado() {
     try {
         const escolaId = document.getElementById('rel-turma-escola').value;
@@ -5717,7 +5838,6 @@ function limparFiltrosRelTurma() {
     }).catch(e => console.error('Erro ao recarregar provas:', e));
 }
 
-// ═══ CORRIGIDO: escapeHtml em todas as células ═══
 function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao) {
     try {
         const container = document.getElementById('rel-acertos-grid');
@@ -5895,7 +6015,6 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
 
 // ============================================
 // FUNÇÕES DA ABA DESEMPENHO DO ALUNO
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarEscolasDesempenho() {
     try {
@@ -6516,8 +6635,7 @@ async function carregarDadosSecundarios() {
             carregarEscolasFiltroAlunos(),
             carregarEscolasCorrigir(),
             carregarEscolasTexto(),
-            carregarEscolasParaCorrecaoManual(),
-            carregarEscolasNotaProducao()   // ⬅️ NOVO AQUI
+            carregarEscolasParaCorrecaoManual()
         ]);
         console.log('✅ Dados de formulários carregados!');
 
@@ -6537,7 +6655,6 @@ async function carregarDadosSecundarios() {
 
 // ============================================
 // CARREGAR CONCEITO REAL
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarConceitoReal() {
     try {
@@ -6657,7 +6774,6 @@ async function carregarConceitoReal() {
 
 // ============================================
 // CARREGAR ÚLTIMAS CORREÇÕES
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarUltimasCorrecoes() {
     try {
@@ -6703,7 +6819,6 @@ async function carregarUltimasCorrecoes() {
 
 // ============================================
 // CARREGAR USUÁRIOS
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 async function carregarUsuarios() {
     try {
@@ -6877,7 +6992,6 @@ function imprimirAlunos() {
     win.print();
 }
 
-// ═══ CORRIGIDO: escapeHtml no exportarRelatorioPDF ═══
 function exportarRelatorioPDF() {
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
@@ -7179,7 +7293,6 @@ function exportarRelatorioPDF() {
 
 // ============================================
 // GABARITO - BUILD GRID
-// ═══ CORRIGIDO: escapeHtml ═══
 // ============================================
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
@@ -7198,7 +7311,6 @@ function buildGabGrid() {
     const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
     const isProducao = (disciplina === 'Produção de Texto');
 
-    // ═══ Atualiza o cabeçalho do gabarito ═══
     if (headerContainer) {
         const disciplinaLabel = disciplina || 'Disciplina';
         headerContainer.innerHTML = `
@@ -7210,7 +7322,6 @@ function buildGabGrid() {
         `;
     }
 
-    // ═══ Aviso de alternativas ═══
     if (infoAlts) {
         if (isProducao) {
             infoAlts.innerHTML = '<div style="padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--orange);">📝 PRODUÇÃO DE TEXTO — Título + Cabeçalho + Alternativas A/B/C + Situação (A até I)</div>';
@@ -7221,16 +7332,12 @@ function buildGabGrid() {
 
     const total = parseInt(totalEl.value) || 20;
 
-    // ═══════════════════════════════════════════════
-    // ═══ PRODUÇÃO DE TEXTO — LAYOUT DIFERENCIADO ═══
-    // ═══════════════════════════════════════════════
     if (isProducao) {
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
         grid.style.gap = '16px';
         grid.innerHTML = '';
 
-        // Mantém o estado atual se já tiver questões
         if (!gabProducaoData.questoes || gabProducaoData.questoes.length === 0) {
             gabProducaoData.questoes = [];
             for (let i = 0; i < total; i++) {
@@ -7242,7 +7349,6 @@ function buildGabGrid() {
                 });
             }
         } else {
-            // Ajusta se o total mudou
             while (gabProducaoData.questoes.length < total) {
                 const idx = gabProducaoData.questoes.length + 1;
                 gabProducaoData.questoes.push({
@@ -7257,14 +7363,12 @@ function buildGabGrid() {
             }
         }
 
-        // Cria os cards
         for (let i = 0; i < total; i++) {
             const q = gabProducaoData.questoes[i];
             const card = document.createElement('div');
             card.className = 'gab-producao-questao';
             card.dataset.index = i;
 
-            // Header (título + cabeçalho)
             const header = document.createElement('div');
             header.className = 'gab-producao-header';
             header.innerHTML = `
@@ -7276,14 +7380,12 @@ function buildGabGrid() {
             `;
             card.appendChild(header);
 
-            // Alternativas (A, B, C)
             const altsLista = document.createElement('div');
             altsLista.className = 'gab-alternativas-lista';
             altsLista.id = `gab-alts-${i}`;
             renderizarAlternativasProducao(i, altsLista);
             card.appendChild(altsLista);
 
-            // Situação
             const situacaoWrap = document.createElement('div');
             situacaoWrap.className = 'gab-situacao-wrapper';
             const opcoesSituacao = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
@@ -7305,9 +7407,6 @@ function buildGabGrid() {
         return;
     }
 
-    // ═══════════════════════════════════════════════
-    // ═══ OUTRAS DISCIPLINAS (fluxo original) ═══
-    // ═══════════════════════════════════════════════
     const alts = ['A', 'B', 'C', 'D'];
     const lbl = document.getElementById('gab-label');
     if (lbl) {
@@ -7333,10 +7432,9 @@ function buildGabGrid() {
     }
 }
 
-// ═══════════════════════════════════════════════════════════
-// ═══ NOVAS FUNÇÕES AUXILIARES — PRODUÇÃO DE TEXTO ═══
-// ═══════════════════════════════════════════════════════════
-
+// ============================================
+// FUNÇÕES AUXILIARES — PRODUÇÃO DE TEXTO
+// ============================================
 function renderizarAlternativasProducao(index, container) {
     const q = gabProducaoData.questoes[index];
     if (!q) return;
@@ -7356,7 +7454,6 @@ function renderizarAlternativasProducao(index, container) {
         container.appendChild(item);
     });
 
-    // Botão de adicionar próxima letra (se ainda der)
     const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const ultimaLetra = altsOrdenadas[altsOrdenadas.length - 1] || 'C';
     const proximaLetra = letras[letras.indexOf(ultimaLetra) + 1];
@@ -7391,7 +7488,6 @@ function atualizarAlternativaProducao(textarea) {
     if (gabProducaoData.questoes[idx]) {
         gabProducaoData.questoes[idx].alternativas[letra] = textarea.value;
 
-        // Auto-abre próxima se digitou algo e é a última letra
         const letras = Object.keys(gabProducaoData.questoes[idx].alternativas).sort();
         const ultimaLetra = letras[letras.length - 1];
         if (letra === ultimaLetra && textarea.value.trim() !== '') {
@@ -7439,162 +7535,6 @@ function removerAlternativaProducao(index, letra) {
     if (container) renderizarAlternativasProducao(index, container);
 }
 
-// ═══════════════════════════════════════════════════════════
-// ═══ NOVAS FUNÇÕES — NOTA MANUAL DE PRODUÇÃO ═══
-// ═══════════════════════════════════════════════════════════
-
-async function carregarEscolasNotaProducao() {
-    try {
-        const escolas = await carregarEscolasComCache();
-        const select = document.getElementById('nota-producao-escola');
-        if (select && escolas && !escolas.erro) {
-            const current = select.value;
-            select.innerHTML = '<option value="">Selecione a escola...</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                select.appendChild(opt);
-            });
-            if (current) {
-                select.value = current;
-                carregarTurmasNotaProducao(current);
-            }
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar escolas para nota produção:', erro);
-    }
-}
-
-async function carregarTurmasNotaProducao(escolaId) {
-    const selectTurma = document.getElementById('nota-producao-turma');
-    const selectAluno = document.getElementById('nota-producao-aluno');
-    selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-    selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-    if (!escolaId) return;
-    try {
-        const turmas = await carregarTurmasComCache(escolaId);
-        if (turmas && !turmas.erro) {
-            turmas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.nome + ' - ' + (t.serie || '');
-                opt.dataset.serie = t.serie || '';
-                selectTurma.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        console.error('Erro ao carregar turmas nota produção:', e);
-    }
-}
-
-async function carregarAlunosNotaProducao(turmaId) {
-    const selectAluno = document.getElementById('nota-producao-aluno');
-    selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-    if (!turmaId) return;
-    try {
-        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-        if (alunos && !alunos.erro) {
-            alunos.forEach(a => {
-                const opt = document.createElement('option');
-                opt.value = a.id;
-                opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
-                selectAluno.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        console.error('Erro ao carregar alunos nota produção:', e);
-    }
-}
-
-function atualizarVisibilidadeNotaProducao() {
-    const container = document.getElementById('gab-nota-manual-container');
-    const provaSelect = document.getElementById('gab-prova');
-    if (!container || !provaSelect) return;
-
-    const selectedOption = provaSelect.options[provaSelect.selectedIndex];
-    const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
-    const isProducao = (disciplina === 'Produção de Texto');
-
-    if (isProducao) {
-        container.style.display = 'block';
-    } else {
-        container.style.display = 'none';
-    }
-}
-
-async function salvarNotaProducao() {
-    const escolaId = document.getElementById('nota-producao-escola').value;
-    const turmaId = document.getElementById('nota-producao-turma').value;
-    const alunoId = document.getElementById('nota-producao-aluno').value;
-    const nota = document.getElementById('nota-producao-valor').value;
-    const observacao = document.getElementById('nota-producao-observacao').value;
-    const provaId = document.getElementById('gab-prova').value;
-    const statusDiv = document.getElementById('nota-producao-status');
-
-    if (!escolaId) { showToast('❌ Selecione a escola!', 'error'); return; }
-    if (!turmaId) { showToast('❌ Selecione a turma!', 'error'); return; }
-    if (!alunoId) { showToast('❌ Selecione o aluno!', 'error'); return; }
-    if (!provaId) { showToast('❌ Selecione a prova (no topo da página)!', 'error'); return; }
-    if (!nota || nota === '') { showToast('❌ Digite a nota!', 'error'); return; }
-
-    const notaNum = parseFloat(nota);
-    if (isNaN(notaNum) || notaNum < 0 || notaNum > 10) {
-        showToast('❌ Nota deve estar entre 0 e 10!', 'error');
-        return;
-    }
-
-    if (statusDiv) {
-        statusDiv.style.display = 'block';
-        statusDiv.className = 'info';
-        statusDiv.textContent = '💾 Salvando nota...';
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/api/salvar_nota_producao`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                aluno_id: parseInt(alunoId),
-                prova_id: parseInt(provaId),
-                nota: notaNum,
-                observacao: observacao || ''
-            })
-        });
-        const dados = await response.json();
-
-        if (dados.sucesso) {
-            showToast(`✅ Nota ${notaNum.toFixed(1)} salva para ${dados.aluno}!`, 'success');
-            if (statusDiv) {
-                statusDiv.className = 'sucesso';
-                statusDiv.textContent = `✅ Nota ${notaNum.toFixed(1)} salva! Já aparece em Resultados, Rel. Turma e Desempenho.`;
-            }
-            document.getElementById('nota-producao-valor').value = '';
-            document.getElementById('nota-producao-observacao').value = '';
-
-            limparCache();
-            setTimeout(() => {
-                carregarResultadosComFiltros();
-                carregarDashboard();
-                carregarUltimasCorrecoes();
-            }, 500);
-        } else {
-            showToast('❌ ' + (dados.erro || 'Erro desconhecido'), 'error');
-            if (statusDiv) {
-                statusDiv.className = 'erro';
-                statusDiv.textContent = '❌ ' + (dados.erro || 'Erro ao salvar nota');
-            }
-        }
-    } catch (erro) {
-        console.error('Erro ao salvar nota produção:', erro);
-        showToast('❌ Erro ao salvar nota: ' + erro.message, 'error');
-        if (statusDiv) {
-            statusDiv.className = 'erro';
-            statusDiv.textContent = '❌ Erro ao salvar: ' + erro.message;
-        }
-    }
-}
-
 function fillGabRand() {
     const provaSelect = document.getElementById('gab-prova');
     const selectedOption = provaSelect.options[provaSelect.selectedIndex];
@@ -7614,10 +7554,15 @@ function clearGab() {
     const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
     const isProducao = (disciplina === 'Produção de Texto');
     if (isProducao) {
-        document.querySelectorAll('.gab-titulo').forEach(inp => inp.value = 'Q' + (Array.from(document.querySelectorAll('.gab-titulo')).indexOf(inp) + 1));
-        document.querySelectorAll('.gab-texto').forEach(ta => ta.value = '');
-        document.querySelectorAll('.gab-nivel').forEach(sel => sel.value = '');
-        document.querySelectorAll('.gab-observacao').forEach(ta => ta.value = '');
+        document.querySelectorAll('.gab-titulo-editavel').forEach((inp, i) => inp.value = 'Q' + (i+1));
+        document.querySelectorAll('.gab-cabecalho').forEach(ta => ta.value = '');
+        document.querySelectorAll('.alt-texto').forEach(ta => ta.value = '');
+        document.querySelectorAll('.gab-situacao').forEach(sel => sel.value = '');
+        gabProducaoData.questoes.forEach(q => {
+            q.cabecalho = '';
+            q.situacao = '';
+            Object.keys(q.alternativas).forEach(k => q.alternativas[k] = '');
+        });
     } else {
         document.querySelectorAll('.gab-select').forEach(s => { s.value = ''; s.classList.remove('filled'); });
         document.querySelectorAll('.gab-bncc').forEach(inp => inp.value = '');
@@ -7634,9 +7579,6 @@ async function saveGab() {
         const provaId = provaSelect.value;
         if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
 
-        // ═══════════════════════════════════════════════
-        // ═══ PRODUÇÃO DE TEXTO ═══
-        // ═══════════════════════════════════════════════
         if (isProducao) {
             const total = gabProducaoData.questoes.length;
             if (total === 0) {
@@ -7644,14 +7586,12 @@ async function saveGab() {
                 return;
             }
 
-            // Monta os textos_questoes no formato esperado pelo backend
             const textos_questoes = gabProducaoData.questoes.map(q => ({
                 titulo: q.titulo || '',
                 cabecalho: q.cabecalho || '',
                 alternativas: q.alternativas || {}
             }));
 
-            // Respostas = concatenação legível das alternativas (para compatibilidade)
             const respostas = gabProducaoData.questoes.map(q => {
                 const alts = q.alternativas || {};
                 return Object.keys(alts).sort().map(k => `${k}) ${alts[k] || ''}`).join('\n');
@@ -7686,9 +7626,6 @@ async function saveGab() {
             return;
         }
 
-        // ═══════════════════════════════════════════════
-        // ═══ OUTRAS DISCIPLINAS (fluxo original) ═══
-        // ═══════════════════════════════════════════════
         const respostas = [];
         const bncc = [];
 
@@ -7748,7 +7685,6 @@ function editarGabarito(id) {
                     const selectProva = document.getElementById('gab-prova');
                     if (selectProva) selectProva.value = id;
 
-                    // ═══ NOVO: se for Produção, popula gabProducaoData ANTES de buildGabGrid ═══
                     if (isProducao) {
                         const textos = prova.textos_questoes || [];
                         const niveis = prova.niveis || [];
@@ -7846,10 +7782,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const gabProvaSelect = document.getElementById('gab-prova');
     if (gabProvaSelect) {
-        gabProvaSelect.addEventListener('change', function() {
-            buildGabGrid();
-            atualizarVisibilidadeNotaProducao();
-        });
+        gabProvaSelect.addEventListener('change', buildGabGrid);
     }
 });
 
@@ -7869,7 +7802,6 @@ window.addEventListener('resize', function() {
 
 // ================================================================
 // MATRIZ DE PROFICIÊNCIA - CRUD COMPLETO
-// ═══ CORRIGIDO: escapeHtml ═══
 // ================================================================
 
 if (typeof matrizesData === 'undefined') { var matrizesData = []; }
@@ -8188,7 +8120,6 @@ function limparFiltrosMatriz() {
 
 let visualizarMatrizId = null;
 
-// ═══ CORRIGIDO: escapeHtml ═══
 function visualizarMatriz(id) {
     const matriz = matrizesData.find(m => m.id === id);
     if (!matriz) {
@@ -8264,7 +8195,6 @@ function visualizarMatriz(id) {
     openM('m-visualizar-matriz');
 }
 
-// ═══ CORRIGIDO: escapeHtml no PDF ═══
 function imprimirMatrizVisualizada() {
     const matriz = window.matrizVisualizando;
     if (!matriz) {
@@ -8499,7 +8429,7 @@ async function corrigirAutomatico() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 imagem: imagem,
-                salvar_auto: false  // ⬅️ ADICIONADO: NÃO salva sozinho — usuário decide pelo botão "💾 Salvar"
+                salvar_auto: false
             })
         });
 
@@ -8553,8 +8483,6 @@ function mostrarResultadoAutomatico(dados) {
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
     if (!conteudoDiv) return;
 
-    // ⬇️ ADICIONADO: prepara os dados para reutilizar as funções da Tela 2
-    // (abrirCorrecaoManual e salvarCorrecao já trabalham com correcaoManualData)
     if (dados.sucesso || !dados.erro) {
         const gabarito = dados.gabarito || [];
         const respostas = dados.respostas_detectadas || [];
@@ -8585,7 +8513,6 @@ function mostrarResultadoAutomatico(dados) {
 
         window.ultimoResultadoAuto = dados;
     }
-    // ⬆️ ADICIONADO
 
     const nota = dados.nota || 0;
     const acertos = dados.acertos || 0;
@@ -8726,13 +8653,8 @@ function limparResultadoAutomatico() {
 }
 
 // ============================================
-// ═══ ADAPTADORES: Tela 1 (QR Code) → Funções da Tela 2 ═══
+// ADAPTADORES: Tela 1 (QR Code) → Funções da Tela 2
 // ============================================
-
-/**
- * Botão "✏️ Correção Manual" da tela do QR Code.
- * Reaproveita a função abrirCorrecaoManual() que já existe.
- */
 function abrirCorrecaoManualAuto() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
         showToast('❌ Nenhuma correção para editar!', 'error');
@@ -8745,10 +8667,6 @@ function abrirCorrecaoManualAuto() {
     abrirCorrecaoManual();
 }
 
-/**
- * Botão "💾 Salvar" da tela do QR Code.
- * Reaproveita a função salvarCorrecao() que já existe.
- */
 async function salvarCorrecaoAuto() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
         showToast('❌ Nenhuma correção para salvar!', 'error');
