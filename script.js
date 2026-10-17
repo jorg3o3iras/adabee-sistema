@@ -2324,7 +2324,11 @@ function carregarGabaritoParaCorrecaoManual() {
     }
 }
 
-function iniciarCorrecaoManualStandalone() {
+// ============================================
+// INICIAR CORREÇÃO MANUAL STANDALONE
+// ═══ MODIFICADO: busca textos_questoes e niveis da prova completa ═══
+// ============================================
+async function iniciarCorrecaoManualStandalone() {
     const escolaSelect = document.getElementById('cm-escola-select');
     const turmaSelect = document.getElementById('cm-turma-select');
     const provaSelect = document.getElementById('cm-prova-select');
@@ -2343,21 +2347,44 @@ function iniciarCorrecaoManualStandalone() {
     cmStandaloneData.escolaNome = escolaOption.text || '';
     cmStandaloneData.escolaId = parseInt(escolaSelect.value);
 
-    if (!cmStandaloneData.gabarito || cmStandaloneData.gabarito.length === 0) {
-        const provaOption = provaSelect.options[provaSelect.selectedIndex];
-        try {
-            const gabarito = JSON.parse(provaOption.dataset.gabarito || '[]');
-            cmStandaloneData.gabarito = gabarito;
-            cmStandaloneData.quantidade = parseInt(provaOption.dataset.quantidade) || 20;
-            const tipo = provaOption.dataset.tipo || '4';
-            cmStandaloneData.alternativas = tipo === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-            cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
-            cmStandaloneData.respostas = new Array(cmStandaloneData.quantidade).fill('');
-            cmStandaloneData.disciplina = provaOption.dataset.disciplina || '';
-        } catch (e) {
-            showToast('❌ Erro ao carregar gabarito da prova', 'error');
+    const provaId = parseInt(provaSelect.value);
+
+    // ═══ BUSCA A PROVA COMPLETA NO BACKEND (inclui textos_questoes e niveis) ═══
+    try {
+        showToast('🔄 Carregando dados da prova...', 'info');
+        const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+        const prova = await provaResp.json();
+
+        if (!prova || prova.erro) {
+            showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
             return;
         }
+
+        cmStandaloneData.provaId = provaId;
+        cmStandaloneData.gabarito = prova.gabarito || [];
+        cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
+        const tipo = prova.tipo_questoes || '4';
+        cmStandaloneData.alternativas = tipo == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+        cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
+        cmStandaloneData.respostas = new Array(cmStandaloneData.quantidade).fill('');
+        cmStandaloneData.disciplina = prova.disciplina || '';
+        cmStandaloneData.provaTitulo = prova.titulo || 'Prova';
+        cmStandaloneData.provaData = prova.data_prova || '';
+        cmStandaloneData.serie = prova.serie || cmStandaloneData.serie || '';
+        cmStandaloneData.textos_questoes = prova.textos_questoes || [];
+        cmStandaloneData.situacoes = new Array(cmStandaloneData.quantidade).fill('');
+
+        // Se for Produção, inicializa as situações com os niveis salvos
+        if (prova.niveis && Array.isArray(prova.niveis)) {
+            for (let i = 0; i < cmStandaloneData.quantidade; i++) {
+                cmStandaloneData.situacoes[i] = prova.niveis[i] || '';
+            }
+        }
+
+    } catch (e) {
+        console.error('Erro ao carregar prova:', e);
+        showToast('❌ Erro ao carregar dados da prova: ' + e.message, 'error');
+        return;
     }
 
     const temGabarito = cmStandaloneData.gabarito.some(g => g && g.trim() !== '');
@@ -2375,7 +2402,7 @@ function iniciarCorrecaoManualStandalone() {
     document.getElementById('cm-grid-standalone-container').style.display = 'block';
     document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
-    // ═══ NOVO: mostra bloco de nota manual se for Produção ═══
+    // ═══ Mostra bloco de nota manual se for Produção ═══
     const cmNotaContainer = document.getElementById('cm-nota-manual-container');
     if (cmNotaContainer) {
         if (cmStandaloneData.disciplina === 'Produção de Texto') {
@@ -2393,7 +2420,7 @@ function iniciarCorrecaoManualStandalone() {
 
 // ============================================
 // GERAR GRID CORREÇÃO MANUAL STANDALONE
-// ═══ MODIFICADO: Produção mostra gabarito formatado ═══
+// ═══ MODIFICADO: cabeçalho + situação de correção por questão ═══
 // ============================================
 function gerarGridCorrecaoManualSA() {
     const grid = document.getElementById('cm-grid-standalone');
@@ -2404,6 +2431,8 @@ function gerarGridCorrecaoManualSA() {
     const gabarito = cmStandaloneData.gabarito || [];
     const respostas = cmStandaloneData.respostas || [];
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+    const textosQuestoes = cmStandaloneData.textos_questoes || [];
+    const situacoes = cmStandaloneData.situacoes || [];
 
     if (isProducao) {
         grid.style.display = 'flex';
@@ -2431,10 +2460,21 @@ function gerarGridCorrecaoManualSA() {
             // ═══ LAYOUT DE PRODUÇÃO DE TEXTO ═══
             div.className = 'cm-item-producao';
 
-            // Monta o gabarito formatado com A/B/C em blocos separados
+            // ═══ CABEÇALHO/TEMA ═══
+            let cabecalho = '';
+            if (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].cabecalho) {
+                cabecalho = textosQuestoes[i].cabecalho;
+            }
+            const tituloQ = (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i + 1}`;
+
+            let cabecalhoHTML = '';
+            if (cabecalho && cabecalho.trim() !== '') {
+                cabecalhoHTML = `<div class="cm-q-cabecalho">${escapeHtml(cabecalho)}</div>`;
+            }
+
+            // ═══ GABARITO FORMATADO ═══
             let gabFormatadoHTML = '';
             if (gab && gab.trim() !== '') {
-                // Divide o gabarito em blocos A), B), C)...
                 const blocos = gab.split(/\n(?=[A-Z]\))/);
                 blocos.forEach(bloco => {
                     const match = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
@@ -2450,10 +2490,20 @@ function gerarGridCorrecaoManualSA() {
                 gabFormatadoHTML = '<div style="color:var(--text3);font-style:italic;">Sem gabarito cadastrado</div>';
             }
 
+            // ═══ SITUAÇÃO DE CORREÇÃO (A–I) ═══
+            const situacaoAtual = (i < situacoes.length) ? (situacoes[i] || '') : '';
+            const opcoesSit = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+            let optsSitHTML = '';
+            opcoesSit.forEach(op => {
+                const sel = (situacaoAtual === op) ? 'selected' : '';
+                optsSitHTML += `<option value="${op}" ${sel}>${op === '' ? '—' : op}</option>`;
+            });
+
             div.innerHTML = `
                 <div class="cm-q-header">
-                    <span class="cm-q-titulo">Q${i + 1}</span>
+                    <span class="cm-q-titulo">${escapeHtml(tituloQ)}</span>
                 </div>
+                ${cabecalhoHTML}
                 <div>
                     <div class="cm-q-resposta-label">📋 Gabarito:</div>
                     <div class="cm-gabarito-formatado">${gabFormatadoHTML}</div>
@@ -2464,6 +2514,12 @@ function gerarGridCorrecaoManualSA() {
                               placeholder="Digite o que o aluno escreveu..."
                               data-questao="${i}">${escapeHtml(resp || '')}</textarea>
                 </div>
+                <div class="cm-q-situacao-wrapper">
+                    <label class="cm-q-situacao-label">📊 Situação de Correção:</label>
+                    <select class="cm-q-situacao-select" data-questao="${i}" onchange="atualizarSituacaoCM(this)">
+                        ${optsSitHTML}
+                    </select>
+                </div>
             `;
 
             const textarea = div.querySelector('.cm-q-resposta-texto');
@@ -2472,7 +2528,7 @@ function gerarGridCorrecaoManualSA() {
                 atualizarResumoCorrecaoManualSA();
             });
         } else {
-            // ═══ LAYOUT TRADICIONAL (A/B/C/D) ═══
+            // ═══ LAYOUT TRADICIONAL ═══
             div.className = 'cm-item-standalone';
 
             let options = '<option value="">—</option>';
@@ -2499,6 +2555,13 @@ function gerarGridCorrecaoManualSA() {
         }
         grid.appendChild(div);
     }
+}
+
+// ═══ NOVA FUNÇÃO: atualizar situação por questão ═══
+function atualizarSituacaoCM(select) {
+    const idx = parseInt(select.dataset.questao);
+    if (!cmStandaloneData.situacoes) cmStandaloneData.situacoes = [];
+    cmStandaloneData.situacoes[idx] = select.value;
 }
 // ============================================
 // ATUALIZAR RESPOSTA MANUAL SA
@@ -2785,8 +2848,8 @@ function salvarCorrecaoManualStandalone() {
 }
 
 // ============================================
-// ═══ NOVO: SALVAR NOTA MANUAL DE PRODUÇÃO (DENTRO DO MODAL) ═══
-// ═══ Aluno e prova vêm do cmStandaloneData (já selecionados no modal) ═══
+// SALVAR NOTA MANUAL DE PRODUÇÃO (DENTRO DO MODAL)
+// ═══ MODIFICADO: envia também as situações por questão ═══
 // ============================================
 async function salvarNotaProducaoCM() {
     const notaInput = document.getElementById('cm-nota-valor');
@@ -2828,6 +2891,36 @@ async function salvarNotaProducaoCM() {
     if (btn) btn.disabled = true;
 
     try {
+        // ═══ Monta as questões_status com a situação marcada ═══
+        const questoesStatus = [];
+        const qtd = cmStandaloneData.quantidade || 20;
+        const gabarito = cmStandaloneData.gabarito || [];
+        const respostas = cmStandaloneData.respostas || [];
+        const textosQuestoes = cmStandaloneData.textos_questoes || [];
+        const situacoes = cmStandaloneData.situacoes || [];
+
+        for (let i = 0; i < qtd; i++) {
+            const gab = (i < gabarito.length) ? gabarito[i] : '';
+            const resp = (i < respostas.length) ? respostas[i] : '';
+            const sit = (i < situacoes.length) ? situacoes[i] : '';
+            const titulo = (textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i+1}`;
+            const cabecalho = (textosQuestoes[i] && textosQuestoes[i].cabecalho) ? textosQuestoes[i].cabecalho : '';
+
+            questoesStatus.push({
+                numero: i + 1,
+                titulo: titulo,
+                cabecalho: cabecalho,
+                resposta: resp || '—',
+                gabarito: gab || '—',
+                situacao: sit || '',
+                acertou: false,
+                respondida: !!resp,
+                bncc: '',
+                status: `Situação: ${sit || '—'}`,
+                status_texto: `📝 Situação ${sit || '—'}`
+            });
+        }
+
         const response = await fetch(`${API_URL}/api/salvar_nota_producao`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2835,7 +2928,8 @@ async function salvarNotaProducaoCM() {
                 aluno_id: parseInt(alunoId),
                 prova_id: parseInt(provaId),
                 nota: notaNum,
-                observacao: observacao || ''
+                observacao: observacao || '',
+                questoes_status: questoesStatus
             })
         });
         const dados = await response.json();
@@ -7293,11 +7387,13 @@ function exportarRelatorioPDF() {
 
 // ============================================
 // GABARITO - BUILD GRID
+// ═══ MODIFICADO: Situação de Correção só na correção manual ═══
 // ============================================
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
     const headerContainer = document.getElementById('gab-header-container');
     const infoAlts = document.getElementById('gab-info-alts');
+    const ptsRow = document.getElementById('gab-pts-row');
     if (!grid) return;
 
     const serieEl = document.getElementById('gab-serie');
@@ -7310,6 +7406,11 @@ function buildGabGrid() {
     const provaNome = selectedOption ? selectedOption.text || 'Gabarito' : 'Gabarito';
     const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
     const isProducao = (disciplina === 'Produção de Texto');
+
+    // ═══ Esconde/mostra Pts/Penalidade/Anuladas conforme disciplina ═══
+    if (ptsRow) {
+        ptsRow.style.display = isProducao ? 'none' : 'grid';
+    }
 
     if (headerContainer) {
         const disciplinaLabel = disciplina || 'Disciplina';
@@ -7324,7 +7425,7 @@ function buildGabGrid() {
 
     if (infoAlts) {
         if (isProducao) {
-            infoAlts.innerHTML = '<div style="padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--orange);">📝 PRODUÇÃO DE TEXTO — Título + Cabeçalho + Alternativas A/B/C + Situação (A até I)</div>';
+            infoAlts.innerHTML = '<div style="padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--orange);">📝 PRODUÇÃO DE TEXTO — Título + Cabeçalho + Alternativas A/B/C</div>';
         } else {
             infoAlts.innerHTML = '<div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">📝 Gabarito com 4 alternativas: A, B, C, D</div>';
         }
@@ -7386,27 +7487,14 @@ function buildGabGrid() {
             renderizarAlternativasProducao(i, altsLista);
             card.appendChild(altsLista);
 
-            const situacaoWrap = document.createElement('div');
-            situacaoWrap.className = 'gab-situacao-wrapper';
-            const opcoesSituacao = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-            let optsHtml = '';
-            opcoesSituacao.forEach(op => {
-                const selected = (q.situacao || '') === op ? 'selected' : '';
-                optsHtml += `<option value="${op}" ${selected}>${op === '' ? '—' : op}</option>`;
-            });
-            situacaoWrap.innerHTML = `
-                <span class="gab-situacao-label">📊 Situação de Correção:</span>
-                <select class="gab-situacao" data-index="${i}" onchange="atualizarSituacaoProducao(this)">
-                    ${optsHtml}
-                </select>
-            `;
-            card.appendChild(situacaoWrap);
+            // ═══ SITUAÇÃO DE CORREÇÃO REMOVIDA DAQUI (agora fica só na correção manual) ═══
 
             grid.appendChild(card);
         }
         return;
     }
 
+    // ═══ OUTRAS DISCIPLINAS ═══
     const alts = ['A', 'B', 'C', 'D'];
     const lbl = document.getElementById('gab-label');
     if (lbl) {
