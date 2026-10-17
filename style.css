@@ -1,5 +1,7 @@
 /* ============================================
-   CSS COMPLETO OTIMIZADO - VERSÃO CORRIGIDA
+   CSS COMPLETO OTIMIZADO - VERSÃO CORRIGIDA v4.1
+   + Layout diferenciado de Gabarito para Produção de Texto
+   + Bloco de Nota Manual de Produção de Texto
    ============================================ */
 :root {
     --bg: #0f172a;
@@ -411,7 +413,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     left: 50%;
     transform: translate(-50%, -50%);
     width: 94%;
-    aspect-ratio: 10 / 14;   /* ⚡ MAIS LARGO — proporção 1.4 */
+    aspect-ratio: 10 / 14;
     border: 3px dashed rgba(16, 185, 129, 0.85);
     border-radius: 14px;
     pointer-events: none;
@@ -449,18 +451,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .cam-controls { display:flex; gap:12px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
 .cam-hint { text-align:center; font-size:12px; color:var(--text3); margin-top:12px; }
 
-/* ═══ RESPONSIVIDADE DO RETÂNGULO DA CÂMERA (LARGO EM TODOS OS TAMANHOS) ═══ */
 @media (max-width: 900px) {
     .cam-frame {
         width: 95%;
-        aspect-ratio: 10 / 14;   /* ⚡ MANTÉM LARGO NO TABLET */
+        aspect-ratio: 10 / 14;
     }
 }
 
 @media (max-width: 480px) {
     .cam-frame {
         width: 96%;
-        aspect-ratio: 10 / 14;   /* ⚡ MANTÉM LARGO NO CELULAR */
+        aspect-ratio: 10 / 14;
     }
     .cam-container { padding: 14px; }
     .cam-corner { width: 26px; height: 26px; }
@@ -1170,4 +1171,275 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 @media print {
     .pdf-no-print { display: none !important; }
+}
+
+/* ============================================================
+   ═══ NOVO: GABARITO DE PRODUÇÃO DE TEXTO ═══
+   Layout diferenciado com:
+   - Título editável por questão
+   - Cabeçalho/tema por questão
+   - Alternativas A / B / C / ... com auto-abertura
+   - Situação de Correção (A até I)
+   ============================================================ */
+
+.gab-producao-questao {
+    background: var(--bg2);
+    border: 2px solid var(--border2);
+    border-left: 5px solid var(--purple);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+
+.gab-producao-questao:hover {
+    border-color: var(--purple);
+    box-shadow: 0 4px 20px rgba(139,92,246,0.15);
+}
+
+.gab-producao-header {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.gab-titulo-editavel {
+    flex: 0 0 110px;
+    min-width: 90px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.08));
+    border: 2px solid rgba(139,92,246,0.35);
+    border-radius: 8px;
+    color: var(--purple);
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+}
+.gab-titulo-editavel:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
+    background: rgba(139,92,246,0.18);
+}
+
+.gab-cabecalho {
+    flex: 1;
+    min-width: 200px;
+    min-height: 42px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 2px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: all 0.2s;
+    line-height: 1.5;
+}
+.gab-cabecalho:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.gab-cabecalho::placeholder {
+    color: var(--text3);
+    font-style: italic;
+}
+
+.gab-alternativas-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.gab-alternativa-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all 0.2s;
+    animation: fadeInAlt 0.25s ease;
+}
+.gab-alternativa-item:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+}
+
+.gab-alternativa-item .alt-letra {
+    flex: 0 0 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--green), #059669);
+    color: #fff;
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+}
+
+.gab-alternativa-item .alt-texto {
+    flex: 1;
+    min-height: 36px;
+    padding: 6px 10px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: all 0.2s;
+    line-height: 1.5;
+}
+.gab-alternativa-item .alt-texto:focus {
+    border-color: var(--green);
+    background: rgba(16,185,129,0.03);
+}
+.gab-alternativa-item .alt-texto::placeholder {
+    color: var(--text3);
+    font-style: italic;
+}
+
+.gab-alternativa-item .btn-remover-alt {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--red);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    line-height: 1;
+    align-self: center;
+}
+.gab-alternativa-item .btn-remover-alt:hover {
+    background: rgba(239,68,68,0.12);
+    transform: scale(1.1);
+}
+
+.gab-situacao-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.gab-situacao-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.gab-situacao {
+    flex: 1;
+    max-width: 220px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03));
+    border: 2px solid rgba(245,158,11,0.35);
+    border-radius: 8px;
+    color: var(--orange);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.gab-situacao:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.18);
+}
+
+@keyframes fadeInAlt {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* RESPONSIVO DO GABARITO PRODUÇÃO */
+@media (max-width: 768px) {
+    .gab-producao-questao { padding: 12px 14px; }
+    .gab-titulo-editavel { flex: 0 0 90px; font-size: 13px; padding: 6px 10px; }
+    .gab-cabecalho { min-height: 38px; font-size: 12px; }
+    .gab-alternativa-item { padding: 6px 10px; gap: 8px; }
+    .gab-alternativa-item .alt-letra { flex: 0 0 28px; height: 28px; font-size: 13px; }
+    .gab-alternativa-item .alt-texto { font-size: 12px; padding: 5px 8px; }
+    .gab-situacao { max-width: 100%; font-size: 13px; }
+}
+
+@media (max-width: 480px) {
+    .gab-producao-questao { padding: 10px 12px; margin-bottom: 12px; }
+    .gab-producao-header { flex-direction: column; }
+    .gab-titulo-editavel { flex: 1 1 auto; width: 100%; }
+    .gab-cabecalho { min-width: 0; width: 100%; }
+    .gab-alternativa-item .alt-letra { flex: 0 0 26px; height: 26px; font-size: 12px; }
+    .gab-situacao-wrapper { flex-direction: column; align-items: stretch; }
+    .gab-situacao { max-width: 100%; }
+}
+
+/* ============================================================
+   ═══ NOVO: BLOCO DE NOTA MANUAL DE PRODUÇÃO ═══
+   ============================================================ */
+
+#gab-nota-manual-container {
+    animation: fadeUp 0.4s ease;
+}
+
+#gab-nota-manual-container .form-control[type="number"] {
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--orange);
+}
+
+#gab-nota-manual-container .form-control[type="number"]:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+}
+
+#nota-producao-status {
+    animation: fadeInStatus 0.3s ease;
+}
+
+#nota-producao-status.sucesso {
+    background: rgba(16,185,129,0.12);
+    border: 1.5px solid rgba(16,185,129,0.3);
+    color: var(--green);
+}
+
+#nota-producao-status.erro {
+    background: rgba(239,68,68,0.12);
+    border: 1.5px solid rgba(239,68,68,0.3);
+    color: var(--red);
+}
+
+#nota-producao-status.info {
+    background: rgba(59,130,246,0.12);
+    border: 1.5px solid rgba(59,130,246,0.3);
+    color: var(--blue);
+}
+
+@keyframes fadeInStatus {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
