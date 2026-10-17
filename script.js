@@ -464,6 +464,10 @@ let desempenhoData = {
 };
 
 let usuarioEditandoId = null;
+// ═══ NOVO: Dados das questões de Produção de Texto ═══
+let gabProducaoData = {
+    questoes: []
+};
 
 // ============================================
 // PROCESSAR RESPOSTAS DA API
@@ -6512,7 +6516,8 @@ async function carregarDadosSecundarios() {
             carregarEscolasFiltroAlunos(),
             carregarEscolasCorrigir(),
             carregarEscolasTexto(),
-            carregarEscolasParaCorrecaoManual()
+            carregarEscolasParaCorrecaoManual(),
+            carregarEscolasNotaProducao()   // ⬅️ NOVO AQUI
         ]);
         console.log('✅ Dados de formulários carregados!');
 
@@ -7179,6 +7184,7 @@ function exportarRelatorioPDF() {
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
     const headerContainer = document.getElementById('gab-header-container');
+    const infoAlts = document.getElementById('gab-info-alts');
     if (!grid) return;
 
     const serieEl = document.getElementById('gab-serie');
@@ -7192,6 +7198,7 @@ function buildGabGrid() {
     const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
     const isProducao = (disciplina === 'Produção de Texto');
 
+    // ═══ Atualiza o cabeçalho do gabarito ═══
     if (headerContainer) {
         const disciplinaLabel = disciplina || 'Disciplina';
         headerContainer.innerHTML = `
@@ -7203,54 +7210,388 @@ function buildGabGrid() {
         `;
     }
 
-    const alts = ['A', 'B', 'C', 'D'];
-    const total = parseInt(totalEl.value) || 20;
-    const lbl = document.getElementById('gab-label');
-    if (lbl) {
+    // ═══ Aviso de alternativas ═══
+    if (infoAlts) {
         if (isProducao) {
-            lbl.textContent = '📝 Produção de Texto — Resposta descritiva e nível BNCC';
+            infoAlts.innerHTML = '<div style="padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:12px;font-weight:700;color:var(--orange);">📝 PRODUÇÃO DE TEXTO — Título + Cabeçalho + Alternativas A/B/C + Situação (A até I)</div>';
         } else {
-            lbl.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
+            infoAlts.innerHTML = '<div style="padding:8px 14px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:12px;font-weight:700;color:#a78bfa;">📝 Gabarito com 4 alternativas: A, B, C, D</div>';
         }
     }
 
+    const total = parseInt(totalEl.value) || 20;
+
+    // ═══════════════════════════════════════════════
+    // ═══ PRODUÇÃO DE TEXTO — LAYOUT DIFERENCIADO ═══
+    // ═══════════════════════════════════════════════
     if (isProducao) {
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
         grid.style.gap = '16px';
-    } else {
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
-        grid.style.gap = '14px';
+        grid.innerHTML = '';
+
+        // Mantém o estado atual se já tiver questões
+        if (!gabProducaoData.questoes || gabProducaoData.questoes.length === 0) {
+            gabProducaoData.questoes = [];
+            for (let i = 0; i < total; i++) {
+                gabProducaoData.questoes.push({
+                    titulo: `Q${i + 1}`,
+                    cabecalho: '',
+                    alternativas: { A: '', B: '', C: '' },
+                    situacao: ''
+                });
+            }
+        } else {
+            // Ajusta se o total mudou
+            while (gabProducaoData.questoes.length < total) {
+                const idx = gabProducaoData.questoes.length + 1;
+                gabProducaoData.questoes.push({
+                    titulo: `Q${idx}`,
+                    cabecalho: '',
+                    alternativas: { A: '', B: '', C: '' },
+                    situacao: ''
+                });
+            }
+            if (gabProducaoData.questoes.length > total) {
+                gabProducaoData.questoes = gabProducaoData.questoes.slice(0, total);
+            }
+        }
+
+        // Cria os cards
+        for (let i = 0; i < total; i++) {
+            const q = gabProducaoData.questoes[i];
+            const card = document.createElement('div');
+            card.className = 'gab-producao-questao';
+            card.dataset.index = i;
+
+            // Header (título + cabeçalho)
+            const header = document.createElement('div');
+            header.className = 'gab-producao-header';
+            header.innerHTML = `
+                <input class="gab-titulo-editavel" type="text" value="${escapeAttr(q.titulo || 'Q' + (i+1))}"
+                       data-index="${i}" onchange="atualizarTituloProducao(this)" placeholder="Ex: Q1 / Tema 1">
+                <textarea class="gab-cabecalho" data-index="${i}"
+                          onchange="atualizarCabecalhoProducao(this)"
+                          placeholder="Escreva o cabeçalho/tema da questão aqui...">${escapeHtml(q.cabecalho || '')}</textarea>
+            `;
+            card.appendChild(header);
+
+            // Alternativas (A, B, C)
+            const altsLista = document.createElement('div');
+            altsLista.className = 'gab-alternativas-lista';
+            altsLista.id = `gab-alts-${i}`;
+            renderizarAlternativasProducao(i, altsLista);
+            card.appendChild(altsLista);
+
+            // Situação
+            const situacaoWrap = document.createElement('div');
+            situacaoWrap.className = 'gab-situacao-wrapper';
+            const opcoesSituacao = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+            let optsHtml = '';
+            opcoesSituacao.forEach(op => {
+                const selected = (q.situacao || '') === op ? 'selected' : '';
+                optsHtml += `<option value="${op}" ${selected}>${op === '' ? '—' : op}</option>`;
+            });
+            situacaoWrap.innerHTML = `
+                <span class="gab-situacao-label">📊 Situação de Correção:</span>
+                <select class="gab-situacao" data-index="${i}" onchange="atualizarSituacaoProducao(this)">
+                    ${optsHtml}
+                </select>
+            `;
+            card.appendChild(situacaoWrap);
+
+            grid.appendChild(card);
+        }
+        return;
     }
+
+    // ═══════════════════════════════════════════════
+    // ═══ OUTRAS DISCIPLINAS (fluxo original) ═══
+    // ═══════════════════════════════════════════════
+    const alts = ['A', 'B', 'C', 'D'];
+    const lbl = document.getElementById('gab-label');
+    if (lbl) {
+        lbl.textContent = '📝 Gabarito com 4 alternativas: A, B, C, D';
+    }
+
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+    grid.style.gap = '14px';
 
     grid.innerHTML = '';
     for (let i = 1; i <= total; i++) {
         const div = document.createElement('div');
         div.className = 'gab-item';
-        if (isProducao) {
-            div.innerHTML = `
-                <input class="gab-titulo" type="text" value="Q${i}" style="width:100%; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); padding:6px 10px; font-size:14px; font-weight:bold; text-align:center;" />
-                <textarea class="gab-texto" placeholder="Digite a resposta esperada..." style="width:100%; min-height:70px; background:var(--bg2); border:2.5px solid var(--border2); border-radius:8px; color:var(--text); padding:8px 10px; font-size:13px; resize:vertical;"></textarea>
-                <select class="gab-nivel" style="width:100%; margin-top:2px; padding:5px 8px; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); font-size:12px;">
-                    <option value="">Nível BNCC</option>
-                    <option value="Inicial">Inicial</option>
-                    <option value="Básico">Básico</option>
-                    <option value="Proficiente">Proficiente</option>
-                    <option value="Avançado">Avançado</option>
-                </select>
-                <textarea class="gab-observacao" placeholder="Observações (opcional)" style="width:100%; min-height:35px; background:var(--bg2); border:2px solid var(--border2); border-radius:6px; color:var(--text); padding:5px 8px; font-size:11px; resize:vertical; margin-top:4px;"></textarea>
-            `;
-        } else {
-            let opts = '<option value="">—</option>';
-            alts.forEach(a => { opts += '<option>' + a + '</option>'; });
-            div.innerHTML = `
-                <div class="gab-num">Q${i}</div>
-                <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
-                <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:5px 8px; background:var(--bg); border:2px solid var(--border2); border-radius:6px; color:var(--text); font-size:10px; text-align:center;" />
-            `;
-        }
+        let opts = '<option value="">—</option>';
+        alts.forEach(a => { opts += '<option>' + a + '</option>'; });
+        div.innerHTML = `
+            <div class="gab-num">Q${i}</div>
+            <select class="gab-select" onchange="this.classList.toggle('filled', this.value!='')">${opts}</select>
+            <input class="gab-bncc" placeholder="BNCC" style="width:100%; margin-top:2px; padding:5px 8px; background:var(--bg); border:2px solid var(--border2); border-radius:6px; color:var(--text); font-size:10px; text-align:center;" />
+        `;
         grid.appendChild(div);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ═══ NOVAS FUNÇÕES AUXILIARES — PRODUÇÃO DE TEXTO ═══
+// ═══════════════════════════════════════════════════════════
+
+function renderizarAlternativasProducao(index, container) {
+    const q = gabProducaoData.questoes[index];
+    if (!q) return;
+    const altsOrdenadas = Object.keys(q.alternativas).sort();
+    container.innerHTML = '';
+
+    altsOrdenadas.forEach(letra => {
+        const item = document.createElement('div');
+        item.className = 'gab-alternativa-item';
+        item.innerHTML = `
+            <div class="alt-letra">${escapeHtml(letra)}</div>
+            <textarea class="alt-texto" placeholder="Digite a resposta esperada para ${escapeHtml(letra)}..."
+                      data-index="${index}" data-letra="${letra}"
+                      onchange="atualizarAlternativaProducao(this)">${escapeHtml(q.alternativas[letra] || '')}</textarea>
+            ${altsOrdenadas.length > 1 ? `<button class="btn-remover-alt" onclick="removerAlternativaProducao(${index}, '${letra}')" title="Remover alternativa">×</button>` : ''}
+        `;
+        container.appendChild(item);
+    });
+
+    // Botão de adicionar próxima letra (se ainda der)
+    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const ultimaLetra = altsOrdenadas[altsOrdenadas.length - 1] || 'C';
+    const proximaLetra = letras[letras.indexOf(ultimaLetra) + 1];
+
+    if (proximaLetra && letras.indexOf(ultimaLetra) < 25) {
+        const btnAdd = document.createElement('button');
+        btnAdd.className = 'btn btn-outline btn-sm';
+        btnAdd.style.cssText = 'align-self:flex-start; margin-top:4px;';
+        btnAdd.textContent = `➕ Adicionar alternativa ${proximaLetra}`;
+        btnAdd.onclick = () => adicionarAlternativaProducao(index);
+        container.appendChild(btnAdd);
+    }
+}
+
+function atualizarTituloProducao(input) {
+    const idx = parseInt(input.dataset.index);
+    if (gabProducaoData.questoes[idx]) {
+        gabProducaoData.questoes[idx].titulo = input.value;
+    }
+}
+
+function atualizarCabecalhoProducao(textarea) {
+    const idx = parseInt(textarea.dataset.index);
+    if (gabProducaoData.questoes[idx]) {
+        gabProducaoData.questoes[idx].cabecalho = textarea.value;
+    }
+}
+
+function atualizarAlternativaProducao(textarea) {
+    const idx = parseInt(textarea.dataset.index);
+    const letra = textarea.dataset.letra;
+    if (gabProducaoData.questoes[idx]) {
+        gabProducaoData.questoes[idx].alternativas[letra] = textarea.value;
+
+        // Auto-abre próxima se digitou algo e é a última letra
+        const letras = Object.keys(gabProducaoData.questoes[idx].alternativas).sort();
+        const ultimaLetra = letras[letras.length - 1];
+        if (letra === ultimaLetra && textarea.value.trim() !== '') {
+            const letras26 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const proxima = letras26[letras26.indexOf(ultimaLetra) + 1];
+            if (proxima && !gabProducaoData.questoes[idx].alternativas[proxima]) {
+                gabProducaoData.questoes[idx].alternativas[proxima] = '';
+                const container = document.getElementById(`gab-alts-${idx}`);
+                if (container) renderizarAlternativasProducao(idx, container);
+            }
+        }
+    }
+}
+
+function atualizarSituacaoProducao(select) {
+    const idx = parseInt(select.dataset.index);
+    if (gabProducaoData.questoes[idx]) {
+        gabProducaoData.questoes[idx].situacao = select.value;
+    }
+}
+
+function adicionarAlternativaProducao(index) {
+    const q = gabProducaoData.questoes[index];
+    if (!q) return;
+    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const atual = Object.keys(q.alternativas).sort();
+    const ultima = atual[atual.length - 1] || 'A';
+    const proxima = letras[letras.indexOf(ultima) + 1];
+    if (proxima) {
+        q.alternativas[proxima] = '';
+        const container = document.getElementById(`gab-alts-${index}`);
+        if (container) renderizarAlternativasProducao(index, container);
+    }
+}
+
+function removerAlternativaProducao(index, letra) {
+    const q = gabProducaoData.questoes[index];
+    if (!q) return;
+    if (Object.keys(q.alternativas).length <= 1) {
+        showToast('⚠️ Deve haver pelo menos uma alternativa!', 'warning');
+        return;
+    }
+    delete q.alternativas[letra];
+    const container = document.getElementById(`gab-alts-${index}`);
+    if (container) renderizarAlternativasProducao(index, container);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ═══ NOVAS FUNÇÕES — NOTA MANUAL DE PRODUÇÃO ═══
+// ═══════════════════════════════════════════════════════════
+
+async function carregarEscolasNotaProducao() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        const select = document.getElementById('nota-producao-escola');
+        if (select && escolas && !escolas.erro) {
+            const current = select.value;
+            select.innerHTML = '<option value="">Selecione a escola...</option>';
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nome;
+                select.appendChild(opt);
+            });
+            if (current) {
+                select.value = current;
+                carregarTurmasNotaProducao(current);
+            }
+        }
+    } catch (erro) {
+        console.error('Erro ao carregar escolas para nota produção:', erro);
+    }
+}
+
+async function carregarTurmasNotaProducao(escolaId) {
+    const selectTurma = document.getElementById('nota-producao-turma');
+    const selectAluno = document.getElementById('nota-producao-aluno');
+    selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+    selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+    if (!escolaId) return;
+    try {
+        const turmas = await carregarTurmasComCache(escolaId);
+        if (turmas && !turmas.erro) {
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '');
+                opt.dataset.serie = t.serie || '';
+                selectTurma.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error('Erro ao carregar turmas nota produção:', e);
+    }
+}
+
+async function carregarAlunosNotaProducao(turmaId) {
+    const selectAluno = document.getElementById('nota-producao-aluno');
+    selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
+    if (!turmaId) return;
+    try {
+        const alunos = await carregarAlunosComCache({ turma_id: turmaId });
+        if (alunos && !alunos.erro) {
+            alunos.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = a.nome + ' (Nº ' + (a.numero_chamada || '—') + ')';
+                selectAluno.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error('Erro ao carregar alunos nota produção:', e);
+    }
+}
+
+function atualizarVisibilidadeNotaProducao() {
+    const container = document.getElementById('gab-nota-manual-container');
+    const provaSelect = document.getElementById('gab-prova');
+    if (!container || !provaSelect) return;
+
+    const selectedOption = provaSelect.options[provaSelect.selectedIndex];
+    const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
+    const isProducao = (disciplina === 'Produção de Texto');
+
+    if (isProducao) {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+async function salvarNotaProducao() {
+    const escolaId = document.getElementById('nota-producao-escola').value;
+    const turmaId = document.getElementById('nota-producao-turma').value;
+    const alunoId = document.getElementById('nota-producao-aluno').value;
+    const nota = document.getElementById('nota-producao-valor').value;
+    const observacao = document.getElementById('nota-producao-observacao').value;
+    const provaId = document.getElementById('gab-prova').value;
+    const statusDiv = document.getElementById('nota-producao-status');
+
+    if (!escolaId) { showToast('❌ Selecione a escola!', 'error'); return; }
+    if (!turmaId) { showToast('❌ Selecione a turma!', 'error'); return; }
+    if (!alunoId) { showToast('❌ Selecione o aluno!', 'error'); return; }
+    if (!provaId) { showToast('❌ Selecione a prova (no topo da página)!', 'error'); return; }
+    if (!nota || nota === '') { showToast('❌ Digite a nota!', 'error'); return; }
+
+    const notaNum = parseFloat(nota);
+    if (isNaN(notaNum) || notaNum < 0 || notaNum > 10) {
+        showToast('❌ Nota deve estar entre 0 e 10!', 'error');
+        return;
+    }
+
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'info';
+        statusDiv.textContent = '💾 Salvando nota...';
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/salvar_nota_producao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: parseInt(alunoId),
+                prova_id: parseInt(provaId),
+                nota: notaNum,
+                observacao: observacao || ''
+            })
+        });
+        const dados = await response.json();
+
+        if (dados.sucesso) {
+            showToast(`✅ Nota ${notaNum.toFixed(1)} salva para ${dados.aluno}!`, 'success');
+            if (statusDiv) {
+                statusDiv.className = 'sucesso';
+                statusDiv.textContent = `✅ Nota ${notaNum.toFixed(1)} salva! Já aparece em Resultados, Rel. Turma e Desempenho.`;
+            }
+            document.getElementById('nota-producao-valor').value = '';
+            document.getElementById('nota-producao-observacao').value = '';
+
+            limparCache();
+            setTimeout(() => {
+                carregarResultadosComFiltros();
+                carregarDashboard();
+                carregarUltimasCorrecoes();
+            }, 500);
+        } else {
+            showToast('❌ ' + (dados.erro || 'Erro desconhecido'), 'error');
+            if (statusDiv) {
+                statusDiv.className = 'erro';
+                statusDiv.textContent = '❌ ' + (dados.erro || 'Erro ao salvar nota');
+            }
+        }
+    } catch (erro) {
+        console.error('Erro ao salvar nota produção:', erro);
+        showToast('❌ Erro ao salvar nota: ' + erro.message, 'error');
+        if (statusDiv) {
+            statusDiv.className = 'erro';
+            statusDiv.textContent = '❌ Erro ao salvar: ' + erro.message;
+        }
     }
 }
 
@@ -7290,30 +7631,76 @@ async function saveGab() {
         const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
         const isProducao = (disciplina === 'Produção de Texto');
 
+        const provaId = provaSelect.value;
+        if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
+
+        // ═══════════════════════════════════════════════
+        // ═══ PRODUÇÃO DE TEXTO ═══
+        // ═══════════════════════════════════════════════
+        if (isProducao) {
+            const total = gabProducaoData.questoes.length;
+            if (total === 0) {
+                showToast('⚠️ Nenhuma questão para salvar!', 'error');
+                return;
+            }
+
+            // Monta os textos_questoes no formato esperado pelo backend
+            const textos_questoes = gabProducaoData.questoes.map(q => ({
+                titulo: q.titulo || '',
+                cabecalho: q.cabecalho || '',
+                alternativas: q.alternativas || {}
+            }));
+
+            // Respostas = concatenação legível das alternativas (para compatibilidade)
+            const respostas = gabProducaoData.questoes.map(q => {
+                const alts = q.alternativas || {};
+                return Object.keys(alts).sort().map(k => `${k}) ${alts[k] || ''}`).join('\n');
+            });
+
+            const niveis = gabProducaoData.questoes.map(q => q.situacao || '');
+            const bncc = gabProducaoData.questoes.map(() => '');
+
+            showToast('💾 Salvando gabarito de Produção...', 'info');
+            const response = await fetch(`${API_URL}/api/gabaritos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prova_id: parseInt(provaId),
+                    respostas: respostas,
+                    bncc: bncc,
+                    textos_questoes: textos_questoes,
+                    niveis: niveis
+                })
+            });
+            const result = await response.json();
+
+            if (response.ok && result.id) {
+                showToast(`✅ ${result.mensagem || 'Gabarito salvo!'}`, 'success');
+                limparCache();
+                carregarGabaritos();
+                carregarCombos();
+                carregarProvas();
+            } else {
+                showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
+            }
+            return;
+        }
+
+        // ═══════════════════════════════════════════════
+        // ═══ OUTRAS DISCIPLINAS (fluxo original) ═══
+        // ═══════════════════════════════════════════════
         const respostas = [];
         const bncc = [];
 
-        if (isProducao) {
-            const textareas = document.querySelectorAll('.gab-texto');
-            const niveis = document.querySelectorAll('.gab-nivel');
-            textareas.forEach((ta, idx) => {
-                respostas.push(ta.value.trim() || '');
-                if (niveis[idx]) bncc.push(niveis[idx].value.trim() || '');
-            });
-        } else {
-            const selects = document.querySelectorAll('.gab-select');
-            const bnccInputs = document.querySelectorAll('.gab-bncc');
-            selects.forEach((s, idx) => {
-                respostas.push(s.value || '');
-                if (bnccInputs[idx]) bncc.push(bnccInputs[idx].value.trim() || '');
-            });
-        }
+        const selects = document.querySelectorAll('.gab-select');
+        const bnccInputs = document.querySelectorAll('.gab-bncc');
+        selects.forEach((s, idx) => {
+            respostas.push(s.value || '');
+            if (bnccInputs[idx]) bncc.push(bnccInputs[idx].value.trim() || '');
+        });
 
         const respostasValidas = respostas.filter(r => r !== '');
         if (respostasValidas.length === 0) { showToast('⚠️ Preencha pelo menos uma questão do gabarito!', 'error'); return; }
-
-        const provaId = provaSelect.value;
-        if (!provaId) { showToast('❌ Selecione uma prova primeiro!', 'error'); return; }
 
         showToast('💾 Salvando gabarito...', 'info');
         const payload = { prova_id: parseInt(provaId), respostas: respostas, bncc: bncc };
@@ -7334,6 +7721,7 @@ async function saveGab() {
         }
     } catch (erro) {
         showToast('❌ Erro ao salvar gabarito: ' + erro.message, 'error');
+        console.error('Erro saveGab:', erro);
     }
 }
 
@@ -7347,6 +7735,7 @@ function editarGabarito(id) {
                 const gabarito = prova.gabarito;
                 const bncc = prova.bncc || [];
                 const disciplina = prova.disciplina || '';
+                const isProducao = (disciplina === 'Produção de Texto');
 
                 go('gabarito');
 
@@ -7359,24 +7748,29 @@ function editarGabarito(id) {
                     const selectProva = document.getElementById('gab-prova');
                     if (selectProva) selectProva.value = id;
 
+                    // ═══ NOVO: se for Produção, popula gabProducaoData ANTES de buildGabGrid ═══
+                    if (isProducao) {
+                        const textos = prova.textos_questoes || [];
+                        const niveis = prova.niveis || [];
+                        const total = prova.quantidade_questoes || gabarito.length || 20;
+
+                        gabProducaoData.questoes = [];
+                        for (let i = 0; i < total; i++) {
+                            const tq = textos[i] || {};
+                            gabProducaoData.questoes.push({
+                                titulo: (tq && tq.titulo) ? tq.titulo : `Q${i + 1}`,
+                                cabecalho: (tq && tq.cabecalho) ? tq.cabecalho : '',
+                                alternativas: (tq && tq.alternativas) ? { ...tq.alternativas } : { A: '', B: '', C: '' },
+                                situacao: niveis[i] || ''
+                            });
+                        }
+                    }
+
                     buildGabGrid();
 
                     setTimeout(() => {
-                        const isProducao = (disciplina === 'Produção de Texto');
                         if (isProducao) {
-                            const titulos = document.querySelectorAll('.gab-titulo');
-                            const textareas = document.querySelectorAll('.gab-texto');
-                            const niveis = document.querySelectorAll('.gab-nivel');
-
-                            titulos.forEach((inp, i) => {
-                                if (i < gabarito.length) inp.value = 'Q' + (i+1);
-                            });
-                            textareas.forEach((ta, i) => {
-                                if (i < gabarito.length) ta.value = gabarito[i] || '';
-                            });
-                            niveis.forEach((sel, i) => {
-                                if (i < bncc.length && bncc[i]) sel.value = bncc[i];
-                            });
+                            showToast('📋 Gabarito de Produção carregado para edição!', 'success');
                         } else {
                             const selects = document.querySelectorAll('.gab-select');
                             const bnccInputs = document.querySelectorAll('.gab-bncc');
@@ -7386,8 +7780,8 @@ function editarGabarito(id) {
                             bnccInputs.forEach((inp, i) => {
                                 if (i < bncc.length && bncc[i]) inp.value = bncc[i];
                             });
+                            showToast('📋 Gabarito carregado para edição!', 'success');
                         }
-                        showToast('📋 Gabarito carregado para edição!', 'success');
                     }, 100);
                 }, 150);
             } else {
@@ -7452,7 +7846,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const gabProvaSelect = document.getElementById('gab-prova');
     if (gabProvaSelect) {
-        gabProvaSelect.addEventListener('change', buildGabGrid);
+        gabProvaSelect.addEventListener('change', function() {
+            buildGabGrid();
+            atualizarVisibilidadeNotaProducao();
+        });
     }
 });
 
