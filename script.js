@@ -6747,6 +6747,22 @@ function limparFiltrosDesempenho() {
     document.getElementById('resultado-desempenho').style.display = 'none';
     document.getElementById('desempenho-disciplina-unica').style.display = 'none';
     document.getElementById('gabarito-oficial-card').style.display = 'none';
+
+    // ═══ Restaura o resumo ao estado padrão (4 cards) ═══
+    const resumoContainer = document.querySelector('.desempenho-resumo');
+    if (resumoContainer) {
+        resumoContainer.classList.remove('duplo');
+        resumoContainer.querySelectorAll('.item').forEach(card => {
+            card.style.display = '';
+        });
+        const notaResumoCard = document.getElementById('resumo-nota-card');
+        if (notaResumoCard) notaResumoCard.remove();
+    }
+
+    // ═══ Guard no card grande de Produção (seguro mesmo se removido do HTML) ═══
+    const notaCardLimpar = document.getElementById('desempenho-nota-producao-card');
+    if (notaCardLimpar) notaCardLimpar.style.display = 'none';
+
     desempenhoData.alunoSelecionado = null;
     showToast('✕ Filtros limpos!', 'info');
 }
