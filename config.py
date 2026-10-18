@@ -23,6 +23,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 RELAY_API_URL = os.getenv('RELAY_API_URL', '')
 RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')
 RELAY_MODEL = os.getenv('RELAY_MODEL', 'gemini-1.5-flash')
+RELAY_AVAILABLE = bool(RELAY_API_URL)
 
 # ═══ USUÁRIOS FIXOS ═══
 USUARIOS_FIXOS = {
