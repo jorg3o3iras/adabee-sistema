@@ -1583,48 +1583,75 @@ async function gerarDesempenho() {
             disciplina: disciplina,
             totalQuestoes: totalQuestoes,
             notaProducao: notaRealProducao,
-			questoesStatusHistorico: questoesStatusHistorico,
-			textosQuestoes: textosQuestoes
+            questoesStatusHistorico: questoesStatusHistorico,
+            textosQuestoes: textosQuestoes
         };
 
         document.getElementById('resultado-desempenho').style.display = 'block';
 
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ CONTROLE DOS CARDS DO RESUMO
+        // Em Produção de Texto: esconde TODOS os cards originais
+        // (Porcentagem, Acertos, Erros, Conceito) e mostra APENAS o NOTA.
+        // Nas demais provas: mostra todos os cards originais.
+        // ═══════════════════════════════════════════════════════════════
         const resumoContainer = document.querySelector('.desempenho-resumo');
         if (resumoContainer) {
             const cardsResumo = resumoContainer.querySelectorAll('.item');
             if (isProducao) {
-                cardsResumo.forEach((card, idx) => {
-                    card.style.display = (idx <= 2) ? 'none' : '';
-                });
+                // Esconde TODOS os cards originais
+                cardsResumo.forEach(card => { card.style.display = 'none'; });
 
+                // Remove qualquer card "NOTA" antigo e recria limpo
                 let notaResumoCard = document.getElementById('resumo-nota-card');
-                if (!notaResumoCard) {
-                    notaResumoCard = document.createElement('div');
-                    notaResumoCard.id = 'resumo-nota-card';
-                    notaResumoCard.className = 'item';
-                    notaResumoCard.innerHTML = `
-                        <div class="valor" id="resumo-nota-producao" style="color:#8b5cf6;">0.0</div>
-                        <div class="label">NOTA</div>
-                    `;
-                    resumoContainer.appendChild(notaResumoCard);
-                }
+                if (notaResumoCard) notaResumoCard.remove();
+
+                notaResumoCard = document.createElement('div');
+                notaResumoCard.id = 'resumo-nota-card';
+                notaResumoCard.className = 'item';
+                notaResumoCard.innerHTML = `
+                    <div class="valor" id="resumo-nota-producao" style="color:#8b5cf6;">0.0</div>
+                    <div class="label">NOTA</div>
+                `;
+                resumoContainer.appendChild(notaResumoCard);
+
                 const notaResumoEl = document.getElementById('resumo-nota-producao');
                 if (notaResumoEl) notaResumoEl.textContent = notaRealProducao.toFixed(1);
 
                 resumoContainer.classList.add('duplo');
+
+                // ✅ Esconde a barra de stats internos (Acertos/Erros/Aproveitamento/Conceito)
+                const statsInternos = document.getElementById('disciplina-unica-stats');
+                if (statsInternos) statsInternos.style.display = 'none';
+
+                // ✅ Esconde a legenda (✅ Acertou / ❌ Errou / — Não respondeu / conceitos)
+                const legenda = document.getElementById('legenda-desempenho');
+                if (legenda) legenda.style.display = 'none';
+
             } else {
-                cardsResumo.forEach(card => card.style.display = '');
+                // ✅ Provas normais: mostra tudo
+                cardsResumo.forEach(card => { card.style.display = ''; });
+
                 const notaResumoCard = document.getElementById('resumo-nota-card');
                 if (notaResumoCard) notaResumoCard.remove();
 
                 resumoContainer.classList.remove('duplo');
+
+                const statsInternos = document.getElementById('disciplina-unica-stats');
+                if (statsInternos) statsInternos.style.display = 'flex';
+
+                const legenda = document.getElementById('legenda-desempenho');
+                if (legenda) legenda.style.display = 'flex';
             }
         }
 
-        setText('resumo-nota', pct + '%');
-        setText('resumo-acertos', acertos);
-        setText('resumo-erros', erros);
-        setText('resumo-conceito', conceito);
+        // ✅ Só preenche os valores do resumo se NÃO for Produção
+        if (!isProducao) {
+            setText('resumo-nota', pct + '%');
+            setText('resumo-acertos', acertos);
+            setText('resumo-erros', erros);
+            setText('resumo-conceito', conceito);
+        }
 
         setText('info-escola', escola.nome || '—');
         setText('info-turma', (turma.nome || '') + ' - ' + (turma.serie || ''));
@@ -1803,6 +1830,13 @@ function limparFiltrosDesempenho() {
         const notaResumoCard = document.getElementById('resumo-nota-card');
         if (notaResumoCard) notaResumoCard.remove();
     }
+
+    // ✅ Restaura visibilidade dos elementos escondidos no modo Produção
+    const statsInternosLimpar = document.getElementById('disciplina-unica-stats');
+    if (statsInternosLimpar) statsInternosLimpar.style.display = 'flex';
+
+    const legendaLimpar = document.getElementById('legenda-desempenho');
+    if (legendaLimpar) legendaLimpar.style.display = 'flex';
 
     const notaCardLimpar = document.getElementById('desempenho-nota-producao-card');
     if (notaCardLimpar) notaCardLimpar.style.display = 'none';
