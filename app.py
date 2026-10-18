@@ -2775,6 +2775,26 @@ def historico_agrupado():
 
         query += " ORDER BY a.nome, h.data_correcao DESC"
 
+        # ═══════════════════════════════════════════════════════════════════
+        # ═══ CORREÇÃO 1: LIMITE DE SEGURANÇA ═══
+        # Evita estouro de JSON quando não há filtro restritivo
+        # (turma, aluno ou prova). Sem isso, a query tenta trazer 3341+
+        # alunos de uma vez e o Render corta a conexão no meio da resposta,
+        # causando "Unexpected end of JSON input" no frontend.
+        # ═══════════════════════════════════════════════════════════════════
+        tem_filtro_restritivo = bool(
+            (turma_id and turma_id != '' and turma_id != 'null') or
+            (aluno_id and aluno_id != '' and aluno_id != 'null') or
+            (prova_id and prova_id != '' and prova_id != 'null')
+        )
+        if not tem_filtro_restritivo:
+            query += " LIMIT 1000"
+            logging.warning(
+                "⚠️ /api/historico/agrupado SEM filtro restritivo → LIMIT 1000 aplicado "
+                "(escola=%s, serie=%s)", escola_id, serie
+            )
+        # ═══ FIM DA CORREÇÃO 1 ═══
+
         cur.execute(query, params)
         historico = cur.fetchall()
         cur.close()
@@ -2963,6 +2983,18 @@ def historico_agrupado():
                 'soma': round(soma, 1),
                 'media': round(media, 1)
             })
+
+        # ═══════════════════════════════════════════════════════════════════
+        # ═══ CORREÇÃO 2: LOG DE DIAGNÓSTICO ═══
+        # Confirma quantos alunos foram retornados (para você ver no log
+        # do Render se a query trouxe 1, 1000 ou estourou).
+        # ═══════════════════════════════════════════════════════════════════
+        logging.info(
+            "📊 /api/historico/agrupado → %s alunos retornados "
+            "(escola=%s, serie=%s, turma=%s, aluno=%s, prova=%s)",
+            len(resultado), escola_id, serie, turma_id, aluno_id, prova_id
+        )
+        # ═══ FIM DA CORREÇÃO 2 ═══
 
         return jsonify(resultado)
 
