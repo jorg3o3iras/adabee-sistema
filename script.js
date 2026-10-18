@@ -6374,10 +6374,12 @@ async function gerarDesempenho() {
         if (resumoContainer) {
             const cardsResumo = resumoContainer.querySelectorAll('.item');
             if (isProducao) {
+                // Esconde Porcentagem, Acertos e Erros (índices 0, 1, 2)
                 cardsResumo.forEach((card, idx) => {
                     card.style.display = (idx <= 2) ? 'none' : '';
                 });
 
+                // Cria/atualiza o card de NOTA (4º card)
                 let notaResumoCard = document.getElementById('resumo-nota-card');
                 if (!notaResumoCard) {
                     notaResumoCard = document.createElement('div');
@@ -6391,10 +6393,17 @@ async function gerarDesempenho() {
                 }
                 const notaResumoEl = document.getElementById('resumo-nota-producao');
                 if (notaResumoEl) notaResumoEl.textContent = notaRealProducao.toFixed(1);
+
+                // Aplica classe que centraliza os 2 cards e ocupa 100% da largura
+                resumoContainer.classList.add('duplo');
             } else {
+                // Restaura o layout padrão (4 cards)
                 cardsResumo.forEach(card => card.style.display = '');
                 const notaResumoCard = document.getElementById('resumo-nota-card');
                 if (notaResumoCard) notaResumoCard.remove();
+
+                // Remove a classe ao voltar para disciplina normal
+                resumoContainer.classList.remove('duplo');
             }
         }
         // ═══ FIM DA CORREÇÃO 1 ═══
@@ -6556,21 +6565,10 @@ async function gerarDesempenho() {
         }
         // ═══ FIM DA CORREÇÃO 3 ═══
 
-        // ═══ CORREÇÃO 4: card de nota (só Produção) ═══
+        // ═══ CORREÇÃO 4: card grande de NOTA removido — nota já está no resumo ═══
         const notaCard = document.getElementById('desempenho-nota-producao-card');
-        const notaValorEl = document.getElementById('desempenho-nota-producao-valor');
-        const notaInfoEl = document.getElementById('desempenho-nota-producao-info');
-
         if (notaCard) {
-            if (isProducao) {
-                notaCard.style.display = 'block';
-                if (notaValorEl) notaValorEl.textContent = notaRealProducao.toFixed(1);
-                if (notaInfoEl) {
-                    notaInfoEl.textContent = `Aluno: ${aluno.nome} | Prova: ${prova.titulo}`;
-                }
-            } else {
-                notaCard.style.display = 'none';
-            }
+            notaCard.style.display = 'none';  // sempre oculto
         }
         // ═══ FIM DA CORREÇÃO 4 ═══
 
