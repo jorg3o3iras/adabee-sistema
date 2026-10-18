@@ -5750,7 +5750,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("🎯 v4.1 — NOVIDADES:")
     print("   ✅ Gabarito de Produção de Texto: título editável + cabeçalho + alternativas A/B/C")
-    print("   ✅ Situação de Correção A–I (substitui Nível BNCC)")
+    print("   ✅ Situação de Correção JORGE A–I (substitui Nível BNCC)")
     print("   ✅ Nota Manual de Produção de Texto → aparece em Resultados/Rel.Turma/Desempenho")
     print("   ✅ Nova rota /api/salvar_nota_producao")
     print("=" * 60)
