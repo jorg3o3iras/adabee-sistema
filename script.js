@@ -736,6 +736,22 @@ function calcularConceito(porcentagem) {
     return 'avancado';
 }
 
+// ═══ MAPEAMENTO GLOBAL DE DISCIPLINA ═══
+// Usado por carregarResultadosComFiltros e carregarRelatorioTurmaFiltrado
+function mapearDisciplina(nome) {
+    const mapa = {
+        'Português': 'portugues',
+        'Matemática': 'matematica',
+        'Produção de Texto': 'producao',
+        'Ciências Humanas': 'ch',
+        'Ciências Naturais': 'cn',
+        'História': 'ch',
+        'Geografia': 'ch',
+        'Inglês': 'portugues'
+    };
+    return mapa[nome] || null;
+}
+
 // ============================================
 // FUNÇÃO PARA FILTRAR TURMAS POR SÉRIE
 // ============================================
@@ -1368,6 +1384,20 @@ async function carregarResultadosComFiltros() {
         const turmaId = document.getElementById('filtro-turma').value;
         const provaId = document.getElementById('filtro-prova').value;
 
+        // ═══ LOG DE DIAGNÓSTICO ═══
+        console.log('🔍 [Resultados] Filtros aplicados:', {
+            escolaId: escolaId || '(vazio)',
+            serie: serie || '(vazio)',
+            turmaId: turmaId || '(vazio)',
+            provaId: provaId || '(vazio)'
+        });
+
+        // ═══ AVISO ÚNICO (sem duplicação) ═══
+        if (!turmaId && !provaId) {
+            console.warn('⚠️ [Resultados] SEM filtro de turma nem prova — pode estourar com muitos alunos');
+            showToast('⚠️ Selecione TURMA e PROVA para resultados precisos', 'warning');
+        }
+
         let totalAlunosTurma = 0;
         let alunosDaTurma = [];
 
@@ -1400,8 +1430,52 @@ async function carregarResultadosComFiltros() {
         if (provaId && provaId !== '') paramsHist.append('prova', provaId);
         if (paramsHist.toString()) url += '?' + paramsHist.toString();
 
+        console.log('📡 [Resultados] URL:', url);
+
         const response = await fetch(url);
-        const alunos = await response.json();
+
+        // ═══ CORREÇÃO 1: valida status HTTP antes de parsear ═══
+        if (!response.ok) {
+            console.error('❌ HTTP', response.status, 'ao buscar /api/historico/agrupado');
+            const tbody = document.getElementById('tb-resultados-filtrado');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--red);">' +
+                    '❌ Erro do servidor (' + response.status + '). Selecione TURMA e PROVA específicas para reduzir o volume.' +
+                    '</td></tr>';
+            }
+            return;
+        }
+
+        // ═══ CORREÇÃO 2: lê como texto primeiro (evita "Unexpected end of JSON") ═══
+        const textoResposta = await response.text();
+
+        if (!textoResposta || textoResposta.trim() === '') {
+            console.error('❌ Backend retornou resposta VAZIA');
+            const tbody = document.getElementById('tb-resultados-filtrado');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--orange);">' +
+                    '⚠️ O servidor não retornou dados (resposta vazia). Selecione TURMA e PROVA específicas.' +
+                    '</td></tr>';
+            }
+            return;
+        }
+
+        let alunos;
+        try {
+            alunos = JSON.parse(textoResposta);
+        } catch (e) {
+            console.error('❌ JSON inválido recebido:', e);
+            console.error('📄 Primeiros 500 chars da resposta:', textoResposta.substring(0, 500));
+            const tbody = document.getElementById('tb-resultados-filtrado');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--red);">' +
+                    '❌ Resposta do servidor corrompida. Selecione TURMA e PROVA específicas.' +
+                    '</td></tr>';
+            }
+            return;
+        }
+
+        console.log('✅ [Resultados] Alunos recebidos:', Array.isArray(alunos) ? alunos.length : 'não-array');
 
         const tbody = document.getElementById('tb-resultados-filtrado');
         if (!tbody) return;
@@ -1464,20 +1538,6 @@ async function carregarResultadosComFiltros() {
             }
         }
 
-        function mapearDisciplina(nome) {
-            const mapa = {
-                'Português': 'portugues',
-                'Matemática': 'matematica',
-                'Produção de Texto': 'producao',
-                'Ciências Humanas': 'ch',
-                'Ciências Naturais': 'cn',
-                'História': 'ch',
-                'Geografia': 'ch',
-                'Inglês': 'portugues'
-            };
-            return mapa[nome] || null;
-        }
-
         const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
 
         if (disciplinaAlvo) {
@@ -1486,7 +1546,16 @@ async function carregarResultadosComFiltros() {
                 if (discData && typeof discData === 'object') {
                     const acertos = discData.acertos || 0;
                     const totalDisc = discData.total || 0;
-                    const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                    const nota = discData.nota !== undefined ? Number(discData.nota) : 0;
+
+                    // ═══ Produção usa nota/10 para % ═══
+                    let pct;
+                    if (nota > 0 && totalDisc <= 10) {
+                        pct = Math.round((nota / 10) * 100);
+                    } else {
+                        pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                    }
+
                     const conceito = calcularConceito(pct);
                     contagemConceitos[conceito]++;
                 } else {
@@ -1501,7 +1570,15 @@ async function carregarResultadosComFiltros() {
                     if (discData && typeof discData === 'object') {
                         const acertos = discData.acertos || 0;
                         const totalDisc = discData.total || 0;
-                        const pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        const nota = discData.nota !== undefined ? Number(discData.nota) : 0;
+
+                        let pct;
+                        if (nota > 0 && totalDisc <= 10) {
+                            pct = Math.round((nota / 10) * 100);
+                        } else {
+                            pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+                        }
+
                         const conceito = calcularConceito(pct);
                         contagemConceitos[conceito]++;
                     } else {
@@ -1524,16 +1601,24 @@ async function carregarResultadosComFiltros() {
 
         function getDadosDisciplina(disciplinaData, totalQuestoes) {
             if (!disciplinaData || typeof disciplinaData !== 'object') {
-			return { acertos: 0, erros: 0, conceito: 'inicial', nota: 0 };
-			}
-			const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-			let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-			const totalDisc = disciplinaData.total || totalQuestoes || 0;
-			if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
-			const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-			const conceito = calcularConceito(porcentagem);
-			const nota = disciplinaData.nota !== undefined ? disciplinaData.nota : 0;
-			return { acertos, erros, conceito, nota };
+                return { acertos: 0, erros: 0, conceito: 'inicial', nota: 0 };
+            }
+            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+            const totalDisc = disciplinaData.total || totalQuestoes || 0;
+            const nota = disciplinaData.nota !== undefined ? Number(disciplinaData.nota) : 0;
+
+            // ═══ Produção usa nota/10 para % ═══
+            let porcentagem;
+            if (nota > 0 && totalDisc <= 10) {
+                porcentagem = Math.round((nota / 10) * 100);
+            } else {
+                if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+                porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+            }
+
+            const conceito = calcularConceito(porcentagem);
+            return { acertos, erros, conceito, nota };
         }
 
         function badgeConceito(c) {
@@ -1552,6 +1637,11 @@ async function carregarResultadosComFiltros() {
             const nomeEscola = aluno.escola || '';
             const nomeTurma = aluno.turma || '';
 
+            // ═══ Coluna NOTA mostra se nota > 0 (sem exigir total > 0) ═══
+            const notaProducaoTexto = (producao && producao.nota !== undefined && producao.nota !== null && Number(producao.nota) > 0)
+                ? Number(producao.nota).toFixed(1)
+                : '—';
+
             return '<tr>' +
                 '<td>' + medalha + '</td>' +
                 '<td>' + (index + 1) + '</td>' +
@@ -1564,11 +1654,9 @@ async function carregarResultadosComFiltros() {
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
                 '<td style="text-align:center;background:rgba(139,92,246,0.05);padding:4px;">' +
-					'<div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:2px;">NOTA</div>' +
-					'<div style="font-size:16px;font-weight:900;color:var(--purple);">' +
-						(producao && producao.total > 0 && producao.nota !== undefined && producao.nota !== null ? Number(producao.nota).toFixed(1) : '—') +
-				'</div>' +
-			'</td>' +
+                    '<div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:2px;">NOTA</div>' +
+                    '<div style="font-size:16px;font-weight:900;color:var(--purple);">' + notaProducaoTexto + '</div>' +
+                '</td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
@@ -1658,10 +1746,15 @@ async function carregarFiltrosResultados() {
             provas.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
-                opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                // ═══ Inclui disciplina visível para o usuário saber qual é Produção ═══
+                opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                opt.dataset.disciplina = p.disciplina || '';
                 selectProva.appendChild(opt);
             });
             if (current) selectProva.value = current;
+            console.log('✅ [Filtros Resultados] Provas populadas:', provas.length);
+        } else {
+            console.warn('⚠️ [Filtros Resultados] Não foi possível popular o select de provas');
         }
     } catch (erro) { console.error('Erro ao carregar filtros:', erro); }
 }
@@ -1722,7 +1815,8 @@ function limparFiltrosResultados() {
             provas.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
-                opt.textContent = p.titulo + ' - ' + (p.serie || '');
+                opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                opt.dataset.disciplina = p.disciplina || '';
                 selectProva.appendChild(opt);
             });
             carregarResultadosComFiltros();
@@ -1760,7 +1854,6 @@ function abrirCorrecaoManual() {
     }, 300);
 }
 
-// ═══ CORRIGIDO: usar questoes_suspeitas do backend ═══
 function destacarQuestoesDuvidosas() {
     const confiancas = correcaoManualData.confianca_por_questao || [];
     const suspeitas = correcaoManualData.questoes_suspeitas || [];
@@ -2146,33 +2239,23 @@ function salvarCorrecaoManual() {
 }
 
 // ============================================
-// CORREÇÃO MANUAL STANDALONE (MENU)
-// ============================================
-// ============================================
 // AJUSTAR UI DO MODAL CONFORME DISCIPLINA
-// Produção de Texto: esconde Acertos/Erros/Nota Final + botão "Salvar Correção"
-// Outras disciplinas: mostra tudo normal
 // ============================================
 function ajustarUIporDisciplina() {
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
 
-    // Bloco de Nota Manual: aparece SÓ em Produção
     const cmNotaContainer = document.getElementById('cm-nota-manual-container');
     if (cmNotaContainer) cmNotaContainer.style.display = isProducao ? 'block' : 'none';
 
-    // Resumo Acertos/Erros/Nota Final: some em Produção
     const resumo = document.getElementById('cm-sa-resumo');
     if (resumo) resumo.style.display = isProducao ? 'none' : 'grid';
 
-    // Badges (Aprovado/Reprovado/%): somem em Produção
     const badges = document.getElementById('cm-sa-badges');
     if (badges) badges.style.display = isProducao ? 'none' : 'flex';
 
-    // Botão "Salvar Correção" do rodapé: some em Produção
     const btnSalvar = document.getElementById('btn-salvar-correcao-manual');
     if (btnSalvar) btnSalvar.style.display = isProducao ? 'none' : 'inline-flex';
 
-    // Botões de ação (Revisar/Preencher/Limpar): somem em Produção
     const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
     if (botoesAcao) botoesAcao.style.display = isProducao ? 'none' : 'flex';
 }
@@ -2197,7 +2280,6 @@ function abrirCorrecaoManualStandalone() {
     document.getElementById('cm-grid-standalone').innerHTML = '';
     document.getElementById('cm-selects-container').style.display = 'block';
 
-    // ═══ NOVO: esconde bloco de nota manual + limpa campos ═══
     const cmNotaContainer = document.getElementById('cm-nota-manual-container');
     if (cmNotaContainer) cmNotaContainer.style.display = 'none';
     const notaValor = document.getElementById('cm-nota-valor');
@@ -2357,10 +2439,6 @@ function carregarGabaritoParaCorrecaoManual() {
     }
 }
 
-// ============================================
-// INICIAR CORREÇÃO MANUAL STANDALONE
-// ═══ MODIFICADO: busca textos_questoes e niveis da prova completa ═══
-// ============================================
 async function iniciarCorrecaoManualStandalone() {
     const escolaSelect = document.getElementById('cm-escola-select');
     const turmaSelect = document.getElementById('cm-turma-select');
@@ -2382,7 +2460,6 @@ async function iniciarCorrecaoManualStandalone() {
 
     const provaId = parseInt(provaSelect.value);
 
-    // ═══ BUSCA A PROVA COMPLETA NO BACKEND (inclui textos_questoes e niveis) ═══
     try {
         showToast('🔄 Carregando dados da prova...', 'info');
         const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
@@ -2407,7 +2484,6 @@ async function iniciarCorrecaoManualStandalone() {
         cmStandaloneData.textos_questoes = prova.textos_questoes || [];
         cmStandaloneData.situacoes = new Array(cmStandaloneData.quantidade).fill('');
 
-        // Se for Produção, inicializa as situações com os niveis salvos
         if (prova.niveis && Array.isArray(prova.niveis)) {
             for (let i = 0; i < cmStandaloneData.quantidade; i++) {
                 cmStandaloneData.situacoes[i] = prova.niveis[i] || '';
@@ -2431,7 +2507,7 @@ async function iniciarCorrecaoManualStandalone() {
     setText('cm-sa-prova', cmStandaloneData.provaTitulo);
     setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
 
-       document.getElementById('cm-info-standalone').style.display = 'grid';
+    document.getElementById('cm-info-standalone').style.display = 'grid';
     document.getElementById('cm-grid-standalone-container').style.display = 'block';
 
     ajustarUIporDisciplina();
@@ -2442,10 +2518,6 @@ async function iniciarCorrecaoManualStandalone() {
     showToast('📝 Correção manual iniciada para ' + cmStandaloneData.alunoNome, 'success');
 }
 
-// ============================================
-// GERAR GRID CORREÇÃO MANUAL STANDALONE
-// ═══ MODIFICADO: cabeçalho inline + observação do professor ═══
-// ============================================
 function gerarGridCorrecaoManualSA() {
     const grid = document.getElementById('cm-grid-standalone');
     if (!grid) return;
@@ -2458,10 +2530,8 @@ function gerarGridCorrecaoManualSA() {
     const textosQuestoes = cmStandaloneData.textos_questoes || [];
     const situacoes = cmStandaloneData.situacoes || [];
 
-    // ═══ UI CONTROLADA POR ajustarUIporDisciplina() ═══
     ajustarUIporDisciplina();
 
-    // ═══ CONFIGURAÇÃO DO GRID ═══
     if (isProducao) {
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
@@ -2485,21 +2555,17 @@ function gerarGridCorrecaoManualSA() {
         const resp = (i < respostas.length) ? respostas[i] : '';
 
         if (isProducao) {
-            // ═══ LAYOUT DE PRODUÇÃO DE TEXTO ═══
             div.className = 'cm-item-producao';
 
-            // Pega o Título e o Cabeçalho
             let cabecalho = '';
             if (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].cabecalho) {
                 cabecalho = textosQuestoes[i].cabecalho;
             }
             const tituloQ = (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i + 1}`;
 
-            // ═══ CABEÇALHO INLINE: "Q1 - TEXTO DO CABEÇALHO" ═══
             const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
             const cabecalhoHTML = `<div class="cm-q-cabecalho-inline">${escapeHtml(headerTexto)}</div>`;
 
-            // ═══ GABARITO FORMATADO ═══
             let gabFormatadoHTML = '';
             if (gab && gab.trim() !== '') {
                 const blocos = gab.split(/\n(?=[A-Z]\))/);
@@ -2517,7 +2583,6 @@ function gerarGridCorrecaoManualSA() {
                 gabFormatadoHTML = '<div style="color:var(--text3);font-style:italic;">Sem gabarito cadastrado</div>';
             }
 
-            // ═══ SITUAÇÃO DE CORREÇÃO (A–I) ═══
             const situacaoAtual = (i < situacoes.length) ? (situacoes[i] || '') : '';
             const opcoesSit = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
             let optsSitHTML = '';
@@ -2549,10 +2614,8 @@ function gerarGridCorrecaoManualSA() {
             const textarea = div.querySelector('.cm-q-resposta-texto');
             textarea.addEventListener('input', function() {
                 cmStandaloneData.respostas[i] = this.value;
-                // NÃO chamamos atualizarResumo, pois ele foi ocultado
             });
         } else {
-            // ═══ LAYOUT TRADICIONAL ═══
             div.className = 'cm-item-standalone';
 
             let options = '<option value="">—</option>';
@@ -2581,15 +2644,12 @@ function gerarGridCorrecaoManualSA() {
     }
 }
 
-// ═══ NOVA FUNÇÃO: atualizar situação por questão ═══
 function atualizarSituacaoCM(select) {
     const idx = parseInt(select.dataset.questao);
     if (!cmStandaloneData.situacoes) cmStandaloneData.situacoes = [];
     cmStandaloneData.situacoes[idx] = select.value;
 }
-// ============================================
-// ATUALIZAR RESPOSTA MANUAL SA
-// ============================================
+
 function atualizarRespostaManualSA(select) {
     const questaoIndex = parseInt(select.dataset.questao);
     const novaResposta = select.value;
@@ -2608,9 +2668,6 @@ function atualizarRespostaManualSA(select) {
     atualizarResumoCorrecaoManualSA();
 }
 
-// ============================================
-// ATUALIZAR RESUMO CORREÇÃO MANUAL SA
-// ============================================
 function atualizarResumoCorrecaoManualSA() {
     const qtd = cmStandaloneData.quantidade || 20;
     const respostas = cmStandaloneData.respostas || [];
@@ -2648,9 +2705,6 @@ function atualizarResumoCorrecaoManualSA() {
     setText('cm-sa-porcentagem', porcentagem + '% de aproveitamento');
 }
 
-// ============================================
-// PREENCHER GABARITO MANUAL SA
-// ============================================
 function preencherGabaritoManualSA() {
     const qtd = cmStandaloneData.quantidade || 20;
     const gabarito = cmStandaloneData.gabarito || [];
@@ -2676,9 +2730,6 @@ function preencherGabaritoManualSA() {
     showToast('📋 Respostas preenchidas com o gabarito!', 'success');
 }
 
-// ============================================
-// LIMPAR RESPOSTAS MANUAL SA
-// ============================================
 function limparRespostasManualSA() {
     const qtd = cmStandaloneData.quantidade || 20;
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
@@ -2699,9 +2750,6 @@ function limparRespostasManualSA() {
     showToast('🗑️ Respostas limpas!', 'info');
 }
 
-// ============================================
-// REVISAR APENAS DUVIDOSAS SA
-// ============================================
 function revisarApenasDuvidosasSA() {
     const confiancas = cmStandaloneData.confianca_por_questao || [];
     const suspeitas = cmStandaloneData.questoes_suspeitas || [];
@@ -2732,21 +2780,16 @@ function revisarApenasDuvidosasSA() {
     }
 }
 
-// ============================================
-// SALVAR CORREÇÃO MANUAL STANDALONE
-// ============================================
 function salvarCorrecaoManualStandalone() {
     if (!cmStandaloneData) {
         showToast('❌ Dados não encontrados!', 'error');
         return;
     }
 
-    // ═══ BLOQUEIO: Produção de Texto usa "SALVAR NOTA", não "Salvar Correção" ═══
     if (cmStandaloneData.disciplina === 'Produção de Texto') {
         showToast('⚠️ Use o botão "💾 SALVAR NOTA" para Produção de Texto.', 'warning');
         return;
     }
-    // ═══ FIM DO BLOQUEIO ═══
 
     const provaId = parseInt(cmStandaloneData.provaId);
     const alunoId = parseInt(cmStandaloneData.alunoId);
@@ -2878,10 +2921,6 @@ function salvarCorrecaoManualStandalone() {
     });
 }
 
-// ============================================
-// SALVAR NOTA MANUAL DE PRODUÇÃO (DENTRO DO MODAL)
-// ═══ MODIFICADO: envia também as situações por questão ═══
-// ============================================
 async function salvarNotaProducaoCM() {
     const notaInput = document.getElementById('cm-nota-valor');
     const obsInput = document.getElementById('cm-nota-observacao');
@@ -2922,7 +2961,6 @@ async function salvarNotaProducaoCM() {
     if (btn) btn.disabled = true;
 
     try {
-        // ═══ Monta as questões_status com a situação marcada ═══
         const questoesStatus = [];
         const qtd = cmStandaloneData.quantidade || 20;
         const gabarito = cmStandaloneData.gabarito || [];
@@ -2959,7 +2997,7 @@ async function salvarNotaProducaoCM() {
                 aluno_id: parseInt(alunoId),
                 prova_id: parseInt(provaId),
                 nota: notaNum,
-                observacao: '', // A observação agora é POR QUESTÃO
+                observacao: '',
                 questoes_status: questoesStatus
             })
         });
@@ -3008,9 +3046,6 @@ async function salvarNotaProducaoCM() {
     }
 }
 
-// ============================================
-// ABRIR CORREÇÃO MANUAL DIRETAMENTE
-// ============================================
 async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
     try {
         showToast('🔄 Carregando dados...', 'info');
@@ -3055,7 +3090,7 @@ async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
         cmStandaloneData.provaData = prova.data_prova || '';
         cmStandaloneData.disciplina = prova.disciplina || '';
 
-                openM('m-correcao-manual-standalone');
+        openM('m-correcao-manual-standalone');
 
         const selectsContainer = document.getElementById('cm-selects-container');
         if (selectsContainer) selectsContainer.style.display = 'none';
@@ -3079,9 +3114,6 @@ async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
     }
 }
 
-// ============================================
-// FUNÇÃO CHAMADA PELO BOTÃO "✏️ Editar Gabarito" NA ABA DESEMPENHO
-// ============================================
 async function editarGabaritoDesempenho() {
     const escolaId = document.getElementById('filtro-escola-desempenho').value;
     const turmaId = document.getElementById('filtro-turma-desempenho').value;
@@ -3096,9 +3128,6 @@ async function editarGabaritoDesempenho() {
     await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
 }
 
-// ============================================
-// FUNÇÕES DE USUÁRIO
-// ============================================
 function abrirModalUsuario() {
     usuarioEditandoId = null;
     document.getElementById('editar-usuario-id').value = '';
@@ -3652,9 +3681,6 @@ async function processarComIA(imagemBase64) {
     }
 }
 
-// ============================================
-// FUNÇÕES AUXILIARES DA CORREÇÃO COM IA
-// ============================================
 async function buscarProva(provaId) {
     try {
         const provas = await carregarProvasComCache();
@@ -4801,9 +4827,6 @@ function fecharAbaMulti() {
     go('lista-turma');
 }
 
-// ============================================
-// FUNÇÕES PARA CORREÇÃO (IA)
-// ============================================
 async function carregarEscolasTexto() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -4824,9 +4847,6 @@ async function carregarEscolasTexto() {
     }
 }
 
-// ============================================
-// FUNÇÕES DE GERAÇÃO DE CARTÃO RESPOSTA
-// ============================================
 async function carregarTurmasLista(escolaId) {
     const select = document.getElementById('lista-turma');
     select.innerHTML = '<option value="">Selecione a turma</option>';
@@ -5408,9 +5428,6 @@ async function carregarTurmasPorEscolaParaAluno(escolaId, selectTurmaId) {
     }
 }
 
-// ============================================
-// CARREGAR RELATÓRIOS
-// ============================================
 async function carregarRelatorios() {
     try {
         const alunos = await carregarAlunosComCache();
@@ -6659,9 +6676,6 @@ function limparFiltrosDesempenho() {
     showToast('✕ Filtros limpos!', 'info');
 }
 
-// ============================================
-// FUNÇÕES DE TURMA PARA TEXTO IA
-// ============================================
 async function carregarTurmasTexto(escolaId) {
     const selectTurma = document.getElementById('txt-turma');
     const selectAluno = document.getElementById('txt-aluno-select');
@@ -6698,9 +6712,6 @@ async function carregarAlunosPorTurmaTexto(turmaId) {
     } catch (e) { console.error('Erro ao carregar alunos:', e); }
 }
 
-// ============================================
-// CARREGAR DADOS - FUNÇÃO PRINCIPAL
-// ============================================
 async function carregarDados() {
     console.log('🔄 Carregando dados do sistema...');
 
@@ -6775,9 +6786,6 @@ async function carregarDadosSecundarios() {
     }
 }
 
-// ============================================
-// CARREGAR CONCEITO REAL
-// ============================================
 async function carregarConceitoReal() {
     try {
         const [conceitoResp, turmasResp] = await Promise.all([
@@ -6894,9 +6902,6 @@ async function carregarConceitoReal() {
     }
 }
 
-// ============================================
-// CARREGAR ÚLTIMAS CORREÇÕES
-// ============================================
 async function carregarUltimasCorrecoes() {
     try {
         const response = await fetch(API_URL + '/api/historico?limit=10');
@@ -6939,9 +6944,6 @@ async function carregarUltimasCorrecoes() {
     }
 }
 
-// ============================================
-// CARREGAR USUÁRIOS
-// ============================================
 async function carregarUsuarios() {
     try {
         const response = await fetch(API_URL + '/api/usuarios');
@@ -6970,9 +6972,6 @@ async function carregarUsuarios() {
     } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
 }
 
-// ============================================
-// EXPORTAR FUNCTIONS
-// ============================================
 function exportarResultadosFiltrados() {
     showToast('📥 Exportando resultados filtrados...', 'info');
     const tbody = document.getElementById('tb-resultados-filtrado');
@@ -7413,10 +7412,6 @@ function exportarRelatorioPDF() {
     showToast('📄 PDF gerado com sucesso!', 'success');
 }
 
-// ============================================
-// GABARITO - BUILD GRID
-// ═══ MODIFICADO: Situação de Correção só na correção manual ═══
-// ============================================
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
     const headerContainer = document.getElementById('gab-header-container');
@@ -7435,7 +7430,6 @@ function buildGabGrid() {
     const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
     const isProducao = (disciplina === 'Produção de Texto');
 
-    // ═══ Esconde/mostra Pts/Penalidade/Anuladas conforme disciplina ═══
     if (ptsRow) {
         ptsRow.style.display = isProducao ? 'none' : 'grid';
     }
@@ -7515,14 +7509,11 @@ function buildGabGrid() {
             renderizarAlternativasProducao(i, altsLista);
             card.appendChild(altsLista);
 
-            // ═══ SITUAÇÃO DE CORREÇÃO REMOVIDA DAQUI (agora fica só na correção manual) ═══
-
             grid.appendChild(card);
         }
         return;
     }
 
-    // ═══ OUTRAS DISCIPLINAS ═══
     const alts = ['A', 'B', 'C', 'D'];
     const lbl = document.getElementById('gab-label');
     if (lbl) {
@@ -7548,9 +7539,6 @@ function buildGabGrid() {
     }
 }
 
-// ============================================
-// FUNÇÕES AUXILIARES — PRODUÇÃO DE TEXTO
-// ============================================
 function renderizarAlternativasProducao(index, container) {
     const q = gabProducaoData.questoes[index];
     if (!q) return;
@@ -7867,9 +7855,6 @@ async function excluirGabarito(id, nome) {
     }
 }
 
-// ============================================
-// DOM READY
-// ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const tipoSelect = document.getElementById('modal-prova-tipo');
     if (tipoSelect) { tipoSelect.addEventListener('change', function() { gerarGabaritoModal(this.value); }); }
@@ -8768,9 +8753,6 @@ function limparResultadoAutomatico() {
     showToast('🔄 Pronto para nova correção', 'info');
 }
 
-// ============================================
-// ADAPTADORES: Tela 1 (QR Code) → Funções da Tela 2
-// ============================================
 function abrirCorrecaoManualAuto() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
         showToast('❌ Nenhuma correção para editar!', 'error');
