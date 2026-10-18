@@ -2587,7 +2587,6 @@ function atualizarSituacaoCM(select) {
     if (!cmStandaloneData.situacoes) cmStandaloneData.situacoes = [];
     cmStandaloneData.situacoes[idx] = select.value;
 }
-}
 // ============================================
 // ATUALIZAR RESPOSTA MANUAL SA
 // ============================================
