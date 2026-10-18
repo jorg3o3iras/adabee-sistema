@@ -2799,8 +2799,10 @@ def historico_agrupado():
                 'reda' in prova_lower or
                 item.get('tipo_correcao') == 'ia_redacao'
             )
-            # ═══ PRODUÇÃO DE TEXTO com nota manual (tipo_correcao='manual_producao') ═══
             is_producao_manual = item.get('tipo_correcao') == 'manual_producao'
+
+            if is_producao_manual:
+                tipo = 'Producao'
 
             if is_redacao or is_producao_manual:
                 nota_red = float(item.get('nota') or 0)
