@@ -1983,6 +1983,16 @@ def corrigir_manual():
         gabarito = prova[3] if prova else []
         bncc_gabarito = prova[4] if prova else []
 
+        # ═══ BLOQUEIO: Produção de Texto não usa correção por acertos ═══
+        if (disciplina or '').strip() == 'Produção de Texto':
+            cur.close()
+            conn.close()
+            return jsonify({
+                'erro': 'Esta prova é de Produção de Texto. Use o botão "SALVAR NOTA" (Nota Manual).',
+                'tipo': 'producao'
+            }), 400
+        # ═══ FIM DO BLOQUEIO ═══
+
         cur.execute("SELECT t.serie FROM alunos a LEFT JOIN turmas t ON a.turma_id = t.id WHERE a.id = %s", (aluno_id,))
         serie_result = cur.fetchone()
         serie = serie_result[0] if serie_result else serie_prova or '1º Ano'
