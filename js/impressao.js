@@ -65,15 +65,21 @@ function buildCSSBase() {
     }
 
     /* ══════════ CABEÇALHO INSTITUCIONAL ══════════ */
-    .cabecalho-institucional {
+        .cabecalho-institucional {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 16px;
-        padding: 12px 20px;
+        padding: 14px 24px;
         background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
         border: 2px solid #2563eb;
         border-radius: 10px 10px 0 0;
         margin-bottom: 0;
+    }
+    .cabecalho-logo {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
     }
     .cabecalho-logo img {
         height: 70px;
@@ -81,7 +87,11 @@ function buildCSSBase() {
         object-fit: contain;
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
-    .cabecalho-texto { flex: 1; min-width: 0; }
+    .cabecalho-texto {
+        flex: 1;
+        min-width: 0;
+        text-align: center;
+    }
     .cab-prefeitura { 
         font-size: 9px; 
         font-weight: 600; 
