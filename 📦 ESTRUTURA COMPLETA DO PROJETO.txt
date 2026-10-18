@@ -1,0 +1,59 @@
+adabee-sistema/
+│
+├── 🖥️ FRONTEND (HTML/CSS/JS)
+│   ├── index.html                 → Página única, todas as telas e modais
+│   ├── style.css                  → Estilos globais do sistema
+│   ├── script.js                  → Entry point do front (boot + o que sobrou)
+│   └── js/
+│       ├── core.js                → Config, cache, segurança, utilitários
+│       ├── auth-nav.js            → Login, logout, navegação, menu
+│       ├── cadastros.js           → CRUD escolas, turmas, alunos
+│       ├── provas.js              → CRUD provas + editor de gabarito
+│       ├── correcao.js            → IA, manual, QR Code, câmera
+│       ├── resultados.js          → Dashboard, resultados, relatórios
+│       └── impressao.js           → PDFs, cartões resposta, impressões
+│
+├── 🐍 BACKEND (Python/Flask)
+│   ├── app.py                     → Entry point enxuto (cria app + registra rotas)
+│   ├── config.py                  → Variáveis de ambiente e constantes
+│   ├── core/
+│   │   ├── __init__.py            → Marca a pasta como pacote Python
+│   │   ├── db.py                  → Pool de conexões PostgreSQL + init do banco
+│   │   ├── utils.py               → Funções puras (conceito, validação, cálculo)
+│   │   └── cache.py               → Cache persistente de correções
+│   ├── services/
+│   │   ├── __init__.py            → Marca a pasta como pacote Python
+│   │   ├── evalbee.py             → Motor de detecção de bolhas (OpenCV)
+│   │   ├── ia_fallback.py         → Correção por IA (OpenAI) quando EvalBee falha
+│   │   ├── correcao.py            → Orquestrador EvalBee + IA
+│   │   └── redacao.py             → Correção de redação + OCR
+│   └── routes/
+│       ├── __init__.py            → Marca a pasta como pacote Python
+│       ├── auth.py                → POST /api/login
+│       ├── cadastros.py           → CRUD escolas, turmas, alunos, provas
+│       ├── correcao.py            → Correção IA, lote, manual, produção, QR
+│       ├── redacao.py             → Correção de redação + OCR + salvar
+│       ├── historico.py           → Consultas de correções (simples + agrupado)
+│       ├── gabaritos.py           → Salvar / remover gabaritos
+│       ├── usuarios.py            → CRUD usuários do sistema
+│       ├── dashboard.py           → Estatísticas gerais + conceito por turma
+│       ├── matrizes.py            → CRUD matrizes de proficiência
+│       ├── cartao.py              → Geração de cartão resposta + folha redação
+│       ├── backup.py              → Exportar banco em ZIP/JSON
+│       └── static_files.py        → Servir arquivos estáticos + health check
+│
+└── ⚙️ CONFIGURAÇÃO / DEPLOY
+    ├── requirements.txt           → Dependências Python
+    ├── Procfile                   → Comando de start (Heroku/Render)
+    ├── runtime.txt                → Versão do Python
+    ├── Dockerfile                 → Containerização
+    ├── build.sh                   → Script de build
+    ├── .gitignore                 → Arquivos ignorados pelo git
+    │
+    └── 🖼️ Assets (imagens e ícones)
+        ├── bandeira.webp          → Bandeira (usada em alguma tela)
+        ├── dgp.jpg                → Logo do DGP
+        ├── favicon.ico            → Ícone da aba do navegador
+        ├── logo.png               → Logo do CorrigePro
+        ├── logotipo cartão resposta.png → Logo usada nos cartões gerados
+        └── semed.png              → Logo da SEMED (login)
