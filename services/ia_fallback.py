@@ -49,6 +49,17 @@ except Exception as e:
     OPENAI_AVAILABLE = False
 
 
+# ═══ VERIFICAÇÃO DE PYZBAR ═══
+PYZBAR_AVAILABLE = False
+try:
+    from pyzbar.pyzbar import decode as _pyzbar_decode
+    PYZBAR_AVAILABLE = True
+    print("✅ pyzbar disponível (leitura de QR Code)")
+except ImportError:
+    print("⚠️ pyzbar não instalado. Leitura automática de QR Code desabilitada.")
+    print("💡 Execute: pip install pyzbar")
+
+
 def preprocessar_imagem_para_ia(imagem_base64):
     try:
         raw = imagem_base64
