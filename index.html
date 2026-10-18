@@ -1059,8 +1059,6 @@
               </button>
             </div>
           </div>
-
-          <!-- ═══ BLOCO DE NOTA MANUAL REMOVIDO DAQUI (agora fica no modal de correção manual) ═══ -->
         </div>
 
         <!-- ========== CORRIGIR COM IA ========== -->
@@ -2298,9 +2296,10 @@
               <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
             </div>
             <div class="page-actions no-print">
+              <!-- ✅ CORRIGIDO: agora chama a função correta de impressão da aba Resultados -->
               <button
                 class="btn btn-outline"
-                onclick="exportarRelatorioPDF()"
+                onclick="imprimirResultadosMelhorados()"
               >
                 🖨️ Imprimir
               </button>
@@ -3767,6 +3766,7 @@
               </p>
             </div>
             <div class="page-actions no-print">
+              <!-- ✅ CORRIGIDO: agora chama a função correta do desempenho -->
               <button
                 class="btn btn-outline"
                 onclick="gerarDocumentoDesempenho()"
@@ -4370,9 +4370,6 @@
               >
             </div>
           </div>
-          <!-- ═══════════════════════════════════════════════════════════ -->
-          <!-- ═══ NOVO: BLOCO DE NOTA MANUAL — SÓ PARA PRODUÇÃO ═══ -->
-          <!-- ═══════════════════════════════════════════════════════════ -->
           <div id="cm-nota-manual-container">
             <div class="cm-nota-titulo">⭐ Nota Manual — Produção de Texto</div>
             <div class="cm-nota-sub">
