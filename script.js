@@ -6292,13 +6292,12 @@ async function gerarDesempenho() {
 
         let respostasAluno = [];
         let disciplina = prova.disciplina || 'Português';
-        let notaRealProducao = 0; // ═══ NOVO: nota real para Produção ═══
+        let notaRealProducao = 0;
 
         if (historico && historico.length > 0 && !historico.erro) {
             const correcao = historico[0];
             respostasAluno = correcao.respostas || [];
             if (correcao.disciplina) disciplina = correcao.disciplina;
-            // ═══ NOVO: captura a nota real salva no histórico ═══
             notaRealProducao = parseFloat(correcao.nota) || 0;
         }
 
@@ -6336,6 +6335,8 @@ async function gerarDesempenho() {
             conceitoCor = 'badge-blue'; } else if (pct > 40) { conceito = 'Básico';
             conceitoCor = 'badge-orange'; }
 
+        const isProducao = (disciplina === 'Produção de Texto');
+
         desempenhoData.alunoSelecionado = {
             escola,
             turma,
@@ -6351,10 +6352,45 @@ async function gerarDesempenho() {
             conceito: conceito,
             disciplina: disciplina,
             totalQuestoes: totalQuestoes,
-            notaProducao: notaRealProducao // ═══ NOVO ═══
+            notaProducao: notaRealProducao
         };
 
         document.getElementById('resultado-desempenho').style.display = 'block';
+
+        // ═══════════════════════════════════════════════════════════════════
+        // ═══ CORREÇÃO 1: cards de resumo — Produção mostra só Conceito + NOTA ═══
+        // ═══════════════════════════════════════════════════════════════════
+        const resumoContainer = document.querySelector('.desempenho-resumo');
+        if (resumoContainer) {
+            const cardsResumo = resumoContainer.querySelectorAll('.item');
+            if (isProducao) {
+                // Esconde os 3 primeiros (% / Acertos / Erros), mantém só Conceito
+                cardsResumo.forEach((card, idx) => {
+                    card.style.display = (idx <= 2) ? 'none' : '';
+                });
+
+                // Cria/atualiza o card de NOTA ao lado do Conceito
+                let notaResumoCard = document.getElementById('resumo-nota-card');
+                if (!notaResumoCard) {
+                    notaResumoCard = document.createElement('div');
+                    notaResumoCard.id = 'resumo-nota-card';
+                    notaResumoCard.className = 'item';
+                    notaResumoCard.innerHTML = `
+                        <div class="valor" id="resumo-nota-producao" style="color:#8b5cf6;">0.0</div>
+                        <div class="label">NOTA</div>
+                    `;
+                    resumoContainer.appendChild(notaResumoCard);
+                }
+                const notaResumoEl = document.getElementById('resumo-nota-producao');
+                if (notaResumoEl) notaResumoEl.textContent = notaRealProducao.toFixed(1);
+            } else {
+                // Outras disciplinas: mostra os 4 cards originais
+                cardsResumo.forEach(card => card.style.display = '');
+                const notaResumoCard = document.getElementById('resumo-nota-card');
+                if (notaResumoCard) notaResumoCard.remove();
+            }
+        }
+        // ═══ FIM DA CORREÇÃO 1 ═══
 
         setText('resumo-nota', pct + '%');
         setText('resumo-acertos', acertos);
@@ -6375,39 +6411,76 @@ async function gerarDesempenho() {
         const grid = document.getElementById('disciplina-unica-questoes');
         grid.innerHTML = '';
 
-        const isProducao = (disciplina === 'Produção de Texto');
-
+        // ═══════════════════════════════════════════════════════════════════
+        // ═══ CORREÇÃO 2: grid de questões — Produção igual ao modal manual ═══
+        // ═══════════════════════════════════════════════════════════════════
         if (isProducao) {
             grid.style.display = 'flex';
             grid.style.flexDirection = 'column';
-            grid.style.gap = '12px';
+            grid.style.gap = '14px';
             grid.style.padding = '8px 0';
 
-            resultadoQuestoes.forEach(q => {
+            const textosQuestoes = prova.textos_questoes || [];
+            const situacoesProva = prova.niveis || [];
+
+            resultadoQuestoes.forEach((q, i) => {
                 const div = document.createElement('div');
                 div.style.background = 'var(--bg2)';
                 div.style.border = '1px solid var(--border)';
                 div.style.borderRadius = '8px';
-                div.style.padding = '10px 14px';
+                div.style.padding = '12px 14px';
                 div.style.display = 'flex';
                 div.style.flexDirection = 'column';
-                div.style.gap = '6px';
+                div.style.gap = '8px';
 
-                let bnccHtml = '';
-                if (q.bncc && q.bncc.trim() !== '') {
-                    bnccHtml = `<div style="font-size:9px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:2px 6px; border-radius:4px;">BNCC: ${escapeHtml(q.bncc)}</div>`;
+                // Cabeçalho inline "Q1 - CABEÇALHO"
+                const tq = textosQuestoes[i] || {};
+                const cabecalho = (tq && tq.cabecalho) ? tq.cabecalho : '';
+                const tituloQ = (tq && tq.titulo) ? tq.titulo : `Q${q.numero}`;
+                const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
+
+                // Gabarito formatado A) / B) / C)
+                let gabFormatadoHTML = '';
+                const gab = q.gabarito || '';
+                if (gab && gab.trim() !== '' && gab !== '—') {
+                    const blocos = gab.split(/\n(?=[A-Z]\))/);
+                    blocos.forEach(bloco => {
+                        const match = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
+                        if (match) {
+                            const letra = match[1];
+                            const texto = match[2].trim();
+                            gabFormatadoHTML += `<div style="display:flex; gap:6px; align-items:flex-start; margin-bottom:4px;">
+                                <span style="font-weight:800; color:#8b5cf6; min-width:14px;">${escapeHtml(letra)}</span>
+                                <span style="font-size:12px; color:var(--text2);">${escapeHtml(texto)}</span>
+                            </div>`;
+                        } else if (bloco.trim()) {
+                            gabFormatadoHTML += `<div style="font-size:12px; color:var(--text2);">${escapeHtml(bloco.trim())}</div>`;
+                        }
+                    });
+                } else {
+                    gabFormatadoHTML = '<div style="font-size:12px; color:var(--text3); font-style:italic;">Sem gabarito</div>';
                 }
 
+                // Situação salva (A–I)
+                const situacao = situacoesProva[i] || '';
+
+                // Observação do professor (resposta da questão)
+                const observacao = (q.resposta && q.resposta !== '—') ? q.resposta : '';
+
                 div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:12px; font-weight:700; color:var(--text2);">Q${q.numero}</span>
-                        <span class="q-status-text" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:${q.acertou ? 'rgba(16,185,129,0.15)' : (q.respondida ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)')}; color:${q.acertou ? 'var(--green)' : (q.respondida ? 'var(--red)' : 'var(--text3)')};">${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '—')}
-                    </span>
+                    <div style="font-size:13px; font-weight:800; color:#a78bfa;">${escapeHtml(headerTexto)}</div>
+                    <div>
+                        <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:4px;">📋 Gabarito:</div>
+                        <div>${gabFormatadoHTML}</div>
                     </div>
-                    <div style="font-size:11px; color:var(--text3);">Resposta: <strong>${escapeHtml(q.resposta)}</strong></div>
-                    <div style="font-size:11px; color:var(--text3);">Gabarito: <strong style="color:var(--green);">${escapeHtml(q.gabarito)}</strong></div>
-                    ${bnccHtml}
-                    <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${escapeHtml(q.bncc || 'Não definido')}</div>
+                    <div>
+                        <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:4px;">✍️ Observação do Professor:</div>
+                        <textarea readonly style="width:100%; min-height:40px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px; font-size:11px; color:var(--text2); resize:none;" placeholder="Escreva sua avaliação/observação sobre a resposta do aluno...">${escapeHtml(observacao)}</textarea>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11px; font-weight:700; color:var(--text3);">📊 Situação de Correção:</span>
+                        <span style="font-size:13px; font-weight:800; color:${situacao ? '#8b5cf6' : 'var(--text3)'}; background:${situacao ? 'rgba(139,92,246,0.12)' : 'var(--surface2)'}; padding:2px 12px; border-radius:8px; border:1px solid ${situacao ? 'rgba(139,92,246,0.3)' : 'var(--border)'};">${escapeHtml(situacao || '—')}</span>
+                    </div>
                 `;
                 grid.appendChild(div);
             });
@@ -6434,6 +6507,7 @@ async function gerarDesempenho() {
                 grid.appendChild(div);
             });
         }
+        // ═══ FIM DA CORREÇÃO 2 ═══
 
         setText('disciplina-unica-acertos', acertos);
         setText('disciplina-unica-erros', erros);
@@ -6445,21 +6519,15 @@ async function gerarDesempenho() {
 
         setText('disciplina-unica-conceito', conceito);
 
-        // ═══════════════════════════════════════════════════════════════════
-        // ═══ CORREÇÃO 1: Card de Gabarito Oficial ═══
-        // Produção → NÃO mostra (fica com display:none)
-        // Outras disciplinas → mostra normal
-        // ═══════════════════════════════════════════════════════════════════
+        // ═══ CORREÇÃO 3: Gabarito oficial só para outras disciplinas ═══
         const gabCard = document.getElementById('gabarito-oficial-card');
         const gabCardTitle = document.querySelector('#gabarito-oficial-card .card-title');
         const gabGrid = document.getElementById('gabarito-oficial-grid');
 
         if (isProducao) {
-            // Produção: ESCONDE o card de gabarito oficial
             gabCard.style.display = 'none';
             gabGrid.innerHTML = '';
         } else {
-            // Outras disciplinas: mostra gabarito normal
             gabCard.style.display = 'block';
 
             if (gabCardTitle) {
@@ -6485,12 +6553,9 @@ async function gerarDesempenho() {
                 gabGrid.appendChild(div);
             });
         }
-        // ═══ FIM DA CORREÇÃO 1 ═══
+        // ═══ FIM DA CORREÇÃO 3 ═══
 
-        // ═══════════════════════════════════════════════════════════════════
-        // ═══ CORREÇÃO 2: Card novo de NOTA (só Produção) ═══
-        // Mostra a nota real do aluno em destaque
-        // ═══════════════════════════════════════════════════════════════════
+        // ═══ CORREÇÃO 4: card de nota (só Produção) ═══
         const notaCard = document.getElementById('desempenho-nota-producao-card');
         const notaValorEl = document.getElementById('desempenho-nota-producao-valor');
         const notaInfoEl = document.getElementById('desempenho-nota-producao-info');
@@ -6506,7 +6571,7 @@ async function gerarDesempenho() {
                 notaCard.style.display = 'none';
             }
         }
-        // ═══ FIM DA CORREÇÃO 2 ═══
+        // ═══ FIM DA CORREÇÃO 4 ═══
 
         showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
 
