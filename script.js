@@ -6288,12 +6288,13 @@ async function gerarDesempenho() {
 
         const gabarito = prova.gabarito || [];
         const bncc = prova.bncc || [];
+        const textosQuestoes = prova.textos_questoes || [];
         const totalQuestoes = prova.quantidade_questoes || 20;
 
         let respostasAluno = [];
         let disciplina = prova.disciplina || 'Português';
         let notaRealProducao = 0;
-        
+
         let questoesStatusHistorico = [];
         if (historico && historico.length > 0 && !historico.erro) {
             const correcao = historico[0];
@@ -6306,6 +6307,7 @@ async function gerarDesempenho() {
                     questoesStatusHistorico = JSON.parse(questoesStatusHistorico);
                 } catch (e) {
                     questoesStatusHistorico = [];
+                }
             }
         }
 
@@ -6372,12 +6374,10 @@ async function gerarDesempenho() {
         if (resumoContainer) {
             const cardsResumo = resumoContainer.querySelectorAll('.item');
             if (isProducao) {
-                // Esconde os 3 primeiros (% / Acertos / Erros), mantém só Conceito
                 cardsResumo.forEach((card, idx) => {
                     card.style.display = (idx <= 2) ? 'none' : '';
                 });
 
-                // Cria/atualiza o card de NOTA ao lado do Conceito
                 let notaResumoCard = document.getElementById('resumo-nota-card');
                 if (!notaResumoCard) {
                     notaResumoCard = document.createElement('div');
@@ -6392,7 +6392,6 @@ async function gerarDesempenho() {
                 const notaResumoEl = document.getElementById('resumo-nota-producao');
                 if (notaResumoEl) notaResumoEl.textContent = notaRealProducao.toFixed(1);
             } else {
-                // Outras disciplinas: mostra os 4 cards originais
                 cardsResumo.forEach(card => card.style.display = '');
                 const notaResumoCard = document.getElementById('resumo-nota-card');
                 if (notaResumoCard) notaResumoCard.remove();
@@ -6441,13 +6440,11 @@ async function gerarDesempenho() {
                 div.style.flexDirection = 'column';
                 div.style.gap = '8px';
 
-                // Cabeçalho inline "Q1 - CABEÇALHO"
                 const tq = textosQuestoes[i] || {};
                 const cabecalho = (tq && tq.cabecalho) ? tq.cabecalho : '';
                 const tituloQ = (tq && tq.titulo) ? tq.titulo : `Q${q.numero}`;
                 const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
 
-                // Gabarito formatado A) / B) / C)
                 let gabFormatadoHTML = '';
                 const gab = q.gabarito || '';
                 if (gab && gab.trim() !== '' && gab !== '—') {
@@ -6469,7 +6466,6 @@ async function gerarDesempenho() {
                     gabFormatadoHTML = '<div style="font-size:12px; color:var(--text3); font-style:italic;">Sem gabarito</div>';
                 }
 
-                // Observação do professor (resposta da questão)
                 const observacao = observacaoProfessor;
 
                 div.innerHTML = `
