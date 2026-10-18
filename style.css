@@ -1688,3 +1688,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         grid-template-columns: 1fr;
     }
 }
+/* ═══ CABEÇALHO INLINE DA PRODUÇÃO (Q1 - TEXTO) ═══ */
+.cm-q-cabecalho-inline {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--purple);
+    background: rgba(139, 92, 246, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 4px solid var(--purple);
+    margin-bottom: 12px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    display: block;
+}
