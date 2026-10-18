@@ -6777,7 +6777,7 @@ function gerarDocumentoProducao(data) {
 
         const {
             escola, turma, aluno, prova, resultadoQuestoes,
-            disciplina, notaProducao,
+            disciplina, notaProducao, conceito,
             questoesStatusHistorico, textosQuestoes
         } = data;
 
@@ -6827,8 +6827,10 @@ function gerarDocumentoProducao(data) {
                     <div class="prod-label">✍️ Observação do Professor</div>
                     <div class="prod-observacao">${escapeHtml(observacao || '—')}</div>
 
-                    <div class="prod-label">📊 Situação de Correção</div>
-                    <div><span class="prod-situacao">${escapeHtml(situacao || '—')}</span></div>
+                    <div class="prod-situacao-wrapper">
+                        <span class="prod-label" style="margin:0;">📊 Situação de Correção:</span>
+                        <span class="prod-situacao">${escapeHtml(situacao || '—')}</span>
+                    </div>
                 </div>
             `;
         });
@@ -6902,6 +6904,7 @@ function gerarDocumentoProducao(data) {
                         letter-spacing: 0.4px;
                         margin-bottom: 4px;
                         margin-top: 8px;
+                        display: block;
                     }
 
                     /* ═══ ALTERNATIVAS HORIZONTAIS (A/B/C/D/E lado a lado) ═══ */
@@ -6954,16 +6957,30 @@ function gerarDocumentoProducao(data) {
                         white-space: pre-wrap;
                         word-wrap: break-word;
                     }
+
+                    /* ═══ SITUAÇÃO INLINE ═══ */
+                    .prod-situacao-wrapper {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        margin-top: 10px;
+                        padding-top: 8px;
+                        border-top: 1px dashed #e2e8f0;
+                    }
+                    .prod-situacao-wrapper .prod-label {
+                        margin: 0;
+                        display: inline;
+                    }
                     .prod-situacao {
                         display: inline-block;
                         background: #ede9fe;
                         color: #6d28d9;
                         border: 1px solid #c4b5fd;
-                        padding: 4px 14px;
+                        padding: 3px 14px;
                         border-radius: 20px;
                         font-weight: 900;
                         font-size: 12px;
-                        margin-top: 4px;
+                        line-height: 1.2;
                     }
 
                     /* ═══ FOOTER ═══ */
@@ -7002,10 +7019,14 @@ function gerarDocumentoProducao(data) {
                     <div class="item"><span class="label">📚 DISCIPLINA</span><span class="value">${escapeHtml(disciplina)}</span></div>
                 </div>
 
-                <!-- ═══ NOTA EM DESTAQUE ═══ -->
+                <!-- ═══ NOTA EM DESTAQUE + CONCEITO ═══ -->
                 <div class="prod-nota-final">
                     <div class="prod-nota-valor">${notaProducao.toFixed(1)}</div>
                     <div class="prod-nota-label">⭐ NOTA FINAL — PRODUÇÃO DE TEXTO</div>
+                    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c4b5fd;display:flex;justify-content:center;align-items:center;gap:8px;">
+                        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.3px;">Conceito:</span>
+                        <span style="display:inline-block;padding:4px 16px;border-radius:20px;font-weight:900;font-size:13px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;">${escapeHtml(conceito || '—')}</span>
+                    </div>
                 </div>
 
                 <!-- ═══ QUESTÕES ═══ -->
