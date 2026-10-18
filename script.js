@@ -1524,15 +1524,16 @@ async function carregarResultadosComFiltros() {
 
         function getDadosDisciplina(disciplinaData, totalQuestoes) {
             if (!disciplinaData || typeof disciplinaData !== 'object') {
-                return { acertos: 0, erros: 0, conceito: 'inicial' };
-            }
-            const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
-            let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
-            const totalDisc = disciplinaData.total || totalQuestoes || 0;
-            if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
-            const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-            const conceito = calcularConceito(porcentagem);
-            return { acertos, erros, conceito };
+			return { acertos: 0, erros: 0, conceito: 'inicial', nota: 0 };
+			}
+			const acertos = disciplinaData.acertos !== undefined ? disciplinaData.acertos : 0;
+			let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
+			const totalDisc = disciplinaData.total || totalQuestoes || 0;
+			if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
+			const porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
+			const conceito = calcularConceito(porcentagem);
+			const nota = disciplinaData.nota !== undefined ? disciplinaData.nota : 0;
+			return { acertos, erros, conceito, nota };
         }
 
         function badgeConceito(c) {
@@ -1562,9 +1563,12 @@ async function carregarResultadosComFiltros() {
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-purple">' + producao.acertos + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge badge-red">' + producao.erros + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.03);"><span class="badge ' + badgeConceito(producao.conceito) + '">' + producao.conceito + '</span></td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.05);padding:4px;">' +
+					'<div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:2px;">NOTA</div>' +
+					'<div style="font-size:16px;font-weight:900;color:var(--purple);">' +
+						(producao.nota !== undefined && producao.nota !== null && Number(producao.nota) > 0 ? Number(producao.nota).toFixed(1) : '—') +
+				'</div>' +
+			'</td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
@@ -5898,9 +5902,15 @@ async function carregarRelatorioTurmaFiltrado() {
                 <td>${index + 1}</td>
                 <td style="text-align:left;font-weight:600;">${escapeHtml(aluno.aluno_nome || 'Aluno')}</td>
                 <td><span class="badge badge-purple" style="font-size:9px;">${escapeHtml(aluno.serie || '—')}</span></td>
-                <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
-                <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
-                <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>
+                ${tipoAvaliacao === 'producao' ?
+					`<td style="text-align:center;background:${bgDisciplina};padding:4px;">
+						<div style="font-size:9px;font-weight:700;color:var(--text3);">NOTA</div>
+						<div style="font-size:16px;font-weight:900;color:var(--purple);">${d.nota ? Number(d.nota).toFixed(1) : '—'}</div>
+					</td>` :
+					`<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
+					<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
+					<td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>`
+				}
                 <td style="font-size:9px;color:var(--text2);">${escapeHtml(aluno.escola || '—')}</td>
                 <td style="font-size:9px;color:var(--text2);">${escapeHtml(aluno.turma || '—')}</td>
             </tr>`;
