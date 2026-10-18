@@ -6480,7 +6480,7 @@ async function gerarDesempenho() {
                 div.innerHTML = `
                     <div style="font-size:13px; font-weight:800; color:#a78bfa;">${escapeHtml(headerTexto)}</div>
                     <div>
-                        <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:4px;">📋 Gabarito:</div>
+                        <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:4px;">📋 Situação de Correção:</div>
                         <div>${gabFormatadoHTML}</div>
                     </div>
                     <div>
@@ -6488,7 +6488,7 @@ async function gerarDesempenho() {
                         <textarea readonly style="width:100%; min-height:40px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px; font-size:11px; color:var(--text2); resize:none;" placeholder="Escreva sua avaliação/observação sobre a resposta do aluno...">${escapeHtml(observacao)}</textarea>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text3);">📊 Situação de Correção:</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text3);">📊 Situação de Correção Alternativa:</span>
                         <span style="font-size:13px; font-weight:800; color:${situacao ? '#8b5cf6' : 'var(--text3)'}; background:${situacao ? 'rgba(139,92,246,0.12)' : 'var(--surface2)'}; padding:2px 12px; border-radius:8px; border:1px solid ${situacao ? 'rgba(139,92,246,0.3)' : 'var(--border)'};">${escapeHtml(situacao || '—')}</span>
                     </div>
                 `;
