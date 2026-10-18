@@ -8776,3 +8776,228 @@ async function salvarCorrecaoAuto() {
     }
     await salvarCorrecao();
 }
+
+// ============================================
+// IMPRESSÃO DA ABA RESULTADOS
+// ============================================
+function imprimirResultadosMelhorados() {
+    const tbody = document.getElementById('tb-resultados-filtrado');
+    if (!tbody) {
+        showToast('❌ Nenhuma tabela encontrada.', 'error');
+        return;
+    }
+
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Carregando'))) {
+        showToast('⚠️ Nenhum resultado para imprimir. Aplique filtros primeiro.', 'error');
+        return;
+    }
+
+    const escolaSelect = document.getElementById('filtro-escola');
+    const serieSelect = document.getElementById('filtro-serie');
+    const turmaSelect = document.getElementById('filtro-turma');
+    const provaSelect = document.getElementById('filtro-prova');
+
+    const escolaNome = escolaSelect?.options[escolaSelect.selectedIndex]?.text || 'Todas';
+    const serieNome = serieSelect?.options[serieSelect.selectedIndex]?.text || 'Todas';
+    const turmaNome = turmaSelect?.options[turmaSelect.selectedIndex]?.text || 'Todas';
+    const provaNome = provaSelect?.options[provaSelect.selectedIndex]?.text || 'Todas';
+
+    const conceitoInicial = document.getElementById('conceito-inicial-count')?.textContent || '0';
+    const conceitoBasico = document.getElementById('conceito-basico-count')?.textContent || '0';
+    const conceitoProficiente = document.getElementById('conceito-proficiente-count')?.textContent || '0';
+    const conceitoAvancado = document.getElementById('conceito-avancado-count')?.textContent || '0';
+    const totalAlunos = document.getElementById('total-alunos-tabela')?.textContent || '0 alunos';
+
+    const alunosData = [];
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 19) {
+            alunosData.push({
+                posicao: cells[0].textContent.trim(),
+                numero: cells[1].textContent.trim(),
+                nome: cells[2].textContent.trim(),
+                serie: cells[3].textContent.trim(),
+                ptAcertos: cells[4].textContent.trim(),
+                ptErros: cells[5].textContent.trim(),
+                ptConceito: cells[6].textContent.trim(),
+                matAcertos: cells[7].textContent.trim(),
+                matErros: cells[8].textContent.trim(),
+                matConceito: cells[9].textContent.trim(),
+                prodNota: cells[10].textContent.trim().replace('NOTA', '').trim(),
+                chAcertos: cells[11].textContent.trim(),
+                chErros: cells[12].textContent.trim(),
+                chConceito: cells[13].textContent.trim(),
+                cnAcertos: cells[14].textContent.trim(),
+                cnErros: cells[15].textContent.trim(),
+                cnConceito: cells[16].textContent.trim(),
+                escola: cells[17].textContent.trim(),
+                turma: cells[18].textContent.trim()
+            });
+        }
+    });
+
+    const dataAtual = new Date().toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Resultados — Relatório</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fff; color: #1e293b; }
+            .header { border-bottom: 3px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+            .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+            .header-left .prefeitura { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; }
+            .header-left .secretaria { font-size: 13px; font-weight: 800; color: #1e293b; }
+            .header-left .departamento { font-size: 10px; color: #475569; font-weight: 600; }
+            .header-left .sisam { font-size: 14px; font-weight: 900; color: #2563eb; }
+            .header-right { text-align: right; border-left: 2px solid #e2e8f0; padding-left: 16px; }
+            .header-right .titulo { font-size: 18px; font-weight: 800; color: #1e293b; }
+            .header-right .sub { font-size: 11px; color: #475569; font-weight: 600; }
+            .info-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+            .info-grid .item .label { font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
+            .info-grid .item .value { font-size: 11px; font-weight: 700; color: #0f172a; margin-top: 1px; }
+            .conceitos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+            .conceito-card { padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
+            .conceito-card .valor { font-size: 22px; font-weight: 900; }
+            .conceito-card .label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+            .ci { background: #fef2f2; border-color: #fecaca; } .ci .valor { color: #ef4444; }
+            .cb { background: #fffbeb; border-color: #fde68a; } .cb .valor { color: #f59e0b; }
+            .cp { background: #eff6ff; border-color: #bfdbfe; } .cp .valor { color: #3b82f6; }
+            .ca { background: #ecfdf5; border-color: #a7f3d0; } .ca .valor { color: #10b981; }
+            .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
+            table { width: 100%; border-collapse: collapse; font-size: 8px; }
+            thead { background: #f1f5f9; }
+            th { padding: 6px 3px; text-align: center; font-weight: 700; color: #475569; border-bottom: 2px solid #e2e8f0; font-size: 7px; text-transform: uppercase; }
+            td { padding: 4px 3px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 8px; }
+            tr:nth-child(even) td { background: #fafbfc; }
+            .nome-aluno { font-weight: 600; text-align: left; padding-left: 6px; }
+            .nota-prod { font-weight: 900; color: #8b5cf6; font-size: 11px; }
+            .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; }
+            @media print { body { padding: 10px; } @page { size: A4 landscape; margin: 8mm 5mm; } }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left">
+                    <div class="prefeitura">PREFEITURA MUNICIPAL DE</div>
+                    <div class="secretaria">SÃO SEBASTIÃO DA BOA VISTA</div>
+                    <div class="departamento">SECRETARIA MUNICIPAL DE EDUCAÇÃO — DGP</div>
+                    <div class="sisam">SISAM 2026</div>
+                </div>
+                <div class="header-right">
+                    <div class="titulo">🏆 RELATÓRIO DE RESULTADOS</div>
+                    <div class="sub">Acertos, erros e conceitos por disciplina</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="item"><span class="label">🏫 ESCOLA</span><span class="value">${escolaNome}</span></div>
+            <div class="item"><span class="label">📚 SÉRIE</span><span class="value">${serieNome}</span></div>
+            <div class="item"><span class="label">👥 TURMA</span><span class="value">${turmaNome}</span></div>
+            <div class="item"><span class="label">📄 PROVA</span><span class="value">${provaNome}</span></div>
+            <div class="item"><span class="label">📅 DATA</span><span class="value">${new Date().toLocaleDateString('pt-BR')}</span></div>
+        </div>
+
+        <div style="font-size:12px; font-weight:700; margin-bottom:8px;">
+            📊 Distribuição por Conceito — <span style="color:#3b82f6;">${totalAlunos}</span>
+        </div>
+
+        <div class="conceitos">
+            <div class="conceito-card ci"><div class="valor">${conceitoInicial}</div><div class="label">🔴 Inicial</div></div>
+            <div class="conceito-card cb"><div class="valor">${conceitoBasico}</div><div class="label">🟠 Básico</div></div>
+            <div class="conceito-card cp"><div class="valor">${conceitoProficiente}</div><div class="label">🔵 Proficiente</div></div>
+            <div class="conceito-card ca"><div class="valor">${conceitoAvancado}</div><div class="label">🟢 Avançado</div></div>
+        </div>
+
+        <div style="font-size:12px; font-weight:700; margin-bottom:6px;">📋 Lista de Alunos</div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">Pos.</th>
+                        <th rowspan="2">Nº</th>
+                        <th rowspan="2" style="text-align:left;">Nome</th>
+                        <th rowspan="2">Série</th>
+                        <th colspan="3" style="background:#eff6ff;">Português</th>
+                        <th colspan="3" style="background:#ecfdf5;">Matemática</th>
+                        <th colspan="1" style="background:#f5f3ff;">Produção</th>
+                        <th colspan="3" style="background:#fffbeb;">CH</th>
+                        <th colspan="3" style="background:#f0fdfa;">CN</th>
+                        <th rowspan="2">Escola</th>
+                        <th rowspan="2">Turma</th>
+                    </tr>
+                    <tr>
+                        <th style="font-size:6px;">Acertos</th>
+                        <th style="font-size:6px;">Erros</th>
+                        <th style="font-size:6px;">Conceito</th>
+                        <th style="font-size:6px;">Acertos</th>
+                        <th style="font-size:6px;">Erros</th>
+                        <th style="font-size:6px;">Conceito</th>
+                        <th style="font-size:6px;">NOTA</th>
+                        <th style="font-size:6px;">Acertos</th>
+                        <th style="font-size:6px;">Erros</th>
+                        <th style="font-size:6px;">Conceito</th>
+                        <th style="font-size:6px;">Acertos</th>
+                        <th style="font-size:6px;">Erros</th>
+                        <th style="font-size:6px;">Conceito</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${alunosData.map(a => `
+                        <tr>
+                            <td>${a.posicao}</td>
+                            <td>${a.numero}</td>
+                            <td class="nome-aluno">${a.nome}</td>
+                            <td>${a.serie}</td>
+                            <td>${a.ptAcertos}</td>
+                            <td>${a.ptErros}</td>
+                            <td>${a.ptConceito}</td>
+                            <td>${a.matAcertos}</td>
+                            <td>${a.matErros}</td>
+                            <td>${a.matConceito}</td>
+                            <td class="nota-prod">${a.prodNota}</td>
+                            <td>${a.chAcertos}</td>
+                            <td>${a.chErros}</td>
+                            <td>${a.chConceito}</td>
+                            <td>${a.cnAcertos}</td>
+                            <td>${a.cnErros}</td>
+                            <td>${a.cnConceito}</td>
+                            <td>${a.escola}</td>
+                            <td>${a.turma}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <span>📄 Documento gerado pelo sistema <strong>CorrigePro</strong></span>
+            <span>${dataAtual}</span>
+        </div>
+    </body>
+    </html>
+    `;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        showToast('⚠️ Permita pop-ups para imprimir.', 'error');
+        return;
+    }
+
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => {
+        setTimeout(() => { win.focus(); win.print(); }, 500);
+    };
+    showToast('📄 Relatório gerado!', 'success');
+}
