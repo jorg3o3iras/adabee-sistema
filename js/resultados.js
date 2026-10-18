@@ -1591,16 +1591,21 @@ async function gerarDesempenho() {
 
         // ═══════════════════════════════════════════════════════════════
         // ✅ CONTROLE DOS CARDS DO RESUMO
-        // Em Produção de Texto: esconde TODOS os cards originais
-        // (Porcentagem, Acertos, Erros, Conceito) e mostra APENAS o NOTA.
+        // Em Produção de Texto:
+        //   - Esconde: Porcentagem de Acertos, Acertos, Erros
+        //   - MANTÉM: Conceito (ao lado do NOTA)
+        //   - Adiciona: NOTA
         // Nas demais provas: mostra todos os cards originais.
         // ═══════════════════════════════════════════════════════════════
         const resumoContainer = document.querySelector('.desempenho-resumo');
         if (resumoContainer) {
             const cardsResumo = resumoContainer.querySelectorAll('.item');
             if (isProducao) {
-                // Esconde TODOS os cards originais
-                cardsResumo.forEach(card => { card.style.display = 'none'; });
+                // ✅ Esconde apenas os 3 primeiros cards (Porcentagem, Acertos, Erros)
+                //    Mantém o 4º (Conceito) visível
+                cardsResumo.forEach((card, idx) => {
+                    card.style.display = (idx <= 2) ? 'none' : '';
+                });
 
                 // Remove qualquer card "NOTA" antigo e recria limpo
                 let notaResumoCard = document.getElementById('resumo-nota-card');
@@ -1624,9 +1629,13 @@ async function gerarDesempenho() {
                 const statsInternos = document.getElementById('disciplina-unica-stats');
                 if (statsInternos) statsInternos.style.display = 'none';
 
-                // ✅ Esconde a legenda (✅ Acertou / ❌ Errou / — Não respondeu / conceitos)
-                const legenda = document.getElementById('legenda-desempenho');
-                if (legenda) legenda.style.display = 'none';
+                // ✅ Esconde SOMENTE a legenda de acertos (✅ Acertou / ❌ Errou / — Não respondeu)
+                const legendaAcertos = document.getElementById('legenda-desempenho');
+                if (legendaAcertos) legendaAcertos.style.display = 'none';
+
+                // ✅ Garante que as badges de conceito continuam visíveis
+                const legendaConceitos = document.getElementById('legenda-conceitos');
+                if (legendaConceitos) legendaConceitos.style.display = 'flex';
 
             } else {
                 // ✅ Provas normais: mostra tudo
@@ -1640,17 +1649,21 @@ async function gerarDesempenho() {
                 const statsInternos = document.getElementById('disciplina-unica-stats');
                 if (statsInternos) statsInternos.style.display = 'flex';
 
-                const legenda = document.getElementById('legenda-desempenho');
-                if (legenda) legenda.style.display = 'flex';
+                const legendaAcertos = document.getElementById('legenda-desempenho');
+                if (legendaAcertos) legendaAcertos.style.display = 'flex';
+
+                const legendaConceitos = document.getElementById('legenda-conceitos');
+                if (legendaConceitos) legendaConceitos.style.display = 'flex';
             }
         }
 
-        // ✅ Só preenche os valores do resumo se NÃO for Produção
+        // ✅ Sempre preenche o Conceito; só Porcentagem/Acertos/Erros ficam ocultos em Produção
+        setText('resumo-conceito', conceito);
+
         if (!isProducao) {
             setText('resumo-nota', pct + '%');
             setText('resumo-acertos', acertos);
             setText('resumo-erros', erros);
-            setText('resumo-conceito', conceito);
         }
 
         setText('info-escola', escola.nome || '—');
@@ -1835,8 +1848,12 @@ function limparFiltrosDesempenho() {
     const statsInternosLimpar = document.getElementById('disciplina-unica-stats');
     if (statsInternosLimpar) statsInternosLimpar.style.display = 'flex';
 
-    const legendaLimpar = document.getElementById('legenda-desempenho');
-    if (legendaLimpar) legendaLimpar.style.display = 'flex';
+    const legendaAcertosLimpar = document.getElementById('legenda-desempenho');
+    if (legendaAcertosLimpar) legendaAcertosLimpar.style.display = 'flex';
+
+    // ✅ NOVO: restaura também as badges de conceito (🔴🟠🔵🟢)
+    const legendaConceitosLimpar = document.getElementById('legenda-conceitos');
+    if (legendaConceitosLimpar) legendaConceitosLimpar.style.display = 'flex';
 
     const notaCardLimpar = document.getElementById('desempenho-nota-producao-card');
     if (notaCardLimpar) notaCardLimpar.style.display = 'none';
