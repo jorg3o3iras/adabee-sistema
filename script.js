@@ -6293,12 +6293,20 @@ async function gerarDesempenho() {
         let respostasAluno = [];
         let disciplina = prova.disciplina || 'Português';
         let notaRealProducao = 0;
-
+        
+        let questoesStatusHistorico = [];
         if (historico && historico.length > 0 && !historico.erro) {
             const correcao = historico[0];
             respostasAluno = correcao.respostas || [];
             if (correcao.disciplina) disciplina = correcao.disciplina;
             notaRealProducao = parseFloat(correcao.nota) || 0;
+            questoesStatusHistorico = correcao.questoes_status || [];
+            if (typeof questoesStatusHistorico === 'string') {
+                try {
+                    questoesStatusHistorico = JSON.parse(questoesStatusHistorico);
+                } catch (e) {
+                    questoesStatusHistorico = [];
+            }
         }
 
         while (respostasAluno.length < totalQuestoes) respostasAluno.push('');
@@ -6420,10 +6428,10 @@ async function gerarDesempenho() {
             grid.style.gap = '14px';
             grid.style.padding = '8px 0';
 
-            const textosQuestoes = prova.textos_questoes || [];
-            const situacoesProva = prova.niveis || [];
-
             resultadoQuestoes.forEach((q, i) => {
+                const statusSalvo = questoesStatusHistorico[i] || {};
+                const situacao = statusSalvo.situacao || '';
+                const observacaoProfessor = statusSalvo.resposta || statusSalvo.observacao || '';
                 const div = document.createElement('div');
                 div.style.background = 'var(--bg2)';
                 div.style.border = '1px solid var(--border)';
@@ -6461,11 +6469,8 @@ async function gerarDesempenho() {
                     gabFormatadoHTML = '<div style="font-size:12px; color:var(--text3); font-style:italic;">Sem gabarito</div>';
                 }
 
-                // Situação salva (A–I)
-                const situacao = situacoesProva[i] || '';
-
                 // Observação do professor (resposta da questão)
-                const observacao = (q.resposta && q.resposta !== '—') ? q.resposta : '';
+                const observacao = observacaoProfessor;
 
                 div.innerHTML = `
                     <div style="font-size:13px; font-weight:800; color:#a78bfa;">${escapeHtml(headerTexto)}</div>
