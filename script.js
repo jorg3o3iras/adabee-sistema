@@ -6362,7 +6362,7 @@ async function gerarDesempenho() {
             conceito: conceito,
             disciplina: disciplina,
             totalQuestoes: totalQuestoes,
-            notaProducao: notaRealProducao
+            notaProducao: notaRealProducao,
 			questoesStatusHistorico: questoesStatusHistorico,
 			textosQuestoes: textosQuestoes
         };
