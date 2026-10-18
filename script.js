@@ -6292,11 +6292,14 @@ async function gerarDesempenho() {
 
         let respostasAluno = [];
         let disciplina = prova.disciplina || 'Português';
+        let notaRealProducao = 0; // ═══ NOVO: nota real para Produção ═══
 
         if (historico && historico.length > 0 && !historico.erro) {
             const correcao = historico[0];
             respostasAluno = correcao.respostas || [];
             if (correcao.disciplina) disciplina = correcao.disciplina;
+            // ═══ NOVO: captura a nota real salva no histórico ═══
+            notaRealProducao = parseFloat(correcao.nota) || 0;
         }
 
         while (respostasAluno.length < totalQuestoes) respostasAluno.push('');
@@ -6347,7 +6350,8 @@ async function gerarDesempenho() {
             porcentagem: pct,
             conceito: conceito,
             disciplina: disciplina,
-            totalQuestoes: totalQuestoes
+            totalQuestoes: totalQuestoes,
+            notaProducao: notaRealProducao // ═══ NOVO ═══
         };
 
         document.getElementById('resultado-desempenho').style.display = 'block';
@@ -6441,43 +6445,28 @@ async function gerarDesempenho() {
 
         setText('disciplina-unica-conceito', conceito);
 
+        // ═══════════════════════════════════════════════════════════════════
+        // ═══ CORREÇÃO 1: Card de Gabarito Oficial ═══
+        // Produção → NÃO mostra (fica com display:none)
+        // Outras disciplinas → mostra normal
+        // ═══════════════════════════════════════════════════════════════════
         const gabCard = document.getElementById('gabarito-oficial-card');
-        gabCard.style.display = 'block';
-
         const gabCardTitle = document.querySelector('#gabarito-oficial-card .card-title');
-        if (gabCardTitle) {
-            gabCardTitle.textContent = isProducao ? '📋 Gabarito Oficial (Texto)' : '📋 Gabarito Oficial da Prova';
-        }
-
         const gabGrid = document.getElementById('gabarito-oficial-grid');
-        gabGrid.innerHTML = '';
 
         if (isProducao) {
-            gabGrid.style.display = 'flex';
-            gabGrid.style.flexDirection = 'column';
-            gabGrid.style.gap = '12px';
-            gabGrid.style.padding = '8px 0';
-
-            gabarito.forEach((gab, idx) => {
-                const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
-                const div = document.createElement('div');
-                div.style.background = 'var(--bg2)';
-                div.style.border = '1px solid var(--border)';
-                div.style.borderRadius = '8px';
-                div.style.padding = '10px 14px';
-                div.style.display = 'flex';
-                div.style.flexDirection = 'column';
-                div.style.gap = '6px';
-
-                div.innerHTML = `
-                    <div style="font-weight:700; color:var(--text2);">Q${idx+1}</div>
-                    <div style="font-size:13px; font-weight:700; color:var(--green);">${escapeHtml(gab || '—')}</div>
-                    ${codigoBncc ? `<div style="font-size:9px; color:var(--purple);">BNCC: ${escapeHtml(codigoBncc)}</div>` : ''}
-                    <div style="font-size:10px; color:var(--text3); border-top:1px solid var(--border); padding-top:6px;">Nível BNCC: ${escapeHtml(codigoBncc || 'Não definido')}</div>
-                `;
-                gabGrid.appendChild(div);
-            });
+            // Produção: ESCONDE o card de gabarito oficial
+            gabCard.style.display = 'none';
+            gabGrid.innerHTML = '';
         } else {
+            // Outras disciplinas: mostra gabarito normal
+            gabCard.style.display = 'block';
+
+            if (gabCardTitle) {
+                gabCardTitle.textContent = '📋 Gabarito Oficial da Prova';
+            }
+
+            gabGrid.innerHTML = '';
             gabGrid.style.display = 'grid';
             gabGrid.style.gridTemplateColumns = 'repeat(10, 1fr)';
             gabGrid.style.gap = '6px';
@@ -6496,6 +6485,28 @@ async function gerarDesempenho() {
                 gabGrid.appendChild(div);
             });
         }
+        // ═══ FIM DA CORREÇÃO 1 ═══
+
+        // ═══════════════════════════════════════════════════════════════════
+        // ═══ CORREÇÃO 2: Card novo de NOTA (só Produção) ═══
+        // Mostra a nota real do aluno em destaque
+        // ═══════════════════════════════════════════════════════════════════
+        const notaCard = document.getElementById('desempenho-nota-producao-card');
+        const notaValorEl = document.getElementById('desempenho-nota-producao-valor');
+        const notaInfoEl = document.getElementById('desempenho-nota-producao-info');
+
+        if (notaCard) {
+            if (isProducao) {
+                notaCard.style.display = 'block';
+                if (notaValorEl) notaValorEl.textContent = notaRealProducao.toFixed(1);
+                if (notaInfoEl) {
+                    notaInfoEl.textContent = `Aluno: ${aluno.nome} | Prova: ${prova.titulo}`;
+                }
+            } else {
+                notaCard.style.display = 'none';
+            }
+        }
+        // ═══ FIM DA CORREÇÃO 2 ═══
 
         showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
 
