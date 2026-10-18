@@ -4044,12 +4044,12 @@
             </div>
 
             <div
-              id="legenda-desempenho"
               style="
                 display: flex;
                 gap: 16px;
                 flex-wrap: wrap;
                 justify-content: center;
+                align-items: center;
                 padding: 12px;
                 background: var(--bg2);
                 border-radius: 10px;
@@ -4058,58 +4058,78 @@
                 font-size: 12px;
               "
             >
-              <span style="display: flex; align-items: center; gap: 6px"
-                ><span
-                  style="
-                    display: inline-block;
-                    width: 14px;
-                    height: 14px;
-                    border-radius: 4px;
-                    background: rgba(16, 185, 129, 0.2);
-                    border: 1px solid var(--green);
-                  "
-                ></span>
-                ✅ Acertou</span
+              <div
+                id="legenda-desempenho"
+                style="
+                  display: flex;
+                  gap: 16px;
+                  flex-wrap: wrap;
+                  align-items: center;
+                "
               >
-              <span style="display: flex; align-items: center; gap: 6px"
-                ><span
-                  style="
-                    display: inline-block;
-                    width: 14px;
-                    height: 14px;
-                    border-radius: 4px;
-                    background: rgba(239, 68, 68, 0.2);
-                    border: 1px solid var(--red);
-                  "
-                ></span>
-                ❌ Errou</span
+                <span style="display: flex; align-items: center; gap: 6px"
+                  ><span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      border-radius: 4px;
+                      background: rgba(16, 185, 129, 0.2);
+                      border: 1px solid var(--green);
+                    "
+                  ></span>
+                  ✅ Acertou</span
+                >
+                <span style="display: flex; align-items: center; gap: 6px"
+                  ><span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      border-radius: 4px;
+                      background: rgba(239, 68, 68, 0.2);
+                      border: 1px solid var(--red);
+                    "
+                  ></span>
+                  ❌ Errou</span
+                >
+                <span style="display: flex; align-items: center; gap: 6px"
+                  ><span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      border-radius: 4px;
+                      background: var(--bg2);
+                      border: 1px solid var(--border);
+                    "
+                  ></span>
+                  — Não respondeu</span
+                >
+              </div>
+
+              <div
+                id="legenda-conceitos"
+                style="
+                  display: flex;
+                  gap: 8px;
+                  flex-wrap: wrap;
+                  align-items: center;
+                "
               >
-              <span style="display: flex; align-items: center; gap: 6px"
-                ><span
-                  style="
-                    display: inline-block;
-                    width: 14px;
-                    height: 14px;
-                    border-radius: 4px;
-                    background: var(--bg2);
-                    border: 1px solid var(--border);
-                  "
-                ></span>
-                — Não respondeu</span
-              >
-              <span style="color: var(--text3)">|</span>
-              <span class="badge badge-conceito-inicial"
-                >🔴 Inicial (até 40%)</span
-              >
-              <span class="badge badge-conceito-basico"
-                >🟠 Básico (41-60%)</span
-              >
-              <span class="badge badge-conceito-proficiente"
-                >🔵 Proficiente (61-80%)</span
-              >
-              <span class="badge badge-conceito-avancado"
-                >🟢 Avançado (&gt;80%)</span
-              >
+                <span class="badge badge-conceito-inicial"
+                  >🔴 Inicial (até 40%)</span
+                >
+                <span class="badge badge-conceito-basico"
+                  >🟠 Básico (41-60%)</span
+                >
+                <span class="badge badge-conceito-proficiente"
+                  >🔵 Proficiente (61-80%)</span
+                >
+                <span class="badge badge-conceito-avancado"
+                  >🟢 Avançado (&gt;80%)</span
+                >
+              </div>
             </div>
           </div>
         </div>
