@@ -6363,6 +6363,8 @@ async function gerarDesempenho() {
             disciplina: disciplina,
             totalQuestoes: totalQuestoes,
             notaProducao: notaRealProducao
+			questoesStatusHistorico: questoesStatusHistorico,
+			textosQuestoes: textosQuestoes
         };
 
         document.getElementById('resultado-desempenho').style.display = 'block';
@@ -6580,6 +6582,9 @@ async function gerarDesempenho() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// ═══ GERADOR DE DOCUMENTO — DISPATCHER POR DISCIPLINA ═══
+// ═══════════════════════════════════════════════════════════════════
 function gerarDocumentoDesempenho() {
     if (gerandoDocumento) {
         showToast('⏳ Aguarde, o documento está sendo gerado...', 'info');
@@ -6597,6 +6602,21 @@ function gerarDocumentoDesempenho() {
     btn.disabled = true;
     btn.textContent = '⏳ Gerando...';
 
+    const isProducao = (data.disciplina === 'Produção de Texto');
+
+    if (isProducao) {
+        gerarDocumentoProducao(data);
+    } else {
+        gerarDocumentoNormal(data);
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ PDF — DISCIPLINAS NORMAIS (layout ORIGINAL, intocado) ═══
+// ═══════════════════════════════════════════════════════════════════
+function gerarDocumentoNormal(data) {
+    const btn = document.getElementById('btnGerarDocumento');
     try {
         const win = window.open('', '_blank');
         if (!win) {
@@ -6720,6 +6740,285 @@ function gerarDocumentoDesempenho() {
             </div>
         </body>
         </html>
+        `;
+
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => win.print(), 600);
+
+        showToast('📄 Documento gerado!', 'success');
+    } catch (erro) {
+        console.error('Erro ao gerar documento:', erro);
+        showToast('❌ Erro ao gerar documento: ' + erro.message, 'error');
+    } finally {
+        setTimeout(() => {
+            gerandoDocumento = false;
+            btn.disabled = false;
+            btn.textContent = '📄 GERAR DOCUMENTO';
+        }, 1000);
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ PDF — PRODUÇÃO DE TEXTO (cabeçalho + cards horizontais) ═══
+// ═══════════════════════════════════════════════════════════════════
+function gerarDocumentoProducao(data) {
+    const btn = document.getElementById('btnGerarDocumento');
+    try {
+        const win = window.open('', '_blank');
+        if (!win) {
+            showToast('⚠️ Permita pop-ups para gerar o documento!', 'error');
+            gerandoDocumento = false;
+            btn.disabled = false;
+            btn.textContent = '📄 GERAR DOCUMENTO';
+            return;
+        }
+
+        const {
+            escola, turma, aluno, prova, resultadoQuestoes,
+            disciplina, notaProducao,
+            questoesStatusHistorico, textosQuestoes
+        } = data;
+
+        const dataAtual = new Date().toLocaleString('pt-BR');
+
+        // ═══ Cards horizontais de cada questão ═══
+        let questoesHTML = '';
+
+        resultadoQuestoes.forEach((q, i) => {
+            const statusSalvo = (questoesStatusHistorico && questoesStatusHistorico[i]) || {};
+            const situacao = statusSalvo.situacao || '';
+            const observacao = statusSalvo.resposta || statusSalvo.observacao || '';
+            const tq = (textosQuestoes && textosQuestoes[i]) || {};
+            const titulo = (tq.titulo) ? tq.titulo : `Q${q.numero}`;
+            const cabecalho = (tq.cabecalho) ? tq.cabecalho : '';
+            const headerTexto = cabecalho ? `${titulo} — ${cabecalho}` : titulo;
+
+            const gab = q.gabarito || '';
+            let alternativasHTML = '';
+
+            if (gab && gab.trim() !== '' && gab !== '—') {
+                const blocos = gab.split(/\n(?=[A-Z]\))/);
+                blocos.forEach(bloco => {
+                    const m = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
+                    if (m) {
+                        alternativasHTML += `
+                            <div class="prod-alt">
+                                <span class="prod-alt-letra">${escapeHtml(m[1])}</span>
+                                <span class="prod-alt-texto">${escapeHtml(m[2].trim())}</span>
+                            </div>
+                        `;
+                    } else if (bloco.trim()) {
+                        alternativasHTML += `<div class="prod-alt"><span class="prod-alt-texto">${escapeHtml(bloco.trim())}</span></div>`;
+                    }
+                });
+            } else {
+                alternativasHTML = '<div style="font-size:10px;color:#94a3b8;font-style:italic;">Sem gabarito cadastrado</div>';
+            }
+
+            questoesHTML += `
+                <div class="prod-questao">
+                    <div class="prod-questao-titulo">${escapeHtml(headerTexto)}</div>
+
+                    <div class="prod-label">📋 Gabarito</div>
+                    <div class="prod-alternativas">${alternativasHTML}</div>
+
+                    <div class="prod-label">✍️ Observação do Professor</div>
+                    <div class="prod-observacao">${escapeHtml(observacao || '—')}</div>
+
+                    <div class="prod-label">📊 Situação de Correção</div>
+                    <div><span class="prod-situacao">${escapeHtml(situacao || '—')}</span></div>
+                </div>
+            `;
+        });
+
+        const html = `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório de Desempenho — ${escapeHtml(aluno.nome)}</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fff; color: #1e293b; }
+
+                    /* ═══ CABEÇALHO INSTITUCIONAL ═══ */
+                    .header { border-bottom: 3px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+                    .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+                    .header-left .prefeitura { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .header-left .secretaria { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: 0.3px; }
+                    .header-left .departamento { font-size: 10px; color: #475569; font-weight: 600; }
+                    .header-left .sisam { font-size: 14px; font-weight: 900; color: #2563eb; letter-spacing: 0.5px; }
+                    .header-right { text-align: right; border-left: 2px solid #e2e8f0; padding-left: 16px; }
+                    .header-right .titulo { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: 0.3px; }
+                    .header-right .sub { font-size: 11px; color: #475569; font-weight: 600; }
+
+                    /* ═══ INFO GRID ═══ */
+                    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; background: #f8fafc; padding: 12px 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+                    .info-grid .item { display: flex; flex-direction: column; }
+                    .info-grid .item .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .info-grid .item .value { font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+
+                    /* ═══ NOTA EM DESTAQUE ═══ */
+                    .prod-nota-final {
+                        background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+                        border: 2px solid #8b5cf6;
+                        border-radius: 10px;
+                        padding: 16px;
+                        text-align: center;
+                        margin: 16px 0;
+                    }
+                    .prod-nota-valor { font-size: 44px; font-weight: 900; color: #8b5cf6; line-height: 1; }
+                    .prod-nota-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 6px; letter-spacing: 0.3px; }
+
+                    /* ═══ SECTION TITLE ═══ */
+                    .section-title { font-size: 14px; font-weight: 800; color: #1e293b; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; }
+
+                    /* ═══ CARD DE QUESTÃO (Produção) ═══ */
+                    .prod-questao {
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-left: 4px solid #8b5cf6;
+                        border-radius: 8px;
+                        padding: 12px 14px;
+                        margin-bottom: 12px;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+                    .prod-questao-titulo {
+                        font-size: 12px;
+                        font-weight: 800;
+                        color: #8b5cf6;
+                        margin-bottom: 8px;
+                        padding-bottom: 6px;
+                        border-bottom: 1px dashed #cbd5e1;
+                    }
+                    .prod-label {
+                        font-size: 9px;
+                        font-weight: 700;
+                        color: #64748b;
+                        text-transform: uppercase;
+                        letter-spacing: 0.4px;
+                        margin-bottom: 4px;
+                        margin-top: 8px;
+                    }
+
+                    /* ═══ ALTERNATIVAS HORIZONTAIS (A/B/C/D/E lado a lado) ═══ */
+                    .prod-alternativas {
+                        display: flex;
+                        gap: 10px;
+                        flex-wrap: wrap;
+                        margin-bottom: 4px;
+                    }
+                    .prod-alt {
+                        flex: 1;
+                        min-width: 200px;
+                        background: #fff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        padding: 8px 10px;
+                        display: flex;
+                        gap: 8px;
+                        align-items: flex-start;
+                    }
+                    .prod-alt-letra {
+                        flex: 0 0 22px;
+                        height: 22px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+                        color: #fff;
+                        font-weight: 900;
+                        font-size: 11px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .prod-alt-texto {
+                        flex: 1;
+                        font-size: 10px;
+                        color: #1e293b;
+                        line-height: 1.4;
+                    }
+
+                    /* ═══ OBSERVAÇÃO E SITUAÇÃO ═══ */
+                    .prod-observacao {
+                        background: #fff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        padding: 8px 10px;
+                        font-size: 10px;
+                        color: #1e293b;
+                        line-height: 1.5;
+                        min-height: 32px;
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                    }
+                    .prod-situacao {
+                        display: inline-block;
+                        background: #ede9fe;
+                        color: #6d28d9;
+                        border: 1px solid #c4b5fd;
+                        padding: 4px 14px;
+                        border-radius: 20px;
+                        font-weight: 900;
+                        font-size: 12px;
+                        margin-top: 4px;
+                    }
+
+                    /* ═══ FOOTER ═══ */
+                    .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; flex-wrap: wrap; gap: 8px; }
+
+                    @media print {
+                        body { padding: 12px; }
+                        @page { size: A4 portrait; margin: 8mm; }
+                    }
+                </style>
+            </head>
+            <body>
+                <!-- ═══ CABEÇALHO INSTITUCIONAL ═══ -->
+                <div class="header">
+                    <div class="header-top">
+                        <div class="header-left">
+                            <div class="prefeitura">PREFEITURA MUNICIPAL DE</div>
+                            <div class="secretaria">SÃO SEBASTIÃO DA BOA VISTA</div>
+                            <div class="departamento">SECRETARIA MUNICIPAL DE EDUCAÇÃO — DGP</div>
+                            <div class="sisam">SISAM 2026</div>
+                        </div>
+                        <div class="header-right">
+                            <div class="titulo">📊 RELATÓRIO DE DESEMPENHO</div>
+                            <div class="sub">${escapeHtml(disciplina)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ INFO GRID ═══ -->
+                <div class="info-grid">
+                    <div class="item"><span class="label">🏫 ESCOLA</span><span class="value">${escapeHtml(escola.nome || '—')}</span></div>
+                    <div class="item"><span class="label">👥 TURMA</span><span class="value">${escapeHtml((turma.nome || '') + ' - ' + (turma.serie || ''))}</span></div>
+                    <div class="item"><span class="label">🎒 ALUNO</span><span class="value">${escapeHtml(aluno.nome || '—')}</span></div>
+                    <div class="item"><span class="label">📄 PROVA</span><span class="value">${escapeHtml(prova.titulo || '—')}</span></div>
+                    <div class="item"><span class="label">📅 DATA</span><span class="value">${new Date().toLocaleDateString('pt-BR')}</span></div>
+                    <div class="item"><span class="label">📚 DISCIPLINA</span><span class="value">${escapeHtml(disciplina)}</span></div>
+                </div>
+
+                <!-- ═══ NOTA EM DESTAQUE ═══ -->
+                <div class="prod-nota-final">
+                    <div class="prod-nota-valor">${notaProducao.toFixed(1)}</div>
+                    <div class="prod-nota-label">⭐ NOTA FINAL — PRODUÇÃO DE TEXTO</div>
+                </div>
+
+                <!-- ═══ QUESTÕES ═══ -->
+                <div class="section-title">📝 Questões Avaliadas (${resultadoQuestoes.length})</div>
+                ${questoesHTML}
+
+                <!-- ═══ FOOTER ═══ -->
+                <div class="footer">
+                    <span>📄 Documento gerado pelo sistema <strong>CorrigePro</strong></span>
+                    <span>${dataAtual}</span>
+                </div>
+            </body>
+            </html>
         `;
 
         win.document.write(html);
