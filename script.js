@@ -2594,7 +2594,7 @@ function gerarGridCorrecaoManualSA() {
             div.innerHTML = `
                 ${cabecalhoHTML}
                 <div>
-                    <div class="cm-q-resposta-label">📋 Gabarito:</div>
+                    <div class="cm-q-resposta-label">📋 JORGE:</div>
                     <div class="cm-gabarito-formatado">${gabFormatadoHTML}</div>
                 </div>
                 <div>
