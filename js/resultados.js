@@ -1556,16 +1556,33 @@ async function gerarDesempenho() {
             });
         }
 
-        const pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ DEFINE isProducao PRIMEIRO (era depois, estava causando erro)
+        // ═══════════════════════════════════════════════════════════════
+        const isProducao = (disciplina === 'Produção de Texto');
 
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ CÁLCULO DA PORCENTAGEM
+        //   - Produção de Texto: usa a NOTA (0-10 → 0-100%)
+        //   - Demais provas: usa acertos/total
+        // ═══════════════════════════════════════════════════════════════
+        let pct;
+        if (isProducao) {
+            // nota 10.0 → 100% | nota 6.0 → 60% | nota 2.5 → 25%
+            pct = Math.round((notaRealProducao / 10) * 100);
+        } else {
+            pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ CÁLCULO DO CONCEITO (mesma regra do sistema)
+        // ═══════════════════════════════════════════════════════════════
         let conceito = 'Inicial';
         let conceitoCor = 'badge-red';
         if (pct > 80) { conceito = 'Avançado';
             conceitoCor = 'badge-green'; } else if (pct > 60) { conceito = 'Proficiente';
             conceitoCor = 'badge-blue'; } else if (pct > 40) { conceito = 'Básico';
             conceitoCor = 'badge-orange'; }
-
-        const isProducao = (disciplina === 'Produção de Texto');
 
         desempenhoData.alunoSelecionado = {
             escola,
@@ -1817,7 +1834,12 @@ async function gerarDesempenho() {
             notaCard.style.display = 'none';
         }
 
-        showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
+        // ✅ Toast mais informativo (mostra a nota em Produção)
+        if (isProducao) {
+            showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: Nota ${notaRealProducao.toFixed(1)} (${conceito})`, 'success');
+        } else {
+            showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
+        }
 
     } catch (erro) {
         console.error('❌ Erro ao gerar desempenho:', erro);
