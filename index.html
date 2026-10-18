@@ -3868,7 +3868,7 @@
                 <div class="valor red" id="resumo-erros">0</div>
                 <div class="label">Erros</div>
               </div>
-              <div class="item">
+              <div class="item" id="resumo-card-conceito">
                 <div class="valor purple" id="resumo-conceito">—</div>
                 <div class="label">Conceito</div>
               </div>
@@ -3896,6 +3896,7 @@
                   "
                 ></div>
                 <div
+                  id="disciplina-unica-stats"
                   class="stats"
                   style="
                     display: flex;
@@ -3973,14 +3974,22 @@
               id="desempenho-nota-producao-card"
               style="display: none; margin-top: 16px"
             >
-              <div class="card" style="border: 2px solid rgba(139, 92, 246, 0.4);">
+              <div
+                class="card"
+                style="border: 2px solid rgba(139, 92, 246, 0.4)"
+              >
                 <div class="card-header">
-                  <div class="card-title" style="color: #a78bfa; font-size: 18px;">
+                  <div
+                    class="card-title"
+                    style="color: #a78bfa; font-size: 18px"
+                  >
                     ✍️ NOTA — Produção de Texto
                   </div>
-                  <span class="badge badge-purple" style="font-size: 11px;">PRODUÇÃO</span>
+                  <span class="badge badge-purple" style="font-size: 11px"
+                    >PRODUÇÃO</span
+                  >
                 </div>
-                <div style="text-align: center; padding: 30px 20px;">
+                <div style="text-align: center; padding: 30px 20px">
                   <div
                     id="desempenho-nota-producao-valor"
                     style="
@@ -4035,6 +4044,7 @@
             </div>
 
             <div
+              id="legenda-desempenho"
               style="
                 display: flex;
                 gap: 16px;
@@ -5629,7 +5639,7 @@ Ana Lima"
     </div>
 
     <!-- ══════════ CARREGAMENTO DO JAVASCRIPT ══════════ -->
-        <!-- ══════════ CARREGAMENTO DO JAVASCRIPT (modularizado) ══════════ -->
+    <!-- ══════════ CARREGAMENTO DO JAVASCRIPT (modularizado) ══════════ -->
     <script src="js/core.js"></script>
     <script src="js/auth-nav.js"></script>
     <script src="js/cadastros.js"></script>
