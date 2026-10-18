@@ -2594,7 +2594,7 @@ function gerarGridCorrecaoManualSA() {
             div.innerHTML = `
                 ${cabecalhoHTML}
                 <div>
-                    <div class="cm-q-resposta-label">📋 JORGE:</div>
+                    <div class="cm-q-resposta-label">📋 Situação de Correção:</div>
                     <div class="cm-gabarito-formatado">${gabFormatadoHTML}</div>
                 </div>
                 <div>
@@ -2604,7 +2604,7 @@ function gerarGridCorrecaoManualSA() {
                               data-questao="${i}">${escapeHtml(resp || '')}</textarea>
                 </div>
                 <div class="cm-q-situacao-wrapper">
-                    <label class="cm-q-situacao-label">📊 Situação de Correção:</label>
+                    <label class="cm-q-situacao-label">📊 Situação de Correção Alternativa:</label>
                     <select class="cm-q-situacao-select" data-questao="${i}" onchange="atualizarSituacaoCM(this)">
                         ${optsSitHTML}
                     </select>
