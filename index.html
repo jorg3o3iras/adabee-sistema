@@ -2296,7 +2296,6 @@
               <p class="page-sub">Acertos, erros e conceitos por disciplina</p>
             </div>
             <div class="page-actions no-print">
-              <!-- ✅ CORRIGIDO: agora chama a função correta de impressão da aba Resultados -->
               <button
                 class="btn btn-outline"
                 onclick="imprimirResultadosMelhorados()"
@@ -3766,7 +3765,6 @@
               </p>
             </div>
             <div class="page-actions no-print">
-              <!-- ✅ CORRIGIDO: agora chama a função correta do desempenho -->
               <button
                 class="btn btn-outline"
                 onclick="gerarDocumentoDesempenho()"
@@ -3966,6 +3964,54 @@
                   "
                 >
                   Respostas corretas da prova
+                </div>
+              </div>
+            </div>
+
+            <!-- ✅ CORRIGIDO: NOVO CARD DE NOTA (só Produção de Texto) -->
+            <div
+              id="desempenho-nota-producao-card"
+              style="display: none; margin-top: 16px"
+            >
+              <div class="card" style="border: 2px solid rgba(139, 92, 246, 0.4);">
+                <div class="card-header">
+                  <div class="card-title" style="color: #a78bfa; font-size: 18px;">
+                    ✍️ NOTA — Produção de Texto
+                  </div>
+                  <span class="badge badge-purple" style="font-size: 11px;">PRODUÇÃO</span>
+                </div>
+                <div style="text-align: center; padding: 30px 20px;">
+                  <div
+                    id="desempenho-nota-producao-valor"
+                    style="
+                      font-size: 72px;
+                      font-weight: 900;
+                      color: #8b5cf6;
+                      line-height: 1;
+                    "
+                  >
+                    0.0
+                  </div>
+                  <div
+                    style="
+                      font-size: 14px;
+                      color: var(--text2);
+                      margin-top: 12px;
+                      font-weight: 600;
+                    "
+                  >
+                    Nota Final da Produção de Texto
+                  </div>
+                  <div
+                    id="desempenho-nota-producao-info"
+                    style="
+                      font-size: 12px;
+                      color: var(--text3);
+                      margin-top: 8px;
+                    "
+                  >
+                    Aluno: —
+                  </div>
                 </div>
               </div>
             </div>
