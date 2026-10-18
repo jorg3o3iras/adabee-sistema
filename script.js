@@ -2420,7 +2420,7 @@ async function iniciarCorrecaoManualStandalone() {
 
 // ============================================
 // GERAR GRID CORREÇÃO MANUAL STANDALONE
-// ═══ MODIFICADO: cabeçalho + situação de correção por questão ═══
+// ═══ MODIFICADO: cabeçalho inline + observação do professor ═══
 // ============================================
 function gerarGridCorrecaoManualSA() {
     const grid = document.getElementById('cm-grid-standalone');
@@ -2434,6 +2434,33 @@ function gerarGridCorrecaoManualSA() {
     const textosQuestoes = cmStandaloneData.textos_questoes || [];
     const situacoes = cmStandaloneData.situacoes || [];
 
+    // ═══ ESCONDE/MOSTRA ELEMENTOS DE ACORDO COM A DISCIPLINA ═══
+    if (isProducao) {
+        // Oculta botões de ação (Revisar, Preencher, Limpar)
+        const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
+        if (botoesAcao) botoesAcao.style.display = 'none';
+
+        // Oculta o resumo de Acertos/Erros/Nota
+        const resumo = document.querySelector('.resumo-correcao');
+        if (resumo) resumo.style.display = 'none';
+
+        // Oculta o badge de status (Aprovado/Reprovado) e a porcentagem
+        const badgesContainer = document.getElementById('cm-sa-status-badge')?.parentElement;
+        if (badgesContainer) badgesContainer.style.display = 'none';
+
+    } else {
+        // Mostra tudo novamente caso seja outra disciplina
+        const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
+        if (botoesAcao) botoesAcao.style.display = 'flex';
+
+        const resumo = document.querySelector('.resumo-correcao');
+        if (resumo) resumo.style.display = 'grid';
+
+        const badgesContainer = document.getElementById('cm-sa-status-badge')?.parentElement;
+        if (badgesContainer) badgesContainer.style.display = 'flex';
+    }
+
+    // ═══ CONFIGURAÇÃO DO GRID ═══
     if (isProducao) {
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
@@ -2460,17 +2487,16 @@ function gerarGridCorrecaoManualSA() {
             // ═══ LAYOUT DE PRODUÇÃO DE TEXTO ═══
             div.className = 'cm-item-producao';
 
-            // ═══ CABEÇALHO/TEMA ═══
+            // Pega o Título e o Cabeçalho
             let cabecalho = '';
             if (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].cabecalho) {
                 cabecalho = textosQuestoes[i].cabecalho;
             }
             const tituloQ = (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i + 1}`;
 
-            let cabecalhoHTML = '';
-            if (cabecalho && cabecalho.trim() !== '') {
-                cabecalhoHTML = `<div class="cm-q-cabecalho">${escapeHtml(cabecalho)}</div>`;
-            }
+            // ═══ CABEÇALHO INLINE: "Q1 - TEXTO DO CABEÇALHO" ═══
+            const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
+            const cabecalhoHTML = `<div class="cm-q-cabecalho-inline">${escapeHtml(headerTexto)}</div>`;
 
             // ═══ GABARITO FORMATADO ═══
             let gabFormatadoHTML = '';
@@ -2500,18 +2526,15 @@ function gerarGridCorrecaoManualSA() {
             });
 
             div.innerHTML = `
-                <div class="cm-q-header">
-                    <span class="cm-q-titulo">${escapeHtml(tituloQ)}</span>
-                </div>
                 ${cabecalhoHTML}
                 <div>
                     <div class="cm-q-resposta-label">📋 Gabarito:</div>
                     <div class="cm-gabarito-formatado">${gabFormatadoHTML}</div>
                 </div>
                 <div>
-                    <div class="cm-q-resposta-label">✍️ Resposta do aluno:</div>
+                    <div class="cm-q-resposta-label">✍️ Observação do Professor:</div>
                     <textarea class="cm-q-resposta-texto"
-                              placeholder="Digite o que o aluno escreveu..."
+                              placeholder="Escreva sua avaliação/observação sobre a resposta do aluno..."
                               data-questao="${i}">${escapeHtml(resp || '')}</textarea>
                 </div>
                 <div class="cm-q-situacao-wrapper">
@@ -2525,7 +2548,7 @@ function gerarGridCorrecaoManualSA() {
             const textarea = div.querySelector('.cm-q-resposta-texto');
             textarea.addEventListener('input', function() {
                 cmStandaloneData.respostas[i] = this.value;
-                atualizarResumoCorrecaoManualSA();
+                // NÃO chamamos atualizarResumo, pois ele foi ocultado
             });
         } else {
             // ═══ LAYOUT TRADICIONAL ═══
@@ -2928,7 +2951,7 @@ async function salvarNotaProducaoCM() {
                 aluno_id: parseInt(alunoId),
                 prova_id: parseInt(provaId),
                 nota: notaNum,
-                observacao: observacao || '',
+                observacao: '', // A observação agora é POR QUESTÃO
                 questoes_status: questoesStatus
             })
         });
