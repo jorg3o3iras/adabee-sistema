@@ -1566,7 +1566,7 @@ async function carregarResultadosComFiltros() {
                 '<td style="text-align:center;background:rgba(139,92,246,0.05);padding:4px;">' +
 					'<div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:2px;">NOTA</div>' +
 					'<div style="font-size:16px;font-weight:900;color:var(--purple);">' +
-						(producao.nota !== undefined && producao.nota !== null && Number(producao.nota) > 0 ? Number(producao.nota).toFixed(1) : '—') +
+						(producao && producao.total > 0 && producao.nota !== undefined && producao.nota !== null ? Number(producao.nota).toFixed(1) : '—') +
 				'</div>' +
 			'</td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
@@ -2148,6 +2148,35 @@ function salvarCorrecaoManual() {
 // ============================================
 // CORREÇÃO MANUAL STANDALONE (MENU)
 // ============================================
+// ============================================
+// AJUSTAR UI DO MODAL CONFORME DISCIPLINA
+// Produção de Texto: esconde Acertos/Erros/Nota Final + botão "Salvar Correção"
+// Outras disciplinas: mostra tudo normal
+// ============================================
+function ajustarUIporDisciplina() {
+    const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
+
+    // Bloco de Nota Manual: aparece SÓ em Produção
+    const cmNotaContainer = document.getElementById('cm-nota-manual-container');
+    if (cmNotaContainer) cmNotaContainer.style.display = isProducao ? 'block' : 'none';
+
+    // Resumo Acertos/Erros/Nota Final: some em Produção
+    const resumo = document.getElementById('cm-sa-resumo');
+    if (resumo) resumo.style.display = isProducao ? 'none' : 'grid';
+
+    // Badges (Aprovado/Reprovado/%): somem em Produção
+    const badges = document.getElementById('cm-sa-badges');
+    if (badges) badges.style.display = isProducao ? 'none' : 'flex';
+
+    // Botão "Salvar Correção" do rodapé: some em Produção
+    const btnSalvar = document.getElementById('btn-salvar-correcao-manual');
+    if (btnSalvar) btnSalvar.style.display = isProducao ? 'none' : 'inline-flex';
+
+    // Botões de ação (Revisar/Preencher/Limpar): somem em Produção
+    const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
+    if (botoesAcao) botoesAcao.style.display = isProducao ? 'none' : 'flex';
+}
+
 function abrirCorrecaoManualStandalone() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
 
@@ -2402,19 +2431,10 @@ async function iniciarCorrecaoManualStandalone() {
     setText('cm-sa-prova', cmStandaloneData.provaTitulo);
     setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
 
-    document.getElementById('cm-info-standalone').style.display = 'grid';
+       document.getElementById('cm-info-standalone').style.display = 'grid';
     document.getElementById('cm-grid-standalone-container').style.display = 'block';
-    document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
 
-    // ═══ Mostra bloco de nota manual se for Produção ═══
-    const cmNotaContainer = document.getElementById('cm-nota-manual-container');
-    if (cmNotaContainer) {
-        if (cmStandaloneData.disciplina === 'Produção de Texto') {
-            cmNotaContainer.style.display = 'block';
-        } else {
-            cmNotaContainer.style.display = 'none';
-        }
-    }
+    ajustarUIporDisciplina();
 
     gerarGridCorrecaoManualSA();
     atualizarResumoCorrecaoManualSA();
@@ -2438,31 +2458,8 @@ function gerarGridCorrecaoManualSA() {
     const textosQuestoes = cmStandaloneData.textos_questoes || [];
     const situacoes = cmStandaloneData.situacoes || [];
 
-    // ═══ ESCONDE/MOSTRA ELEMENTOS DE ACORDO COM A DISCIPLINA ═══
-    if (isProducao) {
-        // Oculta botões de ação (Revisar, Preencher, Limpar)
-        const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
-        if (botoesAcao) botoesAcao.style.display = 'none';
-
-        // Oculta o resumo de Acertos/Erros/Nota
-        const resumo = document.querySelector('.resumo-correcao');
-        if (resumo) resumo.style.display = 'none';
-
-        // Oculta o badge de status (Aprovado/Reprovado) e a porcentagem
-        const badgesContainer = document.getElementById('cm-sa-status-badge')?.parentElement;
-        if (badgesContainer) badgesContainer.style.display = 'none';
-
-    } else {
-        // Mostra tudo novamente caso seja outra disciplina
-        const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
-        if (botoesAcao) botoesAcao.style.display = 'flex';
-
-        const resumo = document.querySelector('.resumo-correcao');
-        if (resumo) resumo.style.display = 'grid';
-
-        const badgesContainer = document.getElementById('cm-sa-status-badge')?.parentElement;
-        if (badgesContainer) badgesContainer.style.display = 'flex';
-    }
+    // ═══ UI CONTROLADA POR ajustarUIporDisciplina() ═══
+    ajustarUIporDisciplina();
 
     // ═══ CONFIGURAÇÃO DO GRID ═══
     if (isProducao) {
@@ -2589,6 +2586,7 @@ function atualizarSituacaoCM(select) {
     const idx = parseInt(select.dataset.questao);
     if (!cmStandaloneData.situacoes) cmStandaloneData.situacoes = [];
     cmStandaloneData.situacoes[idx] = select.value;
+}
 }
 // ============================================
 // ATUALIZAR RESPOSTA MANUAL SA
@@ -2743,6 +2741,13 @@ function salvarCorrecaoManualStandalone() {
         showToast('❌ Dados não encontrados!', 'error');
         return;
     }
+
+    // ═══ BLOQUEIO: Produção de Texto usa "SALVAR NOTA", não "Salvar Correção" ═══
+    if (cmStandaloneData.disciplina === 'Produção de Texto') {
+        showToast('⚠️ Use o botão "💾 SALVAR NOTA" para Produção de Texto.', 'warning');
+        return;
+    }
+    // ═══ FIM DO BLOQUEIO ═══
 
     const provaId = parseInt(cmStandaloneData.provaId);
     const alunoId = parseInt(cmStandaloneData.alunoId);
@@ -3051,28 +3056,19 @@ async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
         cmStandaloneData.provaData = prova.data_prova || '';
         cmStandaloneData.disciplina = prova.disciplina || '';
 
-        openM('m-correcao-manual-standalone');
+                openM('m-correcao-manual-standalone');
 
         const selectsContainer = document.getElementById('cm-selects-container');
         if (selectsContainer) selectsContainer.style.display = 'none';
 
         document.getElementById('cm-grid-standalone-container').style.display = 'block';
-        document.getElementById('btn-salvar-correcao-manual').style.display = 'inline-flex';
-
-        // ═══ NOVO: mostra bloco de nota manual se for Produção ═══
-        const cmNotaContainer = document.getElementById('cm-nota-manual-container');
-        if (cmNotaContainer) {
-            if (cmStandaloneData.disciplina === 'Produção de Texto') {
-                cmNotaContainer.style.display = 'block';
-            } else {
-                cmNotaContainer.style.display = 'none';
-            }
-        }
 
         setText('cm-sa-aluno', cmStandaloneData.alunoNome);
         setText('cm-sa-turma', cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome);
         setText('cm-sa-prova', cmStandaloneData.provaTitulo);
         setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
+
+        ajustarUIporDisciplina();
 
         gerarGridCorrecaoManualSA();
         atualizarResumoCorrecaoManualSA();
@@ -5905,7 +5901,7 @@ async function carregarRelatorioTurmaFiltrado() {
                 ${tipoAvaliacao === 'producao' ?
 					`<td style="text-align:center;background:${bgDisciplina};padding:4px;">
 						<div style="font-size:9px;font-weight:700;color:var(--text3);">NOTA</div>
-						<div style="font-size:16px;font-weight:900;color:var(--purple);">${d.nota ? Number(d.nota).toFixed(1) : '—'}</div>
+						<div style="font-size:16px;font-weight:900;color:var(--purple);">${d.total > 0 && d.nota !== undefined && d.nota !== null ? Number(d.nota).toFixed(1) : '—'}</div>
 					</td>` :
 					`<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
 					<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
