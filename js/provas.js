@@ -38,10 +38,25 @@ function popularSelectGabTotal() {
     }
 }
 
-// ═══ CARREGAR PROVAS ═══
+// ═══ CARREGAR PROVAS (com cache) ═══
+async function carregarProvasComCache(forceRefresh) {
+    if (!forceRefresh && window._provasCache) return window._provasCache;
+    try {
+        const r = await fetch(API_URL + '/api/provas');
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const provas = await r.json();
+        window._provasCache = provas || [];
+        return window._provasCache;
+    } catch (e) {
+        console.error('❌ Erro ao carregar provas:', e);
+        return [];
+    }
+}
+
+// ═══ CARREGAR PROVAS (lista) ═══
 async function carregarProvas() {
     try {
-        const provas = await carregarProvasComCache();
+        const provas = await carregarProvasComCache(true);
         const tbody = document.getElementById('tb-provas');
         if (!tbody) return;
 
@@ -191,17 +206,26 @@ async function salvarProva() {
         if (result.ok && result.data.id) {
             showToast('✅ Prova "' + titulo + '" salva com sucesso para a série ' + serie + '!', 'success');
             limparCache();
+            window._provasCache = null; // invalida cache
             document.getElementById('prova-titulo').value = '';
             document.getElementById('up-ok').style.display = 'block';
             setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
             carregarProvas();
 
             setTimeout(() => {
-                tableFeedback.destacarLinha('tb-provas', result.data.id, '✅ Nova!');
+                if (typeof tableFeedback !== 'undefined' && tableFeedback.destacarLinha) {
+                    tableFeedback.destacarLinha('tb-provas', result.data.id, '✅ Nova!');
+                }
             }, 300);
 
-            carregarDashboard();
-            carregarCombos();
+            if (typeof carregarDashboard === 'function') carregarDashboard();
+            if (typeof carregarCombos === 'function') carregarCombos();
+
+            // ═══ RECARREGA OS SELECTS DE PROVA ═══
+            if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
+            if (typeof carregarProvasParaTexto === 'function') carregarProvasParaTexto();
+            if (typeof carregarProvasParaFiltro === 'function') carregarProvasParaFiltro();
+            if (typeof carregarProvasParaDesempenho === 'function') carregarProvasParaDesempenho();
         } else {
             showToast('❌ Erro ao salvar prova: ' + (result.data.erro || 'Erro desconhecido'), 'error');
         }
@@ -227,9 +251,15 @@ async function excluirProva(id, nome) {
         if (result.ok) {
             showToast('🗑️ Prova "' + nome + '" excluída com sucesso!', 'success');
             limparCache();
+            window._provasCache = null;
             carregarProvas();
-            carregarDashboard();
-            carregarCombos();
+            if (typeof carregarDashboard === 'function') carregarDashboard();
+            if (typeof carregarCombos === 'function') carregarCombos();
+
+            if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
+            if (typeof carregarProvasParaTexto === 'function') carregarProvasParaTexto();
+            if (typeof carregarProvasParaFiltro === 'function') carregarProvasParaFiltro();
+            if (typeof carregarProvasParaDesempenho === 'function') carregarProvasParaDesempenho();
         } else {
             showToast('❌ Erro ao excluir prova: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
         }
@@ -250,7 +280,7 @@ function salvarProvaModal() {
 // ═══ GABARITOS ═══
 async function carregarGabaritos() {
     try {
-        const provas = await carregarProvasComCache();
+        const provas = await carregarProvasComCache(true);
         const tbody = document.getElementById('tb-gabaritos');
         if (!tbody) return;
         const comGabarito = provas.filter(p => p.gabarito && p.gabarito.length > 0);
@@ -592,8 +622,9 @@ async function saveGab() {
             if (response.ok && result.id) {
                 showToast(`✅ ${result.mensagem || 'Gabarito salvo!'}`, 'success');
                 limparCache();
+                window._provasCache = null;
                 carregarGabaritos();
-                carregarCombos();
+                if (typeof carregarCombos === 'function') carregarCombos();
                 carregarProvas();
             } else {
                 showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
@@ -625,8 +656,9 @@ async function saveGab() {
         if (response.ok && result.id) {
             showToast(`✅ ${result.mensagem || 'Gabarito salvo com sucesso!'}`, 'success');
             limparCache();
+            window._provasCache = null;
             carregarGabaritos();
-            carregarCombos();
+            if (typeof carregarCombos === 'function') carregarCombos();
             carregarProvas();
         } else {
             showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
@@ -715,6 +747,7 @@ async function excluirGabarito(id, nome) {
         if (result.ok) {
             showToast('🗑️ Gabarito excluído com sucesso!', 'success');
             limparCache();
+            window._provasCache = null;
             carregarGabaritos();
             carregarProvas();
         } else {
@@ -781,3 +814,82 @@ function carregarTurmasProva() {
         if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || '—'); select.appendChild(opt); }); }
     }).catch(e => console.error(e));
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ═══ NOVAS FUNÇÕES — POPULAR SELECTS DE PROVA EM TODAS AS TELAS ═══
+// ═══════════════════════════════════════════════════════════════
+
+// 1) Gabarito — popula #gab-prova
+async function carregarProvasParaGabarito() {
+    const sel = document.getElementById('gab-prova');
+    if (!sel) return;
+
+    try {
+        const provas = await carregarProvasComCache();
+        
+        sel.innerHTML = '<option value="">Selecione...</option>' +
+            provas.map(p => `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')} (${escapeHtml(p.disciplina || 'Sem disciplina')})</option>`).join('');
+        
+        console.log('✅ Provas para gabarito carregadas:', provas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar provas para gabarito:', e);
+        sel.innerHTML = '<option value="">Erro ao carregar provas</option>';
+    }
+}
+
+// 2) Correção de Texto — popula #txt-prova
+async function carregarProvasParaTexto() {
+    const sel = document.getElementById('txt-prova');
+    if (!sel) return;
+
+    try {
+        const provas = await carregarProvasComCache();
+        
+        sel.innerHTML = '<option value="">Selecione...</option>' +
+            provas.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}</option>`).join('');
+        
+        console.log('✅ Provas para texto carregadas:', provas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar provas para texto:', e);
+    }
+}
+
+// 3) Filtros de Resultados/Rel. Turma — popula #filtro-prova e #rel-turma-prova
+async function carregarProvasParaFiltro() {
+    const ids = ['filtro-prova', 'rel-turma-prova'];
+    
+    try {
+        const provas = await carregarProvasComCache();
+        
+        ids.forEach(id => {
+            const sel = document.getElementById(id);
+            if (sel) {
+                sel.innerHTML = '<option value="">Todas as provas</option>' +
+                    provas.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)}</option>`).join('');
+            }
+        });
+        
+        console.log('✅ Provas para filtros carregadas:', provas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar provas para filtros:', e);
+    }
+}
+
+// 4) Desempenho — popula #filtro-prova-desempenho
+async function carregarProvasParaDesempenho() {
+    const sel = document.getElementById('filtro-prova-desempenho');
+    if (!sel) return;
+
+    try {
+        const provas = await carregarProvasComCache();
+        
+        sel.innerHTML = '<option value="">Selecione a prova...</option>' +
+            provas.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}</option>`).join('');
+        
+        console.log('✅ Provas para desempenho carregadas:', provas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar provas para desempenho:', e);
+    }
+}
+
+console.log('✅ js/provas.js carregado — funções exportadas para o escopo global');
