@@ -1,986 +1,575 @@
-# ============================================================
-# ROUTES/CADASTROS.PY — Escolas, Turmas, Alunos, Provas (CRUD)
-# ============================================================
-
-import json
-import logging
-import traceback
-
-from flask import Blueprint, jsonify, request
-from psycopg2.extras import RealDictCursor
-
-from core.db import get_db_connection
-
-
-bp = Blueprint('cadastros', __name__, url_prefix='/api')
-
-
-# ═══════════════════════════════════════════════════════════
-# ESCOLAS
-# ═══════════════════════════════════════════════════════════
-
-@bp.route('/escolas', methods=['GET'])
-def listar_escolas():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM escolas ORDER BY nome")
-            escolas = cur.fetchall()
-            cur.close()
-            conn.close()
-            return jsonify(escolas)
-        except Exception as e:
-            print(f"Erro ao listar escolas: {e}")
-    return jsonify([])
-
-
-@bp.route('/escolas', methods=['POST'])
-def criar_escola():
-    data = request.json
-    nome = data.get('nome')
-    if not nome:
-        return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO escolas (nome, inep, municipio, estado, telefone, diretor)
-                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-            """, (nome, data.get('inep', ''), data.get('municipio', ''),
-                  data.get('estado', 'PA'), data.get('telefone', ''), data.get('diretor', '')))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Escola criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar escola: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar escola'}), 500
-
-
-@bp.route('/escolas/<int:id>', methods=['GET'])
-def buscar_escola(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM escolas WHERE id = %s", (id,))
-        escola = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not escola:
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        return jsonify(escola)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/escolas/<int:id>', methods=['PUT'])
-def editar_escola(id):
-    try:
-        data = request.json
-        nome = data.get('nome')
-
-        if not nome:
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE escolas
-            SET nome = %s, inep = %s, municipio = %s, estado = %s,
-                telefone = %s, diretor = %s
-            WHERE id = %s RETURNING id
-        """, (nome, data.get('inep', ''), data.get('municipio', ''),
-              data.get('estado', 'PA'), data.get('telefone', ''), data.get('diretor', ''), id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Escola atualizada com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/escolas/<int:id>', methods=['DELETE'])
-def excluir_escola(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome FROM escolas WHERE id = %s", (id,))
-        escola = cur.fetchone()
-        if not escola:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        escola_id, escola_nome = escola[0], escola[1]
-
-        cur.execute("SELECT COUNT(*) FROM turmas WHERE escola_id = %s", (escola_id,))
-        total_turmas = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE escola_id = %s", (escola_id,))
-        total_alunos = cur.fetchone()[0]
-
-        cur.execute("DELETE FROM escolas WHERE id = %s", (escola_id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Escola "{escola_nome}" excluída com sucesso!',
-            'detalhes': {'turmas_excluidas': total_turmas, 'alunos_excluidos': total_alunos}
-        })
-
-    except Exception as e:
-        conn.rollback()
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════
-# TURMAS
-# ═══════════════════════════════════════════════════════════
-
-@bp.route('/turmas', methods=['GET'])
-def listar_turmas():
-    try:
-        escola_id = request.args.get('escola_id')
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                t.id, t.nome, t.serie, t.turno, t.professor, t.capacidade,
-                t.ano_letivo, t.escola_id, e.nome as escola_nome,
-                COUNT(a.id) as total_alunos
-            FROM turmas t
-            LEFT JOIN escolas e ON t.escola_id = e.id
-            LEFT JOIN alunos a ON a.turma_id = t.id
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-            try:
-                params.append(int(escola_id))
-                query += " WHERE t.escola_id = %s"
-            except ValueError:
-                pass
-
-        query += " GROUP BY t.id, e.nome ORDER BY t.nome"
-
-        cur.execute(query, params)
-        turmas = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(turmas)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar turmas: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-
-@bp.route('/turmas', methods=['POST'])
-def criar_turma():
-    data = request.json
-    if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
-                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-                  data.get('turno', 'Manhã'), data.get('professor', ''),
-                  data.get('capacidade', 35), data.get('ano_letivo', 2025)))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
-
-
-@bp.route('/turmas/<int:id>', methods=['GET'])
-def buscar_turma(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT t.id, t.nome, t.serie, t.turno, t.professor, t.capacidade,
-                   t.ano_letivo, t.escola_id, e.nome as escola_nome
-            FROM turmas t
-            LEFT JOIN escolas e ON t.escola_id = e.id
-            WHERE t.id = %s
-        """, (id,))
-        turma = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not turma:
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        return jsonify(turma)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/turmas/<int:id>', methods=['PUT'])
-def editar_turma(id):
-    try:
-        data = request.json
-
-        if not data.get('nome') or not data.get('escola_id'):
-            return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE turmas
-            SET escola_id = %s, nome = %s, serie = %s, turno = %s,
-                professor = %s, capacidade = %s, ano_letivo = %s
-            WHERE id = %s RETURNING id
-        """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-              data.get('turno', 'Manhã'), data.get('professor', ''),
-              data.get('capacidade', 35), data.get('ano_letivo', 2025), id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Turma atualizada com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/turmas/<int:id>', methods=['DELETE'])
-def excluir_turma(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
-        turma = cur.fetchone()
-        if not turma:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        turma_id, turma_nome = turma[0], turma[1]
-
-        cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
-        total_alunos = cur.fetchone()[0]
-
-        cur.execute("DELETE FROM turmas WHERE id = %s", (turma_id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'sucesso': True,
-            'mensagem': f'Turma "{turma_nome}" excluída com sucesso!',
-            'detalhes': {'alunos_excluidos': total_alunos}
-        })
-
-    except Exception as e:
-        conn.rollback()
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════
-# ALUNOS
-# ═══════════════════════════════════════════════════════════
-
-@bp.route('/alunos', methods=['GET'])
-def listar_alunos():
-    try:
-        escola_id = request.args.get('escola_id')
-        turma_id = request.args.get('turma_id')
-        serie = request.args.get('serie')
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify([])
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        query = """
-            SELECT
-                a.id, a.nome, a.matricula, a.numero_chamada, a.data_nascimento,
-                a.genero, a.responsavel, a.telefone, a.email, a.observacoes,
-                a.turma_id, a.escola_id,
-                t.nome as turma_nome, t.serie as turma_serie, t.turno as turma_turno,
-                e.nome as escola_nome
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE 1=1
-        """
-        params = []
-
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
-            try:
-                params.append(int(escola_id))
-                query += " AND a.escola_id = %s"
-            except ValueError:
-                pass
-
-        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
-            try:
-                params.append(int(turma_id))
-                query += " AND a.turma_id = %s"
-            except ValueError:
-                pass
-
-        if serie and serie != '' and serie != 'null' and serie != 'undefined':
-            params.append(serie)
-            query += " AND t.serie = %s"
-
-        query += " ORDER BY a.numero_chamada NULLS LAST, a.nome"
-
-        cur.execute(query, params)
-        alunos = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        return jsonify(alunos)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar alunos: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-
-@bp.route('/alunos', methods=['POST'])
-def criar_aluno():
-    try:
-        data = request.json
-
-        if not data.get('nome'):
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-        if not data.get('escola_id'):
-            return jsonify({'erro': 'Escola é obrigatória'}), 400
-        if not data.get('turma_id'):
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            INSERT INTO alunos
-            (escola_id, turma_id, nome, matricula, numero_chamada, data_nascimento,
-             genero, responsavel, telefone, email, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            data['escola_id'], data['turma_id'], data['nome'],
-            data.get('matricula', ''), data.get('numero_chamada'),
-            data.get('data_nascimento'), data.get('genero', 'Masculino'),
-            data.get('responsavel', ''), data.get('telefone', ''),
-            data.get('email', ''), data.get('observacoes', '')
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'id': result['id'], 'mensagem': 'Aluno criado com sucesso'})
-
-    except Exception as e:
-        print(f"❌ Erro ao criar aluno: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/alunos/<int:id>', methods=['GET'])
-def buscar_aluno(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT a.*, t.nome as turma_nome, t.serie as turma_serie,
-                   e.nome as escola_nome, e.id as escola_id
-            FROM alunos a
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            LEFT JOIN escolas e ON a.escola_id = e.id
-            WHERE a.id = %s
-        """, (id,))
-        aluno = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not aluno:
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        return jsonify(aluno)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/alunos/<int:id>', methods=['PUT'])
-def editar_aluno(id):
-    try:
-        data = request.json
-
-        if not data.get('nome'):
-            return jsonify({'erro': 'Nome é obrigatório'}), 400
-        if not data.get('escola_id'):
-            return jsonify({'erro': 'Escola é obrigatória'}), 400
-        if not data.get('turma_id'):
-            return jsonify({'erro': 'Turma é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM alunos WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Escola não encontrada'}), 404
-
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (data['turma_id'],))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Turma não encontrada'}), 404
-
-        cur.execute("""
-            UPDATE alunos
-            SET escola_id = %s, turma_id = %s, nome = %s, matricula = %s,
-                numero_chamada = %s, data_nascimento = %s, genero = %s,
-                responsavel = %s, telefone = %s, email = %s, observacoes = %s
-            WHERE id = %s RETURNING id
-        """, (
-            data['escola_id'], data['turma_id'], data['nome'],
-            data.get('matricula', ''), data.get('numero_chamada'),
-            data.get('data_nascimento'), data.get('genero', 'Masculino'),
-            data.get('responsavel', ''), data.get('telefone', ''),
-            data.get('email', ''), data.get('observacoes', ''), id
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Aluno atualizado com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/alunos/<int:id>', methods=['DELETE'])
-def excluir_aluno(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, nome FROM alunos WHERE id = %s", (id,))
-        aluno = cur.fetchone()
-        if not aluno:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Aluno não encontrado'}), 404
-
-        aluno_nome = aluno[1]
-
-        cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM cartoes_template WHERE aluno_id = %s", (id,))
-        cur.execute("DELETE FROM transferencias WHERE aluno_id = %s", (id,))  # ✅ NOVA LINHA
-        cur.execute("DELETE FROM alunos WHERE id = %s", (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'mensagem': f'Aluno "{aluno_nome}" excluído com sucesso!'})
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════
-# 🔄 TRANSFERÊNCIA DE ALUNO (INDIVIDUAL E EM LOTE)
-# ═══════════════════════════════════════════════════════════
-
-@bp.route('/alunos/transferir', methods=['POST'])
-def transferir_aluno():
-    """
-    Transfere 1 aluno OU vários.
-    Body: { alunos_ids: [1,2,3], escola_origem_id, turma_origem_id, escola_destino_id, turma_destino_id, serie_destino?, motivo? }
-    """
-    try:
-        data = request.get_json()
-        alunos_ids = data.get('alunos_ids', [])
-        escola_origem_id = data.get('escola_origem_id')
-        turma_origem_id = data.get('turma_origem_id')
-        escola_destino_id = data.get('escola_destino_id')
-        turma_destino_id = data.get('turma_destino_id')
-        serie_destino = data.get('serie_destino', '')
-        motivo = data.get('motivo', 'Transferência solicitada')
-        usuario_responsavel = data.get('usuario_responsavel', 'sistema')
-
-        if not alunos_ids or len(alunos_ids) == 0:
-            return jsonify({'ok': False, 'erro': 'Nenhum aluno selecionado'}), 400
-        if not escola_destino_id or not turma_destino_id:
-            return jsonify({'ok': False, 'erro': 'Escola e turma destino obrigatórias'}), 400
-        if escola_origem_id == escola_destino_id and turma_origem_id == turma_destino_id:
-            return jsonify({'ok': False, 'erro': 'Origem e destino são iguais'}), 400
-
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Busca alunos
-        cur.execute("""
-            SELECT id, nome, escola_id, turma_id, serie, matricula, numero_chamada
-            FROM alunos WHERE id = ANY(%s)
-        """, (alunos_ids,))
-        alunos = cur.fetchall()
-
-        if not alunos:
-            cur.close(); conn.close()
-            return jsonify({'ok': False, 'erro': 'Nenhum aluno encontrado'}), 404
-
-        # Valida turma de origem
-        invalidos = [a for a in alunos if a['turma_id'] != turma_origem_id]
-        if invalidos:
-            cur.close(); conn.close()
-            nomes = ', '.join(a['nome'] for a in invalidos[:3])
-            return jsonify({'ok': False, 'erro': f'Alunos fora da turma de origem: {nomes}'}), 400
-
-        # Próxima matrícula na escola destino
-        cur.execute("""
-            SELECT COALESCE(MAX(CAST(matricula AS INTEGER)), 0) + 1 AS proxima
-            FROM alunos WHERE escola_id = %s AND matricula ~ '^[0-9]+$'
-        """, (escola_destino_id,))
-        proxima_matricula = cur.fetchone()['proxima']
-
-        # Próximo número de chamada na turma destino
-        cur.execute("""
-            SELECT COALESCE(MAX(numero_chamada), 0) + 1 AS proximo
-            FROM alunos WHERE turma_id = %s
-        """, (turma_destino_id,))
-        proximo_numero = cur.fetchone()['proximo']
-
-        transferidos = 0
-        erros = []
-
-        for aluno in alunos:
-            try:
-                # 1. Registra histórico
-                cur.execute("""
-                    INSERT INTO transferencias (
-                        aluno_id, escola_origem_id, escola_destino_id,
-                        turma_origem_id, turma_destino_id,
-                        serie_origem, serie_destino,
-                        matricula_origem, matricula_destino,
-                        numero_chamada_origem, numero_chamada_destino,
-                        motivo, usuario_responsavel
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    aluno['id'],
-                    aluno['escola_id'], escola_destino_id,
-                    aluno['turma_id'], turma_destino_id,
-                    aluno['serie'], serie_destino or aluno['serie'],
-                    aluno['matricula'], str(proxima_matricula),
-                    aluno['numero_chamada'], proximo_numero,
-                    motivo, usuario_responsavel
-                ))
-
-                # 2. Atualiza aluno
-                cur.execute("""
-                    UPDATE alunos
-                    SET escola_id = %s,
-                        turma_id = %s,
-                        serie = %s,
-                        matricula = %s,
-                        numero_chamada = %s
-                    WHERE id = %s
-                """, (
-                    escola_destino_id, turma_destino_id,
-                    serie_destino or aluno['serie'],
-                    str(proxima_matricula), proximo_numero,
-                    aluno['id']
-                ))
-
-                proxima_matricula += 1
-                proximo_numero += 1
-                transferidos += 1
-            except Exception as e:
-                erros.append({'aluno': aluno['nome'], 'erro': str(e)})
-
-        conn.commit()
-        cur.close(); conn.close()
-
-        return jsonify({
-            'ok': True,
-            'transferidos': transferidos,
-            'total': len(alunos_ids),
-            'erros': erros,
-            'mensagem': f'{transferidos} aluno(s) transferido(s)'
-        }), 200
-
-    except Exception as e:
-        print(f'❌ Erro em transferir_aluno: {e}')
-        traceback.print_exc()
-        return jsonify({'ok': False, 'erro': str(e)}), 500
-
-
-@bp.route('/alunos/<int:aluno_id>/transferencias', methods=['GET'])
-def listar_transferencias_aluno(aluno_id):
-    """Histórico de transferências do aluno."""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT t.*,
-                   eo.nome AS escola_origem_nome,
-                   ed.nome AS escola_destino_nome,
-                   tor.nome AS turma_origem_nome,
-                   tde.nome AS turma_destino_nome
-            FROM transferencias t
-            LEFT JOIN escolas eo ON eo.id = t.escola_origem_id
-            LEFT JOIN escolas ed ON ed.id = t.escola_destino_id
-            LEFT JOIN turmas tor ON tor.id = t.turma_origem_id
-            LEFT JOIN turmas tde ON tde.id = t.turma_destino_id
-            WHERE t.aluno_id = %s
-            ORDER BY t.data_transferencia DESC
-        """, (aluno_id,))
-        transferencias = cur.fetchall()
-        cur.close(); conn.close()
-        return jsonify(transferencias), 200
-    except Exception as e:
-        print(f'❌ Erro: {e}')
-        return jsonify({'erro': str(e)}), 500
-
-
-# ═══════════════════════════════════════════════════════════
-# PROVAS
-# ═══════════════════════════════════════════════════════════
-
-@bp.route('/provas', methods=['GET'])
-def listar_provas():
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT p.id, p.titulo, p.serie, p.disciplina, p.bimestre, p.data_prova,
-                   p.valor_nota, p.tipo_questoes, p.quantidade_questoes, p.gabarito,
-                   p.bncc, p.textos_questoes, p.niveis, p.created_at
-            FROM provas p
-            ORDER BY p.created_at DESC
-        """)
-        provas = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        for p in provas:
-            if p.get('textos_questoes'):
-                try:
-                    novos = []
-                    for t in p['textos_questoes']:
-                        if t and isinstance(t, str) and t.strip().startswith('{'):
-                            try:
-                                novos.append(json.loads(t))
-                            except Exception:
-                                novos.append(t)
-                        else:
-                            novos.append(t)
-                    p['textos_questoes'] = novos
-                except Exception as e:
-                    logging.warning(f"⚠️ Erro ao desserializar textos_questoes: {e}")
-
-        return jsonify(provas)
-
-    except Exception as e:
-        print(f"❌ Erro ao listar provas: {e}")
-        traceback.print_exc()
-        return jsonify([])
-
-
-@bp.route('/provas', methods=['POST'])
-def criar_prova():
-    try:
-        data = request.json
-        titulo = data.get('titulo')
-        serie = data.get('serie')
-
-        if not titulo:
-            return jsonify({'erro': 'Título é obrigatório'}), 400
-        if not serie:
-            return jsonify({'erro': 'Série é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM provas WHERE titulo = %s AND serie = %s", (titulo, serie))
-        if cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Já existe uma prova com este título para esta série'}), 400
-
-        bncc = data.get('bncc', [])
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-        textos_questoes = data.get('textos_questoes', [])
-        textos_validos = [str(t).strip() for t in textos_questoes if t]
-        niveis = data.get('niveis', [])
-        niveis_validos = [str(n).strip() for n in niveis if n]
-
-        cur.execute("""
-            INSERT INTO provas
-                (titulo, serie, disciplina, bimestre, data_prova,
-                 valor_nota, tipo_questoes, quantidade_questoes, gabarito,
-                 bncc, textos_questoes, niveis)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            titulo, serie, data.get('disciplina', ''), data.get('bimestre', ''),
-            data.get('data_prova'), data.get('nota_maxima', 10),
-            data.get('tipo_questoes', '4'), data.get('quantidade_questoes', 20),
-            data.get('gabarito', []), bncc_validos, textos_validos, niveis_validos
-        ))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            'id': result['id'],
-            'mensagem': f'Prova "{titulo}" criada com sucesso para a série {serie}!',
-            'serie': serie
-        })
-
-    except Exception as e:
-        print(f"❌ Erro ao criar prova: {e}")
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/provas/<int:id>', methods=['GET'])
-def buscar_prova(id):
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT id, titulo, serie, disciplina, bimestre, data_prova,
-                   valor_nota, tipo_questoes, quantidade_questoes, gabarito,
-                   bncc, textos_questoes, niveis, created_at
-            FROM provas WHERE id = %s
-        """, (id,))
-        prova = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not prova:
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        if prova.get('textos_questoes'):
-            try:
-                novos_textos = []
-                for t in prova['textos_questoes']:
-                    if t and isinstance(t, str) and t.strip().startswith('{'):
-                        try:
-                            novos_textos.append(json.loads(t))
-                        except Exception:
-                            novos_textos.append(t)
-                    else:
-                        novos_textos.append(t)
-                prova['textos_questoes'] = novos_textos
-            except Exception as e:
-                logging.warning(f"⚠️ Erro ao desserializar textos_questoes: {e}")
-
-        return jsonify(prova)
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/provas/<int:id>', methods=['PUT'])
-def editar_prova(id):
-    try:
-        data = request.json
-        titulo = data.get('titulo')
-        serie = data.get('serie')
-
-        if not titulo:
-            return jsonify({'erro': 'Título é obrigatório'}), 400
-        if not serie:
-            return jsonify({'erro': 'Série é obrigatória'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT id FROM provas WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        bncc = data.get('bncc', [])
-        bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
-        textos_questoes = data.get('textos_questoes', [])
-        textos_validos = [str(t).strip() for t in textos_questoes if t]
-        niveis = data.get('niveis', [])
-        niveis_validos = [str(n).strip() for n in niveis if n]
-
-        cur.execute("""
-            UPDATE provas
-            SET titulo = %s, serie = %s, disciplina = %s, bimestre = %s,
-                data_prova = %s, valor_nota = %s, tipo_questoes = %s,
-                quantidade_questoes = %s, gabarito = %s, bncc = %s,
-                textos_questoes = %s, niveis = %s
-            WHERE id = %s RETURNING id
-        """, (titulo, serie, data.get('disciplina', ''), data.get('bimestre', ''),
-              data.get('data_prova'), data.get('nota_maxima', 10),
-              data.get('tipo_questoes', '4'), data.get('quantidade_questoes', 20),
-              data.get('gabarito', []), bncc_validos, textos_validos, niveis_validos, id))
-
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'id': result['id'], 'mensagem': 'Prova atualizada com sucesso'})
-
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-
-@bp.route('/provas/<int:id>', methods=['DELETE'])
-def excluir_prova(id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
-
-    try:
-        cur = conn.cursor()
-
-        cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (id,))
-        prova = cur.fetchone()
-        if not prova:
-            cur.close()
-            conn.close()
-            return jsonify({'erro': 'Prova não encontrada'}), 404
-
-        prova_titulo = prova[1]
-
-        cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
-        cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
-        cur.execute("DELETE FROM cartoes_template WHERE prova_id = %s", (id,))
-        cur.execute("DELETE FROM provas WHERE id = %s", (id,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'mensagem': f'Prova "{prova_titulo}" excluída com sucesso!'})
-
-    except Exception as e:
-        conn.rollback()
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
+// ============================================================
+// JS/CADASTROS.JS — Escolas, Turmas, Alunos (Frontend)
+// ============================================================
+
+// ═══ VARIÁVEIS GLOBAIS ═══
+let escolasCache = null;
+let turmasCache = null;
+let alunosCache = null;
+
+// ═══ CACHE / FETCH ═══
+function limparCache() {
+    escolasCache = null;
+    turmasCache = null;
+    alunosCache = null;
+}
+
+async function _fetchJSON(url, opcoes) {
+    try {
+        const r = await fetch(url, opcoes);
+        if (!r.ok) {
+            const txt = await r.text();
+            throw new Error(`HTTP ${r.status}: ${txt.slice(0, 200)}`);
+        }
+        return await r.json();
+    } catch (e) {
+        console.error('❌ fetch falhou:', url, e.message);
+        throw e;
+    }
+}
+
+// ═══ ESCOLAS ═══
+async function carregarEscolasComCache(forceRefresh) {
+    if (!forceRefresh && escolasCache) return escolasCache;
+    try {
+        const escolas = await _fetchJSON(API_URL + '/api/escolas');
+        escolasCache = escolas || [];
+        return escolasCache;
+    } catch (e) {
+        console.error('Erro ao carregar escolas:', e);
+        return [];
+    }
+}
+
+async function carregarEscolas() {
+    const escolas = await carregarEscolasComCache(true);
+    const tbody = document.getElementById('tb-escola');
+    if (!tbody) return;
+
+    if (!escolas || escolas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
+        return;
+    }
+
+    // Para cada escola, conta turmas e alunos
+    const turmas = await carregarTurmasComCache();
+    tbody.innerHTML = escolas.map((e, i) => {
+        const totalTurmas = turmas.filter(t => t.escola_id == e.id).length;
+        const totalAlunos = turmas
+            .filter(t => t.escola_id == e.id)
+            .reduce((acc, t) => acc + (parseInt(t.total_alunos) || 0), 0);
+        return `<tr>
+            <td>${i + 1}</td>
+            <td><strong>${escapeHtml(e.nome || '—')}</strong></td>
+            <td>${escapeHtml(e.municipio || '—')}</td>
+            <td>${escapeHtml(e.inep || '—')}</td>
+            <td>${escapeHtml(e.diretor || '—')}</td>
+            <td><span class="badge badge-blue">${totalTurmas}</span></td>
+            <td><span class="badge badge-green">${totalAlunos}</span></td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-outline btn-sm" onclick="editarEscola(${e.id})" title="Editar">✏️</button>
+                    <button class="btn-del" onclick="excluirEscola(${e.id}, '${escapeAttr(e.nome || '')}')" title="Excluir">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function salvarEscola() {
+    const nome = document.getElementById('escola-nome')?.value.trim();
+    if (!nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
+
+    const dados = {
+        nome,
+        inep: document.getElementById('escola-inep')?.value.trim() || '',
+        municipio: document.getElementById('escola-municipio')?.value.trim() || '',
+        estado: document.getElementById('escola-estado')?.value || 'PA',
+        telefone: document.getElementById('escola-telefone')?.value.trim() || '',
+        diretor: document.getElementById('escola-diretor')?.value.trim() || ''
+    };
+
+    try {
+        await _fetchJSON(API_URL + '/api/escolas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        showToast('✅ Escola "' + nome + '" cadastrada!', 'success');
+        limparCache();
+        closeM('m-escola');
+        carregarEscolas();
+        carregarCombos();
+    } catch (e) {
+        showToast('❌ Erro ao salvar escola: ' + e.message, 'error');
+    }
+}
+
+async function editarEscola(id) {
+    try {
+        const escola = await _fetchJSON(API_URL + '/api/escolas/' + id);
+        document.getElementById('editar-escola-id').value = id;
+        document.getElementById('editar-escola-nome').value = escola.nome || '';
+        document.getElementById('editar-escola-inep').value = escola.inep || '';
+        document.getElementById('editar-escola-municipio').value = escola.municipio || '';
+        document.getElementById('editar-escola-estado').value = escola.estado || 'PA';
+        document.getElementById('editar-escola-telefone').value = escola.telefone || '';
+        document.getElementById('editar-escola-diretor').value = escola.diretor || '';
+        openM('m-editar-escola');
+    } catch (e) {
+        showToast('❌ Erro ao carregar escola: ' + e.message, 'error');
+    }
+}
+
+async function salvarEdicaoEscola() {
+    const id = document.getElementById('editar-escola-id').value;
+    const dados = {
+        nome: document.getElementById('editar-escola-nome').value.trim(),
+        inep: document.getElementById('editar-escola-inep').value.trim(),
+        municipio: document.getElementById('editar-escola-municipio').value.trim(),
+        estado: document.getElementById('editar-escola-estado').value,
+        telefone: document.getElementById('editar-escola-telefone').value.trim(),
+        diretor: document.getElementById('editar-escola-diretor').value.trim()
+    };
+    if (!dados.nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
+    try {
+        await _fetchJSON(API_URL + '/api/escolas/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        showToast('✅ Escola atualizada!', 'success');
+        limparCache();
+        closeM('m-editar-escola');
+        carregarEscolas();
+    } catch (e) {
+        showToast('❌ Erro ao atualizar: ' + e.message, 'error');
+    }
+}
+
+async function excluirEscola(id, nome) {
+    if (!confirm(`Excluir a escola "${nome}"?\n\nATENÇÃO: Turmas e alunos vinculados também serão removidos!`)) return;
+    try {
+        await _fetchJSON(API_URL + '/api/escolas/' + id, { method: 'DELETE' });
+        showToast('🗑️ Escola excluída!', 'success');
+        limparCache();
+        carregarEscolas();
+        carregarCombos();
+    } catch (e) {
+        showToast('❌ Erro ao excluir: ' + e.message, 'error');
+    }
+}
+
+// ═══ TURMAS ═══
+async function carregarTurmasComCache(escolaId, forceRefresh) {
+    if (!forceRefresh && turmasCache && !escolaId) return turmasCache;
+    try {
+        const url = API_URL + '/api/turmas' + (escolaId ? `?escola_id=${escolaId}` : '');
+        const turmas = await _fetchJSON(url);
+        if (!escolaId) turmasCache = turmas || [];
+        return turmas || [];
+    } catch (e) {
+        console.error('Erro ao carregar turmas:', e);
+        return [];
+    }
+}
+
+async function carregarTurmas() {
+    const turmas = await carregarTurmasComCache(null, true);
+    const tbody = document.getElementById('tb-turmas');
+    if (!tbody) return;
+
+    if (!turmas || turmas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = turmas.map((t, i) => {
+        const totalAlunos = parseInt(t.total_alunos) || 0;
+        return `<tr data-serie="${escapeAttr(t.serie || '')}">
+            <td>${i + 1}</td>
+            <td><strong>${escapeHtml(t.nome || '—')}</strong></td>
+            <td><span class="badge badge-purple">${escapeHtml(t.serie || '—')}</span></td>
+            <td>${escapeHtml(t.turno || '—')}</td>
+            <td>${escapeHtml(t.escola_nome || '—')}</td>
+            <td>${escapeHtml(t.professor || '—')}</td>
+            <td><span class="badge badge-blue">${totalAlunos}</span></td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-outline btn-sm" onclick="editarTurma(${t.id})" title="Editar">✏️</button>
+                    <button class="btn-del" onclick="excluirTurma(${t.id}, '${escapeAttr(t.nome || '')}')" title="Excluir">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function salvarTurma() {
+    const nome = document.getElementById('turma-nome')?.value.trim();
+    const escolaId = document.getElementById('turma-escola')?.value;
+    if (!nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
+    if (!escolaId) { showToast('❌ Selecione a escola!', 'error'); return; }
+
+    const dados = {
+        nome,
+        escola_id: parseInt(escolaId),
+        serie: document.getElementById('turma-serie')?.value || '1º Ano',
+        turno: document.getElementById('turma-turno')?.value || 'Manhã',
+        professor: document.getElementById('turma-professor')?.value.trim() || '',
+        capacidade: parseInt(document.getElementById('turma-capacidade')?.value || 35),
+        ano_letivo: parseInt(document.getElementById('turma-ano')?.value || 2025)
+    };
+
+    try {
+        await _fetchJSON(API_URL + '/api/turmas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        showToast('✅ Turma criada!', 'success');
+        limparCache();
+        closeM('m-turma');
+        carregarTurmas();
+        carregarCombos();
+    } catch (e) {
+        showToast('❌ Erro: ' + e.message, 'error');
+    }
+}
+
+async function editarTurma(id) {
+    try {
+        const turma = await _fetchJSON(API_URL + '/api/turmas/' + id);
+        await carregarEscolasComCache();
+        const selEscola = document.getElementById('editar-turma-escola');
+        if (selEscola) {
+            selEscola.innerHTML = '<option value="">Selecione</option>' +
+                escolasCache.map(e => `<option value="${e.id}" ${e.id == turma.escola_id ? 'selected' : ''}>${escapeHtml(e.nome)}</option>`).join('');
+        }
+        document.getElementById('editar-turma-id').value = id;
+        document.getElementById('editar-turma-nome').value = turma.nome || '';
+        document.getElementById('editar-turma-serie').value = turma.serie || '1º Ano';
+        document.getElementById('editar-turma-turno').value = turma.turno || 'Manhã';
+        document.getElementById('editar-turma-professor').value = turma.professor || '';
+        document.getElementById('editar-turma-capacidade').value = turma.capacidade || 35;
+        document.getElementById('editar-turma-ano').value = turma.ano_letivo || 2025;
+        openM('m-editar-turma');
+    } catch (e) {
+        showToast('❌ Erro ao carregar: ' + e.message, 'error');
+    }
+}
+
+async function salvarEdicaoTurma() {
+    const id = document.getElementById('editar-turma-id').value;
+    const dados = {
+        nome: document.getElementById('editar-turma-nome').value.trim(),
+        escola_id: parseInt(document.getElementById('editar-turma-escola').value),
+        serie: document.getElementById('editar-turma-serie').value,
+        turno: document.getElementById('editar-turma-turno').value,
+        professor: document.getElementById('editar-turma-professor').value.trim(),
+        capacidade: parseInt(document.getElementById('editar-turma-capacidade').value || 35),
+        ano_letivo: parseInt(document.getElementById('editar-turma-ano').value || 2025)
+    };
+    if (!dados.nome || !dados.escola_id) { showToast('❌ Preencha todos os campos!', 'error'); return; }
+    try {
+        await _fetchJSON(API_URL + '/api/turmas/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        showToast('✅ Turma atualizada!', 'success');
+        limparCache();
+        closeM('m-editar-turma');
+        carregarTurmas();
+    } catch (e) {
+        showToast('❌ Erro: ' + e.message, 'error');
+    }
+}
+
+async function excluirTurma(id, nome) {
+    if (!confirm(`Excluir a turma "${nome}"?\n\nAlunos vinculados também serão removidos!`)) return;
+    try {
+        await _fetchJSON(API_URL + '/api/turmas/' + id, { method: 'DELETE' });
+        showToast('🗑️ Turma excluída!', 'success');
+        limparCache();
+        carregarTurmas();
+        carregarCombos();
+    } catch (e) {
+        showToast('❌ Erro: ' + e.message, 'error');
+    }
+}
+
+// ═══ ALUNOS ═══
+async function carregarAlunosComCache(filtros, forceRefresh) {
+    if (!forceRefresh && !filtros && alunosCache) return alunosCache;
+    try {
+        let url = API_URL + '/api/alunos';
+        const params = [];
+        if (filtros) {
+            if (filtros.escola_id) params.push('escola_id=' + filtros.escola_id);
+            if (filtros.turma_id) params.push('turma_id=' + filtros.turma_id);
+            if (filtros.serie) params.push('serie=' + encodeURIComponent(filtros.serie));
+        }
+        if (params.length) url += '?' + params.join('&');
+        const alunos = await _fetchJSON(url);
+        if (!filtros) alunosCache = alunos || [];
+        return alunos || [];
+    } catch (e) {
+        console.error('Erro ao carregar alunos:', e);
+        return [];
+    }
+}
+
+async function carregarAlunos(escolaId) {
+    const turmaId = document.getElementById('filtro-turma-alunos')?.value;
+    const filtros = {};
+    if (escolaId) filtros.escola_id = escolaId;
+    if (turmaId) filtros.turma_id = turmaId;
+
+    const alunos = await carregarAlunosComCache(filtros, true);
+    const tbody = document.getElementById('tb-alunos');
+    if (!tbody) return;
+
+    if (!alunos || alunos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = alunos.map((a, i) => {
+        const dataNasc = a.data_nascimento ? formatarData(a.data_nascimento) : '—';
+        return `<tr data-escola="${a.escola_id}" data-serie="${escapeAttr(a.turma_serie || '')}">
+            <td>${a.numero_chamada || (i + 1)}</td>
+            <td>${escapeHtml(a.matricula || '—')}</td>
+            <td><strong>${escapeHtml(a.nome || '—')}</strong></td>
+            <td><span class="badge badge-purple">${escapeHtml(a.turma_serie || '—')}</span></td>
+            <td>${escapeHtml(a.turma_nome || '—')}</td>
+            <td>${escapeHtml(a.escola_nome || '—')}</td>
+            <td>${dataNasc}</td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-outline btn-sm" onclick="editarAluno(${a.id})" title="Editar">✏️</button>
+                    <button class="btn-del" onclick="excluirAluno(${a.id}, '${escapeAttr(a.nome || '')}')" title="Excluir">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function salvarAluno() {
+    const nome = document.getElementById('aluno-nome')?.value.trim();
+    const escolaId = document.getElementById('aluno-escola')?.value;
+    const turmaId = document.getElementById('aluno-turma')?.value;
+    if (!nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
+    if (!escolaId) { showToast('❌ Selecione a escola!', 'error'); return; }
+    if (!turmaId) { showToast('❌ Selecione a turma!', 'error'); return; }
+
+    const dados = {
+        nome,
+        escola_id: parseInt(escolaId),
+        turma_id: parseInt(turmaId),
+        matricula: document.getElementById('aluno-matricula')?.value.trim() || '',
+        numero_chamada: parseInt(document.getElementById('aluno-numero')?.value) || null,
+        data_nascimento: document.getElementById('aluno-nascimento')?.value || null,
+        genero: document.getElementById('aluno-genero')?.value || 'Masculino',
+        responsavel: document.getElementById('aluno-responsavel')?.value.trim() || '',
+        telefone: document.getElementById('aluno-telefone')?.value.trim() || '',
+        email: document.getElementById('aluno-email')?.value.trim() || '',
+        observacoes: document.getElementById('aluno-observacoes')?.value.trim() || ''
+    };
+
+    try {
+        await _fetchJSON(API_URL + '/api/alunos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        showToast('✅ Aluno cadastrado!', 'success');
+        limparCache();
+        closeM('m-aluno');
+        carregarAlunos(escolaId);
+        carregarCombos();
+    } catch (e) {
+        showToast('❌ Erro: ' + e.message, 'error');
+    }
+}
+
+async function editarAluno(id) {
+    try {
+        const aluno = await _fetchJSON(API_URL + '/api/alunos/' + id);
+        await carregarEscolasComCache();
+        const selEscola = document.getElementById('editar-aluno-escola');
+        if (selEscola) {
+            selEscola.innerHTML = '<option value="">Selecione</option>' +
+                escolasCache.map(e => `<option value="${e.id}" ${e.id == aluno.escola_id ? 'selected' : ''}>${escapeHtml(e.nome)}</option>`).join('');
+        }
+        // Carrega turmas da escola
+        const turmas = await carregarTurmasComCache(aluno.escola_id);
+        const selTurma = document.getElementById('editar-aluno-turma');
+        if (selTurma) {
+            selTurma.innerHTML = '<option value="">Selecione</option>' +
+                turmas.map(t => `<option value="${t.id}" ${t.id == aluno.turma_id ? 'selected' : ''}>${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
+        }
+        document.getElementById('editar-aluno-id').value = id;
+        document.getElementById('editar-aluno-nome').value = aluno.nome || '';
+        document.getElementById('editar-aluno-matricula').value = aluno.matricula || '';
+        document.getElementById('editar-aluno-numero').value = aluno.numero_chamada || '';
+        document.getElementById('editar-aluno-nascimento').value = aluno.data_nascimento ? aluno.data_nascimento.slice(0, 10) : '';
+        document.getElementById('editar-aluno-genero').value = aluno.genero || 'Masculino';
+        document.getElementById('editar-aluno-responsavel').value = aluno.responsavel || '';
+        document.getElementById('editar-aluno-telefone').value = aluno.telefone || '';
+        document.getElementById('editar-aluno-email').value = aluno.email || '';
+        document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
+        openM('m-editar-aluno');
+    } catch (e) {
+        showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
+    }
+}
+
+async function salvarEdicaoAluno() {
+    const id = document.getElementById('editar-aluno-id').value;
+    const dados = {
+        nome: document.getElementById('editar-aluno-nome').value.trim(),
+        escola_id: parseInt(document.getElementById('editar-aluno-escola').value),
+        turma_id: parseInt(document.getElementById('editar-aluno-turma').value),
+        matricula: document.getElementById('editar-aluno-matricula').value.trim(),
+        numero_chamada: parseInt(document.getElementById('editar-aluno-numero').value) || null,
+        data_nascimento: document.getElementById('editar-aluno-nascimento').value || null,
+        genero: document.getElementById('editar-aluno-genero').value,
+        responsavel: document.getElementById('editar-aluno-responsavel').value.trim(),
+        telefone: document.getElementById('editar-aluno-telefone').value.trim(),
+        email: document.getElementById('editar-aluno-email').value.trim(),
+        observacoes: document.getElementById('editar-aluno-observacoes').value.trim()
+    };
+    if (!dados.nome || !dados.escola_id || !dados.turma_id) { showToast('❌ Preencha todos os campos obrigatórios!', 'error'); return; }
+    try {
+        await _fetchJSON(API_URL + '/api/alunos/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+        showToast('✅ Aluno atualizado!', 'success');
+        limparCache();
+        closeM('m-editar-aluno');
+        carregarAlunos();
+    } catch (e) {
+        showToast('❌ Erro: ' + e.message, 'error');
+    }
+}
+
+async function excluirAluno(id, nome) {
+    if (!confirm(`Excluir o aluno "${nome}"?`)) return;
+    try {
+        await _fetchJSON(API_URL + '/api/alunos/' + id, { method: 'DELETE' });
+        showToast('🗑️ Aluno excluído!', 'success');
+        limparCache();
+        carregarAlunos();
+        carregarCombos();
+    } catch (e) {
+        showToast('❌ Erro: ' + e.message, 'error');
+    }
+}
+
+// ═══ FILTROS / COMBOS ═══
+async function carregarEscolasFiltroAlunos() {
+    const escolas = await carregarEscolasComCache();
+    const sel = document.getElementById('filtro-escola-alunos');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Todas as escolas</option>' +
+        escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+}
+
+async function carregarFiltroEscolaTurmas() {
+    const escolas = await carregarEscolasComCache();
+    const sel = document.getElementById('filtro-escola-turmas');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Todas as escolas</option>' +
+        escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+}
+
+async function carregarTurmasPorEscolaParaAluno(escolaId, targetId) {
+    const sel = document.getElementById(targetId);
+    if (!sel) return;
+    if (!escolaId) { sel.innerHTML = '<option value="">Selecione a escola primeiro</option>'; return; }
+    const turmas = await carregarTurmasComCache(escolaId);
+    sel.innerHTML = '<option value="">Selecione a turma</option>' +
+        turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
+}
+
+function filtrarAlunosPorEscola(escolaId) {
+    carregarAlunos(escolaId);
+}
+
+function filtrarAlunosPorSerie(serie) {
+    const rows = document.querySelectorAll('#tb-alunos tr');
+    rows.forEach(row => {
+        if (!serie) { row.style.display = ''; return; }
+        row.style.display = row.dataset.serie === serie ? '' : 'none';
+    });
+}
+
+function aplicarFiltrosTurmas() {
+    const escolaId = document.getElementById('filtro-escola-turmas')?.value || '';
+    const serie = document.getElementById('filtro-serie-turmas')?.value || '';
+    const rows = document.querySelectorAll('#tb-turmas tr');
+    rows.forEach(row => {
+        let ok = true;
+        if (escolaId && !row.textContent.includes(escolaId)) { /* filtro por nome já renderizado */ }
+        if (serie && row.dataset.serie !== serie) ok = false;
+        row.style.display = ok ? '' : 'none';
+    });
+}
+
+function limparFiltrosTurmas() {
+    const f1 = document.getElementById('filtro-escola-turmas');
+    const f2 = document.getElementById('filtro-serie-turmas');
+    if (f1) f1.value = '';
+    if (f2) f2.value = '';
+    document.querySelectorAll('#tb-turmas tr').forEach(r => r.style.display = '');
+}
+
+// ═══ COMBOS UNIFICADOS (chamado no DOMContentLoaded) ═══
+async function carregarCombos() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        const turmas = await carregarTurmasComCache();
+        const alunos = await carregarAlunosComCache();
+
+        // Combos de escola
+        ['turma-escola', 'aluno-escola', 'editar-turma-escola', 'editar-aluno-escola'].forEach(id => {
+            const sel = document.getElementById(id);
+            if (sel && sel.options.length <= 1) {
+                sel.innerHTML = '<option value="">Selecione a escola</option>' +
+                    escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+            }
+        });
+
+        // Combo de turmas no modal de aluno
+        const selTurmaAluno = document.getElementById('aluno-turma');
+        if (selTurmaAluno && selTurmaAluno.options.length <= 1) {
+            selTurmaAluno.innerHTML = '<option value="">Selecione a escola primeiro</option>';
+        }
+
+        console.log('✅ Combos carregados:', escolas.length, 'escolas,', turmas.length, 'turmas,', alunos.length, 'alunos');
+    } catch (e) {
+        console.error('Erro em carregarCombos:', e);
+    }
+}
+
+// ═══ UTILITÁRIOS ═══
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function escapeAttr(s) {
+    return escapeHtml(s).replace(/'/g, '&#39;');
+}
+
+function formatarData(d) {
+    if (!d) return '—';
+    try {
+        const dt = new Date(d);
+        return dt.toLocaleDateString('pt-BR');
+    } catch { return d; }
+}
+
+console.log('✅ js/cadastros.js carregado — funções exportadas para o escopo global');
