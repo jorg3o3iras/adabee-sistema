@@ -1772,3 +1772,37 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     word-wrap: break-word;
     display: block;
 }
+/* ═══════════════════════════════════════════════════════════════
+   ✅ CORREÇÃO: remove bolinha duplicada nas badges de conceito
+   O emoji (🔴🟠🔵🟢) já está no texto do HTML, não precisa de outro.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Remove ::before e ::marker de qualquer badge de conceito */
+.badge-conceito-inicial::before,
+.badge-conceito-basico::before,
+.badge-conceito-proficiente::before,
+.badge-conceito-avancado::before,
+.badge-conceito-inicial-sm::before,
+.badge-conceito-basico-sm::before,
+.badge-conceito-proficiente-sm::before,
+.badge-conceito-avancado-sm::before,
+#legenda-conceitos .badge::before,
+#legenda-conceitos span::before {
+    content: none !important;
+    display: none !important;
+}
+
+.badge-conceito-inicial,
+.badge-conceito-basico,
+.badge-conceito-proficiente,
+.badge-conceito-avancado,
+#legenda-conceitos .badge {
+    list-style: none !important;
+}
+
+.badge-conceito-inicial::marker,
+.badge-conceito-basico::marker,
+.badge-conceito-proficiente::marker,
+.badge-conceito-avancado::marker {
+    content: none !important;
+}
