@@ -455,7 +455,7 @@ function imprimirAlunos() {
 // ═══════════════════════════════════════════════════════════════
 // 📊 EXPORTAR RELATÓRIO PDF (Rel. por Turma)
 // ═══════════════════════════════════════════════════════════════
-function exportarRelatorioPDF() {function exportarRelatorioPDF() {
+function exportarRelatorioPDF() {
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
         showToast('❌ Nenhum dado para exportar!', 'error');
@@ -485,7 +485,6 @@ function exportarRelatorioPDF() {function exportarRelatorioPDF() {
         disciplinaNome = provaOption.dataset.disciplina;
     }
 
-    // ✅ Detecta se é Produção de Texto
     const isProducaoPDF = (disciplinaNome === 'Produção de Texto');
 
     const mediaEl = document.getElementById('rel-media');
@@ -499,9 +498,9 @@ function exportarRelatorioPDF() {function exportarRelatorioPDF() {
     let totalErrosGeral = 0;
 
     // ═══════════════════════════════════════════════════════════════
-    // ✅ EXTRAÇÃO DAS LINHAS DA TABELA
-    //    Produção: 8 colunas (POS, Nº, NOME, SÉRIE, NOTA, CONCEITO, ESCOLA, TURMA)
-    //    Demais:   9 colunas (POS, Nº, NOME, SÉRIE, ACERTOS, ERROS, CONCEITO, ESCOLA, TURMA)
+    // ✅ EXTRAÇÃO — Produção: 8 colunas | Demais: 9 colunas
+    //    Produção:  POS, Nº, NOME, SÉRIE, NOTA, CONCEITO, ESCOLA, TURMA
+    //    Demais:    POS, Nº, NOME, SÉRIE, ACERTOS, ERROS, CONCEITO, ESCOLA, TURMA
     // ═══════════════════════════════════════════════════════════════
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
@@ -509,7 +508,6 @@ function exportarRelatorioPDF() {function exportarRelatorioPDF() {
 
         if (cells.length >= minCols) {
             if (isProducaoPDF) {
-                // ═══ PRODUÇÃO (8 colunas) ═══
                 const notaTexto = cells[4]?.textContent.trim() || '';
                 // A célula pode vir como "NOTA\n10.0", "10.0" ou "10"
                 const matchNota = notaTexto.match(/(\d+[.,]?\d*)/);
@@ -526,7 +524,6 @@ function exportarRelatorioPDF() {function exportarRelatorioPDF() {
                     turma: cells[7]?.textContent.trim() || ''
                 });
             } else {
-                // ═══ DEMAIS PROVAS (9 colunas) ═══
                 const acertos = parseInt(cells[4]?.textContent.trim()) || 0;
                 const erros = parseInt(cells[5]?.textContent.trim()) || 0;
                 totalAcertosGeral += acertos;
@@ -592,12 +589,8 @@ function exportarRelatorioPDF() {function exportarRelatorioPDF() {
         `).join('')
         : '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">Nenhum dado disponível.</div>';
 
-    // ═══════════════════════════════════════════════════════════════
-    // ✅ RENDERIZAÇÃO DAS LINHAS DO PDF (adaptada por tipo de prova)
-    // ═══════════════════════════════════════════════════════════════
     const alunosHTML = alunosData.map(a => {
         const conceitoClass = a.conceito ? `badge-${a.conceito.toLowerCase().replace(/\s+/g,'')}` : 'badge-inicial';
-
         if (isProducaoPDF) {
             return `
                 <tr>
@@ -612,7 +605,6 @@ function exportarRelatorioPDF() {function exportarRelatorioPDF() {
                 </tr>
             `;
         }
-
         return `
             <tr>
                 <td>${escapeHtml(a.posicao)}</td>
