@@ -304,6 +304,12 @@ function buildGabGrid() {
 
     if (!serieEl || !totalEl || !provaSelect) return;
 
+    // 🔧 FIX (blindagem): se o select ainda não foi populado, popula agora.
+    // Evita o bug mesmo se buildGabGrid for chamado por outro caminho que não o go('gabarito').
+    if (provaSelect.options.length <= 1 && typeof carregarProvasParaGabarito === 'function') {
+        carregarProvasParaGabarito();
+    }
+
     const selectedOption = provaSelect.options[provaSelect.selectedIndex];
     const provaNome = selectedOption ? selectedOption.text || 'Gabarito' : 'Gabarito';
     const disciplina = selectedOption ? selectedOption.dataset.disciplina : '';
@@ -610,6 +616,8 @@ async function saveGab() {
                 carregarGabaritos();
                 if (typeof carregarCombos === 'function') carregarCombos();
                 carregarProvas();
+                // 🔧 FIX: mantém o select do editor sincronizado após salvar
+                if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
             } else {
                 showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
             }
@@ -644,6 +652,8 @@ async function saveGab() {
             carregarGabaritos();
             if (typeof carregarCombos === 'function') carregarCombos();
             carregarProvas();
+            // 🔧 FIX: mantém o select do editor sincronizado após salvar
+            if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
         } else {
             showToast(`❌ ${result.erro || 'Erro desconhecido'}`, 'error');
         }
@@ -653,70 +663,81 @@ async function saveGab() {
     }
 }
 
-function editarGabarito(id) {
+// 🔧 FIX: versão async/await, sem setTimeout, esperando o select ser populado antes de setar value = id
+async function editarGabarito(id) {
     showToast('✏️ Carregando gabarito...', 'info');
-    fetch(API_URL + '/api/provas/' + id)
-        .then(r => r.json())
-        .then(prova => {
-            if (prova.erro) { showToast('❌ ' + prova.erro, 'error'); return; }
-            if (prova.gabarito && prova.gabarito.length > 0) {
-                const gabarito = prova.gabarito;
-                const bncc = prova.bncc || [];
-                const disciplina = prova.disciplina || '';
-                const isProducao = (disciplina === 'Produção de Texto');
+    try {
+        const response = await fetch(API_URL + '/api/provas/' + id);
+        const prova = await response.json();
 
-                go('gabarito');
+        if (!prova || prova.erro) {
+            showToast('❌ ' + (prova && prova.erro ? prova.erro : 'Erro ao carregar prova'), 'error');
+            return;
+        }
 
-                setTimeout(() => {
-                    const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
-                    const serieVal = serieMap[prova.serie] || '2';
-                    document.getElementById('gab-serie').value = serieVal;
-                    document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
+        go('gabarito'); // agora cai no case 'gabarito' (singular) do go()
 
-                    const selectProva = document.getElementById('gab-prova');
-                    if (selectProva) selectProva.value = id;
+        // 🔧 espera o select #gab-prova ser populado ANTES de setar value = id
+        if (typeof carregarProvasParaGabarito === 'function') {
+            await carregarProvasParaGabarito();
+        }
 
-                    if (isProducao) {
-                        const textos = prova.textos_questoes || [];
-                        const niveis = prova.niveis || [];
-                        const total = prova.quantidade_questoes || gabarito.length || 20;
+        if (!prova.gabarito || prova.gabarito.length === 0) {
+            showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
+            return;
+        }
 
-                        gabProducaoData.questoes = [];
-                        for (let i = 0; i < total; i++) {
-                            const tq = textos[i] || {};
-                            gabProducaoData.questoes.push({
-                                titulo: (tq && tq.titulo) ? tq.titulo : `Q${i + 1}`,
-                                cabecalho: (tq && tq.cabecalho) ? tq.cabecalho : '',
-                                alternativas: (tq && tq.alternativas) ? { ...tq.alternativas } : { A: '', B: '', C: '' },
-                                situacao: niveis[i] || ''
-                            });
-                        }
-                    }
+        const gabarito = prova.gabarito;
+        const bncc = prova.bncc || [];
+        const disciplina = prova.disciplina || '';
+        const isProducao = (disciplina === 'Produção de Texto');
 
-                    buildGabGrid();
+        const serieMap = { '1º Ano': '1', '2º Ano': '2', '3º Ano': '3', '4º Ano': '4', '5º Ano': '5', '6º Ano': '6', '7º Ano': '7', '8º Ano': '8', '9º Ano': '9' };
+        document.getElementById('gab-serie').value = serieMap[prova.serie] || '2';
+        document.getElementById('gab-total').value = prova.quantidade_questoes || 20;
 
-                    setTimeout(() => {
-                        if (isProducao) {
-                            showToast('📋 Gabarito de Produção carregado para edição!', 'success');
-                        } else {
-                            const selects = document.querySelectorAll('.gab-select');
-                            const bnccInputs = document.querySelectorAll('.gab-bncc');
-                            selects.forEach((s, i) => {
-                                if (i < gabarito.length && gabarito[i]) { s.value = gabarito[i]; s.classList.add('filled'); }
-                            });
-                            bnccInputs.forEach((inp, i) => {
-                                if (i < bncc.length && bncc[i]) inp.value = bncc[i];
-                            });
-                            showToast('📋 Gabarito carregado para edição!', 'success');
-                        }
-                    }, 100);
-                }, 150);
-            } else {
-                showToast('⚠️ Esta prova não tem gabarito cadastrado', 'warning');
-                go('gabarito');
+        const selectProva = document.getElementById('gab-prova');
+        if (selectProva) selectProva.value = String(id); // 🔧 String() — <option value> é string
+
+        if (isProducao) {
+            const textos = prova.textos_questoes || [];
+            const niveis = prova.niveis || [];
+            const total = prova.quantidade_questoes || gabarito.length || 20;
+
+            gabProducaoData.questoes = [];
+            for (let i = 0; i < total; i++) {
+                const tq = textos[i] || {};
+                gabProducaoData.questoes.push({
+                    titulo: (tq && tq.titulo) ? tq.titulo : `Q${i + 1}`,
+                    cabecalho: (tq && tq.cabecalho) ? tq.cabecalho : '',
+                    alternativas: (tq && tq.alternativas) ? { ...tq.alternativas } : { A: '', B: '', C: '' },
+                    situacao: niveis[i] || ''
+                });
             }
-        })
-        .catch(e => { showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error'); console.error('Erro ao carregar gabarito:', e); });
+        }
+
+        buildGabGrid();
+
+        if (isProducao) {
+            showToast('📋 Gabarito de Produção carregado para edição!', 'success');
+        } else {
+            const selects = document.querySelectorAll('.gab-select');
+            const bnccInputs = document.querySelectorAll('.gab-bncc');
+            selects.forEach((s, i) => {
+                if (i < gabarito.length && gabarito[i]) {
+                    s.value = gabarito[i];
+                    s.classList.add('filled');
+                }
+            });
+            bnccInputs.forEach((inp, i) => {
+                if (i < bncc.length && bncc[i]) inp.value = bncc[i];
+            });
+            showToast('📋 Gabarito carregado para edição!', 'success');
+        }
+    } catch (e) {
+        showToast('❌ Erro ao carregar gabarito: ' + e.message, 'error');
+        console.error('Erro ao carregar gabarito:', e);
+    }
 }
 
 async function excluirGabarito(id, nome) {
@@ -734,6 +755,8 @@ async function excluirGabarito(id, nome) {
             window._provasCache = null;
             carregarGabaritos();
             carregarProvas();
+            // 🔧 FIX: mantém o select do editor sincronizado após excluir
+            if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
         } else {
             showToast('❌ Erro ao excluir gabarito: ' + (result.data.erro || result.data.mensagem || 'Erro desconhecido'), 'error');
         }
