@@ -299,10 +299,11 @@
             <div
               class="sb-item"
               id="menu-config"
-              onclick="go('config')"
+              onclick="pedirSenhaConfig()"
               data-p="config"
             >
               <span class="sb-ico">⚙️</span> Configurações
+			  <span class="sb-badge" style="background: rgba(239,68,68,0.15); color: var(--red);">🔒</span>
             </div>
           </div>
           <div id="usr-sb" style="display: none"></div>
@@ -5560,6 +5561,45 @@ Ana Lima"
             </button>
           </div>
         </div>
+      </div>
+	
+            <!-- MODAL DE SENHA — ACESSO A CONFIGURAÇÕES -->
+      <div class="modal-overlay no-print" id="m-senha-config">
+          <div class="modal" style="max-width: 420px; text-align: center;">
+              <div class="modal-header">
+                  <h3>🔒 Acesso Restrito</h3>
+                  <button class="modal-close" onclick="cancelarSenhaConfig()">×</button>
+              </div>
+              <div style="padding: 10px 0 20px;">
+                  <div style="font-size: 52px; margin-bottom: 14px;">🔐</div>
+                  <p style="font-size: 14px; color: var(--text2); margin-bottom: 6px;">
+                      A tela de <strong>Configurações</strong> é restrita a administradores.
+                  </p>
+                  <p style="font-size: 12px; color: var(--text3); margin-bottom: 20px;">
+                      Digite a senha do administrador para continuar.
+                  </p>
+                  <div class="form-group" style="text-align: left;">
+                      <label class="form-label">Senha do Administrador</label>
+                      <input 
+                          type="password" 
+                          class="form-control" 
+                          id="senha-config-input" 
+                          placeholder="••••••••"
+                          autocomplete="off"
+                          onkeydown="if(event.key==='Enter') validarSenhaConfig()"
+                          style="font-size: 16px; text-align: center; letter-spacing: 2px;"
+                      />
+                  </div>
+                  <div id="senha-config-erro" style="display: none; margin-top: 12px; padding: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; color: var(--red); font-size: 13px; font-weight: 600;"></div>
+                  <div id="senha-config-loading" style="display: none; margin-top: 12px; padding: 10px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; color: var(--blue); font-size: 13px; font-weight: 600;">
+                      ⏳ Verificando...
+                  </div>
+              </div>
+              <div class="modal-footer no-print" style="justify-content: center;">
+                  <button class="btn btn-outline" onclick="cancelarSenhaConfig()">Cancelar</button>
+                  <button class="btn btn-primary" id="btn-desbloquear-config" onclick="validarSenhaConfig()">🔓 Desbloquear</button>
+              </div>
+          </div>
       </div>
 
       <!-- TOAST -->
