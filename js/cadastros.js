@@ -554,6 +554,51 @@ async function carregarCombos() {
     }
 }
 
+// ═══ FUNÇÕES FALTANTES (chamadas por script.js) ═══
+async function carregarEscolasParaAluno() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        ['aluno-escola', 'editar-aluno-escola'].forEach(id => {
+            const sel = document.getElementById(id);
+            if (sel && sel.options.length <= 1) {
+                sel.innerHTML = '<option value="">Selecione a escola</option>' +
+                    escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+            }
+        });
+        console.log('✅ Escolas para aluno carregadas:', escolas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar escolas para aluno:', e);
+    }
+}
+
+async function carregarEscolasParaCorrecaoManual() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        const sel = document.getElementById('cm-escola-select');
+        if (sel && sel.options.length <= 1) {
+            sel.innerHTML = '<option value="">Selecione a escola...</option>' +
+                escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+        }
+        console.log('✅ Escolas para correção manual:', escolas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar escolas para correção manual:', e);
+    }
+}
+
+async function carregarEscolasDesempenho() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        const sel = document.getElementById('filtro-escola-desempenho');
+        if (sel) {
+            sel.innerHTML = '<option value="">Selecione a escola...</option>' +
+                escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+        }
+        console.log('✅ Escolas para desempenho:', escolas.length);
+    } catch (e) {
+        console.error('❌ Erro ao carregar escolas para desempenho:', e);
+    }
+}
+
 // ═══ UTILITÁRIOS ═══
 function escapeHtml(s) {
     if (s === null || s === undefined) return '';
