@@ -492,7 +492,28 @@ async function carregarTurmasPorEscolaParaAluno(escolaId, targetId) {
         turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
 }
 
+// ═══ FILTROS DE ALUNOS (CORRIGIDO — popula select de turmas) ═══
+async function carregarTurmasFiltroAlunos(escolaId) {
+    const sel = document.getElementById('filtro-turma-alunos');
+    if (!sel) return;
+
+    if (!escolaId) {
+        sel.innerHTML = '<option value="">Todas as turmas</option>';
+        return;
+    }
+
+    try {
+        const turmas = await carregarTurmasComCache(escolaId);
+        sel.innerHTML = '<option value="">Todas as turmas</option>' +
+            turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)}</option>`).join('');
+    } catch (e) {
+        console.error('❌ Erro ao carregar turmas para filtro:', e);
+        sel.innerHTML = '<option value="">Todas as turmas</option>';
+    }
+}
+
 function filtrarAlunosPorEscola(escolaId) {
+    carregarTurmasFiltroAlunos(escolaId);
     carregarAlunos(escolaId);
 }
 
@@ -504,7 +525,7 @@ function filtrarAlunosPorSerie(serie) {
     });
 }
 
-// ═══ FILTROS DE TURMAS (CORRIGIDO) ═══
+// ═══ FILTROS DE TURMAS ═══
 function aplicarFiltrosTurmas() {
     const escolaId = document.getElementById('filtro-escola-turmas')?.value || '';
     const serie = document.getElementById('filtro-serie-turmas')?.value || '';
@@ -512,9 +533,7 @@ function aplicarFiltrosTurmas() {
 
     rows.forEach(row => {
         let ok = true;
-        // Filtro por escola: usa data-escola (ID) em vez de textContent
         if (escolaId && row.dataset.escola !== escolaId) ok = false;
-        // Filtro por série: usa data-serie
         if (serie && row.dataset.serie !== serie) ok = false;
         row.style.display = ok ? '' : 'none';
     });
@@ -525,7 +544,6 @@ function limparFiltrosTurmas() {
     const f2 = document.getElementById('filtro-serie-turmas');
     if (f1) f1.value = '';
     if (f2) f2.value = '';
-    // Reaplica (mostra tudo)
     document.querySelectorAll('#tb-turmas tr').forEach(r => r.style.display = '');
 }
 
