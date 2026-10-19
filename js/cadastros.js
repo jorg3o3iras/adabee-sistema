@@ -2,16 +2,24 @@
 // JS/CADASTROS.JS — Escolas, Turmas, Alunos (Frontend)
 // ============================================================
 
-// ═══ VARIÁVEIS GLOBAIS ═══
+// ═══ CACHE LOCAL ═══
 let escolasCache = null;
 let turmasCache = null;
 let alunosCache = null;
 
-// ═══ CACHE / FETCH ═══
 function limparCache() {
     escolasCache = null;
     turmasCache = null;
     alunosCache = null;
+    if (typeof cache !== 'undefined') {
+        if (cache) {
+            cache.escolas = null;
+            cache.turmas = {};
+            cache.alunos = {};
+            cache.provas = null;
+            cache.ultima_atualizacao = {};
+        }
+    }
 }
 
 async function _fetchJSON(url, opcoes) {
@@ -28,7 +36,9 @@ async function _fetchJSON(url, opcoes) {
     }
 }
 
-// ═══ ESCOLAS ═══
+// ═══════════════════════════════════════════════════════════════
+// ESCOLAS
+// ═══════════════════════════════════════════════════════════════
 async function carregarEscolasComCache(forceRefresh) {
     if (!forceRefresh && escolasCache) return escolasCache;
     try {
@@ -51,17 +61,22 @@ async function carregarEscolas() {
         return;
     }
 
-    const turmas = await carregarTurmasComCache();
+    // Conta turmas e alunos por escola (usando cache de turmas do core.js)
+    let turmas = [];
+    try {
+        turmas = await carregarTurmasComCache();
+    } catch (e) {}
+
     tbody.innerHTML = escolas.map((e, i) => {
         const totalTurmas = turmas.filter(t => t.escola_id == e.id).length;
         const totalAlunos = turmas
             .filter(t => t.escola_id == e.id)
             .reduce((acc, t) => acc + (parseInt(t.total_alunos) || 0), 0);
-        return `<tr>
-            <td>${i + 1}</td>
+        return `<tr data-id="${e.id}" data-nome="${escapeAttr(e.nome || '')}">
+            <td><span class="badge badge-blue">${String(i + 1).padStart(3, '0')}</span></td>
             <td><strong>${escapeHtml(e.nome || '—')}</strong></td>
             <td>${escapeHtml(e.municipio || '—')}</td>
-            <td>${escapeHtml(e.inep || '—')}</td>
+            <td><span class="chip">${escapeHtml(e.inep || '—')}</span></td>
             <td>${escapeHtml(e.diretor || '—')}</td>
             <td><span class="badge badge-blue">${totalTurmas}</span></td>
             <td><span class="badge badge-green">${totalAlunos}</span></td>
@@ -89,7 +104,7 @@ async function salvarEscola() {
     };
 
     try {
-        await _fetchJSON(API_URL + '/api/escolas', {
+        const result = await _fetchJSON(API_URL + '/api/escolas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
@@ -98,7 +113,11 @@ async function salvarEscola() {
         limparCache();
         closeM('m-escola');
         carregarEscolas();
-        carregarCombos();
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
+        if (result && result.id && typeof tableFeedback !== 'undefined') {
+            setTimeout(() => tableFeedback.destacarLinha('tb-escola', result.id, '✅ Nova!'), 300);
+        }
     } catch (e) {
         showToast('❌ Erro ao salvar escola: ' + e.message, 'error');
     }
@@ -141,6 +160,7 @@ async function salvarEdicaoEscola() {
         limparCache();
         closeM('m-editar-escola');
         carregarEscolas();
+        if (typeof carregarCombos === 'function') carregarCombos();
     } catch (e) {
         showToast('❌ Erro ao atualizar: ' + e.message, 'error');
     }
@@ -153,13 +173,18 @@ async function excluirEscola(id, nome) {
         showToast('🗑️ Escola excluída!', 'success');
         limparCache();
         carregarEscolas();
-        carregarCombos();
+        if (typeof carregarTurmas === 'function') carregarTurmas();
+        if (typeof carregarAlunos === 'function') carregarAlunos();
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
     } catch (e) {
         showToast('❌ Erro ao excluir: ' + e.message, 'error');
     }
 }
 
-// ═══ TURMAS ═══
+// ═══════════════════════════════════════════════════════════════
+// TURMAS
+// ═══════════════════════════════════════════════════════════════
 async function carregarTurmasComCache(escolaId, forceRefresh) {
     if (!forceRefresh && turmasCache && !escolaId) return turmasCache;
     try {
@@ -183,12 +208,18 @@ async function carregarTurmas() {
         return;
     }
 
+    const corMap = {
+        '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+        '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+        '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
+    };
+
     tbody.innerHTML = turmas.map((t, i) => {
         const totalAlunos = parseInt(t.total_alunos) || 0;
-        return `<tr data-serie="${escapeAttr(t.serie || '')}" data-escola="${t.escola_id}">
-            <td>${i + 1}</td>
+        return `<tr data-id="${t.id}" data-nome="${escapeAttr(t.nome || '')}" data-serie="${escapeAttr(t.serie || '')}" data-escola="${t.escola_id}">
+            <td><span class="badge badge-gray">${String(i + 1).padStart(2, '0')}</span></td>
             <td><strong>${escapeHtml(t.nome || '—')}</strong></td>
-            <td><span class="badge badge-purple">${escapeHtml(t.serie || '—')}</span></td>
+            <td><span class="badge ${corMap[t.serie] || 'badge-blue'}">${escapeHtml(t.serie || '—')}</span></td>
             <td>${escapeHtml(t.turno || '—')}</td>
             <td>${escapeHtml(t.escola_nome || '—')}</td>
             <td>${escapeHtml(t.professor || '—')}</td>
@@ -196,6 +227,7 @@ async function carregarTurmas() {
             <td>
                 <div class="btn-group">
                     <button class="btn btn-outline btn-sm" onclick="editarTurma(${t.id})" title="Editar">✏️</button>
+                    <button class="btn btn-green btn-sm" onclick="verAlunosDaTurma(${t.id})" title="Lista de Alunos">📋</button>
                     <button class="btn-del" onclick="excluirTurma(${t.id}, '${escapeAttr(t.nome || '')}')" title="Excluir">🗑️</button>
                 </div>
             </td>
@@ -220,7 +252,7 @@ async function salvarTurma() {
     };
 
     try {
-        await _fetchJSON(API_URL + '/api/turmas', {
+        const result = await _fetchJSON(API_URL + '/api/turmas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
@@ -229,7 +261,11 @@ async function salvarTurma() {
         limparCache();
         closeM('m-turma');
         carregarTurmas();
-        carregarCombos();
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
+        if (result && result.id && typeof tableFeedback !== 'undefined') {
+            setTimeout(() => tableFeedback.destacarLinha('tb-turmas', result.id, '✅ Nova!'), 300);
+        }
     } catch (e) {
         showToast('❌ Erro: ' + e.message, 'error');
     }
@@ -279,6 +315,7 @@ async function salvarEdicaoTurma() {
         limparCache();
         closeM('m-editar-turma');
         carregarTurmas();
+        if (typeof carregarCombos === 'function') carregarCombos();
     } catch (e) {
         showToast('❌ Erro: ' + e.message, 'error');
     }
@@ -291,13 +328,28 @@ async function excluirTurma(id, nome) {
         showToast('🗑️ Turma excluída!', 'success');
         limparCache();
         carregarTurmas();
-        carregarCombos();
+        if (typeof carregarAlunos === 'function') carregarAlunos();
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
     } catch (e) {
         showToast('❌ Erro: ' + e.message, 'error');
     }
 }
 
-// ═══ ALUNOS ═══
+// Botão "📋" da linha da turma — vai para Alunos já filtrado
+function verAlunosDaTurma(turmaId) {
+    const selTurma = document.getElementById('filtro-turma-alunos');
+    if (selTurma) {
+        // Se a opção existir, seleciona
+        const opt = Array.from(selTurma.options).find(o => o.value == turmaId);
+        if (opt) selTurma.value = turmaId;
+    }
+    go('alunos');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ALUNOS
+// ═══════════════════════════════════════════════════════════════
 async function carregarAlunosComCache(filtros, forceRefresh) {
     if (!forceRefresh && !filtros && alunosCache) return alunosCache;
     try {
@@ -320,9 +372,12 @@ async function carregarAlunosComCache(filtros, forceRefresh) {
 
 async function carregarAlunos(escolaId) {
     const turmaId = document.getElementById('filtro-turma-alunos')?.value;
+    const serie = document.getElementById('filtro-serie-alunos')?.value;
+
     const filtros = {};
     if (escolaId) filtros.escola_id = escolaId;
     if (turmaId) filtros.turma_id = turmaId;
+    if (serie) filtros.serie = serie;
 
     const alunos = await carregarAlunosComCache(filtros, true);
     const tbody = document.getElementById('tb-alunos');
@@ -333,13 +388,19 @@ async function carregarAlunos(escolaId) {
         return;
     }
 
+    const corMap = {
+        '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
+        '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
+        '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
+    };
+
     tbody.innerHTML = alunos.map((a, i) => {
         const dataNasc = a.data_nascimento ? formatarData(a.data_nascimento) : '—';
-        return `<tr data-escola="${a.escola_id}" data-serie="${escapeAttr(a.turma_serie || '')}">
-            <td>${a.numero_chamada || (i + 1)}</td>
-            <td>${escapeHtml(a.matricula || '—')}</td>
+        return `<tr data-id="${a.id}" data-escola="${a.escola_id}" data-serie="${escapeAttr(a.turma_serie || '')}">
+            <td><span class="badge badge-blue">${String(a.numero_chamada || (i + 1)).padStart(2, '0')}</span></td>
+            <td><span class="chip">${escapeHtml(a.matricula || '—')}</span></td>
             <td><strong>${escapeHtml(a.nome || '—')}</strong></td>
-            <td><span class="badge badge-purple">${escapeHtml(a.turma_serie || '—')}</span></td>
+            <td><span class="badge ${corMap[a.turma_serie] || 'badge-blue'}">${escapeHtml(a.turma_serie || '—')}</span></td>
             <td>${escapeHtml(a.turma_nome || '—')}</td>
             <td>${escapeHtml(a.escola_nome || '—')}</td>
             <td>${dataNasc}</td>
@@ -376,7 +437,7 @@ async function salvarAluno() {
     };
 
     try {
-        await _fetchJSON(API_URL + '/api/alunos', {
+        const result = await _fetchJSON(API_URL + '/api/alunos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
@@ -385,7 +446,11 @@ async function salvarAluno() {
         limparCache();
         closeM('m-aluno');
         carregarAlunos(escolaId);
-        carregarCombos();
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
+        if (result && result.id && typeof tableFeedback !== 'undefined') {
+            setTimeout(() => tableFeedback.destacarLinha('tb-alunos', result.id, '✅ Novo!'), 300);
+        }
     } catch (e) {
         showToast('❌ Erro: ' + e.message, 'error');
     }
@@ -460,13 +525,16 @@ async function excluirAluno(id, nome) {
         showToast('🗑️ Aluno excluído!', 'success');
         limparCache();
         carregarAlunos();
-        carregarCombos();
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
     } catch (e) {
         showToast('❌ Erro: ' + e.message, 'error');
     }
 }
 
-// ═══ FILTROS / COMBOS ═══
+// ═══════════════════════════════════════════════════════════════
+// FILTROS / COMBOS
+// ═══════════════════════════════════════════════════════════════
 async function carregarEscolasFiltroAlunos() {
     const escolas = await carregarEscolasComCache();
     const sel = document.getElementById('filtro-escola-alunos');
@@ -486,13 +554,15 @@ async function carregarFiltroEscolaTurmas() {
 async function carregarTurmasPorEscolaParaAluno(escolaId, targetId) {
     const sel = document.getElementById(targetId);
     if (!sel) return;
-    if (!escolaId) { sel.innerHTML = '<option value="">Selecione a escola primeiro</option>'; return; }
+    if (!escolaId) {
+        sel.innerHTML = '<option value="">Selecione a escola primeiro</option>';
+        return;
+    }
     const turmas = await carregarTurmasComCache(escolaId);
     sel.innerHTML = '<option value="">Selecione a turma</option>' +
-        turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
+        turmas.map(t => `<option value="${t.id}" data-serie="${escapeAttr(t.serie || '')}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
 }
 
-// ═══ FILTROS DE ALUNOS ═══
 async function carregarTurmasFiltroAlunos(escolaId) {
     const sel = document.getElementById('filtro-turma-alunos');
     if (!sel) return;
@@ -518,14 +588,13 @@ function filtrarAlunosPorEscola(escolaId) {
 }
 
 function filtrarAlunosPorSerie(serie) {
-    const rows = document.querySelectorAll('#tb-alunos tr');
-    rows.forEach(row => {
-        if (!serie) { row.style.display = ''; return; }
-        row.style.display = row.dataset.serie === serie ? '' : 'none';
-    });
+    const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
+    carregarAlunos(escolaId);
 }
 
-// ═══ FILTROS DE TURMAS ═══
+// ═══════════════════════════════════════════════════════════════
+// FILTROS DE TURMAS
+// ═══════════════════════════════════════════════════════════════
 function aplicarFiltrosTurmas() {
     const escolaId = document.getElementById('filtro-escola-turmas')?.value || '';
     const serie = document.getElementById('filtro-serie-turmas')?.value || '';
@@ -547,7 +616,9 @@ function limparFiltrosTurmas() {
     document.querySelectorAll('#tb-turmas tr').forEach(r => r.style.display = '');
 }
 
-// ═══ LISTA POR TURMA ═══
+// ═══════════════════════════════════════════════════════════════
+// LISTA POR TURMA
+// ═══════════════════════════════════════════════════════════════
 async function carregarTurmasLista(escolaId) {
     const sel = document.getElementById('lista-turma');
     if (!sel) return;
@@ -567,14 +638,30 @@ async function carregarTurmasLista(escolaId) {
     }
 }
 
-// ═══ COMBOS UNIFICADOS ═══
+// ═══════════════════════════════════════════════════════════════
+// TEXTO COM IA — select de escola
+// ═══════════════════════════════════════════════════════════════
+async function carregarEscolasTexto() {
+    try {
+        const escolas = await carregarEscolasComCache();
+        const sel = document.getElementById('txt-escola');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Selecione a escola...</option>' +
+            escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+    } catch (e) {
+        console.error('Erro ao carregar escolas para texto:', e);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMBOS UNIFICADOS (chamado no DOMContentLoaded)
+// ═══════════════════════════════════════════════════════════════
 async function carregarCombos() {
     try {
         const escolas = await carregarEscolasComCache();
         const turmas = await carregarTurmasComCache();
         const alunos = await carregarAlunosComCache();
 
-        // Todos os selects de escola da aplicação
         const idsEscola = [
             'turma-escola',
             'aluno-escola',
@@ -583,7 +670,9 @@ async function carregarCombos() {
             'lista-escola',
             'transf-escola-origem',
             'transf-escola-destino',
-            'rel-turma-escola'
+            'rel-turma-escola',
+            'prova-escola',
+            'corrigir-escola'
         ];
 
         idsEscola.forEach(id => {
@@ -605,7 +694,9 @@ async function carregarCombos() {
     }
 }
 
-// ═══ FUNÇÕES CHAMADAS POR script.js ═══
+// ═══════════════════════════════════════════════════════════════
+// FUNÇÕES CHAMADAS POR script.js / startApp()
+// ═══════════════════════════════════════════════════════════════
 async function carregarEscolasParaAluno() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -644,21 +735,79 @@ async function carregarEscolasParaCorrecaoManual() {
     }
 }
 
-async function carregarEscolasDesempenho() {
-    try {
-        const escolas = await carregarEscolasComCache();
-        const sel = document.getElementById('filtro-escola-desempenho');
-        if (sel) {
-            sel.innerHTML = '<option value="">Selecione a escola...</option>' +
-                escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
-        }
-        console.log('✅ Escolas para desempenho:', escolas.length);
-    } catch (e) {
-        console.error('❌ Erro ao carregar escolas para desempenho:', e);
+// ═══════════════════════════════════════════════════════════════
+// CADASTRO MÚLTIPLO DE ALUNOS
+// ═══════════════════════════════════════════════════════════════
+function processarListaAlunos() {
+    const textarea = document.getElementById('multi-alunos-input');
+    const linhas = textarea.value.split('\n').filter(l => l.trim() !== '');
+    if (linhas.length === 0) {
+        showToast('⚠️ Cole a lista de alunos primeiro!', 'warning');
+        return;
     }
+
+    const statusDiv = document.getElementById('multi-status');
+    const statusText = document.getElementById('multi-status-text');
+
+    let adicionados = 0, erros = 0;
+
+    linhas.forEach(linha => {
+        let nome = linha.trim();
+        let matricula = '';
+        let numero = '';
+
+        const matchVirgula = linha.match(/^([^,]+),\s*([^,]+),\s*(\d+)?/);
+        const matchTraco = linha.match(/^([^-]+)\s*-\s*([^-]+)\s*-\s*(\d+)?/);
+        const matchParenteses = linha.match(/^([^(]+)\s*\(([^)]+)\)/);
+
+        if (matchVirgula) {
+            nome = matchVirgula[1].trim();
+            matricula = matchVirgula[2].trim();
+            numero = matchVirgula[3] ? matchVirgula[3].trim() : '';
+        } else if (matchTraco) {
+            nome = matchTraco[1].trim();
+            matricula = matchTraco[2].trim();
+            numero = matchTraco[3] ? matchTraco[3].trim() : '';
+        } else if (matchParenteses) {
+            nome = matchParenteses[1].trim();
+            matricula = matchParenteses[2].trim();
+        }
+
+        if (nome) {
+            document.getElementById('aluno-nome').value = nome;
+            if (matricula) document.getElementById('aluno-matricula').value = matricula;
+            if (numero) document.getElementById('aluno-numero').value = numero;
+            salvarAluno();
+            adicionados++;
+        } else {
+            erros++;
+        }
+    });
+
+    if (adicionados > 0) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'multi-status success';
+        statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
+        textarea.value = '';
+    } else {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'multi-status error';
+        statusText.textContent = '❌ Nenhum aluno válido encontrado. Verifique o formato.';
+    }
+
+    setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
 }
 
-// ═══ UTILITÁRIOS ═══
+function fecharAbaMulti() {
+    showToast('📋 Lista de alunos gerada!', 'success');
+    const modal = document.getElementById('m-aluno');
+    if (modal) modal.classList.remove('show');
+    go('lista-turma');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════════════════════
 function escapeHtml(s) {
     if (s === null || s === undefined) return '';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -676,4 +825,4 @@ function formatarData(d) {
     } catch { return d; }
 }
 
-console.log('✅ js/cadastros.js carregado — funções exportadas para o escopo global');
+console.log('✅ js/cadastros.js carregado');
