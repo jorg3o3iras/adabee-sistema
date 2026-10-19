@@ -47,7 +47,11 @@ let cmStandaloneData = {
 
 let autoModoAtivo = false;
 
-// ═══ CARREGAR ESCOLAS PARA CORRIGIR ═══
+// ═══════════════════════════════════════════════════════════════════
+// ═══ NOVO — Funções que faltavam (chamadas por startApp e pela tela Corrigir com IA) ═══
+// ═══════════════════════════════════════════════════════════════════
+
+// 1) Popula o select de escola da tela "🤖 Corrigir com IA"
 async function carregarEscolasCorrigir() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -71,14 +75,17 @@ async function carregarEscolasCorrigir() {
     }
 }
 
+// 2) Popula o select de turma quando escolhe a escola
 async function carregarTurmasPorEscolaCorrigir(escolaId) {
     const selectTurma = document.getElementById('corrigir-turma');
     const selectProva = document.getElementById('corrigir-prova');
     const selectAluno = document.getElementById('corrigir-aluno');
 
+    if (!selectTurma) return;
+
     selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
-    selectProva.innerHTML = '<option value="">Selecione...</option>';
-    selectAluno.innerHTML = '<option value="">Selecione...</option>';
+    if (selectProva) selectProva.innerHTML = '<option value="">Selecione...</option>';
+    if (selectAluno) selectAluno.innerHTML = '<option value="">Selecione...</option>';
 
     if (!escolaId) return;
 
@@ -99,8 +106,11 @@ async function carregarTurmasPorEscolaCorrigir(escolaId) {
     }
 }
 
+// 3) Popula o select de aluno quando escolhe a turma
 async function carregarAlunosPorTurmaCorrigir(turmaId) {
     const selectAluno = document.getElementById('corrigir-aluno');
+    if (!selectAluno) return;
+
     selectAluno.innerHTML = '<option value="">Selecione...</option>';
     if (!turmaId) return;
 
@@ -119,15 +129,18 @@ async function carregarAlunosPorTurmaCorrigir(turmaId) {
     }
 }
 
+// 4) Popula o select de prova quando escolhe a turma
 async function carregarProvasPorTurmaCorrigir(turmaId) {
     const selectProva = document.getElementById('corrigir-prova');
+    if (!selectProva) return;
+
     selectProva.innerHTML = '<option value="">Selecione...</option>';
     if (!turmaId) return;
 
     try {
         const provas = await carregarProvasComCache();
-        const turma = await carregarTurmasComCache();
-        const turmaData = turma.find(t => t.id == turmaId);
+        const turmas = await carregarTurmasComCache();
+        const turmaData = turmas.find(t => t.id == turmaId);
         const serieTurma = turmaData?.serie || '';
 
         if (provas && !provas.erro) {
@@ -155,8 +168,11 @@ async function carregarProvasPorTurmaCorrigir(turmaId) {
     }
 }
 
+// 5) Popula o select de aluno quando escolhe a prova (filtro por série)
 async function carregarAlunosPorProvaFiltrados(provaId) {
     const selectAluno = document.getElementById('corrigir-aluno');
+    if (!selectAluno) return;
+
     selectAluno.innerHTML = '<option value="">Selecione...</option>';
     if (!provaId) return;
 
@@ -168,7 +184,7 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
             return;
         }
 
-        const turmaId = document.getElementById('corrigir-turma').value;
+        const turmaId = document.getElementById('corrigir-turma')?.value;
         if (!turmaId) {
             const alunos = await carregarAlunosComCache({ serie: prova.serie || '' });
             if (alunos && !alunos.erro) {
@@ -196,6 +212,9 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
         console.error('Erro ao carregar alunos:', e);
     }
 }
+
+// ═══ FIM DAS FUNÇÕES NOVAS ═══
+
 
 // ═══ CÂMERA ═══
 async function abrirCamera() {
