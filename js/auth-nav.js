@@ -1,5 +1,5 @@
 // ============================================================
-// AUTH-NAV.JS — Login, logout, navegação, menu
+// JS/AUTH-NAV.JS — Login, logout, navegação, menu
 // Extraído de script.js — Corte 2
 // ============================================================
 
@@ -8,6 +8,7 @@ function toggleMenu() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('menuOverlay');
     const toggle = document.getElementById('menuToggle');
+    if (!sidebar || !overlay || !toggle) return;
     sidebar.classList.toggle('open');
     overlay.classList.toggle('show');
     toggle.classList.toggle('active');
@@ -25,6 +26,13 @@ function setLTab(t) {
 async function doLogin() {
     const u = document.getElementById('lu').value.trim();
     const p = document.getElementById('lp').value.trim();
+
+    if (!u || !p) {
+        showToast('❌ Preencha usuário e senha!', 'error');
+        shakeCard();
+        return;
+    }
+
     try {
         const response = await fetch(`${API_URL}/api/login`, {
             method: 'POST',
@@ -32,6 +40,7 @@ async function doLogin() {
             body: JSON.stringify({ username: u, senha: p })
         });
         const data = await response.json();
+
         if (data.sucesso) {
             startApp(data.perfil, data.usuario);
         } else {
@@ -39,9 +48,12 @@ async function doLogin() {
             shakeCard();
         }
     } catch (erro) {
-        if ((loginType === 'admin' && u === 'admin' && p === 'admin') ||
-            (loginType === 'user' && (u === 'usuario' || u === 'professor1') && p === '123')) {
-            startApp(loginType, u);
+        // Fallback: se API cair, aceita usuários fixos
+        console.warn('Login via API falhou, tentando fallback:', erro);
+        if ((u === 'admin' && p === 'admin') ||
+            ((u === 'usuario' || u === 'professor1') && p === '123')) {
+            const perfil = u === 'admin' ? 'admin' : 'usuario';
+            startApp(perfil, u);
         } else {
             showToast('❌ Usuário ou senha incorretos!', 'error');
             shakeCard();
@@ -51,14 +63,12 @@ async function doLogin() {
 
 function shakeCard() {
     const c = document.querySelector('.login-card');
+    if (!c) return;
     c.style.animation = 'none';
     setTimeout(() => c.style.animation = 'shake .4s ease', 10);
 }
 
-document.getElementById('lp')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-});
-
+// ═══ START APP (após login) ═══
 function startApp(role, uname) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
@@ -68,25 +78,29 @@ function startApp(role, uname) {
 
     const isAdmin = role === 'admin';
 
-    document.getElementById('adm-sb').style.display = 'block';
-    document.getElementById('usr-sb').style.display = 'none';
+    const admSb = document.getElementById('adm-sb');
+    const usrSb = document.getElementById('usr-sb');
+    if (admSb) admSb.style.display = 'block';
+    if (usrSb) usrSb.style.display = 'none';
 
     const menuConfig = document.getElementById('menu-config');
     if (menuConfig) {
         menuConfig.style.display = isAdmin ? 'block' : 'none';
     }
 
-    go(isAdmin ? 'dashboard' : 'dashboard');
+    go('dashboard');
 
-    buildGabGrid();
-    carregarDados();
-    atualizarDatasImpressao();
-    carregarEscolasParaCorrecaoManual();
-    carregarFiltrosRelTurma();
-    carregarEscolasDesempenho();
-    popularSelectQuestoes();
-    popularSelectGabTotal();
-    carregarEscolasCorrigir();
+    // ═══ CHAMADAS PROTEGIDAS POR typeof ═══
+    // Isso evita ReferenceError se algum script ainda não carregou.
+    if (typeof buildGabGrid === 'function') buildGabGrid();
+    if (typeof carregarDados === 'function') carregarDados();
+    if (typeof atualizarDatasImpressao === 'function') atualizarDatasImpressao();
+    if (typeof carregarEscolasParaCorrecaoManual === 'function') carregarEscolasParaCorrecaoManual();
+    if (typeof carregarFiltrosRelTurma === 'function') carregarFiltrosRelTurma();
+    if (typeof carregarEscolasDesempenho === 'function') carregarEscolasDesempenho();
+    if (typeof popularSelectQuestoes === 'function') popularSelectQuestoes();
+    if (typeof popularSelectGabTotal === 'function') popularSelectGabTotal();
+    if (typeof carregarEscolasCorrigir === 'function') carregarEscolasCorrigir();
 }
 
 function doLogout() {
@@ -94,7 +108,7 @@ function doLogout() {
     document.getElementById('app').style.display = 'none';
     document.getElementById('lu').value = '';
     document.getElementById('lp').value = '';
-    fecharCamera();
+    if (typeof fecharCamera === 'function') fecharCamera();
 }
 
 // ═══ NAVEGAÇÃO ═══
@@ -107,53 +121,54 @@ function go(page) {
 
     switch(page) {
         case 'escola':
-            carregarEscolas();
+            if (typeof carregarEscolas === 'function') carregarEscolas();
             break;
         case 'turmas':
-            carregarFiltroEscolaTurmas();
-            carregarTurmas();
+            if (typeof carregarFiltroEscolaTurmas === 'function') carregarFiltroEscolaTurmas();
+            if (typeof carregarTurmas === 'function') carregarTurmas();
             break;
-        case 'alunos':
+        case 'alunos': {
             const escolaId = document.getElementById('filtro-escola-alunos')?.value || '';
-            carregarAlunos(escolaId);
+            if (typeof carregarAlunos === 'function') carregarAlunos(escolaId);
             break;
+        }
         case 'provas':
-            carregarProvas();
+            if (typeof carregarProvas === 'function') carregarProvas();
             break;
         case 'resultados':
-            carregarFiltrosResultados();
-            carregarResultadosComFiltros();
+            if (typeof carregarFiltrosResultados === 'function') carregarFiltrosResultados();
+            if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
             break;
         case 'gabaritos':
-            carregarGabaritos();
+            if (typeof carregarGabaritos === 'function') carregarGabaritos();
             break;
         case 'rel-turma':
-            carregarFiltrosRelTurma();
-            carregarRelatorioTurmaFiltrado();
+            if (typeof carregarFiltrosRelTurma === 'function') carregarFiltrosRelTurma();
+            if (typeof carregarRelatorioTurmaFiltrado === 'function') carregarRelatorioTurmaFiltrado();
             break;
         case 'desempenho':
-            carregarEscolasDesempenho();
+            if (typeof carregarEscolasDesempenho === 'function') carregarEscolasDesempenho();
             break;
         case 'dashboard':
-            carregarDashboard();
-            carregarUltimasCorrecoes();
+            if (typeof carregarDashboard === 'function') carregarDashboard();
+            if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
             break;
         case 'corrigir-ia':
-            carregarEscolasCorrigir();
+            if (typeof carregarEscolasCorrigir === 'function') carregarEscolasCorrigir();
             break;
         case 'matriz':
-            carregarMatrizes();
+            if (typeof carregarMatrizes === 'function') carregarMatrizes();
             break;
     }
 
-    atualizarDatasImpressao();
+    if (typeof atualizarDatasImpressao === 'function') atualizarDatasImpressao();
     paginaAtual = page;
 
     if (window.innerWidth <= 900) {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('menuOverlay');
         const toggle = document.getElementById('menuToggle');
-        if (sidebar.classList.contains('open')) {
+        if (sidebar && overlay && toggle && sidebar.classList.contains('open')) {
             sidebar.classList.remove('open');
             overlay.classList.remove('show');
             toggle.classList.remove('active');
@@ -161,3 +176,10 @@ function go(page) {
         }
     }
 }
+
+// ═══ ENTER NO CAMPO DE SENHA = LOGIN ═══
+document.getElementById('lp')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+});
+
+console.log('✅ js/auth-nav.js carregado');
