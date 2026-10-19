@@ -1,5 +1,5 @@
 // ============================================================
-// CORE.JS — Config, segurança, cache, progress, feedback, dom
+// JS/CORE.JS — Config, segurança, cache, progress, feedback, DOM
 // Extraído de script.js — Corte 1
 // Ordem: PRIMEIRO (antes de todos os outros)
 // ============================================================
@@ -515,6 +515,186 @@ function openM(id) {
         console.warn('⚠️ Modal não encontrado:', id);
     }
 
-    if (id === 'm-turma' || id === 'm-aluno') { carregarCombos(); if (id === 'm-aluno') carregarEscolasParaAluno(); }
-    if (id === 'm-prova') { carregarCombos(); const tipo = document.getElementById('modal-prova-tipo').value; gerarGabaritoModal(tipo); }
+    if (id === 'm-turma' || id === 'm-aluno') {
+        if (typeof carregarCombos === 'function') carregarCombos();
+        if (id === 'm-aluno' && typeof carregarEscolasParaAluno === 'function') carregarEscolasParaAluno();
+    }
+    if (id === 'm-prova') {
+        if (typeof carregarCombos === 'function') carregarCombos();
+        const tipoEl = document.getElementById('modal-prova-tipo');
+        if (tipoEl && typeof gerarGabaritoModal === 'function') gerarGabaritoModal(tipoEl.value);
+    }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ═══ ADICIONADO DO MONOLÍTICO — funções que faltavam aqui ═══
+// ═══════════════════════════════════════════════════════════════
+
+// Preenche datas de impressão em todos os relatórios
+function atualizarDatasImpressao() {
+    const agora = new Date();
+    const dataFormatada = agora.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const elementosData = [
+        'print-data-dash',
+        'print-data-resultados',
+        'print-data-rel-turma',
+        'print-data-rel-escola',
+        'print-data-u-dash',
+        'print-data-u-rel',
+        'print-data-desempenho'
+    ];
+
+    elementosData.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = dataFormatada;
+    });
+}
+
+// Popula o select de número de questões no cadastro de prova
+function popularSelectQuestoes() {
+    const select = document.getElementById('prova-questoes');
+    if (!select) return;
+    select.innerHTML = '';
+    for (let i = 1; i <= 30; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === 20) opt.selected = true;
+        select.appendChild(opt);
+    }
+}
+
+// Popula o select de número de questões no gabarito
+function popularSelectGabTotal() {
+    const select = document.getElementById('gab-total');
+    if (!select) return;
+    select.innerHTML = '';
+    for (let i = 1; i <= 30; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === 20) opt.selected = true;
+        select.appendChild(opt);
+    }
+}
+
+// Filtra tabelas por texto (search box)
+function filtrarTabela(input, tbodyId) {
+    const val = input.value.toLowerCase();
+    document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none';
+    });
+}
+
+// Filtra tabela de turmas por série
+function filtrarSerie(sel) {
+    const val = sel.value;
+    document.querySelectorAll('#tb-turmas tr').forEach(row => {
+        row.style.display = (!val || row.dataset.serie === val) ? '' : 'none';
+    });
+}
+
+// Filtra as opções do select de turma conforme a série escolhida
+function filtrarTurmasPorSerie(selectSerie, selectTurma) {
+    const serieSelecionada = selectSerie.value;
+    let firstVisible = false;
+
+    for (let option of selectTurma.options) {
+        if (option.value === '') {
+            option.style.display = '';
+            continue;
+        }
+        const serieDaTurma = option.dataset.serie || '';
+        if (serieSelecionada === '' || serieDaTurma === serieSelecionada) {
+            option.style.display = '';
+            if (!firstVisible) {
+                selectTurma.value = option.value;
+                firstVisible = true;
+            }
+        } else {
+            option.style.display = 'none';
+        }
+    }
+
+    if (!firstVisible) selectTurma.value = '';
+    selectTurma.dispatchEvent(new Event('change'));
+}
+
+// Renumera as linhas de uma tabela após exclusão
+function renumerarTabela(tbody) {
+    if (!tbody) return;
+    tbody.querySelectorAll('tr').forEach((tr, i) => {
+        const badge = tr.querySelector('.badge-blue, .badge-gray');
+        if (badge) {
+            const num = String(i + 1).padStart(2, '0');
+            if (badge.textContent.match(/^\d+$/)) badge.textContent = num;
+        }
+    });
+}
+
+// Modal genérico de confirmação de exclusão
+function excluir(btn, tipo, nome) {
+    const row = btn.closest('tr');
+    delTarget = { row, tipo, nome };
+    document.getElementById('del-nome-txt').textContent = '"' + nome + '"';
+    document.getElementById('del-modal').classList.add('show');
+}
+
+function cancelarDel() {
+    document.getElementById('del-modal').classList.remove('show');
+    delTarget = null;
+}
+
+function confirmarDel() {
+    document.getElementById('del-modal').classList.remove('show');
+    if (!delTarget) return;
+    const { row, tipo, nome } = delTarget;
+    row.classList.add('deleting');
+    setTimeout(() => {
+        row.remove();
+        showToast('🗑️ ' + tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' "' + nome + '" excluído(a).', 'error');
+        delTarget = null;
+        if (typeof limparCache === 'function') limparCache();
+        renumerarTabela(row.closest('tbody'));
+    }, 350);
+}
+
+// Switch de abas em modais
+function switchTab(idx, btn) {
+    const parent = btn.closest('.tab-nav');
+    if (parent) {
+        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    const card = btn.closest('.card');
+    if (card) {
+        card.querySelectorAll('.tab-c').forEach((tc, i) => {
+            tc.style.display = i === idx ? 'block' : 'none';
+        });
+    }
+}
+
+// Simula upload (feedback visual)
+function simUpload() {
+    setTimeout(() => {
+        const el = document.getElementById('up-ok');
+        if (el) el.style.display = 'block';
+        showToast('✅ Arquivo enviado!', 'success');
+    }, 600);
+}
+
+// Salva configurações (feedback visual)
+function salvarConfiguracoes() {
+    showToast('✅ Configurações salvas!', 'success');
+}
+
+// ═══ FIM DOS ADICIONADOS DO MONOLÍTICO ═══
+
+console.log('✅ js/core.js carregado');
