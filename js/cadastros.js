@@ -492,7 +492,7 @@ async function carregarTurmasPorEscolaParaAluno(escolaId, targetId) {
         turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
 }
 
-// ═══ FILTROS DE ALUNOS (CORRIGIDO — popula select de turmas) ═══
+// ═══ FILTROS DE ALUNOS ═══
 async function carregarTurmasFiltroAlunos(escolaId) {
     const sel = document.getElementById('filtro-turma-alunos');
     if (!sel) return;
@@ -547,14 +547,46 @@ function limparFiltrosTurmas() {
     document.querySelectorAll('#tb-turmas tr').forEach(r => r.style.display = '');
 }
 
-// ═══ COMBOS UNIFICADOS (chamado no DOMContentLoaded) ═══
+// ═══ LISTA POR TURMA ═══
+async function carregarTurmasLista(escolaId) {
+    const sel = document.getElementById('lista-turma');
+    if (!sel) return;
+
+    if (!escolaId) {
+        sel.innerHTML = '<option value="">Selecione a turma</option>';
+        return;
+    }
+
+    try {
+        const turmas = await carregarTurmasComCache(escolaId);
+        sel.innerHTML = '<option value="">Selecione a turma</option>' +
+            turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
+    } catch (e) {
+        console.error('❌ Erro ao carregar turmas para lista:', e);
+        sel.innerHTML = '<option value="">Selecione a turma</option>';
+    }
+}
+
+// ═══ COMBOS UNIFICADOS ═══
 async function carregarCombos() {
     try {
         const escolas = await carregarEscolasComCache();
         const turmas = await carregarTurmasComCache();
         const alunos = await carregarAlunosComCache();
 
-        ['turma-escola', 'aluno-escola', 'editar-turma-escola', 'editar-aluno-escola'].forEach(id => {
+        // Todos os selects de escola da aplicação
+        const idsEscola = [
+            'turma-escola',
+            'aluno-escola',
+            'editar-turma-escola',
+            'editar-aluno-escola',
+            'lista-escola',
+            'transf-escola-origem',
+            'transf-escola-destino',
+            'rel-turma-escola'
+        ];
+
+        idsEscola.forEach(id => {
             const sel = document.getElementById(id);
             if (sel && sel.options.length <= 1) {
                 sel.innerHTML = '<option value="">Selecione a escola</option>' +
@@ -573,11 +605,19 @@ async function carregarCombos() {
     }
 }
 
-// ═══ FUNÇÕES FALTANTES (chamadas por script.js) ═══
+// ═══ FUNÇÕES CHAMADAS POR script.js ═══
 async function carregarEscolasParaAluno() {
     try {
         const escolas = await carregarEscolasComCache();
-        ['aluno-escola', 'editar-aluno-escola'].forEach(id => {
+        const ids = [
+            'aluno-escola',
+            'editar-aluno-escola',
+            'lista-escola',
+            'transf-escola-origem',
+            'transf-escola-destino',
+            'rel-turma-escola'
+        ];
+        ids.forEach(id => {
             const sel = document.getElementById(id);
             if (sel && sel.options.length <= 1) {
                 sel.innerHTML = '<option value="">Selecione a escola</option>' +
