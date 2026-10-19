@@ -1806,3 +1806,58 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .badge-conceito-avancado::marker {
     content: none !important;
 }
+/* ============================================================
+   ═══ AJUSTE ESTÉTICO: AUMENTAR CAMPOS DE ESCOLA ═══
+   Data: 2026-10-19
+   ============================================================ */
+
+/* 1) Filtros na barra superior de Alunos e Turmas */
+#filtro-escola-alunos,
+#filtro-escola-turmas {
+    width: 320px !important;
+    min-width: 320px;
+    max-width: 100%;
+    font-size: 13px;
+    padding: 8px 11px;
+}
+
+/* 2) Selects de escola dentro dos modais e outras telas */
+#aluno-escola,
+#editar-aluno-escola,
+#turma-escola,
+#editar-turma-escola,
+#lista-escola,
+#transf-escola-origem,
+#transf-escola-destino,
+#cm-escola-select,
+#filtro-escola-desempenho,
+#txt-escola,
+#corrigir-escola {
+    width: 100% !important;
+    min-width: 280px;
+    font-size: 13px;
+    padding: 8px 11px;
+}
+
+/* 3) Em telas pequenas, deixa responsivo (evita quebra) */
+@media (max-width: 900px) {
+    #filtro-escola-alunos,
+    #filtro-escola-turmas {
+        width: 100% !important;
+        min-width: 0;
+    }
+    #aluno-escola,
+    #editar-aluno-escola,
+    #turma-escola,
+    #editar-turma-escola,
+    #lista-escola,
+    #transf-escola-origem,
+    #transf-escola-destino,
+    #cm-escola-select,
+    #filtro-escola-desempenho,
+    #txt-escola,
+    #corrigir-escola {
+        width: 100% !important;
+        min-width: 0;
+    }
+}
