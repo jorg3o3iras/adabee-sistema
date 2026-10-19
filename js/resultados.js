@@ -1,35 +1,7 @@
 // ============================================================
-// RESULTADOS.JS — Dashboard, Resultados, Relatórios, Desempenho
+// JS/RESULTADOS.JS — Dashboard, Resultados, Relatórios, Desempenho
 // Extraído de script.js — Corte 6
-// Inclui complemento: resultados-extra.js (datas de impressão)
 // ============================================================
-
-// ═══ ATUALIZAR DATAS DE IMPRESSÃO ═══
-function atualizarDatasImpressao() {
-    const agora = new Date();
-    const dataFormatada = agora.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
-    const elementosData = [
-        'print-data-dash',
-        'print-data-resultados',
-        'print-data-rel-turma',
-        'print-data-rel-escola',
-        'print-data-u-dash',
-        'print-data-u-rel',
-        'print-data-desempenho'
-    ];
-
-    elementosData.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = dataFormatada;
-    });
-}
 
 // ═══ ESTADO DE DESEMPENHO ═══
 let desempenhoData = {
@@ -61,30 +33,24 @@ async function carregarDashboard() {
 // ═══ CARREGAR RESULTADOS COM FILTROS ═══
 async function carregarResultadosComFiltros() {
     try {
-        const escolaId = document.getElementById('filtro-escola').value;
-        const serie = document.getElementById('filtro-serie').value;
-        const turmaId = document.getElementById('filtro-turma').value;
-        const provaId = document.getElementById('filtro-prova').value;
+        const escolaId = document.getElementById('filtro-escola')?.value || '';
+        const serie = document.getElementById('filtro-serie')?.value || '';
+        const turmaId = document.getElementById('filtro-turma')?.value || '';
+        const provaId = document.getElementById('filtro-prova')?.value || '';
 
-        console.log('🔍 [Resultados] Filtros aplicados:', {
-            escolaId: escolaId || '(vazio)',
-            serie: serie || '(vazio)',
-            turmaId: turmaId || '(vazio)',
-            provaId: provaId || '(vazio)'
-        });
+        console.log('🔍 [Resultados] Filtros:', { escolaId, serie, turmaId, provaId });
 
         if (!turmaId && !provaId) {
-            console.warn('⚠️ [Resultados] SEM filtro de turma nem prova — pode estourar com muitos alunos');
-            showToast('⚠️ Selecione TURMA e PROVA para resultados precisos', 'warning');
+            console.warn('⚠️ [Resultados] SEM filtro de turma nem prova');
         }
 
         let totalAlunosTurma = 0;
         let alunosDaTurma = [];
 
         const paramsAlunos = new URLSearchParams();
-        if (turmaId && turmaId !== '') paramsAlunos.append('turma_id', turmaId);
-        else if (escolaId && escolaId !== '') paramsAlunos.append('escola_id', escolaId);
-        if (serie && serie !== '') paramsAlunos.append('serie', serie);
+        if (turmaId) paramsAlunos.append('turma_id', turmaId);
+        else if (escolaId) paramsAlunos.append('escola_id', escolaId);
+        if (serie) paramsAlunos.append('serie', serie);
 
         if (paramsAlunos.toString()) {
             try {
@@ -98,16 +64,16 @@ async function carregarResultadosComFiltros() {
                     totalAlunosTurma = alunosData.length;
                 }
             } catch (e) {
-                console.warn('Erro ao buscar total de alunos da turma:', e);
+                console.warn('Erro ao buscar total de alunos:', e);
             }
         }
 
         let url = API_URL + '/api/historico/agrupado';
         const paramsHist = new URLSearchParams();
-        if (escolaId && escolaId !== '') paramsHist.append('escola', escolaId);
-        if (serie && serie !== '') paramsHist.append('serie', serie);
-        if (turmaId && turmaId !== '') paramsHist.append('turma', turmaId);
-        if (provaId && provaId !== '') paramsHist.append('prova', provaId);
+        if (escolaId) paramsHist.append('escola', escolaId);
+        if (serie) paramsHist.append('serie', serie);
+        if (turmaId) paramsHist.append('turma', turmaId);
+        if (provaId) paramsHist.append('prova', provaId);
         if (paramsHist.toString()) url += '?' + paramsHist.toString();
 
         console.log('📡 [Resultados] URL:', url);
@@ -115,25 +81,20 @@ async function carregarResultadosComFiltros() {
         const response = await fetch(url);
 
         if (!response.ok) {
-            console.error('❌ HTTP', response.status, 'ao buscar /api/historico/agrupado');
+            console.error('❌ HTTP', response.status);
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--red);">' +
-                    '❌ Erro do servidor (' + response.status + '). Selecione TURMA e PROVA específicas para reduzir o volume.' +
-                    '</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--red);">❌ Erro do servidor (${response.status}). Selecione TURMA e PROVA específicas.</td></tr>`;
             }
             return;
         }
 
         const textoResposta = await response.text();
-
         if (!textoResposta || textoResposta.trim() === '') {
-            console.error('❌ Backend retornou resposta VAZIA');
+            console.error('❌ Resposta vazia');
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--orange);">' +
-                    '⚠️ O servidor não retornou dados (resposta vazia). Selecione TURMA e PROVA específicas.' +
-                    '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--orange);">⚠️ Resposta vazia. Selecione TURMA e PROVA específicas.</td></tr>';
             }
             return;
         }
@@ -142,13 +103,10 @@ async function carregarResultadosComFiltros() {
         try {
             alunos = JSON.parse(textoResposta);
         } catch (e) {
-            console.error('❌ JSON inválido recebido:', e);
-            console.error('📄 Primeiros 500 chars da resposta:', textoResposta.substring(0, 500));
+            console.error('❌ JSON inválido:', e);
             const tbody = document.getElementById('tb-resultados-filtrado');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--red);">' +
-                    '❌ Resposta do servidor corrompida. Selecione TURMA e PROVA específicas.' +
-                    '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--red);">❌ Resposta corrompida. Selecione TURMA e PROVA específicas.</td></tr>';
             }
             return;
         }
@@ -163,8 +121,6 @@ async function carregarResultadosComFiltros() {
 
         const pctCorrigidos = totalAlunosTurma > 0 ? Math.round((totalCorrigidos / totalAlunosTurma) * 100) : 0;
         const pctSemCorrecao = totalAlunosTurma > 0 ? Math.round((diff / totalAlunosTurma) * 100) : 0;
-        const pctFizeram = pctCorrigidos;
-        const pctNaoFizeram = pctSemCorrecao;
 
         setText('res-total-alunos-turma', totalAlunosTurma);
         setText('res-porcentagem-total', '100% da turma');
@@ -174,11 +130,11 @@ async function carregarResultadosComFiltros() {
         setText('res-porcentagem-sem-correcao', pctSemCorrecao + '% da turma');
         setText('res-alunos-fizeram', totalCorrigidos);
         setText('res-alunos-nao-fizeram', diff);
-        setText('res-porcentagem-fizeram', pctFizeram + '% da turma');
-        setText('res-porcentagem-nao-fizeram', pctNaoFizeram + '% da turma');
+        setText('res-porcentagem-fizeram', pctCorrigidos + '% da turma');
+        setText('res-porcentagem-nao-fizeram', pctSemCorrecao + '% da turma');
 
         if (!alunos || alunos.length === 0 || alunos.erro) {
-            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada com os filtros selecionados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma correção encontrada</td></tr>';
             setText('total-alunos-tabela', '0 alunos');
             ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
                 setText(`conceito-${c}-count`, '0');
@@ -191,29 +147,13 @@ async function carregarResultadosComFiltros() {
 
         const dadosAlunos = Array.isArray(alunos) ? alunos : [];
 
-        if (dadosAlunos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Nenhum dado disponível</td></tr>';
-            setText('total-alunos-tabela', '0 alunos');
-            ['inicial', 'basico', 'proficiente', 'avancado'].forEach(c => {
-                setText(`conceito-${c}-count`, '0');
-                const bar = document.getElementById(`conceito-${c}-bar`);
-                if (bar) bar.style.width = '2%';
-            });
-            setText('total-conceitos-label', '0');
-            return;
-        }
-
         let disciplinaAlvo = null;
-        if (provaId && provaId !== '') {
+        if (provaId) {
             try {
                 const provas = await carregarProvasComCache();
                 const prova = provas.find(p => p.id == provaId);
-                if (prova && prova.disciplina) {
-                    disciplinaAlvo = mapearDisciplina(prova.disciplina);
-                }
-            } catch (e) {
-                console.warn('Não foi possível obter a disciplina da prova:', e);
-            }
+                if (prova && prova.disciplina) disciplinaAlvo = mapearDisciplina(prova.disciplina);
+            } catch (e) {}
         }
 
         const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
@@ -225,19 +165,12 @@ async function carregarResultadosComFiltros() {
                     const acertos = discData.acertos || 0;
                     const totalDisc = discData.total || 0;
                     const nota = discData.nota !== undefined ? Number(discData.nota) : 0;
-
                     let pct;
-                    if (nota > 0 && totalDisc <= 10) {
-                        pct = Math.round((nota / 10) * 100);
-                    } else {
-                        pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-                    }
-
+                    if (nota > 0 && totalDisc <= 10) pct = Math.round((nota / 10) * 100);
+                    else pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
                     const conceito = calcularConceito(pct);
                     contagemConceitos[conceito]++;
-                } else {
-                    contagemConceitos.inicial++;
-                }
+                } else contagemConceitos.inicial++;
             });
         } else {
             const disciplinas = ['portugues', 'matematica', 'producao', 'ch', 'cn'];
@@ -248,33 +181,22 @@ async function carregarResultadosComFiltros() {
                         const acertos = discData.acertos || 0;
                         const totalDisc = discData.total || 0;
                         const nota = discData.nota !== undefined ? Number(discData.nota) : 0;
-
                         let pct;
-                        if (nota > 0 && totalDisc <= 10) {
-                            pct = Math.round((nota / 10) * 100);
-                        } else {
-                            pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
-                        }
-
+                        if (nota > 0 && totalDisc <= 10) pct = Math.round((nota / 10) * 100);
+                        else pct = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
                         const conceito = calcularConceito(pct);
                         contagemConceitos[conceito]++;
-                    } else {
-                        contagemConceitos.inicial++;
-                    }
+                    } else contagemConceitos.inicial++;
                 });
             });
         }
 
         atualizarGraficosConceitos(contagemConceitos);
-
-        const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico +
-                               contagemConceitos.proficiente + contagemConceitos.avancado;
+        const totalConceitos = contagemConceitos.inicial + contagemConceitos.basico + contagemConceitos.proficiente + contagemConceitos.avancado;
         setText('total-conceitos-label', totalConceitos);
 
         dadosAlunos.sort((a, b) => (b.media || 0) - (a.media || 0));
-        const total = dadosAlunos.length;
-
-        setText('total-alunos-tabela', total + ' alunos');
+        setText('total-alunos-tabela', dadosAlunos.length + ' alunos');
 
         function getDadosDisciplina(disciplinaData, totalQuestoes) {
             if (!disciplinaData || typeof disciplinaData !== 'object') {
@@ -284,38 +206,29 @@ async function carregarResultadosComFiltros() {
             let erros = disciplinaData.erros !== undefined ? disciplinaData.erros : 0;
             const totalDisc = disciplinaData.total || totalQuestoes || 0;
             const nota = disciplinaData.nota !== undefined ? Number(disciplinaData.nota) : 0;
-
             let porcentagem;
-            if (nota > 0 && totalDisc <= 10) {
-                porcentagem = Math.round((nota / 10) * 100);
-            } else {
+            if (nota > 0 && totalDisc <= 10) porcentagem = Math.round((nota / 10) * 100);
+            else {
                 if (erros === 0 && totalDisc > 0 && acertos > 0) erros = totalDisc - acertos;
                 porcentagem = totalDisc > 0 ? Math.round((acertos / totalDisc) * 100) : 0;
             }
-
             const conceito = calcularConceito(porcentagem);
             return { acertos, erros, conceito, nota };
         }
 
-        function badgeConceito(c) {
-            return `badge-conceito-${c}-sm`;
-        }
+        function badgeConceito(c) { return `badge-conceito-${c}-sm`; }
 
         tbody.innerHTML = dadosAlunos.map((aluno, index) => {
             const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
-
             const portugues = getDadosDisciplina(aluno.portugues, 20);
             const matematica = getDadosDisciplina(aluno.matematica, 20);
             const producao = getDadosDisciplina(aluno.producao, 20);
             const ch = getDadosDisciplina(aluno.ch, 20);
             const cn = getDadosDisciplina(aluno.cn, 20);
-
             const nomeEscola = aluno.escola || '';
             const nomeTurma = aluno.turma || '';
-
             const notaProducaoTexto = (producao && producao.nota !== undefined && producao.nota !== null && Number(producao.nota) > 0)
-                ? Number(producao.nota).toFixed(1)
-                : '—';
+                ? Number(producao.nota).toFixed(1) : '—';
 
             return '<tr>' +
                 '<td>' + medalha + '</td>' +
@@ -328,10 +241,7 @@ async function carregarResultadosComFiltros() {
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-green">' + matematica.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge badge-red">' + matematica.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(16,185,129,0.03);"><span class="badge ' + badgeConceito(matematica.conceito) + '">' + matematica.conceito + '</span></td>' +
-                '<td style="text-align:center;background:rgba(139,92,246,0.05);padding:4px;">' +
-                    '<div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:2px;">NOTA</div>' +
-                    '<div style="font-size:16px;font-weight:900;color:var(--purple);">' + notaProducaoTexto + '</div>' +
-                '</td>' +
+                '<td style="text-align:center;background:rgba(139,92,246,0.05);padding:4px;"><div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:2px;">NOTA</div><div style="font-size:16px;font-weight:900;color:var(--purple);">' + notaProducaoTexto + '</div></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-orange">' + ch.acertos + '</span></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge badge-red">' + ch.erros + '</span></td>' +
                 '<td style="text-align:center;background:rgba(245,158,11,0.03);"><span class="badge ' + badgeConceito(ch.conceito) + '">' + ch.conceito + '</span></td>' +
@@ -344,10 +254,10 @@ async function carregarResultadosComFiltros() {
         }).join('');
 
     } catch (erro) {
-        console.error('❌ Erro ao carregar resultados com filtros:', erro);
+        console.error('❌ Erro ao carregar resultados:', erro);
         const tbody = document.getElementById('tb-resultados-filtrado');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro ao carregar resultados: ' + escapeHtml(erro.message) + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text3);">Erro: ' + escapeHtml(erro.message) + '</td></tr>';
         }
     }
 }
@@ -355,22 +265,14 @@ async function carregarResultadosComFiltros() {
 // ═══ GRÁFICOS DE CONCEITOS ═══
 function atualizarGraficosConceitos(contagem) {
     const total = contagem.inicial + contagem.basico + contagem.proficiente + contagem.avancado || 1;
-
-    const cores = {
-        inicial: '#ef4444',
-        basico: '#f59e0b',
-        proficiente: '#3b82f6',
-        avancado: '#10b981'
-    };
+    const cores = { inicial: '#ef4444', basico: '#f59e0b', proficiente: '#3b82f6', avancado: '#10b981' };
 
     ['inicial', 'basico', 'proficiente', 'avancado'].forEach(conceito => {
         const count = contagem[conceito] || 0;
         let pct = total > 0 ? (count / total) * 100 : 0;
         pct = Math.max(pct, 2);
-
         const countEl = document.getElementById(`conceito-${conceito}-count`);
         const barEl = document.getElementById(`conceito-${conceito}-bar`);
-
         if (countEl) countEl.textContent = count;
         if (barEl) {
             barEl.style.width = pct + '%';
@@ -387,10 +289,12 @@ async function carregarFiltrosResultados() {
         if (selectEscola && escolas && !escolas.erro) {
             const current = selectEscola.value;
             selectEscola.innerHTML = '<option value="">Todas as escolas</option>';
-            escolas.forEach(e => { const opt = document.createElement('option');
+            escolas.forEach(e => {
+                const opt = document.createElement('option');
                 opt.value = e.id;
                 opt.textContent = e.nome;
-                selectEscola.appendChild(opt); });
+                selectEscola.appendChild(opt);
+            });
             if (current) selectEscola.value = current;
         }
 
@@ -423,8 +327,6 @@ async function carregarFiltrosResultados() {
             });
             if (current) selectProva.value = current;
             console.log('✅ [Filtros Resultados] Provas populadas:', provas.length);
-        } else {
-            console.warn('⚠️ [Filtros Resultados] Não foi possível popular o select de provas');
         }
     } catch (erro) { console.error('Erro ao carregar filtros:', erro); }
 }
@@ -446,9 +348,7 @@ async function carregarTurmasPorEscola(escolaId) {
             });
             if (selectSerie) filtrarTurmasPorSerie(selectSerie, selectTurma);
         }
-    } catch (erro) {
-        console.error('Erro ao carregar turmas:', erro);
-    }
+    } catch (erro) { console.error('Erro ao carregar turmas:', erro); }
     carregarResultadosComFiltros();
 }
 
@@ -470,7 +370,7 @@ function limparFiltrosResultados() {
             });
             carregarResultadosComFiltros();
         }
-    }).catch(e => console.error('Erro ao recarregar turmas:', e));
+    }).catch(e => console.error('Erro:', e));
 
     const selectProva = document.getElementById('filtro-prova');
     carregarProvasComCache(true).then(provas => {
@@ -485,7 +385,7 @@ function limparFiltrosResultados() {
             });
             carregarResultadosComFiltros();
         }
-    }).catch(e => console.error('Erro ao recarregar provas:', e));
+    }).catch(e => console.error('Erro:', e));
 }
 
 // ═══ CONCEITO REAL (DASHBOARD) ═══
@@ -504,11 +404,7 @@ async function carregarConceitoReal() {
         if (!container) return;
 
         if (!dados || dados.erro || (Array.isArray(dados) && dados.length === 0)) {
-            container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;">
-                <div style="font-size:30px;margin-bottom:10px;">📭</div>
-                <p>Nenhuma turma com correções ainda.</p>
-                <p style="font-size:12px;">Cadastre turmas e faça correções para ver o Conceito.</p>
-            </div>`;
+            container.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px;"><div style="font-size:30px;margin-bottom:10px;">📭</div><p>Nenhuma turma com correções ainda.</p></div>`;
             if (badge) badge.textContent = '0 turmas';
             return;
         }
@@ -523,27 +419,17 @@ async function carregarConceitoReal() {
         const agrupado = new Map();
         dadosArray.forEach(item => {
             let turmaId = item.turma_id || item.id || item.turmaId;
-            if (!turmaId) {
-                if (item.nome) turmaId = 'nome_' + item.nome;
-                else return;
-            }
+            if (!turmaId) { if (item.nome) turmaId = 'nome_' + item.nome; else return; }
 
             let nomeReal = turmasMap.get(turmaId);
             if (!nomeReal && item.nome && item.nome !== 'Turma sem nome') nomeReal = item.nome;
             if (!nomeReal) nomeReal = `Turma ${turmaId}`;
 
             if (!agrupado.has(turmaId)) {
-                agrupado.set(turmaId, {
-                    id: turmaId,
-                    nome: nomeReal,
-                    somaPorcentagem: 0,
-                    totalCorrecoes: 0,
-                    contagem: 0
-                });
+                agrupado.set(turmaId, { id: turmaId, nome: nomeReal, somaPorcentagem: 0, totalCorrecoes: 0, contagem: 0 });
             }
             const turma = agrupado.get(turmaId);
-            if (item.porcentagem !== undefined) { turma.somaPorcentagem += item.porcentagem;
-                turma.contagem++; }
+            if (item.porcentagem !== undefined) { turma.somaPorcentagem += item.porcentagem; turma.contagem++; }
             if (item.total_correcoes !== undefined) turma.totalCorrecoes += item.total_correcoes;
             else if (item.correcoes !== undefined) turma.totalCorrecoes += item.correcoes;
             else turma.totalCorrecoes += 1;
@@ -583,25 +469,14 @@ async function carregarConceitoReal() {
             const porcentagem = turma.porcentagem || 0;
             const altura = Math.max(20, (porcentagem / 100) * 130);
             const cor = cores[index % cores.length];
-            html += `<div class="chart-bar-item" title="${escapeAttr(nome)} - Média: ${turma.media || 0}">
-                <div class="chart-bar-val">${porcentagem}%</div>
-                <div class="chart-bar" style="height:${altura}px;background:${cor};"></div>
-                <div class="chart-bar-lbl">${escapeHtml(nome)}</div>
-            </div>`;
+            html += `<div class="chart-bar-item" title="${escapeAttr(nome)} - Média: ${turma.media || 0}"><div class="chart-bar-val">${porcentagem}%</div><div class="chart-bar" style="height:${altura}px;background:${cor};"></div><div class="chart-bar-lbl">${escapeHtml(nome)}</div></div>`;
         });
         html += '</div>';
-
         container.innerHTML = html;
-
     } catch (erro) {
         console.error('Erro ao carregar Conceito:', erro);
         const container = document.getElementById('grafico-Conceito');
-        if (container) {
-            container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">
-                <div style="font-size:30px;margin-bottom:10px;">⚠️</div>
-                <p>Erro ao carregar dados de Conceito.</p>
-            </div>`;
-        }
+        if (container) container.innerHTML = `<div style="text-align:center;color:var(--red);padding:20px;">⚠️ Erro ao carregar dados.</div>`;
     }
 }
 
@@ -633,14 +508,7 @@ async function carregarUltimasCorrecoes() {
                     'proficiente': '🔵 Proficiente',
                     'avancado': '🟢 Avançado'
                 };
-                const badge = badgeMap[conceito] || 'badge-gray';
-                const label = nomeConceito[conceito] || 'Indefinido';
-                return `<tr>
-                    <td><strong>${escapeHtml(item.aluno_nome || 'Aluno')}</strong></td>
-                    <td>${escapeHtml(item.prova_titulo || 'Prova')}</td>
-                    <td><strong>${porcentagem}%</strong></td>
-                    <td><span class="badge ${badge}">${label}</span></td>
-                </tr>`;
+                return `<tr><td><strong>${escapeHtml(item.aluno_nome || 'Aluno')}</strong></td><td>${escapeHtml(item.prova_titulo || 'Prova')}</td><td><strong>${porcentagem}%</strong></td><td><span class="badge ${badgeMap[conceito] || 'badge-gray'}">${nomeConceito[conceito] || 'Indefinido'}</span></td></tr>`;
             }).join('');
         }
     } catch (erro) {
@@ -665,11 +533,13 @@ async function carregarRelatorios() {
         setText('rel-media', media.toFixed(1));
 
         const faixas = { '0-2': 0, '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-        correcoes.forEach(c => { if (c.nota < 2) faixas['0-2']++;
+        correcoes.forEach(c => {
+            if (c.nota < 2) faixas['0-2']++;
             else if (c.nota < 4) faixas['2-4']++;
             else if (c.nota < 6) faixas['4-6']++;
             else if (c.nota < 8) faixas['6-8']++;
-            else faixas['8-10']++; });
+            else faixas['8-10']++;
+        });
         const maxVal = Math.max(...Object.values(faixas), 1);
         setText('d0-2', faixas['0-2']);
         setText('d2-4', faixas['2-4']);
@@ -679,79 +549,10 @@ async function carregarRelatorios() {
 
         const bars = document.querySelectorAll('#dist-notas .chart-bar');
         const vals = [faixas['0-2'], faixas['2-4'], faixas['4-6'], faixas['6-8'], faixas['8-10']];
-        vals.forEach((v, i) => { if (bars[i]) { bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; } });
-
-        let totalPtAcertos = 0,
-            totalPtErros = 0,
-            totalPtQuestoes = 0;
-        let totalMatAcertos = 0,
-            totalMatErros = 0,
-            totalMatQuestoes = 0;
-        let totalProdAcertos = 0,
-            totalProdErros = 0,
-            totalProdQuestoes = 0;
-        let totalCHAcertos = 0,
-            totalCHErros = 0,
-            totalCHQuestoes = 0;
-        let totalCNAcertos = 0,
-            totalCNErros = 0,
-            totalCNQuestoes = 0;
-
-        if (correcoes && correcoes.length > 0) {
-            correcoes.forEach(c => {
-                const disciplina = c.disciplina || '';
-                const acertos = c.acertos || 0;
-                const total = c.total || 20;
-                const erros = total - acertos;
-
-                const discLower = disciplina.toLowerCase();
-                if (discLower.includes('português') || discLower.includes('portugues')) {
-                    totalPtAcertos += acertos;
-                    totalPtErros += erros;
-                    totalPtQuestoes += total;
-                } else if (discLower.includes('matemática') || discLower.includes('matematica')) {
-                    totalMatAcertos += acertos;
-                    totalMatErros += erros;
-                    totalMatQuestoes += total;
-                } else if (discLower.includes('produção') || discLower.includes('producao') || discLower.includes('texto')) {
-                    totalProdAcertos += acertos;
-                    totalProdErros += erros;
-                    totalProdQuestoes += total;
-                } else if (discLower.includes('ciências humanas') || discLower.includes('ch')) {
-                    totalCHAcertos += acertos;
-                    totalCHErros += erros;
-                    totalCHQuestoes += total;
-                } else if (discLower.includes('ciências naturais') || discLower.includes('cn')) {
-                    totalCNAcertos += acertos;
-                    totalCNErros += erros;
-                    totalCNQuestoes += total;
-                }
-            });
-        }
-
-        const totalCorrecoes = correcoes.length || 1;
-        setText('rel-pt-acertos', totalPtAcertos);
-        setText('rel-pt-erros', totalPtErros);
-        setText('rel-pt-media', totalCorrecoes > 0 ? (totalPtAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-mat-acertos', totalMatAcertos);
-        setText('rel-mat-erros', totalMatErros);
-        setText('rel-mat-media', totalCorrecoes > 0 ? (totalMatAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-prod-acertos', totalProdAcertos);
-        setText('rel-prod-erros', totalProdErros);
-        setText('rel-prod-media', totalCorrecoes > 0 ? (totalProdAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-ch-acertos', totalCHAcertos);
-        setText('rel-ch-erros', totalCHErros);
-        setText('rel-ch-media', totalCorrecoes > 0 ? (totalCHAcertos / totalCorrecoes).toFixed(1) : '0.0');
-
-        setText('rel-cn-acertos', totalCNAcertos);
-        setText('rel-cn-erros', totalCNErros);
-        setText('rel-cn-media', totalCorrecoes > 0 ? (totalCNAcertos / totalCorrecoes).toFixed(1) : '0.0');
+        vals.forEach((v, i) => { if (bars[i]) bars[i].style.height = (maxVal > 0 ? Math.max(10, (v / maxVal) * 110) : 10) + 'px'; });
 
         await carregarRelatorioEscola();
-        atualizarDatasImpressao();
+        if (typeof atualizarDatasImpressao === 'function') atualizarDatasImpressao();
     } catch (erro) { console.error('Erro ao carregar relatórios:', erro); }
 }
 
@@ -815,7 +616,7 @@ async function carregarFiltrosRelTurma() {
             if (current) selectProva.value = current;
         }
     } catch (erro) {
-        console.error('Erro ao carregar filtros do relatório por turma:', erro);
+        console.error('Erro ao carregar filtros relatório:', erro);
     }
 }
 
@@ -839,16 +640,13 @@ async function carregarTurmasRelTurma(escolaId) {
                 });
                 if (selectSerie) filtrarTurmasPorSerie(selectSerie, selectTurma);
             }
-        } catch (erro) {
-            console.error('Erro ao carregar turmas:', erro);
-        }
+        } catch (erro) { console.error('Erro:', erro); }
         carregarRelatorioTurmaFiltrado();
         return;
     }
 
     try {
         const turmas = await carregarTurmasComCache(escolaId);
-
         if (turmas && !turmas.erro && turmas.length > 0) {
             turmas.forEach(t => {
                 const opt = document.createElement('option');
@@ -864,16 +662,8 @@ async function carregarTurmasRelTurma(escolaId) {
             opt.disabled = true;
             selectTurma.appendChild(opt);
         }
-
         if (selectSerie) filtrarTurmasPorSerie(selectSerie, selectTurma);
-    } catch (erro) {
-        console.error('Erro ao carregar turmas da escola:', erro);
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Erro ao carregar turmas';
-        opt.disabled = true;
-        selectTurma.appendChild(opt);
-    }
+    } catch (erro) { console.error('Erro:', erro); }
 
     carregarRelatorioTurmaFiltrado();
 }
@@ -898,9 +688,7 @@ async function carregarRelatorioTurmaFiltrado() {
 
         const selectProva = document.getElementById('rel-turma-prova');
         const optionProva = selectProva.options[selectProva.selectedIndex];
-        if (optionProva && optionProva.dataset.disciplina) {
-            disciplinaSelecionada = optionProva.dataset.disciplina;
-        }
+        if (optionProva && optionProva.dataset.disciplina) disciplinaSelecionada = optionProva.dataset.disciplina;
 
         const disciplinaMap = {
             'Português': { chave: 'portugues', cor: '#3b82f6', bg: 'rgba(59,130,246,0.05)', label: 'Português', icon: '📖' },
@@ -930,17 +718,15 @@ async function carregarRelatorioTurmaFiltrado() {
                     alunosDaTurma = alunosData;
                     totalAlunos = alunosData.length;
                 }
-            } catch (e) {
-                console.warn('Erro ao buscar alunos da turma:', e);
-            }
+            } catch (e) { console.warn('Erro ao buscar alunos:', e); }
         }
 
         let url = API_URL + '/api/historico/agrupado';
         const params = new URLSearchParams();
-        if (escolaId && escolaId !== '') params.append('escola', escolaId);
-        if (serie && serie !== '') params.append('serie', serie);
-        if (turmaId && turmaId !== '') params.append('turma', turmaId);
-        if (provaId && provaId !== '') params.append('prova', provaId);
+        if (escolaId) params.append('escola', escolaId);
+        if (serie) params.append('serie', serie);
+        if (turmaId) params.append('turma', turmaId);
+        if (provaId) params.append('prova', provaId);
         if (params.toString()) url += '?' + params.toString();
 
         const response = await fetch(url);
@@ -958,18 +744,7 @@ async function carregarRelatorioTurmaFiltrado() {
                     const erros = total - acertos;
                     const pct = total > 0 ? Math.round((acertos / total) * 100) : 0;
                     const conceito = calcularConceito(pct);
-
-                    alunosComCorrecao.push({
-                        ...aluno,
-                        disciplinaData: {
-                            acertos: acertos,
-                            erros: erros,
-                            total: total,
-                            porcentagem: pct,
-                            conceito: conceito,
-                            nota: discData.nota || 0
-                        }
-                    });
+                    alunosComCorrecao.push({ ...aluno, disciplinaData: { acertos, erros, total, porcentagem: pct, conceito, nota: discData.nota || 0 } });
                 }
             });
         }
@@ -979,41 +754,25 @@ async function carregarRelatorioTurmaFiltrado() {
             alunosDaTurma.forEach(aluno => {
                 if (!idsComCorrecao.has(aluno.id)) {
                     alunosSemCorrecao.push({
-                        aluno_id: aluno.id,
-                        aluno_nome: aluno.nome,
+                        aluno_id: aluno.id, aluno_nome: aluno.nome,
                         serie: aluno.turma_serie || serie,
-                        turma: aluno.turma_nome || '',
-                        escola: aluno.escola_nome || '',
-                        disciplinaData: {
-                            acertos: 0,
-                            erros: 0,
-                            total: 20,
-                            porcentagem: 0,
-                            conceito: calcularConceito(0),
-                            nota: 0
-                        }
+                        turma: aluno.turma_nome || '', escola: aluno.escola_nome || '',
+                        disciplinaData: { acertos: 0, erros: 0, total: 20, porcentagem: 0, conceito: calcularConceito(0), nota: 0 }
                     });
                 }
             });
         }
 
         const totalComCorrecao = alunosComCorrecao.length;
-        const totalSemCorrecao = alunosSemCorrecao.length;
-
         document.getElementById('rel-total-alunos-conceitos').textContent = totalComCorrecao + ' alunos';
         document.getElementById('rel-total-alunos-tabela').textContent = totalComCorrecao + ' alunos';
 
-        let somaPorcentagem = 0;
-        let totalQuestoes = 0;
-        let totalAcertos = 0;
-        let totalErros = 0;
-
+        let somaPorcentagem = 0, totalAcertos = 0, totalErros = 0;
         alunosComCorrecao.forEach(aluno => {
             const d = aluno.disciplinaData;
             somaPorcentagem += d.porcentagem;
             totalAcertos += d.acertos;
             totalErros += d.erros;
-            totalQuestoes += d.total;
         });
 
         const media = totalComCorrecao > 0 ? Math.round(somaPorcentagem / totalComCorrecao) : 0;
@@ -1026,18 +785,8 @@ async function carregarRelatorioTurmaFiltrado() {
 
         const conceitoGeralEl = document.getElementById('rel-conceito-geral');
         if (conceitoGeralEl) {
-            const labels = {
-                'inicial': '🔴 Inicial',
-                'basico': '🟠 Básico',
-                'proficiente': '🔵 Proficiente',
-                'avancado': '🟢 Avançado'
-            };
-            const badgeClasses = {
-                'inicial': 'badge-conceito-inicial',
-                'basico': 'badge-conceito-basico',
-                'proficiente': 'badge-conceito-proficiente',
-                'avancado': 'badge-conceito-avancado'
-            };
+            const labels = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' };
+            const badgeClasses = { 'inicial': 'badge-conceito-inicial', 'basico': 'badge-conceito-basico', 'proficiente': 'badge-conceito-proficiente', 'avancado': 'badge-conceito-avancado' };
             conceitoGeralEl.textContent = labels[conceitoGeral] || '—';
             conceitoGeralEl.className = `badge ${badgeClasses[conceitoGeral] || 'badge-gray'}`;
         }
@@ -1045,9 +794,7 @@ async function carregarRelatorioTurmaFiltrado() {
         const contagemConceitos = { inicial: 0, basico: 0, proficiente: 0, avancado: 0 };
         alunosComCorrecao.forEach(aluno => {
             const conceito = aluno.disciplinaData.conceito;
-            if (contagemConceitos[conceito] !== undefined) {
-                contagemConceitos[conceito]++;
-            }
+            if (contagemConceitos[conceito] !== undefined) contagemConceitos[conceito]++;
         });
 
         const totalConceitos = alunosComCorrecao.length || 1;
@@ -1055,23 +802,17 @@ async function carregarRelatorioTurmaFiltrado() {
             const count = contagemConceitos[conceito] || 0;
             let pct = (count / totalConceitos) * 100;
             pct = Math.max(pct, 2);
-
             document.getElementById(`rel-conceito-${conceito}-count`).textContent = count;
             const bar = document.getElementById(`rel-conceito-${conceito}-bar`);
             if (bar) bar.style.width = pct + '%';
         });
 
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ THEAD ADAPTADO POR TIPO DE PROVA
-        //    Produção: POS, Nº, NOME, SÉRIE, [NOTA, CONCEITO], ESCOLA, TURMA → 8 colunas
-        //    Demais:   POS, Nº, NOME, SÉRIE, [ACERTOS, ERROS, CONCEITO], ESCOLA, TURMA → 9 colunas
-        // ═══════════════════════════════════════════════════════════════
+        // THEAD adaptado por tipo
         const table = document.querySelector('#tb-rel-alunos')?.closest('table');
         const thead = table?.querySelector('thead');
         if (thead) {
             const isProducao = (tipoAvaliacao === 'producao');
             const colspanDisciplina = isProducao ? 2 : 3;
-
             const subheaders = isProducao
                 ? `<th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">NOTA</th>
                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">CONCEITO</th>`
@@ -1085,9 +826,7 @@ async function carregarRelatorioTurmaFiltrado() {
                     <th>Nº</th>
                     <th>NOME</th>
                     <th>SÉRIE</th>
-                    <th colspan="${colspanDisciplina}" style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:10px;color:${corDisciplina};">
-                        ${iconDisciplina} ${labelDisciplina.toUpperCase()}
-                    </th>
+                    <th colspan="${colspanDisciplina}" style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:10px;color:${corDisciplina};">${iconDisciplina} ${labelDisciplina.toUpperCase()}</th>
                     <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">ESCOLA</th>
                     <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">TURMA</th>
                 </tr>
@@ -1107,47 +846,21 @@ async function carregarRelatorioTurmaFiltrado() {
         if (!tbody) return;
 
         const todosAlunos = [...alunosComCorrecao, ...alunosSemCorrecao];
-
         if (todosAlunos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado com os filtros selecionados.</td></tr>`;
-            document.getElementById('rel-total-alunos-tabela').textContent = '0 alunos';
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado.</td></tr>`;
             return;
         }
 
         todosAlunos.sort((a, b) => (b.disciplinaData.porcentagem || 0) - (a.disciplinaData.porcentagem || 0));
 
         function badgeConceito(c) {
-            const classes = {
-                'inicial': 'badge-conceito-inicial-sm',
-                'basico': 'badge-conceito-basico-sm',
-                'proficiente': 'badge-conceito-proficiente-sm',
-                'avancado': 'badge-conceito-avancado-sm'
-            };
-            return classes[c] || 'badge-gray';
+            return { 'inicial': 'badge-conceito-inicial-sm', 'basico': 'badge-conceito-basico-sm', 'proficiente': 'badge-conceito-proficiente-sm', 'avancado': 'badge-conceito-avancado-sm' }[c] || 'badge-gray';
         }
 
-        const conceitoLabel = {
-            'inicial': 'inicial',
-            'basico': 'basico',
-            'proficiente': 'proficiente',
-            'avancado': 'avancado'
-        };
-
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ TBODY ADAPTADO POR TIPO DE PROVA
-        //    Produção: NOTA + CONCEITO (2 <td>) → 8 colunas totais
-        //    Demais:   ACERTOS + ERROS + CONCEITO (3 <td>) → 9 colunas totais
-        // ═══════════════════════════════════════════════════════════════
         tbody.innerHTML = todosAlunos.map((aluno, index) => {
             const d = aluno.disciplinaData;
-
-            let medalha = '';
-            if (index === 0) medalha = '🥇';
-            else if (index === 1) medalha = '🥈';
-            else if (index === 2) medalha = '🥉';
-            else medalha = (index + 1);
-
-            const conceitoBadge = `<span class="badge ${badgeConceito(d.conceito)}">${conceitoLabel[d.conceito] || d.conceito}</span>`;
+            const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+            const conceitoBadge = `<span class="badge ${badgeConceito(d.conceito)}">${d.conceito}</span>`;
 
             return `<tr>
                 <td style="font-size:14px;">${medalha}</td>
@@ -1155,10 +868,7 @@ async function carregarRelatorioTurmaFiltrado() {
                 <td style="text-align:left;font-weight:600;">${escapeHtml(aluno.aluno_nome || 'Aluno')}</td>
                 <td><span class="badge badge-purple" style="font-size:9px;">${escapeHtml(aluno.serie || '—')}</span></td>
                 ${tipoAvaliacao === 'producao' ?
-                    `<td style="text-align:center;background:${bgDisciplina};padding:4px;">
-                        <div style="font-size:9px;font-weight:700;color:var(--text3);">NOTA</div>
-                        <div style="font-size:16px;font-weight:900;color:var(--purple);">${d.total > 0 && d.nota !== undefined && d.nota !== null ? Number(d.nota).toFixed(1) : '—'}</div>
-                    </td>
+                    `<td style="text-align:center;background:${bgDisciplina};padding:4px;"><div style="font-size:9px;font-weight:700;color:var(--text3);">NOTA</div><div style="font-size:16px;font-weight:900;color:var(--purple);">${d.nota !== undefined && d.nota !== null ? Number(d.nota).toFixed(1) : '—'}</div></td>
                     <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>` :
                     `<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
                     <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
@@ -1169,9 +879,7 @@ async function carregarRelatorioTurmaFiltrado() {
             </tr>`;
         }).join('');
 
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ CONTROLE DOS CARDS — em Produção esconde Acertos por Questão
-        // ═══════════════════════════════════════════════════════════════
+        // Controle dos cards
         const cardAcertosPorQuestao = document.getElementById('rel-acertos-por-questao');
         if (tipoAvaliacao === 'producao') {
             if (cardAcertosPorQuestao) cardAcertosPorQuestao.style.display = 'none';
@@ -1180,11 +888,9 @@ async function carregarRelatorioTurmaFiltrado() {
             atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
         }
 
-        // ✅ Sempre preenche Média e Conceito
         document.getElementById('rel-disc-media').textContent = totalComCorrecao > 0 ? (totalAcertos / totalComCorrecao).toFixed(1) : '0.0';
         document.getElementById('rel-disc-conceito').textContent = conceitoGeral || '—';
 
-        // ✅ Acertos/Erros só aparecem em provas normais
         const spanDiscAcertos = document.getElementById('rel-disc-acertos');
         const spanDiscErros = document.getElementById('rel-disc-erros');
         const parentAcertos = spanDiscAcertos ? spanDiscAcertos.parentElement : null;
@@ -1199,10 +905,9 @@ async function carregarRelatorioTurmaFiltrado() {
             if (spanDiscAcertos) spanDiscAcertos.textContent = totalAcertos;
             if (spanDiscErros) spanDiscErros.textContent = totalErros;
         }
-
     } catch (erro) {
-        console.error('❌ Erro ao carregar relatório por turma:', erro);
-        showToast('❌ Erro ao carregar relatório: ' + erro.message, 'error');
+        console.error('❌ Erro ao carregar relatório:', erro);
+        showToast('❌ Erro: ' + erro.message, 'error');
     }
 }
 
@@ -1224,7 +929,7 @@ function limparFiltrosRelTurma() {
             });
             carregarRelatorioTurmaFiltrado();
         }
-    }).catch(e => console.error('Erro ao recarregar turmas:', e));
+    }).catch(e => console.error('Erro:', e));
 
     const selectProva = document.getElementById('rel-turma-prova');
     carregarProvasComCache(true).then(provas => {
@@ -1239,7 +944,7 @@ function limparFiltrosRelTurma() {
             });
             carregarRelatorioTurmaFiltrado();
         }
-    }).catch(e => console.error('Erro ao recarregar provas:', e));
+    }).catch(e => console.error('Erro:', e));
 }
 
 function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao) {
@@ -1254,7 +959,7 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
         if (disciplinaTitulo) disciplinaTitulo.textContent = disciplinaSelecionada;
 
         if (!dadosAgrupados || dadosAgrupados.erro || !Array.isArray(dadosAgrupados) || dadosAgrupados.length === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível para esta disciplina.</div>`;
+            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível.</div>`;
             totalQuestoesEl.textContent = '0 questões';
             totalAcertosEl.textContent = '0';
             totalErrosEl.textContent = '0';
@@ -1263,9 +968,7 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
         }
 
         const questoesMap = new Map();
-        let totalAcertos = 0;
-        let totalErros = 0;
-        let totalAlunos = 0;
+        let totalAcertos = 0, totalErros = 0, totalAlunos = 0;
         const bnccMap = new Map();
 
         dadosAgrupados.forEach(aluno => {
@@ -1279,113 +982,47 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
             if (Array.isArray(questoesStatus) && questoesStatus.length > 0) {
                 questoesStatus.forEach((q, idx) => {
                     const num = q.numero || q.questao || (idx + 1);
-                    if (!questoesMap.has(num)) {
-                        questoesMap.set(num, { acertos: 0, erros: 0 });
-                    }
+                    if (!questoesMap.has(num)) questoesMap.set(num, { acertos: 0, erros: 0 });
                     const data = questoesMap.get(num);
-
-                    if (!bnccMap.has(num)) {
-                        const bncc = q.bncc || q.codigo_bncc || (bnccList[idx] || 'N/A');
-                        bnccMap.set(num, bncc);
-                    }
+                    if (!bnccMap.has(num)) bnccMap.set(num, q.bncc || q.codigo_bncc || (bnccList[idx] || 'N/A'));
 
                     const resp = q.resposta || '';
                     const gab = q.gabarito || '';
                     const isRespondida = resp && resp !== '' && resp !== '—' && resp !== '-';
                     const isCorreta = isRespondida && resp.toUpperCase() === gab.toUpperCase();
 
-                    if (isCorreta || q.acertou === true || q.correta === true) {
-                        data.acertos++;
-                        totalAcertos++;
-                    } else if (isRespondida || q.respondida !== false) {
-                        data.erros++;
-                        totalErros++;
-                    } else {
-                        data.erros++;
-                        totalErros++;
-                    }
+                    if (isCorreta || q.acertou === true || q.correta === true) { data.acertos++; totalAcertos++; }
+                    else { data.erros++; totalErros++; }
                 });
-            } else {
-                const respostas = discData.respostas || [];
-                const gabarito = discData.gabarito || [];
-                const total = discData.total || 20;
-
-                for (let i = 0; i < Math.min(respostas.length, gabarito.length, total); i++) {
-                    const num = i + 1;
-                    if (!questoesMap.has(num)) {
-                        questoesMap.set(num, { acertos: 0, erros: 0 });
-                    }
-                    const data = questoesMap.get(num);
-
-                    if (!bnccMap.has(num)) {
-                        const bncc = (bnccList[i] || 'N/A');
-                        bnccMap.set(num, bncc);
-                    }
-
-                    const resp = String(respostas[i] || '').trim().toUpperCase();
-                    const gab = String(gabarito[i] || '').trim().toUpperCase();
-
-                    const isRespostaValida = resp && resp !== '' && resp !== '—' && resp !== '-';
-                    const isCorreta = isRespostaValida && resp === gab && gab !== '';
-
-                    if (isCorreta) {
-                        data.acertos++;
-                        totalAcertos++;
-                    } else {
-                        data.erros++;
-                        totalErros++;
-                    }
-                }
             }
         });
 
         const totalQuestoes = questoesMap.size || 20;
-
         totalQuestoesEl.textContent = totalQuestoes + ' questões';
         totalAcertosEl.textContent = totalAcertos;
         totalErrosEl.textContent = totalErros;
-
-        const media = totalAlunos > 0 && totalQuestoes > 0 ?
-            Math.round((totalAcertos / (totalAlunos * totalQuestoes)) * 100) : 0;
+        const media = totalAlunos > 0 && totalQuestoes > 0 ? Math.round((totalAcertos / (totalAlunos * totalQuestoes)) * 100) : 0;
         mediaEl.textContent = media + '%';
 
         container.innerHTML = '';
         const sortedKeys = Array.from(questoesMap.keys()).sort((a, b) => a - b);
 
-        if (sortedKeys.length === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);">Nenhum dado disponível.</div>`;
-            return;
-        }
-
         sortedKeys.forEach(num => {
             const data = questoesMap.get(num);
             const total = data.acertos + data.erros;
             const bnccCode = bnccMap.get(num) || 'N/A';
-
             const pctAcertos = total > 0 ? Math.round((data.acertos / total) * 100) : 0;
             const pctErros = total > 0 ? Math.round((data.erros / total) * 100) : 0;
 
             const div = document.createElement('div');
             div.className = 'acertos-por-questao-item';
-            div.style.cssText = `
-                background: var(--surface);
-                border-radius: 10px;
-                padding: 12px 10px;
-                border: 1px solid var(--border);
-                text-align: center;
-                transition: all 0.2s ease;
-            `;
-
             let corBarra = '#ef4444';
             if (pctAcertos >= 80) corBarra = '#10b981';
             else if (pctAcertos >= 60) corBarra = '#f59e0b';
-            else if (pctAcertos >= 40) corBarra = '#f59e0b';
             else if (pctAcertos >= 20) corBarra = '#ef4444';
 
             div.innerHTML = `
-                <div style="font-size: 14px; font-weight: 800; color: var(--text1); margin-bottom: 4px;">
-                    Q${num}
-                </div>
+                <div style="font-size: 14px; font-weight: 800; color: var(--text1); margin-bottom: 4px;">Q${num}</div>
                 <div style="display:flex; justify-content:center; align-items:center; gap:4px; font-size: 16px; font-weight: 700; margin: 4px 0;">
                     <span style="color: var(--green);">${data.acertos}</span>
                     <span style="color: var(--text3); font-weight: 300;">/</span>
@@ -1393,9 +1030,7 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
                 </div>
                 <div style="font-size: 9px; color: var(--text3); font-weight: 600; margin-bottom: 4px;">Acertos / Erros</div>
                 <div style="font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 4px;">Total: ${total}</div>
-                <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; background: rgba(139,92,246,0.12); padding: 3px 12px; border-radius: 8px; display: inline-block; margin-bottom: 4px; font-family: 'Courier New', monospace; letter-spacing: 0.3px;">
-                    ${escapeHtml(bnccCode)}
-                </div>
+                <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; background: rgba(139,92,246,0.12); padding: 3px 12px; border-radius: 8px; display: inline-block; margin-bottom: 4px; font-family: 'Courier New', monospace; letter-spacing: 0.3px;">${escapeHtml(bnccCode)}</div>
                 <div class="progress" style="height: 8px; background: var(--bg2); border-radius: 6px; overflow: hidden; margin: 6px 0;">
                     <div class="progress-fill" style="width: ${Math.max(pctAcertos, 2)}%; background: ${corBarra}; border-radius: 6px; transition: width 0.8s ease;"></div>
                 </div>
@@ -1407,13 +1042,8 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
             `;
             container.appendChild(div);
         });
-
     } catch (erro) {
-        console.error('❌ Erro ao atualizar gráfico de acertos:', erro);
-        const container = document.getElementById('rel-acertos-grid');
-        if (container) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--red);">Erro ao carregar dados: ${escapeHtml(erro.message)}</div>`;
-        }
+        console.error('❌ Erro ao atualizar gráfico:', erro);
     }
 }
 
@@ -1458,25 +1088,19 @@ async function carregarEscolasDesempenho() {
 
         document.getElementById('filtro-turma-desempenho').innerHTML = '<option value="">Selecione a turma...</option>';
         document.getElementById('filtro-aluno-desempenho').innerHTML = '<option value="">Selecione o aluno...</option>';
-
     } catch (erro) {
         console.error('Erro ao carregar escolas para desempenho:', erro);
-        showToast('❌ Erro ao carregar dados: ' + erro.message, 'error');
     }
 }
 
 async function carregarTurmasDesempenho(escolaId) {
     const selectTurma = document.getElementById('filtro-turma-desempenho');
     const selectAluno = document.getElementById('filtro-aluno-desempenho');
-
     selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
     selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-
     if (!escolaId) return;
-
     try {
         const turmas = await carregarTurmasComCache(escolaId);
-
         if (turmas && !turmas.erro) {
             turmas.forEach(t => {
                 const opt = document.createElement('option');
@@ -1486,21 +1110,15 @@ async function carregarTurmasDesempenho(escolaId) {
                 selectTurma.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar turmas:', e);
-        showToast('❌ Erro ao carregar turmas', 'error');
-    }
+    } catch (e) { console.error('Erro ao carregar turmas:', e); }
 }
 
 async function carregarAlunosDesempenho(turmaId) {
     const selectAluno = document.getElementById('filtro-aluno-desempenho');
     selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-
     if (!turmaId) return;
-
     try {
         const alunos = await carregarAlunosComCache({ turma_id: turmaId });
-
         if (alunos && !alunos.erro) {
             alunos.forEach(a => {
                 const opt = document.createElement('option');
@@ -1509,10 +1127,7 @@ async function carregarAlunosDesempenho(turmaId) {
                 selectAluno.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar alunos:', e);
-        showToast('❌ Erro ao carregar alunos', 'error');
-    }
+    } catch (e) { console.error('Erro ao carregar alunos:', e); }
 }
 
 async function gerarDesempenho() {
@@ -1531,18 +1146,15 @@ async function gerarDesempenho() {
     try {
         const escolaResp = await fetch(`${API_URL}/api/escolas/${escolaId}`);
         const escola = await escolaResp.json();
-
         const turmaResp = await fetch(`${API_URL}/api/turmas/${turmaId}`);
         const turma = await turmaResp.json();
-
         const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
         const aluno = await alunoResp.json();
-
         const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
         const prova = await provaResp.json();
 
         if (!escola || escola.erro || !turma || turma.erro || !aluno || aluno.erro || !prova || prova.erro) {
-            showToast('❌ Erro ao carregar dados. Verifique os filtros selecionados.', 'error');
+            showToast('❌ Erro ao carregar dados.', 'error');
             return;
         }
 
@@ -1557,8 +1169,8 @@ async function gerarDesempenho() {
         let respostasAluno = [];
         let disciplina = prova.disciplina || 'Português';
         let notaRealProducao = 0;
-
         let questoesStatusHistorico = [];
+
         if (historico && historico.length > 0 && !historico.erro) {
             const correcao = historico[0];
             respostasAluno = correcao.respostas || [];
@@ -1566,18 +1178,13 @@ async function gerarDesempenho() {
             notaRealProducao = parseFloat(correcao.nota) || 0;
             questoesStatusHistorico = correcao.questoes_status || [];
             if (typeof questoesStatusHistorico === 'string') {
-                try {
-                    questoesStatusHistorico = JSON.parse(questoesStatusHistorico);
-                } catch (e) {
-                    questoesStatusHistorico = [];
-                }
+                try { questoesStatusHistorico = JSON.parse(questoesStatusHistorico); } catch (e) { questoesStatusHistorico = []; }
             }
         }
 
         while (respostasAluno.length < totalQuestoes) respostasAluno.push('');
 
-        let acertos = 0,
-            erros = 0;
+        let acertos = 0, erros = 0;
         const resultadoQuestoes = [];
 
         for (let i = 0; i < totalQuestoes; i++) {
@@ -1585,141 +1192,66 @@ async function gerarDesempenho() {
             const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
             const codigoBncc = (i < bncc.length) ? (bncc[i] || '') : '';
             const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
-
-            if (resp) { if (isCorreto) acertos++;
-                else erros++; }
-
-            resultadoQuestoes.push({
-                numero: i + 1,
-                resposta: resp || '—',
-                gabarito: gab || '—',
-                bncc: codigoBncc,
-                acertou: isCorreto,
-                respondida: !!resp
-            });
+            if (resp) { if (isCorreto) acertos++; else erros++; }
+            resultadoQuestoes.push({ numero: i + 1, resposta: resp || '—', gabarito: gab || '—', bncc: codigoBncc, acertou: isCorreto, respondida: !!resp });
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ DEFINE isProducao PRIMEIRO (era depois, estava causando erro)
-        // ═══════════════════════════════════════════════════════════════
         const isProducao = (disciplina === 'Produção de Texto');
 
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ CÁLCULO DA PORCENTAGEM
-        //   - Produção de Texto: usa a NOTA (0-10 → 0-100%)
-        //   - Demais provas: usa acertos/total
-        // ═══════════════════════════════════════════════════════════════
         let pct;
-        if (isProducao) {
-            // nota 10.0 → 100% | nota 6.0 → 60% | nota 2.5 → 25%
-            pct = Math.round((notaRealProducao / 10) * 100);
-        } else {
-            pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
-        }
+        if (isProducao) pct = Math.round((notaRealProducao / 10) * 100);
+        else pct = totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0;
 
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ CÁLCULO DO CONCEITO (mesma regra do sistema)
-        // ═══════════════════════════════════════════════════════════════
         let conceito = 'Inicial';
         let conceitoCor = 'badge-red';
-        if (pct > 80) { conceito = 'Avançado';
-            conceitoCor = 'badge-green'; } else if (pct > 60) { conceito = 'Proficiente';
-            conceitoCor = 'badge-blue'; } else if (pct > 40) { conceito = 'Básico';
-            conceitoCor = 'badge-orange'; }
+        if (pct > 80) { conceito = 'Avançado'; conceitoCor = 'badge-green'; }
+        else if (pct > 60) { conceito = 'Proficiente'; conceitoCor = 'badge-blue'; }
+        else if (pct > 40) { conceito = 'Básico'; conceitoCor = 'badge-orange'; }
 
         desempenhoData.alunoSelecionado = {
-            escola,
-            turma,
-            aluno,
-            prova,
-            respostas: respostasAluno,
-            gabarito: gabarito,
-            bncc: bncc,
-            resultadoQuestoes: resultadoQuestoes,
-            acertos: acertos,
-            erros: erros,
-            porcentagem: pct,
-            conceito: conceito,
-            disciplina: disciplina,
-            totalQuestoes: totalQuestoes,
-            notaProducao: notaRealProducao,
-            questoesStatusHistorico: questoesStatusHistorico,
-            textosQuestoes: textosQuestoes
+            escola, turma, aluno, prova,
+            respostas: respostasAluno, gabarito, bncc, resultadoQuestoes,
+            acertos, erros, porcentagem: pct, conceito, disciplina,
+            totalQuestoes, notaProducao: notaRealProducao,
+            questoesStatusHistorico, textosQuestoes
         };
 
         document.getElementById('resultado-desempenho').style.display = 'block';
 
-        // ═══════════════════════════════════════════════════════════════
-        // ✅ CONTROLE DOS CARDS DO RESUMO
-        // Em Produção de Texto:
-        //   - Esconde: Porcentagem de Acertos, Acertos, Erros
-        //   - MANTÉM: Conceito (ao lado do NOTA)
-        //   - Adiciona: NOTA
-        // Nas demais provas: mostra todos os cards originais.
-        // ═══════════════════════════════════════════════════════════════
         const resumoContainer = document.querySelector('.desempenho-resumo');
         if (resumoContainer) {
             const cardsResumo = resumoContainer.querySelectorAll('.item');
             if (isProducao) {
-                // ✅ Esconde apenas os 3 primeiros cards (Porcentagem, Acertos, Erros)
-                //    Mantém o 4º (Conceito) visível
-                cardsResumo.forEach((card, idx) => {
-                    card.style.display = (idx <= 2) ? 'none' : '';
-                });
-
-                // Remove qualquer card "NOTA" antigo e recria limpo
+                cardsResumo.forEach((card, idx) => { card.style.display = (idx <= 2) ? 'none' : ''; });
                 let notaResumoCard = document.getElementById('resumo-nota-card');
                 if (notaResumoCard) notaResumoCard.remove();
-
                 notaResumoCard = document.createElement('div');
                 notaResumoCard.id = 'resumo-nota-card';
                 notaResumoCard.className = 'item';
-                notaResumoCard.innerHTML = `
-                    <div class="valor" id="resumo-nota-producao" style="color:#8b5cf6;">0.0</div>
-                    <div class="label">NOTA</div>
-                `;
+                notaResumoCard.innerHTML = `<div class="valor" id="resumo-nota-producao" style="color:#8b5cf6;">0.0</div><div class="label">NOTA</div>`;
                 resumoContainer.appendChild(notaResumoCard);
-
                 const notaResumoEl = document.getElementById('resumo-nota-producao');
                 if (notaResumoEl) notaResumoEl.textContent = notaRealProducao.toFixed(1);
-
                 resumoContainer.classList.add('duplo');
-
-                // ✅ Esconde a barra de stats internos (Acertos/Erros/Aproveitamento/Conceito)
                 const statsInternos = document.getElementById('disciplina-unica-stats');
                 if (statsInternos) statsInternos.style.display = 'none';
-
-                // ✅ Esconde SOMENTE a legenda de acertos (✅ Acertou / ❌ Errou / — Não respondeu)
                 const legendaAcertos = document.getElementById('legenda-desempenho');
                 if (legendaAcertos) legendaAcertos.style.display = 'none';
-
-                // ✅ Garante que as badges de conceito continuam visíveis
                 const legendaConceitos = document.getElementById('legenda-conceitos');
                 if (legendaConceitos) legendaConceitos.style.display = 'flex';
-
             } else {
-                // ✅ Provas normais: mostra tudo
                 cardsResumo.forEach(card => { card.style.display = ''; });
-
                 const notaResumoCard = document.getElementById('resumo-nota-card');
                 if (notaResumoCard) notaResumoCard.remove();
-
                 resumoContainer.classList.remove('duplo');
-
                 const statsInternos = document.getElementById('disciplina-unica-stats');
                 if (statsInternos) statsInternos.style.display = 'flex';
-
                 const legendaAcertos = document.getElementById('legenda-desempenho');
                 if (legendaAcertos) legendaAcertos.style.display = 'flex';
-
-                const legendaConceitos = document.getElementById('legenda-conceitos');
-                if (legendaConceitos) legendaConceitos.style.display = 'flex';
             }
         }
 
-        // ✅ Sempre preenche o Conceito; só Porcentagem/Acertos/Erros ficam ocultos em Produção
         setText('resumo-conceito', conceito);
-
         if (!isProducao) {
             setText('resumo-nota', pct + '%');
             setText('resumo-acertos', acertos);
@@ -1734,7 +1266,6 @@ async function gerarDesempenho() {
 
         const card = document.getElementById('desempenho-disciplina-unica');
         card.style.display = 'block';
-
         setText('disciplina-unica-titulo', `📖 ${disciplina}`);
 
         const grid = document.getElementById('disciplina-unica-questoes');
@@ -1745,62 +1276,30 @@ async function gerarDesempenho() {
             grid.style.flexDirection = 'column';
             grid.style.gap = '14px';
             grid.style.padding = '8px 0';
-
             resultadoQuestoes.forEach((q, i) => {
                 const statusSalvo = questoesStatusHistorico[i] || {};
                 const situacao = statusSalvo.situacao || '';
                 const observacaoProfessor = statusSalvo.resposta || statusSalvo.observacao || '';
                 const div = document.createElement('div');
-                div.style.background = 'var(--bg2)';
-                div.style.border = '1px solid var(--border)';
-                div.style.borderRadius = '8px';
-                div.style.padding = '12px 14px';
-                div.style.display = 'flex';
-                div.style.flexDirection = 'column';
-                div.style.gap = '8px';
-
+                div.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;';
                 const tq = textosQuestoes[i] || {};
                 const cabecalho = (tq && tq.cabecalho) ? tq.cabecalho : '';
                 const tituloQ = (tq && tq.titulo) ? tq.titulo : `Q${q.numero}`;
                 const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
-
                 let gabFormatadoHTML = '';
                 const gab = q.gabarito || '';
                 if (gab && gab.trim() !== '' && gab !== '—') {
                     const blocos = gab.split(/\n(?=[A-Z]\))/);
                     blocos.forEach(bloco => {
-                        const match = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
-                        if (match) {
-                            const letra = match[1];
-                            const texto = match[2].trim();
-                            gabFormatadoHTML += `<div style="display:flex; gap:6px; align-items:flex-start; margin-bottom:4px;">
-                                <span style="font-weight:800; color:#8b5cf6; min-width:14px;">${escapeHtml(letra)}</span>
-                                <span style="font-size:12px; color:var(--text2);">${escapeHtml(texto)}</span>
-                            </div>`;
-                        } else if (bloco.trim()) {
-                            gabFormatadoHTML += `<div style="font-size:12px; color:var(--text2);">${escapeHtml(bloco.trim())}</div>`;
-                        }
+                        const m = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
+                        if (m) gabFormatadoHTML += `<div style="display:flex;gap:6px;margin-bottom:4px;"><span style="font-weight:800;color:#8b5cf6;min-width:14px;">${escapeHtml(m[1])}</span><span style="font-size:12px;color:var(--text2);">${escapeHtml(m[2].trim())}</span></div>`;
                     });
-                } else {
-                    gabFormatadoHTML = '<div style="font-size:12px; color:var(--text3); font-style:italic;">Sem gabarito</div>';
                 }
-
-                const observacao = observacaoProfessor;
-
                 div.innerHTML = `
-                    <div style="font-size:13px; font-weight:800; color:#a78bfa;">${escapeHtml(headerTexto)}</div>
-                    <div>
-                        <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:4px;">📋 Situação de Correção:</div>
-                        <div>${gabFormatadoHTML}</div>
-                    </div>
-                    <div>
-                        <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:4px;">✍️ Observação do Professor:</div>
-                        <textarea readonly style="width:100%; min-height:40px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px; font-size:11px; color:var(--text2); resize:none;" placeholder="Escreva sua avaliação/observação sobre a resposta do aluno...">${escapeHtml(observacao)}</textarea>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text3);">📊 Situação de Correção Alternativa:</span>
-                        <span style="font-size:13px; font-weight:800; color:${situacao ? '#8b5cf6' : 'var(--text3)'}; background:${situacao ? 'rgba(139,92,246,0.12)' : 'var(--surface2)'}; padding:2px 12px; border-radius:8px; border:1px solid ${situacao ? 'rgba(139,92,246,0.3)' : 'var(--border)'};">${escapeHtml(situacao || '—')}</span>
-                    </div>
+                    <div style="font-size:13px;font-weight:800;color:#a78bfa;">${escapeHtml(headerTexto)}</div>
+                    <div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;">📋 Situação de Correção:</div><div>${gabFormatadoHTML || '<div style="font-size:12px;color:var(--text3);font-style:italic;">Sem gabarito</div>'}</div></div>
+                    <div><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px;">✍️ Observação do Professor:</div><textarea readonly style="width:100%;min-height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:11px;color:var(--text2);resize:none;">${escapeHtml(observacaoProfessor)}</textarea></div>
+                    <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;font-weight:700;color:var(--text3);">📊 Situação Alternativa:</span><span style="font-size:13px;font-weight:800;color:${situacao ? '#8b5cf6' : 'var(--text3)'};background:${situacao ? 'rgba(139,92,246,0.12)' : 'var(--surface2)'};padding:2px 12px;border-radius:8px;border:1px solid ${situacao ? 'rgba(139,92,246,0.3)' : 'var(--border)'};">${escapeHtml(situacao || '—')}</span></div>
                 `;
                 grid.appendChild(div);
             });
@@ -1809,13 +1308,12 @@ async function gerarDesempenho() {
             grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
             grid.style.gap = '6px';
             grid.style.padding = '8px 4px';
-
             resultadoQuestoes.forEach(q => {
                 const div = document.createElement('div');
                 div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
                 let bnccHtml = '';
                 if (q.bncc && q.bncc.trim() !== '') {
-                    bnccHtml = `<div style="font-size:6px; color:#a78bfa; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px; margin-top:2px;">BNCC: ${escapeHtml(q.bncc)}</div>`;
+                    bnccHtml = `<div style="font-size:6px;color:#a78bfa;background:rgba(139,92,246,0.1);padding:0 4px;border-radius:4px;margin-top:2px;">BNCC: ${escapeHtml(q.bncc)}</div>`;
                 }
                 div.innerHTML = `
                     <div class="q-num">Q${q.numero}</div>
@@ -1835,7 +1333,6 @@ async function gerarDesempenho() {
         const statusBadge = document.getElementById('disciplina-unica-status');
         statusBadge.textContent = conceito;
         statusBadge.className = `badge ${conceitoCor}`;
-
         setText('disciplina-unica-conceito', conceito);
 
         const gabCard = document.getElementById('gabarito-oficial-card');
@@ -1847,46 +1344,32 @@ async function gerarDesempenho() {
             gabGrid.innerHTML = '';
         } else {
             gabCard.style.display = 'block';
-
-            if (gabCardTitle) {
-                gabCardTitle.textContent = '📋 Gabarito Oficial da Prova';
-            }
-
+            if (gabCardTitle) gabCardTitle.textContent = '📋 Gabarito Oficial da Prova';
             gabGrid.innerHTML = '';
             gabGrid.style.display = 'grid';
             gabGrid.style.gridTemplateColumns = 'repeat(10, 1fr)';
             gabGrid.style.gap = '6px';
             gabGrid.style.padding = '8px 4px';
-
             gabarito.forEach((gab, idx) => {
                 const codigoBncc = (idx < bncc.length) ? bncc[idx] : '';
                 const div = document.createElement('div');
                 div.className = 'questao-item';
-                div.innerHTML = `
-                    <div class="q-num">Q${idx+1}</div>
-                    <div class="q-resp" style="color: var(--green);">${escapeHtml(gab || '—')}</div>
-                    <div class="q-gab">Oficial</div>
-                    ${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${escapeHtml(codigoBncc)}</div>` : ''}
-                `;
+                div.innerHTML = `<div class="q-num">Q${idx+1}</div><div class="q-resp" style="color: var(--green);">${escapeHtml(gab || '—')}</div><div class="q-gab">Oficial</div>${codigoBncc ? `<div style="font-size:6px; color: var(--purple); margin-top:2px; background:rgba(139,92,246,0.1); padding:0 4px; border-radius:4px;">BNCC: ${escapeHtml(codigoBncc)}</div>` : ''}`;
                 gabGrid.appendChild(div);
             });
         }
 
         const notaCard = document.getElementById('desempenho-nota-producao-card');
-        if (notaCard) {
-            notaCard.style.display = 'none';
-        }
+        if (notaCard) notaCard.style.display = 'none';
 
-        // ✅ Toast mais informativo (mostra a nota em Produção)
         if (isProducao) {
-            showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: Nota ${notaRealProducao.toFixed(1)} (${conceito})`, 'success');
+            showToast(`✅ Desempenho: ${aluno.nome} - ${disciplina}: Nota ${notaRealProducao.toFixed(1)} (${conceito})`, 'success');
         } else {
-            showToast(`✅ Desempenho gerado para ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
+            showToast(`✅ Desempenho: ${aluno.nome} - ${disciplina}: ${acertos}/${totalQuestoes} acertos (${pct}%)`, 'success');
         }
-
     } catch (erro) {
         console.error('❌ Erro ao gerar desempenho:', erro);
-        showToast('❌ Erro ao gerar desempenho: ' + erro.message, 'error');
+        showToast('❌ Erro: ' + erro.message, 'error');
     }
 }
 
@@ -1902,24 +1385,16 @@ function limparFiltrosDesempenho() {
     const resumoContainer = document.querySelector('.desempenho-resumo');
     if (resumoContainer) {
         resumoContainer.classList.remove('duplo');
-        resumoContainer.querySelectorAll('.item').forEach(card => {
-            card.style.display = '';
-        });
+        resumoContainer.querySelectorAll('.item').forEach(card => { card.style.display = ''; });
         const notaResumoCard = document.getElementById('resumo-nota-card');
         if (notaResumoCard) notaResumoCard.remove();
     }
-
-    // ✅ Restaura visibilidade dos elementos escondidos no modo Produção
     const statsInternosLimpar = document.getElementById('disciplina-unica-stats');
-    if (statsInternosLimpar) statsInternosLimpar.style.display = 'flex';
-
+    if (statsInternosLimpos) statsInternosLimpos.style.display = 'flex';
     const legendaAcertosLimpar = document.getElementById('legenda-desempenho');
     if (legendaAcertosLimpar) legendaAcertosLimpar.style.display = 'flex';
-
-    // ✅ NOVO: restaura também as badges de conceito (🔴🟠🔵🟢)
     const legendaConceitosLimpar = document.getElementById('legenda-conceitos');
     if (legendaConceitosLimpar) legendaConceitosLimpar.style.display = 'flex';
-
     const notaCardLimpar = document.getElementById('desempenho-nota-producao-card');
     if (notaCardLimpar) notaCardLimpar.style.display = 'none';
 
@@ -1930,10 +1405,8 @@ function limparFiltrosDesempenho() {
 // ═══ CARGA INICIAL ═══
 async function carregarDados() {
     console.log('🔄 Carregando dados do sistema...');
-
     try {
         console.log('📌 Carregando dados essenciais...');
-
         await Promise.all([
             carregarEscolas(),
             carregarTurmas(),
@@ -1941,28 +1414,17 @@ async function carregarDados() {
             carregarProvas(),
             carregarDashboard()
         ]);
-
         console.log('✅ Dados essenciais carregados!');
-
-        atualizarDatasImpressao();
-
-        console.log('📌 Carregando dados secundários em segundo plano...');
-
-        setTimeout(() => {
-            carregarDadosSecundarios();
-        }, 300);
-
+        if (typeof atualizarDatasImpressao === 'function') atualizarDatasImpressao();
+        setTimeout(() => carregarDadosSecundarios(), 300);
         console.log('✅ Interface principal carregada!');
-
     } catch (erro) {
-        console.error('❌ Erro ao carregar dados essenciais:', erro);
-        showToast('⚠️ Erro ao carregar dados essenciais. Recarregue a página.', 'error');
+        console.error('❌ Erro:', erro);
     }
 }
 
 async function carregarDadosSecundarios() {
-    console.log('🔄 Iniciando carga de dados secundários...');
-
+    console.log('🔄 Iniciando carga secundária...');
     try {
         await Promise.all([
             carregarResultadosComFiltros(),
@@ -1970,13 +1432,13 @@ async function carregarDadosSecundarios() {
             carregarUltimasCorrecoes(),
             carregarConceitoReal()
         ]);
-        console.log('✅ Dados de resultados carregados!');
+        console.log('✅ Resultados carregados!');
 
         await Promise.all([
             carregarUsuarios(),
             carregarCombos()
         ]);
-        console.log('✅ Dados de usuários carregados!');
+        console.log('✅ Usuários carregados!');
 
         await Promise.all([
             carregarRelatorios(),
@@ -1986,19 +1448,17 @@ async function carregarDadosSecundarios() {
             carregarEscolasTexto(),
             carregarEscolasParaCorrecaoManual()
         ]);
-        console.log('✅ Dados de formulários carregados!');
+        console.log('✅ Formulários carregados!');
 
         await Promise.all([
             carregarFiltrosRelTurma(),
             carregarFiltroEscolaTurmas(),
             carregarEscolasDesempenho()
         ]);
-        console.log('✅ Dados de filtros carregados!');
-
+        console.log('✅ Filtros carregados!');
         console.log('✅ TODOS OS DADOS CARREGADOS COM SUCESSO!');
-
     } catch (erro) {
-        console.warn('⚠️ Erro ao carregar dados secundários:', erro);
+        console.warn('⚠️ Erro secundário:', erro);
     }
 }
 
@@ -2011,26 +1471,7 @@ function exportarResultadosFiltrados() {
     tbody.querySelectorAll('tr').forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 20) {
-            csv += cells[0].textContent.trim() + ',' +
-                cells[1].textContent.trim() + ',' +
-                cells[2].textContent.trim() + ',' +
-                cells[3].textContent.trim() + ',' +
-                cells[4].textContent.trim() + ',' +
-                cells[5].textContent.trim() + ',' +
-                cells[6].textContent.trim() + ',' +
-                cells[7].textContent.trim() + ',' +
-                cells[8].textContent.trim() + ',' +
-                cells[9].textContent.trim() + ',' +
-                cells[10].textContent.trim() + ',' +
-                cells[11].textContent.trim() + ',' +
-                cells[12].textContent.trim() + ',' +
-                cells[13].textContent.trim() + ',' +
-                cells[14].textContent.trim() + ',' +
-                cells[15].textContent.trim() + ',' +
-                cells[16].textContent.trim() + ',' +
-                cells[17].textContent.trim() + ',' +
-                cells[18].textContent.trim() + ',' +
-                cells[19].textContent.trim() + '\n';
+            csv += Array.from(cells).slice(0, 20).map(c => c.textContent.trim()).join(',') + '\n';
         }
     });
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -2042,3 +1483,48 @@ function exportarResultadosFiltrados() {
     URL.revokeObjectURL(url);
     showToast('✅ Resultados exportados!', 'success');
 }
+
+// ═══ USUÁRIOS ═══
+async function carregarUsuarios() {
+    try {
+        const response = await fetch(API_URL + '/api/usuarios');
+        const usuarios = await response.json();
+        const tbody = document.getElementById('tb-usuarios');
+        if (!tbody) return;
+        if (!usuarios || usuarios.length === 0 || usuarios.erro) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário cadastrado</td></tr>';
+            return;
+        }
+        tbody.innerHTML = usuarios.map(u => {
+            const perfilBadge = u.perfil === 'admin' ? 'badge-orange' : 'badge-blue';
+            const statusBadge = u.ativo ? 'badge-green' : 'badge-red';
+            const statusText = u.ativo ? 'Ativo' : 'Inativo';
+            const isAdmin = u.username === 'admin';
+            return '<tr data-id="' + u.id + '" data-username="' + escapeAttr(u.username) + '">' +
+                '<td><strong>' + escapeHtml(u.username) + '</strong><br><small style="color:var(--text3);font-size:10px;">' + escapeHtml(u.nome || '') + '</small></td>' +
+                '<td><span class="badge ' + perfilBadge + '">' + (u.perfil === 'admin' ? 'Admin' : 'Usuário') + '</span></td>' +
+                '<td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>' +
+                '<td><div class="btn-group">' + (isAdmin ? '<span style="font-size:10px;color:var(--text3);">Sistema</span>' : '<button class="btn btn-outline btn-sm" onclick="editarUsuario(' + u.id + ')">✏️</button><button class="btn-del" onclick="excluirUsuario(' + u.id + ', \'' + escapeAttr(u.username) + '\')">🗑️</button>') + '</div></td></tr>';
+        }).join('');
+    } catch (erro) { console.error('Erro ao carregar usuários:', erro); }
+}
+
+// ═══ USER DATA ═══
+function carregarUserData() {
+    console.log('🔄 Carregando dados do usuário...');
+    try {
+        const tbody = document.getElementById('u-tb-turmas');
+        if (tbody) {
+            carregarTurmasComCache().then(turmas => {
+                if (turmas && turmas.length > 0) {
+                    tbody.innerHTML = turmas.map(t => {
+                        const totalAlunos = t.total_alunos || 0;
+                        return '<tr><td><strong>' + escapeHtml(t.nome) + '</strong></td><td><span class="badge badge-purple">' + escapeHtml(t.serie || '—') + '</span></td><td>' + escapeHtml(t.professor || '—') + '</td><td><span class="badge badge-blue">' + totalAlunos + '</span></td><td><button class="btn btn-green btn-sm" onclick="go(\'lista-turma\')">📋</button></td></tr>';
+                    }).join('');
+                }
+            }).catch(e => console.error(e));
+        }
+    } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
+}
+
+console.log('✅ js/resultados.js carregado');
