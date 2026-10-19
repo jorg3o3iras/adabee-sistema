@@ -207,6 +207,15 @@
             >
               <span class="sb-ico">📋</span> Gerar Cartao Resposta
             </div>
+            <!-- ✅ NOVO: Transferir Alunos -->
+            <div
+              class="sb-item"
+              onclick="go('transferir-alunos')"
+              data-p="transferir-alunos"
+            >
+              <span class="sb-ico">🔄</span> Transferir Alunos
+              <span class="sb-badge-new">NOVO</span>
+            </div>
 
             <div class="sb-section">Avaliações</div>
             <div
@@ -2044,8 +2053,7 @@
                   ><br /><br /><span id="txt-fb">Aguardando avaliação...</span>
                 </div>
                 <div class="btn-group no-print" style="margin-top: 14px">
-                  <button
-                    class="btn btn-green btn-sm"
+                  <button                    class="btn btn-green btn-sm"
                     onclick="salvarAvaliacaoTexto()"
                   >
                     💾 Salvar</button
@@ -4131,6 +4139,185 @@
             </div>
           </div>
         </div>
+
+        <!-- ========== TRANSFERIR ALUNOS ========== -->
+        <div class="page" id="page-transferir-alunos">
+          <div class="page-header">
+            <div>
+              <div class="page-title">🔄 Transferir Alunos</div>
+              <p class="page-sub">
+                Transfira 1 aluno ou vários entre escolas/turmas
+              </p>
+            </div>
+          </div>
+
+          <div class="g2 no-print">
+            <!-- ORIGEM -->
+            <div class="card" style="border-left: 4px solid var(--red)">
+              <div class="card-header">
+                <div class="card-title" style="color: var(--red)">
+                  📤 ORIGEM
+                </div>
+              </div>
+              <div class="form-row c1">
+                <div class="form-group">
+                  <label class="form-label"
+                    >Escola <span class="req">*</span></label
+                  >
+                  <select
+                    class="form-control"
+                    id="transf-escola-origem"
+                    onchange="carregarTurmasTransfOrigem(this.value)"
+                  >
+                    <option value="">Selecione a escola...</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Série</label>
+                  <select class="form-control" id="transf-serie-origem">
+                    <option value="">Todas</option>
+                    <option value="1º Ano">1º Ano</option>
+                    <option value="2º Ano">2º Ano</option>
+                    <option value="3º Ano">3º Ano</option>
+                    <option value="4º Ano">4º Ano</option>
+                    <option value="5º Ano">5º Ano</option>
+                    <option value="6º Ano">6º Ano</option>
+                    <option value="7º Ano">7º Ano</option>
+                    <option value="8º Ano">8º Ano</option>
+                    <option value="9º Ano">9º Ano</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label"
+                    >Turma <span class="req">*</span></label
+                  >
+                  <select
+                    class="form-control"
+                    id="transf-turma-origem"
+                    onchange="carregarAlunosTransf(this.value)"
+                  >
+                    <option value="">Selecione a turma...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- DESTINO -->
+            <div class="card" style="border-left: 4px solid var(--green)">
+              <div class="card-header">
+                <div class="card-title" style="color: var(--green)">
+                  📥 DESTINO
+                </div>
+              </div>
+              <div class="form-row c1">
+                <div class="form-group">
+                  <label class="form-label"
+                    >Escola <span class="req">*</span></label
+                  >
+                  <select
+                    class="form-control"
+                    id="transf-escola-destino"
+                    onchange="carregarTurmasTransfDestino(this.value)"
+                  >
+                    <option value="">Selecione a escola...</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Série</label>
+                  <select class="form-control" id="transf-serie-destino">
+                    <option value="">Mesma série</option>
+                    <option value="1º Ano">1º Ano</option>
+                    <option value="2º Ano">2º Ano</option>
+                    <option value="3º Ano">3º Ano</option>
+                    <option value="4º Ano">4º Ano</option>
+                    <option value="5º Ano">5º Ano</option>
+                    <option value="6º Ano">6º Ano</option>
+                    <option value="7º Ano">7º Ano</option>
+                    <option value="8º Ano">8º Ano</option>
+                    <option value="9º Ano">9º Ano</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label"
+                    >Turma <span class="req">*</span></label
+                  >
+                  <select class="form-control" id="transf-turma-destino">
+                    <option value="">Selecione a turma...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ALUNOS -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">👨‍🎓 Alunos da Turma de Origem</div>
+              <div class="btn-group no-print">
+                <button
+                  class="btn btn-outline btn-sm"
+                  onclick="selecionarTodosTransf(true)"
+                >
+                  ✅ Todos
+                </button>
+                <button
+                  class="btn btn-ghost btn-sm"
+                  onclick="selecionarTodosTransf(false)"
+                >
+                  ⬜ Nenhum
+                </button>
+              </div>
+            </div>
+            <div id="transf-lista-alunos">
+              <div
+                style="
+                  text-align: center;
+                  padding: 40px;
+                  color: var(--text3);
+                "
+              >
+                Selecione uma turma de origem para ver os alunos
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTÃO CONFIRMAR -->
+          <div
+            class="card no-print"
+            style="
+              background: rgba(245, 158, 11, 0.05);
+              border-color: rgba(245, 158, 11, 0.3);
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 12px;
+              "
+            >
+              <div style="font-size: 13px; color: var(--text2)">
+                <strong style="color: var(--orange)">⚠️</strong>
+                A transferência altera escola/turma atual.
+                <strong>Correções antigas são preservadas.</strong>
+              </div>
+              <button
+                class="btn btn-orange btn-lg"
+                id="btn-confirmar-transf"
+                onclick="confirmarTransferencia()"
+                disabled
+              >
+                🔄 Transferir 0 aluno(s)
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ============================================================ -->
@@ -5704,6 +5891,7 @@ Ana Lima"
     <script src="js/correcao.js"></script>
     <script src="js/resultados.js"></script>
     <script src="js/impressao.js"></script>
+    <script src="js/transferencia.js"></script> <!-- ⬅️ NOVO -->
     <script src="script.js"></script>
   </body>
 </html>
