@@ -1,5 +1,5 @@
 // ============================================================
-// CORRECAO.JS — Câmera, IA, correção manual, correção auto QR
+// JS/CORRECAO.JS — Câmera, IA, correção manual, correção auto QR
 // Extraído de script.js — Corte 5 (completo)
 // ============================================================
 
@@ -48,7 +48,8 @@ let cmStandaloneData = {
 let autoModoAtivo = false;
 
 // ═══════════════════════════════════════════════════════════════════
-// ═══ NOVO — Funções que faltavam (chamadas por startApp e pela tela Corrigir com IA) ═══
+// ═══ ADICIONADO DO MONOLÍTICO — funções que faltavam aqui ═══
+// Chamadas pelo startApp() e pelos selects da tela "Corrigir com IA"
 // ═══════════════════════════════════════════════════════════════════
 
 // 1) Popula o select de escola da tela "🤖 Corrigir com IA"
@@ -213,25 +214,36 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
     }
 }
 
-// ═══ FIM DAS FUNÇÕES NOVAS ═══
+// ═══ FIM DOS ADICIONADOS DO MONOLÍTICO ═══
 
-
-// ═══ CÂMERA ═══
+// ═══════════════════════════════════════════════════════════════════
+// CÂMERA
+// ═══════════════════════════════════════════════════════════════════
 async function abrirCamera() {
     document.getElementById('cam-modal').classList.add('show');
     try {
         if (camStream) camStream.getTracks().forEach(t => t.stop());
         camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } } });
         document.getElementById('cam-video').srcObject = camStream;
-    } catch (e) { showToast('❌ Câmera não disponível: ' + e.message, 'error');
-        fecharCamera(); }
+    } catch (e) {
+        showToast('❌ Câmera não disponível: ' + e.message, 'error');
+        fecharCamera();
+    }
 }
 
-function trocarCamera() { camFacing = camFacing === 'environment' ? 'user' : 'environment';
-    abrirCamera(); }
+function trocarCamera() {
+    camFacing = camFacing === 'environment' ? 'user' : 'environment';
+    abrirCamera();
+}
 
-function fecharCamera() { document.getElementById('cam-modal').classList.remove('show'); if (camStream) { camStream.getTracks().forEach(t => t.stop());
-        camStream = null; } }
+function fecharCamera() {
+    const camModal = document.getElementById('cam-modal');
+    if (camModal) camModal.classList.remove('show');
+    if (camStream) {
+        camStream.getTracks().forEach(t => t.stop());
+        camStream = null;
+    }
+}
 
 function capturarFoto() {
     const vid = document.getElementById('cam-video');
@@ -264,7 +276,10 @@ function capturarFoto() {
     go('corrigir-ia');
 }
 
-function abrirArquivo() { document.getElementById('inp-arq').click(); }
+function abrirArquivo() {
+    const inp = document.getElementById('inp-arq');
+    if (inp) inp.click();
+}
 
 function processarArq(input) {
     const file = input.files[0];
@@ -279,7 +294,9 @@ function processarArq(input) {
     reader.readAsDataURL(file);
 }
 
-// ═══ CORREÇÃO COM IA ═══
+// ═══════════════════════════════════════════════════════════════════
+// CORREÇÃO COM IA (PROCESSO COMPLETO)
+// ═══════════════════════════════════════════════════════════════════
 async function processarComIA(imagemBase64) {
     const escolaId = document.getElementById('corrigir-escola')?.value;
     const turmaId = document.getElementById('corrigir-turma')?.value;
@@ -350,7 +367,6 @@ async function processarComIA(imagemBase64) {
 
         let respostasDetectadas = respostaIA.respostas_detectadas || [];
         let confiancas = respostaIA.confianca_por_questao || [];
-        let questoesStatus = [];
 
         const { respostasNormalizadas, confiancasNormalizadas } = normalizarRespostas(
             respostasDetectadas,
@@ -454,9 +470,9 @@ async function processarComIA(imagemBase64) {
 
         progressManager.finalizar(`✅ Correção concluída! ${acertos}/${totalQuestoes} acertos — Nota: ${nota.toFixed(1)}`);
 
-        carregarDashboard();
-        carregarResultadosComFiltros();
-        carregarUltimasCorrecoes();
+        if (typeof carregarDashboard === 'function') carregarDashboard();
+        if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
+        if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
 
     } catch (erro) {
         console.error('❌ Erro na correção:', erro);
@@ -576,7 +592,6 @@ function salvarDadosCorrecaoManual(dados) {
     };
 }
 
-// ═══ ATUALIZAR INTERFACE DE CORREÇÃO ═══
 function atualizarInterfaceCorrecao(dados) {
     const box = document.getElementById('ia-result');
     if (box) box.style.display = 'block';
@@ -649,6 +664,7 @@ function atualizarInterfaceCorrecao(dados) {
         }).join('');
     }
 
+    // ─── Grade comparativa (gabarito oficial x aluno) ───
     const grid = document.getElementById('ia-comp');
     if (grid) {
         grid.innerHTML = '';
@@ -657,17 +673,9 @@ function atualizarInterfaceCorrecao(dados) {
         let colunasPorLinha = 5;
         if (totalQuestoes > 25) colunasPorLinha = 6;
 
+        // Título do gabarito oficial
         const tituloOficial = document.createElement('div');
-        tituloOficial.style.cssText = `
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 6px 0;
-            background: linear-gradient(135deg, rgba(59,130,246,0.10), rgba(139,92,246,0.10));
-            border-radius: 6px;
-            border: 1px solid rgba(59,130,246,0.15);
-            margin-bottom: 2px;
-            margin-top: 6px;
-        `;
+        tituloOficial.style.cssText = `grid-column: 1 / -1; text-align: center; padding: 6px 0; background: linear-gradient(135deg, rgba(59,130,246,0.10), rgba(139,92,246,0.10)); border-radius: 6px; border: 1px solid rgba(59,130,246,0.15); margin-bottom: 2px; margin-top: 6px;`;
         tituloOficial.innerHTML = `
             <span style="font-size:12px;font-weight:800;color:var(--blue);letter-spacing:0.3px;">📋 GABARITO OFICIAL GERADO PELO SISTEMA</span>
             <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">(${totalQuestoes} questões)</span>
@@ -676,30 +684,10 @@ function atualizarInterfaceCorrecao(dados) {
         grid.appendChild(tituloOficial);
 
         const gridOficial = document.createElement('div');
-        gridOficial.style.cssText = `
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: repeat(${colunasPorLinha}, 1fr);
-            gap: 4px;
-            padding: 4px 0;
-            background: rgba(59,130,246,0.02);
-            border-radius: 4px;
-            border: 1px solid rgba(59,130,246,0.06);
-        `;
-
+        gridOficial.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: repeat(${colunasPorLinha}, 1fr); gap: 4px; padding: 4px 0; background: rgba(59,130,246,0.02); border-radius: 4px; border: 1px solid rgba(59,130,246,0.06);`;
         dados.resultadoQuestoes.forEach((q) => {
             const div = document.createElement('div');
-            div.style.cssText = `
-                background: rgba(59,130,246,0.05);
-                border-radius: 4px;
-                padding: 3px 2px;
-                text-align: center;
-                border: 1px solid rgba(59,130,246,0.10);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1px;
-            `;
+            div.style.cssText = `background: rgba(59,130,246,0.05); border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid rgba(59,130,246,0.10); display: flex; flex-direction: column; align-items: center; gap: 1px;`;
             div.innerHTML = `
                 <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
                 <div style="font-size:16px;font-weight:900;color:var(--green);line-height:1.1;">${escapeHtml(q.gabarito || '—')}</div>
@@ -708,17 +696,9 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridOficial);
 
+        // Título do gabarito do aluno
         const tituloAluno = document.createElement('div');
-        tituloAluno.style.cssText = `
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 6px 0;
-            background: linear-gradient(135deg, rgba(139,92,246,0.10), rgba(59,130,246,0.10));
-            border-radius: 6px;
-            border: 1px solid rgba(139,92,246,0.15);
-            margin-bottom: 2px;
-            margin-top: 8px;
-        `;
+        tituloAluno.style.cssText = `grid-column: 1 / -1; text-align: center; padding: 6px 0; background: linear-gradient(135deg, rgba(139,92,246,0.10), rgba(59,130,246,0.10)); border-radius: 6px; border: 1px solid rgba(139,92,246,0.15); margin-bottom: 2px; margin-top: 8px;`;
         tituloAluno.innerHTML = `
             <span style="font-size:12px;font-weight:800;color:var(--purple);letter-spacing:0.3px;">📋 GABARITO DO ALUNO</span>
             <span style="font-size:9px;color:var(--text3);margin-left:8px;font-weight:600;">${escapeHtml(dados.aluno.nome || 'Aluno')}</span>
@@ -727,16 +707,7 @@ function atualizarInterfaceCorrecao(dados) {
         grid.appendChild(tituloAluno);
 
         const gridAluno = document.createElement('div');
-        gridAluno.style.cssText = `
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: repeat(${colunasPorLinha}, 1fr);
-            gap: 4px;
-            padding: 4px 0;
-            background: rgba(139,92,246,0.02);
-            border-radius: 4px;
-            border: 1px solid rgba(139,92,246,0.06);
-        `;
+        gridAluno.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: repeat(${colunasPorLinha}, 1fr); gap: 4px; padding: 4px 0; background: rgba(139,92,246,0.02); border-radius: 4px; border: 1px solid rgba(139,92,246,0.06);`;
 
         dados.resultadoQuestoes.forEach((q) => {
             const acertou = q.acertou;
@@ -761,17 +732,7 @@ function atualizarInterfaceCorrecao(dados) {
             const confColor = confianca < 70 ? 'var(--orange)' : 'var(--text3)';
 
             const div = document.createElement('div');
-            div.style.cssText = `
-                background: ${corBg};
-                border-radius: 4px;
-                padding: 3px 2px;
-                text-align: center;
-                border: 1px solid ${acertou ? 'rgba(16,185,129,0.20)' : (q.respondida ? 'rgba(239,68,68,0.20)' : 'rgba(100,116,139,0.10)')};
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1px;
-            `;
+            div.style.cssText = `background: ${corBg}; border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid ${acertou ? 'rgba(16,185,129,0.20)' : (q.respondida ? 'rgba(239,68,68,0.20)' : 'rgba(100,116,139,0.10)')}; display: flex; flex-direction: column; align-items: center; gap: 1px;`;
             div.innerHTML = `
                 <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
                 <div style="font-size:16px;font-weight:900;color:${corTexto};line-height:1.1;">${escapeHtml(resposta)}</div>
@@ -782,18 +743,9 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridAluno);
 
+        // Resumo comparativo
         const divComparacao = document.createElement('div');
-        divComparacao.style.cssText = `
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 8px;
-            padding: 8px 12px;
-            margin-top: 8px;
-            background: var(--bg2);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        `;
+        divComparacao.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border);`;
 
         const acertos = dados.acertos;
         const naoRespondidas = dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length;
@@ -822,7 +774,9 @@ function atualizarInterfaceCorrecao(dados) {
     }
 }
 
-// ═══ SALVAR CORREÇÃO ═══
+// ═══════════════════════════════════════════════════════════════════
+// SALVAR CORREÇÃO (a partir da tela de IA)
+// ═══════════════════════════════════════════════════════════════════
 async function salvarCorrecao() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
         showToast('❌ Nenhuma correção para salvar!', 'error');
@@ -872,9 +826,9 @@ async function salvarCorrecao() {
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             limparCache();
-            carregarResultadosComFiltros();
-            carregarDashboard();
-            carregarUltimasCorrecoes();
+            if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
+            if (typeof carregarDashboard === 'function') carregarDashboard();
+            if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
         } else {
             showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
         }
@@ -884,7 +838,9 @@ async function salvarCorrecao() {
     }
 }
 
-// ═══ CORREÇÃO MANUAL INLINE ═══
+// ═══════════════════════════════════════════════════════════════════
+// CORREÇÃO MANUAL INLINE (modal m-correcao-manual)
+// ═══════════════════════════════════════════════════════════════════
 function abrirCorrecaoManual() {
     if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
         showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
@@ -906,10 +862,7 @@ function abrirCorrecaoManual() {
     gerarGridCorrecaoManual();
     atualizarResumoCorrecaoManual();
     openM('m-correcao-manual');
-
-    setTimeout(() => {
-        destacarQuestoesDuvidosas();
-    }, 300);
+    setTimeout(() => destacarQuestoesDuvidosas(), 300);
 }
 
 function destacarQuestoesDuvidosas() {
@@ -973,9 +926,7 @@ function revisarApenasDuvidosas() {
         if (isSuspeita) {
             item.style.display = '';
             totalDuvidosas++;
-            if (totalDuvidosas === 1) {
-                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            if (totalDuvidosas === 1) item.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             item.style.display = 'none';
         }
@@ -1018,9 +969,7 @@ function gerarGridCorrecaoManual() {
         div.className = 'correcao-manual-item';
         const respostaAluno = (i < respostas.length) ? respostas[i] : '';
         const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
-
-        const isCorreto = respostaAluno && respostaGabarito &&
-                         respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+        const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
 
         if (isProducao) {
             div.style.background = 'var(--bg2)';
@@ -1061,13 +1010,8 @@ function gerarGridCorrecaoManual() {
             let statusClass = '';
             let statusText = '';
             if (respostaAluno) {
-                if (isCorreto) {
-                    statusClass = 'correta';
-                    statusText = '✅';
-                } else {
-                    statusClass = 'errada';
-                    statusText = '❌';
-                }
+                if (isCorreto) { statusClass = 'correta'; statusText = '✅'; }
+                else { statusClass = 'errada'; statusText = '❌'; }
             }
 
             div.innerHTML = `
@@ -1079,11 +1023,8 @@ function gerarGridCorrecaoManual() {
 
             const select = div.querySelector('.q-select');
             if (select) {
-                if (respostaAluno && isCorreto) {
-                    select.className = 'q-select correta';
-                } else if (respostaAluno) {
-                    select.className = 'q-select errada';
-                }
+                if (respostaAluno && isCorreto) select.className = 'q-select correta';
+                else if (respostaAluno) select.className = 'q-select errada';
             }
         }
         grid.appendChild(div);
@@ -1093,24 +1034,26 @@ function gerarGridCorrecaoManual() {
 function atualizarRespostaManual(select) {
     const questaoIndex = parseInt(select.dataset.questao);
     const novaResposta = select.value;
-    if (novaResposta) { correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase(); } else { correcaoManualData.respostasAluno[questaoIndex] = ''; }
+    if (novaResposta) correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase();
+    else correcaoManualData.respostasAluno[questaoIndex] = '';
+
     const item = select.closest('.correcao-manual-item');
     const qResposta = item.querySelector('.q-resposta');
     const qStatus = item.querySelector('.q-status');
     const gabarito = correcaoManualData.gabarito[questaoIndex] || '';
     const resposta = correcaoManualData.respostasAluno[questaoIndex] || '';
     const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+
     qResposta.textContent = resposta || '—';
     qResposta.style.color = isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)');
     if (resposta) {
-        if (isCorreto) { qStatus.textContent = '✅';
-            qStatus.className = 'q-status correta';
-            select.className = 'q-select correta'; } else { qStatus.textContent = '❌';
-            qStatus.className = 'q-status errada';
-            select.className = 'q-select errada'; }
-    } else { qStatus.textContent = '';
+        if (isCorreto) { qStatus.textContent = '✅'; qStatus.className = 'q-status correta'; select.className = 'q-select correta'; }
+        else { qStatus.textContent = '❌'; qStatus.className = 'q-status errada'; select.className = 'q-select errada'; }
+    } else {
+        qStatus.textContent = '';
         qStatus.className = 'q-status';
-        select.className = 'q-select'; }
+        select.className = 'q-select';
+    }
     atualizarResumoCorrecaoManual();
 }
 
@@ -1120,8 +1063,7 @@ function atualizarResumoCorrecaoManual() {
     const gabarito = correcaoManualData.gabarito || [];
     const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
 
-    let acertos = 0,
-        respondidas = 0;
+    let acertos = 0, respondidas = 0;
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
@@ -1145,16 +1087,24 @@ function atualizarResumoCorrecaoManual() {
 
     const statusBadge = document.getElementById('cm-status-badge');
     const statusAtual = document.getElementById('cm-status-atual');
-    if (notaFinal >= (correcaoManualData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
-        statusBadge.className = 'badge badge-green';
-        statusAtual.textContent = 'Aprovado';
-        statusAtual.style.color = 'var(--green)'; } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
-        statusBadge.className = 'badge badge-orange';
-        statusAtual.textContent = 'Recuperação';
-        statusAtual.style.color = 'var(--orange)'; } else { statusBadge.textContent = '❌ REPROVADO';
-        statusBadge.className = 'badge badge-red';
-        statusAtual.textContent = 'Reprovado';
-        statusAtual.style.color = 'var(--red)'; }
+    if (statusBadge && statusAtual) {
+        if (notaFinal >= (correcaoManualData.notaMinima || 5)) {
+            statusBadge.textContent = '✅ APROVADO';
+            statusBadge.className = 'badge badge-green';
+            statusAtual.textContent = 'Aprovado';
+            statusAtual.style.color = 'var(--green)';
+        } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) {
+            statusBadge.textContent = '⚠️ RECUPERAÇÃO';
+            statusBadge.className = 'badge badge-orange';
+            statusAtual.textContent = 'Recuperação';
+            statusAtual.style.color = 'var(--orange)';
+        } else {
+            statusBadge.textContent = '❌ REPROVADO';
+            statusBadge.className = 'badge badge-red';
+            statusAtual.textContent = 'Reprovado';
+            statusAtual.style.color = 'var(--red)';
+        }
+    }
     setText('cm-porcentagem', porcentagem + '% de aproveitamento');
 }
 
@@ -1172,9 +1122,7 @@ function preencherGabaritoCM() {
         });
     } else {
         for (let i = 0; i < qtd; i++) {
-            if (i < gabarito.length && gabarito[i]) {
-                correcaoManualData.respostasAluno[i] = gabarito[i];
-            }
+            if (i < gabarito.length && gabarito[i]) correcaoManualData.respostasAluno[i] = gabarito[i];
         }
         gerarGridCorrecaoManual();
     }
@@ -1192,9 +1140,7 @@ function limparRespostasCM() {
             correcaoManualData.respostasAluno[i] = '';
         });
     } else {
-        for (let i = 0; i < qtd; i++) {
-            correcaoManualData.respostasAluno[i] = '';
-        }
+        for (let i = 0; i < qtd; i++) correcaoManualData.respostasAluno[i] = '';
         gerarGridCorrecaoManual();
     }
     atualizarResumoCorrecaoManual();
@@ -1210,9 +1156,7 @@ function salvarCorrecaoManual() {
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
-        if (resp && resp.toUpperCase() === gab.toUpperCase()) {
-            acertos++;
-        }
+        if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
 
     const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
@@ -1251,20 +1195,16 @@ function salvarCorrecaoManual() {
         if (data.sucesso) {
             progressManager.concluirEtapa(2);
             progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
-
             limparCache();
-
             setTimeout(() => {
-                carregarResultadosComFiltros();
-                carregarDashboard();
-                carregarUltimasCorrecoes();
+                if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
+                if (typeof carregarDashboard === 'function') carregarDashboard();
+                if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
             }, 500);
 
             const alunoId = correcaoManualData.alunoId;
-            if (alunoId) {
-                setTimeout(() => {
-                    tableFeedback.destacarLinha('tb-resultados-filtrado', alunoId, '✅ Corrigido!');
-                }, 800);
+            if (alunoId && typeof tableFeedback !== 'undefined') {
+                setTimeout(() => tableFeedback.destacarLinha('tb-resultados-filtrado', alunoId, '✅ Corrigido!'), 800);
             }
         } else {
             progressManager.erro(data.erro || 'Erro ao salvar');
@@ -1278,7 +1218,9 @@ function salvarCorrecaoManual() {
     });
 }
 
-// ═══ CORREÇÃO MANUAL STANDALONE ═══
+// ═══════════════════════════════════════════════════════════════════
+// CORREÇÃO MANUAL STANDALONE (modal m-correcao-manual-standalone)
+// ═══════════════════════════════════════════════════════════════════
 function ajustarUIporDisciplina() {
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
 
@@ -1322,38 +1264,12 @@ function abrirCorrecaoManualStandalone() {
     if (cmNotaContainer) cmNotaContainer.style.display = 'none';
     const notaValor = document.getElementById('cm-nota-valor');
     if (notaValor) notaValor.value = '';
-    const notaObs = document.getElementById('cm-nota-observacao');
-    if (notaObs) notaObs.value = '';
     const statusDiv = document.getElementById('cm-nota-status');
-    if (statusDiv) {
-        statusDiv.style.display = 'none';
-        statusDiv.textContent = '';
-    }
+    if (statusDiv) { statusDiv.style.display = 'none'; statusDiv.textContent = ''; }
 
     carregarEscolasParaCorrecaoManual();
 
     document.getElementById('m-correcao-manual-standalone').style.display = 'flex';
-}
-
-async function carregarEscolasParaCorrecaoManual() {
-    try {
-        const escolas = await carregarEscolasComCache();
-        const select = document.getElementById('cm-escola-select');
-        if (select && escolas && !escolas.erro) {
-            const current = select.value;
-            select.innerHTML = '<option value="">Selecione a escola...</option>';
-            escolas.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
-                select.appendChild(opt);
-            });
-            if (current) select.value = current;
-            if (current) carregarTurmasParaCorrecaoManual(current);
-        }
-    } catch (erro) {
-        console.error('Erro ao carregar escolas para correção manual:', erro);
-    }
 }
 
 async function carregarTurmasParaCorrecaoManual(escolaId) {
@@ -1366,7 +1282,6 @@ async function carregarTurmasParaCorrecaoManual(escolaId) {
     selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
 
     if (!escolaId) return;
-
     cmStandaloneData.escolaId = parseInt(escolaId);
 
     try {
@@ -1390,6 +1305,7 @@ async function carregarAlunosParaCorrecaoManual(turmaId) {
     selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
     if (!turmaId) return;
     cmStandaloneData.turmaId = parseInt(turmaId);
+
     const selectTurma = document.getElementById('cm-turma-select');
     const turmaOption = selectTurma.options[selectTurma.selectedIndex];
     if (turmaOption) {
@@ -1421,10 +1337,8 @@ async function carregarProvasParaCorrecaoManualPorTurma(turmaId) {
             provas.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
-                const serie = p.serie || '';
-                opt.textContent = p.titulo + ' - ' + serie + ' - ' + (p.disciplina || '');
-                opt.dataset.serie = serie;
-                opt.dataset.turma = p.turma_nome || '';
+                opt.textContent = p.titulo + ' - ' + (p.serie || '') + ' - ' + (p.disciplina || '');
+                opt.dataset.serie = p.serie || '';
                 opt.dataset.quantidade = p.quantidade_questoes || 20;
                 opt.dataset.tipo = p.tipo_questoes || '4';
                 opt.dataset.data = p.data_prova || '';
@@ -1547,9 +1461,7 @@ async function iniciarCorrecaoManualStandalone() {
 
     document.getElementById('cm-info-standalone').style.display = 'grid';
     document.getElementById('cm-grid-standalone-container').style.display = 'block';
-
     ajustarUIporDisciplina();
-
     gerarGridCorrecaoManualSA();
     atualizarResumoCorrecaoManualSA();
 
@@ -1588,7 +1500,6 @@ function gerarGridCorrecaoManualSA() {
 
     for (let i = 0; i < qtd; i++) {
         const div = document.createElement('div');
-
         const gab = (i < gabarito.length) ? gabarito[i] : '';
         const resp = (i < respostas.length) ? respostas[i] : '';
 
@@ -1596,11 +1507,8 @@ function gerarGridCorrecaoManualSA() {
             div.className = 'cm-item-producao';
 
             let cabecalho = '';
-            if (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].cabecalho) {
-                cabecalho = textosQuestoes[i].cabecalho;
-            }
+            if (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].cabecalho) cabecalho = textosQuestoes[i].cabecalho;
             const tituloQ = (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i + 1}`;
-
             const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
             const cabecalhoHTML = `<div class="cm-q-cabecalho-inline">${escapeHtml(headerTexto)}</div>`;
 
@@ -1610,9 +1518,7 @@ function gerarGridCorrecaoManualSA() {
                 blocos.forEach(bloco => {
                     const match = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
                     if (match) {
-                        const letra = match[1];
-                        const texto = match[2].trim();
-                        gabFormatadoHTML += `<div class="alt-bloco"><span class="alt-letra-gab">${escapeHtml(letra)}</span><span class="alt-texto-gab">${escapeHtml(texto)}</span></div>`;
+                        gabFormatadoHTML += `<div class="alt-bloco"><span class="alt-letra-gab">${escapeHtml(match[1])}</span><span class="alt-texto-gab">${escapeHtml(match[2].trim())}</span></div>`;
                     } else if (bloco.trim()) {
                         gabFormatadoHTML += `<div class="alt-bloco">${escapeHtml(bloco.trim())}</div>`;
                     }
@@ -1637,9 +1543,7 @@ function gerarGridCorrecaoManualSA() {
                 </div>
                 <div>
                     <div class="cm-q-resposta-label">✍️ Observação do Professor:</div>
-                    <textarea class="cm-q-resposta-texto"
-                              placeholder="Escreva sua avaliação/observação sobre a resposta do aluno..."
-                              data-questao="${i}">${escapeHtml(resp || '')}</textarea>
+                    <textarea class="cm-q-resposta-texto" placeholder="Escreva sua avaliação/observação sobre a resposta do aluno..." data-questao="${i}">${escapeHtml(resp || '')}</textarea>
                 </div>
                 <div class="cm-q-situacao-wrapper">
                     <label class="cm-q-situacao-label">📊 Situação de Correção Alternativa:</label>
@@ -1693,6 +1597,7 @@ function atualizarRespostaManualSA(select) {
     const novaResposta = select.value;
     if (novaResposta) cmStandaloneData.respostas[questaoIndex] = novaResposta.toUpperCase();
     else cmStandaloneData.respostas[questaoIndex] = '';
+
     const item = select.closest('.cm-item-standalone');
     const statusIcon = item.querySelector('.q-status-icon');
     const gabarito = cmStandaloneData.gabarito[questaoIndex] || '';
@@ -1701,8 +1606,7 @@ function atualizarRespostaManualSA(select) {
 
     select.className = 'q-select-manual';
     if (resposta) select.className += isCorreto ? ' correta' : ' errada';
-    if (resposta) statusIcon.textContent = isCorreto ? '✅' : '❌';
-    else statusIcon.textContent = '';
+    statusIcon.textContent = resposta ? (isCorreto ? '✅' : '❌') : '';
     atualizarResumoCorrecaoManualSA();
 }
 
@@ -1712,8 +1616,7 @@ function atualizarResumoCorrecaoManualSA() {
     const gabarito = cmStandaloneData.gabarito || [];
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
 
-    let acertos = 0,
-        respondidas = 0;
+    let acertos = 0, respondidas = 0;
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
@@ -1736,15 +1639,15 @@ function atualizarResumoCorrecaoManualSA() {
     setText('cm-sa-nota', notaFinal.toFixed(1));
 
     const statusBadge = document.getElementById('cm-sa-status-badge');
-    if (notaFinal >= (cmStandaloneData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO';
-        statusBadge.className = 'badge badge-green'; } else if (notaFinal >= (cmStandaloneData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO';
-        statusBadge.className = 'badge badge-orange'; } else { statusBadge.textContent = '❌ REPROVADO';
-        statusBadge.className = 'badge badge-red'; }
+    if (statusBadge) {
+        if (notaFinal >= (cmStandaloneData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO'; statusBadge.className = 'badge badge-green'; }
+        else if (notaFinal >= (cmStandaloneData.notaMinima || 5) * 0.8) { statusBadge.textContent = '⚠️ RECUPERAÇÃO'; statusBadge.className = 'badge badge-orange'; }
+        else { statusBadge.textContent = '❌ REPROVADO'; statusBadge.className = 'badge badge-red'; }
+    }
     setText('cm-sa-porcentagem', porcentagem + '% de aproveitamento');
 }
 
 function preencherGabaritoManualSA() {
-    const qtd = cmStandaloneData.quantidade || 20;
     const gabarito = cmStandaloneData.gabarito || [];
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
     if (isProducao) {
@@ -1769,20 +1672,13 @@ function preencherGabaritoManualSA() {
 }
 
 function limparRespostasManualSA() {
-    const qtd = cmStandaloneData.quantidade || 20;
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
     if (isProducao) {
         const inputs = document.querySelectorAll('#cm-grid-standalone .cm-q-resposta-texto');
-        inputs.forEach((input, i) => {
-            input.value = '';
-            cmStandaloneData.respostas[i] = '';
-        });
+        inputs.forEach((input, i) => { input.value = ''; cmStandaloneData.respostas[i] = ''; });
     } else {
         const selects = document.querySelectorAll('#cm-grid-standalone .q-select-manual');
-        selects.forEach((select, i) => {
-            select.value = '';
-            cmStandaloneData.respostas[i] = '';
-        });
+        selects.forEach((select, i) => { select.value = ''; cmStandaloneData.respostas[i] = ''; });
     }
     atualizarResumoCorrecaoManualSA();
     showToast('🗑️ Respostas limpas!', 'info');
@@ -1802,9 +1698,7 @@ function revisarApenasDuvidosasSA() {
         if (isSuspeita) {
             item.style.display = '';
             totalDuvidosas++;
-            if (totalDuvidosas === 1) {
-                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            if (totalDuvidosas === 1) item.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             item.style.display = 'none';
         }
@@ -1819,10 +1713,7 @@ function revisarApenasDuvidosasSA() {
 }
 
 function salvarCorrecaoManualStandalone() {
-    if (!cmStandaloneData) {
-        showToast('❌ Dados não encontrados!', 'error');
-        return;
-    }
+    if (!cmStandaloneData) { showToast('❌ Dados não encontrados!', 'error'); return; }
 
     if (cmStandaloneData.disciplina === 'Produção de Texto') {
         showToast('⚠️ Use o botão "💾 SALVAR NOTA" para Produção de Texto.', 'warning');
@@ -1834,13 +1725,10 @@ function salvarCorrecaoManualStandalone() {
 
     if (!provaId || isNaN(provaId) || provaId <= 0) {
         showToast('❌ ID da prova inválido!', 'error');
-        console.error('❌ cmStandaloneData.provaId:', cmStandaloneData.provaId);
         return;
     }
-
     if (!alunoId || isNaN(alunoId) || alunoId <= 0) {
         showToast('❌ ID do aluno inválido!', 'error');
-        console.error('❌ cmStandaloneData.alunoId:', cmStandaloneData.alunoId);
         return;
     }
 
@@ -1858,9 +1746,7 @@ function salvarCorrecaoManualStandalone() {
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
-        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) {
-            acertos++;
-        }
+        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
 
     const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
@@ -1877,77 +1763,51 @@ function salvarCorrecaoManualStandalone() {
         total: qtd
     };
 
-    console.log('📤 Enviando dados:', JSON.stringify(dadosCorrecao, null, 2));
-
     fetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dadosCorrecao)
     })
     .then(async response => {
         let data;
         const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            data = await response.json();
-        } else {
+        if (contentType && contentType.includes('application/json')) data = await response.json();
+        else {
             const text = await response.text();
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                data = { erro: text || 'Erro desconhecido' };
-            }
+            try { data = JSON.parse(text); } catch (e) { data = { erro: text || 'Erro desconhecido' }; }
         }
-
-        if (!response.ok) {
-            throw new Error(data.erro || data.mensagem || `Erro ${response.status}`);
-        }
+        if (!response.ok) throw new Error(data.erro || data.mensagem || `Erro ${response.status}`);
         return data;
     })
     .then(data => {
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
-
             limparCache();
-
             setTimeout(() => {
-                const paginaAtual = document.querySelector('.page.active');
-                if (paginaAtual) {
-                    const pageId = paginaAtual.id.replace('page-', '');
-
+                const paginaAtualEl = document.querySelector('.page.active');
+                if (paginaAtualEl) {
+                    const pageId = paginaAtualEl.id.replace('page-', '');
                     switch(pageId) {
                         case 'resultados':
-                            carregarResultadosComFiltros();
+                            if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
                             break;
                         case 'dashboard':
-                            carregarDashboard();
-                            carregarUltimasCorrecoes();
+                            if (typeof carregarDashboard === 'function') carregarDashboard();
+                            if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
                             break;
                         case 'rel-turma':
-                            carregarRelatorioTurmaFiltrado();
+                            if (typeof carregarRelatorioTurmaFiltrado === 'function') carregarRelatorioTurmaFiltrado();
                             break;
                         case 'desempenho':
-                            if (desempenhoData.alunoSelecionado) {
-                                gerarDesempenho();
-                            }
+                            if (typeof desempenhoData !== 'undefined' && desempenhoData.alunoSelecionado && typeof gerarDesempenho === 'function') gerarDesempenho();
                             break;
                         default:
-                            carregarResultadosComFiltros();
-                            carregarDashboard();
-                            carregarUltimasCorrecoes();
+                            if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
+                            if (typeof carregarDashboard === 'function') carregarDashboard();
                             break;
                     }
-                } else {
-                    carregarResultadosComFiltros();
-                    carregarDashboard();
-                    carregarUltimasCorrecoes();
                 }
-
-                carregarConceitoReal();
-                carregarUltimasCorrecoes();
-
-                console.log('✅ Todos os dados foram atualizados automaticamente!');
+                if (typeof carregarConceitoReal === 'function') carregarConceitoReal();
             }, 300);
         } else {
             showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
@@ -1966,8 +1826,6 @@ async function salvarNotaProducaoCM() {
     const btn = document.getElementById('btn-salvar-nota-cm');
 
     const nota = notaInput ? notaInput.value : '';
-    const observacao = obsInput ? obsInput.value : '';
-
     const alunoId = cmStandaloneData.alunoId;
     const provaId = cmStandaloneData.provaId;
 
@@ -1975,7 +1833,6 @@ async function salvarNotaProducaoCM() {
         showToast('❌ Dados incompletos: aluno ou prova ausentes!', 'error');
         return;
     }
-
     if (!nota || nota === '') {
         showToast('❌ Digite a nota!', 'error');
         if (notaInput) notaInput.focus();
@@ -2014,16 +1871,10 @@ async function salvarNotaProducaoCM() {
             const cabecalho = (textosQuestoes[i] && textosQuestoes[i].cabecalho) ? textosQuestoes[i].cabecalho : '';
 
             questoesStatus.push({
-                numero: i + 1,
-                titulo: titulo,
-                cabecalho: cabecalho,
-                resposta: resp || '—',
-                gabarito: gab || '—',
-                situacao: sit || '',
-                acertou: false,
-                respondida: !!resp,
-                bncc: '',
-                status: `Situação: ${sit || '—'}`,
+                numero: i + 1, titulo: titulo, cabecalho: cabecalho,
+                resposta: resp || '—', gabarito: gab || '—',
+                situacao: sit || '', acertou: false, respondida: !!resp,
+                bncc: '', status: `Situação: ${sit || '—'}`,
                 status_texto: `📝 Situação ${sit || '—'}`
             });
         }
@@ -2055,9 +1906,9 @@ async function salvarNotaProducaoCM() {
 
             limparCache();
             setTimeout(() => {
-                carregarResultadosComFiltros();
-                carregarDashboard();
-                carregarUltimasCorrecoes();
+                if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
+                if (typeof carregarDashboard === 'function') carregarDashboard();
+                if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
             }, 500);
         } else {
             showToast('❌ ' + (dados.erro || 'Erro desconhecido'), 'error');
@@ -2090,58 +1941,45 @@ async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
 
         const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
         const prova = await provaResp.json();
-        if (!prova || prova.erro) {
-            showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
-            return;
-        }
+        if (!prova || prova.erro) { showToast('❌ Erro ao carregar prova', 'error'); return; }
 
         const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
         const aluno = await alunoResp.json();
-        if (!aluno || aluno.erro) {
-            showToast('❌ Erro ao carregar aluno: ' + (aluno.erro || 'Desconhecido'), 'error');
-            return;
-        }
+        if (!aluno || aluno.erro) { showToast('❌ Erro ao carregar aluno', 'error'); return; }
 
         const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
         const historico = await historicoResp.json();
         let respostas = [];
-        if (historico && historico.length > 0 && !historico.erro) {
-            respostas = historico[0].respostas || [];
-        }
+        if (historico && historico.length > 0 && !historico.erro) respostas = historico[0].respostas || [];
 
         cmStandaloneData.escolaId = parseInt(escolaId);
         cmStandaloneData.turmaId = parseInt(turmaId);
         cmStandaloneData.provaId = parseInt(provaId);
         cmStandaloneData.alunoId = parseInt(alunoId);
         cmStandaloneData.alunoNome = aluno.nome || 'Aluno';
-        cmStandaloneData.turmaNome = '';
         cmStandaloneData.serie = prova.serie || '';
         cmStandaloneData.gabarito = prova.gabarito || [];
         cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
         cmStandaloneData.alternativas = prova.tipo_questoes == '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
         cmStandaloneData.valorPorQuestao = 10 / cmStandaloneData.quantidade;
         cmStandaloneData.respostas = respostas.slice(0, cmStandaloneData.quantidade);
-        while (cmStandaloneData.respostas.length < cmStandaloneData.quantidade) {
-            cmStandaloneData.respostas.push('');
-        }
+        while (cmStandaloneData.respostas.length < cmStandaloneData.quantidade) cmStandaloneData.respostas.push('');
         cmStandaloneData.provaTitulo = prova.titulo || 'Prova';
         cmStandaloneData.provaData = prova.data_prova || '';
         cmStandaloneData.disciplina = prova.disciplina || '';
 
         openM('m-correcao-manual-standalone');
-
         const selectsContainer = document.getElementById('cm-selects-container');
         if (selectsContainer) selectsContainer.style.display = 'none';
 
         document.getElementById('cm-grid-standalone-container').style.display = 'block';
 
         setText('cm-sa-aluno', cmStandaloneData.alunoNome);
-        setText('cm-sa-turma', cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome);
+        setText('cm-sa-turma', cmStandaloneData.serie);
         setText('cm-sa-prova', cmStandaloneData.provaTitulo);
         setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
 
         ajustarUIporDisciplina();
-
         gerarGridCorrecaoManualSA();
         atualizarResumoCorrecaoManualSA();
 
@@ -2162,11 +2000,12 @@ async function editarGabaritoDesempenho() {
         showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
         return;
     }
-
     await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
 }
 
-// ═══ CORREÇÃO AUTOMÁTICA POR QR CODE ═══
+// ═══════════════════════════════════════════════════════════════════
+// CORREÇÃO AUTOMÁTICA POR QR CODE
+// ═══════════════════════════════════════════════════════════════════
 function abrirCameraAutomatico() {
     autoModoAtivo = true;
     abrirCamera();
@@ -2175,28 +2014,17 @@ function abrirCameraAutomatico() {
 function processarArqAutomatico(input) {
     const file = input.files[0];
     if (!file) return;
-
-    if (file.size > 20 * 1024 * 1024) {
-        showToast('❌ Imagem muito grande (máx. 20MB)', 'error');
-        return;
-    }
+    if (file.size > 20 * 1024 * 1024) { showToast('❌ Imagem muito grande (máx. 20MB)', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = function(e) {
         const base64 = e.target.result;
-
         const preview = document.getElementById('auto-preview');
         const img = document.getElementById('auto-img-prev');
-        if (preview && img) {
-            img.src = base64;
-            preview.style.display = 'block';
-        }
-
+        if (preview && img) { img.src = base64; preview.style.display = 'block'; }
         const resultado = document.getElementById('auto-resultado');
         if (resultado) resultado.style.display = 'none';
-
         window._autoImagem = base64;
-
         showToast('✅ Imagem carregada! Clique em "CORRIGIR AUTOMATICAMENTE"', 'success');
     };
     reader.readAsDataURL(file);
@@ -2204,11 +2032,7 @@ function processarArqAutomatico(input) {
 
 async function corrigirAutomatico() {
     const imagem = window._autoImagem;
-
-    if (!imagem) {
-        showToast('❌ Nenhuma imagem carregada', 'error');
-        return;
-    }
+    if (!imagem) { showToast('❌ Nenhuma imagem carregada', 'error'); return; }
 
     const resultadoDiv = document.getElementById('auto-resultado');
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
@@ -2219,9 +2043,7 @@ async function corrigirAutomatico() {
             <div style="text-align:center; padding:20px;">
                 <div class="spinner" style="margin:0 auto 14px;"></div>
                 <p style="font-size:15px; font-weight:700;">🔍 Lendo o QR Code do cartão...</p>
-                <p style="font-size:13px; color:var(--text2); margin-top:6px;">
-                    Identificando aluno, prova, escola e turma automaticamente
-                </p>
+                <p style="font-size:13px; color:var(--text2); margin-top:6px;">Identificando aluno, prova, escola e turma automaticamente</p>
             </div>
         `;
     }
@@ -2230,25 +2052,18 @@ async function corrigirAutomatico() {
         const response = await fetch(`${API_URL}/api/corrigir-automatico`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                imagem: imagem,
-                salvar_auto: false
-            })
+            body: JSON.stringify({ imagem: imagem, salvar_auto: false })
         });
-
         const dados = await response.json();
 
         if (!response.ok || !dados.sucesso) {
             mostrarErroAutomatico(dados.erro || 'Erro na correção automática', dados.dicas);
             return;
         }
-
         mostrarResultadoAutomatico(dados);
-
         window._autoImagem = null;
         const preview = document.getElementById('auto-preview');
         if (preview) preview.style.display = 'none';
-
     } catch (erro) {
         console.error('Erro na correção automática:', erro);
         mostrarErroAutomatico('Erro de conexão: ' + erro.message);
@@ -2262,21 +2077,16 @@ function mostrarErroAutomatico(mensagem, dicas) {
     let dicasHtml = '';
     if (dicas && Array.isArray(dicas)) {
         dicasHtml = '<div style="margin-top:14px; padding:12px; background:rgba(245,158,11,0.1); border-radius:8px; border-left:3px solid var(--orange);"><strong style="color:var(--orange);">Dicas:</strong><ul style="margin-top:6px; padding-left:20px; font-size:13px; color:var(--text2); line-height:1.7;">';
-        dicas.forEach(d => {
-            dicasHtml += `<li>${escapeHtml(d)}</li>`;
-        });
+        dicas.forEach(d => { dicasHtml += `<li>${escapeHtml(d)}</li>`; });
         dicasHtml += '</ul></div>';
     }
 
     conteudoDiv.innerHTML = `
         <div style="padding:16px; background:rgba(239,68,68,0.08); border-radius:10px; border-left:4px solid var(--red);">
-            <div style="font-size:15px; font-weight:700; color:var(--red); margin-bottom:8px;">
-                ❌ ${escapeHtml(mensagem)}
-            </div>
+            <div style="font-size:15px; font-weight:700; color:var(--red); margin-bottom:8px;">❌ ${escapeHtml(mensagem)}</div>
             ${dicasHtml}
             <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13px; color:var(--text2);">
-                <strong>Alternativa:</strong> use os campos abaixo (Escola / Turma / Prova / Aluno) 
-                para corrigir manualmente.
+                <strong>Alternativa:</strong> use os campos abaixo (Escola / Turma / Prova / Aluno) para corrigir manualmente.
             </div>
         </div>
     `;
@@ -2299,21 +2109,14 @@ function mostrarResultadoAutomatico(dados) {
             alunoNome: dados.aluno || 'Aluno',
             provaId: dados.prova_id || dados.qr_lido?.prova_id,
             provaTitulo: dados.prova_titulo || 'Prova',
-            gabarito: gabarito,
-            respostasAluno: respostas.slice(),
-            quantidade: quantidade,
-            alternativas: alternativas,
-            notaMaxima: 10,
-            notaMinima: 5,
-            valorPorQuestao: valorPorQuestao,
-            serie: dados.serie || '',
-            disciplina: dados.disciplina || '',
+            gabarito: gabarito, respostasAluno: respostas.slice(),
+            quantidade: quantidade, alternativas: alternativas,
+            notaMaxima: 10, notaMinima: 5, valorPorQuestao: valorPorQuestao,
+            serie: dados.serie || '', disciplina: dados.disciplina || '',
             confianca_por_questao: dados.confianca_por_questao || [],
             questoes_suspeitas: dados.questoes_suspeitas || [],
-            bncc: dados.bncc || [],
-            questoes_status: dados.questoes_status || []
+            bncc: dados.bncc || [], questoes_status: dados.questoes_status || []
         };
-
         window.ultimoResultadoAuto = dados;
     }
 
@@ -2327,19 +2130,9 @@ function mostrarResultadoAutomatico(dados) {
     const escola = dados.escola_nome || '';
     const turma = dados.turma_nome || '';
 
-    const conceitoCores = {
-        'inicial': '#ef4444',
-        'basico': '#f59e0b',
-        'proficiente': '#3b82f6',
-        'avancado': '#10b981'
-    };
+    const conceitoCores = { 'inicial': '#ef4444', 'basico': '#f59e0b', 'proficiente': '#3b82f6', 'avancado': '#10b981' };
     const cor = conceitoCores[conceito] || '#94a3b8';
-    const conceitoLabel = {
-        'inicial': '🔴 Inicial',
-        'basico': '🟠 Básico',
-        'proficiente': '🔵 Proficiente',
-        'avancado': '🟢 Avançado'
-    }[conceito] || conceito;
+    const conceitoLabel = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' }[conceito] || conceito;
 
     let questoesHtml = '';
     if (dados.questoes_status && Array.isArray(dados.questoes_status)) {
@@ -2347,85 +2140,40 @@ function mostrarResultadoAutomatico(dados) {
         dados.questoes_status.forEach(q => {
             const acertou = q.acertou;
             const resp = q.resposta || '—';
-            const cor = acertou ? 'rgba(16,185,129,0.15)' : (q.resposta !== '—' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.1)');
+            const corQ = acertou ? 'rgba(16,185,129,0.15)' : (q.resposta !== '—' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.1)');
             const corTexto = acertou ? 'var(--green)' : (q.resposta !== '—' ? 'var(--red)' : 'var(--text3)');
             const icone = acertou ? '✅' : (q.resposta !== '—' ? '❌' : '—');
-            questoesHtml += `
-                <div style="background:${cor}; border-radius:6px; padding:5px 2px; text-align:center;">
-                    <div style="font-size:8px; font-weight:700; color:var(--text3);">Q${q.numero}</div>
-                    <div style="font-size:13px; font-weight:800; color:${corTexto};">${escapeHtml(resp)}</div>
-                    <div style="font-size:8px;">${icone}</div>
-                </div>
-            `;
+            questoesHtml += `<div style="background:${corQ}; border-radius:6px; padding:5px 2px; text-align:center;"><div style="font-size:8px; font-weight:700; color:var(--text3);">Q${q.numero}</div><div style="font-size:13px; font-weight:800; color:${corTexto};">${escapeHtml(resp)}</div><div style="font-size:8px;">${icone}</div></div>`;
         });
         questoesHtml += '</div>';
     }
 
     let alertaHtml = '';
     if (dados.requer_revisao_manual) {
-        alertaHtml = `
-            <div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.12); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">
-                ⚠️ <strong>Revisão manual recomendada</strong> — algumas questões tiveram baixa confiança.
-            </div>
-        `;
+        alertaHtml = '<div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.12); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">⚠️ <strong>Revisão manual recomendada</strong> — algumas questões tiveram baixa confiança.</div>';
     }
 
     conteudoDiv.innerHTML = `
         <div style="background:linear-gradient(135deg, rgba(139,92,246,0.08), rgba(6,182,212,0.08)); border-radius:12px; padding:16px; border:2px solid rgba(139,92,246,0.3);">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
-                <div style="font-size:16px; font-weight:800; color:#a78bfa;">
-                    ✅ Correção Automática Concluída!
-                </div>
+                <div style="font-size:16px; font-weight:800; color:#a78bfa;">✅ Correção Automática Concluída!</div>
                 <span class="badge badge-purple" style="font-size:10px;">VIA QR CODE</span>
             </div>
-
             <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; font-size:13px;">
-                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
-                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">ALUNO</div>
-                    <div style="font-weight:700;">${escapeHtml(aluno)}</div>
-                </div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
-                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">PROVA</div>
-                    <div style="font-weight:700;">${escapeHtml(prova)}</div>
-                </div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
-                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">ESCOLA</div>
-                    <div style="font-weight:700; font-size:12px;">${escapeHtml(escola)}</div>
-                </div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px;">
-                    <div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">TURMA</div>
-                    <div style="font-weight:700; font-size:12px;">${escapeHtml(turma)}</div>
-                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;"><div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">ALUNO</div><div style="font-weight:700;">${escapeHtml(aluno)}</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;"><div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">PROVA</div><div style="font-weight:700;">${escapeHtml(prova)}</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;"><div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">ESCOLA</div><div style="font-weight:700; font-size:12px;">${escapeHtml(escola)}</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px;"><div style="color:var(--text3); font-size:9px; font-weight:700; margin-bottom:3px;">TURMA</div><div style="font-weight:700; font-size:12px;">${escapeHtml(turma)}</div></div>
             </div>
-
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
-                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                    <div style="font-size:26px; font-weight:900; color:var(--green);">${acertos}</div>
-                    <div style="font-size:10px; color:var(--text3); font-weight:700;">✅ ACERTOS</div>
-                </div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                    <div style="font-size:26px; font-weight:900; color:var(--red);">${total - acertos}</div>
-                    <div style="font-size:10px; color:var(--text3); font-weight:700;">❌ ERROS</div>
-                </div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                    <div style="font-size:26px; font-weight:900; color:var(--blue);">${porcentagem}%</div>
-                    <div style="font-size:10px; color:var(--text3); font-weight:700;">📊 APROVEIT.</div>
-                </div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;">
-                    <div style="font-size:26px; font-weight:900; color:${cor};">${nota.toFixed(1)}</div>
-                    <div style="font-size:10px; color:var(--text3); font-weight:700;">⭐ NOTA</div>
-                </div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--green);">${acertos}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">✅ ACERTOS</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--red);">${total - acertos}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">❌ ERROS</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--blue);">${porcentagem}%</div><div style="font-size:10px; color:var(--text3); font-weight:700;">📊 APROVEIT.</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:${cor};">${nota.toFixed(1)}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">⭐ NOTA</div></div>
             </div>
-
-            <div style="text-align:center; margin-bottom:10px;">
-                <span style="background:${cor}20; color:${cor}; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:800;">
-                    ${conceitoLabel}
-                </span>
-            </div>
-
+            <div style="text-align:center; margin-bottom:10px;"><span style="background:${cor}20; color:${cor}; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:800;">${conceitoLabel}</span></div>
             ${questoesHtml}
             ${alertaHtml}
-
             <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center;">
                 <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()">✏️ Correção Manual</button>
                 <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()">💾 Salvar</button>
@@ -2445,36 +2193,32 @@ function limparResultadoAutomatico() {
     const preview = document.getElementById('auto-preview');
     const img = document.getElementById('auto-img-prev');
     const input = document.getElementById('inp-arq-auto');
-
     if (resultado) resultado.style.display = 'none';
     if (preview) preview.style.display = 'none';
     if (img) img.src = '';
     if (input) input.value = '';
-
     window._autoImagem = null;
     showToast('🔄 Pronto para nova correção', 'info');
 }
 
 function abrirCorrecaoManualAuto() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
-        showToast('❌ Nenhuma correção para editar!', 'error');
-        return;
+        showToast('❌ Nenhuma correção para editar!', 'error'); return;
     }
     if (!correcaoManualData.gabarito || correcaoManualData.gabarito.length === 0) {
-        showToast('❌ Gabarito não disponível para esta prova!', 'error');
-        return;
+        showToast('❌ Gabarito não disponível para esta prova!', 'error'); return;
     }
     abrirCorrecaoManual();
 }
 
 async function salvarCorrecaoAuto() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
-        showToast('❌ Nenhuma correção para salvar!', 'error');
-        return;
+        showToast('❌ Nenhuma correção para salvar!', 'error'); return;
     }
     if (!correcaoManualData.provaId || !correcaoManualData.alunoId) {
-        showToast('❌ Dados incompletos: prova ou aluno ausentes!', 'error');
-        return;
+        showToast('❌ Dados incompletos: prova ou aluno ausentes!', 'error'); return;
     }
     await salvarCorrecao();
 }
+
+console.log('✅ js/correcao.js carregado');
