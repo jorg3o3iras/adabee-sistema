@@ -55,6 +55,7 @@ def after_request(response):
 # ═══ BLUEPRINTS ═══
 from routes.auth import bp as auth_bp
 from routes.cadastros import bp as cadastros_bp
+from routes.transferencia import bp as transferencia_bp
 from routes.correcao import bp as correcao_bp
 from routes.redacao import bp as redacao_bp
 from routes.historico import bp as historico_bp
@@ -68,6 +69,7 @@ from routes.static_files import bp as static_files_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(cadastros_bp)
+app.register_blueprint(transferencia_bp)
 app.register_blueprint(correcao_bp)
 app.register_blueprint(redacao_bp)
 app.register_blueprint(historico_bp)
