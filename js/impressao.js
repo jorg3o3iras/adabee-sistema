@@ -455,7 +455,7 @@ function imprimirAlunos() {
 // ═══════════════════════════════════════════════════════════════
 // 📊 EXPORTAR RELATÓRIO PDF (Rel. por Turma)
 // ═══════════════════════════════════════════════════════════════
-function exportarRelatorioPDF() {
+function exportarRelatorioPDF() {function exportarRelatorioPDF() {
     const tbody = document.getElementById('tb-rel-alunos');
     if (!tbody) {
         showToast('❌ Nenhum dado para exportar!', 'error');
@@ -498,14 +498,21 @@ function exportarRelatorioPDF() {
     let totalAcertosGeral = 0;
     let totalErrosGeral = 0;
 
+    // ═══════════════════════════════════════════════════════════════
+    // ✅ EXTRAÇÃO DAS LINHAS DA TABELA
+    //    Produção: 8 colunas (POS, Nº, NOME, SÉRIE, NOTA, CONCEITO, ESCOLA, TURMA)
+    //    Demais:   9 colunas (POS, Nº, NOME, SÉRIE, ACERTOS, ERROS, CONCEITO, ESCOLA, TURMA)
+    // ═══════════════════════════════════════════════════════════════
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length >= 9) {
-            // ✅ Em Produção, a coluna 4 contém a NOTA (não acertos)
+        const minCols = isProducaoPDF ? 8 : 9;
+
+        if (cells.length >= minCols) {
             if (isProducaoPDF) {
+                // ═══ PRODUÇÃO (8 colunas) ═══
                 const notaTexto = cells[4]?.textContent.trim() || '';
-                // A nota está no formato "NOTA\n10.0" — pega só o número
-                const matchNota = notaTexto.match(/(\d+[.,]\d+)/);
+                // A célula pode vir como "NOTA\n10.0", "10.0" ou "10"
+                const matchNota = notaTexto.match(/(\d+[.,]?\d*)/);
                 const nota = matchNota ? parseFloat(matchNota[1].replace(',', '.')) : 0;
 
                 alunosData.push({
@@ -514,11 +521,12 @@ function exportarRelatorioPDF() {
                     nome: cells[2]?.textContent.trim() || '',
                     serie: cells[3]?.textContent.trim() || '',
                     nota: nota,
-                    conceito: cells[6]?.textContent.trim() || '',
-                    escola: cells[7]?.textContent.trim() || '',
-                    turma: cells[8]?.textContent.trim() || ''
+                    conceito: cells[5]?.textContent.trim() || '',
+                    escola: cells[6]?.textContent.trim() || '',
+                    turma: cells[7]?.textContent.trim() || ''
                 });
             } else {
+                // ═══ DEMAIS PROVAS (9 colunas) ═══
                 const acertos = parseInt(cells[4]?.textContent.trim()) || 0;
                 const erros = parseInt(cells[5]?.textContent.trim()) || 0;
                 totalAcertosGeral += acertos;
@@ -584,9 +592,12 @@ function exportarRelatorioPDF() {
         `).join('')
         : '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">Nenhum dado disponível.</div>';
 
-    // ✅ Tabela adaptada: em Produção mostra NOTA em vez de Acertos/Erros
+    // ═══════════════════════════════════════════════════════════════
+    // ✅ RENDERIZAÇÃO DAS LINHAS DO PDF (adaptada por tipo de prova)
+    // ═══════════════════════════════════════════════════════════════
     const alunosHTML = alunosData.map(a => {
         const conceitoClass = a.conceito ? `badge-${a.conceito.toLowerCase().replace(/\s+/g,'')}` : 'badge-inicial';
+
         if (isProducaoPDF) {
             return `
                 <tr>
@@ -601,6 +612,7 @@ function exportarRelatorioPDF() {
                 </tr>
             `;
         }
+
         return `
             <tr>
                 <td>${escapeHtml(a.posicao)}</td>
