@@ -485,6 +485,9 @@ function exportarRelatorioPDF() {
         disciplinaNome = provaOption.dataset.disciplina;
     }
 
+    // ✅ Detecta se é Produção de Texto
+    const isProducaoPDF = (disciplinaNome === 'Produção de Texto');
+
     const mediaEl = document.getElementById('rel-media');
     const media = mediaEl ? mediaEl.textContent : '0%';
 
@@ -498,22 +501,41 @@ function exportarRelatorioPDF() {
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 9) {
-            const acertos = parseInt(cells[4]?.textContent.trim()) || 0;
-            const erros = parseInt(cells[5]?.textContent.trim()) || 0;
-            totalAcertosGeral += acertos;
-            totalErrosGeral += erros;
+            // ✅ Em Produção, a coluna 4 contém a NOTA (não acertos)
+            if (isProducaoPDF) {
+                const notaTexto = cells[4]?.textContent.trim() || '';
+                // A nota está no formato "NOTA\n10.0" — pega só o número
+                const matchNota = notaTexto.match(/(\d+[.,]\d+)/);
+                const nota = matchNota ? parseFloat(matchNota[1].replace(',', '.')) : 0;
 
-            alunosData.push({
-                posicao: cells[0]?.textContent.trim() || '',
-                numero: cells[1]?.textContent.trim() || '',
-                nome: cells[2]?.textContent.trim() || '',
-                serie: cells[3]?.textContent.trim() || '',
-                acertos,
-                erros,
-                conceito: cells[6]?.textContent.trim() || '',
-                escola: cells[7]?.textContent.trim() || '',
-                turma: cells[8]?.textContent.trim() || ''
-            });
+                alunosData.push({
+                    posicao: cells[0]?.textContent.trim() || '',
+                    numero: cells[1]?.textContent.trim() || '',
+                    nome: cells[2]?.textContent.trim() || '',
+                    serie: cells[3]?.textContent.trim() || '',
+                    nota: nota,
+                    conceito: cells[6]?.textContent.trim() || '',
+                    escola: cells[7]?.textContent.trim() || '',
+                    turma: cells[8]?.textContent.trim() || ''
+                });
+            } else {
+                const acertos = parseInt(cells[4]?.textContent.trim()) || 0;
+                const erros = parseInt(cells[5]?.textContent.trim()) || 0;
+                totalAcertosGeral += acertos;
+                totalErrosGeral += erros;
+
+                alunosData.push({
+                    posicao: cells[0]?.textContent.trim() || '',
+                    numero: cells[1]?.textContent.trim() || '',
+                    nome: cells[2]?.textContent.trim() || '',
+                    serie: cells[3]?.textContent.trim() || '',
+                    acertos,
+                    erros,
+                    conceito: cells[6]?.textContent.trim() || '',
+                    escola: cells[7]?.textContent.trim() || '',
+                    turma: cells[8]?.textContent.trim() || ''
+                });
+            }
         }
     });
 
@@ -521,7 +543,7 @@ function exportarRelatorioPDF() {
 
     const acertosPorQuestao = [];
     const acertosGrid = document.getElementById('rel-acertos-grid');
-    if (acertosGrid) {
+    if (acertosGrid && !isProducaoPDF) {
         const items = acertosGrid.querySelectorAll('.acertos-por-questao-item');
         items.forEach(item => {
             const texto = item.textContent || '';
@@ -562,8 +584,23 @@ function exportarRelatorioPDF() {
         `).join('')
         : '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;">Nenhum dado disponível.</div>';
 
+    // ✅ Tabela adaptada: em Produção mostra NOTA em vez de Acertos/Erros
     const alunosHTML = alunosData.map(a => {
         const conceitoClass = a.conceito ? `badge-${a.conceito.toLowerCase().replace(/\s+/g,'')}` : 'badge-inicial';
+        if (isProducaoPDF) {
+            return `
+                <tr>
+                    <td>${escapeHtml(a.posicao)}</td>
+                    <td>${escapeHtml(a.numero)}</td>
+                    <td style="text-align:left;font-weight:600;">${escapeHtml(a.nome)}</td>
+                    <td>${escapeHtml(a.serie)}</td>
+                    <td style="color:#8b5cf6;font-weight:900;font-size:13px;">${(a.nota !== undefined && a.nota !== null) ? Number(a.nota).toFixed(1) : '—'}</td>
+                    <td><span class="badge-conceito ${conceitoClass}">${escapeHtml(a.conceito || '—')}</span></td>
+                    <td>${escapeHtml(a.escola)}</td>
+                    <td>${escapeHtml(a.turma)}</td>
+                </tr>
+            `;
+        }
         return `
             <tr>
                 <td>${escapeHtml(a.posicao)}</td>
@@ -580,20 +617,24 @@ function exportarRelatorioPDF() {
     }).join('');
 
     const conteudo = `
-        <h3 style="font-size:13px;font-weight:800;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">📊 Acertos por Questão — ${escapeHtml(disciplinaNome)}</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:16px;">
-            ${questoesHTML}
-        </div>
+        ${!isProducaoPDF ? `
+            <h3 style="font-size:13px;font-weight:800;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">📊 Acertos por Questão — ${escapeHtml(disciplinaNome)}</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:16px;">
+                ${questoesHTML}
+            </div>
+        ` : ''}
 
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;">
-            <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px;text-align:center;">
-                <div style="font-size:24px;font-weight:900;color:#10b981;">${totalAcertosGeral}</div>
-                <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;">✅ Acertos</div>
-            </div>
-            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;text-align:center;">
-                <div style="font-size:24px;font-weight:900;color:#ef4444;">${totalErrosGeral}</div>
-                <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;">❌ Erros</div>
-            </div>
+        <div style="display:grid;grid-template-columns:${isProducaoPDF ? '2' : '4'};gap:12px;margin:16px 0;">
+            ${!isProducaoPDF ? `
+                <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-size:24px;font-weight:900;color:#10b981;">${totalAcertosGeral}</div>
+                    <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;">✅ Acertos</div>
+                </div>
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-size:24px;font-weight:900;color:#ef4444;">${totalErrosGeral}</div>
+                    <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;">❌ Erros</div>
+                </div>
+            ` : ''}
             <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center;">
                 <div style="font-size:24px;font-weight:900;color:#3b82f6;">${escapeHtml(media)}</div>
                 <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;">📊 Média</div>
@@ -607,17 +648,30 @@ function exportarRelatorioPDF() {
         <h3 style="font-size:13px;font-weight:800;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">📋 Lista de Alunos (${totalAlunos})</h3>
         <table>
             <thead>
-                <tr>
-                    <th>POS.</th>
-                    <th>Nº</th>
-                    <th style="text-align:left;">NOME</th>
-                    <th>SÉRIE</th>
-                    <th>ACERTOS</th>
-                    <th>ERROS</th>
-                    <th>CONCEITO</th>
-                    <th>ESCOLA</th>
-                    <th>TURMA</th>
-                </tr>
+                ${isProducaoPDF ? `
+                    <tr>
+                        <th>POS.</th>
+                        <th>Nº</th>
+                        <th style="text-align:left;">NOME</th>
+                        <th>SÉRIE</th>
+                        <th>NOTA</th>
+                        <th>CONCEITO</th>
+                        <th>ESCOLA</th>
+                        <th>TURMA</th>
+                    </tr>
+                ` : `
+                    <tr>
+                        <th>POS.</th>
+                        <th>Nº</th>
+                        <th style="text-align:left;">NOME</th>
+                        <th>SÉRIE</th>
+                        <th>ACERTOS</th>
+                        <th>ERROS</th>
+                        <th>CONCEITO</th>
+                        <th>ESCOLA</th>
+                        <th>TURMA</th>
+                    </tr>
+                `}
             </thead>
             <tbody>${alunosHTML}</tbody>
         </table>
