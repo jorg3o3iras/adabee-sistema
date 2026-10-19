@@ -139,6 +139,13 @@ function go(page) {
             if (typeof carregarFiltrosResultados === 'function') carregarFiltrosResultados();
             if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
             break;
+        // 🔧 FIX: case próprio para o EDITOR de gabarito (tela singular /page-gabarito)
+        // Popula o select #gab-prova, que antes nunca era preenchido ao entrar na tela.
+        case 'gabarito':
+            if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
+            if (typeof popularSelectGabTotal === 'function') popularSelectGabTotal();
+            break;
+        // Lista/tabela de gabaritos (tela plural /page-gabaritos)
         case 'gabaritos':
             if (typeof carregarGabaritos === 'function') carregarGabaritos();
             break;
