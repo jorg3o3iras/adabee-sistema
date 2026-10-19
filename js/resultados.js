@@ -1061,16 +1061,31 @@ async function carregarRelatorioTurmaFiltrado() {
             if (bar) bar.style.width = pct + '%';
         });
 
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ THEAD ADAPTADO POR TIPO DE PROVA
+        //    Produção: POS, Nº, NOME, SÉRIE, [NOTA, CONCEITO], ESCOLA, TURMA → 8 colunas
+        //    Demais:   POS, Nº, NOME, SÉRIE, [ACERTOS, ERROS, CONCEITO], ESCOLA, TURMA → 9 colunas
+        // ═══════════════════════════════════════════════════════════════
         const table = document.querySelector('#tb-rel-alunos')?.closest('table');
         const thead = table?.querySelector('thead');
         if (thead) {
+            const isProducao = (tipoAvaliacao === 'producao');
+            const colspanDisciplina = isProducao ? 2 : 3;
+
+            const subheaders = isProducao
+                ? `<th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">NOTA</th>
+                   <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">CONCEITO</th>`
+                : `<th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ACERTOS</th>
+                   <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ERROS</th>
+                   <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">CONCEITO</th>`;
+
             thead.innerHTML = `
                 <tr>
                     <th>POS.</th>
                     <th>Nº</th>
                     <th>NOME</th>
                     <th>SÉRIE</th>
-                    <th colspan="3" style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:10px;color:${corDisciplina};">
+                    <th colspan="${colspanDisciplina}" style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:10px;color:${corDisciplina};">
                         ${iconDisciplina} ${labelDisciplina.toUpperCase()}
                     </th>
                     <th style="background:${bgDisciplina};border-bottom:2px solid ${corDisciplina};font-size:8px;">ESCOLA</th>
@@ -1081,9 +1096,7 @@ async function carregarRelatorioTurmaFiltrado() {
                     <th style="font-size:7px;"></th>
                     <th style="font-size:7px;"></th>
                     <th style="font-size:7px;"></th>
-                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ACERTOS</th>
-                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">ERROS</th>
-                    <th style="background:${bgDisciplina};font-size:7px;padding:2px 2px;color:${corDisciplina};">CONCEITO</th>
+                    ${subheaders}
                     <th style="font-size:7px;"></th>
                     <th style="font-size:7px;"></th>
                 </tr>
@@ -1120,6 +1133,11 @@ async function carregarRelatorioTurmaFiltrado() {
             'avancado': 'avancado'
         };
 
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ TBODY ADAPTADO POR TIPO DE PROVA
+        //    Produção: NOTA + CONCEITO (2 <td>) → 8 colunas totais
+        //    Demais:   ACERTOS + ERROS + CONCEITO (3 <td>) → 9 colunas totais
+        // ═══════════════════════════════════════════════════════════════
         tbody.innerHTML = todosAlunos.map((aluno, index) => {
             const d = aluno.disciplinaData;
 
@@ -1137,14 +1155,15 @@ async function carregarRelatorioTurmaFiltrado() {
                 <td style="text-align:left;font-weight:600;">${escapeHtml(aluno.aluno_nome || 'Aluno')}</td>
                 <td><span class="badge badge-purple" style="font-size:9px;">${escapeHtml(aluno.serie || '—')}</span></td>
                 ${tipoAvaliacao === 'producao' ?
-					`<td style="text-align:center;background:${bgDisciplina};padding:4px;">
-						<div style="font-size:9px;font-weight:700;color:var(--text3);">NOTA</div>
-						<div style="font-size:16px;font-weight:900;color:var(--purple);">${d.total > 0 && d.nota !== undefined && d.nota !== null ? Number(d.nota).toFixed(1) : '—'}</div>
-					</td>` :
-					`<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
-					<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
-					<td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>`
-				}
+                    `<td style="text-align:center;background:${bgDisciplina};padding:4px;">
+                        <div style="font-size:9px;font-weight:700;color:var(--text3);">NOTA</div>
+                        <div style="font-size:16px;font-weight:900;color:var(--purple);">${d.total > 0 && d.nota !== undefined && d.nota !== null ? Number(d.nota).toFixed(1) : '—'}</div>
+                    </td>
+                    <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>` :
+                    `<td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--green);">${d.acertos}</td>
+                    <td style="text-align:center;background:${bgDisciplina};font-weight:700;color:var(--red);">${d.erros}</td>
+                    <td style="text-align:center;background:${bgDisciplina};">${conceitoBadge}</td>`
+                }
                 <td style="font-size:9px;color:var(--text2);">${escapeHtml(aluno.escola || '—')}</td>
                 <td style="font-size:9px;color:var(--text2);">${escapeHtml(aluno.turma || '—')}</td>
             </tr>`;
