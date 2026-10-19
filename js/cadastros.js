@@ -51,7 +51,6 @@ async function carregarEscolas() {
         return;
     }
 
-    // Para cada escola, conta turmas e alunos
     const turmas = await carregarTurmasComCache();
     tbody.innerHTML = escolas.map((e, i) => {
         const totalTurmas = turmas.filter(t => t.escola_id == e.id).length;
@@ -186,7 +185,7 @@ async function carregarTurmas() {
 
     tbody.innerHTML = turmas.map((t, i) => {
         const totalAlunos = parseInt(t.total_alunos) || 0;
-        return `<tr data-serie="${escapeAttr(t.serie || '')}">
+        return `<tr data-serie="${escapeAttr(t.serie || '')}" data-escola="${t.escola_id}">
             <td>${i + 1}</td>
             <td><strong>${escapeHtml(t.nome || '—')}</strong></td>
             <td><span class="badge badge-purple">${escapeHtml(t.serie || '—')}</span></td>
@@ -401,7 +400,6 @@ async function editarAluno(id) {
             selEscola.innerHTML = '<option value="">Selecione</option>' +
                 escolasCache.map(e => `<option value="${e.id}" ${e.id == aluno.escola_id ? 'selected' : ''}>${escapeHtml(e.nome)}</option>`).join('');
         }
-        // Carrega turmas da escola
         const turmas = await carregarTurmasComCache(aluno.escola_id);
         const selTurma = document.getElementById('editar-aluno-turma');
         if (selTurma) {
@@ -506,13 +504,17 @@ function filtrarAlunosPorSerie(serie) {
     });
 }
 
+// ═══ FILTROS DE TURMAS (CORRIGIDO) ═══
 function aplicarFiltrosTurmas() {
     const escolaId = document.getElementById('filtro-escola-turmas')?.value || '';
     const serie = document.getElementById('filtro-serie-turmas')?.value || '';
     const rows = document.querySelectorAll('#tb-turmas tr');
+
     rows.forEach(row => {
         let ok = true;
-        if (escolaId && !row.textContent.includes(escolaId)) { /* filtro por nome já renderizado */ }
+        // Filtro por escola: usa data-escola (ID) em vez de textContent
+        if (escolaId && row.dataset.escola !== escolaId) ok = false;
+        // Filtro por série: usa data-serie
         if (serie && row.dataset.serie !== serie) ok = false;
         row.style.display = ok ? '' : 'none';
     });
@@ -523,6 +525,7 @@ function limparFiltrosTurmas() {
     const f2 = document.getElementById('filtro-serie-turmas');
     if (f1) f1.value = '';
     if (f2) f2.value = '';
+    // Reaplica (mostra tudo)
     document.querySelectorAll('#tb-turmas tr').forEach(r => r.style.display = '');
 }
 
@@ -533,7 +536,6 @@ async function carregarCombos() {
         const turmas = await carregarTurmasComCache();
         const alunos = await carregarAlunosComCache();
 
-        // Combos de escola
         ['turma-escola', 'aluno-escola', 'editar-turma-escola', 'editar-aluno-escola'].forEach(id => {
             const sel = document.getElementById(id);
             if (sel && sel.options.length <= 1) {
@@ -542,7 +544,6 @@ async function carregarCombos() {
             }
         });
 
-        // Combo de turmas no modal de aluno
         const selTurmaAluno = document.getElementById('aluno-turma');
         if (selTurmaAluno && selTurmaAluno.options.length <= 1) {
             selTurmaAluno.innerHTML = '<option value="">Selecione a escola primeiro</option>';
