@@ -38,8 +38,9 @@ def transferir_aluno():
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # 1. Busca os alunos SEM a coluna 'serie' (que não existe em alunos)
         cur.execute("""
-            SELECT id, nome, escola_id, turma_id, serie, matricula, numero_chamada
+            SELECT id, nome, escola_id, turma_id, matricula, numero_chamada
             FROM alunos WHERE id = ANY(%s)
         """, (alunos_ids,))
         alunos = cur.fetchall()
@@ -48,18 +49,34 @@ def transferir_aluno():
             cur.close(); conn.close()
             return jsonify({'ok': False, 'erro': 'Nenhum aluno encontrado'}), 404
 
+        # 2. Valida que todos estão na turma de origem
         invalidos = [a for a in alunos if a['turma_id'] != turma_origem_id]
         if invalidos:
             cur.close(); conn.close()
             nomes = ', '.join(a['nome'] for a in invalidos[:3])
             return jsonify({'ok': False, 'erro': f'Alunos fora da turma de origem: {nomes}'}), 400
 
+        # 3. Busca a série REAL da turma de origem (não do aluno)
+        cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_origem_id,))
+        t_origem = cur.fetchone()
+        serie_origem = t_origem['serie'] if t_origem else ''
+
+        # 4. Busca a série REAL da turma de destino
+        cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_destino_id,))
+        t_destino = cur.fetchone()
+        if not t_destino:
+            cur.close(); conn.close()
+            return jsonify({'ok': False, 'erro': 'Turma de destino não encontrada'}), 404
+        serie_destino_final = serie_destino or t_destino['serie']
+
+        # 5. Próxima matrícula na escola destino
         cur.execute("""
             SELECT COALESCE(MAX(CAST(matricula AS INTEGER)), 0) + 1 AS proxima
             FROM alunos WHERE escola_id = %s AND matricula ~ '^[0-9]+$'
         """, (escola_destino_id,))
         proxima_matricula = cur.fetchone()['proxima']
 
+        # 6. Próximo número de chamada na turma destino
         cur.execute("""
             SELECT COALESCE(MAX(numero_chamada), 0) + 1 AS proximo
             FROM alunos WHERE turma_id = %s
@@ -71,6 +88,7 @@ def transferir_aluno():
 
         for aluno in alunos:
             try:
+                # 7. Registra histórico na tabela transferencias
                 cur.execute("""
                     INSERT INTO transferencias (
                         aluno_id, escola_origem_id, escola_destino_id,
@@ -84,21 +102,24 @@ def transferir_aluno():
                     aluno['id'],
                     aluno['escola_id'], escola_destino_id,
                     aluno['turma_id'], turma_destino_id,
-                    aluno['serie'], serie_destino or aluno['serie'],
+                    serie_origem, serie_destino_final,
                     aluno['matricula'], str(proxima_matricula),
                     aluno['numero_chamada'], proximo_numero,
                     motivo, usuario_responsavel
                 ))
 
+                # 8. Atualiza aluno (SEM coluna 'serie')
                 cur.execute("""
                     UPDATE alunos
-                    SET escola_id = %s, turma_id = %s, serie = %s,
-                        matricula = %s, numero_chamada = %s
+                    SET escola_id = %s,
+                        turma_id = %s,
+                        matricula = %s,
+                        numero_chamada = %s
                     WHERE id = %s
                 """, (
                     escola_destino_id, turma_destino_id,
-                    serie_destino or aluno['serie'],
-                    str(proxima_matricula), proximo_numero, aluno['id']
+                    str(proxima_matricula), proximo_numero,
+                    aluno['id']
                 ))
 
                 proxima_matricula += 1
