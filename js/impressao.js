@@ -1,5 +1,5 @@
 // ============================================================
-// IMPRESSAO.JS — PDFs, cartões resposta, impressões
+// JS/IMPRESSAO.JS — PDFs, cartões resposta, impressões
 // Extraído de script.js — Corte 7
 // ✨ REESCRITO COM CABEÇALHO INSTITUCIONAL PADRONIZADO
 // ============================================================
@@ -65,7 +65,7 @@ function buildCSSBase() {
     }
 
     /* ══════════ CABEÇALHO INSTITUCIONAL ══════════ */
-        .cabecalho-institucional {
+    .cabecalho-institucional {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -76,74 +76,17 @@ function buildCSSBase() {
         border-radius: 10px 10px 0 0;
         margin-bottom: 0;
     }
-    .cabecalho-logo {
-        flex: 0 0 auto;
-        display: flex;
-        align-items: center;
-    }
-    .cabecalho-logo img {
-        height: 70px;
-        width: auto;
-        object-fit: contain;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-    }
-    .cabecalho-texto {
-        flex: 1;
-        min-width: 0;
-        text-align: center;
-    }
-    .cab-prefeitura { 
-        font-size: 9px; 
-        font-weight: 600; 
-        color: #64748b; 
-        text-transform: uppercase; 
-        letter-spacing: 1px; 
-    }
-    .cab-cidade { 
-        font-size: 16px; 
-        font-weight: 900; 
-        color: #1e3a8a; 
-        letter-spacing: 0.5px;
-        margin-bottom: 2px;
-    }
-    .cab-secretaria { 
-        font-size: 11px; 
-        font-weight: 700; 
-        color: #2563eb; 
-        letter-spacing: 0.3px;
-    }
-    .cab-departamento { 
-        font-size: 9px; 
-        font-weight: 600; 
-        color: #475569; 
-        letter-spacing: 0.3px;
-    }
-    .cabecalho-sisam { 
-        text-align: right; 
-        padding-left: 16px; 
-        border-left: 2px solid #cbd5e1;
-    }
-    .cab-sisam-titulo { 
-        font-size: 20px; 
-        font-weight: 900; 
-        color: #2563eb; 
-        line-height: 1;
-        letter-spacing: 1px;
-    }
-    .cab-sisam-ano { 
-        font-size: 12px; 
-        font-weight: 900; 
-        color: #1e3a8a;
-        letter-spacing: 2px;
-    }
-    .cab-sisam-sub { 
-        font-size: 8px; 
-        color: #64748b; 
-        font-weight: 600; 
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 2px;
-    }
+    .cabecalho-logo { flex: 0 0 auto; display: flex; align-items: center; }
+    .cabecalho-logo img { height: 70px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+    .cabecalho-texto { flex: 1; min-width: 0; text-align: center; }
+    .cab-prefeitura { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .cab-cidade { font-size: 16px; font-weight: 900; color: #1e3a8a; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .cab-secretaria { font-size: 11px; font-weight: 700; color: #2563eb; letter-spacing: 0.3px; }
+    .cab-departamento { font-size: 9px; font-weight: 600; color: #475569; letter-spacing: 0.3px; }
+    .cabecalho-sisam { text-align: right; padding-left: 16px; border-left: 2px solid #cbd5e1; }
+    .cab-sisam-titulo { font-size: 20px; font-weight: 900; color: #2563eb; line-height: 1; letter-spacing: 1px; }
+    .cab-sisam-ano { font-size: 12px; font-weight: 900; color: #1e3a8a; letter-spacing: 2px; }
+    .cab-sisam-sub { font-size: 8px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
     /* ══════════ TÍTULO DO RELATÓRIO ══════════ */
     .cabecalho-titulo-relatorio {
@@ -159,43 +102,14 @@ function buildCSSBase() {
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
     .cab-titulo-left { flex: 1; min-width: 0; }
-    .cab-titulo-principal { 
-        font-size: 18px; 
-        font-weight: 900; 
-        letter-spacing: 0.5px;
-        line-height: 1.2;
-    }
-    .cab-titulo-subtitulo { 
-        font-size: 11px; 
-        font-weight: 600; 
-        opacity: 0.9;
-        margin-top: 3px;
-    }
-    .cab-titulo-right { 
-        text-align: right; 
-        padding-left: 16px;
-        border-left: 2px solid rgba(255,255,255,0.3);
-        flex-shrink: 0;
-    }
-    .cab-data-label { 
-        font-size: 8px; 
-        font-weight: 700; 
-        opacity: 0.85; 
-        text-transform: uppercase; 
-        letter-spacing: 0.5px;
-    }
-    .cab-data-valor { 
-        font-size: 13px; 
-        font-weight: 900; 
-        margin-top: 2px;
-    }
-    .cab-hora-valor { 
-        font-size: 10px; 
-        font-weight: 600; 
-        opacity: 0.85;
-    }
+    .cab-titulo-principal { font-size: 18px; font-weight: 900; letter-spacing: 0.5px; line-height: 1.2; }
+    .cab-titulo-subtitulo { font-size: 11px; font-weight: 600; opacity: 0.9; margin-top: 3px; }
+    .cab-titulo-right { text-align: right; padding-left: 16px; border-left: 2px solid rgba(255,255,255,0.3); flex-shrink: 0; }
+    .cab-data-label { font-size: 8px; font-weight: 700; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cab-data-valor { font-size: 13px; font-weight: 900; margin-top: 2px; }
+    .cab-hora-valor { font-size: 10px; font-weight: 600; opacity: 0.85; }
 
-    /* ══════════ INFO GRID (filtros aplicados) ══════════ */
+    /* ══════════ INFO GRID ══════════ */
     .info-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -207,60 +121,18 @@ function buildCSSBase() {
         margin-bottom: 16px;
     }
     .info-grid .item { display: flex; flex-direction: column; }
-    .info-grid .item .label { 
-        font-size: 8px; 
-        font-weight: 700; 
-        color: #94a3b8; 
-        text-transform: uppercase; 
-        letter-spacing: 0.5px; 
-    }
-    .info-grid .item .value { 
-        font-size: 12px; 
-        font-weight: 700; 
-        color: #0f172a; 
-        margin-top: 2px;
-    }
+    .info-grid .item .label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-grid .item .value { font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 2px; }
 
     /* ══════════ TABELAS PADRÃO ══════════ */
-    table { 
-        width: 100%; 
-        border-collapse: collapse; 
-        font-size: 10px; 
-        margin: 8px 0;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        overflow: hidden;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
     thead { background: #f1f5f9; }
-    th { 
-        padding: 8px 6px; 
-        text-align: center; 
-        font-weight: 700; 
-        color: #475569; 
-        border-bottom: 2px solid #cbd5e1; 
-        font-size: 8px; 
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-    td { 
-        padding: 6px 4px; 
-        border-bottom: 1px solid #f1f5f9; 
-        text-align: center; 
-        font-size: 9px; 
-        color: #1e293b; 
-    }
+    th { padding: 8px 6px; text-align: center; font-weight: 700; color: #475569; border-bottom: 2px solid #cbd5e1; font-size: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 6px 4px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 9px; color: #1e293b; }
     tr:nth-child(even) td { background: #fafbfc; }
 
     /* ══════════ BADGES DE CONCEITO ══════════ */
-    .badge-conceito { 
-        display: inline-block; 
-        padding: 2px 10px; 
-        border-radius: 12px; 
-        font-size: 8px; 
-        font-weight: 700; 
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
+    .badge-conceito { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
     .badge-inicial { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
     .badge-basico { background: #fffbeb; color: #f59e0b; border: 1px solid #fde68a; }
     .badge-proficiente { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
@@ -291,32 +163,15 @@ function buildCSSBase() {
         text-align: center;
     }
     .assinatura-item { display: flex; flex-direction: column; align-items: center; }
-    .assinatura-item .linha { 
-        width: 180px; 
-        border-bottom: 1.5px solid #1e293b; 
-        margin-bottom: 4px; 
-    }
-    .assinatura-item .cargo { 
-        font-size: 9px; 
-        color: #64748b; 
-        font-weight: 600; 
-    }
+    .assinatura-item .linha { width: 180px; border-bottom: 1.5px solid #1e293b; margin-bottom: 4px; }
+    .assinatura-item .cargo { font-size: 9px; color: #64748b; font-weight: 600; }
 
     /* ══════════ IMPRESSÃO ══════════ */
     @media print {
         body { padding: 10px; }
-        .cabecalho-institucional { 
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact; 
-        }
-        .cabecalho-titulo-relatorio { 
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact; 
-        }
-        .badge-conceito { 
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact; 
-        }
+        .cabecalho-institucional { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .cabecalho-titulo-relatorio { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .badge-conceito { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .assinaturas { page-break-inside: avoid; break-inside: avoid; }
     }
     `;
@@ -374,7 +229,10 @@ function abrirEImprimir(html) {
     win.document.write(html);
     win.document.close();
     win.onload = () => {
-        setTimeout(() => { win.focus(); win.print(); }, 400);
+        setTimeout(() => {
+            win.focus();
+            win.print();
+        }, 400);
     };
     return true;
 }
@@ -384,19 +242,28 @@ function abrirEImprimir(html) {
 // ═══════════════════════════════════════════════════════════════
 function imprimirAlunos() {
     const tbody = document.getElementById('tb-alunos');
+    if (!tbody) {
+        showToast('⚠️ Nenhuma tabela de alunos encontrada.', 'error');
+        return;
+    }
+
     const rows = tbody.querySelectorAll('tr');
     if (rows.length === 0 || (rows.length === 1 && rows[0].textContent.includes('Nenhum aluno'))) {
         showToast('⚠️ Nenhum aluno para imprimir.', 'error');
         return;
     }
+
     const escolaSelect = document.getElementById('filtro-escola-alunos');
     const turmaSelect = document.getElementById('filtro-turma-alunos');
     const serieSelect = document.getElementById('filtro-serie-alunos');
-    const escolaNome = escolaSelect.options[escolaSelect.selectedIndex]?.text || 'Todas';
-    const turmaNome = turmaSelect.options[turmaSelect.selectedIndex]?.text || 'Todas';
-    const serieNome = serieSelect.options[serieSelect.selectedIndex]?.text || 'Todas';
+
+    const escolaNome = escolaSelect?.options[escolaSelect.selectedIndex]?.text || 'Todas';
+    const turmaNome = turmaSelect?.options[turmaSelect.selectedIndex]?.text || 'Todas';
+    const serieNome = serieSelect?.options[serieSelect.selectedIndex]?.text || 'Todas';
 
     let tbodyHtml = '';
+    let totalAlunos = 0;
+
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 7) {
@@ -411,6 +278,7 @@ function imprimirAlunos() {
                     <td>${escapeHtml(cells[6].textContent.trim())}</td>
                 </tr>
             `;
+            totalAlunos++;
         }
     });
 
@@ -418,7 +286,7 @@ function imprimirAlunos() {
         <div class="item"><span class="label">🏫 ESCOLA</span><span class="value">${escapeHtml(escolaNome)}</span></div>
         <div class="item"><span class="label">👥 TURMA</span><span class="value">${escapeHtml(turmaNome)}</span></div>
         <div class="item"><span class="label">📚 SÉRIE</span><span class="value">${escapeHtml(serieNome)}</span></div>
-        <div class="item"><span class="label">👨‍🎓 TOTAL</span><span class="value">${rows.length} alunos</span></div>
+        <div class="item"><span class="label">👨‍🎓 TOTAL</span><span class="value">${totalAlunos} alunos</span></div>
     `;
 
     const conteudo = `
@@ -486,22 +354,14 @@ function exportarRelatorioPDF() {
     }
 
     const isProducaoPDF = (disciplinaNome === 'Produção de Texto');
-
     const mediaEl = document.getElementById('rel-media');
     const media = mediaEl ? mediaEl.textContent : '0%';
-
     const conceitoEl = document.getElementById('rel-conceito-geral');
     const conceito = conceitoEl ? conceitoEl.textContent : '—';
 
     const alunosData = [];
-    let totalAcertosGeral = 0;
-    let totalErrosGeral = 0;
+    let totalAcertosGeral = 0, totalErrosGeral = 0;
 
-    // ═══════════════════════════════════════════════════════════════
-    // ✅ EXTRAÇÃO — Produção: 8 colunas | Demais: 9 colunas
-    //    Produção:  POS, Nº, NOME, SÉRIE, NOTA, CONCEITO, ESCOLA, TURMA
-    //    Demais:    POS, Nº, NOME, SÉRIE, ACERTOS, ERROS, CONCEITO, ESCOLA, TURMA
-    // ═══════════════════════════════════════════════════════════════
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         const minCols = isProducaoPDF ? 8 : 9;
@@ -509,10 +369,8 @@ function exportarRelatorioPDF() {
         if (cells.length >= minCols) {
             if (isProducaoPDF) {
                 const notaTexto = cells[4]?.textContent.trim() || '';
-                // A célula pode vir como "NOTA\n10.0", "10.0" ou "10"
                 const matchNota = notaTexto.match(/(\d+[.,]?\d*)/);
                 const nota = matchNota ? parseFloat(matchNota[1].replace(',', '.')) : 0;
-
                 alunosData.push({
                     posicao: cells[0]?.textContent.trim() || '',
                     numero: cells[1]?.textContent.trim() || '',
@@ -528,14 +386,12 @@ function exportarRelatorioPDF() {
                 const erros = parseInt(cells[5]?.textContent.trim()) || 0;
                 totalAcertosGeral += acertos;
                 totalErrosGeral += erros;
-
                 alunosData.push({
                     posicao: cells[0]?.textContent.trim() || '',
                     numero: cells[1]?.textContent.trim() || '',
                     nome: cells[2]?.textContent.trim() || '',
                     serie: cells[3]?.textContent.trim() || '',
-                    acertos,
-                    erros,
+                    acertos, erros,
                     conceito: cells[6]?.textContent.trim() || '',
                     escola: cells[7]?.textContent.trim() || '',
                     turma: cells[8]?.textContent.trim() || ''
@@ -575,7 +431,7 @@ function exportarRelatorioPDF() {
         <div class="item"><span class="label">📊 MÉDIA</span><span class="value">${escapeHtml(media)}</span></div>
     `;
 
-    const questoesHTML = acertosPorQuestao.length > 0 
+    const questoesHTML = acertosPorQuestao.length > 0
         ? acertosPorQuestao.map(q => `
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center;">
                 <div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:4px;">${escapeHtml(q.numero)}</div>
@@ -910,7 +766,6 @@ async function gerarCartaoResposta(escolaId, turmaId, alunoId, provaId) {
         novaAba.document.close();
 
         showToast('✅ Cartão resposta gerado com sucesso!', 'success');
-
     } catch (erro) {
         console.error('Erro ao gerar cartão:', erro);
         showToast('❌ Erro ao gerar cartão: ' + erro.message, 'error');
@@ -935,7 +790,6 @@ async function gerarCartoesTodosAlunos(escolaId, turmaId, provaId) {
         }
 
         showToast(`✅ Gerando ${alunos.length} cartões...`, 'success');
-
     } catch (erro) {
         console.error('Erro ao gerar cartões:', erro);
         showToast('❌ Erro: ' + erro.message, 'error');
@@ -959,8 +813,7 @@ function gerarDocumentoDesempenho() {
 
     const btn = document.getElementById('btnGerarDocumento');
     gerandoDocumento = true;
-    btn.disabled = true;
-    btn.textContent = '⏳ Gerando...';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
 
     const isProducao = (data.disciplina === 'Produção de Texto');
 
@@ -1041,14 +894,10 @@ function gerarDocumentoNormal(data) {
             </div>
 
             <h3 style="font-size:13px;font-weight:800;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">📖 Questões — ${escapeHtml(disciplina)}</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;">
-                ${questoesHTML}
-            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;">${questoesHTML}</div>
 
             <h3 style="font-size:13px;font-weight:800;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">📋 Gabarito Oficial</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;">
-                ${gabaritoHTML}
-            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;">${gabaritoHTML}</div>
         `;
 
         const html = buildDocumentoHTML({
@@ -1059,17 +908,14 @@ function gerarDocumentoNormal(data) {
             orientacao: 'portrait'
         });
 
-        if (abrirEImprimir(html)) {
-            showToast('📄 Documento gerado!', 'success');
-        }
+        if (abrirEImprimir(html)) showToast('📄 Documento gerado!', 'success');
     } catch (erro) {
         console.error('Erro ao gerar documento:', erro);
-        showToast('❌ Erro ao gerar documento: ' + erro.message, 'error');
+        showToast('❌ Erro: ' + erro.message, 'error');
     } finally {
         setTimeout(() => {
             gerandoDocumento = false;
-            btn.disabled = false;
-            btn.textContent = '📄 GERAR DOCUMENTO';
+            if (btn) { btn.disabled = false; btn.textContent = '📄 GERAR DOCUMENTO'; }
         }, 1000);
     }
 }
@@ -1080,11 +926,7 @@ function gerarDocumentoNormal(data) {
 function gerarDocumentoProducao(data) {
     const btn = document.getElementById('btnGerarDocumento');
     try {
-        const {
-            escola, turma, aluno, prova, resultadoQuestoes,
-            disciplina, notaProducao, conceito,
-            questoesStatusHistorico, textosQuestoes
-        } = data;
+        const { escola, turma, aluno, prova, resultadoQuestoes, disciplina, notaProducao, conceito, questoesStatusHistorico, textosQuestoes } = data;
 
         const infoFiltros = `
             <div class="item"><span class="label">🏫 ESCOLA</span><span class="value">${escapeHtml(escola.nome || '—')}</span></div>
@@ -1103,47 +945,64 @@ function gerarDocumentoProducao(data) {
             const titulo = (tq.titulo) ? tq.titulo : `Q${q.numero}`;
             const cabecalho = (tq.cabecalho) ? tq.cabecalho : '';
             const headerTexto = cabecalho ? `${titulo} — ${cabecalho}` : titulo;
-
             const gab = q.gabarito || '';
-            let alternativasHTML = '';
 
+            let alternativasHTML = '';
             if (gab && gab.trim() !== '' && gab !== '—') {
                 const blocos = gab.split(/\n(?=[A-Z]\))/);
                 blocos.forEach(bloco => {
                     const m = bloco.match(/^([A-Z])\)\s*([\s\S]*)$/);
                     if (m) {
                         alternativasHTML += `
-                            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;display:flex;gap:8px;align-items:flex-start;">
-                                <span style="flex:0 0 22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;font-weight:900;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">${escapeHtml(m[1])}</span>
-                                <span style="flex:1;font-size:10px;color:#1e293b;line-height:1.4;">${escapeHtml(m[2].trim())}</span>
+                            <div class="prod-alt">
+                                <span class="prod-alt-letra">${escapeHtml(m[1])}</span>
+                                <span class="prod-alt-texto">${escapeHtml(m[2].trim())}</span>
                             </div>
                         `;
+                    } else if (bloco.trim()) {
+                        alternativasHTML += `<div class="prod-alt"><span class="prod-alt-texto">${escapeHtml(bloco.trim())}</span></div>`;
                     }
                 });
+            } else {
+                alternativasHTML = '<div style="font-size:10px;color:#94a3b8;font-style:italic;">Sem gabarito cadastrado</div>';
             }
 
             questoesHTML += `
-                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #8b5cf6;border-radius:8px;padding:12px 14px;margin-bottom:12px;page-break-inside:avoid;break-inside:avoid;">
-                    <div style="font-size:12px;font-weight:800;color:#8b5cf6;margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed #cbd5e1;">${escapeHtml(headerTexto)}</div>
-
-                    <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">📋 Gabarito</div>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">${alternativasHTML || '<div style="font-size:10px;color:#94a3b8;font-style:italic;">Sem gabarito cadastrado</div>'}</div>
-
-                    <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">✍️ Observação do Professor</div>
-                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;font-size:10px;color:#1e293b;line-height:1.5;min-height:32px;white-space:pre-wrap;word-wrap:break-word;">${escapeHtml(observacao || '—')}</div>
-
-                    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:1px dashed #e2e8f0;">
-                        <span style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.4px;">📊 Situação de Correção:</span>
-                        <span style="display:inline-block;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;padding:3px 14px;border-radius:20px;font-weight:900;font-size:12px;">${escapeHtml(situacao || '—')}</span>
+                <div class="prod-questao">
+                    <div class="prod-questao-titulo">${escapeHtml(headerTexto)}</div>
+                    <div class="prod-label">📋 Gabarito</div>
+                    <div class="prod-alternativas">${alternativasHTML}</div>
+                    <div class="prod-label">✍️ Observação do Professor</div>
+                    <div class="prod-observacao">${escapeHtml(observacao || '—')}</div>
+                    <div class="prod-situacao-wrapper">
+                        <span class="prod-label" style="margin:0;">📊 Situação de Correção:</span>
+                        <span class="prod-situacao">${escapeHtml(situacao || '—')}</span>
                     </div>
                 </div>
             `;
         });
 
         const conteudo = `
-            <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px solid #8b5cf6;border-radius:10px;padding:16px;text-align:center;margin:16px 0;">
-                <div style="font-size:44px;font-weight:900;color:#8b5cf6;line-height:1;">${notaProducao.toFixed(1)}</div>
-                <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:6px;letter-spacing:0.3px;">⭐ NOTA FINAL — PRODUÇÃO DE TEXTO</div>
+            <style>
+                .prod-nota-final { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 2px solid #8b5cf6; border-radius: 10px; padding: 16px; text-align: center; margin: 16px 0; }
+                .prod-nota-valor { font-size: 44px; font-weight: 900; color: #8b5cf6; line-height: 1; }
+                .prod-nota-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 6px; letter-spacing: 0.3px; }
+                .prod-questao { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #8b5cf6; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
+                .prod-questao-titulo { font-size: 12px; font-weight: 800; color: #8b5cf6; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed #cbd5e1; }
+                .prod-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; margin-top: 8px; display: block; }
+                .prod-alternativas { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+                .prod-alt { flex: 1; min-width: 200px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; display: flex; gap: 8px; align-items: flex-start; }
+                .prod-alt-letra { flex: 0 0 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; font-weight: 900; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
+                .prod-alt-texto { flex: 1; font-size: 10px; color: #1e293b; line-height: 1.4; }
+                .prod-observacao { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 10px; color: #1e293b; line-height: 1.5; min-height: 32px; white-space: pre-wrap; word-wrap: break-word; }
+                .prod-situacao-wrapper { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; }
+                .prod-situacao-wrapper .prod-label { margin: 0; display: inline; }
+                .prod-situacao { display: inline-block; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 3px 14px; border-radius: 20px; font-weight: 900; font-size: 12px; line-height: 1.2; }
+            </style>
+
+            <div class="prod-nota-final">
+                <div class="prod-nota-valor">${notaProducao.toFixed(1)}</div>
+                <div class="prod-nota-label">⭐ NOTA FINAL — PRODUÇÃO DE TEXTO</div>
                 <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #c4b5fd;display:flex;justify-content:center;align-items:center;gap:8px;">
                     <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.3px;">Conceito:</span>
                     <span style="display:inline-block;padding:4px 16px;border-radius:20px;font-weight:900;font-size:13px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;">${escapeHtml(conceito || '—')}</span>
@@ -1162,17 +1021,14 @@ function gerarDocumentoProducao(data) {
             orientacao: 'portrait'
         });
 
-        if (abrirEImprimir(html)) {
-            showToast('📄 Documento gerado!', 'success');
-        }
+        if (abrirEImprimir(html)) showToast('📄 Documento gerado!', 'success');
     } catch (erro) {
         console.error('Erro ao gerar documento:', erro);
-        showToast('❌ Erro ao gerar documento: ' + erro.message, 'error');
+        showToast('❌ Erro: ' + erro.message, 'error');
     } finally {
         setTimeout(() => {
             gerandoDocumento = false;
-            btn.disabled = false;
-            btn.textContent = '📄 GERAR DOCUMENTO';
+            if (btn) { btn.disabled = false; btn.textContent = '📄 GERAR DOCUMENTO'; }
         }, 1000);
     }
 }
@@ -1200,15 +1056,13 @@ function imprimirMatrizVisualizada() {
     descritores.forEach((d) => {
         const bnccs = d.bncc.split(/\s*-\s*/).filter(b => b.trim() !== '');
         if (bnccs.length > 1) {
-            bnccs.forEach(bncc => {
-                linhas.push({ bncc: bncc.trim(), descritor: d.descritor });
-            });
+            bnccs.forEach(bncc => linhas.push({ bncc: bncc.trim(), descritor: d.descritor }));
         } else {
             linhas.push({ bncc: d.bncc, descritor: d.descritor });
         }
     });
 
-    const descritoresHTML = linhas.length > 0 
+    const descritoresHTML = linhas.length > 0
         ? linhas.map((linha, idx) => `
             <tr style="background:${idx % 2 === 0 ? '#fff' : '#f8fafc'};">
                 <td style="padding:10px 12px;font-weight:700;color:#8b5cf6;font-family:'Courier New',monospace;vertical-align:top;border-bottom:1px solid #e2e8f0;font-size:10px;">${escapeHtml(linha.bncc || '—')}</td>
@@ -1245,7 +1099,7 @@ function imprimirMatrizVisualizada() {
         orientacao: 'portrait'
     });
 
-    if (abrirEImprimir(html)) {
-        showToast('📄 Documento gerado!', 'success');
-    }
+    if (abrirEImprimir(html)) showToast('📄 Documento gerado!', 'success');
 }
+
+console.log('✅ js/impressao.js carregado');
