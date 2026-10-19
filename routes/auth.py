@@ -1,4 +1,4 @@
-@app.route('/api/verificar-senha-admin', methods=['POST'])
+@bp.route('/api/verificar-senha-admin', methods=['POST'])
 def verificar_senha_admin():
     """
     Verifica se a senha enviada pertence a um usuário ADMIN.
