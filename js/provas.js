@@ -1,5 +1,5 @@
 // ============================================================
-// PROVAS.JS — Provas + Gabaritos (CRUD + editor + produção)
+// JS/PROVAS.JS — Provas + Gabaritos (CRUD + editor + produção)
 // Extraído de script.js — Corte 4
 // ============================================================
 
@@ -11,34 +11,9 @@ let gabProducaoData = {
 let visualizarProvaId = null;
 let visualizarProvaData = null;
 
-// ═══ POPULAR SELECTS ═══
-function popularSelectQuestoes() {
-    const select = document.getElementById('prova-questoes');
-    if (!select) return;
-    select.innerHTML = '';
-    for (let i = 1; i <= 30; i++) {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = i;
-        if (i === 20) opt.selected = true;
-        select.appendChild(opt);
-    }
-}
-
-function popularSelectGabTotal() {
-    const select = document.getElementById('gab-total');
-    if (!select) return;
-    select.innerHTML = '';
-    for (let i = 1; i <= 30; i++) {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = i;
-        if (i === 20) opt.selected = true;
-        select.appendChild(opt);
-    }
-}
-
-// ═══ CARREGAR PROVAS (com cache) ═══
+// ═══════════════════════════════════════════════════════════════
+// CARREGAR PROVAS (com cache próprio local)
+// ═══════════════════════════════════════════════════════════════
 async function carregarProvasComCache(forceRefresh) {
     if (!forceRefresh && window._provasCache) return window._provasCache;
     try {
@@ -53,7 +28,6 @@ async function carregarProvasComCache(forceRefresh) {
     }
 }
 
-// ═══ CARREGAR PROVAS (lista) ═══
 async function carregarProvas() {
     try {
         const provas = await carregarProvasComCache(true);
@@ -79,7 +53,9 @@ async function carregarProvas() {
     }
 }
 
-// ═══ VISUALIZAR PROVA ═══
+// ═══════════════════════════════════════════════════════════════
+// VISUALIZAR PROVA
+// ═══════════════════════════════════════════════════════════════
 async function visualizarProva(id) {
     showToast('👁️ Carregando dados da prova...', 'info');
     try {
@@ -115,7 +91,6 @@ async function visualizarProva(id) {
                             <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;">Q${i+1}</div>
                             <div style="font-weight:700;font-size:14px;color:var(--green);">${escapeHtml(texto)}</div>
                             ${codigo ? `<div style="font-size:10px;color:var(--purple);margin-top:4px;">BNCC: ${escapeHtml(codigo)}</div>` : ''}
-                            <div style="font-size:9px;color:var(--text3);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">Nível BNCC: ${escapeHtml(codigo || 'Não definido')}</div>
                         </div>
                     `;
                 }
@@ -168,7 +143,9 @@ function editarProvaDireto() {
     }
 }
 
-// ═══ CRUD PROVA ═══
+// ═══════════════════════════════════════════════════════════════
+// CRUD PROVA
+// ═══════════════════════════════════════════════════════════════
 async function salvarProva() {
     const titulo = document.getElementById('prova-titulo').value.trim();
     if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
@@ -188,9 +165,8 @@ async function salvarProva() {
 
     try {
         const btn = document.querySelector('#page-prova-upload .btn-green');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Salvando...';
-        btn.disabled = true;
+        const originalText = btn ? btn.textContent : '';
+        if (btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
 
         showToast('💾 Salvando prova...', 'info');
         const response = await fetch(API_URL + '/api/provas', {
@@ -200,28 +176,24 @@ async function salvarProva() {
         });
         const result = await processarRespostaAPI(response);
 
-        btn.textContent = originalText;
-        btn.disabled = false;
+        if (btn) { btn.textContent = originalText; btn.disabled = false; }
 
         if (result.ok && result.data.id) {
             showToast('✅ Prova "' + titulo + '" salva com sucesso para a série ' + serie + '!', 'success');
             limparCache();
-            window._provasCache = null; // invalida cache
+            window._provasCache = null;
             document.getElementById('prova-titulo').value = '';
-            document.getElementById('up-ok').style.display = 'block';
-            setTimeout(() => { document.getElementById('up-ok').style.display = 'none'; }, 3000);
+            const upOk = document.getElementById('up-ok');
+            if (upOk) { upOk.style.display = 'block'; setTimeout(() => { upOk.style.display = 'none'; }, 3000); }
             carregarProvas();
 
-            setTimeout(() => {
-                if (typeof tableFeedback !== 'undefined' && tableFeedback.destacarLinha) {
-                    tableFeedback.destacarLinha('tb-provas', result.data.id, '✅ Nova!');
-                }
-            }, 300);
-
+            if (typeof tableFeedback !== 'undefined') {
+                setTimeout(() => tableFeedback.destacarLinha('tb-provas', result.data.id, '✅ Nova!'), 300);
+            }
             if (typeof carregarDashboard === 'function') carregarDashboard();
             if (typeof carregarCombos === 'function') carregarCombos();
 
-            // ═══ RECARREGA OS SELECTS DE PROVA ═══
+            // Recarrega selects de prova em todas as telas
             if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
             if (typeof carregarProvasParaTexto === 'function') carregarProvasParaTexto();
             if (typeof carregarProvasParaFiltro === 'function') carregarProvasParaFiltro();
@@ -237,7 +209,9 @@ async function salvarProva() {
     }
 }
 
-function editarProva(id) { showToast('👁️ Visualizando prova ID ' + id + '...', 'info'); }
+function editarProva(id) {
+    showToast('👁️ Visualizando prova ID ' + id + '...', 'info');
+}
 
 async function excluirProva(id, nome) {
     if (!confirm('Excluir a prova "' + nome + '" e todos os seus dados?')) return;
@@ -269,15 +243,19 @@ async function excluirProva(id, nome) {
     }
 }
 
+// Salvar prova pelo modal rápido (m-prova)
 function salvarProvaModal() {
     const titulo = document.getElementById('modal-prova-titulo').value.trim();
     if (!titulo) { showToast('❌ O título da prova é obrigatório!', 'error'); return; }
     showToast('✅ Prova "' + titulo + '" salva com sucesso!', 'success');
     closeM('m-prova');
     carregarProvas();
+    if (typeof carregarCombos === 'function') carregarCombos();
 }
 
-// ═══ GABARITOS ═══
+// ═══════════════════════════════════════════════════════════════
+// GABARITOS
+// ═══════════════════════════════════════════════════════════════
 async function carregarGabaritos() {
     try {
         const provas = await carregarProvasComCache(true);
@@ -298,7 +276,7 @@ async function carregarGabaritos() {
                     '<td><span class="badge badge-blue">' + String(i + 1).padStart(3, '0') + '</span></td>' +
                     '<td>' + escapeHtml(p.titulo) + '</td>' +
                     '<td><span class="badge badge-purple">' + escapeHtml(p.serie || '—') + '</span></td>' +
-                    '<td>' + (p.quantidade_questoes || p.gabarito?.length || 0) + '</td>' +
+                    '<td>' + (p.quantidade_questoes || (p.gabarito ? p.gabarito.length : 0) || 0) + '</td>' +
                     '<td><span class="badge ' + (tipoTexto === 'Texto' ? 'badge-purple' : (p.tipo_questoes == '3' ? 'badge-purple' : 'badge-blue')) + '">' + tipoTexto + '</span></td>' +
                     '<td style="font-size:9px; max-width:120px; word-wrap:break-word;">' + escapeHtml(bnccText) + '</td>' +
                     '<td>' + escapeHtml(p.data_prova || '—') + '</td>' +
@@ -310,7 +288,9 @@ async function carregarGabaritos() {
     }
 }
 
-// ═══ BUILD GAB GRID ═══
+// ═══════════════════════════════════════════════════════════════
+// BUILD GAB GRID
+// ═══════════════════════════════════════════════════════════════
 function buildGabGrid() {
     const grid = document.getElementById('gab-grid');
     const headerContainer = document.getElementById('gab-header-container');
@@ -438,7 +418,9 @@ function buildGabGrid() {
     }
 }
 
-// ═══ ALTERNATIVAS DE PRODUÇÃO ═══
+// ═══════════════════════════════════════════════════════════════
+// ALTERNATIVAS DE PRODUÇÃO
+// ═══════════════════════════════════════════════════════════════
 function renderizarAlternativasProducao(index, container) {
     const q = gabProducaoData.questoes[index];
     if (!q) return;
@@ -539,7 +521,9 @@ function removerAlternativaProducao(index, letra) {
     if (container) renderizarAlternativasProducao(index, container);
 }
 
-// ═══ AÇÕES DO GABARITO ═══
+// ═══════════════════════════════════════════════════════════════
+// AÇÕES DO GABARITO
+// ═══════════════════════════════════════════════════════════════
 function fillGabRand() {
     const provaSelect = document.getElementById('gab-prova');
     const selectedOption = provaSelect.options[provaSelect.selectedIndex];
@@ -759,7 +743,11 @@ async function excluirGabarito(id, nome) {
     }
 }
 
-// ═══ AUXILIARES DE PROVA ═══
+// ═══════════════════════════════════════════════════════════════
+// AUXILIARES DE PROVA
+// ═══════════════════════════════════════════════════════════════
+
+// Popula o grid de gabarito dentro do modal de prova (m-prova)
 function gerarGabaritoModal(tipo) {
     const grid = document.getElementById('modal-gabarito-grid');
     if (!grid) return;
@@ -782,16 +770,19 @@ function gerarGabaritoModal(tipo) {
         input.style.textTransform = 'uppercase';
         input.placeholder = i;
         input.title = 'Questão ' + i;
-        input.addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/[^A-D]/g, ''); if (this.value && !alts.includes(this.value)) this.value = ''; });
+        input.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-D]/g, '');
+            if (this.value && !alts.includes(this.value)) this.value = '';
+        });
         grid.appendChild(input);
     }
 }
 
+// Atualiza o aviso "Gabarito com N alternativas" no cadastro de prova
 function atualizarInfoAlts() {
-    const s = document.getElementById('prova-serie');
-    const disciplina = document.getElementById('prova-disciplina').value;
+    const disciplina = document.getElementById('prova-disciplina')?.value || '';
     const info = document.getElementById('info-alts');
-    if (!s || !info) return;
+    if (!info) return;
     if (disciplina === 'Produção de Texto') {
         info.textContent = '📝 Produção de Texto — Gabarito com resposta descritiva e níveis BNCC';
         info.style.color = '#a78bfa';
@@ -805,18 +796,55 @@ function atualizarInfoAlts() {
     }
 }
 
+// Popula o select de turma no modal de prova (cadastro rápido)
 function carregarTurmasProva() {
-    const escolaId = document.getElementById('prova-escola').value;
+    const escolaId = document.getElementById('prova-escola')?.value;
     if (!escolaId) return;
     const select = document.getElementById('prova-turma');
+    if (!select) return;
     select.innerHTML = '<option value="">Selecione a turma</option>';
     carregarTurmasComCache(escolaId).then(turmas => {
-        if (turmas && !turmas.erro) { turmas.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.nome + ' - ' + (t.serie || '—'); select.appendChild(opt); }); }
+        if (turmas && !turmas.erro) {
+            turmas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome + ' - ' + (t.serie || '—');
+                select.appendChild(opt);
+            });
+        }
     }).catch(e => console.error(e));
 }
 
+// Popula o select de número de questões no cadastro de prova
+function popularSelectQuestoes() {
+    const select = document.getElementById('prova-questoes');
+    if (!select) return;
+    select.innerHTML = '';
+    for (let i = 1; i <= 30; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === 20) opt.selected = true;
+        select.appendChild(opt);
+    }
+}
+
+// Popula o select de número de questões no gabarito
+function popularSelectGabTotal() {
+    const select = document.getElementById('gab-total');
+    if (!select) return;
+    select.innerHTML = '';
+    for (let i = 1; i <= 30; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === 20) opt.selected = true;
+        select.appendChild(opt);
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════
-// ═══ NOVAS FUNÇÕES — POPULAR SELECTS DE PROVA EM TODAS AS TELAS ═══
+// POPULAR SELECTS DE PROVA EM TODAS AS TELAS
 // ═══════════════════════════════════════════════════════════════
 
 // 1) Gabarito — popula #gab-prova
@@ -826,10 +854,8 @@ async function carregarProvasParaGabarito() {
 
     try {
         const provas = await carregarProvasComCache();
-        
         sel.innerHTML = '<option value="">Selecione...</option>' +
             provas.map(p => `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')} (${escapeHtml(p.disciplina || 'Sem disciplina')})</option>`).join('');
-        
         console.log('✅ Provas para gabarito carregadas:', provas.length);
     } catch (e) {
         console.error('❌ Erro ao carregar provas para gabarito:', e);
@@ -844,10 +870,8 @@ async function carregarProvasParaTexto() {
 
     try {
         const provas = await carregarProvasComCache();
-        
         sel.innerHTML = '<option value="">Selecione...</option>' +
             provas.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}</option>`).join('');
-        
         console.log('✅ Provas para texto carregadas:', provas.length);
     } catch (e) {
         console.error('❌ Erro ao carregar provas para texto:', e);
@@ -857,18 +881,16 @@ async function carregarProvasParaTexto() {
 // 3) Filtros de Resultados/Rel. Turma — popula #filtro-prova e #rel-turma-prova
 async function carregarProvasParaFiltro() {
     const ids = ['filtro-prova', 'rel-turma-prova'];
-    
+
     try {
         const provas = await carregarProvasComCache();
-        
         ids.forEach(id => {
             const sel = document.getElementById(id);
             if (sel) {
                 sel.innerHTML = '<option value="">Todas as provas</option>' +
-                    provas.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)}</option>`).join('');
+                    provas.map(p => `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${escapeHtml(p.titulo)}</option>`).join('');
             }
         });
-        
         console.log('✅ Provas para filtros carregadas:', provas.length);
     } catch (e) {
         console.error('❌ Erro ao carregar provas para filtros:', e);
@@ -882,14 +904,12 @@ async function carregarProvasParaDesempenho() {
 
     try {
         const provas = await carregarProvasComCache();
-        
         sel.innerHTML = '<option value="">Selecione a prova...</option>' +
-            provas.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}</option>`).join('');
-        
+            provas.map(p => `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}</option>`).join('');
         console.log('✅ Provas para desempenho carregadas:', provas.length);
     } catch (e) {
         console.error('❌ Erro ao carregar provas para desempenho:', e);
     }
 }
 
-console.log('✅ js/provas.js carregado — funções exportadas para o escopo global');
+console.log('✅ js/provas.js carregado');
