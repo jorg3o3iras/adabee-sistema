@@ -149,6 +149,11 @@ function go(page) {
         case 'gabaritos':
             if (typeof carregarGabaritos === 'function') carregarGabaritos();
             break;
+        // 🔧 FIX: popula #txt-prova ao entrar na tela "Texto com IA"
+        // Sem este case, o select de Prova ficava vazio até salvar prova em outra tela.
+        case 'correcao-texto':
+            if (typeof carregarProvasParaTexto === 'function') carregarProvasParaTexto();
+            break;
         case 'rel-turma':
             if (typeof carregarFiltrosRelTurma === 'function') carregarFiltrosRelTurma();
             if (typeof carregarRelatorioTurmaFiltrado === 'function') carregarRelatorioTurmaFiltrado();
