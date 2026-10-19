@@ -1070,3 +1070,162 @@ window.addEventListener('resize', function() {
         toggle.innerHTML = '☰';
     }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// 🔒 PROTEÇÃO DA TELA DE CONFIGURAÇÕES — SENHA DO ADMIN LOGADO
+// ═══════════════════════════════════════════════════════════════
+
+let tentativasSenhaConfig = 0;
+let bloqueioSenhaAte = 0;
+
+function getUsuarioLogado() {
+    try {
+        const local = localStorage.getItem('usuario') || localStorage.getItem('user') || localStorage.getItem('usuarioLogado');
+        if (local) {
+            try { return JSON.parse(local); } catch (e) {}
+        }
+        
+        const session = sessionStorage.getItem('usuario') || sessionStorage.getItem('user');
+        if (session) {
+            try { return JSON.parse(session); } catch (e) {}
+        }
+        
+        if (typeof usuarioLogado !== 'undefined' && usuarioLogado) return usuarioLogado;
+        if (typeof currentUser !== 'undefined' && currentUser) return currentUser;
+        if (typeof usuarioAtual !== 'undefined' && usuarioAtual) return usuarioAtual;
+        
+        const unameEl = document.getElementById('sb-uname');
+        if (unameEl && unameEl.textContent.trim()) {
+            return { username: unameEl.textContent.trim(), nome: unameEl.textContent.trim() };
+        }
+        
+        return null;
+    } catch (e) {
+        console.warn('Erro ao buscar usuário logado:', e);
+        return null;
+    }
+}
+
+function pedirSenhaConfig() {
+    if (Date.now() < bloqueioSenhaAte) {
+        const seg = Math.ceil((bloqueioSenhaAte - Date.now()) / 1000);
+        showToast(`⏳ Aguarde ${seg}s antes de tentar novamente`, 'error');
+        return;
+    }
+
+    const input = document.getElementById('senha-config-input');
+    const erroEl = document.getElementById('senha-config-erro');
+    const loadingEl = document.getElementById('senha-config-loading');
+    const btn = document.getElementById('btn-desbloquear-config');
+    
+    if (input) input.value = '';
+    if (erroEl) erroEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.textContent = '🔓 Desbloquear'; }
+
+    const modal = document.getElementById('m-senha-config');
+    if (modal) {
+        modal.classList.add('show');
+        setTimeout(() => { if (input) input.focus(); }, 100);
+    }
+}
+
+function cancelarSenhaConfig() {
+    const modal = document.getElementById('m-senha-config');
+    const input = document.getElementById('senha-config-input');
+    const erroEl = document.getElementById('senha-config-erro');
+    const loadingEl = document.getElementById('senha-config-loading');
+    const btn = document.getElementById('btn-desbloquear-config');
+    
+    if (modal) modal.classList.remove('show');
+    if (input) input.value = '';
+    if (erroEl) erroEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.textContent = '🔓 Desbloquear'; }
+}
+
+async function validarSenhaConfig() {
+    const input = document.getElementById('senha-config-input');
+    const erroEl = document.getElementById('senha-config-erro');
+    const loadingEl = document.getElementById('senha-config-loading');
+    const btn = document.getElementById('btn-desbloquear-config');
+    
+    if (!input) return;
+    const senhaDigitada = input.value.trim();
+    
+    if (!senhaDigitada) {
+        if (erroEl) { erroEl.textContent = '⚠️ Digite a senha'; erroEl.style.display = 'block'; }
+        return;
+    }
+    
+    const usuario = getUsuarioLogado();
+    if (!usuario || !usuario.username) {
+        if (erroEl) {
+            erroEl.textContent = '❌ Não foi possível identificar o usuário logado. Faça login novamente.';
+            erroEl.style.display = 'block';
+        }
+        return;
+    }
+    
+    if (erroEl) erroEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Verificando...'; }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/verificar-senha-admin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: usuario.username,
+                senha: senhaDigitada
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (btn) { btn.disabled = false; btn.textContent = '🔓 Desbloquear'; }
+        
+        if (data.ok) {
+            tentativasSenhaConfig = 0;
+            bloqueioSenhaAte = 0;
+            cancelarSenhaConfig();
+            go('config');
+            
+            document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+            const menuConfig = document.getElementById('menu-config');
+            if (menuConfig) menuConfig.classList.add('active');
+            
+            showToast('🔓 Acesso liberado', 'success');
+        } else {
+            tentativasSenhaConfig++;
+            
+            if (erroEl) {
+                if (tentativasSenhaConfig >= 3) {
+                    bloqueioSenhaAte = Date.now() + 30000;
+                    erroEl.textContent = `🚫 Muitas tentativas erradas. Aguarde 30 segundos.`;
+                    
+                    setTimeout(() => {
+                        const e = document.getElementById('senha-config-erro');
+                        if (e) e.style.display = 'none';
+                        tentativasSenhaConfig = 0;
+                        bloqueioSenhaAte = 0;
+                    }, 30000);
+                } else {
+                    erroEl.textContent = `❌ ${data.erro || 'Senha incorreta'} (${tentativasSenhaConfig}/3)`;
+                }
+                erroEl.style.display = 'block';
+            }
+            
+            if (input) { input.value = ''; input.focus(); }
+        }
+    } catch (e) {
+        console.error('Erro ao verificar senha:', e);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (btn) { btn.disabled = false; btn.textContent = '🔓 Desbloquear'; }
+        if (erroEl) {
+            erroEl.textContent = '❌ Erro de conexão. Tente novamente.';
+            erroEl.style.display = 'block';
+        }
+    }
+}
