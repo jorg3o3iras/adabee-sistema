@@ -1150,12 +1150,36 @@ async function carregarRelatorioTurmaFiltrado() {
             </tr>`;
         }).join('');
 
-        atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
+        // ═══════════════════════════════════════════════════════════════
+        // ✅ CONTROLE DOS CARDS — em Produção esconde Acertos por Questão
+        // ═══════════════════════════════════════════════════════════════
+        const cardAcertosPorQuestao = document.getElementById('rel-acertos-por-questao');
+        if (tipoAvaliacao === 'producao') {
+            if (cardAcertosPorQuestao) cardAcertosPorQuestao.style.display = 'none';
+        } else {
+            if (cardAcertosPorQuestao) cardAcertosPorQuestao.style.display = 'block';
+            atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada, tipoAvaliacao);
+        }
 
-        document.getElementById('rel-disc-acertos').textContent = totalAcertos;
-        document.getElementById('rel-disc-erros').textContent = totalErros;
+        // ✅ Sempre preenche Média e Conceito
         document.getElementById('rel-disc-media').textContent = totalComCorrecao > 0 ? (totalAcertos / totalComCorrecao).toFixed(1) : '0.0';
         document.getElementById('rel-disc-conceito').textContent = conceitoGeral || '—';
+
+        // ✅ Acertos/Erros só aparecem em provas normais
+        const spanDiscAcertos = document.getElementById('rel-disc-acertos');
+        const spanDiscErros = document.getElementById('rel-disc-erros');
+        const parentAcertos = spanDiscAcertos ? spanDiscAcertos.parentElement : null;
+        const parentErros = spanDiscErros ? spanDiscErros.parentElement : null;
+
+        if (tipoAvaliacao === 'producao') {
+            if (parentAcertos) parentAcertos.style.display = 'none';
+            if (parentErros) parentErros.style.display = 'none';
+        } else {
+            if (parentAcertos) parentAcertos.style.display = '';
+            if (parentErros) parentErros.style.display = '';
+            if (spanDiscAcertos) spanDiscAcertos.textContent = totalAcertos;
+            if (spanDiscErros) spanDiscErros.textContent = totalErros;
+        }
 
     } catch (erro) {
         console.error('❌ Erro ao carregar relatório por turma:', erro);
