@@ -1,5 +1,5 @@
 # ============================================================
-# ROUTES/TRANSFERENCIA.PY — Transferência de Alunos
+# ROUTES/TRANSFERENCIA.PY — Transferência de Alunos (com escola)
 # ============================================================
 
 import traceback
@@ -8,6 +8,8 @@ from flask import Blueprint, jsonify, request
 from psycopg2.extras import RealDictCursor
 
 from core.db import get_db_connection
+from core.utils import get_escola_id
+
 
 bp = Blueprint('transferencia', __name__, url_prefix='/api')
 
@@ -32,13 +34,24 @@ def transferir_aluno():
         if escola_origem_id == escola_destino_id and turma_origem_id == turma_destino_id:
             return jsonify({'ok': False, 'erro': 'Origem e destino são iguais'}), 400
 
+        # 🔒 Escola da sessão (None = admin)
+        escola_sessao = get_escola_id()
+
+        # 🔒 Não-admin só pode transferir da própria escola (origem)
+        if escola_sessao is not None:
+            if escola_origem_id is None or int(escola_origem_id) != int(escola_sessao):
+                return jsonify({
+                    'ok': False,
+                    'erro': 'Você só pode transferir alunos da sua escola'
+                }), 403
+
         conn = get_db_connection()
         if not conn:
             return jsonify({'ok': False, 'erro': 'Erro ao conectar ao banco'}), 500
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 1. Busca os alunos SEM a coluna 'serie' (que não existe em alunos)
+        # 1. Busca os alunos
         cur.execute("""
             SELECT id, nome, escola_id, turma_id, matricula, numero_chamada
             FROM alunos WHERE id = ANY(%s)
@@ -49,6 +62,14 @@ def transferir_aluno():
             cur.close(); conn.close()
             return jsonify({'ok': False, 'erro': 'Nenhum aluno encontrado'}), 404
 
+        # 🔒 Dupla checagem: cada aluno precisa estar na escola da sessão
+        if escola_sessao is not None:
+            fora_escola = [a for a in alunos if a.get('escola_id') != escola_sessao]
+            if fora_escola:
+                cur.close(); conn.close()
+                nomes = ', '.join(a['nome'] for a in fora_escola[:3])
+                return jsonify({'ok': False, 'erro': f'Alunos fora da sua escola: {nomes}'}), 403
+
         # 2. Valida que todos estão na turma de origem
         invalidos = [a for a in alunos if a['turma_id'] != turma_origem_id]
         if invalidos:
@@ -56,12 +77,12 @@ def transferir_aluno():
             nomes = ', '.join(a['nome'] for a in invalidos[:3])
             return jsonify({'ok': False, 'erro': f'Alunos fora da turma de origem: {nomes}'}), 400
 
-        # 3. Busca a série REAL da turma de origem (não do aluno)
+        # 3. Série real da turma de origem
         cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_origem_id,))
         t_origem = cur.fetchone()
         serie_origem = t_origem['serie'] if t_origem else ''
 
-        # 4. Busca a série REAL da turma de destino
+        # 4. Série real da turma de destino
         cur.execute("SELECT serie FROM turmas WHERE id = %s", (turma_destino_id,))
         t_destino = cur.fetchone()
         if not t_destino:
@@ -88,7 +109,6 @@ def transferir_aluno():
 
         for aluno in alunos:
             try:
-                # 7. Registra histórico na tabela transferencias
                 cur.execute("""
                     INSERT INTO transferencias (
                         aluno_id, escola_origem_id, escola_destino_id,
@@ -108,7 +128,6 @@ def transferir_aluno():
                     motivo, usuario_responsavel
                 ))
 
-                # 8. Atualiza aluno (SEM coluna 'serie')
                 cur.execute("""
                     UPDATE alunos
                     SET escola_id = %s,
@@ -152,7 +171,20 @@ def listar_transferencias_aluno(aluno_id):
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
+        escola_sessao = get_escola_id()
         cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # 🔒 Verifica escola do aluno antes de listar
+        if escola_sessao is not None:
+            cur.execute("SELECT escola_id FROM alunos WHERE id = %s", (aluno_id,))
+            row = cur.fetchone()
+            if not row:
+                cur.close(); conn.close()
+                return jsonify({'erro': 'Aluno não encontrado'}), 404
+            if row.get('escola_id') != escola_sessao:
+                cur.close(); conn.close()
+                return jsonify({'erro': 'Acesso negado a este aluno'}), 403
+
         cur.execute("""
             SELECT t.*,
                    eo.nome AS escola_origem_nome,
