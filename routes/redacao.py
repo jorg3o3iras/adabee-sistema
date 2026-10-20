@@ -1,5 +1,6 @@
 # ============================================================
 # ROUTES/REDACAO.PY — Correção de redação + OCR + salvar
+# com validação de escola
 # ============================================================
 
 import json
@@ -10,19 +11,39 @@ from flask import Blueprint, jsonify, request
 from psycopg2.extras import RealDictCursor
 
 from core.db import get_db_connection
-from core.utils import identificar_disciplina
+from core.utils import identificar_disciplina, get_escola_id
 from services.redacao import corrigir_redacao_por_texto, extrair_texto_por_imagem
 
 
 bp = Blueprint('redacao', __name__, url_prefix='/api')
 
 
+# ═══════════════════════════════════════════════════════════════
+# 🔒 HELPERS DE ESCOPO
+# ═══════════════════════════════════════════════════════════════
+def _aluno_pertence_escola_sessao(cur, aluno_id, escola_sessao):
+    """
+    Verifica se o aluno existe e (se não-admin) se pertence à escola.
+    Retorna (ok, aluno_row|None, erro_msg|None, http_status).
+    """
+    cur.execute("SELECT id, escola_id FROM alunos WHERE id = %s", (aluno_id,))
+    row = cur.fetchone()
+    if not row:
+        return False, None, 'Aluno não encontrado', 404
+    if escola_sessao is not None and row.get('escola_id') != escola_sessao:
+        return False, None, 'Acesso negado a este aluno', 403
+    return True, row, None, 200
+
+
+# ═══════════════════════════════════════════════════════════════
+# 🧠 CORREÇÃO DE REDAÇÃO (texto puro — não toca em dados)
+# ═══════════════════════════════════════════════════════════════
 @bp.route('/corrigir_redacao', methods=['POST'])
 def corrigir_redacao():
     try:
-        data = request.json
+        data = request.json or {}
         texto = data.get('texto')
-        aluno_id = data.get('aluno_id')
+        aluno_id = data.get('aluno_id')  # não usado, mas mantido por compatibilidade
 
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
@@ -36,11 +57,14 @@ def corrigir_redacao():
         return jsonify({'erro': str(e)}), 500
 
 
+# ═══════════════════════════════════════════════════════════════
+# 📷 OCR — EXTRAIR TEXTO DE FOTO (não toca em dados)
+# ═══════════════════════════════════════════════════════════════
 @bp.route('/extrair_texto_redacao', methods=['POST'])
 def extrair_texto_redacao():
     """Extrai o texto de uma foto de redação usando OpenAI Vision."""
     try:
-        data = request.json
+        data = request.json or {}
         imagem_base64 = data.get('imagem')
         if not imagem_base64:
             return jsonify({'erro': 'Imagem é obrigatória'}), 400
@@ -59,10 +83,13 @@ def extrair_texto_redacao():
         return jsonify({'erro': str(e)}), 500
 
 
+# ═══════════════════════════════════════════════════════════════
+# 💾 SALVAR CORREÇÃO DE TEXTO (+ integração com histórico)
+# ═══════════════════════════════════════════════════════════════
 @bp.route('/salvar_correcao_texto', methods=['POST'])
 def salvar_correcao_texto():
     try:
-        data = request.json
+        data = request.json or {}
         aluno_id = data.get('aluno_id')
         prova_id = data.get('prova_id')
         texto = data.get('texto')
@@ -72,7 +99,6 @@ def salvar_correcao_texto():
 
         if not aluno_id:
             return jsonify({'erro': 'Aluno é obrigatório'}), 400
-
         if not texto:
             return jsonify({'erro': 'Texto é obrigatório'}), 400
 
@@ -80,8 +106,23 @@ def salvar_correcao_texto():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
+        # 🔒 Escola da sessão (None = admin)
+        escola_sessao = get_escola_id()
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        ok, aluno_row, err, status = _aluno_pertence_escola_sessao(
+            cur, aluno_id, escola_sessao
+        )
+        if not ok:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': err}), status
+
+        # Volta para cursor padrão (tuplas) — o resto do código original usa `cur.fetchone()[0]`
         cur = conn.cursor()
 
+        # 1) Insert da correção de texto
         cur.execute("""
             INSERT INTO correcoes_texto
             (aluno_id, prova_id, texto, nota, metrica_coerencia, metrica_estrutura,
@@ -99,6 +140,7 @@ def salvar_correcao_texto():
         result = cur.fetchone()
         id_correcao_texto = result[0] if result else None
 
+        # 2) Integração com histórico (quando prova_id e nota existem)
         if prova_id and nota is not None:
             try:
                 cur.execute("SELECT disciplina, titulo, serie FROM provas WHERE id = %s", (prova_id,))
@@ -136,8 +178,10 @@ def salvar_correcao_texto():
 
                 respostas_hist = [f'{nota_float}']
 
-                cur.execute("SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s",
-                            (prova_id, aluno_id))
+                cur.execute(
+                    "SELECT id FROM historico WHERE prova_id = %s AND aluno_id = %s",
+                    (prova_id, aluno_id)
+                )
                 existe = cur.fetchone()
 
                 if existe:
@@ -186,6 +230,9 @@ def salvar_correcao_texto():
         return jsonify({'erro': str(e)}), 500
 
 
+# ═══════════════════════════════════════════════════════════════
+# 📋 LISTAR CORREÇÕES DE TEXTO (com filtro por escola)
+# ═══════════════════════════════════════════════════════════════
 @bp.route('/correcoes_texto', methods=['GET'])
 def listar_correcoes_texto():
     try:
@@ -193,14 +240,26 @@ def listar_correcoes_texto():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
+        escola_sessao = get_escola_id()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT ct.*, a.nome as aluno_nome, t.serie
-            FROM correcoes_texto ct
-            LEFT JOIN alunos a ON ct.aluno_id = a.id
-            LEFT JOIN turmas t ON a.turma_id = t.id
-            ORDER BY ct.data_correcao DESC
-        """)
+
+        if escola_sessao is None:
+            cur.execute("""
+                SELECT ct.*, a.nome as aluno_nome, t.serie
+                FROM correcoes_texto ct
+                LEFT JOIN alunos a ON ct.aluno_id = a.id
+                LEFT JOIN turmas t ON a.turma_id = t.id
+                ORDER BY ct.data_correcao DESC
+            """)
+        else:
+            cur.execute("""
+                SELECT ct.*, a.nome as aluno_nome, t.serie
+                FROM correcoes_texto ct
+                LEFT JOIN alunos a ON ct.aluno_id = a.id
+                LEFT JOIN turmas t ON a.turma_id = t.id
+                WHERE a.escola_id = %s
+                ORDER BY ct.data_correcao DESC
+            """, (escola_sessao,))
 
         resultados = cur.fetchall()
         cur.close()
@@ -210,4 +269,5 @@ def listar_correcoes_texto():
 
     except Exception as e:
         print(f"❌ Erro ao listar correções de texto: {e}")
+        traceback.print_exc()
         return jsonify({'erro': str(e)}), 500
