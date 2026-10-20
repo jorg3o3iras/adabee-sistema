@@ -1,9 +1,7 @@
 // ============================================================
 // JS/AUTH-NAV.JS — Login, logout, navegação, menu
-// Extraído de script.js — Corte 2
 // ============================================================
 
-// ═══ MENU TOGGLE ═══
 function toggleMenu() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('menuOverlay');
@@ -15,7 +13,6 @@ function toggleMenu() {
     toggle.innerHTML = sidebar.classList.contains('open') ? '✕' : '☰';
 }
 
-// ═══ LOGIN ═══
 function setLTab(t) {
     loginType = t;
     document.querySelectorAll('.login-tab').forEach((el, i) => {
@@ -23,6 +20,7 @@ function setLTab(t) {
     });
 }
 
+// ═══ LOGIN ═══
 async function doLogin() {
     const u = document.getElementById('lu').value.trim();
     const p = document.getElementById('lp').value.trim();
@@ -42,18 +40,37 @@ async function doLogin() {
         const data = await response.json();
 
         if (data.sucesso) {
-            startApp(data.perfil, data.usuario);
+            // ✅ Salva sessão com contexto de escola
+            salvarSessao({
+                id: data.id,
+                username: data.username || data.usuario,
+                nome: data.nome,
+                perfil: data.perfil,
+                escola_id: (data.escola_id != null) ? data.escola_id : null,
+                escola_nome: data.escola_nome || null
+            });
+            startApp(data.perfil, data.nome, data.username || data.usuario, data.escola_nome);
         } else {
-            showToast('❌ Usuário ou senha incorretos!', 'error');
+            showToast('❌ ' + (data.erro || 'Usuário ou senha incorretos!'), 'error');
             shakeCard();
         }
     } catch (erro) {
-        // Fallback: se API cair, aceita usuários fixos
         console.warn('Login via API falhou, tentando fallback:', erro);
-        if ((u === 'admin' && p === 'admin') ||
-            ((u === 'usuario' || u === 'professor1') && p === '123')) {
-            const perfil = u === 'admin' ? 'admin' : 'usuario';
-            startApp(perfil, u);
+        // Fallback (dev/teste) — sem escola
+        const credenciais = {
+            'admin': { senha: 'admin', perfil: 'admin' },
+            'usuario': { senha: '123', perfil: 'usuario' },
+            'professor1': { senha: '123', perfil: 'usuario' }
+        };
+        const cred = credenciais[u];
+        if (cred && cred.senha === p) {
+            salvarSessao({
+                id: 0, username: u,
+                nome: u.charAt(0).toUpperCase() + u.slice(1),
+                perfil: cred.perfil,
+                escola_id: null, escola_nome: null
+            });
+            startApp(cred.perfil, u, u, null);
         } else {
             showToast('❌ Usuário ou senha incorretos!', 'error');
             shakeCard();
@@ -68,13 +85,20 @@ function shakeCard() {
     setTimeout(() => c.style.animation = 'shake .4s ease', 10);
 }
 
-// ═══ START APP (após login) ═══
-function startApp(role, uname) {
+// ═══ START APP ═══
+function startApp(role, nome, username, escolaNome) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    document.getElementById('sb-avatar').textContent = uname[0].toUpperCase();
-    document.getElementById('sb-uname').textContent = uname;
-    document.getElementById('sb-urole').textContent = role === 'admin' ? 'Administrador do Sistema' : 'Usuário do Sistema';
+
+    const inicial = (nome || username || 'U').charAt(0).toUpperCase();
+    document.getElementById('sb-avatar').textContent = inicial;
+    document.getElementById('sb-uname').textContent = nome || username || '—';
+
+    // Mostra nome da escola ou "Administração"
+    const roleText = role === 'admin'
+        ? '🛠️ Administrador (todas as escolas)'
+        : (escolaNome ? '🏫 ' + escolaNome : '🏫 Sem escola vinculada');
+    document.getElementById('sb-urole').textContent = roleText;
 
     const isAdmin = role === 'admin';
 
@@ -84,14 +108,10 @@ function startApp(role, uname) {
     if (usrSb) usrSb.style.display = 'none';
 
     const menuConfig = document.getElementById('menu-config');
-    if (menuConfig) {
-        menuConfig.style.display = isAdmin ? 'block' : 'none';
-    }
+    if (menuConfig) menuConfig.style.display = isAdmin ? 'block' : 'none';
 
     go('dashboard');
 
-    // ═══ CHAMADAS PROTEGIDAS POR typeof ═══
-    // Isso evita ReferenceError se algum script ainda não carregou.
     if (typeof buildGabGrid === 'function') buildGabGrid();
     if (typeof carregarDados === 'function') carregarDados();
     if (typeof atualizarDatasImpressao === 'function') atualizarDatasImpressao();
@@ -104,6 +124,10 @@ function startApp(role, uname) {
 }
 
 function doLogout() {
+    // ✅ Limpa sessão
+    limparSessao();
+    if (typeof limparCache === 'function') limparCache();
+
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
     document.getElementById('lu').value = '';
@@ -116,7 +140,6 @@ function go(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const el = document.getElementById('page-' + page);
     if (el) el.classList.add('active');
-
     document.querySelectorAll('.sb-item').forEach(s => s.classList.toggle('active', s.dataset.p === page));
 
     switch(page) {
@@ -139,18 +162,13 @@ function go(page) {
             if (typeof carregarFiltrosResultados === 'function') carregarFiltrosResultados();
             if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
             break;
-        // 🔧 FIX: case próprio para o EDITOR de gabarito (tela singular /page-gabarito)
-        // Popula o select #gab-prova, que antes nunca era preenchido ao entrar na tela.
         case 'gabarito':
             if (typeof carregarProvasParaGabarito === 'function') carregarProvasParaGabarito();
             if (typeof popularSelectGabTotal === 'function') popularSelectGabTotal();
             break;
-        // Lista/tabela de gabaritos (tela plural /page-gabaritos)
         case 'gabaritos':
             if (typeof carregarGabaritos === 'function') carregarGabaritos();
             break;
-        // 🔧 FIX: popula #txt-prova ao entrar na tela "Texto com IA"
-        // Sem este case, o select de Prova ficava vazio até salvar prova em outra tela.
         case 'correcao-texto':
             if (typeof carregarProvasParaTexto === 'function') carregarProvasParaTexto();
             break;
@@ -189,7 +207,6 @@ function go(page) {
     }
 }
 
-// ═══ ENTER NO CAMPO DE SENHA = LOGIN ═══
 document.getElementById('lp')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
 });
