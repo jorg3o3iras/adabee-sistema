@@ -19,7 +19,6 @@ function limparCache() {
     }
 }
 
-// 🔑 TODOS os fetch passam por apiFetch (injeta X-Usuario-Username)
 async function _fetchJSON(url, opcoes) {
     try {
         const r = await apiFetch(url, opcoes);
@@ -629,28 +628,23 @@ function fecharAbaMulti() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 👤 USUÁRIOS (com escola) — deve sobrescrever versão do script.js
+// 👤 USUÁRIOS (com escola)
 // ═══════════════════════════════════════════════════════════════
 
-// ✅ NOVO: chamado pelo inline onchange do select de perfil no index.html
-// Mostra/esconde o asterisco obrigatório e limpa a escola quando vira admin
 function atualizarObrigatorioEscolaUsuario() {
     const perfilSel = document.getElementById('usuario-perfil');
     const escolaSel = document.getElementById('usuario-escola');
     const reqEl     = document.getElementById('usuario-escola-req');
     if (!perfilSel) return;
-
     const isUsuario = perfilSel.value !== 'admin';
     if (escolaSel) {
         escolaSel.required = isUsuario;
-        if (!isUsuario) escolaSel.value = ''; // admin: limpa seleção
+        if (!isUsuario) escolaSel.value = '';
     }
     if (reqEl) reqEl.style.display = isUsuario ? 'inline' : 'none';
 }
 
-// 🔧 AJUSTADO: usa a função global e não sobrescreve mais o onchange inline
 async function abrirModalUsuario(usuarioId) {
-    // Carrega combo de escolas
     const sel = document.getElementById('usuario-escola');
     if (sel) {
         sel.innerHTML = '<option value="">Carregando escolas...</option>';
@@ -662,8 +656,6 @@ async function abrirModalUsuario(usuarioId) {
             sel.innerHTML = '<option value="">Erro ao carregar escolas</option>';
         }
     }
-
-    // Limpa form (modo criação) — preenche depois se for edição
     document.getElementById('editar-usuario-id').value = usuarioId || '';
     document.getElementById('usuario-nome').value = '';
     document.getElementById('usuario-username').value = '';
@@ -672,12 +664,8 @@ async function abrirModalUsuario(usuarioId) {
     document.getElementById('usuario-perfil').value = 'usuario';
     document.getElementById('usuario-ativo').checked = true;
     if (sel) sel.value = '';
-
-    // Header dinâmico
     const h3 = document.querySelector('#m-usuario .modal-header h3');
     if (h3) h3.textContent = usuarioId ? '✏️ Editar Usuário' : '👤 Cadastrar Usuário';
-
-    // Carrega dados do usuário (edição)
     if (usuarioId) {
         try {
             const u = await _fetchJSON(API_URL + '/api/usuarios/' + usuarioId);
@@ -691,19 +679,14 @@ async function abrirModalUsuario(usuarioId) {
             showToast('❌ Erro ao carregar usuário: ' + e.message, 'error');
         }
     }
-
-    // Atualiza estado do campo escola (required + asterisco)
     atualizarObrigatorioEscolaUsuario();
-
     openM('m-usuario');
 }
 
-// 🔧 AJUSTADO: força escola_id = null quando perfil é admin
 async function salvarUsuario() {
     const id = document.getElementById('editar-usuario-id').value;
     const perfil = document.getElementById('usuario-perfil').value;
     const escolaVal = document.getElementById('usuario-escola')?.value;
-
     const payload = {
         nome: document.getElementById('usuario-nome').value.trim(),
         username: document.getElementById('usuario-username').value.trim(),
@@ -713,14 +696,12 @@ async function salvarUsuario() {
         ativo: document.getElementById('usuario-ativo').checked,
         escola_id: perfil === 'admin' ? null : (escolaVal ? parseInt(escolaVal) : null)
     };
-
     if (!payload.nome || !payload.username) { showToast('❌ Nome e usuário são obrigatórios!', 'error'); return; }
     if (!id && !payload.senha) { showToast('❌ Senha é obrigatória para novo usuário!', 'error'); return; }
     if (payload.senha && payload.senha.length < 4) { showToast('❌ Senha deve ter 4+ caracteres!', 'error'); return; }
     if (payload.perfil !== 'admin' && !payload.escola_id) {
         showToast('❌ Escola é obrigatória para usuários não administradores!', 'error'); return;
     }
-
     try {
         const url = id ? API_URL + '/api/usuarios/' + id : API_URL + '/api/usuarios';
         const method = id ? 'PUT' : 'POST';
@@ -785,5 +766,65 @@ function formatarData(d) {
     try { const dt = new Date(d); return dt.toLocaleDateString('pt-BR'); }
     catch { return d; }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 🔧 FIX: populate dos selects de PROVA nos filtros
+// (Resultados, Rel. por Turma, Desempenho do Aluno)
+// ═══════════════════════════════════════════════════════════════
+(function fixProvasDropdowns() {
+    const DROPDOWNS = [
+        { id: 'filtro-prova',            placeholder: 'Todas as provas',       curto: false },
+        { id: 'rel-turma-prova',         placeholder: 'Todas as provas',       curto: false },
+        { id: 'filtro-prova-desempenho', placeholder: 'Selecione a prova...',   curto: true  }
+    ];
+
+    async function popular() {
+        try {
+            let provas = window._provasCache;
+            if (!provas || !Array.isArray(provas) || provas.length === 0) {
+                const r = await apiFetch(API_URL + '/api/provas');
+                if (r.ok) {
+                    provas = await r.json();
+                    window._provasCache = provas;
+                }
+            }
+            if (!provas || provas.length === 0) return;
+
+            DROPDOWNS.forEach(d => {
+                const sel = document.getElementById(d.id);
+                if (!sel) return;
+                // Só popula se ainda estiver com placeholder (<= 1 option)
+                if (sel.options.length <= 1) {
+                    const html = provas.map(p => {
+                        const txt = d.curto
+                            ? `${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}`
+                            : `${escapeHtml(p.titulo)} - ${escapeHtml(p.serie || '')} - ${escapeHtml(p.disciplina || '')}`;
+                        return `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${txt}</option>`;
+                    }).join('');
+                    sel.innerHTML = `<option value="">${d.placeholder}</option>` + html;
+                    console.log(`✅ [fixProvas] ${d.id}: ${provas.length} provas`);
+                }
+            });
+        } catch (e) {
+            console.warn('fixProvasDropdowns erro:', e);
+        }
+    }
+
+    // 1ª execução após o sistema carregar
+    setTimeout(popular, 1500);
+
+    // Reexecuta ao clicar nas abas relevantes
+    document.addEventListener('click', (e) => {
+        const item = e.target.closest('.sb-item');
+        if (!item) return;
+        const page = item.dataset.p;
+        if (page === 'resultados' || page === 'rel-turma' || page === 'desempenho') {
+            setTimeout(popular, 300);
+        }
+    }, true);
+
+    // Reexecuta quando o usuário volta pra tela (via go())
+    window.addEventListener('load', () => setTimeout(popular, 2500));
+})();
 
 console.log('✅ js/cadastros.js carregado');
