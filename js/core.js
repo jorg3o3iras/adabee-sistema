@@ -16,6 +16,49 @@ let ultimaImagem = null;
 let gerandoDocumento = false;
 let paginaAtual = 'dashboard';
 
+// ═══════════════════════════════════════════════════════════════
+// 🔑 SESSÃO DO USUÁRIO + CONTEXTO DE ESCOLA
+// ═══════════════════════════════════════════════════════════════
+const USUARIO_STORAGE_KEY = 'adabee_usuario';
+
+function salvarSessao(usuario) {
+    try {
+        localStorage.setItem(USUARIO_STORAGE_KEY, JSON.stringify(usuario || {}));
+    } catch (e) { console.warn('salvarSessao:', e); }
+}
+
+function getUsuarioAtual() {
+    try {
+        return JSON.parse(localStorage.getItem(USUARIO_STORAGE_KEY) || '{}') || {};
+    } catch (e) { return {}; }
+}
+
+function limparSessao() {
+    try { localStorage.removeItem(USUARIO_STORAGE_KEY); } catch (e) {}
+}
+
+function isAdminLogado() {
+    return getUsuarioAtual().perfil === 'admin';
+}
+
+function getEscolaLogada() {
+    const u = getUsuarioAtual();
+    return (u && u.escola_id != null) ? u.escola_id : null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🌐 apiFetch — injeta X-Usuario-Username automaticamente
+// ═══════════════════════════════════════════════════════════════
+function apiFetch(url, opcoes) {
+    opcoes = opcoes || {};
+    opcoes.headers = opcoes.headers || {};
+    const u = getUsuarioAtual();
+    if (u && u.username) {
+        opcoes.headers['X-Usuario-Username'] = u.username;
+    }
+    return fetch(url, opcoes);
+}
+
 // ═══ SEGURANÇA — ESCAPE HTML (anti-XSS) ═══
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -183,20 +226,13 @@ class ProgressManager {
         this.fecharBtn.style.display = 'inline-flex';
         this.cancelarBtn.style.display = 'none';
 
-        this.etapas.forEach((_, index) => {
-            this.concluirEtapa(index);
-        });
+        this.etapas.forEach((_, index) => { this.concluirEtapa(index); });
 
-        setTimeout(() => {
-            this.fechar();
-        }, 2000);
+        setTimeout(() => { this.fechar(); }, 2000);
     }
 
     fechar() {
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
         this.modal.style.display = 'none';
         this.modal.classList.remove('show');
     }
@@ -216,10 +252,7 @@ class ProgressManager {
             const icon = document.getElementById(`progress-icon-${this.etapaAtual}`);
             if (icon) icon.textContent = '❌';
             const status = document.getElementById(`progress-status-${this.etapaAtual}`);
-            if (status) {
-                status.textContent = '❌ erro';
-                status.style.color = 'var(--red)';
-            }
+            if (status) { status.textContent = '❌ erro'; status.style.color = 'var(--red)'; }
         }
     }
 }
@@ -228,14 +261,11 @@ const progressManager = new ProgressManager();
 
 // ═══ SISTEMA DE FEEDBACK VISUAL PARA TABELAS ═══
 class TableFeedback {
-    constructor() {
-        this.animations = new Map();
-    }
+    constructor() { this.animations = new Map(); }
 
     destacarLinha(tableId, rowId, message = '✅ Salvo!') {
         const table = document.getElementById(tableId);
         if (!table) return;
-
         const row = table.querySelector(`tr[data-id="${rowId}"]`);
         if (!row) return;
 
@@ -263,14 +293,12 @@ class TableFeedback {
             row.style.background = '';
             row.style.borderLeft = '';
             row.style.boxShadow = '';
-
             const badge = firstCell?.querySelector('.save-badge');
             if (badge) {
                 badge.style.transition = 'opacity 0.5s ease';
                 badge.style.opacity = '0';
                 setTimeout(() => badge.remove(), 500);
             }
-
             this.animations.delete(rowId);
         }, 3000);
 
@@ -280,28 +308,18 @@ class TableFeedback {
 
     mostrarSucesso(tableId, rowId, nome, acao = 'salvo') {
         showToast(`✅ ${nome} ${acao} com sucesso!`, 'success');
-        setTimeout(() => {
-            this.destacarLinha(tableId, rowId, `✅ ${acao}!`);
-        }, 300);
+        setTimeout(() => { this.destacarLinha(tableId, rowId, `✅ ${acao}!`); }, 300);
     }
 }
 
 const tableFeedback = new TableFeedback();
 
-// ═══ FUNÇÃO AUXILIAR SLEEP ═══
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 // ═══ SISTEMA DE CACHE ═══
 const cache = {
-    escolas: null,
-    turmas: {},
-    alunos: {},
-    provas: null,
-    ultima_atualizacao: {}
+    escolas: null, turmas: {}, alunos: {}, provas: null, ultima_atualizacao: {}
 };
-
 const TEMPO_CACHE = 30000;
 
 function isCacheValido(chave) {
@@ -310,11 +328,9 @@ function isCacheValido(chave) {
 }
 
 async function carregarEscolasComCache(forceRefresh = false) {
-    if (!forceRefresh && cache.escolas && isCacheValido('escolas')) {
-        return cache.escolas;
-    }
+    if (!forceRefresh && cache.escolas && isCacheValido('escolas')) return cache.escolas;
     try {
-        const response = await fetch(`${API_URL}/api/escolas`);
+        const response = await apiFetch(`${API_URL}/api/escolas`);
         const escolas = await response.json();
         cache.escolas = escolas;
         cache.ultima_atualizacao['escolas'] = Date.now();
@@ -327,15 +343,11 @@ async function carregarEscolasComCache(forceRefresh = false) {
 
 async function carregarTurmasComCache(escolaId, forceRefresh = false) {
     const chave = `turmas_${escolaId}`;
-    if (!forceRefresh && cache.turmas[chave] && isCacheValido(chave)) {
-        return cache.turmas[chave];
-    }
+    if (!forceRefresh && cache.turmas[chave] && isCacheValido(chave)) return cache.turmas[chave];
     try {
         let url = `${API_URL}/api/turmas`;
-        if (escolaId && escolaId !== '') {
-            url += `?escola_id=${escolaId}`;
-        }
-        const response = await fetch(url);
+        if (escolaId && escolaId !== '') url += `?escola_id=${escolaId}`;
+        const response = await apiFetch(url);
         const turmas = await response.json();
         cache.turmas[chave] = turmas;
         cache.ultima_atualizacao[chave] = Date.now();
@@ -348,19 +360,15 @@ async function carregarTurmasComCache(escolaId, forceRefresh = false) {
 
 async function carregarAlunosComCache(filtros = {}, forceRefresh = false) {
     const chave = JSON.stringify(filtros);
-    if (!forceRefresh && cache.alunos[chave] && isCacheValido(chave)) {
-        return cache.alunos[chave];
-    }
+    if (!forceRefresh && cache.alunos[chave] && isCacheValido(chave)) return cache.alunos[chave];
     try {
         const params = new URLSearchParams();
         if (filtros.escola_id) params.append('escola_id', filtros.escola_id);
         if (filtros.turma_id) params.append('turma_id', filtros.turma_id);
         if (filtros.serie) params.append('serie', filtros.serie);
-
         let url = `${API_URL}/api/alunos`;
         if (params.toString()) url += '?' + params.toString();
-
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         const alunos = await response.json();
         cache.alunos[chave] = alunos;
         cache.ultima_atualizacao[chave] = Date.now();
@@ -372,11 +380,9 @@ async function carregarAlunosComCache(filtros = {}, forceRefresh = false) {
 }
 
 async function carregarProvasComCache(forceRefresh = false) {
-    if (!forceRefresh && cache.provas && isCacheValido('provas')) {
-        return cache.provas;
-    }
+    if (!forceRefresh && cache.provas && isCacheValido('provas')) return cache.provas;
     try {
-        const response = await fetch(`${API_URL}/api/provas`);
+        const response = await apiFetch(`${API_URL}/api/provas`);
         const provas = await response.json();
         cache.provas = provas;
         cache.ultima_atualizacao['provas'] = Date.now();
@@ -396,49 +402,24 @@ function limparCache() {
     console.log('🧹 Cache limpo!');
 }
 
-// ═══ FUNÇÕES AUXILIARES DE DOM ═══
-function setText(id, valor) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = valor;
-}
+function setText(id, valor) { const el = document.getElementById(id); if (el) el.textContent = valor; }
+function setHTML(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
 
-function setHTML(id, html) {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
-}
-
-// ═══ PROCESSAR RESPOSTAS DA API ═══
 async function processarRespostaAPI(response) {
     let result;
     const contentType = response.headers.get('content-type');
-
     if (contentType && contentType.includes('application/json')) {
-        try {
-            result = await response.json();
-        } catch (e) {
-            result = { erro: 'Erro ao processar JSON' };
-        }
+        try { result = await response.json(); } catch (e) { result = { erro: 'Erro ao processar JSON' }; }
     } else {
         const text = await response.text();
-        try {
-            result = JSON.parse(text);
-        } catch (e) {
-            if (response.ok) {
-                result = { sucesso: true, mensagem: 'Operação realizada com sucesso' };
-            } else {
-                result = { sucesso: false, erro: 'Erro ' + response.status + ': ' + text.substring(0, 100) };
-            }
+        try { result = JSON.parse(text); } catch (e) {
+            if (response.ok) result = { sucesso: true, mensagem: 'Operação realizada com sucesso' };
+            else result = { sucesso: false, erro: 'Erro ' + response.status + ': ' + text.substring(0, 100) };
         }
     }
-
-    return {
-        ok: response.ok || result.sucesso === true,
-        data: result,
-        status: response.status
-    };
+    return { ok: response.ok || result.sucesso === true, data: result, status: response.status };
 }
 
-// ═══ CÁLCULO DE CONCEITO ═══
 function calcularConceito(porcentagem) {
     if (porcentagem <= 40) return 'inicial';
     if (porcentagem <= 60) return 'basico';
@@ -446,22 +427,15 @@ function calcularConceito(porcentagem) {
     return 'avancado';
 }
 
-// ═══ MAPEAMENTO GLOBAL DE DISCIPLINA ═══
 function mapearDisciplina(nome) {
     const mapa = {
-        'Português': 'portugues',
-        'Matemática': 'matematica',
-        'Produção de Texto': 'producao',
-        'Ciências Humanas': 'ch',
-        'Ciências Naturais': 'cn',
-        'História': 'ch',
-        'Geografia': 'ch',
-        'Inglês': 'portugues'
+        'Português': 'portugues', 'Matemática': 'matematica',
+        'Produção de Texto': 'producao', 'Ciências Humanas': 'ch',
+        'Ciências Naturais': 'cn', 'História': 'ch', 'Geografia': 'ch', 'Inglês': 'portugues'
     };
     return mapa[nome] || null;
 }
 
-// ═══ TOAST E MODAIS ═══
 function showToast(msg, type) {
     type = type || 'info';
     const c = document.getElementById('toast-c');
@@ -475,10 +449,7 @@ function showToast(msg, type) {
 }
 
 function toast(mensagem, tipo = 'info') {
-    if (typeof showToast === 'function') {
-        showToast(mensagem, tipo);
-        return;
-    }
+    if (typeof showToast === 'function') { showToast(mensagem, tipo); return; }
     const container = document.getElementById('toast-c');
     if (!container) return;
     const el = document.createElement('div');
@@ -493,28 +464,13 @@ function toast(mensagem, tipo = 'info') {
 }
 
 function closeM(id) {
-    console.log('🔴 Fechando modal:', id);
     const modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-        console.log('✅ Modal fechado:', id);
-    } else {
-        console.warn('⚠️ Modal não encontrado:', id);
-    }
+    if (modal) { modal.style.display = 'none'; modal.classList.remove('show'); }
 }
 
 function openM(id) {
-    console.log('🟢 Abrindo modal:', id);
     const modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('show');
-        console.log('✅ Modal aberto:', id);
-    } else {
-        console.warn('⚠️ Modal não encontrado:', id);
-    }
-
+    if (modal) { modal.style.display = 'flex'; modal.classList.add('show'); }
     if (id === 'm-turma' || id === 'm-aluno') {
         if (typeof carregarCombos === 'function') carregarCombos();
         if (id === 'm-aluno' && typeof carregarEscolasParaAluno === 'function') carregarEscolasParaAluno();
@@ -526,66 +482,46 @@ function openM(id) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ═══ ADICIONADO DO MONOLÍTICO — funções que faltavam aqui ═══
-// ═══════════════════════════════════════════════════════════════
-
-// Preenche datas de impressão em todos os relatórios
 function atualizarDatasImpressao() {
     const agora = new Date();
     const dataFormatada = agora.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
-
     const elementosData = [
-        'print-data-dash',
-        'print-data-resultados',
-        'print-data-rel-turma',
-        'print-data-rel-escola',
-        'print-data-u-dash',
-        'print-data-u-rel',
+        'print-data-dash', 'print-data-resultados', 'print-data-rel-turma',
+        'print-data-rel-escola', 'print-data-u-dash', 'print-data-u-rel',
         'print-data-desempenho'
     ];
-
     elementosData.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = dataFormatada;
     });
 }
 
-// Popula o select de número de questões no cadastro de prova
 function popularSelectQuestoes() {
     const select = document.getElementById('prova-questoes');
     if (!select) return;
     select.innerHTML = '';
     for (let i = 1; i <= 30; i++) {
         const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = i;
+        opt.value = i; opt.textContent = i;
         if (i === 20) opt.selected = true;
         select.appendChild(opt);
     }
 }
 
-// Popula o select de número de questões no gabarito
 function popularSelectGabTotal() {
     const select = document.getElementById('gab-total');
     if (!select) return;
     select.innerHTML = '';
     for (let i = 1; i <= 30; i++) {
         const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = i;
+        opt.value = i; opt.textContent = i;
         if (i === 20) opt.selected = true;
         select.appendChild(opt);
     }
 }
 
-// Filtra tabelas por texto (search box)
 function filtrarTabela(input, tbodyId) {
     const val = input.value.toLowerCase();
     document.querySelectorAll('#' + tbodyId + ' tr').forEach(row => {
@@ -593,7 +529,6 @@ function filtrarTabela(input, tbodyId) {
     });
 }
 
-// Filtra tabela de turmas por série
 function filtrarSerie(sel) {
     const val = sel.value;
     document.querySelectorAll('#tb-turmas tr').forEach(row => {
@@ -601,33 +536,23 @@ function filtrarSerie(sel) {
     });
 }
 
-// Filtra as opções do select de turma conforme a série escolhida
 function filtrarTurmasPorSerie(selectSerie, selectTurma) {
     const serieSelecionada = selectSerie.value;
     let firstVisible = false;
-
     for (let option of selectTurma.options) {
-        if (option.value === '') {
-            option.style.display = '';
-            continue;
-        }
+        if (option.value === '') { option.style.display = ''; continue; }
         const serieDaTurma = option.dataset.serie || '';
         if (serieSelecionada === '' || serieDaTurma === serieSelecionada) {
             option.style.display = '';
-            if (!firstVisible) {
-                selectTurma.value = option.value;
-                firstVisible = true;
-            }
+            if (!firstVisible) { selectTurma.value = option.value; firstVisible = true; }
         } else {
             option.style.display = 'none';
         }
     }
-
     if (!firstVisible) selectTurma.value = '';
     selectTurma.dispatchEvent(new Event('change'));
 }
 
-// Renumera as linhas de uma tabela após exclusão
 function renumerarTabela(tbody) {
     if (!tbody) return;
     tbody.querySelectorAll('tr').forEach((tr, i) => {
@@ -639,7 +564,6 @@ function renumerarTabela(tbody) {
     });
 }
 
-// Modal genérico de confirmação de exclusão
 function excluir(btn, tipo, nome) {
     const row = btn.closest('tr');
     delTarget = { row, tipo, nome };
@@ -666,7 +590,6 @@ function confirmarDel() {
     }, 350);
 }
 
-// Switch de abas em modais
 function switchTab(idx, btn) {
     const parent = btn.closest('.tab-nav');
     if (parent) {
@@ -681,7 +604,6 @@ function switchTab(idx, btn) {
     }
 }
 
-// Simula upload (feedback visual)
 function simUpload() {
     setTimeout(() => {
         const el = document.getElementById('up-ok');
@@ -690,11 +612,8 @@ function simUpload() {
     }, 600);
 }
 
-// Salva configurações (feedback visual)
 function salvarConfiguracoes() {
     showToast('✅ Configurações salvas!', 'success');
 }
-
-// ═══ FIM DOS ADICIONADOS DO MONOLÍTICO ═══
 
 console.log('✅ js/core.js carregado');
