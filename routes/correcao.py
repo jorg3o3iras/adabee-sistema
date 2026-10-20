@@ -1,6 +1,6 @@
 # ============================================================
 # ROUTES/CORRECAO.PY — Correção IA, lote, manual, produção, QR
-# com validação de escola
+# Provas GLOBAIS — valida apenas a escola do ALUNO
 # ============================================================
 
 import hashlib
@@ -26,13 +26,18 @@ bp = Blueprint('correcao', __name__, url_prefix='/api')
 
 def _validar_aluno_prova_escola(cur, aluno_id, prova_id, escola_sessao):
     """
-    Valida que aluno e prova existem e, se usuário não-admin,
-    que o aluno pertence à escola da sessão.
+    Valida aluno + prova.
+    - Aluno: usuário comum precisa pertencer à mesma escola.
+    - Prova: GLOBAL — não filtra por escola (todos veem todas as provas).
     Retorna (ok, dados|None, erro_msg|None, status_code).
     """
     cur.execute("""
-        SELECT p.*, a.nome AS aluno_nome, a.turma_id, a.escola_id,
-               t.serie AS turma_serie, e.nome AS escola_nome
+        SELECT p.*,
+               a.nome AS aluno_nome,
+               a.turma_id,
+               a.escola_id AS aluno_escola_id,
+               t.serie AS turma_serie,
+               e.nome AS escola_nome
         FROM provas p
         LEFT JOIN alunos a ON a.id = %s
         LEFT JOIN turmas t ON a.turma_id = t.id
@@ -42,8 +47,9 @@ def _validar_aluno_prova_escola(cur, aluno_id, prova_id, escola_sessao):
     dados = cur.fetchone()
     if not dados:
         return False, None, 'Prova não encontrada', 404
-    if escola_sessao is not None and dados.get('escola_id') != escola_sessao:
-        return False, None, 'Acesso negado a este aluno/prova', 403
+    # ⚠️ Só valida a escola DO ALUNO (prova é global)
+    if escola_sessao is not None and dados.get('aluno_escola_id') != escola_sessao:
+        return False, None, 'Acesso negado a este aluno', 403
     return True, dados, None, 200
 
 
@@ -119,7 +125,6 @@ def corrigir_com_ia():
                 resultado['confianca_por_questao'] = [70] * total
                 resultado['confianca'] = 70
 
-            # ⬇️ resto igual ao original
             try:
                 conn = get_db_connection()
                 if conn:
@@ -176,11 +181,6 @@ def corrigir_com_ia():
         return jsonify({'erro': str(e)}), 500
 
 
-# /corrigir-lote — sem escola filter aqui (batch é por cartão, e cada aluno
-# é validado individualmente dentro do loop via nome do aluno + prova).
-# MANTIDO ORIGINAL.
-
-# /corrigir_manual — adiciona validação de escola
 @bp.route('/corrigir_manual', methods=['POST'])
 def corrigir_manual():
     try:
@@ -275,7 +275,6 @@ def corrigir_manual():
         return jsonify({'erro': str(e)}), 500
 
 
-# /salvar_nota_producao — adiciona validação de escola
 @bp.route('/salvar_nota_producao', methods=['POST'])
 def salvar_nota_producao():
     try:
@@ -376,7 +375,6 @@ def salvar_nota_producao():
         return jsonify({'erro': str(e)}), 500
 
 
-# /corrigir-automatico — adiciona validação de escola (após ler QR)
 @bp.route('/corrigir-automatico', methods=['POST'])
 def corrigir_automatico():
     try:
