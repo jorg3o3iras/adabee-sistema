@@ -76,12 +76,15 @@ def login():
 
 # ═══════════════════════════════════════════════════════════════
 # 🔒 VERIFICAR SENHA ADMIN (protege a tela de Configurações)
+# Aceita usuários da TABELA + fallback em USUARIOS_FIXOS
 # ═══════════════════════════════════════════════════════════════
 @bp.route('/verificar-senha-admin', methods=['POST'])
 def verificar_senha_admin():
     """
     Verifica se a senha enviada pertence a um usuário ADMIN.
-    Usado para proteger a tela de Configurações.
+    Ordem de checagem:
+      1) Tabela `usuarios`
+      2) Fallback em `USUARIOS_FIXOS` (dev/teste — ex: 'admin' / 'admin')
     """
     try:
         data = request.get_json() or {}
@@ -105,27 +108,43 @@ def verificar_senha_admin():
         cur.close()
         conn.close()
 
-        if not usuario:
-            return jsonify({'ok': False, 'erro': 'Usuário não encontrado'}), 401
+        # ── 1) Usuário existe na TABELA ──
+        if usuario:
+            if not usuario['ativo']:
+                return jsonify({'ok': False, 'erro': 'Usuário inativo'}), 401
+            if usuario['perfil'] != 'admin':
+                return jsonify({'ok': False, 'erro': 'Apenas administradores podem acessar'}), 403
+            if not hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)):
+                return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
+            return jsonify({
+                'ok': True,
+                'usuario': {
+                    'id': usuario['id'],
+                    'username': usuario['username'],
+                    'nome': usuario['nome'],
+                    'perfil': usuario['perfil']
+                }
+            }), 200
 
-        if not usuario['ativo']:
-            return jsonify({'ok': False, 'erro': 'Usuário inativo'}), 401
+        # ── 2) Fallback: USUARIOS_FIXOS (DEV/TESTE) ──
+        if username in USUARIOS_FIXOS:
+            dados = USUARIOS_FIXOS[username]
+            if dados.get('perfil') != 'admin':
+                return jsonify({'ok': False, 'erro': 'Apenas administradores podem acessar'}), 403
+            if not hmac.compare_digest(str(dados['senha']), str(senha)):
+                return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
+            return jsonify({
+                'ok': True,
+                'usuario': {
+                    'id': 0,
+                    'username': username,
+                    'nome': dados['nome'],
+                    'perfil': dados['perfil']
+                }
+            }), 200
 
-        if usuario['perfil'] != 'admin':
-            return jsonify({'ok': False, 'erro': 'Apenas administradores podem acessar'}), 403
-
-        if not hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)):
-            return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
-
-        return jsonify({
-            'ok': True,
-            'usuario': {
-                'id': usuario['id'],
-                'username': usuario['username'],
-                'nome': usuario['nome'],
-                'perfil': usuario['perfil']
-            }
-        }), 200
+        # ── 3) Não achou em nenhum dos dois ──
+        return jsonify({'ok': False, 'erro': 'Usuário não encontrado'}), 401
 
     except Exception as e:
         print(f'❌ Erro em verificar_senha_admin: {e}')
