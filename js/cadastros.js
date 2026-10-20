@@ -631,6 +631,24 @@ function fecharAbaMulti() {
 // ═══════════════════════════════════════════════════════════════
 // 👤 USUÁRIOS (com escola) — deve sobrescrever versão do script.js
 // ═══════════════════════════════════════════════════════════════
+
+// ✅ NOVO: chamado pelo inline onchange do select de perfil no index.html
+// Mostra/esconde o asterisco obrigatório e limpa a escola quando vira admin
+function atualizarObrigatorioEscolaUsuario() {
+    const perfilSel = document.getElementById('usuario-perfil');
+    const escolaSel = document.getElementById('usuario-escola');
+    const reqEl     = document.getElementById('usuario-escola-req');
+    if (!perfilSel) return;
+
+    const isUsuario = perfilSel.value !== 'admin';
+    if (escolaSel) {
+        escolaSel.required = isUsuario;
+        if (!isUsuario) escolaSel.value = ''; // admin: limpa seleção
+    }
+    if (reqEl) reqEl.style.display = isUsuario ? 'inline' : 'none';
+}
+
+// 🔧 AJUSTADO: usa a função global e não sobrescreve mais o onchange inline
 async function abrirModalUsuario(usuarioId) {
     // Carrega combo de escolas
     const sel = document.getElementById('usuario-escola');
@@ -645,7 +663,7 @@ async function abrirModalUsuario(usuarioId) {
         }
     }
 
-    // Limpa form (modo criação) ou preenche (modo edição)
+    // Limpa form (modo criação) — preenche depois se for edição
     document.getElementById('editar-usuario-id').value = usuarioId || '';
     document.getElementById('usuario-nome').value = '';
     document.getElementById('usuario-username').value = '';
@@ -655,10 +673,11 @@ async function abrirModalUsuario(usuarioId) {
     document.getElementById('usuario-ativo').checked = true;
     if (sel) sel.value = '';
 
-    // Modal header dinâmico
+    // Header dinâmico
     const h3 = document.querySelector('#m-usuario .modal-header h3');
     if (h3) h3.textContent = usuarioId ? '✏️ Editar Usuário' : '👤 Cadastrar Usuário';
 
+    // Carrega dados do usuário (edição)
     if (usuarioId) {
         try {
             const u = await _fetchJSON(API_URL + '/api/usuarios/' + usuarioId);
@@ -673,29 +692,26 @@ async function abrirModalUsuario(usuarioId) {
         }
     }
 
-    // Admin não precisa de escola → desativa required
-    const perfilSel = document.getElementById('usuario-perfil');
-    const atualizarRequired = () => {
-        if (sel) sel.required = (perfilSel.value !== 'admin');
-    };
-    if (perfilSel) { perfilSel.onchange = atualizarRequired; atualizarRequired(); }
+    // Atualiza estado do campo escola (required + asterisco)
+    atualizarObrigatorioEscolaUsuario();
 
     openM('m-usuario');
 }
 
+// 🔧 AJUSTADO: força escola_id = null quando perfil é admin
 async function salvarUsuario() {
     const id = document.getElementById('editar-usuario-id').value;
+    const perfil = document.getElementById('usuario-perfil').value;
+    const escolaVal = document.getElementById('usuario-escola')?.value;
+
     const payload = {
         nome: document.getElementById('usuario-nome').value.trim(),
         username: document.getElementById('usuario-username').value.trim(),
         senha: document.getElementById('usuario-senha').value,
         email: document.getElementById('usuario-email').value.trim(),
-        perfil: document.getElementById('usuario-perfil').value,
+        perfil: perfil,
         ativo: document.getElementById('usuario-ativo').checked,
-        escola_id: (function() {
-            const v = document.getElementById('usuario-escola')?.value;
-            return v ? parseInt(v) : null;
-        })()
+        escola_id: perfil === 'admin' ? null : (escolaVal ? parseInt(escolaVal) : null)
     };
 
     if (!payload.nome || !payload.username) { showToast('❌ Nome e usuário são obrigatórios!', 'error'); return; }
