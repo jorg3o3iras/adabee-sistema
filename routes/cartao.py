@@ -1,5 +1,6 @@
 # ============================================================
 # ROUTES/CARTAO.PY — Geração de cartão resposta + folha redação
+# com validação de escola
 # ============================================================
 
 import base64
@@ -13,12 +14,16 @@ from flask import Blueprint, jsonify, request
 from psycopg2.extras import RealDictCursor
 
 from core.db import get_db_connection
+from core.utils import get_escola_id
 from services.evalbee import gerar_mapa_template_padrao, salvar_mapa_template
 
 
 bp = Blueprint('cartao', __name__, url_prefix='/api')
 
 
+# ═══════════════════════════════════════════════════════════════
+# 🎨 HELPERS DE IMAGEM (inalterados)
+# ═══════════════════════════════════════════════════════════════
 def gerar_qrcode_base64(dados):
     try:
         import qrcode
@@ -74,10 +79,13 @@ def carregar_logo_base64(nome_arquivo):
         return ''
 
 
+# ═══════════════════════════════════════════════════════════════
+# 🎫 GERAR GABARITO/CARTÃO RESPOSTA (com validação de escola)
+# ═══════════════════════════════════════════════════════════════
 @bp.route('/gerar_gabarito', methods=['POST'])
 def gerar_gabarito():
     try:
-        data = request.json
+        data = request.json or {}
 
         campos_obrigatorios = ['escola_id', 'turma_id', 'aluno_id', 'prova_id']
         for campo in campos_obrigatorios:
@@ -93,10 +101,15 @@ def gerar_gabarito():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
 
+        # 🔒 Escola da sessão (None = admin → vê tudo)
+        escola_sessao = get_escola_id()
+
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # Buscar aluno (agora inclui escola_id para validação)
         cur.execute("""
-            SELECT a.nome, e.nome as escola_nome, t.nome as turma_nome, t.serie
+            SELECT a.nome, a.escola_id, e.nome as escola_nome,
+                   t.nome as turma_nome, t.serie
             FROM alunos a
             LEFT JOIN turmas t ON a.turma_id = t.id
             LEFT JOIN escolas e ON a.escola_id = e.id
@@ -112,6 +125,15 @@ def gerar_gabarito():
 
         if not aluno or not prova:
             return jsonify({'erro': 'Aluno ou prova não encontrados'}), 404
+
+        # 🔒 Valida acesso à escola do aluno
+        if escola_sessao is not None and aluno.get('escola_id') != escola_sessao:
+            return jsonify({'erro': 'Acesso negado a este aluno'}), 403
+
+        # 🛡️ Valida que a prova também pertence à escola da sessão
+        prova_escola_id = prova.get('escola_id') if isinstance(prova, dict) else prova[8] if len(prova) > 8 else None
+        if escola_sessao is not None and prova_escola_id is not None and prova_escola_id != escola_sessao:
+            return jsonify({'erro': 'Acesso negado a esta prova'}), 403
 
         nome_aluno = aluno['nome']
         escola_nome = aluno['escola_nome'] or ''
@@ -132,6 +154,9 @@ def gerar_gabarito():
         alternativas = ['A', 'B', 'C', 'D', 'E'][:tipo_questoes]
         quantidade_questoes = int(prova.get('quantidade_questoes', 20))
 
+        # ═══════════════════════════════════════════════════════════
+        # FOLHA DE REDAÇÃO
+        # ═══════════════════════════════════════════════════════════
         if disciplina_prova == 'Redação':
             logging.info(f"📝 Gerando FOLHA DE REDAÇÃO para {nome_aluno}")
 
@@ -209,7 +234,7 @@ def gerar_gabarito():
         </div>
 
         <div class="header">
-            {logo_html} 
+            {logo_html}
             <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div>
             <div style="text-align:center;">
                 <div class="header-cartao">FOLHA DE REDAÇÃO</div>
@@ -247,6 +272,9 @@ def gerar_gabarito():
 """
             return html_redacao, 200, {'Content-Type': 'text/html'}
 
+        # ═══════════════════════════════════════════════════════════
+        # CARTÃO RESPOSTA (bolhas)
+        # ═══════════════════════════════════════════════════════════
         num_colunas_real = 1 if quantidade_questoes <= 12 else 2
 
         mapa_template = gerar_mapa_template_padrao(
@@ -345,7 +373,7 @@ def gerar_gabarito():
 
         <div class="header-abs">
             {logo_html}
-            <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div> 
+            <div class="header-titulo">SECRETARIA MUN. DE EDUCAÇÃO — SISAM 2026</div>
             <div class="header-cartao">CARTÃO RESPOSTA</div>
             <div class="header-prova">{titulo_prova}</div>
             <div class="header-escola">{escola_nome} | Série: {serie} | Turma: {turma_nome}</div>
@@ -357,7 +385,7 @@ def gerar_gabarito():
                 <span style="display:inline-block; border-bottom:1.5px solid #000; width:85mm; height:5mm; margin-left:2mm; vertical-align:bottom;"></span>
             </div>
             <div class="instrucoes">
-                ⚠️ PINTE SOMENTE UM CIRCULO POR QUESTAO — USE CANETA PRETA OU AZUL — NÃO RASURE - 
+                ⚠️ PINTE SOMENTE UM CIRCULO POR QUESTAO — USE CANETA PRETA OU AZUL — NÃO RASURE -
             </div>
         </div>
 
