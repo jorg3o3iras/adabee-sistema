@@ -21,7 +21,7 @@ bp = Blueprint('auth', __name__, url_prefix='/api')
 @bp.route('/login', methods=['POST'])
 def login():
     try:
-        data = request.json
+        data = request.json or {}
         username = data.get('username')
         senha = data.get('senha')
         if not username or not senha:
@@ -31,29 +31,51 @@ def login():
         if conn:
             try:
                 cur = conn.cursor(cursor_factory=RealDictCursor)
-                cur.execute("SELECT id, nome, username, senha_hash, perfil, ativo FROM usuarios WHERE username = %s", (username,))
+                cur.execute("""
+                    SELECT u.id, u.nome, u.username, u.senha_hash, u.perfil,
+                           u.ativo, u.escola_id, e.nome AS escola_nome
+                    FROM usuarios u
+                    LEFT JOIN escolas e ON e.id = u.escola_id
+                    WHERE u.username = %s
+                """, (username,))
                 usuario = cur.fetchone()
                 cur.close()
                 conn.close()
                 if usuario:
                     if hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)) and usuario['ativo'] == True:
-                        return jsonify({'sucesso': True, 'perfil': usuario['perfil'], 'usuario': usuario['username'], 'nome': usuario['nome']})
+                        return jsonify({
+                            'sucesso': True,
+                            'id': usuario['id'],
+                            'perfil': usuario['perfil'],
+                            'usuario': usuario['username'],
+                            'username': usuario['username'],
+                            'nome': usuario['nome'],
+                            'escola_id': usuario.get('escola_id'),
+                            'escola_nome': usuario.get('escola_nome'),
+                        })
             except Exception as e:
                 print(f"❌ Erro no banco: {e}")
                 traceback.print_exc()
         if username in USUARIOS_FIXOS:
             dados = USUARIOS_FIXOS[username]
             if hmac.compare_digest(str(dados['senha']), str(senha)):
-                return jsonify({'sucesso': True, 'perfil': dados['perfil'], 'usuario': username, 'nome': dados['nome']})
+                return jsonify({
+                    'sucesso': True,
+                    'id': 0,
+                    'perfil': dados['perfil'],
+                    'usuario': username,
+                    'username': username,
+                    'nome': dados['nome'],
+                    'escola_id': dados.get('escola_id'),
+                    'escola_nome': None,
+                })
         return jsonify({'sucesso': False, 'erro': 'Usuário ou senha incorretos!'}), 401
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
 
 # ═══════════════════════════════════════════════════════════════
-# 🔒 NOVA ROTA — VERIFICAR SENHA ADMIN
-# (url_prefix='/api' já está no Blueprint, então NÃO coloque /api aqui)
-# URL final: /api/verificar-senha-admin
+# 🔒 VERIFICAR SENHA ADMIN (protege a tela de Configurações)
 # ═══════════════════════════════════════════════════════════════
 @bp.route('/verificar-senha-admin', methods=['POST'])
 def verificar_senha_admin():
@@ -62,7 +84,7 @@ def verificar_senha_admin():
     Usado para proteger a tela de Configurações.
     """
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         senha = data.get('senha', '').strip()
         username = data.get('username', '').strip()
 
@@ -70,6 +92,9 @@ def verificar_senha_admin():
             return jsonify({'ok': False, 'erro': 'Usuário e senha são obrigatórios'}), 400
 
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'ok': False, 'erro': 'Banco indisponível'}), 500
+
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             SELECT id, username, nome, senha_hash, perfil, ativo
@@ -89,7 +114,6 @@ def verificar_senha_admin():
         if usuario['perfil'] != 'admin':
             return jsonify({'ok': False, 'erro': 'Apenas administradores podem acessar'}), 403
 
-        # Compara a senha (mesma técnica do login: hmac.compare_digest)
         if not hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)):
             return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
 
