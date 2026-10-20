@@ -89,7 +89,11 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(matrizes_bp)
 app.register_blueprint(cartao_bp)
 app.register_blueprint(backup_bp)
-app.register_blueprint(static_files_bp)
+
+# ⚠️ FIX: name='static_files_main' dá um nome de registro ÚNICO.
+# Se outro arquivo (routes/static.py) já declarou Blueprint('static_files', ...)
+# em algum ponto, isso evita o ValueError "already registered".
+app.register_blueprint(static_files_bp, name='static_files_main')
 
 
 # ═══ INIT ═══
