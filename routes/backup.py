@@ -1,78 +1,149 @@
 # ============================================================
-# ROUTES/BACKUP.PY — Backup do banco em ZIP
+# ROUTES/STATIC.PY — Servir arquivos estáticos + health
 # ============================================================
 
-import io
-import json
 import logging
 import os
-import traceback
-import zipfile
-from datetime import datetime
 
-from flask import Blueprint, jsonify, request, send_file
-from psycopg2.extras import RealDictCursor
+from flask import Blueprint, jsonify, send_file
 
 from core.db import get_db_connection
+from services.ia_fallback import (
+    OPENAI_AVAILABLE,
+    PYZBAR_AVAILABLE as _pyzbar_check,
+)
+from config import (
+    DB_POOL_MAX,
+    DB_POOL_MIN,
+    OPENAI_MODEL,
+    RELAY_AVAILABLE,
+)
 
 
-bp = Blueprint('backup', __name__, url_prefix='/api')
+bp = Blueprint('static_files', __name__)
 
 
-@bp.route('/backup', methods=['GET'])
-def backup_database():
-    backup_key = request.headers.get('X-Backup-Key') or request.args.get('key')
-    expected_key = os.getenv('BACKUP_KEY', 'backup123')
+MIME_TYPES = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.eot': 'application/vnd.ms-fontobject',
+    '.pdf': 'application/pdf',
+    '.txt': 'text/plain',
+    '.xml': 'application/xml',
+}
 
-    if not backup_key or backup_key != expected_key:
-        logging.warning(f"⚠️ Tentativa de backup com chave inválida: {backup_key}")
-        return jsonify({'erro': 'Não autorizado. Chave de backup inválida.'}), 403
 
+def _get_mimetype(filename):
+    _, ext = os.path.splitext(filename.lower())
+    return MIME_TYPES.get(ext, None)
+
+
+@bp.route('/')
+def index():
     try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'erro': 'Erro ao conectar ao banco de dados'}), 500
+        if os.path.isfile('index.html'):
+            return send_file('index.html', mimetype='text/html')
+        return jsonify({
+            'mensagem': 'CorrigePro API',
+            'status': 'online',
+            'aviso': 'index.html não encontrado'
+        }), 200
+    except Exception as e:
+        logging.error(f"❌ Erro ao servir index.html: {e}")
+        return jsonify({'mensagem': 'CorrigePro API', 'status': 'online'}), 200
 
-        tables = ['escolas', 'turmas', 'alunos', 'provas', 'historico', 'usuarios', 'correcoes_texto', 'matrizes']
-        data = {}
 
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+@bp.route('/style.css')
+def serve_css():
+    try:
+        if os.path.isfile('style.css'):
+            logging.info("✅ Servindo style.css")
+            return send_file('style.css', mimetype='text/css')
+        logging.warning("⚠️ style.css não encontrado")
+        return "/* style.css não encontrado */", 404, {'Content-Type': 'text/css'}
+    except Exception as e:
+        logging.error(f"❌ Erro ao servir style.css: {e}")
+        return "/* erro */", 500, {'Content-Type': 'text/css'}
 
-        for table in tables:
-            try:
-                cur.execute(f"SELECT * FROM {table}")
-                rows = cur.fetchall()
-                data[table] = rows
-                logging.info(f"📦 Tabela '{table}': {len(rows)} registros exportados.")
-            except Exception as e:
-                logging.warning(f"⚠️ Tabela '{table}' não encontrada ou erro: {e}")
-                data[table] = []
 
-        cur.close()
-        conn.close()
+@bp.route('/script.js')
+def serve_js():
+    try:
+        if os.path.isfile('script.js'):
+            logging.info("✅ Servindo script.js")
+            return send_file('script.js', mimetype='application/javascript')
+        logging.warning("⚠️ script.js não encontrado")
+        return "// script.js não encontrado", 404, {'Content-Type': 'application/javascript'}
+    except Exception as e:
+        logging.error(f"❌ Erro ao servir script.js: {e}")
+        return "// erro", 500, {'Content-Type': 'application/javascript'}
 
-        json_str = json.dumps(data, default=str, indent=2, ensure_ascii=False)
 
-        memory_file = io.BytesIO()
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        json_filename = f"backup_{timestamp}.json"
-        zip_filename = f"backup_{timestamp}.zip"
+@bp.route('/<path:filename>')
+def serve_static_file(filename):
+    try:
+        if '..' in filename or filename.startswith('/'):
+            logging.warning(f"⚠️ Path traversal bloqueado: {filename}")
+            return jsonify({'erro': 'Caminho inválido'}), 400
 
-        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(json_filename, json_str.encode('utf-8'))
+        mimetype = _get_mimetype(filename)
 
-        memory_file.seek(0)
+        if os.path.isfile(filename):
+            logging.info(f"✅ Servindo: {filename} ({mimetype})")
+            return send_file(filename, mimetype=mimetype)
 
-        logging.info(f"✅ Backup gerado com sucesso: {zip_filename}")
+        logging.warning(f"⚠️ Arquivo não encontrado: {filename}")
 
-        return send_file(
-            memory_file,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name=zip_filename
-        )
+        if filename.endswith('.css'):
+            return "/* não encontrado */", 404, {'Content-Type': 'text/css'}
+        if filename.endswith('.js'):
+            return "// não encontrado", 404, {'Content-Type': 'application/javascript'}
+
+        return jsonify({'erro': 'Arquivo não encontrado', 'path': filename}), 404
 
     except Exception as e:
-        logging.error(f"❌ Erro ao gerar backup: {str(e)}")
-        traceback.print_exc()
-        return jsonify({'erro': f'Erro ao gerar backup: {str(e)}'}), 500
+        logging.error(f"❌ Erro ao servir {filename}: {e}")
+        if filename.endswith('.css'):
+            return "/* erro */", 500, {'Content-Type': 'text/css'}
+        if filename.endswith('.js'):
+            return "// erro", 500, {'Content-Type': 'application/javascript'}
+        return jsonify({'erro': str(e)}), 500
+
+
+@bp.route('/health', methods=['GET'])
+def health_check():
+    conn = get_db_connection()
+    db_ok = conn is not None
+    if conn:
+        conn.close()
+
+    arquivos = {
+        'index.html': os.path.isfile('index.html'),
+        'style.css': os.path.isfile('style.css'),
+        'script.js': os.path.isfile('script.js'),
+    }
+
+    return jsonify({
+        'status': 'online',
+        'openai': 'disponível' if OPENAI_AVAILABLE else 'indisponível',
+        'openai_modelo': OPENAI_MODEL if OPENAI_AVAILABLE else None,
+        'relay': 'disponível' if RELAY_AVAILABLE else 'indisponível',
+        'pyzbar': 'disponível' if _pyzbar_check else 'indisponível',
+        'database': 'conectado' if db_ok else 'desconectado',
+        'pool': {'min': DB_POOL_MIN, 'max': DB_POOL_MAX},
+        'correcao': 'EvalBee v4 (A,B,C / A,B,C,D / A,B,C,D,E)',
+        'versao': 'v4.0-EvalBee',
+        'arquivos': arquivos
+    })
