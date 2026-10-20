@@ -1,5 +1,6 @@
 # ============================================================
 # ROUTES/CADASTROS.PY — Escolas, Turmas, Alunos, Provas (CRUD)
+# com isolamento por escola
 # ============================================================
 
 import json
@@ -10,9 +11,18 @@ from flask import Blueprint, jsonify, request
 from psycopg2.extras import RealDictCursor
 
 from core.db import get_db_connection
+from core.utils import get_usuario_atual, get_escola_id, is_admin
 
 
 bp = Blueprint('cadastros', __name__, url_prefix='/api')
+
+
+def _apenas_admin():
+    """Bloqueia não-admin apenas se houver header (compat quando não há)."""
+    u = get_usuario_atual()
+    if u and u.get('perfil') != 'admin':
+        return jsonify({'erro': 'Apenas administradores podem executar esta ação'}), 403
+    return None
 
 
 # ═══════════════════════════════════════════════════════════
@@ -21,23 +31,35 @@ bp = Blueprint('cadastros', __name__, url_prefix='/api')
 
 @bp.route('/escolas', methods=['GET'])
 def listar_escolas():
+    escola_id_sessao = get_escola_id()  # None = admin / sem header
     conn = get_db_connection()
     if conn:
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM escolas ORDER BY nome")
+            if escola_id_sessao is not None:
+                # usuário comum → só a própria escola
+                cur.execute("SELECT * FROM escolas WHERE id = %s ORDER BY nome",
+                            (escola_id_sessao,))
+            else:
+                cur.execute("SELECT * FROM escolas ORDER BY nome")
             escolas = cur.fetchall()
             cur.close()
             conn.close()
             return jsonify(escolas)
         except Exception as e:
             print(f"Erro ao listar escolas: {e}")
+            try: conn.close()
+            except Exception: pass
     return jsonify([])
 
 
 @bp.route('/escolas', methods=['POST'])
 def criar_escola():
-    data = request.json
+    bloqueio = _apenas_admin()
+    if bloqueio:
+        return bloqueio
+
+    data = request.json or {}
     nome = data.get('nome')
     if not nome:
         return jsonify({'erro': 'Nome é obrigatório'}), 400
@@ -59,11 +81,17 @@ def criar_escola():
         except Exception as e:
             print(f"Erro ao criar escola: {e}")
             traceback.print_exc()
+            try: conn.close()
+            except Exception: pass
     return jsonify({'erro': 'Erro ao criar escola'}), 500
 
 
 @bp.route('/escolas/<int:id>', methods=['GET'])
 def buscar_escola(id):
+    escola_id_sessao = get_escola_id()
+    if escola_id_sessao is not None and escola_id_sessao != id:
+        return jsonify({'erro': 'Acesso negado a esta escola'}), 403
+
     try:
         conn = get_db_connection()
         if not conn:
@@ -86,8 +114,12 @@ def buscar_escola(id):
 
 @bp.route('/escolas/<int:id>', methods=['PUT'])
 def editar_escola(id):
+    bloqueio = _apenas_admin()
+    if bloqueio:
+        return bloqueio
+
     try:
-        data = request.json
+        data = request.json or {}
         nome = data.get('nome')
 
         if not nome:
@@ -125,6 +157,10 @@ def editar_escola(id):
 
 @bp.route('/escolas/<int:id>', methods=['DELETE'])
 def excluir_escola(id):
+    bloqueio = _apenas_admin()
+    if bloqueio:
+        return bloqueio
+
     conn = get_db_connection()
     if not conn:
         return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -172,7 +208,14 @@ def excluir_escola(id):
 @bp.route('/turmas', methods=['GET'])
 def listar_turmas():
     try:
-        escola_id = request.args.get('escola_id')
+        escola_id_sessao = get_escola_id()
+
+        # Se não-admin → força o escola_id da sessão
+        if escola_id_sessao is not None:
+            escola_id = escola_id_sessao
+        else:
+            escola_id = request.args.get('escola_id')
+
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
@@ -190,11 +233,11 @@ def listar_turmas():
         """
         params = []
 
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+        if escola_id and str(escola_id) not in ('', 'null', 'undefined'):
             try:
                 params.append(int(escola_id))
                 query += " WHERE t.escola_id = %s"
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         query += " GROUP BY t.id, e.nome ORDER BY t.nome"
@@ -214,29 +257,37 @@ def listar_turmas():
 
 @bp.route('/turmas', methods=['POST'])
 def criar_turma():
-    data = request.json
-    if not data.get('nome') or not data.get('escola_id'):
-        return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
+    try:
+        data = request.json or {}
 
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
-                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
-                  data.get('turno', 'Manhã'), data.get('professor', ''),
-                  data.get('capacidade', 35), data.get('ano_letivo', 2025)))
-            result = cur.fetchone()
-            conn.commit()
-            cur.close()
-            conn.close()
-            return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
-        except Exception as e:
-            print(f"Erro ao criar turma: {e}")
-            traceback.print_exc()
-    return jsonify({'erro': 'Erro ao criar turma'}), 500
+        # Se não-admin → força escola_id da sessão
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None:
+            data['escola_id'] = escola_id_sessao
+
+        if not data.get('nome') or not data.get('escola_id'):
+            return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            INSERT INTO turmas (escola_id, nome, serie, turno, professor, capacidade, ano_letivo)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (data['escola_id'], data['nome'], data.get('serie', '1º Ano'),
+              data.get('turno', 'Manhã'), data.get('professor', ''),
+              data.get('capacidade', 35), data.get('ano_letivo', 2025)))
+        result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'id': result['id'], 'mensagem': 'Turma criada com sucesso'})
+    except Exception as e:
+        print(f"Erro ao criar turma: {e}")
+        traceback.print_exc()
+        return jsonify({'erro': 'Erro ao criar turma'}), 500
 
 
 @bp.route('/turmas/<int:id>', methods=['GET'])
@@ -261,6 +312,11 @@ def buscar_turma(id):
         if not turma:
             return jsonify({'erro': 'Turma não encontrada'}), 404
 
+        # Isolamento: usuário comum só vê turmas da própria escola
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None and turma.get('escola_id') != escola_id_sessao:
+            return jsonify({'erro': 'Acesso negado a esta turma'}), 403
+
         return jsonify(turma)
 
     except Exception as e:
@@ -270,7 +326,11 @@ def buscar_turma(id):
 @bp.route('/turmas/<int:id>', methods=['PUT'])
 def editar_turma(id):
     try:
-        data = request.json
+        data = request.json or {}
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None:
+            data['escola_id'] = escola_id_sessao
 
         if not data.get('nome') or not data.get('escola_id'):
             return jsonify({'erro': 'Nome e escola são obrigatórios'}), 400
@@ -280,11 +340,18 @@ def editar_turma(id):
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT id FROM turmas WHERE id = %s", (id,))
-        if not cur.fetchone():
+        cur.execute("SELECT id, escola_id FROM turmas WHERE id = %s", (id,))
+        turma = cur.fetchone()
+        if not turma:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
+
+        # Isolamento: usuário comum só edita turmas da própria escola
+        if escola_id_sessao is not None and turma['escola_id'] != escola_id_sessao:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Acesso negado a esta turma'}), 403
 
         cur.execute("""
             UPDATE turmas
@@ -315,14 +382,20 @@ def excluir_turma(id):
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT id, nome, serie FROM turmas WHERE id = %s", (id,))
+        cur.execute("SELECT id, nome, serie, escola_id FROM turmas WHERE id = %s", (id,))
         turma = cur.fetchone()
         if not turma:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Turma não encontrada'}), 404
 
-        turma_id, turma_nome = turma[0], turma[1]
+        turma_id, turma_nome, turma_escola_id = turma[0], turma[1], turma[3]
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None and turma_escola_id != escola_id_sessao:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Acesso negado a esta turma'}), 403
 
         cur.execute("SELECT COUNT(*) FROM alunos WHERE turma_id = %s", (turma_id,))
         total_alunos = cur.fetchone()[0]
@@ -352,7 +425,13 @@ def excluir_turma(id):
 @bp.route('/alunos', methods=['GET'])
 def listar_alunos():
     try:
-        escola_id = request.args.get('escola_id')
+        escola_id_sessao = get_escola_id()
+
+        if escola_id_sessao is not None:
+            escola_id = escola_id_sessao
+        else:
+            escola_id = request.args.get('escola_id')
+
         turma_id = request.args.get('turma_id')
         serie = request.args.get('serie')
 
@@ -376,21 +455,21 @@ def listar_alunos():
         """
         params = []
 
-        if escola_id and escola_id != '' and escola_id != 'null' and escola_id != 'undefined':
+        if escola_id and str(escola_id) not in ('', 'null', 'undefined'):
             try:
                 params.append(int(escola_id))
                 query += " AND a.escola_id = %s"
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
-        if turma_id and turma_id != '' and turma_id != 'null' and turma_id != 'undefined':
+        if turma_id and str(turma_id) not in ('', 'null', 'undefined'):
             try:
                 params.append(int(turma_id))
                 query += " AND a.turma_id = %s"
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
-        if serie and serie != '' and serie != 'null' and serie != 'undefined':
+        if serie and str(serie) not in ('', 'null', 'undefined'):
             params.append(serie)
             query += " AND t.serie = %s"
 
@@ -412,7 +491,11 @@ def listar_alunos():
 @bp.route('/alunos', methods=['POST'])
 def criar_aluno():
     try:
-        data = request.json
+        data = request.json or {}
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None:
+            data['escola_id'] = escola_id_sessao
 
         if not data.get('nome'):
             return jsonify({'erro': 'Nome é obrigatório'}), 400
@@ -489,6 +572,10 @@ def buscar_aluno(id):
         if not aluno:
             return jsonify({'erro': 'Aluno não encontrado'}), 404
 
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None and aluno.get('escola_id') != escola_id_sessao:
+            return jsonify({'erro': 'Acesso negado a este aluno'}), 403
+
         return jsonify(aluno)
 
     except Exception as e:
@@ -498,7 +585,11 @@ def buscar_aluno(id):
 @bp.route('/alunos/<int:id>', methods=['PUT'])
 def editar_aluno(id):
     try:
-        data = request.json
+        data = request.json or {}
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None:
+            data['escola_id'] = escola_id_sessao
 
         if not data.get('nome'):
             return jsonify({'erro': 'Nome é obrigatório'}), 400
@@ -513,11 +604,17 @@ def editar_aluno(id):
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        cur.execute("SELECT id FROM alunos WHERE id = %s", (id,))
-        if not cur.fetchone():
+        cur.execute("SELECT id, escola_id FROM alunos WHERE id = %s", (id,))
+        aluno_existente = cur.fetchone()
+        if not aluno_existente:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Aluno não encontrado'}), 404
+
+        if escola_id_sessao is not None and aluno_existente['escola_id'] != escola_id_sessao:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Acesso negado a este aluno'}), 403
 
         cur.execute("SELECT id FROM escolas WHERE id = %s", (data['escola_id'],))
         if not cur.fetchone():
@@ -565,7 +662,7 @@ def excluir_aluno(id):
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT id, nome FROM alunos WHERE id = %s", (id,))
+        cur.execute("SELECT id, nome, escola_id FROM alunos WHERE id = %s", (id,))
         aluno = cur.fetchone()
         if not aluno:
             cur.close()
@@ -573,6 +670,13 @@ def excluir_aluno(id):
             return jsonify({'erro': 'Aluno não encontrado'}), 404
 
         aluno_nome = aluno[1]
+        aluno_escola_id = aluno[2]
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None and aluno_escola_id != escola_id_sessao:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Acesso negado a este aluno'}), 403
 
         cur.execute("DELETE FROM historico WHERE aluno_id = %s", (id,))
         cur.execute("DELETE FROM correcoes_texto WHERE aluno_id = %s", (id,))
@@ -597,18 +701,39 @@ def excluir_aluno(id):
 @bp.route('/provas', methods=['GET'])
 def listar_provas():
     try:
+        escola_id_sessao = get_escola_id()
         conn = get_db_connection()
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
+
+        query = """
             SELECT p.id, p.titulo, p.serie, p.disciplina, p.bimestre, p.data_prova,
                    p.valor_nota, p.tipo_questoes, p.quantidade_questoes, p.gabarito,
-                   p.bncc, p.textos_questoes, p.niveis, p.created_at
+                   p.bncc, p.textos_questoes, p.niveis, p.created_at,
+                   p.escola_id, e.nome AS escola_nome
             FROM provas p
-            ORDER BY p.created_at DESC
-        """)
+            LEFT JOIN escolas e ON e.id = p.escola_id
+        """
+        params = []
+
+        if escola_id_sessao is not None:
+            query += " WHERE p.escola_id = %s"
+            params.append(escola_id_sessao)
+        else:
+            # admin: pode filtrar via query param
+            filtro = request.args.get('escola_id')
+            if filtro and str(filtro) not in ('', 'null', 'undefined'):
+                try:
+                    query += " WHERE p.escola_id = %s"
+                    params.append(int(filtro))
+                except (ValueError, TypeError):
+                    pass
+
+        query += " ORDER BY p.created_at DESC"
+
+        cur.execute(query, params)
         provas = cur.fetchall()
         cur.close()
         conn.close()
@@ -640,7 +765,12 @@ def listar_provas():
 @bp.route('/provas', methods=['POST'])
 def criar_prova():
     try:
-        data = request.json
+        data = request.json or {}
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None:
+            data['escola_id'] = escola_id_sessao
+
         titulo = data.get('titulo')
         serie = data.get('serie')
 
@@ -648,6 +778,8 @@ def criar_prova():
             return jsonify({'erro': 'Título é obrigatório'}), 400
         if not serie:
             return jsonify({'erro': 'Série é obrigatória'}), 400
+        if not data.get('escola_id'):
+            return jsonify({'erro': 'Escola é obrigatória'}), 400
 
         conn = get_db_connection()
         if not conn:
@@ -655,11 +787,14 @@ def criar_prova():
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        cur.execute("SELECT id FROM provas WHERE titulo = %s AND serie = %s", (titulo, serie))
+        cur.execute(
+            "SELECT id FROM provas WHERE titulo = %s AND serie = %s AND escola_id = %s",
+            (titulo, serie, data['escola_id'])
+        )
         if cur.fetchone():
             cur.close()
             conn.close()
-            return jsonify({'erro': 'Já existe uma prova com este título para esta série'}), 400
+            return jsonify({'erro': 'Já existe uma prova com este título para esta série nesta escola'}), 400
 
         bncc = data.get('bncc', [])
         bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
@@ -670,16 +805,17 @@ def criar_prova():
 
         cur.execute("""
             INSERT INTO provas
-                (titulo, serie, disciplina, bimestre, data_prova,
+                (escola_id, titulo, serie, disciplina, bimestre, data_prova,
                  valor_nota, tipo_questoes, quantidade_questoes, gabarito,
                  bncc, textos_questoes, niveis)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """, (
-            titulo, serie, data.get('disciplina', ''), data.get('bimestre', ''),
-            data.get('data_prova'), data.get('nota_maxima', 10),
-            data.get('tipo_questoes', '4'), data.get('quantidade_questoes', 20),
-            data.get('gabarito', []), bncc_validos, textos_validos, niveis_validos
+            data['escola_id'], titulo, serie, data.get('disciplina', ''),
+            data.get('bimestre', ''), data.get('data_prova'),
+            data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
+            data.get('quantidade_questoes', 20), data.get('gabarito', []),
+            bncc_validos, textos_validos, niveis_validos
         ))
 
         result = cur.fetchone()
@@ -708,7 +844,7 @@ def buscar_prova(id):
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT id, titulo, serie, disciplina, bimestre, data_prova,
+            SELECT id, escola_id, titulo, serie, disciplina, bimestre, data_prova,
                    valor_nota, tipo_questoes, quantidade_questoes, gabarito,
                    bncc, textos_questoes, niveis, created_at
             FROM provas WHERE id = %s
@@ -719,6 +855,10 @@ def buscar_prova(id):
 
         if not prova:
             return jsonify({'erro': 'Prova não encontrada'}), 404
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None and prova.get('escola_id') != escola_id_sessao:
+            return jsonify({'erro': 'Acesso negado a esta prova'}), 403
 
         if prova.get('textos_questoes'):
             try:
@@ -744,7 +884,12 @@ def buscar_prova(id):
 @bp.route('/provas/<int:id>', methods=['PUT'])
 def editar_prova(id):
     try:
-        data = request.json
+        data = request.json or {}
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None:
+            data['escola_id'] = escola_id_sessao
+
         titulo = data.get('titulo')
         serie = data.get('serie')
 
@@ -759,11 +904,19 @@ def editar_prova(id):
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        cur.execute("SELECT id FROM provas WHERE id = %s", (id,))
-        if not cur.fetchone():
+        cur.execute("SELECT id, escola_id FROM provas WHERE id = %s", (id,))
+        prova_existente = cur.fetchone()
+        if not prova_existente:
             cur.close()
             conn.close()
             return jsonify({'erro': 'Prova não encontrada'}), 404
+
+        if escola_id_sessao is not None and prova_existente['escola_id'] != escola_id_sessao:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Acesso negado a esta prova'}), 403
+
+        escola_id_final = data.get('escola_id') or prova_existente['escola_id']
 
         bncc = data.get('bncc', [])
         bncc_validos = [str(b).strip() for b in bncc if b and str(b).strip()]
@@ -774,15 +927,16 @@ def editar_prova(id):
 
         cur.execute("""
             UPDATE provas
-            SET titulo = %s, serie = %s, disciplina = %s, bimestre = %s,
+            SET escola_id = %s, titulo = %s, serie = %s, disciplina = %s, bimestre = %s,
                 data_prova = %s, valor_nota = %s, tipo_questoes = %s,
                 quantidade_questoes = %s, gabarito = %s, bncc = %s,
                 textos_questoes = %s, niveis = %s
             WHERE id = %s RETURNING id
-        """, (titulo, serie, data.get('disciplina', ''), data.get('bimestre', ''),
-              data.get('data_prova'), data.get('nota_maxima', 10),
-              data.get('tipo_questoes', '4'), data.get('quantidade_questoes', 20),
-              data.get('gabarito', []), bncc_validos, textos_validos, niveis_validos, id))
+        """, (escola_id_final, titulo, serie, data.get('disciplina', ''),
+              data.get('bimestre', ''), data.get('data_prova'),
+              data.get('nota_maxima', 10), data.get('tipo_questoes', '4'),
+              data.get('quantidade_questoes', 20), data.get('gabarito', []),
+              bncc_validos, textos_validos, niveis_validos, id))
 
         result = cur.fetchone()
         conn.commit()
@@ -804,7 +958,7 @@ def excluir_prova(id):
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT id, titulo FROM provas WHERE id = %s", (id,))
+        cur.execute("SELECT id, titulo, escola_id FROM provas WHERE id = %s", (id,))
         prova = cur.fetchone()
         if not prova:
             cur.close()
@@ -812,6 +966,13 @@ def excluir_prova(id):
             return jsonify({'erro': 'Prova não encontrada'}), 404
 
         prova_titulo = prova[1]
+        prova_escola_id = prova[2]
+
+        escola_id_sessao = get_escola_id()
+        if escola_id_sessao is not None and prova_escola_id != escola_id_sessao:
+            cur.close()
+            conn.close()
+            return jsonify({'erro': 'Acesso negado a esta prova'}), 403
 
         cur.execute("DELETE FROM historico WHERE prova_id = %s", (id,))
         cur.execute("DELETE FROM correcoes_texto WHERE prova_id = %s", (id,))
