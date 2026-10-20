@@ -1,5 +1,7 @@
 # ============================================================
 # ROUTES/STATIC.PY — Servir arquivos estáticos + health
+# (Blueprints renomeados para 'static_legacy' evitando conflito
+#  com routes/static_files.py)
 # ============================================================
 
 import logging
@@ -20,7 +22,9 @@ from config import (
 )
 
 
-bp = Blueprint('static_files', __name__)
+# ⚠️ IMPORTANTE: nome 'static_legacy' é ÚNICO, evita conflito com
+# 'static_files' já registrado em routes/static_files.py
+bp = Blueprint('static_legacy', __name__)
 
 
 MIME_TYPES = {
