@@ -1,58 +1,30 @@
 // ============================================================
 // JS/CORRECAO.JS — Câmera, IA, correção manual, correção auto QR
-// Extraído de script.js — Corte 5 (completo)
+// Com apiFetch (header X-Usuario-Username)
 // ============================================================
 
-// ═══ ESTADOS DE CORREÇÃO ═══
 let correcaoManualData = {
-    alunoId: null,
-    alunoNome: '',
-    provaId: null,
-    provaTitulo: '',
-    gabarito: [],
-    respostasAluno: [],
-    quantidade: 20,
-    alternativas: ['A', 'B', 'C', 'D'],
-    notaMaxima: 10,
-    notaMinima: 5,
-    valorPorQuestao: 0.5,
-    serie: '1º Ano',
-    disciplina: '',
-    confianca_por_questao: [],
-    questoes_suspeitas: []
+    alunoId: null, alunoNome: '', provaId: null, provaTitulo: '',
+    gabarito: [], respostasAluno: [], quantidade: 20,
+    alternativas: ['A', 'B', 'C', 'D'], notaMaxima: 10, notaMinima: 5,
+    valorPorQuestao: 0.5, serie: '1º Ano', disciplina: '',
+    confianca_por_questao: [], questoes_suspeitas: []
 };
 
 let cmStandaloneData = {
-    escolaId: null,
-    turmaId: null,
-    provaId: null,
-    alunoId: null,
-    alunoNome: '',
-    turmaNome: '',
-    serie: '',
-    escolaNome: '',
-    gabarito: [],
-    respostas: [],
-    quantidade: 20,
-    alternativas: ['A', 'B', 'C', 'D'],
-    notaMaxima: 10,
-    notaMinima: 5,
-    valorPorQuestao: 0.5,
-    provaTitulo: '',
-    provaData: '',
-    disciplina: '',
-    confianca_por_questao: [],
-    questoes_suspeitas: []
+    escolaId: null, turmaId: null, provaId: null, alunoId: null,
+    alunoNome: '', turmaNome: '', serie: '', escolaNome: '',
+    gabarito: [], respostas: [], quantidade: 20,
+    alternativas: ['A', 'B', 'C', 'D'], notaMaxima: 10, notaMinima: 5,
+    valorPorQuestao: 0.5, provaTitulo: '', provaData: '', disciplina: '',
+    confianca_por_questao: [], questoes_suspeitas: []
 };
 
 let autoModoAtivo = false;
 
 // ═══════════════════════════════════════════════════════════════════
-// ═══ ADICIONADO DO MONOLÍTICO — funções que faltavam aqui ═══
-// Chamadas pelo startApp() e pelos selects da tela "Corrigir com IA"
+// Combos da tela "Corrigir com IA"
 // ═══════════════════════════════════════════════════════════════════
-
-// 1) Popula o select de escola da tela "🤖 Corrigir com IA"
 async function carregarEscolasCorrigir() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -62,8 +34,7 @@ async function carregarEscolasCorrigir() {
             select.innerHTML = '<option value="">Selecione a escola...</option>';
             escolas.forEach(e => {
                 const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nome;
+                opt.value = e.id; opt.textContent = e.nome;
                 select.appendChild(opt);
             });
             if (current) {
@@ -71,25 +42,18 @@ async function carregarEscolasCorrigir() {
                 carregarTurmasPorEscolaCorrigir(current);
             }
         }
-    } catch (erro) {
-        console.error('Erro ao carregar escolas para correção:', erro);
-    }
+    } catch (erro) { console.error('Erro ao carregar escolas para correção:', erro); }
 }
 
-// 2) Popula o select de turma quando escolhe a escola
 async function carregarTurmasPorEscolaCorrigir(escolaId) {
     const selectTurma = document.getElementById('corrigir-turma');
     const selectProva = document.getElementById('corrigir-prova');
     const selectAluno = document.getElementById('corrigir-aluno');
-
     if (!selectTurma) return;
-
     selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
     if (selectProva) selectProva.innerHTML = '<option value="">Selecione...</option>';
     if (selectAluno) selectAluno.innerHTML = '<option value="">Selecione...</option>';
-
     if (!escolaId) return;
-
     try {
         const turmas = await carregarTurmasComCache(escolaId);
         if (turmas && !turmas.erro) {
@@ -107,14 +71,11 @@ async function carregarTurmasPorEscolaCorrigir(escolaId) {
     }
 }
 
-// 3) Popula o select de aluno quando escolhe a turma
 async function carregarAlunosPorTurmaCorrigir(turmaId) {
     const selectAluno = document.getElementById('corrigir-aluno');
     if (!selectAluno) return;
-
     selectAluno.innerHTML = '<option value="">Selecione...</option>';
     if (!turmaId) return;
-
     try {
         const alunos = await carregarAlunosComCache({ turma_id: turmaId });
         if (alunos && !alunos.erro) {
@@ -125,31 +86,22 @@ async function carregarAlunosPorTurmaCorrigir(turmaId) {
                 selectAluno.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar alunos:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar alunos:', e); }
 }
 
-// 4) Popula o select de prova quando escolhe a turma
 async function carregarProvasPorTurmaCorrigir(turmaId) {
     const selectProva = document.getElementById('corrigir-prova');
     if (!selectProva) return;
-
     selectProva.innerHTML = '<option value="">Selecione...</option>';
     if (!turmaId) return;
-
     try {
         const provas = await carregarProvasComCache();
         const turmas = await carregarTurmasComCache();
         const turmaData = turmas.find(t => t.id == turmaId);
         const serieTurma = turmaData?.serie || '';
-
         if (provas && !provas.erro) {
             let provasFiltradas = provas.filter(p => p.serie === serieTurma);
-            if (provasFiltradas.length === 0) {
-                provasFiltradas = provas;
-            }
-
+            if (provasFiltradas.length === 0) provasFiltradas = provas;
             provasFiltradas.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
@@ -164,27 +116,21 @@ async function carregarProvasPorTurmaCorrigir(turmaId) {
                 selectProva.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar provas:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar provas:', e); }
 }
 
-// 5) Popula o select de aluno quando escolhe a prova (filtro por série)
 async function carregarAlunosPorProvaFiltrados(provaId) {
     const selectAluno = document.getElementById('corrigir-aluno');
     if (!selectAluno) return;
-
     selectAluno.innerHTML = '<option value="">Selecione...</option>';
     if (!provaId) return;
-
     try {
-        const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+        const provaResp = await apiFetch(`${API_URL}/api/provas/${provaId}`);
         const prova = await provaResp.json();
         if (!prova || prova.erro) {
             showToast('❌ Erro ao carregar dados da prova', 'error');
             return;
         }
-
         const turmaId = document.getElementById('corrigir-turma')?.value;
         if (!turmaId) {
             const alunos = await carregarAlunosComCache({ serie: prova.serie || '' });
@@ -199,7 +145,6 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
             }
             return;
         }
-
         const alunos = await carregarAlunosComCache({ turma_id: turmaId });
         if (alunos && !alunos.erro) {
             alunos.forEach(a => {
@@ -209,12 +154,8 @@ async function carregarAlunosPorProvaFiltrados(provaId) {
                 selectAluno.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar alunos:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar alunos:', e); }
 }
-
-// ═══ FIM DOS ADICIONADOS DO MONOLÍTICO ═══
 
 // ═══════════════════════════════════════════════════════════════════
 // CÂMERA
@@ -239,10 +180,7 @@ function trocarCamera() {
 function fecharCamera() {
     const camModal = document.getElementById('cam-modal');
     if (camModal) camModal.classList.remove('show');
-    if (camStream) {
-        camStream.getTracks().forEach(t => t.stop());
-        camStream = null;
-    }
+    if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
 }
 
 function capturarFoto() {
@@ -254,7 +192,6 @@ function capturarFoto() {
     const foto = canvas.toDataURL('image/jpeg', 0.9);
     fecharCamera();
     showToast('📸 Foto capturada!', 'ai');
-
     if (autoModoAtivo) {
         autoModoAtivo = false;
         window._autoImagem = foto;
@@ -262,15 +199,11 @@ function capturarFoto() {
         setTimeout(() => {
             const preview = document.getElementById('auto-preview');
             const img = document.getElementById('auto-img-prev');
-            if (preview && img) {
-                img.src = foto;
-                preview.style.display = 'block';
-            }
+            if (preview && img) { img.src = foto; preview.style.display = 'block'; }
             corrigirAutomatico();
         }, 500);
         return;
     }
-
     ultimaImagem = foto;
     processarComIA(foto);
     go('corrigir-ia');
@@ -295,22 +228,18 @@ function processarArq(input) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CORREÇÃO COM IA (PROCESSO COMPLETO)
+// CORREÇÃO COM IA
 // ═══════════════════════════════════════════════════════════════════
 async function processarComIA(imagemBase64) {
     const escolaId = document.getElementById('corrigir-escola')?.value;
     const turmaId = document.getElementById('corrigir-turma')?.value;
     const provaId = document.getElementById('corrigir-prova')?.value;
     const alunoId = document.getElementById('corrigir-aluno')?.value;
-
     if (!escolaId || !turmaId || !provaId || !alunoId) {
-        showToast('❌ Selecione escola, turma, prova e aluno!', 'error');
-        return;
+        showToast('❌ Selecione escola, turma, prova e aluno!', 'error'); return;
     }
-
     if (!imagemBase64) {
-        showToast('❌ Nenhuma imagem foi fornecida!', 'error');
-        return;
+        showToast('❌ Nenhuma imagem foi fornecida!', 'error'); return;
     }
 
     const etapas = [
@@ -321,72 +250,43 @@ async function processarComIA(imagemBase64) {
         { nome: '📊 Processando resultados', descricao: 'Comparando com o gabarito e calculando nota...' },
         { nome: '💾 Finalizando', descricao: 'Salvando os resultados...' }
     ];
-
     progressManager.iniciar('🤖 Corrigindo com IA', etapas, '🤖');
 
     try {
-        progressManager.atualizarEtapa(0);
-        await sleep(500);
-
+        progressManager.atualizarEtapa(0); await sleep(500);
         let imagemEnvio = imagemBase64;
         if (imagemBase64.startsWith('data:image')) {
             const partes = imagemBase64.split(',');
             if (partes.length > 1) imagemEnvio = partes[1];
         }
-
-        progressManager.atualizarEtapa(1);
-        await sleep(300);
-
+        progressManager.atualizarEtapa(1); await sleep(300);
         const prova = await buscarProva(provaId);
         if (!prova) throw new Error('Prova não encontrada');
-
         const gabarito = prova.gabarito || [];
         const totalQuestoes = prova.quantidade_questoes || 20;
         const tipoQuestoes = prova.tipo_questoes || 4;
         const isProducao = (prova.disciplina === 'Produção de Texto');
         const alternativas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-
-        if (!gabarito || gabarito.length === 0) {
-            throw new Error('Esta prova não tem gabarito cadastrado!');
-        }
-
+        if (!gabarito || gabarito.length === 0) throw new Error('Esta prova não tem gabarito cadastrado!');
         const aluno = await buscarAluno(alunoId);
         if (!aluno) throw new Error('Aluno não encontrado');
-
-        progressManager.atualizarEtapa(2);
-        await sleep(300);
-
+        progressManager.atualizarEtapa(2); await sleep(300);
         const respostaIA = await enviarParaCorrecao(imagemEnvio, provaId, alunoId);
-
-        if (respostaIA.erro) {
-            throw new Error(respostaIA.erro);
-        }
-
-        progressManager.atualizarEtapa(3);
-        await sleep(200);
-
+        if (respostaIA.erro) throw new Error(respostaIA.erro);
+        progressManager.atualizarEtapa(3); await sleep(200);
         let respostasDetectadas = respostaIA.respostas_detectadas || [];
         let confiancas = respostaIA.confianca_por_questao || [];
-
         const { respostasNormalizadas, confiancasNormalizadas } = normalizarRespostas(
-            respostasDetectadas,
-            confiancas,
-            totalQuestoes,
-            isProducao,
-            tipoQuestoes
+            respostasDetectadas, confiancas, totalQuestoes, isProducao, tipoQuestoes
         );
-
         let acertos = 0;
         const resultadoQuestoes = [];
-
         for (let i = 0; i < totalQuestoes; i++) {
             const resp = respostasNormalizadas[i] || '';
             const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
             const confianca = confiancasNormalizadas[i] || 0;
-
             let isCorreto = false;
             let statusMsg = 'NÃO RESPONDEU';
-
             if (isProducao) {
                 if (resp && gab) {
                     const respLimpa = resp.trim().toLowerCase();
@@ -397,7 +297,6 @@ async function processarComIA(imagemBase64) {
             } else {
                 const respNormalizada = resp.toString().toUpperCase().trim();
                 const gabNormalizado = gab.toString().toUpperCase().trim();
-
                 if (respNormalizada && gabNormalizado) {
                     isCorreto = respNormalizada === gabNormalizado;
                     statusMsg = isCorreto ? '✅ ACERTOU' : '❌ ERROU';
@@ -407,73 +306,41 @@ async function processarComIA(imagemBase64) {
                     statusMsg = '— NÃO RESPONDEU';
                 }
             }
-
             if (isCorreto) acertos++;
-
             resultadoQuestoes.push({
-                numero: i + 1,
-                resposta: resp || '—',
-                gabarito: gab || '—',
-                acertou: isCorreto,
-                status: statusMsg,
-                confianca: confianca,
-                respondida: !!resp
+                numero: i + 1, resposta: resp || '—', gabarito: gab || '—',
+                acertou: isCorreto, status: statusMsg, confianca: confianca, respondida: !!resp
             });
         }
-
         const valorPorQuestao = 10 / totalQuestoes;
         const nota = Math.min(acertos * valorPorQuestao, 10);
         const porcentagem = Math.round((acertos / totalQuestoes) * 100);
         const conceito = calcularConceito(porcentagem);
-
-        progressManager.atualizarEtapa(4);
-        await sleep(300);
-
+        progressManager.atualizarEtapa(4); await sleep(300);
         salvarDadosCorrecaoManual({
-            alunoId: parseInt(alunoId),
-            alunoNome: aluno.nome || 'Aluno',
-            provaId: parseInt(provaId),
-            provaTitulo: prova.titulo || 'Prova',
-            gabarito: gabarito,
-            respostas: respostasNormalizadas,
-            quantidade: totalQuestoes,
-            alternativas: alternativas,
-            notaMaxima: 10,
-            notaMinima: 5,
-            valorPorQuestao: valorPorQuestao,
-            serie: prova.serie || '1º Ano',
-            disciplina: prova.disciplina || '',
+            alunoId: parseInt(alunoId), alunoNome: aluno.nome || 'Aluno',
+            provaId: parseInt(provaId), provaTitulo: prova.titulo || 'Prova',
+            gabarito: gabarito, respostas: respostasNormalizadas,
+            quantidade: totalQuestoes, alternativas: alternativas,
+            notaMaxima: 10, notaMinima: 5, valorPorQuestao: valorPorQuestao,
+            serie: prova.serie || '1º Ano', disciplina: prova.disciplina || '',
             confianca_por_questao: confiancasNormalizadas,
             questoes_suspeitas: respostaIA.questoes_suspeitas || [],
             questoes_status: resultadoQuestoes
         });
-
         const metodoUsado = respostaIA.metodo_usado || respostaIA.modo || 'desconhecido';
-
         atualizarInterfaceCorrecao({
-            aluno: aluno,
-            prova: prova,
-            resultadoQuestoes: resultadoQuestoes,
-            acertos: acertos,
-            totalQuestoes: totalQuestoes,
-            nota: nota,
-            porcentagem: porcentagem,
-            conceito: conceito,
-            confiancas: confiancasNormalizadas,
-            metodoUsado: metodoUsado,
-            requerRevisao: respostaIA.requer_revisao_manual || false,
+            aluno: aluno, prova: prova, resultadoQuestoes: resultadoQuestoes,
+            acertos: acertos, totalQuestoes: totalQuestoes, nota: nota,
+            porcentagem: porcentagem, conceito: conceito, confiancas: confiancasNormalizadas,
+            metodoUsado: metodoUsado, requerRevisao: respostaIA.requer_revisao_manual || false,
             questoesSuspeitas: respostaIA.questoes_suspeitas || []
         });
-
-        progressManager.atualizarEtapa(5);
-        await sleep(200);
-
+        progressManager.atualizarEtapa(5); await sleep(200);
         progressManager.finalizar(`✅ Correção concluída! ${acertos}/${totalQuestoes} acertos — Nota: ${nota.toFixed(1)}`);
-
         if (typeof carregarDashboard === 'function') carregarDashboard();
         if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
         if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
-
     } catch (erro) {
         console.error('❌ Erro na correção:', erro);
         progressManager.erro(erro.message || 'Erro ao processar correção');
@@ -503,7 +370,7 @@ async function buscarAluno(alunoId) {
 
 async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
     try {
-        const response = await fetch(`${API_URL}/api/corrigir`, {
+        const response = await apiFetch(`${API_URL}/api/corrigir`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -512,24 +379,16 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
                 aluno_id: parseInt(alunoId)
             })
         });
-
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`Erro ${response.status}: ${errorText.substring(0, 100)}`);
         }
-
         const dados = await response.json();
-
-        if (dados.erro) {
-            throw new Error(dados.erro);
-        }
-
+        if (dados.erro) throw new Error(dados.erro);
         if (!dados.respostas_detectadas && !dados.questoes_status) {
             throw new Error('A IA não conseguiu detectar as respostas. Tire uma foto mais nítida com boa iluminação.');
         }
-
         return dados;
-
     } catch (e) {
         console.error('❌ Erro na chamada da API:', e);
         throw e;
@@ -539,63 +398,48 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
 function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao, tipoQuestoes = 4) {
     let respostasNormalizadas = [];
     let confiancasNormalizadas = [];
-
     const alternativasValidas = tipoQuestoes == 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-
     for (let i = 0; i < totalQuestoes; i++) {
         let resp = (i < respostas.length) ? (respostas[i] || '') : '';
         let conf = (i < confiancas.length) ? (confiancas[i] || 0) : 0;
-
         if (isProducao) {
             resp = resp.toString().trim();
         } else {
             let s = resp.toString().trim().toUpperCase();
             s = s.replace(/^[\(\[]*/, '').replace(/[\)\]\.\,\;\:\-]*$/, '');
-
             let encontrou = '';
-            if (alternativasValidas.includes(s)) {
-                encontrou = s;
-            } else {
+            if (alternativasValidas.includes(s)) encontrou = s;
+            else {
                 for (const alt of alternativasValidas) {
                     if (s.includes(alt)) { encontrou = alt; break; }
                 }
             }
             resp = encontrou;
         }
-
         respostasNormalizadas.push(resp);
         confiancasNormalizadas.push(Math.min(Math.max(conf, 0), 100));
     }
-
     return { respostasNormalizadas, confiancasNormalizadas };
 }
 
 function salvarDadosCorrecaoManual(dados) {
     correcaoManualData = {
-        alunoId: dados.alunoId,
-        alunoNome: dados.alunoNome,
-        provaId: dados.provaId,
-        provaTitulo: dados.provaTitulo,
-        gabarito: dados.gabarito,
-        respostasAluno: dados.respostas,
-        quantidade: dados.quantidade,
-        alternativas: dados.alternativas,
-        notaMaxima: dados.notaMaxima,
-        notaMinima: dados.notaMinima,
-        valorPorQuestao: dados.valorPorQuestao,
-        serie: dados.serie,
+        alunoId: dados.alunoId, alunoNome: dados.alunoNome,
+        provaId: dados.provaId, provaTitulo: dados.provaTitulo,
+        gabarito: dados.gabarito, respostasAluno: dados.respostas,
+        quantidade: dados.quantidade, alternativas: dados.alternativas,
+        notaMaxima: dados.notaMaxima, notaMinima: dados.notaMinima,
+        valorPorQuestao: dados.valorPorQuestao, serie: dados.serie,
         disciplina: dados.disciplina,
         confianca_por_questao: dados.confianca_por_questao,
         questoes_suspeitas: dados.questoes_suspeitas || [],
-        bncc: dados.bncc || [],
-        questoes_status: dados.questoes_status || []
+        bncc: dados.bncc || [], questoes_status: dados.questoes_status || []
     };
 }
 
 function atualizarInterfaceCorrecao(dados) {
     const box = document.getElementById('ia-result');
     if (box) box.style.display = 'block';
-
     setText('ia-aluno', dados.aluno.nome || 'Aluno');
     setText('ia-turma', dados.prova.titulo || 'Prova');
     setText('ia-nota', dados.nota.toFixed(1));
@@ -611,14 +455,10 @@ function atualizarInterfaceCorrecao(dados) {
     const metodoBadge = document.getElementById('ia-metodo');
     if (metodoBadge) {
         const metodoLabels = {
-            'template': '🎯 Template',
-            'template+cv': '🎯 Template+CV',
-            'ia': '🤖 IA',
-            'ia+circulos': '🤖 IA + Círculos',
-            'ia_parcial': '🤖 IA (Parcial)',
-            'circulos': '⭕ Círculos',
-            'circulos_parcial': '⭕ Círculos (Parcial)',
-            'manual': '✏️ Manual'
+            'template': '🎯 Template', 'template+cv': '🎯 Template+CV',
+            'ia': '🤖 IA', 'ia+circulos': '🤖 IA + Círculos',
+            'ia_parcial': '🤖 IA (Parcial)', 'circulos': '⭕ Círculos',
+            'circulos_parcial': '⭕ Círculos (Parcial)', 'manual': '✏️ Manual'
         };
         metodoBadge.textContent = metodoLabels[metodo] || `📌 ${metodo}`;
         const classe = metodo === 'template' || metodo === 'template+cv' ? 'badge-green' :
@@ -638,12 +478,10 @@ function atualizarInterfaceCorrecao(dados) {
     if (resumoConfianca) {
         const totalDuvidosas = dados.questoesSuspeitas.length || dados.confiancas.filter(c => c < 70).length;
         resumoConfianca.style.display = 'flex';
-
         let alertaRevisao = '';
         if (dados.requerRevisao) {
             alertaRevisao = `<span style="color:var(--orange);font-weight:700;">⚠️ REVISÃO MANUAL RECOMENDADA</span>`;
         }
-
         resumoConfianca.innerHTML = `
             <span>📊 Confiança média: <strong style="color:${confiancaMedia >= 70 ? 'var(--green)' : confiancaMedia >= 50 ? 'var(--orange)' : 'var(--red)'};">${confiancaMedia.toFixed(1)}%</strong></span>
             ${totalDuvidosas > 0 ? `<span>⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)</span>` : '<span>✅ Todas as questões têm alta confiança!</span>'}
@@ -664,16 +502,13 @@ function atualizarInterfaceCorrecao(dados) {
         }).join('');
     }
 
-    // ─── Grade comparativa (gabarito oficial x aluno) ───
     const grid = document.getElementById('ia-comp');
     if (grid) {
         grid.innerHTML = '';
-
         const totalQuestoes = dados.resultadoQuestoes.length;
         let colunasPorLinha = 5;
         if (totalQuestoes > 25) colunasPorLinha = 6;
 
-        // Título do gabarito oficial
         const tituloOficial = document.createElement('div');
         tituloOficial.style.cssText = `grid-column: 1 / -1; text-align: center; padding: 6px 0; background: linear-gradient(135deg, rgba(59,130,246,0.10), rgba(139,92,246,0.10)); border-radius: 6px; border: 1px solid rgba(59,130,246,0.15); margin-bottom: 2px; margin-top: 6px;`;
         tituloOficial.innerHTML = `
@@ -696,7 +531,6 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridOficial);
 
-        // Título do gabarito do aluno
         const tituloAluno = document.createElement('div');
         tituloAluno.style.cssText = `grid-column: 1 / -1; text-align: center; padding: 6px 0; background: linear-gradient(135deg, rgba(139,92,246,0.10), rgba(59,130,246,0.10)); border-radius: 6px; border: 1px solid rgba(139,92,246,0.15); margin-bottom: 2px; margin-top: 8px;`;
         tituloAluno.innerHTML = `
@@ -713,24 +547,11 @@ function atualizarInterfaceCorrecao(dados) {
             const acertou = q.acertou;
             const resposta = q.resposta || '—';
             const confianca = q.confianca || 100;
-
             let corBg, corTexto, icone;
-            if (acertou) {
-                corBg = 'rgba(16,185,129,0.10)';
-                corTexto = 'var(--green)';
-                icone = '✅';
-            } else if (q.respondida) {
-                corBg = 'rgba(239,68,68,0.10)';
-                corTexto = 'var(--red)';
-                icone = '❌';
-            } else {
-                corBg = 'rgba(100,116,139,0.05)';
-                corTexto = 'var(--text3)';
-                icone = '—';
-            }
-
+            if (acertou) { corBg = 'rgba(16,185,129,0.10)'; corTexto = 'var(--green)'; icone = '✅'; }
+            else if (q.respondida) { corBg = 'rgba(239,68,68,0.10)'; corTexto = 'var(--red)'; icone = '❌'; }
+            else { corBg = 'rgba(100,116,139,0.05)'; corTexto = 'var(--text3)'; icone = '—'; }
             const confColor = confianca < 70 ? 'var(--orange)' : 'var(--text3)';
-
             const div = document.createElement('div');
             div.style.cssText = `background: ${corBg}; border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid ${acertou ? 'rgba(16,185,129,0.20)' : (q.respondida ? 'rgba(239,68,68,0.20)' : 'rgba(100,116,139,0.10)')}; display: flex; flex-direction: column; align-items: center; gap: 1px;`;
             div.innerHTML = `
@@ -743,15 +564,12 @@ function atualizarInterfaceCorrecao(dados) {
         });
         grid.appendChild(gridAluno);
 
-        // Resumo comparativo
         const divComparacao = document.createElement('div');
         divComparacao.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border);`;
-
         const acertos = dados.acertos;
         const naoRespondidas = dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length;
         const erros = dados.totalQuestoes - acertos - naoRespondidas;
         const porcentagem = dados.porcentagem;
-
         divComparacao.innerHTML = `
             <div style="text-align:center;padding:4px;background:rgba(16,185,129,0.06);border-radius:4px;border:1px solid rgba(16,185,129,0.10);">
                 <div style="font-size:18px;font-weight:900;color:var(--green);">${acertos}</div>
@@ -774,55 +592,37 @@ function atualizarInterfaceCorrecao(dados) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// SALVAR CORREÇÃO (a partir da tela de IA)
-// ═══════════════════════════════════════════════════════════════════
+// ═══ SALVAR CORREÇÃO ═══
 async function salvarCorrecao() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
-        showToast('❌ Nenhuma correção para salvar!', 'error');
-        return;
+        showToast('❌ Nenhuma correção para salvar!', 'error'); return;
     }
-
     const provaId = correcaoManualData.provaId;
     const alunoId = correcaoManualData.alunoId;
     const respostas = correcaoManualData.respostasAluno;
     const gabarito = correcaoManualData.gabarito;
     const total = correcaoManualData.quantidade;
-
     if (!provaId || !alunoId) {
-        showToast('❌ Dados da correção incompletos!', 'error');
-        return;
+        showToast('❌ Dados da correção incompletos!', 'error'); return;
     }
-
     let acertos = 0;
     for (let i = 0; i < total; i++) {
         const resp = (i < respostas.length) ? (respostas[i] || '') : '';
         const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
-        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) {
-            acertos++;
-        }
+        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
-
     const nota = Math.min(acertos * (correcaoManualData.valorPorQuestao || (10/total)), 10);
-
     try {
         showToast('💾 Salvando correção...', 'info');
-
-        const response = await fetch(`${API_URL}/api/corrigir_manual`, {
+        const response = await apiFetch(`${API_URL}/api/corrigir_manual`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                prova_id: provaId,
-                aluno_id: alunoId,
-                respostas: respostas,
-                acertos: acertos,
-                nota: nota,
-                total: total
+                prova_id: provaId, aluno_id: alunoId, respostas: respostas,
+                acertos: acertos, nota: nota, total: total
             })
         });
-
         const data = await response.json();
-
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             limparCache();
@@ -838,22 +638,17 @@ async function salvarCorrecao() {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// CORREÇÃO MANUAL INLINE (modal m-correcao-manual)
-// ═══════════════════════════════════════════════════════════════════
+// ═══ CORREÇÃO MANUAL INLINE ═══
 function abrirCorrecaoManual() {
     if (!correcaoManualData.respostasAluno || correcaoManualData.respostasAluno.length === 0) {
-        showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error');
-        return;
+        showToast('❌ Nenhuma correção para editar. Faça uma correção com IA primeiro!', 'error'); return;
     }
     if (!correcaoManualData.gabarito || !Array.isArray(correcaoManualData.gabarito) || correcaoManualData.gabarito.length === 0) {
-        showToast('❌ Gabarito não disponível para esta prova!', 'error');
-        return;
+        showToast('❌ Gabarito não disponível para esta prova!', 'error'); return;
     }
     const temGabaritoValido = correcaoManualData.gabarito.some(g => g && g.trim() !== '');
     if (!temGabaritoValido) {
-        showToast('❌ Gabarito vazio ou inválido para esta prova!', 'error');
-        return;
+        showToast('❌ Gabarito vazio ou inválido para esta prova!', 'error'); return;
     }
     setText('cm-aluno-nome', correcaoManualData.alunoNome || 'Aluno');
     setText('cm-prova-titulo', correcaoManualData.provaTitulo || 'Prova');
@@ -870,41 +665,29 @@ function destacarQuestoesDuvidosas() {
     const suspeitas = correcaoManualData.questoes_suspeitas || [];
     const itens = document.querySelectorAll('.correcao-manual-item');
     let totalDuvidosas = 0;
-
     itens.forEach((item, index) => {
         const confianca = confiancas[index] || 100;
         const numQuestao = index + 1;
-        item.style.borderColor = '';
-        item.style.borderWidth = '';
-        item.style.boxShadow = '';
-
+        item.style.borderColor = ''; item.style.borderWidth = ''; item.style.boxShadow = '';
         const oldBadge = item.querySelector('.confianca-badge');
         if (oldBadge) oldBadge.remove();
-
         const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
-
         if (isSuspeita) {
             totalDuvidosas++;
             item.style.borderColor = 'var(--orange)';
             item.style.borderWidth = '2px';
             item.style.boxShadow = '0 0 20px rgba(245,158,11,0.2)';
-
             const badge = document.createElement('div');
             badge.className = 'confianca-badge confianca-baixa';
             badge.style.cssText = 'font-size:8px; font-weight:700; margin-top:4px; padding:2px 8px; border-radius:12px; background:rgba(239,68,68,0.15); color:#ef4444;';
             badge.textContent = `⚠️ Confiança: ${confianca}%`;
-
             const select = item.querySelector('.q-select');
-            if (select) {
-                item.insertBefore(badge, select);
-            } else {
-                item.appendChild(badge);
-            }
+            if (select) item.insertBefore(badge, select);
+            else item.appendChild(badge);
         } else if (confianca < 80) {
             item.style.borderColor = 'rgba(245,158,11,0.3)';
         }
     });
-
     if (totalDuvidosas > 0) {
         showToast(`🔍 ${totalDuvidosas} questões com baixa confiança (destacadas em laranja)`, 'warning');
     } else {
@@ -917,12 +700,10 @@ function revisarApenasDuvidosas() {
     const suspeitas = correcaoManualData.questoes_suspeitas || [];
     const itens = document.querySelectorAll('.correcao-manual-item');
     let totalDuvidosas = 0;
-
     itens.forEach((item, index) => {
         const confianca = confiancas[index] || 100;
         const numQuestao = index + 1;
         const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
-
         if (isSuspeita) {
             item.style.display = '';
             totalDuvidosas++;
@@ -931,7 +712,6 @@ function revisarApenasDuvidosas() {
             item.style.display = 'none';
         }
     });
-
     if (totalDuvidosas === 0) {
         showToast('✅ Nenhuma questão com baixa confiança!', 'success');
         itens.forEach(item => item.style.display = '');
@@ -950,17 +730,11 @@ function gerarGridCorrecaoManual() {
     const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
 
     if (isProducao) {
-        grid.style.display = 'flex';
-        grid.style.flexDirection = 'column';
-        grid.style.gap = '12px';
-        grid.style.maxHeight = 'none';
-        grid.style.overflowY = 'visible';
+        grid.style.display = 'flex'; grid.style.flexDirection = 'column';
+        grid.style.gap = '12px'; grid.style.maxHeight = 'none'; grid.style.overflowY = 'visible';
     } else {
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
-        grid.style.gap = '6px';
-        grid.style.maxHeight = '280px';
-        grid.style.overflowY = 'auto';
+        grid.style.display = 'grid'; grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+        grid.style.gap = '6px'; grid.style.maxHeight = '280px'; grid.style.overflowY = 'auto';
     }
 
     grid.innerHTML = '';
@@ -972,15 +746,10 @@ function gerarGridCorrecaoManual() {
         const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
 
         if (isProducao) {
-            div.style.background = 'var(--bg2)';
-            div.style.border = '1px solid var(--border)';
-            div.style.borderRadius = '8px';
-            div.style.padding = '10px 14px';
-            div.style.textAlign = 'left';
-            div.style.display = 'flex';
-            div.style.flexDirection = 'column';
-            div.style.gap = '6px';
-
+            div.style.background = 'var(--bg2)'; div.style.border = '1px solid var(--border)';
+            div.style.borderRadius = '8px'; div.style.padding = '10px 14px';
+            div.style.textAlign = 'left'; div.style.display = 'flex';
+            div.style.flexDirection = 'column'; div.style.gap = '6px';
             div.innerHTML = `
                 <input class="gab-titulo" type="text" value="Q${i+1}" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); padding:4px; font-size:12px; font-weight:bold;" />
                 <div style="font-size:10px;color:var(--text3);">Gabarito: ${escapeHtml(respostaGabarito || '—')}</div>
@@ -1006,21 +775,17 @@ function gerarGridCorrecaoManual() {
                 const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
                 options += `<option value="${alt}" ${selected}>${alt}</option>`;
             });
-
-            let statusClass = '';
-            let statusText = '';
+            let statusClass = ''; let statusText = '';
             if (respostaAluno) {
                 if (isCorreto) { statusClass = 'correta'; statusText = '✅'; }
                 else { statusClass = 'errada'; statusText = '❌'; }
             }
-
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
                 <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${escapeHtml(respostaAluno || '—')}</div>
                 <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
                 <div class="q-status ${statusClass}">${statusText}</div>
             `;
-
             const select = div.querySelector('.q-select');
             if (select) {
                 if (respostaAluno && isCorreto) select.className = 'q-select correta';
@@ -1050,9 +815,7 @@ function atualizarRespostaManual(select) {
         if (isCorreto) { qStatus.textContent = '✅'; qStatus.className = 'q-status correta'; select.className = 'q-select correta'; }
         else { qStatus.textContent = '❌'; qStatus.className = 'q-status errada'; select.className = 'q-select errada'; }
     } else {
-        qStatus.textContent = '';
-        qStatus.className = 'q-status';
-        select.className = 'q-select';
+        qStatus.textContent = ''; qStatus.className = 'q-status'; select.className = 'q-select';
     }
     atualizarResumoCorrecaoManual();
 }
@@ -1062,7 +825,6 @@ function atualizarResumoCorrecaoManual() {
     const respostas = correcaoManualData.respostasAluno || [];
     const gabarito = correcaoManualData.gabarito || [];
     const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
-
     let acertos = 0, respondidas = 0;
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
@@ -1080,29 +842,21 @@ function atualizarResumoCorrecaoManual() {
     const nota = (acertos * correcaoManualData.valorPorQuestao) || 0;
     const notaFinal = Math.min(nota, correcaoManualData.notaMaxima || 10);
     const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
-
     setText('cm-acertos', acertos);
     setText('cm-erros', erros);
     setText('cm-nota', notaFinal.toFixed(1));
-
     const statusBadge = document.getElementById('cm-status-badge');
     const statusAtual = document.getElementById('cm-status-atual');
     if (statusBadge && statusAtual) {
         if (notaFinal >= (correcaoManualData.notaMinima || 5)) {
-            statusBadge.textContent = '✅ APROVADO';
-            statusBadge.className = 'badge badge-green';
-            statusAtual.textContent = 'Aprovado';
-            statusAtual.style.color = 'var(--green)';
+            statusBadge.textContent = '✅ APROVADO'; statusBadge.className = 'badge badge-green';
+            statusAtual.textContent = 'Aprovado'; statusAtual.style.color = 'var(--green)';
         } else if (notaFinal >= (correcaoManualData.notaMinima || 5) * 0.8) {
-            statusBadge.textContent = '⚠️ RECUPERAÇÃO';
-            statusBadge.className = 'badge badge-orange';
-            statusAtual.textContent = 'Recuperação';
-            statusAtual.style.color = 'var(--orange)';
+            statusBadge.textContent = '⚠️ RECUPERAÇÃO'; statusBadge.className = 'badge badge-orange';
+            statusAtual.textContent = 'Recuperação'; statusAtual.style.color = 'var(--orange)';
         } else {
-            statusBadge.textContent = '❌ REPROVADO';
-            statusBadge.className = 'badge badge-red';
-            statusAtual.textContent = 'Reprovado';
-            statusAtual.style.color = 'var(--red)';
+            statusBadge.textContent = '❌ REPROVADO'; statusBadge.className = 'badge badge-red';
+            statusAtual.textContent = 'Reprovado'; statusAtual.style.color = 'var(--red)';
         }
     }
     setText('cm-porcentagem', porcentagem + '% de aproveitamento');
@@ -1135,10 +889,7 @@ function limparRespostasCM() {
     const isProducao = (correcaoManualData.disciplina === 'Produção de Texto');
     if (isProducao) {
         const inputs = document.querySelectorAll('#cm-grid .q-resposta-texto');
-        inputs.forEach((input, i) => {
-            input.value = '';
-            correcaoManualData.respostasAluno[i] = '';
-        });
+        inputs.forEach((input, i) => { input.value = ''; correcaoManualData.respostasAluno[i] = ''; });
     } else {
         for (let i = 0; i < qtd; i++) correcaoManualData.respostasAluno[i] = '';
         gerarGridCorrecaoManual();
@@ -1152,13 +903,11 @@ function salvarCorrecaoManual() {
     const respostas = correcaoManualData.respostasAluno || [];
     const gabarito = correcaoManualData.gabarito || [];
     let acertos = 0;
-
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
         if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
-
     const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
 
     const etapas = [
@@ -1166,19 +915,14 @@ function salvarCorrecaoManual() {
         { nome: '📊 Calculando nota', descricao: 'Calculando aproveitamento...' },
         { nome: '💾 Salvando no sistema', descricao: 'Persistindo correção...' }
     ];
-
     progressManager.iniciar('💾 Salvando Correção Manual', etapas, '✏️');
 
     const dadosCorrecao = {
-        prova_id: correcaoManualData.provaId,
-        aluno_id: correcaoManualData.alunoId,
-        respostas: respostas,
-        acertos: acertos,
-        nota: nota,
-        total: qtd
+        prova_id: correcaoManualData.provaId, aluno_id: correcaoManualData.alunoId,
+        respostas: respostas, acertos: acertos, nota: nota, total: qtd
     };
 
-    fetch(API_URL + '/api/corrigir_manual', {
+    apiFetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dadosCorrecao)
@@ -1191,7 +935,6 @@ function salvarCorrecaoManual() {
     .then(data => {
         progressManager.concluirEtapa(1);
         progressManager.proximaEtapa();
-
         if (data.sucesso) {
             progressManager.concluirEtapa(2);
             progressManager.finalizar(`✅ Correção salva! Nota: ${nota.toFixed(1)}`);
@@ -1201,7 +944,6 @@ function salvarCorrecaoManual() {
                 if (typeof carregarDashboard === 'function') carregarDashboard();
                 if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
             }, 500);
-
             const alunoId = correcaoManualData.alunoId;
             if (alunoId && typeof tableFeedback !== 'undefined') {
                 setTimeout(() => tableFeedback.destacarLinha('tb-resultados-filtrado', alunoId, '✅ Corrigido!'), 800);
@@ -1218,31 +960,23 @@ function salvarCorrecaoManual() {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// CORREÇÃO MANUAL STANDALONE (modal m-correcao-manual-standalone)
-// ═══════════════════════════════════════════════════════════════════
+// ═══ CORREÇÃO MANUAL STANDALONE ═══
 function ajustarUIporDisciplina() {
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
-
     const cmNotaContainer = document.getElementById('cm-nota-manual-container');
     if (cmNotaContainer) cmNotaContainer.style.display = isProducao ? 'block' : 'none';
-
     const resumo = document.getElementById('cm-sa-resumo');
     if (resumo) resumo.style.display = isProducao ? 'none' : 'grid';
-
     const badges = document.getElementById('cm-sa-badges');
     if (badges) badges.style.display = isProducao ? 'none' : 'flex';
-
     const btnSalvar = document.getElementById('btn-salvar-correcao-manual');
     if (btnSalvar) btnSalvar.style.display = isProducao ? 'none' : 'inline-flex';
-
     const botoesAcao = document.querySelector('#cm-grid-standalone-container > div[style*="justify-content:space-between"]');
     if (botoesAcao) botoesAcao.style.display = isProducao ? 'none' : 'flex';
 }
 
 function abrirCorrecaoManualStandalone() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-
     document.getElementById('cm-sa-aluno').textContent = '—';
     document.getElementById('cm-sa-turma').textContent = '—';
     document.getElementById('cm-sa-prova').textContent = '—';
@@ -1253,22 +987,18 @@ function abrirCorrecaoManualStandalone() {
     document.getElementById('cm-sa-status-badge').textContent = 'AGUARDANDO';
     document.getElementById('cm-sa-status-badge').className = 'badge badge-gray';
     document.getElementById('cm-sa-porcentagem').textContent = '0% de aproveitamento';
-
     document.getElementById('cm-grid-standalone-container').style.display = 'none';
     document.getElementById('cm-info-standalone').style.display = 'none';
     document.getElementById('btn-salvar-correcao-manual').style.display = 'none';
     document.getElementById('cm-grid-standalone').innerHTML = '';
     document.getElementById('cm-selects-container').style.display = 'block';
-
     const cmNotaContainer = document.getElementById('cm-nota-manual-container');
     if (cmNotaContainer) cmNotaContainer.style.display = 'none';
     const notaValor = document.getElementById('cm-nota-valor');
     if (notaValor) notaValor.value = '';
     const statusDiv = document.getElementById('cm-nota-status');
     if (statusDiv) { statusDiv.style.display = 'none'; statusDiv.textContent = ''; }
-
     carregarEscolasParaCorrecaoManual();
-
     document.getElementById('m-correcao-manual-standalone').style.display = 'flex';
 }
 
@@ -1276,14 +1006,11 @@ async function carregarTurmasParaCorrecaoManual(escolaId) {
     const selectTurma = document.getElementById('cm-turma-select');
     const selectProva = document.getElementById('cm-prova-select');
     const selectAluno = document.getElementById('cm-aluno-select');
-
     selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
     selectProva.innerHTML = '<option value="">Selecione a prova...</option>';
     selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
-
     if (!escolaId) return;
     cmStandaloneData.escolaId = parseInt(escolaId);
-
     try {
         const turmas = await carregarTurmasComCache(escolaId);
         if (turmas && !turmas.erro) {
@@ -1295,9 +1022,7 @@ async function carregarTurmasParaCorrecaoManual(escolaId) {
                 selectTurma.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar turmas:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar turmas:', e); }
 }
 
 async function carregarAlunosParaCorrecaoManual(turmaId) {
@@ -1305,7 +1030,6 @@ async function carregarAlunosParaCorrecaoManual(turmaId) {
     selectAluno.innerHTML = '<option value="">Selecione o aluno...</option>';
     if (!turmaId) return;
     cmStandaloneData.turmaId = parseInt(turmaId);
-
     const selectTurma = document.getElementById('cm-turma-select');
     const turmaOption = selectTurma.options[selectTurma.selectedIndex];
     if (turmaOption) {
@@ -1322,9 +1046,7 @@ async function carregarAlunosParaCorrecaoManual(turmaId) {
                 selectAluno.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar alunos:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar alunos:', e); }
 }
 
 async function carregarProvasParaCorrecaoManualPorTurma(turmaId) {
@@ -1348,9 +1070,7 @@ async function carregarProvasParaCorrecaoManualPorTurma(turmaId) {
                 selectProva.appendChild(opt);
             });
         }
-    } catch (e) {
-        console.error('Erro ao carregar provas:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar provas:', e); }
 }
 
 function carregarGabaritoParaCorrecaoManual() {
@@ -1371,7 +1091,6 @@ function carregarGabaritoParaCorrecaoManual() {
         const quantidade = parseInt(option.dataset.quantidade) || 20;
         const tipo = option.dataset.tipo || '4';
         const alternativas = tipo === '3' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-
         cmStandaloneData.provaId = parseInt(option.value);
         cmStandaloneData.provaTitulo = option.text.split(' - ')[0] || 'Prova';
         cmStandaloneData.provaData = option.dataset.data || '';
@@ -1381,9 +1100,7 @@ function carregarGabaritoParaCorrecaoManual() {
         cmStandaloneData.disciplina = option.dataset.disciplina || '';
         cmStandaloneData.valorPorQuestao = 10 / quantidade;
         cmStandaloneData.respostas = new Array(quantidade).fill('');
-
         if (!cmStandaloneData.serie) cmStandaloneData.serie = option.dataset.serie || '';
-
         showToast('✅ Gabarito carregado! Selecione o aluno e clique em "Iniciar Correção"', 'success');
     } catch (e) {
         console.error('Erro ao carregar gabarito:', e);
@@ -1396,7 +1113,6 @@ async function iniciarCorrecaoManualStandalone() {
     const turmaSelect = document.getElementById('cm-turma-select');
     const provaSelect = document.getElementById('cm-prova-select');
     const alunoSelect = document.getElementById('cm-aluno-select');
-
     if (!escolaSelect.value) { showToast('❌ Selecione uma escola!', 'error'); return; }
     if (!turmaSelect.value) { showToast('❌ Selecione uma turma!', 'error'); return; }
     if (!provaSelect.value) { showToast('❌ Selecione uma prova!', 'error'); return; }
@@ -1405,23 +1121,19 @@ async function iniciarCorrecaoManualStandalone() {
     const alunoOption = alunoSelect.options[alunoSelect.selectedIndex];
     cmStandaloneData.alunoId = parseInt(alunoSelect.value);
     cmStandaloneData.alunoNome = alunoOption.text.split(' (')[0] || 'Aluno';
-
     const escolaOption = escolaSelect.options[escolaSelect.selectedIndex];
     cmStandaloneData.escolaNome = escolaOption.text || '';
     cmStandaloneData.escolaId = parseInt(escolaSelect.value);
 
     const provaId = parseInt(provaSelect.value);
-
     try {
         showToast('🔄 Carregando dados da prova...', 'info');
-        const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+        const provaResp = await apiFetch(`${API_URL}/api/provas/${provaId}`);
         const prova = await provaResp.json();
-
         if (!prova || prova.erro) {
             showToast('❌ Erro ao carregar prova: ' + (prova.erro || 'Desconhecido'), 'error');
             return;
         }
-
         cmStandaloneData.provaId = provaId;
         cmStandaloneData.gabarito = prova.gabarito || [];
         cmStandaloneData.quantidade = prova.quantidade_questoes || 20;
@@ -1435,13 +1147,11 @@ async function iniciarCorrecaoManualStandalone() {
         cmStandaloneData.serie = prova.serie || cmStandaloneData.serie || '';
         cmStandaloneData.textos_questoes = prova.textos_questoes || [];
         cmStandaloneData.situacoes = new Array(cmStandaloneData.quantidade).fill('');
-
         if (prova.niveis && Array.isArray(prova.niveis)) {
             for (let i = 0; i < cmStandaloneData.quantidade; i++) {
                 cmStandaloneData.situacoes[i] = prova.niveis[i] || '';
             }
         }
-
     } catch (e) {
         console.error('Erro ao carregar prova:', e);
         showToast('❌ Erro ao carregar dados da prova: ' + e.message, 'error');
@@ -1453,25 +1163,21 @@ async function iniciarCorrecaoManualStandalone() {
         showToast('⚠️ Esta prova não tem gabarito cadastrado!', 'warning');
         return;
     }
-
     setText('cm-sa-aluno', cmStandaloneData.alunoNome);
     setText('cm-sa-turma', cmStandaloneData.serie + ' - ' + cmStandaloneData.turmaNome);
     setText('cm-sa-prova', cmStandaloneData.provaTitulo);
     setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
-
     document.getElementById('cm-info-standalone').style.display = 'grid';
     document.getElementById('cm-grid-standalone-container').style.display = 'block';
     ajustarUIporDisciplina();
     gerarGridCorrecaoManualSA();
     atualizarResumoCorrecaoManualSA();
-
     showToast('📝 Correção manual iniciada para ' + cmStandaloneData.alunoNome, 'success');
 }
 
 function gerarGridCorrecaoManualSA() {
     const grid = document.getElementById('cm-grid-standalone');
     if (!grid) return;
-
     const qtd = cmStandaloneData.quantidade || 20;
     const alternativas = cmStandaloneData.alternativas || ['A', 'B', 'C', 'D'];
     const gabarito = cmStandaloneData.gabarito || [];
@@ -1479,23 +1185,15 @@ function gerarGridCorrecaoManualSA() {
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
     const textosQuestoes = cmStandaloneData.textos_questoes || [];
     const situacoes = cmStandaloneData.situacoes || [];
-
     ajustarUIporDisciplina();
 
     if (isProducao) {
-        grid.style.display = 'flex';
-        grid.style.flexDirection = 'column';
-        grid.style.gap = '14px';
-        grid.style.maxHeight = 'none';
-        grid.style.overflowY = 'visible';
+        grid.style.display = 'flex'; grid.style.flexDirection = 'column';
+        grid.style.gap = '14px'; grid.style.maxHeight = 'none'; grid.style.overflowY = 'visible';
     } else {
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
-        grid.style.gap = '6px';
-        grid.style.maxHeight = '280px';
-        grid.style.overflowY = 'auto';
+        grid.style.display = 'grid'; grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+        grid.style.gap = '6px'; grid.style.maxHeight = '280px'; grid.style.overflowY = 'auto';
     }
-
     grid.innerHTML = '';
 
     for (let i = 0; i < qtd; i++) {
@@ -1505,13 +1203,11 @@ function gerarGridCorrecaoManualSA() {
 
         if (isProducao) {
             div.className = 'cm-item-producao';
-
             let cabecalho = '';
             if (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].cabecalho) cabecalho = textosQuestoes[i].cabecalho;
             const tituloQ = (textosQuestoes && textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i + 1}`;
             const headerTexto = cabecalho ? `${tituloQ} - ${cabecalho}` : tituloQ;
             const cabecalhoHTML = `<div class="cm-q-cabecalho-inline">${escapeHtml(headerTexto)}</div>`;
-
             let gabFormatadoHTML = '';
             if (gab && gab.trim() !== '') {
                 const blocos = gab.split(/\n(?=[A-Z]\))/);
@@ -1526,7 +1222,6 @@ function gerarGridCorrecaoManualSA() {
             } else {
                 gabFormatadoHTML = '<div style="color:var(--text3);font-style:italic;">Sem gabarito cadastrado</div>';
             }
-
             const situacaoAtual = (i < situacoes.length) ? (situacoes[i] || '') : '';
             const opcoesSit = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
             let optsSitHTML = '';
@@ -1534,7 +1229,6 @@ function gerarGridCorrecaoManualSA() {
                 const sel = (situacaoAtual === op) ? 'selected' : '';
                 optsSitHTML += `<option value="${op}" ${sel}>${op === '' ? '—' : op}</option>`;
             });
-
             div.innerHTML = `
                 ${cabecalhoHTML}
                 <div>
@@ -1552,27 +1246,22 @@ function gerarGridCorrecaoManualSA() {
                     </select>
                 </div>
             `;
-
             const textarea = div.querySelector('.cm-q-resposta-texto');
             textarea.addEventListener('input', function() {
                 cmStandaloneData.respostas[i] = this.value;
             });
         } else {
             div.className = 'cm-item-standalone';
-
             let options = '<option value="">—</option>';
             alternativas.forEach(alt => {
                 const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
                 options += `<option value="${alt}" ${selected}>${alt}</option>`;
             });
-
             const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
             let statusIcon = '';
             if (resp) statusIcon = isCorreto ? '✅' : '❌';
-
             let selectClass = 'q-select-manual';
             if (resp) selectClass += isCorreto ? ' correta' : ' errada';
-
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
                 <div class="q-gabarito">${escapeHtml(gab || '—')}</div>
@@ -1597,13 +1286,11 @@ function atualizarRespostaManualSA(select) {
     const novaResposta = select.value;
     if (novaResposta) cmStandaloneData.respostas[questaoIndex] = novaResposta.toUpperCase();
     else cmStandaloneData.respostas[questaoIndex] = '';
-
     const item = select.closest('.cm-item-standalone');
     const statusIcon = item.querySelector('.q-status-icon');
     const gabarito = cmStandaloneData.gabarito[questaoIndex] || '';
     const resposta = cmStandaloneData.respostas[questaoIndex] || '';
     const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
-
     select.className = 'q-select-manual';
     if (resposta) select.className += isCorreto ? ' correta' : ' errada';
     statusIcon.textContent = resposta ? (isCorreto ? '✅' : '❌') : '';
@@ -1615,7 +1302,6 @@ function atualizarResumoCorrecaoManualSA() {
     const respostas = cmStandaloneData.respostas || [];
     const gabarito = cmStandaloneData.gabarito || [];
     const isProducao = (cmStandaloneData.disciplina === 'Produção de Texto');
-
     let acertos = 0, respondidas = 0;
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
@@ -1633,11 +1319,9 @@ function atualizarResumoCorrecaoManualSA() {
     const nota = (acertos * cmStandaloneData.valorPorQuestao) || 0;
     const notaFinal = Math.min(nota, cmStandaloneData.notaMaxima || 10);
     const porcentagem = qtd > 0 ? Math.round((acertos / qtd) * 100) : 0;
-
     setText('cm-sa-acertos', acertos);
     setText('cm-sa-erros', erros);
     setText('cm-sa-nota', notaFinal.toFixed(1));
-
     const statusBadge = document.getElementById('cm-sa-status-badge');
     if (statusBadge) {
         if (notaFinal >= (cmStandaloneData.notaMinima || 5)) { statusBadge.textContent = '✅ APROVADO'; statusBadge.className = 'badge badge-green'; }
@@ -1689,12 +1373,10 @@ function revisarApenasDuvidosasSA() {
     const suspeitas = cmStandaloneData.questoes_suspeitas || [];
     const itens = document.querySelectorAll('.cm-item-standalone, .cm-item-producao');
     let totalDuvidosas = 0;
-
     itens.forEach((item, index) => {
         const confianca = confiancas[index] || 100;
         const numQuestao = index + 1;
         const isSuspeita = suspeitas.includes(numQuestao) || confianca < 70;
-
         if (isSuspeita) {
             item.style.display = '';
             totalDuvidosas++;
@@ -1703,7 +1385,6 @@ function revisarApenasDuvidosasSA() {
             item.style.display = 'none';
         }
     });
-
     if (totalDuvidosas === 0) {
         showToast('✅ Nenhuma questão com baixa confiança!', 'success');
         itens.forEach(item => item.style.display = '');
@@ -1714,56 +1395,34 @@ function revisarApenasDuvidosasSA() {
 
 function salvarCorrecaoManualStandalone() {
     if (!cmStandaloneData) { showToast('❌ Dados não encontrados!', 'error'); return; }
-
     if (cmStandaloneData.disciplina === 'Produção de Texto') {
         showToast('⚠️ Use o botão "💾 SALVAR NOTA" para Produção de Texto.', 'warning');
         return;
     }
-
     const provaId = parseInt(cmStandaloneData.provaId);
     const alunoId = parseInt(cmStandaloneData.alunoId);
-
-    if (!provaId || isNaN(provaId) || provaId <= 0) {
-        showToast('❌ ID da prova inválido!', 'error');
-        return;
-    }
-    if (!alunoId || isNaN(alunoId) || alunoId <= 0) {
-        showToast('❌ ID do aluno inválido!', 'error');
-        return;
-    }
-
+    if (!provaId || isNaN(provaId) || provaId <= 0) { showToast('❌ ID da prova inválido!', 'error'); return; }
+    if (!alunoId || isNaN(alunoId) || alunoId <= 0) { showToast('❌ ID do aluno inválido!', 'error'); return; }
     const qtd = cmStandaloneData.quantidade || 20;
     const respostas = cmStandaloneData.respostas || [];
     const gabarito = cmStandaloneData.gabarito || [];
-
     const temResposta = respostas.some(r => r && r.trim() !== '');
-    if (!temResposta) {
-        showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning');
-        return;
-    }
-
+    if (!temResposta) { showToast('⚠️ Marque pelo menos uma resposta do aluno!', 'warning'); return; }
     let acertos = 0;
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
         if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
-
     const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
     const nota = Math.min((acertos * valorPorQuestao), cmStandaloneData.notaMaxima || 10);
-
     showToast('💾 Salvando correção manual...', 'info');
-
     const dadosCorrecao = {
-        prova_id: provaId,
-        aluno_id: alunoId,
+        prova_id: provaId, aluno_id: alunoId,
         respostas: respostas.map(r => r || ''),
-        acertos: acertos,
-        nota: nota,
-        total: qtd
+        acertos: acertos, nota: nota, total: qtd
     };
-
-    fetch(API_URL + '/api/corrigir_manual', {
+    apiFetch(API_URL + '/api/corrigir_manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dadosCorrecao)
@@ -1824,27 +1483,17 @@ async function salvarNotaProducaoCM() {
     const obsInput = document.getElementById('cm-nota-observacao');
     const statusDiv = document.getElementById('cm-nota-status');
     const btn = document.getElementById('btn-salvar-nota-cm');
-
     const nota = notaInput ? notaInput.value : '';
     const alunoId = cmStandaloneData.alunoId;
     const provaId = cmStandaloneData.provaId;
-
-    if (!alunoId || !provaId) {
-        showToast('❌ Dados incompletos: aluno ou prova ausentes!', 'error');
-        return;
-    }
+    if (!alunoId || !provaId) { showToast('❌ Dados incompletos: aluno ou prova ausentes!', 'error'); return; }
     if (!nota || nota === '') {
         showToast('❌ Digite a nota!', 'error');
         if (notaInput) notaInput.focus();
         return;
     }
-
     const notaNum = parseFloat(nota);
-    if (isNaN(notaNum) || notaNum < 0 || notaNum > 10) {
-        showToast('❌ Nota deve estar entre 0 e 10!', 'error');
-        return;
-    }
-
+    if (isNaN(notaNum) || notaNum < 0 || notaNum > 10) { showToast('❌ Nota deve estar entre 0 e 10!', 'error'); return; }
     if (statusDiv) {
         statusDiv.className = 'sucesso';
         statusDiv.textContent = '💾 Salvando nota...';
@@ -1854,7 +1503,6 @@ async function salvarNotaProducaoCM() {
         statusDiv.style.border = '1.5px solid rgba(59,130,246,0.3)';
     }
     if (btn) btn.disabled = true;
-
     try {
         const questoesStatus = [];
         const qtd = cmStandaloneData.quantidade || 20;
@@ -1862,14 +1510,12 @@ async function salvarNotaProducaoCM() {
         const respostas = cmStandaloneData.respostas || [];
         const textosQuestoes = cmStandaloneData.textos_questoes || [];
         const situacoes = cmStandaloneData.situacoes || [];
-
         for (let i = 0; i < qtd; i++) {
             const gab = (i < gabarito.length) ? gabarito[i] : '';
             const resp = (i < respostas.length) ? respostas[i] : '';
             const sit = (i < situacoes.length) ? situacoes[i] : '';
             const titulo = (textosQuestoes[i] && textosQuestoes[i].titulo) ? textosQuestoes[i].titulo : `Q${i+1}`;
             const cabecalho = (textosQuestoes[i] && textosQuestoes[i].cabecalho) ? textosQuestoes[i].cabecalho : '';
-
             questoesStatus.push({
                 numero: i + 1, titulo: titulo, cabecalho: cabecalho,
                 resposta: resp || '—', gabarito: gab || '—',
@@ -1878,20 +1524,15 @@ async function salvarNotaProducaoCM() {
                 status_texto: `📝 Situação ${sit || '—'}`
             });
         }
-
-        const response = await fetch(`${API_URL}/api/salvar_nota_producao`, {
+        const response = await apiFetch(`${API_URL}/api/salvar_nota_producao`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                aluno_id: parseInt(alunoId),
-                prova_id: parseInt(provaId),
-                nota: notaNum,
-                observacao: '',
-                questoes_status: questoesStatus
+                aluno_id: parseInt(alunoId), prova_id: parseInt(provaId),
+                nota: notaNum, observacao: '', questoes_status: questoesStatus
             })
         });
         const dados = await response.json();
-
         if (dados.sucesso) {
             showToast(`✅ Nota ${notaNum.toFixed(1)} salva para ${dados.aluno}!`, 'success');
             if (statusDiv) {
@@ -1903,7 +1544,6 @@ async function salvarNotaProducaoCM() {
             }
             if (notaInput) notaInput.value = '';
             if (obsInput) obsInput.value = '';
-
             limparCache();
             setTimeout(() => {
                 if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
@@ -1938,16 +1578,13 @@ async function salvarNotaProducaoCM() {
 async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
     try {
         showToast('🔄 Carregando dados...', 'info');
-
-        const provaResp = await fetch(`${API_URL}/api/provas/${provaId}`);
+        const provaResp = await apiFetch(`${API_URL}/api/provas/${provaId}`);
         const prova = await provaResp.json();
         if (!prova || prova.erro) { showToast('❌ Erro ao carregar prova', 'error'); return; }
-
-        const alunoResp = await fetch(`${API_URL}/api/alunos/${alunoId}`);
+        const alunoResp = await apiFetch(`${API_URL}/api/alunos/${alunoId}`);
         const aluno = await alunoResp.json();
         if (!aluno || aluno.erro) { showToast('❌ Erro ao carregar aluno', 'error'); return; }
-
-        const historicoResp = await fetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
+        const historicoResp = await apiFetch(`${API_URL}/api/historico?aluno_id=${alunoId}&prova_id=${provaId}`);
         const historico = await historicoResp.json();
         let respostas = [];
         if (historico && historico.length > 0 && !historico.erro) respostas = historico[0].respostas || [];
@@ -1971,18 +1608,14 @@ async function abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId) {
         openM('m-correcao-manual-standalone');
         const selectsContainer = document.getElementById('cm-selects-container');
         if (selectsContainer) selectsContainer.style.display = 'none';
-
         document.getElementById('cm-grid-standalone-container').style.display = 'block';
-
         setText('cm-sa-aluno', cmStandaloneData.alunoNome);
         setText('cm-sa-turma', cmStandaloneData.serie);
         setText('cm-sa-prova', cmStandaloneData.provaTitulo);
         setText('cm-sa-data', cmStandaloneData.provaData || new Date().toLocaleDateString('pt-BR'));
-
         ajustarUIporDisciplina();
         gerarGridCorrecaoManualSA();
         atualizarResumoCorrecaoManualSA();
-
         showToast('📝 Correção manual carregada para ' + cmStandaloneData.alunoNome, 'success');
     } catch (erro) {
         console.error('❌ Erro ao abrir correção manual direta:', erro);
@@ -1995,7 +1628,6 @@ async function editarGabaritoDesempenho() {
     const turmaId = document.getElementById('filtro-turma-desempenho').value;
     const alunoId = document.getElementById('filtro-aluno-desempenho').value;
     const provaId = document.getElementById('filtro-prova-desempenho').value;
-
     if (!escolaId || !turmaId || !alunoId || !provaId) {
         showToast('⚠️ Selecione todos os filtros (escola, turma, aluno e prova) antes de editar o gabarito!', 'error');
         return;
@@ -2003,19 +1635,13 @@ async function editarGabaritoDesempenho() {
     await abrirCorrecaoManualDireta(escolaId, turmaId, alunoId, provaId);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// CORREÇÃO AUTOMÁTICA POR QR CODE
-// ═══════════════════════════════════════════════════════════════════
-function abrirCameraAutomatico() {
-    autoModoAtivo = true;
-    abrirCamera();
-}
+// ═══ CORREÇÃO AUTOMÁTICA POR QR CODE ═══
+function abrirCameraAutomatico() { autoModoAtivo = true; abrirCamera(); }
 
 function processarArqAutomatico(input) {
     const file = input.files[0];
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) { showToast('❌ Imagem muito grande (máx. 20MB)', 'error'); return; }
-
     const reader = new FileReader();
     reader.onload = function(e) {
         const base64 = e.target.result;
@@ -2033,10 +1659,8 @@ function processarArqAutomatico(input) {
 async function corrigirAutomatico() {
     const imagem = window._autoImagem;
     if (!imagem) { showToast('❌ Nenhuma imagem carregada', 'error'); return; }
-
     const resultadoDiv = document.getElementById('auto-resultado');
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
-
     if (resultadoDiv) resultadoDiv.style.display = 'block';
     if (conteudoDiv) {
         conteudoDiv.innerHTML = `
@@ -2047,15 +1671,13 @@ async function corrigirAutomatico() {
             </div>
         `;
     }
-
     try {
-        const response = await fetch(`${API_URL}/api/corrigir-automatico`, {
+        const response = await apiFetch(`${API_URL}/api/corrigir-automatico`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imagem: imagem, salvar_auto: false })
         });
         const dados = await response.json();
-
         if (!response.ok || !dados.sucesso) {
             mostrarErroAutomatico(dados.erro || 'Erro na correção automática', dados.dicas);
             return;
@@ -2073,14 +1695,12 @@ async function corrigirAutomatico() {
 function mostrarErroAutomatico(mensagem, dicas) {
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
     if (!conteudoDiv) return;
-
     let dicasHtml = '';
     if (dicas && Array.isArray(dicas)) {
         dicasHtml = '<div style="margin-top:14px; padding:12px; background:rgba(245,158,11,0.1); border-radius:8px; border-left:3px solid var(--orange);"><strong style="color:var(--orange);">Dicas:</strong><ul style="margin-top:6px; padding-left:20px; font-size:13px; color:var(--text2); line-height:1.7;">';
         dicas.forEach(d => { dicasHtml += `<li>${escapeHtml(d)}</li>`; });
         dicasHtml += '</ul></div>';
     }
-
     conteudoDiv.innerHTML = `
         <div style="padding:16px; background:rgba(239,68,68,0.08); border-radius:10px; border-left:4px solid var(--red);">
             <div style="font-size:15px; font-weight:700; color:var(--red); margin-bottom:8px;">❌ ${escapeHtml(mensagem)}</div>
@@ -2095,7 +1715,6 @@ function mostrarErroAutomatico(mensagem, dicas) {
 function mostrarResultadoAutomatico(dados) {
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
     if (!conteudoDiv) return;
-
     if (dados.sucesso || !dados.erro) {
         const gabarito = dados.gabarito || [];
         const respostas = dados.respostas_detectadas || [];
@@ -2103,7 +1722,6 @@ function mostrarResultadoAutomatico(dados) {
         const tipoQuestoes = parseInt(dados.tipo_questoes) || 4;
         const alternativas = tipoQuestoes === 3 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
         const valorPorQuestao = quantidade > 0 ? (10 / quantidade) : 0.5;
-
         correcaoManualData = {
             alunoId: dados.aluno_id || dados.qr_lido?.aluno_id,
             alunoNome: dados.aluno || 'Aluno',
@@ -2183,7 +1801,6 @@ function mostrarResultadoAutomatico(dados) {
             </div>
         </div>
     `;
-
     conteudoDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     showToast(`✅ Corrigido! ${aluno} — Nota ${nota.toFixed(1)}`, 'success');
 }
