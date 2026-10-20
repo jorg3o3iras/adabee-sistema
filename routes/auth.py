@@ -75,76 +75,102 @@ def login():
 
 
 # ═══════════════════════════════════════════════════════════════
-# 🔒 VERIFICAR SENHA ADMIN (protege a tela de Configurações)
-# Aceita usuários da TABELA + fallback em USUARIOS_FIXOS
+# 🔒 VERIFICAR SENHA ADMIN
+# A lógica: aceita a senha de QUALQUER admin ativo (mesma senha do login)
 # ═══════════════════════════════════════════════════════════════
 @bp.route('/verificar-senha-admin', methods=['POST'])
 def verificar_senha_admin():
     """
-    Verifica se a senha enviada pertence a um usuário ADMIN.
-    Ordem de checagem:
-      1) Tabela `usuarios`
-      2) Fallback em `USUARIOS_FIXOS` (dev/teste — ex: 'admin' / 'admin')
+    Valida a senha de administrador.
+
+    Estratégia (na ordem):
+      1) Se o `username` enviado for um admin ativo → confere a senha dele
+      2) Fallback: procura QUALQUER admin ativo no banco cuja senha bata
+         (assim, se o front manda 'admin' fixo, mas a senha é do 'jorge',
+          o fallback encontra o 'jorge' e libera)
+      3) Fallback final: senha do 'admin' fixo (USUARIOS_FIXOS)
     """
     try:
         data = request.get_json() or {}
         senha = data.get('senha', '').strip()
         username = data.get('username', '').strip()
 
-        if not senha or not username:
-            return jsonify({'ok': False, 'erro': 'Usuário e senha são obrigatórios'}), 400
+        if not senha:
+            return jsonify({'ok': False, 'erro': 'Senha é obrigatória'}), 400
 
         conn = get_db_connection()
-        if not conn:
-            return jsonify({'ok': False, 'erro': 'Banco indisponível'}), 500
+        if conn:
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT id, username, nome, senha_hash, perfil, ativo
-            FROM usuarios
-            WHERE username = %s
-        """, (username,))
-        usuario = cur.fetchone()
-        cur.close()
-        conn.close()
+                # ── 1) Tentar pelo username enviado ──
+                if username:
+                    cur.execute("""
+                        SELECT id, username, nome, senha_hash, perfil, ativo
+                        FROM usuarios WHERE username = %s
+                    """, (username,))
+                    u = cur.fetchone()
+                    if (u and u.get('ativo') and u.get('perfil') == 'admin'
+                            and hmac.compare_digest(str(u['senha_hash'] or ''), str(senha))):
+                        cur.close()
+                        conn.close()
+                        return jsonify({
+                            'ok': True,
+                            'usuario': {
+                                'id': u['id'],
+                                'username': u['username'],
+                                'nome': u['nome'],
+                                'perfil': u['perfil']
+                            }
+                        }), 200
 
-        # ── 1) Usuário existe na TABELA ──
-        if usuario:
-            if not usuario['ativo']:
-                return jsonify({'ok': False, 'erro': 'Usuário inativo'}), 401
-            if usuario['perfil'] != 'admin':
-                return jsonify({'ok': False, 'erro': 'Apenas administradores podem acessar'}), 403
-            if not hmac.compare_digest(str(usuario['senha_hash'] or ''), str(senha)):
-                return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
-            return jsonify({
-                'ok': True,
-                'usuario': {
-                    'id': usuario['id'],
-                    'username': usuario['username'],
-                    'nome': usuario['nome'],
-                    'perfil': usuario['perfil']
-                }
-            }), 200
+                # ── 2) Fallback: QUALQUER admin ativo com essa senha ──
+                cur.execute("""
+                    SELECT id, username, nome, senha_hash, perfil
+                    FROM usuarios WHERE perfil = 'admin' AND ativo = TRUE
+                """)
+                admins = cur.fetchall() or []
+                for a in admins:
+                    if hmac.compare_digest(str(a['senha_hash'] or ''), str(senha)):
+                        cur.close()
+                        conn.close()
+                        print(f"✅ Senha admin validada (fallback por senha): {a['username']}")
+                        return jsonify({
+                            'ok': True,
+                            'usuario': {
+                                'id': a['id'],
+                                'username': a['username'],
+                                'nome': a['nome'],
+                                'perfil': a['perfil']
+                            }
+                        }), 200
 
-        # ── 2) Fallback: USUARIOS_FIXOS (DEV/TESTE) ──
-        if username in USUARIOS_FIXOS:
-            dados = USUARIOS_FIXOS[username]
-            if dados.get('perfil') != 'admin':
-                return jsonify({'ok': False, 'erro': 'Apenas administradores podem acessar'}), 403
-            if not hmac.compare_digest(str(dados['senha']), str(senha)):
-                return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
-            return jsonify({
-                'ok': True,
-                'usuario': {
-                    'id': 0,
-                    'username': username,
-                    'nome': dados['nome'],
-                    'perfil': dados['perfil']
-                }
-            }), 200
+                cur.close()
+            except Exception as e:
+                print(f"⚠️ Erro na checagem do banco: {e}")
+                traceback.print_exc()
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
-        # ── 3) Não achou em nenhum dos dois ──
-        return jsonify({'ok': False, 'erro': 'Usuário não encontrado'}), 401
+        # ── 3) Fallback final: 'admin' fixo (DEV) ──
+        if 'admin' in USUARIOS_FIXOS:
+            fixo = USUARIOS_FIXOS['admin']
+            if fixo.get('perfil') == 'admin' and hmac.compare_digest(str(fixo['senha']), str(senha)):
+                print("✅ Senha admin validada (fixo 'admin')")
+                return jsonify({
+                    'ok': True,
+                    'usuario': {
+                        'id': 0,
+                        'username': 'admin',
+                        'nome': fixo.get('nome', 'Administrador'),
+                        'perfil': 'admin'
+                    }
+                }), 200
+
+        return jsonify({'ok': False, 'erro': 'Senha incorreta'}), 401
 
     except Exception as e:
         print(f'❌ Erro em verificar_senha_admin: {e}')
