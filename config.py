@@ -25,9 +25,31 @@ RELAY_API_KEY = os.getenv('RELAY_API_KEY', '')
 RELAY_MODEL = os.getenv('RELAY_MODEL', 'gemini-1.5-flash')
 RELAY_AVAILABLE = bool(RELAY_API_URL)
 
-# ═══ USUÁRIOS FIXOS ═══
+
+# ═══ USUÁRIOS FIXOS (apenas DEV/TESTE) ═══
+# ⚠️ IMPORTANTE:
+#   - 'admin' com escola_id=None  → perfil admin vê TODAS as escolas
+#   - 'usuario' / 'professor1' SEM escola → serão BLOQUEADOS pelo
+#     get_escola_id() (retorna 403). Isso é intencional: força o cadastro
+#     correto via banco (com escola_id) em produção.
+#   - Em produção, remova este dicionário e use apenas a tabela `usuarios`.
 USUARIOS_FIXOS = {
-    'admin': {'senha': 'admin', 'perfil': 'admin', 'nome': 'Administrador'},
-    'usuario': {'senha': '123', 'perfil': 'usuario', 'nome': 'Usuário'},
-    'professor1': {'senha': '123', 'perfil': 'usuario', 'nome': 'Professor 1'}
+    'admin': {
+        'senha': 'admin',
+        'perfil': 'admin',
+        'nome': 'Administrador',
+        'escola_id': None,          # admin → sem filtro (vê tudo)
+    },
+    'usuario': {
+        'senha': '123',
+        'perfil': 'usuario',
+        'nome': 'Usuário',
+        'escola_id': None,          # ⚠️ sem escola → bloqueado
+    },
+    'professor1': {
+        'senha': '123',
+        'perfil': 'usuario',
+        'nome': 'Professor 1',
+        'escola_id': None,          # ⚠️ sem escola → bloqueado
+    },
 }
