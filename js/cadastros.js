@@ -2,7 +2,6 @@
 // JS/CADASTROS.JS — Escolas, Turmas, Alunos (Frontend)
 // ============================================================
 
-// ═══ CACHE LOCAL ═══
 let escolasCache = null;
 let turmasCache = null;
 let alunosCache = null;
@@ -11,20 +10,19 @@ function limparCache() {
     escolasCache = null;
     turmasCache = null;
     alunosCache = null;
-    if (typeof cache !== 'undefined') {
-        if (cache) {
-            cache.escolas = null;
-            cache.turmas = {};
-            cache.alunos = {};
-            cache.provas = null;
-            cache.ultima_atualizacao = {};
-        }
+    if (typeof cache !== 'undefined' && cache) {
+        cache.escolas = null;
+        cache.turmas = {};
+        cache.alunos = {};
+        cache.provas = null;
+        cache.ultima_atualizacao = {};
     }
 }
 
+// 🔑 TODOS os fetch passam por apiFetch (injeta X-Usuario-Username)
 async function _fetchJSON(url, opcoes) {
     try {
-        const r = await fetch(url, opcoes);
+        const r = await apiFetch(url, opcoes);
         if (!r.ok) {
             const txt = await r.text();
             throw new Error(`HTTP ${r.status}: ${txt.slice(0, 200)}`);
@@ -36,9 +34,7 @@ async function _fetchJSON(url, opcoes) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ESCOLAS
-// ═══════════════════════════════════════════════════════════════
+/* ───────── ESCOLAS ───────── */
 async function carregarEscolasComCache(forceRefresh) {
     if (!forceRefresh && escolasCache) return escolasCache;
     try {
@@ -55,22 +51,16 @@ async function carregarEscolas() {
     const escolas = await carregarEscolasComCache(true);
     const tbody = document.getElementById('tb-escola');
     if (!tbody) return;
-
     if (!escolas || escolas.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma escola cadastrada</td></tr>';
         return;
     }
-
-    // Conta turmas e alunos por escola (usando cache de turmas do core.js)
     let turmas = [];
-    try {
-        turmas = await carregarTurmasComCache();
-    } catch (e) {}
+    try { turmas = await carregarTurmasComCache(); } catch (e) {}
 
     tbody.innerHTML = escolas.map((e, i) => {
         const totalTurmas = turmas.filter(t => t.escola_id == e.id).length;
-        const totalAlunos = turmas
-            .filter(t => t.escola_id == e.id)
+        const totalAlunos = turmas.filter(t => t.escola_id == e.id)
             .reduce((acc, t) => acc + (parseInt(t.total_alunos) || 0), 0);
         return `<tr data-id="${e.id}" data-nome="${escapeAttr(e.nome || '')}">
             <td><span class="badge badge-blue">${String(i + 1).padStart(3, '0')}</span></td>
@@ -93,7 +83,6 @@ async function carregarEscolas() {
 async function salvarEscola() {
     const nome = document.getElementById('escola-nome')?.value.trim();
     if (!nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
-
     const dados = {
         nome,
         inep: document.getElementById('escola-inep')?.value.trim() || '',
@@ -102,25 +91,19 @@ async function salvarEscola() {
         telefone: document.getElementById('escola-telefone')?.value.trim() || '',
         diretor: document.getElementById('escola-diretor')?.value.trim() || ''
     };
-
     try {
         const result = await _fetchJSON(API_URL + '/api/escolas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         showToast('✅ Escola "' + nome + '" cadastrada!', 'success');
-        limparCache();
-        closeM('m-escola');
-        carregarEscolas();
+        limparCache(); closeM('m-escola'); carregarEscolas();
         if (typeof carregarCombos === 'function') carregarCombos();
         if (typeof carregarDashboard === 'function') carregarDashboard();
         if (result && result.id && typeof tableFeedback !== 'undefined') {
             setTimeout(() => tableFeedback.destacarLinha('tb-escola', result.id, '✅ Nova!'), 300);
         }
-    } catch (e) {
-        showToast('❌ Erro ao salvar escola: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro ao salvar escola: ' + e.message, 'error'); }
 }
 
 async function editarEscola(id) {
@@ -134,9 +117,7 @@ async function editarEscola(id) {
         document.getElementById('editar-escola-telefone').value = escola.telefone || '';
         document.getElementById('editar-escola-diretor').value = escola.diretor || '';
         openM('m-editar-escola');
-    } catch (e) {
-        showToast('❌ Erro ao carregar escola: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro ao carregar escola: ' + e.message, 'error'); }
 }
 
 async function salvarEdicaoEscola() {
@@ -152,18 +133,13 @@ async function salvarEdicaoEscola() {
     if (!dados.nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
     try {
         await _fetchJSON(API_URL + '/api/escolas/' + id, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         showToast('✅ Escola atualizada!', 'success');
-        limparCache();
-        closeM('m-editar-escola');
-        carregarEscolas();
+        limparCache(); closeM('m-editar-escola'); carregarEscolas();
         if (typeof carregarCombos === 'function') carregarCombos();
-    } catch (e) {
-        showToast('❌ Erro ao atualizar: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro ao atualizar: ' + e.message, 'error'); }
 }
 
 async function excluirEscola(id, nome) {
@@ -171,20 +147,15 @@ async function excluirEscola(id, nome) {
     try {
         await _fetchJSON(API_URL + '/api/escolas/' + id, { method: 'DELETE' });
         showToast('🗑️ Escola excluída!', 'success');
-        limparCache();
-        carregarEscolas();
+        limparCache(); carregarEscolas();
         if (typeof carregarTurmas === 'function') carregarTurmas();
         if (typeof carregarAlunos === 'function') carregarAlunos();
         if (typeof carregarCombos === 'function') carregarCombos();
         if (typeof carregarDashboard === 'function') carregarDashboard();
-    } catch (e) {
-        showToast('❌ Erro ao excluir: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro ao excluir: ' + e.message, 'error'); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TURMAS
-// ═══════════════════════════════════════════════════════════════
+/* ───────── TURMAS ───────── */
 async function carregarTurmasComCache(escolaId, forceRefresh) {
     if (!forceRefresh && turmasCache && !escolaId) return turmasCache;
     try {
@@ -192,28 +163,22 @@ async function carregarTurmasComCache(escolaId, forceRefresh) {
         const turmas = await _fetchJSON(url);
         if (!escolaId) turmasCache = turmas || [];
         return turmas || [];
-    } catch (e) {
-        console.error('Erro ao carregar turmas:', e);
-        return [];
-    }
+    } catch (e) { console.error('Erro ao carregar turmas:', e); return []; }
 }
 
 async function carregarTurmas() {
     const turmas = await carregarTurmasComCache(null, true);
     const tbody = document.getElementById('tb-turmas');
     if (!tbody) return;
-
     if (!turmas || turmas.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhuma turma cadastrada</td></tr>';
         return;
     }
-
     const corMap = {
         '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
         '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
         '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
     };
-
     tbody.innerHTML = turmas.map((t, i) => {
         const totalAlunos = parseInt(t.total_alunos) || 0;
         return `<tr data-id="${t.id}" data-nome="${escapeAttr(t.nome || '')}" data-serie="${escapeAttr(t.serie || '')}" data-escola="${t.escola_id}">
@@ -240,35 +205,27 @@ async function salvarTurma() {
     const escolaId = document.getElementById('turma-escola')?.value;
     if (!nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
     if (!escolaId) { showToast('❌ Selecione a escola!', 'error'); return; }
-
     const dados = {
-        nome,
-        escola_id: parseInt(escolaId),
+        nome, escola_id: parseInt(escolaId),
         serie: document.getElementById('turma-serie')?.value || '1º Ano',
         turno: document.getElementById('turma-turno')?.value || 'Manhã',
         professor: document.getElementById('turma-professor')?.value.trim() || '',
         capacidade: parseInt(document.getElementById('turma-capacidade')?.value || 35),
         ano_letivo: parseInt(document.getElementById('turma-ano')?.value || 2025)
     };
-
     try {
         const result = await _fetchJSON(API_URL + '/api/turmas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         showToast('✅ Turma criada!', 'success');
-        limparCache();
-        closeM('m-turma');
-        carregarTurmas();
+        limparCache(); closeM('m-turma'); carregarTurmas();
         if (typeof carregarCombos === 'function') carregarCombos();
         if (typeof carregarDashboard === 'function') carregarDashboard();
         if (result && result.id && typeof tableFeedback !== 'undefined') {
             setTimeout(() => tableFeedback.destacarLinha('tb-turmas', result.id, '✅ Nova!'), 300);
         }
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
 }
 
 async function editarTurma(id) {
@@ -288,9 +245,7 @@ async function editarTurma(id) {
         document.getElementById('editar-turma-capacidade').value = turma.capacidade || 35;
         document.getElementById('editar-turma-ano').value = turma.ano_letivo || 2025;
         openM('m-editar-turma');
-    } catch (e) {
-        showToast('❌ Erro ao carregar: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro ao carregar: ' + e.message, 'error'); }
 }
 
 async function salvarEdicaoTurma() {
@@ -307,18 +262,13 @@ async function salvarEdicaoTurma() {
     if (!dados.nome || !dados.escola_id) { showToast('❌ Preencha todos os campos!', 'error'); return; }
     try {
         await _fetchJSON(API_URL + '/api/turmas/' + id, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         showToast('✅ Turma atualizada!', 'success');
-        limparCache();
-        closeM('m-editar-turma');
-        carregarTurmas();
+        limparCache(); closeM('m-editar-turma'); carregarTurmas();
         if (typeof carregarCombos === 'function') carregarCombos();
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
 }
 
 async function excluirTurma(id, nome) {
@@ -326,30 +276,23 @@ async function excluirTurma(id, nome) {
     try {
         await _fetchJSON(API_URL + '/api/turmas/' + id, { method: 'DELETE' });
         showToast('🗑️ Turma excluída!', 'success');
-        limparCache();
-        carregarTurmas();
+        limparCache(); carregarTurmas();
         if (typeof carregarAlunos === 'function') carregarAlunos();
         if (typeof carregarCombos === 'function') carregarCombos();
         if (typeof carregarDashboard === 'function') carregarDashboard();
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
 }
 
-// Botão "📋" da linha da turma — vai para Alunos já filtrado
 function verAlunosDaTurma(turmaId) {
     const selTurma = document.getElementById('filtro-turma-alunos');
     if (selTurma) {
-        // Se a opção existir, seleciona
         const opt = Array.from(selTurma.options).find(o => o.value == turmaId);
         if (opt) selTurma.value = turmaId;
     }
     go('alunos');
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ALUNOS
-// ═══════════════════════════════════════════════════════════════
+/* ───────── ALUNOS ───────── */
 async function carregarAlunosComCache(filtros, forceRefresh) {
     if (!forceRefresh && !filtros && alunosCache) return alunosCache;
     try {
@@ -364,36 +307,28 @@ async function carregarAlunosComCache(filtros, forceRefresh) {
         const alunos = await _fetchJSON(url);
         if (!filtros) alunosCache = alunos || [];
         return alunos || [];
-    } catch (e) {
-        console.error('Erro ao carregar alunos:', e);
-        return [];
-    }
+    } catch (e) { console.error('Erro ao carregar alunos:', e); return []; }
 }
 
 async function carregarAlunos(escolaId) {
     const turmaId = document.getElementById('filtro-turma-alunos')?.value;
     const serie = document.getElementById('filtro-serie-alunos')?.value;
-
     const filtros = {};
     if (escolaId) filtros.escola_id = escolaId;
     if (turmaId) filtros.turma_id = turmaId;
     if (serie) filtros.serie = serie;
-
     const alunos = await carregarAlunosComCache(filtros, true);
     const tbody = document.getElementById('tb-alunos');
     if (!tbody) return;
-
     if (!alunos || alunos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Nenhum aluno encontrado</td></tr>';
         return;
     }
-
     const corMap = {
         '1º Ano': 'badge-purple', '2º Ano': 'badge-purple', '3º Ano': 'badge-blue',
         '4º Ano': 'badge-blue', '5º Ano': 'badge-blue', '6º Ano': 'badge-cyan',
         '7º Ano': 'badge-cyan', '8º Ano': 'badge-orange', '9º Ano': 'badge-orange'
     };
-
     tbody.innerHTML = alunos.map((a, i) => {
         const dataNasc = a.data_nascimento ? formatarData(a.data_nascimento) : '—';
         return `<tr data-id="${a.id}" data-escola="${a.escola_id}" data-serie="${escapeAttr(a.turma_serie || '')}">
@@ -421,11 +356,8 @@ async function salvarAluno() {
     if (!nome) { showToast('❌ Nome é obrigatório!', 'error'); return; }
     if (!escolaId) { showToast('❌ Selecione a escola!', 'error'); return; }
     if (!turmaId) { showToast('❌ Selecione a turma!', 'error'); return; }
-
     const dados = {
-        nome,
-        escola_id: parseInt(escolaId),
-        turma_id: parseInt(turmaId),
+        nome, escola_id: parseInt(escolaId), turma_id: parseInt(turmaId),
         matricula: document.getElementById('aluno-matricula')?.value.trim() || '',
         numero_chamada: parseInt(document.getElementById('aluno-numero')?.value) || null,
         data_nascimento: document.getElementById('aluno-nascimento')?.value || null,
@@ -435,25 +367,19 @@ async function salvarAluno() {
         email: document.getElementById('aluno-email')?.value.trim() || '',
         observacoes: document.getElementById('aluno-observacoes')?.value.trim() || ''
     };
-
     try {
         const result = await _fetchJSON(API_URL + '/api/alunos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         showToast('✅ Aluno cadastrado!', 'success');
-        limparCache();
-        closeM('m-aluno');
-        carregarAlunos(escolaId);
+        limparCache(); closeM('m-aluno'); carregarAlunos(escolaId);
         if (typeof carregarCombos === 'function') carregarCombos();
         if (typeof carregarDashboard === 'function') carregarDashboard();
         if (result && result.id && typeof tableFeedback !== 'undefined') {
             setTimeout(() => tableFeedback.destacarLinha('tb-alunos', result.id, '✅ Novo!'), 300);
         }
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
 }
 
 async function editarAluno(id) {
@@ -482,9 +408,7 @@ async function editarAluno(id) {
         document.getElementById('editar-aluno-email').value = aluno.email || '';
         document.getElementById('editar-aluno-observacoes').value = aluno.observacoes || '';
         openM('m-editar-aluno');
-    } catch (e) {
-        showToast('❌ Erro ao carregar aluno: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro ao carregar aluno: ' + e.message, 'error'); }
 }
 
 async function salvarEdicaoAluno() {
@@ -505,17 +429,12 @@ async function salvarEdicaoAluno() {
     if (!dados.nome || !dados.escola_id || !dados.turma_id) { showToast('❌ Preencha todos os campos obrigatórios!', 'error'); return; }
     try {
         await _fetchJSON(API_URL + '/api/alunos/' + id, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         showToast('✅ Aluno atualizado!', 'success');
-        limparCache();
-        closeM('m-editar-aluno');
-        carregarAlunos();
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-    }
+        limparCache(); closeM('m-editar-aluno'); carregarAlunos();
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
 }
 
 async function excluirAluno(id, nome) {
@@ -523,18 +442,13 @@ async function excluirAluno(id, nome) {
     try {
         await _fetchJSON(API_URL + '/api/alunos/' + id, { method: 'DELETE' });
         showToast('🗑️ Aluno excluído!', 'success');
-        limparCache();
-        carregarAlunos();
+        limparCache(); carregarAlunos();
         if (typeof carregarCombos === 'function') carregarCombos();
         if (typeof carregarDashboard === 'function') carregarDashboard();
-    } catch (e) {
-        showToast('❌ Erro: ' + e.message, 'error');
-    }
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FILTROS / COMBOS
-// ═══════════════════════════════════════════════════════════════
+/* ───────── COMBOS ───────── */
 async function carregarEscolasFiltroAlunos() {
     const escolas = await carregarEscolasComCache();
     const sel = document.getElementById('filtro-escola-alunos');
@@ -554,10 +468,7 @@ async function carregarFiltroEscolaTurmas() {
 async function carregarTurmasPorEscolaParaAluno(escolaId, targetId) {
     const sel = document.getElementById(targetId);
     if (!sel) return;
-    if (!escolaId) {
-        sel.innerHTML = '<option value="">Selecione a escola primeiro</option>';
-        return;
-    }
+    if (!escolaId) { sel.innerHTML = '<option value="">Selecione a escola primeiro</option>'; return; }
     const turmas = await carregarTurmasComCache(escolaId);
     sel.innerHTML = '<option value="">Selecione a turma</option>' +
         turmas.map(t => `<option value="${t.id}" data-serie="${escapeAttr(t.serie || '')}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
@@ -566,20 +477,12 @@ async function carregarTurmasPorEscolaParaAluno(escolaId, targetId) {
 async function carregarTurmasFiltroAlunos(escolaId) {
     const sel = document.getElementById('filtro-turma-alunos');
     if (!sel) return;
-
-    if (!escolaId) {
-        sel.innerHTML = '<option value="">Todas as turmas</option>';
-        return;
-    }
-
+    if (!escolaId) { sel.innerHTML = '<option value="">Todas as turmas</option>'; return; }
     try {
         const turmas = await carregarTurmasComCache(escolaId);
         sel.innerHTML = '<option value="">Todas as turmas</option>' +
             turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)}</option>`).join('');
-    } catch (e) {
-        console.error('❌ Erro ao carregar turmas para filtro:', e);
-        sel.innerHTML = '<option value="">Todas as turmas</option>';
-    }
+    } catch (e) { sel.innerHTML = '<option value="">Todas as turmas</option>'; }
 }
 
 function filtrarAlunosPorEscola(escolaId) {
@@ -592,15 +495,10 @@ function filtrarAlunosPorSerie(serie) {
     carregarAlunos(escolaId);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FILTROS DE TURMAS
-// ═══════════════════════════════════════════════════════════════
 function aplicarFiltrosTurmas() {
     const escolaId = document.getElementById('filtro-escola-turmas')?.value || '';
     const serie = document.getElementById('filtro-serie-turmas')?.value || '';
-    const rows = document.querySelectorAll('#tb-turmas tr');
-
-    rows.forEach(row => {
+    document.querySelectorAll('#tb-turmas tr').forEach(row => {
         let ok = true;
         if (escolaId && row.dataset.escola !== escolaId) ok = false;
         if (serie && row.dataset.serie !== serie) ok = false;
@@ -616,31 +514,17 @@ function limparFiltrosTurmas() {
     document.querySelectorAll('#tb-turmas tr').forEach(r => r.style.display = '');
 }
 
-// ═══════════════════════════════════════════════════════════════
-// LISTA POR TURMA
-// ═══════════════════════════════════════════════════════════════
 async function carregarTurmasLista(escolaId) {
     const sel = document.getElementById('lista-turma');
     if (!sel) return;
-
-    if (!escolaId) {
-        sel.innerHTML = '<option value="">Selecione a turma</option>';
-        return;
-    }
-
+    if (!escolaId) { sel.innerHTML = '<option value="">Selecione a turma</option>'; return; }
     try {
         const turmas = await carregarTurmasComCache(escolaId);
         sel.innerHTML = '<option value="">Selecione a turma</option>' +
             turmas.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} - ${escapeHtml(t.serie || '')}</option>`).join('');
-    } catch (e) {
-        console.error('❌ Erro ao carregar turmas para lista:', e);
-        sel.innerHTML = '<option value="">Selecione a turma</option>';
-    }
+    } catch (e) { sel.innerHTML = '<option value="">Selecione a turma</option>'; }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TEXTO COM IA — select de escola
-// ═══════════════════════════════════════════════════════════════
 async function carregarEscolasTexto() {
     try {
         const escolas = await carregarEscolasComCache();
@@ -648,33 +532,19 @@ async function carregarEscolasTexto() {
         if (!sel) return;
         sel.innerHTML = '<option value="">Selecione a escola...</option>' +
             escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
-    } catch (e) {
-        console.error('Erro ao carregar escolas para texto:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar escolas para texto:', e); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// COMBOS UNIFICADOS (chamado no DOMContentLoaded)
-// ═══════════════════════════════════════════════════════════════
 async function carregarCombos() {
     try {
         const escolas = await carregarEscolasComCache();
         const turmas = await carregarTurmasComCache();
         const alunos = await carregarAlunosComCache();
-
         const idsEscola = [
-            'turma-escola',
-            'aluno-escola',
-            'editar-turma-escola',
-            'editar-aluno-escola',
-            'lista-escola',
-            'transf-escola-origem',
-            'transf-escola-destino',
-            'rel-turma-escola',
-            'prova-escola',
-            'corrigir-escola'
+            'turma-escola', 'aluno-escola', 'editar-turma-escola', 'editar-aluno-escola',
+            'lista-escola', 'transf-escola-origem', 'transf-escola-destino',
+            'rel-turma-escola', 'prova-escola', 'corrigir-escola'
         ];
-
         idsEscola.forEach(id => {
             const sel = document.getElementById(id);
             if (sel && sel.options.length <= 1) {
@@ -682,31 +552,20 @@ async function carregarCombos() {
                     escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
             }
         });
-
         const selTurmaAluno = document.getElementById('aluno-turma');
         if (selTurmaAluno && selTurmaAluno.options.length <= 1) {
             selTurmaAluno.innerHTML = '<option value="">Selecione a escola primeiro</option>';
         }
-
         console.log('✅ Combos carregados:', escolas.length, 'escolas,', turmas.length, 'turmas,', alunos.length, 'alunos');
-    } catch (e) {
-        console.error('Erro em carregarCombos:', e);
-    }
+    } catch (e) { console.error('Erro em carregarCombos:', e); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FUNÇÕES CHAMADAS POR script.js / startApp()
-// ═══════════════════════════════════════════════════════════════
 async function carregarEscolasParaAluno() {
     try {
         const escolas = await carregarEscolasComCache();
         const ids = [
-            'aluno-escola',
-            'editar-aluno-escola',
-            'lista-escola',
-            'transf-escola-origem',
-            'transf-escola-destino',
-            'rel-turma-escola'
+            'aluno-escola', 'editar-aluno-escola', 'lista-escola',
+            'transf-escola-origem', 'transf-escola-destino', 'rel-turma-escola'
         ];
         ids.forEach(id => {
             const sel = document.getElementById(id);
@@ -715,10 +574,7 @@ async function carregarEscolasParaAluno() {
                     escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
             }
         });
-        console.log('✅ Escolas para aluno carregadas:', escolas.length);
-    } catch (e) {
-        console.error('❌ Erro ao carregar escolas para aluno:', e);
-    }
+    } catch (e) { console.error('❌ Erro ao carregar escolas para aluno:', e); }
 }
 
 async function carregarEscolasParaCorrecaoManual() {
@@ -729,72 +585,39 @@ async function carregarEscolasParaCorrecaoManual() {
             sel.innerHTML = '<option value="">Selecione a escola...</option>' +
                 escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
         }
-        console.log('✅ Escolas para correção manual:', escolas.length);
-    } catch (e) {
-        console.error('❌ Erro ao carregar escolas para correção manual:', e);
-    }
+    } catch (e) { console.error('❌ Erro ao carregar escolas para correção manual:', e); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CADASTRO MÚLTIPLO DE ALUNOS
-// ═══════════════════════════════════════════════════════════════
 function processarListaAlunos() {
     const textarea = document.getElementById('multi-alunos-input');
     const linhas = textarea.value.split('\n').filter(l => l.trim() !== '');
-    if (linhas.length === 0) {
-        showToast('⚠️ Cole a lista de alunos primeiro!', 'warning');
-        return;
-    }
-
+    if (linhas.length === 0) { showToast('⚠️ Cole a lista de alunos primeiro!', 'warning'); return; }
     const statusDiv = document.getElementById('multi-status');
     const statusText = document.getElementById('multi-status-text');
-
     let adicionados = 0, erros = 0;
-
     linhas.forEach(linha => {
-        let nome = linha.trim();
-        let matricula = '';
-        let numero = '';
-
+        let nome = linha.trim(); let matricula = ''; let numero = '';
         const matchVirgula = linha.match(/^([^,]+),\s*([^,]+),\s*(\d+)?/);
         const matchTraco = linha.match(/^([^-]+)\s*-\s*([^-]+)\s*-\s*(\d+)?/);
         const matchParenteses = linha.match(/^([^(]+)\s*\(([^)]+)\)/);
-
-        if (matchVirgula) {
-            nome = matchVirgula[1].trim();
-            matricula = matchVirgula[2].trim();
-            numero = matchVirgula[3] ? matchVirgula[3].trim() : '';
-        } else if (matchTraco) {
-            nome = matchTraco[1].trim();
-            matricula = matchTraco[2].trim();
-            numero = matchTraco[3] ? matchTraco[3].trim() : '';
-        } else if (matchParenteses) {
-            nome = matchParenteses[1].trim();
-            matricula = matchParenteses[2].trim();
-        }
-
+        if (matchVirgula) { nome = matchVirgula[1].trim(); matricula = matchVirgula[2].trim(); numero = matchVirgula[3] ? matchVirgula[3].trim() : ''; }
+        else if (matchTraco) { nome = matchTraco[1].trim(); matricula = matchTraco[2].trim(); numero = matchTraco[3] ? matchTraco[3].trim() : ''; }
+        else if (matchParenteses) { nome = matchParenteses[1].trim(); matricula = matchParenteses[2].trim(); }
         if (nome) {
             document.getElementById('aluno-nome').value = nome;
             if (matricula) document.getElementById('aluno-matricula').value = matricula;
             if (numero) document.getElementById('aluno-numero').value = numero;
-            salvarAluno();
-            adicionados++;
-        } else {
-            erros++;
-        }
+            salvarAluno(); adicionados++;
+        } else { erros++; }
     });
-
     if (adicionados > 0) {
-        statusDiv.style.display = 'block';
-        statusDiv.className = 'multi-status success';
+        statusDiv.style.display = 'block'; statusDiv.className = 'multi-status success';
         statusText.textContent = `✅ ${adicionados} alunos adicionados com sucesso! ${erros > 0 ? `(${erros} erros)` : ''}`;
         textarea.value = '';
     } else {
-        statusDiv.style.display = 'block';
-        statusDiv.className = 'multi-status error';
+        statusDiv.style.display = 'block'; statusDiv.className = 'multi-status error';
         statusText.textContent = '❌ Nenhum aluno válido encontrado. Verifique o formato.';
     }
-
     setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
 }
 
@@ -806,23 +629,145 @@ function fecharAbaMulti() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// UTILITÁRIOS
+// 👤 USUÁRIOS (com escola) — deve sobrescrever versão do script.js
 // ═══════════════════════════════════════════════════════════════
+async function abrirModalUsuario(usuarioId) {
+    // Carrega combo de escolas
+    const sel = document.getElementById('usuario-escola');
+    if (sel) {
+        sel.innerHTML = '<option value="">Carregando escolas...</option>';
+        try {
+            const escolas = await carregarEscolasComCache(true);
+            sel.innerHTML = '<option value="">Selecione a escola...</option>' +
+                escolas.map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+        } catch (e) {
+            sel.innerHTML = '<option value="">Erro ao carregar escolas</option>';
+        }
+    }
+
+    // Limpa form (modo criação) ou preenche (modo edição)
+    document.getElementById('editar-usuario-id').value = usuarioId || '';
+    document.getElementById('usuario-nome').value = '';
+    document.getElementById('usuario-username').value = '';
+    document.getElementById('usuario-senha').value = '';
+    document.getElementById('usuario-email').value = '';
+    document.getElementById('usuario-perfil').value = 'usuario';
+    document.getElementById('usuario-ativo').checked = true;
+    if (sel) sel.value = '';
+
+    // Modal header dinâmico
+    const h3 = document.querySelector('#m-usuario .modal-header h3');
+    if (h3) h3.textContent = usuarioId ? '✏️ Editar Usuário' : '👤 Cadastrar Usuário';
+
+    if (usuarioId) {
+        try {
+            const u = await _fetchJSON(API_URL + '/api/usuarios/' + usuarioId);
+            document.getElementById('usuario-nome').value = u.nome || '';
+            document.getElementById('usuario-username').value = u.username || '';
+            document.getElementById('usuario-email').value = u.email || '';
+            document.getElementById('usuario-perfil').value = u.perfil || 'usuario';
+            document.getElementById('usuario-ativo').checked = !!u.ativo;
+            if (sel) sel.value = (u.escola_id != null) ? String(u.escola_id) : '';
+        } catch (e) {
+            showToast('❌ Erro ao carregar usuário: ' + e.message, 'error');
+        }
+    }
+
+    // Admin não precisa de escola → desativa required
+    const perfilSel = document.getElementById('usuario-perfil');
+    const atualizarRequired = () => {
+        if (sel) sel.required = (perfilSel.value !== 'admin');
+    };
+    if (perfilSel) { perfilSel.onchange = atualizarRequired; atualizarRequired(); }
+
+    openM('m-usuario');
+}
+
+async function salvarUsuario() {
+    const id = document.getElementById('editar-usuario-id').value;
+    const payload = {
+        nome: document.getElementById('usuario-nome').value.trim(),
+        username: document.getElementById('usuario-username').value.trim(),
+        senha: document.getElementById('usuario-senha').value,
+        email: document.getElementById('usuario-email').value.trim(),
+        perfil: document.getElementById('usuario-perfil').value,
+        ativo: document.getElementById('usuario-ativo').checked,
+        escola_id: (function() {
+            const v = document.getElementById('usuario-escola')?.value;
+            return v ? parseInt(v) : null;
+        })()
+    };
+
+    if (!payload.nome || !payload.username) { showToast('❌ Nome e usuário são obrigatórios!', 'error'); return; }
+    if (!id && !payload.senha) { showToast('❌ Senha é obrigatória para novo usuário!', 'error'); return; }
+    if (payload.senha && payload.senha.length < 4) { showToast('❌ Senha deve ter 4+ caracteres!', 'error'); return; }
+    if (payload.perfil !== 'admin' && !payload.escola_id) {
+        showToast('❌ Escola é obrigatória para usuários não administradores!', 'error'); return;
+    }
+
+    try {
+        const url = id ? API_URL + '/api/usuarios/' + id : API_URL + '/api/usuarios';
+        const method = id ? 'PUT' : 'POST';
+        await _fetchJSON(url, {
+            method, headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        showToast(id ? '✅ Usuário atualizado!' : '✅ Usuário criado!', 'success');
+        closeM('m-usuario');
+        if (typeof carregarUsuarios === 'function') carregarUsuarios();
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
+}
+
+async function carregarUsuarios() {
+    try {
+        const usuarios = await _fetchJSON(API_URL + '/api/usuarios');
+        const tbody = document.getElementById('tb-usuarios');
+        if (!tbody) return;
+        if (!usuarios || usuarios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3);">Nenhum usuário</td></tr>';
+            return;
+        }
+        tbody.innerHTML = usuarios.map(u => `
+            <tr data-id="${u.id}">
+                <td><strong>${escapeHtml(u.nome || u.username || '—')}</strong><br>
+                    <span style="font-size:10px;color:var(--text3);">${escapeHtml(u.username || '')}</span>
+                    ${u.escola_nome ? '<br><span style="font-size:10px;color:var(--blue);">🏫 ' + escapeHtml(u.escola_nome) + '</span>' : ''}
+                </td>
+                <td><span class="badge ${u.perfil === 'admin' ? 'badge-purple' : 'badge-blue'}">${escapeHtml(u.perfil || 'usuario')}</span></td>
+                <td>${u.ativo ? '<span class="badge badge-green">Ativo</span>' : '<span class="badge badge-red">Inativo</span>'}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-outline btn-sm" onclick="abrirModalUsuario(${u.id})">✏️</button>
+                        <button class="btn-del" onclick="excluirUsuario(${u.id}, '${escapeAttr(u.username || '')}')">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error('Erro ao carregar usuários:', e);
+    }
+}
+
+async function excluirUsuario(id, nome) {
+    if (!confirm(`Excluir o usuário "${nome}"?`)) return;
+    try {
+        await _fetchJSON(API_URL + '/api/usuarios/' + id, { method: 'DELETE' });
+        showToast('🗑️ Usuário excluído!', 'success');
+        carregarUsuarios();
+    } catch (e) { showToast('❌ Erro: ' + e.message, 'error'); }
+}
+
 function escapeHtml(s) {
     if (s === null || s === undefined) return '';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function escapeAttr(s) {
-    return escapeHtml(s).replace(/'/g, '&#39;');
-}
+function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 
 function formatarData(d) {
     if (!d) return '—';
-    try {
-        const dt = new Date(d);
-        return dt.toLocaleDateString('pt-BR');
-    } catch { return d; }
+    try { const dt = new Date(d); return dt.toLocaleDateString('pt-BR'); }
+    catch { return d; }
 }
 
 console.log('✅ js/cadastros.js carregado');
