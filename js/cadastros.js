@@ -768,9 +768,78 @@ function formatarData(d) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🔧 FIX: populate dos selects de PROVA nos filtros
-// (Resultados, Rel. por Turma, Desempenho do Aluno)
+// 🛡️ GUARDS E FALLBACKS
 // ═══════════════════════════════════════════════════════════════
+
+// 1) Fallback para carregarEscolasCorrigir (corrige o ReferenceError do resultados.js)
+if (typeof window.carregarEscolasCorrigir !== 'function') {
+    window.carregarEscolasCorrigir = async function() {
+        try {
+            const escolas = await carregarEscolasComCache();
+            const select = document.getElementById('corrigir-escola');
+            if (select && escolas && !escolas.erro) {
+                const current = select.value;
+                select.innerHTML = '<option value="">Selecione a escola...</option>';
+                escolas.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = e.nome;
+                    select.appendChild(opt);
+                });
+                if (current) select.value = current;
+            }
+        } catch (e) {
+            console.error('Erro em carregarEscolasCorrigir (fallback):', e);
+        }
+    };
+    console.log('✅ [guard] carregarEscolasCorrigir definida (fallback)');
+}
+
+// 2) Guard em carregarUsuarios → só roda para admin (corrige 403)
+if (typeof window.carregarUsuarios === 'function') {
+    const _origCarregarUsuarios = window.carregarUsuarios;
+    window.carregarUsuarios = async function() {
+        const isAdmin = (typeof isAdminLogado === 'function')
+            ? isAdminLogado()
+            : (function() {
+                try {
+                    const u = JSON.parse(localStorage.getItem('adabee_usuario') || '{}');
+                    return u && u.perfil === 'admin';
+                } catch (_) { return false; }
+            })();
+        if (!isAdmin) {
+            console.log('⚠️ [guard] carregarUsuarios ignorado (usuário não-admin)');
+            return;
+        }
+        return _origCarregarUsuarios.apply(this, arguments);
+    };
+    console.log('✅ [guard] carregarUsuarios protegida (só admin)');
+}
+
+// 3) Override carregarProvasComCache → trata cache vazio
+if (typeof window.carregarProvasComCache === 'function') {
+    const _origProvasCache = window.carregarProvasComCache;
+    window.carregarProvasComCache = async function(forceRefresh) {
+        // Se não é force e o cache tem itens, usa cache
+        if (!forceRefresh && Array.isArray(window._provasCache) && window._provasCache.length > 0) {
+            return window._provasCache;
+        }
+        // Caso contrário, refaz o fetch
+        try {
+            const r = await apiFetch(API_URL + '/api/provas');
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const provas = await r.json();
+            window._provasCache = Array.isArray(provas) ? provas : [];
+            return window._provasCache;
+        } catch (e) {
+            console.error('❌ Erro carregarProvasComCache:', e);
+            return Array.isArray(window._provasCache) ? window._provasCache : [];
+        }
+    };
+    console.log('✅ [guard] carregarProvasComCache protegida (cache vazio)');
+}
+
+// 4) Populate forçado dos dropdowns de prova (Resultados, Rel. Turma, Desempenho)
 (function fixProvasDropdowns() {
     const DROPDOWNS = [
         { id: 'filtro-prova',            placeholder: 'Todas as provas',       curto: false },
@@ -778,53 +847,69 @@ function formatarData(d) {
         { id: 'filtro-prova-desempenho', placeholder: 'Selecione a prova...',   curto: true  }
     ];
 
-    async function popular() {
+    async function popular(force) {
         try {
-            let provas = window._provasCache;
-            if (!provas || !Array.isArray(provas) || provas.length === 0) {
+            let provas = null;
+            // Força fetch se 'force' ou cache vazio
+            if (force || !Array.isArray(window._provasCache) || window._provasCache.length === 0) {
                 const r = await apiFetch(API_URL + '/api/provas');
                 if (r.ok) {
                     provas = await r.json();
-                    window._provasCache = provas;
+                    window._provasCache = Array.isArray(provas) ? provas : [];
                 }
+            } else {
+                provas = window._provasCache;
             }
-            if (!provas || provas.length === 0) return;
+            if (!Array.isArray(provas)) return;
 
             DROPDOWNS.forEach(d => {
                 const sel = document.getElementById(d.id);
                 if (!sel) return;
-                // Só popula se ainda estiver com placeholder (<= 1 option)
-                if (sel.options.length <= 1) {
-                    const html = provas.map(p => {
-                        const txt = d.curto
-                            ? `${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}`
-                            : `${escapeHtml(p.titulo)} - ${escapeHtml(p.serie || '')} - ${escapeHtml(p.disciplina || '')}`;
-                        return `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${txt}</option>`;
-                    }).join('');
-                    sel.innerHTML = `<option value="">${d.placeholder}</option>` + html;
-                    console.log(`✅ [fixProvas] ${d.id}: ${provas.length} provas`);
+
+                const isEmpty = sel.options.length <= 1;
+                // Popula se está vazio OU se force=true
+                if (!isEmpty && !force) return;
+                if (provas.length === 0) {
+                    // Se não tem provas, garante que ao menos o placeholder exista
+                    if (sel.options.length === 0) {
+                        sel.innerHTML = `<option value="">${d.placeholder}</option>`;
+                    }
+                    return;
                 }
+
+                const html = provas.map(p => {
+                    const txt = d.curto
+                        ? `${escapeHtml(p.titulo)} — ${escapeHtml(p.serie || '')}`
+                        : `${escapeHtml(p.titulo)} - ${escapeHtml(p.serie || '')} - ${escapeHtml(p.disciplina || '')}`;
+                    return `<option value="${p.id}" data-disciplina="${escapeAttr(p.disciplina || '')}">${txt}</option>`;
+                }).join('');
+                sel.innerHTML = `<option value="">${d.placeholder}</option>` + html;
+                console.log(`✅ [fixProvas] ${d.id}: ${provas.length} provas${force ? ' (force)' : ''}`);
             });
         } catch (e) {
             console.warn('fixProvasDropdowns erro:', e);
         }
     }
 
-    // 1ª execução após o sistema carregar
-    setTimeout(popular, 1500);
+    // 1ª passada — só popula se vazio
+    setTimeout(() => popular(false), 1500);
 
-    // Reexecuta ao clicar nas abas relevantes
+    // 2ª passada — força (cobre caso o carregarFiltrosResultados tenha zerado)
+    setTimeout(() => popular(true), 3000);
+
+    // Reexecuta FORÇADO ao clicar nas abas relevantes
     document.addEventListener('click', (e) => {
         const item = e.target.closest('.sb-item');
         if (!item) return;
         const page = item.dataset.p;
         if (page === 'resultados' || page === 'rel-turma' || page === 'desempenho') {
-            setTimeout(popular, 300);
+            setTimeout(() => popular(false), 350);
+            setTimeout(() => popular(true), 1200);
         }
     }, true);
 
-    // Reexecuta quando o usuário volta pra tela (via go())
-    window.addEventListener('load', () => setTimeout(popular, 2500));
+    // Expõe função global para forçar refresh manual
+    window.forcarPopulateProvas = () => popular(true);
 })();
 
 console.log('✅ js/cadastros.js carregado');
