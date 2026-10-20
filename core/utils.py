@@ -1,10 +1,137 @@
 # ============================================================
-# CORE/UTILS.PY — Funções auxiliares puras
+# CORE/UTILS.PY — Funções auxiliares puras + contexto de escola
 # ============================================================
 
 import re
 import logging
 
+from flask import g, has_request_context, request
+
+
+# ═══ EXCEÇÃO DE CONTEXTO ESCOLAR ═══
+class SemEscolaException(Exception):
+    """Levantada quando um usuário não-admin tenta acessar sem escola vinculada."""
+    pass
+
+
+# ═══ CONTEXTO DO USUÁRIO (via header X-Usuario-Username) ═══
+def _carregar_usuario_atual():
+    """
+    Resolve o usuário da requisição atual a partir do header X-Usuario-Username.
+    Consulta o banco; se não achar (ou banco indisponível), cai no USUARIOS_FIXOS.
+    Cacheia em flask.g para não consultar 2x na mesma request.
+    """
+    if not has_request_context():
+        return None
+    if hasattr(g, '_usuario_atual'):
+        return g._usuario_atual
+
+    username = (request.headers.get('X-Usuario-Username') or '').strip()
+    if not username:
+        g._usuario_atual = None
+        return None
+
+    # 1) Banco de dados
+    try:
+        from core.db import get_db_connection
+        from psycopg2.extras import RealDictCursor
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor(cursor_factory=RealDictCursor)
+                cur.execute("""
+                    SELECT u.id, u.nome, u.username, u.perfil, u.ativo,
+                           u.escola_id, e.nome AS escola_nome
+                    FROM usuarios u
+                    LEFT JOIN escolas e ON e.id = u.escola_id
+                    WHERE u.username = %s
+                """, (username,))
+                row = cur.fetchone()
+                cur.close()
+                if row:
+                    d = dict(row)
+                    d['ativo'] = bool(d.get('ativo'))
+                    g._usuario_atual = d
+                    return d
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    except Exception as e:
+        logging.warning("get_usuario_atual: erro no banco: %s", e)
+
+    # 2) Fallback: usuários fixos de DEV/TESTE
+    try:
+        from config import USUARIOS_FIXOS
+        if username in USUARIOS_FIXOS:
+            dados = USUARIOS_FIXOS[username]
+            g._usuario_atual = {
+                'id': 0,
+                'nome': dados['nome'],
+                'username': username,
+                'perfil': dados['perfil'],
+                'ativo': True,
+                'escola_id': dados.get('escola_id'),
+                'escola_nome': None,
+            }
+            return g._usuario_atual
+    except Exception:
+        pass
+
+    g._usuario_atual = None
+    return None
+
+
+def get_usuario_atual():
+    """Retorna dict {id, nome, username, perfil, escola_id, escola_nome, ativo} ou None."""
+    return _carregar_usuario_atual()
+
+
+def is_admin():
+    u = _carregar_usuario_atual()
+    return bool(u and u.get('perfil') == 'admin')
+
+
+def get_escola_id():
+    """
+    Retorna o escola_id a ser usado como filtro nas queries.
+
+    - Sem header X-Usuario-Username → None
+      (compatibilidade: filtro não aplicado, comportamento legado)
+    - Admin → None (vê TODAS as escolas)
+    - Usuário ativo com escola → int escola_id
+    - Usuário ativo SEM escola → levanta SemEscolaException (handler global devolve 403)
+    """
+    u = _carregar_usuario_atual()
+    if not u:
+        return None
+    if not u.get('ativo', True):
+        from werkzeug.exceptions import Forbidden
+        raise Forbidden("Usuário inativo")
+    if u.get('perfil') == 'admin':
+        return None
+    eid = u.get('escola_id')
+    if not eid:
+        raise SemEscolaException(
+            "Usuário não possui escola vinculada. "
+            "Peça ao administrador para associar uma escola ao seu cadastro."
+        )
+    return int(eid)
+
+
+def aplicar_filtro_escola(query, params, escola_id, coluna='escola_id', prefixo='AND'):
+    """Adiciona cláusula de filtro por escola. Retorna (query, params)."""
+    if escola_id is None:
+        return query, params
+    query += f" {prefixo} {coluna} = %s"
+    params.append(escola_id)
+    return query, params
+
+
+# ═══════════════════════════════════════════════════════════
+# FUNÇÕES PURAS (inalteradas)
+# ═══════════════════════════════════════════════════════════
 
 def calcular_conceito(porcentagem):
     if porcentagem <= 40:
