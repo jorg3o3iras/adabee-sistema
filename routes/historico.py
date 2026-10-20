@@ -1,5 +1,6 @@
 # ============================================================
 # ROUTES/HISTORICO.PY — Histórico simples + agrupado + delete
+# com isolamento por escola
 # ============================================================
 
 import json
@@ -10,7 +11,7 @@ from flask import Blueprint, jsonify, request
 from psycopg2.extras import RealDictCursor
 
 from core.db import get_db_connection
-from core.utils import calcular_conceito, identificar_disciplina
+from core.utils import calcular_conceito, identificar_disciplina, get_escola_id
 
 
 bp = Blueprint('historico', __name__, url_prefix='/api')
@@ -23,7 +24,10 @@ def listar_historico():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
-        escola_id = request.args.get('escola')
+        # 🔒 Escola da sessão (None = admin → respeita query param)
+        escola_sessao = get_escola_id()
+        escola_param = request.args.get('escola')
+
         turma_id = request.args.get('turma')
         aluno_id = request.args.get('aluno_id')
         prova_id = request.args.get('prova_id')
@@ -54,28 +58,32 @@ def listar_historico():
         """
         params = []
 
-        if escola_id and escola_id != '' and escola_id != 'null':
+        # 🔒 Força escola da sessão se não-admin
+        if escola_sessao is not None:
+            params.append(escola_sessao)
+            query += " AND a.escola_id = %s"
+        elif escola_param and escola_param not in ('', 'null'):
             try:
-                params.append(int(escola_id))
+                params.append(int(escola_param))
                 query += " AND e.id = %s"
             except ValueError:
                 pass
 
-        if turma_id and turma_id != '' and turma_id != 'null':
+        if turma_id and turma_id not in ('', 'null'):
             try:
                 params.append(int(turma_id))
                 query += " AND t.id = %s"
             except ValueError:
                 pass
 
-        if aluno_id and aluno_id != '' and aluno_id != 'null':
+        if aluno_id and aluno_id not in ('', 'null'):
             try:
                 params.append(int(aluno_id))
                 query += " AND h.aluno_id = %s"
             except ValueError:
                 pass
 
-        if prova_id and prova_id != '' and prova_id != 'null':
+        if prova_id and prova_id not in ('', 'null'):
             try:
                 params.append(int(prova_id))
                 query += " AND h.prova_id = %s"
@@ -124,7 +132,9 @@ def historico_agrupado():
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
-        escola_id = request.args.get('escola')
+        escola_sessao = get_escola_id()
+        escola_param = request.args.get('escola')
+
         turma_id = request.args.get('turma')
         aluno_id = request.args.get('aluno_id')
         serie = request.args.get('serie')
@@ -154,32 +164,35 @@ def historico_agrupado():
         """
         params = []
 
-        if escola_id and escola_id != '' and escola_id != 'null':
+        if escola_sessao is not None:
+            params.append(escola_sessao)
+            query += " AND a.escola_id = %s"
+        elif escola_param and escola_param not in ('', 'null'):
             try:
-                params.append(int(escola_id))
+                params.append(int(escola_param))
                 query += " AND e.id = %s"
             except ValueError:
                 pass
 
-        if turma_id and turma_id != '' and turma_id != 'null':
+        if turma_id and turma_id not in ('', 'null'):
             try:
                 params.append(int(turma_id))
                 query += " AND t.id = %s"
             except ValueError:
                 pass
 
-        if aluno_id and aluno_id != '' and aluno_id != 'null':
+        if aluno_id and aluno_id not in ('', 'null'):
             try:
                 params.append(int(aluno_id))
                 query += " AND h.aluno_id = %s"
             except ValueError:
                 pass
 
-        if serie and serie != '' and serie != 'null':
+        if serie and serie not in ('', 'null'):
             params.append(serie)
             query += " AND t.serie = %s"
 
-        if prova_id and prova_id != '' and prova_id != 'null':
+        if prova_id and prova_id not in ('', 'null'):
             try:
                 params.append(int(prova_id))
                 query += " AND h.prova_id = %s"
@@ -189,15 +202,15 @@ def historico_agrupado():
         query += " ORDER BY a.nome, h.data_correcao DESC"
 
         tem_filtro_restritivo = bool(
-            (turma_id and turma_id != '' and turma_id != 'null') or
-            (aluno_id and aluno_id != '' and aluno_id != 'null') or
-            (prova_id and prova_id != '' and prova_id != 'null')
+            (turma_id and turma_id not in ('', 'null')) or
+            (aluno_id and aluno_id not in ('', 'null')) or
+            (prova_id and prova_id not in ('', 'null'))
         )
         if not tem_filtro_restritivo:
             query += " LIMIT 1000"
             logging.warning(
                 "⚠️ /api/historico/agrupado SEM filtro restritivo → LIMIT 1000 aplicado "
-                "(escola=%s, serie=%s)", escola_id, serie
+                "(escola=%s, serie=%s)", escola_param, serie
             )
 
         cur.execute(query, params)
@@ -229,13 +242,9 @@ def historico_agrupado():
 
             disc_lower = (disciplina or '').lower()
             prova_lower = (prova_titulo or '').lower()
-            is_redacao = (
-                'reda' in disc_lower or
-                'reda' in prova_lower or
-                item.get('tipo_correcao') == 'ia_redacao'
-            )
+            is_redacao = ('reda' in disc_lower or 'reda' in prova_lower
+                          or item.get('tipo_correcao') == 'ia_redacao')
             is_producao_manual = item.get('tipo_correcao') == 'manual_producao'
-
             if is_producao_manual:
                 tipo = 'Producao'
 
@@ -261,9 +270,7 @@ def historico_agrupado():
                         'acertos': acertos_red, 'erros': erros_red, 'total': total_red,
                         'prova': prova_titulo, 'data': item.get('data_correcao', ''),
                         'disciplina': disciplina, 'questoes_status': questoes_status,
-                        'bncc': [''],
-                        'respostas': [f'Nota {nota_red}'],
-                        'gabarito': ['10.0']
+                        'bncc': [''], 'respostas': [f'Nota {nota_red}'], 'gabarito': ['10.0']
                     }
                 else:
                     existing = alunos_map[aluno_key]['avaliacoes'][tipo]
@@ -275,9 +282,7 @@ def historico_agrupado():
                             'acertos': acertos_red, 'erros': erros_red, 'total': total_red,
                             'prova': prova_titulo, 'data': data_atual,
                             'disciplina': disciplina, 'questoes_status': questoes_status,
-                            'bncc': [''],
-                            'respostas': [f'Nota {nota_red}'],
-                            'gabarito': ['10.0']
+                            'bncc': [''], 'respostas': [f'Nota {nota_red}'], 'gabarito': ['10.0']
                         }
                 continue
 
@@ -303,17 +308,13 @@ def historico_agrupado():
             for i in range(total_questoes):
                 resp = str(respostas[i] if i < len(respostas) else '').strip().upper()
                 gab = str(gabarito[i] if i < len(gabarito) else '').strip().upper()
-
-                is_resposta_valida = resp and resp != '' and resp != '—' and resp != '-'
+                is_resposta_valida = resp and resp not in ('', '—', '-')
                 is_correto = is_resposta_valida and resp == gab and gab != ''
-
                 codigo_bncc = bncc_list[i] if i < len(bncc_list) and bncc_list[i] else ''
-
                 if is_correto:
                     acertos += 1
                 else:
                     erros += 1
-
                 questoes_status.append({
                     'numero': i + 1,
                     'resposta': resp if resp else '—',
@@ -352,48 +353,23 @@ def historico_agrupado():
         resultado = []
         for aluno_key, dados in alunos_map.items():
             avaliacoes = dados['avaliacoes']
-
-            default = {
-                'nota': 0, 'acertos': 0, 'erros': 0, 'total': 20,
-                'questoes_status': [], 'bncc': [], 'respostas': [], 'gabarito': []
-            }
-
+            default = {'nota': 0, 'acertos': 0, 'erros': 0, 'total': 20,
+                       'questoes_status': [], 'bncc': [], 'respostas': [], 'gabarito': []}
             portugues = dict(avaliacoes.get('Portugues', default))
             matematica = dict(avaliacoes.get('Matematica', default))
             producao = dict(avaliacoes.get('Producao', default))
             ch = dict(avaliacoes.get('CH', default))
             cn = dict(avaliacoes.get('CN', default))
-
-            notas = [
-                portugues.get('nota', 0),
-                matematica.get('nota', 0),
-                producao.get('nota', 0),
-                ch.get('nota', 0),
-                cn.get('nota', 0)
-            ]
-            soma = sum(notas)
-            media = soma / 5 if notas else 0
-
+            notas = [portugues.get('nota', 0), matematica.get('nota', 0),
+                     producao.get('nota', 0), ch.get('nota', 0), cn.get('nota', 0)]
+            soma = sum(notas); media = soma / 5 if notas else 0
             resultado.append({
-                'aluno_id': dados['aluno_id'],
-                'aluno_nome': dados['aluno_nome'],
-                'serie': dados['serie'],
-                'turma': dados['turma'],
-                'escola': dados['escola'],
-                'portugues': portugues,
-                'matematica': matematica,
-                'producao': producao,
-                'ch': ch,
-                'cn': cn,
-                'soma': round(soma, 1),
-                'media': round(media, 1)
+                'aluno_id': dados['aluno_id'], 'aluno_nome': dados['aluno_nome'],
+                'serie': dados['serie'], 'turma': dados['turma'], 'escola': dados['escola'],
+                'portugues': portugues, 'matematica': matematica,
+                'producao': producao, 'ch': ch, 'cn': cn,
+                'soma': round(soma, 1), 'media': round(media, 1)
             })
-
-        logging.info(
-            "📊 /api/historico/agrupado → %s alunos retornados "
-            "(escola=%s, serie=%s, turma=%s, aluno=%s, prova=%s)",
-            len(resultado), escola_id, serie, turma_id, aluno_id, prova_id
-        )
 
         return jsonify(resultado)
 
@@ -410,18 +386,26 @@ def excluir_correcao(id):
         if not conn:
             return jsonify({'erro': 'Erro ao conectar ao banco'}), 500
 
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM historico WHERE id = %s", (id,))
-        if not cur.fetchone():
-            cur.close()
-            conn.close()
+        escola_sessao = get_escola_id()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT h.id, a.escola_id
+            FROM historico h
+            LEFT JOIN alunos a ON h.aluno_id = a.id
+            WHERE h.id = %s
+        """, (id,))
+        row = cur.fetchone()
+        if not row:
+            cur.close(); conn.close()
             return jsonify({'erro': 'Correção não encontrada'}), 404
+
+        if escola_sessao is not None and row.get('escola_id') != escola_sessao:
+            cur.close(); conn.close()
+            return jsonify({'erro': 'Acesso negado a esta correção'}), 403
 
         cur.execute("DELETE FROM historico WHERE id = %s", (id,))
         conn.commit()
-        cur.close()
-        conn.close()
-
+        cur.close(); conn.close()
         return jsonify({'sucesso': True, 'mensagem': 'Correção excluída com sucesso', 'id': id})
 
     except Exception as e:
