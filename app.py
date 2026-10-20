@@ -20,6 +20,7 @@ from config import (
 )
 from core.cache import init_cache_table, limpar_cache_antigo
 from core.db import init_db
+from core.utils import SemEscolaException          # ← NOVO
 from services.ia_fallback import OPENAI_AVAILABLE, PYZBAR_AVAILABLE
 
 
@@ -50,6 +51,15 @@ def after_request(response):
             except Exception:
                 pass
     return response
+
+
+# ═══ ERROR HANDLER: usuário sem escola vinculada ═══
+@app.errorhandler(SemEscolaException)
+def handle_sem_escola(e):
+    return jsonify({
+        'erro': str(e),
+        'codigo': 'SEM_ESCOLA',
+    }), 403
 
 
 # ═══ BLUEPRINTS ═══
