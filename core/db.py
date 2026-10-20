@@ -158,9 +158,11 @@ def init_db():
                 )
             """)
 
+            # ✅ provas agora tem escola_id
             cur.execute("""
                 CREATE TABLE provas (
                     id SERIAL PRIMARY KEY,
+                    escola_id INTEGER REFERENCES escolas(id) ON DELETE SET NULL,
                     titulo TEXT NOT NULL,
                     serie TEXT NOT NULL,
                     disciplina TEXT,
@@ -197,6 +199,7 @@ def init_db():
                 )
             """)
 
+            # ✅ usuarios agora tem escola_id
             cur.execute("""
                 CREATE TABLE usuarios (
                     id SERIAL PRIMARY KEY,
@@ -206,6 +209,7 @@ def init_db():
                     email TEXT,
                     perfil TEXT DEFAULT 'usuario',
                     ativo BOOLEAN DEFAULT TRUE,
+                    escola_id INTEGER REFERENCES escolas(id) ON DELETE SET NULL,
                     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -264,6 +268,36 @@ def init_db():
                         print(f"✅ Coluna {col} adicionada!")
                     except Exception as e:
                         print(f"⚠️ Erro: {e}")
+
+            # ✅ MIGRATION: provas.escola_id
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'provas' AND column_name = 'escola_id'
+            """)
+            if not cur.fetchone():
+                try:
+                    cur.execute("""
+                        ALTER TABLE provas
+                        ADD COLUMN escola_id INTEGER REFERENCES escolas(id) ON DELETE SET NULL
+                    """)
+                    print("✅ Coluna escola_id adicionada a provas!")
+                except Exception as e:
+                    print(f"⚠️ Erro: {e}")
+
+            # ✅ MIGRATION: usuarios.escola_id
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'usuarios' AND column_name = 'escola_id'
+            """)
+            if not cur.fetchone():
+                try:
+                    cur.execute("""
+                        ALTER TABLE usuarios
+                        ADD COLUMN escola_id INTEGER REFERENCES escolas(id) ON DELETE SET NULL
+                    """)
+                    print("✅ Coluna escola_id adicionada a usuarios!")
+                except Exception as e:
+                    print(f"⚠️ Erro: {e}")
 
             cur.execute("""
                 SELECT column_name FROM information_schema.columns
@@ -343,6 +377,7 @@ def init_db():
         """)
         print("✅ Tabela cartoes_template pronta")
 
+        # Usuários fixos (DEV/TESTE) — não definem escola_id (NULL)
         for username, dados in USUARIOS_FIXOS.items():
             cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
             if not cur.fetchone():
@@ -362,7 +397,9 @@ def init_db():
             "CREATE INDEX IF NOT EXISTS idx_historico_aluno_data ON historico(aluno_id, data_correcao DESC)",
             "CREATE INDEX IF NOT EXISTS idx_correcoes_texto_data ON correcoes_texto(data_correcao DESC)",
             "CREATE INDEX IF NOT EXISTS idx_provas_created_at ON provas(created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_provas_escola_id ON provas(escola_id)",
             "CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)",
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_escola_id ON usuarios(escola_id)",
             "CREATE INDEX IF NOT EXISTS idx_matrizes_ano ON matrizes(ano)",
             "CREATE INDEX IF NOT EXISTS idx_matrizes_disciplina ON matrizes(disciplina)",
             "CREATE INDEX IF NOT EXISTS idx_matrizes_nivel ON matrizes(nivel)"
