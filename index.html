@@ -5463,8 +5463,8 @@ Ana Lima"
           <input type="hidden" id="editar-usuario-id" value="" />
           <div class="form-row c1">
             <div class="form-group">
-              <label class="form-label">Nome <span class="req">*</span></label
-              ><input
+              <label class="form-label">Nome <span class="req">*</span></label>
+              <input
                 class="form-control"
                 id="usuario-nome"
                 placeholder="Nome completo"
@@ -5475,15 +5475,16 @@ Ana Lima"
             <div class="form-group">
               <label class="form-label"
                 >Usuário (Login) <span class="req">*</span></label
-              ><input
+              >
+              <input
                 class="form-control"
                 id="usuario-username"
                 placeholder="Ex: professor1"
               />
             </div>
             <div class="form-group">
-              <label class="form-label">Senha <span class="req">*</span></label
-              ><input
+              <label class="form-label">Senha <span class="req">*</span></label>
+              <input
                 class="form-control"
                 id="usuario-senha"
                 type="password"
@@ -5491,10 +5492,26 @@ Ana Lima"
               />
             </div>
           </div>
+
+          <!-- ✅ NOVO: Escola -->
+          <div class="form-row c1">
+            <div class="form-group">
+              <label class="form-label"
+                >Escola <span class="req" id="usuario-escola-req">*</span></label
+              >
+              <select class="form-control" id="usuario-escola">
+                <option value="">Carregando escolas...</option>
+              </select>
+              <div class="form-hint">
+                Obrigatório para usuários (admins veem todas as escolas)
+              </div>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">E-mail</label
-              ><input
+              <label class="form-label">E-mail</label>
+              <input
                 class="form-control"
                 id="usuario-email"
                 type="email"
@@ -5502,8 +5519,12 @@ Ana Lima"
               />
             </div>
             <div class="form-group">
-              <label class="form-label">Perfil <span class="req">*</span></label
-              ><select class="form-control" id="usuario-perfil">
+              <label class="form-label">Perfil <span class="req">*</span></label>
+              <select
+                class="form-control"
+                id="usuario-perfil"
+                onchange="atualizarObrigatorioEscolaUsuario()"
+              >
                 <option value="usuario">Usuário</option>
                 <option value="admin">Administrador</option>
               </select>
@@ -5519,20 +5540,22 @@ Ana Lima"
                   gap: 8px;
                   cursor: pointer;
                 "
-                ><input
+              >
+                <input
                   type="checkbox"
                   id="usuario-ativo"
                   checked=""
                   style="width: 16px; height: 16px"
                 />
-                Usuário ativo</label
-              >
+                Usuário ativo
+              </label>
             </div>
           </div>
           <div class="modal-footer no-print">
             <button class="btn btn-outline" onclick="closeM('m-usuario')">
-              Cancelar</button
-            ><button class="btn btn-green" onclick="salvarUsuario()">
+              Cancelar
+            </button>
+            <button class="btn btn-green" onclick="salvarUsuario()">
               💾 Salvar Usuário
             </button>
           </div>
@@ -5746,7 +5769,7 @@ Ana Lima"
           </div>
         </div>
       </div>
-	
+
             <!-- MODAL DE SENHA — ACESSO A CONFIGURAÇÕES -->
       <div class="modal-overlay no-print" id="m-senha-config">
           <div class="modal" style="max-width: 420px; text-align: center;">
