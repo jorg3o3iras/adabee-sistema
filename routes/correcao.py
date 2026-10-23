@@ -37,6 +37,7 @@ def _validar_aluno_prova_escola(cur, aluno_id, prova_id, escola_sessao):
                a.turma_id,
                a.escola_id AS aluno_escola_id,
                t.serie AS turma_serie,
+               t.nome  AS turma_nome,              -- ✅ CORRIGIDO: adicionado aqui
                e.nome AS escola_nome
         FROM provas p
         LEFT JOIN alunos a ON a.id = %s
@@ -446,7 +447,7 @@ def corrigir_automatico():
             disciplina = prova.get('disciplina', '')
             prova_titulo = prova.get('titulo', '')
             escola_nome_banco = prova.get('escola_nome', '')
-            turma_nome_banco = prova.get('turma_nome', '')
+            turma_nome_banco = prova.get('turma_nome', '')  # ✅ agora vem preenchido
             cur.close(); conn.close()
         except Exception as e:
             logging.error(f"❌ Erro ao buscar dados: {e}")
@@ -515,7 +516,7 @@ def corrigir_automatico():
         resultado['prova_id'] = prova_id
         resultado['prova_titulo'] = prova_titulo
         resultado['escola_nome'] = escola_nome_banco
-        resultado['turma_nome'] = turma_nome_banco
+        resultado['turma_nome'] = turma_nome_banco          # ✅ agora preenchido
         resultado['tipo_avaliacao'] = tipo_avaliacao
         resultado['disciplina'] = disciplina
         resultado['bncc'] = bncc_gabarito
