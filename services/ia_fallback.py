@@ -190,7 +190,7 @@ A bolha MARCADA tem o INTERIOR ESCURO (caneta/lápis).
 A bolha NÃO MARCADA tem o INTERIOR BRANCO.
 
 ═══════════════════════════════════════════════════════
-REGRA CRÍTICA
+REGRA CRÍTICA 1 — NÃO ADIVINHE
 ═══════════════════════════════════════════════════════
 🚨 Se você NÃO TEM CERTEZA ABSOLUTA de qual bolha está marcada,
    retorne null para aquela questão.
@@ -198,18 +198,30 @@ REGRA CRÍTICA
 🚨 É MELHOR retornar null do que errar.
 
 ═══════════════════════════════════════════════════════
+REGRA CRÍTICA 2 — MÚLTIPLAS MARCAÇÕES
+═══════════════════════════════════════════════════════
+⚠️ Se você vê CLARAMENTE DUAS OU MAIS alternativas marcadas na
+   mesma questão (ambas escuras por dentro), retorne a string
+   "MULTIPLA" para aquela questão — NÃO escolha nenhuma das duas.
+
+Isso é DIFERENTE de null:
+  • "não consigo ver"          → null
+  • "vejo duas marcadas"       → "MULTIPLA"
+
+═══════════════════════════════════════════════════════
 FORMATO DE SAÍDA (JSON puro)
 ═══════════════════════════════════════════════════════
 {{
-  "respostas": ["B", null, "C", "A", null, ...],
-  "confianca_por_questao": [95, 0, 90, 88, 0, ...]
+  "respostas": ["B", "MULTIPLA", null, "A", ...],
+  "confianca_por_questao": [95, 90, 0, 88, ...]
 }}
 
 REGRAS DO JSON:
 - "respostas" DEVE ter EXATAMENTE {total} itens
-- Cada item é uma letra ({alternativas_str}) OU null
+- Cada item é: uma letra ({alternativas_str}), "MULTIPLA", ou null
 - "confianca_por_questao" DEVE ter {total} números de 0 a 100
-- Se você respondeu null, a confiança DEVE ser 0
+- Se retornou null, confiança DEVE ser 0
+- Se retornou "MULTIPLA", confiança DEVE ser >= 85
 
 {aviso_bloco}
 Retorne SOMENTE o JSON.""".strip()
@@ -259,6 +271,11 @@ def _parse_respostas_ia(texto, total_esperado, alternativas):
 
         if not s:
             normalizadas.append('')
+            continue
+
+        # ── Sentinel de dupla marcação (checa ANTES de "in alternativas") ──
+        if s in ('MULTIPLA', 'MÚLTIPLA', 'MULTIPLE', 'MULTI', 'ANULADA'):
+            normalizadas.append('MULTIPLA')
             continue
 
         if s in alternativas_upper:
@@ -322,14 +339,22 @@ def _parse_confiancas_ia(texto, total_esperado):
 
 
 def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
-    """Valida se a resposta da IA é plausível (não chute)."""
+    """Valida se a resposta da IA é plausível (não chute).
+    'MULTIPLA' é resposta legítima (dupla marcação) e NÃO é considerada suspeita.
+    """
     from collections import Counter
 
     if not respostas:
         return True, "Resposta vazia"
 
-    nao_vazias = [r for r in respostas if r]
+    # Separar MULTIPLA das respostas "normais" — MULTIPLA não é chute
+    nao_vazias = [r for r in respostas if r and r != 'MULTIPLA']
+    multiplas = [r for r in respostas if r == 'MULTIPLA']
+
     if not nao_vazias:
+        # Só tem MULTIPLA/blank — se tem pelo menos uma MULTIPLA, não é suspeito
+        if multiplas:
+            return False, ""
         return True, "Nenhuma resposta detectada"
 
     if len(nao_vazias) >= 5 and len(set(nao_vazias)) == 1:
@@ -349,7 +374,7 @@ def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
         acertos = 0
         total_validas = 0
         for r, g in zip(respostas, gabarito):
-            if r and g:
+            if r and r != 'MULTIPLA' and g:
                 total_validas += 1
                 if str(r).upper() == str(g).upper():
                     acertos += 1
@@ -376,8 +401,10 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
             "content": (
                 "Você é um sistema OMR profissional. Analise cartões-resposta "
                 "com precisão EXTREMA. Se não tiver CERTEZA ABSOLUTA de uma "
-                "resposta, retorne null. NUNCA chute. Responda APENAS com JSON "
-                "válido no formato {\"respostas\": [...], \"confianca_por_questao\": [...]}. "
+                "resposta, retorne null. Se vir DUAS OU MAIS bolhas marcadas "
+                "na mesma questão, retorne a string \"MULTIPLA\". NUNCA chute. "
+                "Responda APENAS com JSON válido no formato "
+                "{\"respostas\": [...], \"confianca_por_questao\": [...]}. "
                 "Sem markdown, sem texto extra."
             )
         },
@@ -427,6 +454,8 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
             for i, r in enumerate(respostas_validas):
                 if not r:
                     confiancas_ia[i] = 0
+                elif r == 'MULTIPLA' and confiancas_ia[i] < 85:
+                    confiancas_ia[i] = 90
 
             logging.info(f"✅ OpenAI sucesso na tentativa {tentativa}")
             return respostas_validas, confiancas_ia, resposta_texto
@@ -503,10 +532,21 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
                 f'IA detectou apenas {total_detectadas}/{total_questoes} respostas.'
             )
 
-        return calcular_resultado_correcao(
+        resultado = calcular_resultado_correcao(
             respostas_validas, gabarito, aluno_nome, serie,
             disciplina, tipo_questoes, 'ia', bncc=bncc, confiancas=confiancas_ia
         )
+
+        # ── Marca questões MULTIPLA para a UI mostrar o motivo
+        for q in resultado.get('questoes_status', []):
+            if q.get('resposta') == 'MULTIPLA':
+                q['multipla'] = True
+                q['acertou'] = False
+                q['status'] = '⚠️ MÚLTIPLA MARCAÇÃO (questão anulada)'
+                q['status_texto'] = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
+                q['respondida'] = True
+
+        return resultado
 
     except Exception as e:
         logging.error(f"❌ Erro no fallback OpenAI: {e}")
