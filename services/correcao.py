@@ -97,8 +97,15 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 'Tire foto mais clara, com os 4 marcadores visíveis.'
             )
 
+        # ── ⚠️ CORRIGIDO: excluir 'MULTIPLA' do check de "todas iguais"
         nao_vazias = [r for r in respostas if r]
-        if len(nao_vazias) >= 3 and len(set(nao_vazias)) == 1:
+        letras_validas = set(padrao_gabarito['alternativas'])
+        todas_sao_mesma_letra = (
+            len(nao_vazias) >= 3
+            and len(set(nao_vazias)) == 1
+            and nao_vazias[0] in letras_validas
+        )
+        if todas_sao_mesma_letra:
             logging.warning(f"⚠️ Todas respostas = '{nao_vazias[0]}'. Tentando IA...")
             if OPENAI_AVAILABLE and openai_client is not None:
                 resultado_ia = corrigir_com_ia_fallback(
@@ -114,11 +121,22 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 'Foto com reflexo?'
             )
 
-        return calcular_resultado_correcao(
+        resultado = calcular_resultado_correcao(
             respostas, gabarito, aluno_nome, serie,
             disciplina, tipo_questoes, 'template_evalbee_v4',
             bncc=bncc, confiancas=confiancas
         )
+
+        # ── ⚠️ CORRIGIDO: pós-processa questões MÚLTIPLAS para a UI mostrar o motivo
+        for q in resultado.get('questoes_status', []):
+            if q.get('resposta') == 'MULTIPLA':
+                q['multipla'] = True
+                q['acertou'] = False
+                q['status'] = '⚠️ MÚLTIPLA MARCAÇÃO (questão anulada)'
+                q['status_texto'] = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
+                q['respondida'] = True
+
+        return resultado
 
     except Exception as e:
         logging.error(f"❌ Erro na correção: {e}")
