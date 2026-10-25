@@ -2,7 +2,7 @@
 # SERVICES/EVALBEE.PY — Motor de detecção fiducial + template
 # ⚠️ CORRIGIDO: detecta scanner vs foto
 # ✨ NOVO: calibração automática por HoughCircles (resolve scan "espichado")
-# ✨ NOVO: debug visual (overlay amarelo/verde) em debug/
+# ✨ NOVO: debug visual via base64 (funciona no Render)
 # ============================================================
 
 import cv2
@@ -321,15 +321,12 @@ def carregar_mapa_template(prova_id, aluno_id):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# ✨ NOVO: DEBUG VISUAL — overlay amarelo (template) vs verde (bolhas reais)
+# ✨ DEBUG VISUAL — retorna base64 (funciona no Render)
 # ═══════════════════════════════════════════════════════════════════
 def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
     """
-    Salva imagem com:
-    - Círculos AMARELOS: posições teóricas do template
-    - Círculos VERDES: bolhas reais detectadas por HoughCircles
-    - Se os amarelos ficam cada vez mais distantes dos verdes conforme desce
-      → confirma o problema de "espichamento" do template
+    Gera imagem de debug com template (AMARELO) vs bolhas reais (VERDE).
+    Retorna base64 (funciona no Render) e tenta salvar arquivo local.
     """
     try:
         h, w = img_corrigida.shape[:2]
@@ -362,14 +359,22 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
             for (x, y, r) in circulos:
                 cv2.circle(debug_img, (x, y), r, (0, 255, 0), 2)
 
-        # 3. Salva
-        os.makedirs(pasta_saida, exist_ok=True)
-        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-        path = os.path.join(pasta_saida, f'debug_correcao_{ts}.jpg')
-        cv2.imwrite(path, debug_img)
-        logging.info(f"🐛 Debug salvo: {path}")
-        logging.info(f"🐛 Template: {len(mapa_template)} posições (AMARELO) | Bolhas reais: {n_detectadas} (VERDE)")
-        return path
+        # 3. Tenta salvar em arquivo (silencioso se falhar no Render)
+        try:
+            os.makedirs(pasta_saida, exist_ok=True)
+            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+            path = os.path.join(pasta_saida, f'debug_correcao_{ts}.jpg')
+            cv2.imwrite(path, debug_img)
+            logging.info(f"🐛 Debug salvo em arquivo: {path}")
+        except Exception as e:
+            logging.info(f"🐛 Arquivo local não salvo (ok no Render): {e}")
+
+        logging.info(f"🐛 Debug: {len(mapa_template)} posições (AMARELO) | {n_detectadas} bolhas reais (VERDE)")
+
+        # 4. Retorna base64 (funciona no Render)
+        _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        b64 = base64.b64encode(buffer).decode('utf-8')
+        return f"data:image/jpeg;base64,{b64}"
 
     except Exception as e:
         logging.error(f"Erro no debug overlay: {e}")
@@ -377,7 +382,7 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# ✨ NOVO: CALIBRAÇÃO — reconstrói o template alinhado com bolhas reais
+# ✨ CALIBRAÇÃO — reconstrói o template alinhado com bolhas reais
 # ═══════════════════════════════════════════════════════════════════
 def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num_colunas):
     """
@@ -407,7 +412,6 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
         circulos = np.round(circulos[0]).astype(int)
         logging.info(f"🔧 Calibração: {len(circulos)} bolhas detectadas")
 
-        # Filtra bolhas muito perto dos cantos (marcadores fiduciais)
         margem_x = int(w * 0.06)
         margem_y = int(h * 0.06)
         bolhas = [
@@ -415,7 +419,6 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
             if margem_x < x < w - margem_x and margem_y < y < h - margem_y
         ]
 
-        # Coleta todos os raios detectados para estimar o "raio típico"
         raios = [r for _, _, r in bolhas]
         raio_mediano = float(np.median(raios)) if raios else float(min_r)
 
@@ -427,7 +430,6 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
             )
             return None
 
-        # Agrupa por LINHAS (questões) usando o Y
         bolhas_sorted_y = sorted(bolhas, key=lambda b: b[1])
         linhas = []
         linha_atual = [bolhas_sorted_y[0]]
@@ -439,7 +441,6 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
                 linha_atual = [b]
         linhas.append(linha_atual)
 
-        # Filtra linhas com número plausível de bolhas
         min_alts_aceitas = max(2, len(alternativas) - 1)
         linhas = [ln for ln in linhas if len(ln) >= min_alts_aceitas]
 
@@ -457,7 +458,6 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
         for idx_linha, linha in enumerate(linhas):
             linha_sorted = sorted(linha, key=lambda b: b[0])
 
-            # Se detectou mais bolhas que alternativas, pega as mais alinhadas horizontalmente
             if len(linha_sorted) > num_alts_esperado:
                 y_medio = np.mean([b[1] for b in linha_sorted])
                 linha_sorted = sorted(
@@ -466,12 +466,10 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
                 )[:num_alts_esperado]
                 linha_sorted = sorted(linha_sorted, key=lambda b: b[0])
 
-            # Atribui cada bolha à alternativa correspondente
             for i, letra in enumerate(alternativas):
                 if i < len(linha_sorted):
                     x_real, y_real, _ = linha_sorted[i]
                 else:
-                    # Interpola linearmente se faltou alguma
                     if len(linha_sorted) >= 2:
                         x_real = int(
                             linha_sorted[0][0]
@@ -507,13 +505,9 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
 
 
 # ═══════════════════════════════════════════════════════════════════
-# CORREÇÃO POR TEMPLATE (agora com calibração automática)
+# CORREÇÃO POR TEMPLATE
 # ═══════════════════════════════════════════════════════════════════
 def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas, debug=False):
-    """
-    Para cada bolha esperada do template, mede a fração de pixels pretos.
-    Detecta tipo (scanner/foto) e ajusta threshold automaticamente.
-    """
     try:
         h, w = img_corrigida.shape[:2]
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
@@ -521,7 +515,6 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
         logging.info(f"📷 Tipo de imagem: {tipo.upper()} ({w}x{h})")
 
         if tipo == 'scanner':
-            # Scanner: imagem limpa → Otsu (melhor para fundo branco puro)
             _, binaria = cv2.threshold(
                 gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
             )
@@ -530,7 +523,6 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             limiar_confirma = 0.55
             relative_multi = 0.70
         else:
-            # Foto: sombras → adaptive
             binaria = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -680,7 +672,7 @@ def preparar_imagem_para_template(imagem_base64):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# ✨ FLUXO PRINCIPAL (agora com calibração + debug)
+# FLUXO PRINCIPAL (com calibração + debug base64)
 # ═══════════════════════════════════════════════════════════════════
 def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                    tipo_questoes=4, disciplina='', bncc=None,
@@ -697,18 +689,16 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     if not mapa_template:
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
 
-    # 3. Prepara imagem (detecta marcadores, corrige perspectiva, redimensiona)
+    # 3. Prepara imagem
     img_corr, ok = preparar_imagem_para_template(imagem_base64)
     if not ok:
         return None
 
-    # 4. 🐛 DEBUG: salva overlay com template atual (antes da calibração)
-    try:
-        salvar_debug_overlay(img_corr, mapa_template, pasta_saida='debug')
-    except Exception as e:
-        logging.warning(f"⚠️ Debug overlay falhou (não bloqueia): {e}")
+    # 4. Debug ANTES da calibração
+    debug_b64_antes = salvar_debug_overlay(img_corr, mapa_template, pasta_saida='debug')
+    debug_b64_depois = None
 
-    # 5. 🔧 CALIBRAÇÃO: só para SCANNER (foto pode falhar no Hough)
+    # 5. Calibração: só para SCANNER
     gray_cal = cv2.cvtColor(img_corr, cv2.COLOR_BGR2GRAY)
     tipo = detectar_tipo_entrada(gray_cal)
 
@@ -721,7 +711,9 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
         if template_calibrado:
             logging.info(f"✅ Usando template CALIBRADO ({len(template_calibrado)} bolhas)")
             mapa_template = template_calibrado
-            # Salva no banco pra próximas correções (do mesmo cartão)
+            # Debug DEPOIS da calibração
+            debug_b64_depois = salvar_debug_overlay(img_corr, template_calibrado, pasta_saida='debug')
+
             if prova_id and aluno_id:
                 try:
                     salvar_mapa_template(
@@ -735,7 +727,7 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     else:
         logging.info("📷 Foto detectada — usando template salvo/padrão (sem calibração)")
 
-    # 6. Corrige com o template final (calibrado ou padrão)
+    # 6. Corrige com o template final
     respostas, confiancas = corrigir_por_template_evalbee_v2(
         img_corr, mapa_template, alternativas
     )
@@ -746,7 +738,10 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     return {
         'respostas': respostas,
         'confiancas': confiancas if confiancas else [70] * len(respostas),
-        'metodo': 'evalbee_v4'
+        'metodo': 'evalbee_v4',
+        'debug_antes': debug_b64_antes,
+        'debug_depois': debug_b64_depois,
+        'tipo_entrada': tipo
     }
 
 
