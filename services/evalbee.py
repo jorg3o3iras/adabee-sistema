@@ -4,6 +4,9 @@
 # ✨ NOVO: calibração automática por HoughCircles
 # ✨ NOVO: debug visual via base64 (funciona no Render)
 # 🔧 AJUSTE: limiar foto 0.30→0.22 (imagens comprimidas com ratios baixos)
+# 🔧 FIX: relaxados filtros do detector fiducial para JPEG
+#         (solidez 0.80→0.70, poly 4→3-5, area 0.0005-0.03→0.0003-0.04,
+#          proporção 0.75-1.35→0.65-1.55)
 # ============================================================
 
 import cv2
@@ -68,19 +71,23 @@ def detectar_marcadores_fiduciais_v4(gray):
 
         for c in contornos:
             area = cv2.contourArea(c)
-            if not (area_img * 0.0005 < area < area_img * 0.03):
+            # 🔧 FIX: range ampliado (0.0005-0.03 → 0.0003-0.04) para JPEG
+            if not (area_img * 0.0003 < area < area_img * 0.04):
                 continue
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-            if len(approx) != 4:
+            # 🔧 FIX: aceita 3, 4 ou 5 lados (cantos borrados viram 3 ou 5)
+            if len(approx) not in (3, 4, 5):
                 continue
             x, y, bw, bh = cv2.boundingRect(approx)
             ar = bw / float(bh) if bh > 0 else 0
-            if not (0.75 < ar < 1.35):
+            # 🔧 FIX: proporção ampliada (0.75-1.35 → 0.65-1.55) para JPEG
+            if not (0.65 < ar < 1.55):
                 continue
             hull = cv2.convexHull(c)
             solidez = area / (cv2.contourArea(hull) + 1e-6)
-            if solidez < 0.80:
+            # 🔧 FIX: solidez relaxada (0.80 → 0.70) para JPEG
+            if solidez < 0.70:
                 continue
             candidatos.append((x, y, bw, bh, area, approx))
 
