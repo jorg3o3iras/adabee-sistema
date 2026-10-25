@@ -1,5 +1,6 @@
 # ============================================================
 # SERVICES/EVALBEE.PY — Motor de detecção fiducial + template
+# ⚠️ CORRIGIDO: detecta automaticamente scanner vs foto
 # ============================================================
 
 import cv2
@@ -17,12 +18,42 @@ from collections import defaultdict
 from core.db import get_db_connection
 
 
+def detectar_tipo_entrada(gray):
+    """
+    Detecta se a imagem veio de scanner de mesa ou foto de celular.
+    
+    Scanner: fundo branco uniforme (255), sem sombras, desvio padrão baixo.
+    Foto: iluminação variável, sombras, desvio padrão alto.
+    """
+    try:
+        brilho_medio = float(np.mean(gray))
+        desvio = float(np.std(gray))
+        h, w = gray.shape[:2]
+        
+        # Amostra os 4 cantos (onde não há conteúdo, só fundo)
+        amostra = max(30, min(h, w) // 20)
+        cantos = np.concatenate([
+            gray[:amostra, :amostra].flatten(),
+            gray[:amostra, -amostra:].flatten(),
+            gray[-amostra:, :amostra].flatten(),
+            gray[-amostra:, -amostra:].flatten(),
+        ])
+        brilho_cantos = float(np.mean(cantos))
+        uniformidade_cantos = float(np.std(cantos))
+        quase_branco = float(np.sum(gray > 240) / gray.size)
+        
+        # Scanner: cantos branco puro (255), uniformes
+        if (brilho_cantos > 230 
+            and uniformidade_cantos < 15 
+            and brilho_medio > 180 
+            and quase_branco > 0.5):
+            return 'scanner'
+        return 'foto'
+    except Exception:
+        return 'foto'
+
+
 def detectar_marcadores_fiduciais_v4(gray):
-    """
-    Versão EvalBee-like: adaptativa, tolerante a sombra e blur.
-    Detecta os 4 quadrados pretos nos cantos usando binarização adaptativa
-    + validação geométrica (solidez, aspect ratio, área).
-    """
     try:
         h, w = gray.shape
 
@@ -120,7 +151,6 @@ def detectar_marcadores_fiduciais_v4(gray):
 
 
 def corrigir_perspectiva(img, marcadores):
-    """Corrige a perspectiva usando os 4 centros dos marcadores fiduciais."""
     try:
         tl = marcadores['tl']
         tr = marcadores['tr']
@@ -155,11 +185,6 @@ def corrigir_perspectiva(img, marcadores):
 
 
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
-    """
-    Mapa v11 - EvalBee style.
-    - Origem = CENTRO do marcador fiducial (não o canto).
-    - Suporta 3, 4 ou 5 alternativas dinamicamente.
-    """
     mapa = []
 
     A4_W, A4_H = 210.0, 297.0
@@ -301,25 +326,37 @@ def carregar_mapa_template(prova_id, aluno_id):
 
 def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas, debug=False):
     """
-    Correção estilo EvalBee: para cada bolha esperada do template,
-    mede a fração de pixels pretos dentro do círculo correspondente.
-
-    ⚠️ CORRIGIDO: detecta MÚLTIPLA MARCAÇÃO (2+ bolhas preenchidas).
-    Retorna UMA letra por questão OU o sentinel 'MULTIPLA' quando 2+ bolhas
-    estão realmente marcadas — 'MULTIPLA' nunca coincide com o gabarito,
-    então a questão é automaticamente contada como errada.
+    ⚠️ CORRIGIDO: detecta tipo de entrada (scanner/foto) e ajusta
+    threshold, raio e limiares automaticamente.
     """
     try:
         h, w = img_corrigida.shape[:2]
 
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
+        tipo = detectar_tipo_entrada(gray)
+        logging.info(f"📷 Tipo de imagem detectada: {tipo.upper()} ({w}x{h})")
 
-        binaria = cv2.adaptiveThreshold(
-            gray, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV,
-            25, 12
-        )
+        if tipo == 'scanner':
+            # Scanner: imagem limpa → Otsu é melhor que adaptive
+            _, binaria = cv2.threshold(
+                gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+            )
+            radius_factor = 0.016
+            limiar_min = 0.40
+            limiar_confirma = 0.55
+            relative_multi = 0.70
+        else:
+            # Foto: sombras → adaptive é melhor
+            binaria = cv2.adaptiveThreshold(
+                gray, 255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY_INV,
+                25, 12
+            )
+            radius_factor = 0.018
+            limiar_min = 0.30
+            limiar_confirma = 0.45
+            relative_multi = 0.60
 
         por_questao = defaultdict(list)
         for b in mapa_template:
@@ -327,14 +364,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
 
         respostas = []
         confiancas = []
-
-        num_alts = len(alternativas)
-        # Limiares ajustados conforme qtd de alternativas
-        LIMIAR_MIN      = 0.30 if num_alts == 4 else 0.28   # bolha "marcada"
-        LIMIAR_CONFIRMA = 0.45 if num_alts == 4 else 0.40
-        # 2ª bolha só conta como dupla marcação se for >= 60% da maior
-        # (evita falso positivo por ruído/sombra do scanner)
-        RELATIVE_MULTI = 0.60
+        debug_ratios = {}
 
         for q_num in sorted(por_questao.keys()):
             bolhas_q = sorted(por_questao[q_num], key=lambda b: b['x'])
@@ -343,7 +373,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             for b in bolhas_q:
                 cx = int(b['x'] * w)
                 cy = int(b['y'] * h)
-                r = max(6, int(min(w, h) * 0.018))
+                r = max(6, int(min(w, h) * radius_factor))
 
                 if cx - r < 0 or cy - r < 0 or cx + r >= w or cy + r >= h:
                     ratios.append(0.0)
@@ -357,44 +387,36 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
                     continue
 
                 preto = cv2.countNonZero(cv2.bitwise_and(binaria, binaria, mask=mask))
-                ratios.append(preto / total)
+                ratio = preto / total
+                ratios.append(ratio)
 
-            if debug:
-                logging.info(f"Q{q_num}: ratios={['%.2f' % r for r in ratios]}")
+            debug_ratios[q_num] = [round(r, 3) for r in ratios]
 
             if not ratios:
                 respostas.append('')
                 confiancas.append(0)
                 continue
 
-            # ── ETAPA 1: nenhuma bolha acima do limiar → EM BRANCO
             max_ratio = max(ratios)
-            if max_ratio < LIMIAR_MIN:
+            if max_ratio < limiar_min:
                 respostas.append('')
                 confiancas.append(15)
                 continue
 
-            # ── ETAPA 2: quais bolhas estão realmente marcadas?
-            # Critério: ratio >= LIMIAR_MIN (absoluto) E
-            #           ratio >= max_ratio * RELATIVE_MULTI (relativo, filtra ruído)
-            limiar_relativo = max_ratio * RELATIVE_MULTI
+            limiar_relativo = max_ratio * relative_multi
             marcadas_idx = [
                 i for i, r in enumerate(ratios)
-                if r >= LIMIAR_MIN and r >= limiar_relativo
+                if r >= limiar_min and r >= limiar_relativo
             ]
 
-            # ── ETAPA 3: 2+ marcadas → MÚLTIPLA MARCAÇÃO (erro garantido)
             if len(marcadas_idx) >= 2:
-                letras_marcadas = [bolhas_q[i]['alternativa'] for i in marcadas_idx]
-                logging.info(
-                    f"⚠️ Q{q_num}: MÚLTIPLA MARCAÇÃO detectada: "
-                    f"{letras_marcadas} (ratios={['%.2f' % ratios[i] for i in marcadas_idx]})"
-                )
+                letras = [bolhas_q[i]['alternativa'] for i in marcadas_idx]
+                logging.info(f"⚠️ Q{q_num}: MÚLTIPLA ({tipo}): {letras} "
+                             f"ratios={['%.2f' % ratios[i] for i in marcadas_idx]}")
                 respostas.append('MULTIPLA')
-                confiancas.append(90)   # alta confiança de que É múltipla
+                confiancas.append(90)
                 continue
 
-            # ── ETAPA 4: exatamente 1 marcada → resposta normal
             idx_max = marcadas_idx[0] if marcadas_idx else int(np.argmax(ratios))
             letra = bolhas_q[idx_max]['alternativa']
             respostas.append(letra)
@@ -402,7 +424,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             sorted_r = sorted(ratios, reverse=True)
             separacao = (sorted_r[0] - sorted_r[1]) if len(sorted_r) > 1 else 1.0
 
-            if max_ratio > LIMIAR_CONFIRMA and separacao > 0.25:
+            if max_ratio > limiar_confirma and separacao > 0.25:
                 conf = 96
             elif max_ratio > 0.35 and separacao > 0.15:
                 conf = 82
@@ -411,6 +433,13 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             else:
                 conf = 50
             confiancas.append(conf)
+
+        # Log resumido dos ratios (útil para debugar)
+        if debug or logging.getLogger().level <= logging.INFO:
+            resumo = ' | '.join(
+                f"Q{n}:{debug_ratios[n]}" for n in list(debug_ratios.keys())[:10]
+            )
+            logging.info(f"📊 Ratios ({tipo}) — primeiras 10: {resumo}")
 
         return respostas, confiancas
 
@@ -421,7 +450,6 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
 
 
 def preparar_imagem_para_template(imagem_base64):
-    """Decodifica imagem, detecta marcadores v4 e corrige perspectiva."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -444,6 +472,8 @@ def preparar_imagem_para_template(imagem_base64):
             return None, False
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        tipo = detectar_tipo_entrada(gray)
+
         marcadores = detectar_marcadores_fiduciais_v4(gray)
         if not marcadores:
             logging.warning("⚠️ Template Mapping: marcadores não detectados")
@@ -452,13 +482,15 @@ def preparar_imagem_para_template(imagem_base64):
         img_corr = corrigir_perspectiva(img, marcadores)
 
         h, w = img_corr.shape[:2]
-        TARGET_H = 1800
+        # ⚡ Scans preservam mais resolução (bordas finas das bolhas)
+        TARGET_H = 2400 if tipo == 'scanner' else 1800
         if h > TARGET_H:
             scale = TARGET_H / h
             img_corr = cv2.resize(img_corr, (int(w * scale), TARGET_H),
                                   interpolation=cv2.INTER_AREA)
 
-        logging.info(f"✅ Template: perspectiva corrigida {img_corr.shape[1]}x{img_corr.shape[0]}")
+        logging.info(f"✅ Template: {tipo} {img_corr.shape[1]}x{img_corr.shape[0]} "
+                     f"(TARGET_H={TARGET_H})")
         return img_corr, True
 
     except Exception as e:
@@ -497,15 +529,7 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     }
 
 
-# ============================================
-# LEITURA DE QR CODE (usado pela correção automática)
-# ============================================
-
 def extrair_dados_qrcode(imagem_base64):
-    """
-    Lê o QR Code do cartão resposta e devolve dict {aluno_id, prova_id, escola_id, turma_id}.
-    Retorna None se não encontrar ou se pyzbar não estiver disponível.
-    """
     try:
         from pyzbar.pyzbar import decode
     except ImportError:
