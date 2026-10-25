@@ -303,7 +303,9 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
     """
     Correção estilo EvalBee: para cada bolha esperada do template,
     mede a fração de pixels pretos dentro do círculo correspondente.
-    Escolhe a de maior ratio por questão.
+
+    Retorna UMA letra por questão OU o sentinel 'MULTIPLA' quando 2+ bolhas
+    estão realmente marcadas (detecta dupla marcação = questão errada).
     """
     try:
         h, w = img_corrigida.shape[:2]
@@ -324,6 +326,14 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
         respostas = []
         confiancas = []
 
+        num_alts = len(alternativas)
+        # Limiares ajustados conforme qtd de alternativas
+        LIMIAR_MIN     = 0.30 if num_alts == 4 else 0.28   # bolha "marcada"
+        LIMIAR_CONFIRMA = 0.45 if num_alts == 4 else 0.40
+        # 2ª bolha só conta como dupla marcação se for >= 60% da maior
+        # (evita falso positivo por ruído/sombra do scanner)
+        RELATIVE_MULTI = 0.60
+
         for q_num in sorted(por_questao.keys()):
             bolhas_q = sorted(por_questao[q_num], key=lambda b: b['x'])
             ratios = []
@@ -331,7 +341,6 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             for b in bolhas_q:
                 cx = int(b['x'] * w)
                 cy = int(b['y'] * h)
-
                 r = max(6, int(min(w, h) * 0.018))
 
                 if cx - r < 0 or cy - r < 0 or cx + r >= w or cy + r >= h:
@@ -346,8 +355,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
                     continue
 
                 preto = cv2.countNonZero(cv2.bitwise_and(binaria, binaria, mask=mask))
-                ratio = preto / total
-                ratios.append(ratio)
+                ratios.append(preto / total)
 
             if debug:
                 logging.info(f"Q{q_num}: ratios={['%.2f' % r for r in ratios]}")
@@ -357,32 +365,50 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
                 confiancas.append(0)
                 continue
 
-            idx_max = int(np.argmax(ratios))
-            max_ratio = ratios[idx_max]
+            # ── ETAPA 1: nenhuma bolha acima do limiar → EM BRANCO
+            max_ratio = max(ratios)
+            if max_ratio < LIMIAR_MIN:
+                respostas.append('')
+                confiancas.append(15)
+                continue
+
+            # ── ETAPA 2: quais bolhas estão realmente marcadas?
+            # Critério: ratio >= LIMIAR_MIN (absoluto) E
+            #           ratio >= max_ratio * RELATIVE_MULTI (relativo, filtra ruído)
+            limiar_relativo = max_ratio * RELATIVE_MULTI
+            marcadas_idx = [
+                i for i, r in enumerate(ratios)
+                if r >= LIMIAR_MIN and r >= limiar_relativo
+            ]
+
+            # ── ETAPA 3: 2+ marcadas → MÚLTIPLA MARCAÇÃO (erro garantido)
+            if len(marcadas_idx) >= 2:
+                letras_marcadas = [bolhas_q[i]['alternativa'] for i in marcadas_idx]
+                logging.info(
+                    f"⚠️ Q{q_num}: MÚLTIPLA MARCAÇÃO detectada: "
+                    f"{letras_marcadas} (ratios={['%.2f' % ratios[i] for i in marcadas_idx]})"
+                )
+                respostas.append('MULTIPLA')
+                confiancas.append(90)   # alta confiança de que É múltipla
+                continue
+
+            # ── ETAPA 4: exatamente 1 marcada → resposta normal
+            idx_max = marcadas_idx[0] if marcadas_idx else int(np.argmax(ratios))
+            letra = bolhas_q[idx_max]['alternativa']
+            respostas.append(letra)
 
             sorted_r = sorted(ratios, reverse=True)
             separacao = (sorted_r[0] - sorted_r[1]) if len(sorted_r) > 1 else 1.0
 
-            num_alts = len(alternativas)
-            LIMIAR_MIN = 0.30 if num_alts == 4 else 0.28
-            LIMIAR_CONFIRMA = 0.45 if num_alts == 4 else 0.40
-
-            if max_ratio < LIMIAR_MIN:
-                respostas.append('')
-                confiancas.append(15)
+            if max_ratio > LIMIAR_CONFIRMA and separacao > 0.25:
+                conf = 96
+            elif max_ratio > 0.35 and separacao > 0.15:
+                conf = 82
+            elif separacao > 0.08:
+                conf = 68
             else:
-                letra = bolhas_q[idx_max]['alternativa']
-                respostas.append(letra)
-
-                if max_ratio > LIMIAR_CONFIRMA and separacao > 0.25:
-                    conf = 96
-                elif max_ratio > 0.35 and separacao > 0.15:
-                    conf = 82
-                elif separacao > 0.08:
-                    conf = 68
-                else:
-                    conf = 50
-                confiancas.append(conf)
+                conf = 50
+            confiancas.append(conf)
 
         return respostas, confiancas
 
