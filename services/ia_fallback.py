@@ -1,5 +1,6 @@
 # ============================================================
 # SERVICES/IA_FALLBACK.PY — Fallback de correção por IA
+# ⚠️ CORRIGIDO: mesmo pós-processamento de MULTIPLA + EM BRANCO
 # ============================================================
 
 import base64
@@ -58,6 +59,58 @@ try:
 except ImportError:
     print("⚠️ pyzbar não instalado. Leitura automática de QR Code desabilitada.")
     print("💡 Execute: pip install pyzbar")
+
+
+def _questao_respondida(q):
+    if 'respondida' in q:
+        return bool(q['respondida'])
+    resp = q.get('resposta', '')
+    return bool(resp and resp not in ('—', '-', ''))
+
+
+def _pos_processar_resultado(resultado):
+    """MESMA lógica de services/correcao.py — mantém consistência entre métodos."""
+    if not isinstance(resultado, dict):
+        return resultado
+    questoes_status = resultado.get('questoes_status', []) or []
+
+    for q in questoes_status:
+        if q.get('resposta') == 'MULTIPLA':
+            q['multipla'] = True
+            q['acertou'] = False
+            q['respondida'] = True
+            q['status'] = '⚠️ MÚLTIPLA MARCAÇÃO'
+            q['status_texto'] = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
+
+    respondidas = [q for q in questoes_status if _questao_respondida(q)]
+    respondidas_baixa = [
+        q for q in respondidas
+        if not q.get('multipla') and q.get('confianca', 100) < 70
+    ]
+
+    if respondidas:
+        confs = [q.get('confianca', 70) for q in respondidas]
+        resultado['confianca'] = round(sum(confs) / len(confs))
+    else:
+        resultado['confianca'] = 100
+
+    total_resp = len(respondidas)
+    total_baixa = len(respondidas_baixa)
+    resultado['requer_revisao_manual'] = (
+        total_baixa >= 3 and total_resp > 0 and total_baixa >= total_resp * 0.3
+    )
+
+    suspeitas_orig = resultado.get('questoes_suspeitas') or []
+    suspeitas_novas = []
+    for num in suspeitas_orig:
+        idx = num - 1
+        if 0 <= idx < len(questoes_status):
+            q = questoes_status[idx]
+            if _questao_respondida(q) and not q.get('multipla') and q.get('confianca', 100) < 70:
+                suspeitas_novas.append(num)
+    resultado['questoes_suspeitas'] = suspeitas_novas
+
+    return resultado
 
 
 def preprocessar_imagem_para_ia(imagem_base64):
@@ -204,24 +257,30 @@ REGRA CRÍTICA 2 — MÚLTIPLAS MARCAÇÕES
    mesma questão (ambas escuras por dentro), retorne a string
    "MULTIPLA" para aquela questão — NÃO escolha nenhuma das duas.
 
-Isso é DIFERENTE de null:
-  • "não consigo ver"          → null
-  • "vejo duas marcadas"       → "MULTIPLA"
+═══════════════════════════════════════════════════════
+REGRA CRÍTICA 3 — EM BRANCO
+═══════════════════════════════════════════════════════
+Se TODAS as bolhas da linha estiverem claramente brancas (nenhuma
+marcada), retorne null com confiança 100 para aquela questão.
+Questão em branco é DIFERENTE de "não consigo ver":
+  • "vejo que está em branco"      → null, confiança 100
+  • "não consigo ver / ilegível"   → null, confiança 0
 
 ═══════════════════════════════════════════════════════
 FORMATO DE SAÍDA (JSON puro)
 ═══════════════════════════════════════════════════════
 {{
   "respostas": ["B", "MULTIPLA", null, "A", ...],
-  "confianca_por_questao": [95, 90, 0, 88, ...]
+  "confianca_por_questao": [95, 90, 100, 88, ...]
 }}
 
 REGRAS DO JSON:
 - "respostas" DEVE ter EXATAMENTE {total} itens
 - Cada item é: uma letra ({alternativas_str}), "MULTIPLA", ou null
 - "confianca_por_questao" DEVE ter {total} números de 0 a 100
-- Se retornou null, confiança DEVE ser 0
-- Se retornou "MULTIPLA", confiança DEVE ser >= 85
+- null + confiança 100  = questão EM BRANCO com certeza
+- null + confiança 0    = NÃO CONSEGUI VER
+- "MULTIPLA" + confiança >= 85 = viu duas ou mais marcadas
 
 {aviso_bloco}
 Retorne SOMENTE o JSON.""".strip()
@@ -273,7 +332,6 @@ def _parse_respostas_ia(texto, total_esperado, alternativas):
             normalizadas.append('')
             continue
 
-        # ── Sentinel de dupla marcação (checa ANTES de "in alternativas") ──
         if s in ('MULTIPLA', 'MÚLTIPLA', 'MULTIPLE', 'MULTI', 'ANULADA'):
             normalizadas.append('MULTIPLA')
             continue
@@ -339,20 +397,15 @@ def _parse_confiancas_ia(texto, total_esperado):
 
 
 def _validar_resposta_ia_contra_gabarito(respostas, gabarito):
-    """Valida se a resposta da IA é plausível (não chute).
-    'MULTIPLA' é resposta legítima (dupla marcação) e NÃO é considerada suspeita.
-    """
     from collections import Counter
 
     if not respostas:
         return True, "Resposta vazia"
 
-    # Separar MULTIPLA das respostas "normais" — MULTIPLA não é chute
     nao_vazias = [r for r in respostas if r and r != 'MULTIPLA']
     multiplas = [r for r in respostas if r == 'MULTIPLA']
 
     if not nao_vazias:
-        # Só tem MULTIPLA/blank — se tem pelo menos uma MULTIPLA, não é suspeito
         if multiplas:
             return False, ""
         return True, "Nenhuma resposta detectada"
@@ -402,9 +455,10 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
                 "Você é um sistema OMR profissional. Analise cartões-resposta "
                 "com precisão EXTREMA. Se não tiver CERTEZA ABSOLUTA de uma "
                 "resposta, retorne null. Se vir DUAS OU MAIS bolhas marcadas "
-                "na mesma questão, retorne a string \"MULTIPLA\". NUNCA chute. "
-                "Responda APENAS com JSON válido no formato "
-                "{\"respostas\": [...], \"confianca_por_questao\": [...]}. "
+                "na mesma questão, retorne a string \"MULTIPLA\". Se vir TODAS "
+                "as bolhas brancas (em branco) com certeza, retorne null com "
+                "confiança 100. NUNCA chute. Responda APENAS com JSON válido "
+                "no formato {\"respostas\": [...], \"confianca_por_questao\": [...]}. "
                 "Sem markdown, sem texto extra."
             )
         },
@@ -452,8 +506,9 @@ def _executar_chamada_openai(data_url, padrao_gabarito, aluno_nome,
                 confiancas_ia = [85 if r else 0 for r in respostas_validas]
 
             for i, r in enumerate(respostas_validas):
-                if not r:
-                    confiancas_ia[i] = 0
+                if r == '':
+                    # IA pediu confiança 100 para em branco; se veio 0 é "ilegível"
+                    pass
                 elif r == 'MULTIPLA' and confiancas_ia[i] < 85:
                     confiancas_ia[i] = 90
 
@@ -536,17 +591,7 @@ def corrigir_com_ia_fallback(imagem_base64, padrao_gabarito, aluno_nome,
             respostas_validas, gabarito, aluno_nome, serie,
             disciplina, tipo_questoes, 'ia', bncc=bncc, confiancas=confiancas_ia
         )
-
-        # ── Marca questões MULTIPLA para a UI mostrar o motivo
-        for q in resultado.get('questoes_status', []):
-            if q.get('resposta') == 'MULTIPLA':
-                q['multipla'] = True
-                q['acertou'] = False
-                q['status'] = '⚠️ MÚLTIPLA MARCAÇÃO (questão anulada)'
-                q['status_texto'] = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
-                q['respondida'] = True
-
-        return resultado
+        return _pos_processar_resultado(resultado)
 
     except Exception as e:
         logging.error(f"❌ Erro no fallback OpenAI: {e}")
