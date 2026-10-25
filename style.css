@@ -1806,3 +1806,5 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .badge-conceito-avancado::marker {
     content: none !important;
 }
+.q-status.multipla, .q-select.multipla, .questao-item.multipla { color: var(--orange); border-color: var(--orange); }
+.q-status-text.multipla { color: var(--orange); }
