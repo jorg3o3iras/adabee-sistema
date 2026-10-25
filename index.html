@@ -1109,15 +1109,8 @@
               Não precisa selecionar nada — só tirar a foto.
             </p>
 
-            <!-- ✅ CORRIGIDO PARA CELULAR: auto-fit substitui 1fr 1fr -->
-            <div
-              style="
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 14px;
-                margin-bottom: 16px;
-              "
-            >
+            <!-- ✅ CORRIGIDO PARA CELULAR: usando classe btn-captura-grid -->
+            <div class="btn-captura-grid">
               <button
                 class="btn btn-lg btn-full"
                 style="
@@ -1183,12 +1176,8 @@
                 alt="Preview"
               />
               <div style="margin-top: 12px">
-                <!-- ✅ CORRIGIDO PARA CELULAR: width 100% max 320px -->
-                <button
-                  class="btn btn-green btn-lg"
-                  onclick="corrigirAutomatico()"
-                  style="padding: 14px 16px; font-size: 15px; font-weight: 700; width: 100%; max-width: 320px;"
-                >
+                <!-- ✅ CORRIGIDO PARA CELULAR: usando classe btn-corrigir-auto -->
+                <button class="btn btn-green btn-lg btn-corrigir-auto" onclick="corrigirAutomatico()">
                   🚀 CORRIGIR AUTOMATICAMENTE
                 </button>
               </div>
@@ -1563,18 +1552,18 @@
                     >AGUARDANDO</span
                   >
                   
-                  <!-- ✅ Botões com largura responsiva -->
-                  <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; width: 100%;">
-                    <button class="btn btn-outline btn-sm no-print" onclick="verCartaoOriginal()" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.4); color: #a78bfa; flex: 1 1 auto; min-width: 140px;">
+                  <!-- ✅ Botões responsivos -->
+                  <div class="botoes-resultado">
+                    <button class="btn btn-outline btn-sm no-print btn-ver-cartao" onclick="verCartaoOriginal()">
                         🖼️ Ver cartão original
                     </button>
-                    <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManual()" style="flex: 1 1 auto; min-width: 140px;">
+                    <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManual()">
                         ✏️ Correção Manual
                     </button>
-                    <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecao()" style="flex: 1 1 auto; min-width: 140px;">
+                    <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecao()">
                         💾 Salvar
                     </button>
-                    <button class="btn btn-primary btn-sm no-print" onclick="go('resultados')" style="flex: 1 1 auto; min-width: 140px;">
+                    <button class="btn btn-primary btn-sm no-print" onclick="go('resultados')">
                         📊 Resultados
                     </button>
                   </div>
@@ -4689,116 +4678,15 @@
         </div>
       </div>
 
-      <!-- ✅ NOVO: MODAL VER CARTÃO ORIGINAL -->
-      <div
-        id="m-ver-cartao"
-        style="
-          display: none;
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.92);
-          z-index: 10000;
-          align-items: center;
-          justify-content: center;
-        "
-      >
-        <!-- ✅ CORRIGIDO PARA CELULAR: flex-wrap e justify-content flex-end -->
-        <div
-          style="
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            left: 16px;
-            display: flex;
-            gap: 8px;
-            z-index: 10001;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-          "
-        >
-          <button
-            onclick="abrirCartaoNovaAba()"
-            title="Abrir em nova aba"
-            style="
-              background: rgba(255, 255, 255, 0.15);
-              color: #fff;
-              border: 1px solid rgba(255, 255, 255, 0.3);
-              border-radius: 8px;
-              padding: 8px 14px;
-              font-size: 13px;
-              font-weight: 700;
-              cursor: pointer;
-              backdrop-filter: blur(10px);
-            "
-          >
-            🔍 Nova aba
-          </button>
-          <button
-            onclick="baixarCartaoOriginal()"
-            title="Baixar imagem"
-            style="
-              background: rgba(255, 255, 255, 0.15);
-              color: #fff;
-              border: 1px solid rgba(255, 255, 255, 0.3);
-              border-radius: 8px;
-              padding: 8px 14px;
-              font-size: 13px;
-              font-weight: 700;
-              cursor: pointer;
-              backdrop-filter: blur(10px);
-            "
-          >
-            ⬇️ Baixar
-          </button>
-          <button
-            onclick="fecharCartaoOriginal()"
-            title="Fechar (Esc)"
-            style="
-              background: rgba(239, 68, 68, 0.75);
-              color: #fff;
-              border: 1px solid rgba(255, 255, 255, 0.3);
-              border-radius: 8px;
-              padding: 8px 14px;
-              font-size: 13px;
-              font-weight: 700;
-              cursor: pointer;
-              backdrop-filter: blur(10px);
-            "
-          >
-            ✕ Fechar
-          </button>
+      <!-- ✅ NOVO: MODAL VER CARTÃO ORIGINAL (com classes CSS) -->
+      <div id="m-ver-cartao">
+        <div class="ver-cartao-toolbar">
+          <button class="ver-cartao-btn" onclick="abrirCartaoNovaAba()" title="Abrir em nova aba">🔍 Nova aba</button>
+          <button class="ver-cartao-btn" onclick="baixarCartaoOriginal()" title="Baixar imagem">⬇️ Baixar</button>
+          <button class="ver-cartao-btn btn-fechar" onclick="fecharCartaoOriginal()" title="Fechar (Esc)">✕ Fechar</button>
         </div>
-        <img
-          id="ver-cartao-img"
-          src=""
-          alt="Cartão resposta original"
-          style="
-            max-width: 95vw;
-            max-height: 92vh;
-            border-radius: 8px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            object-fit: contain;
-          "
-        />
-        <div
-          style="
-            position: absolute;
-            bottom: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 11px;
-            background: rgba(0, 0, 0, 0.55);
-            padding: 6px 14px;
-            border-radius: 20px;
-            white-space: nowrap;
-          "
-        >
-          💡 Compare o cartão com o resultado. Pressione <strong>Esc</strong> para fechar.
-        </div>
+        <img id="ver-cartao-img" src="" alt="Cartão resposta original" />
+        <div class="ver-cartao-hint">💡 Compare o cartão com o resultado. Pressione <strong>Esc</strong> para fechar.</div>
       </div>
 
       <!-- MODAL EDITAR ESCOLA -->
