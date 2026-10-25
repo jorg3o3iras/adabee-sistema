@@ -1,7 +1,6 @@
 # ============================================================
 # ROUTES/CORRECAO.PY — Correção IA, lote, manual, produção, QR
-# Provas GLOBAIS — valida apenas a escola do ALUNO
-# ⚠️ CORRIGIDO: status 'MÚLTIPLA MARCAÇÃO' na correção manual
+# ✨ NOVO: recebe 'modo' ('foto' | 'scanner' | 'auto')
 # ============================================================
 
 import hashlib
@@ -26,12 +25,6 @@ bp = Blueprint('correcao', __name__, url_prefix='/api')
 
 
 def _validar_aluno_prova_escola(cur, aluno_id, prova_id, escola_sessao):
-    """
-    Valida aluno + prova.
-    - Aluno: usuário comum precisa pertencer à mesma escola.
-    - Prova: GLOBAL — não filtra por escola (todos veem todas as provas).
-    Retorna (ok, dados|None, erro_msg|None, status_code).
-    """
     cur.execute("""
         SELECT p.*,
                a.nome AS aluno_nome,
@@ -63,14 +56,20 @@ def corrigir_com_ia():
         imagem_base64 = data.get('imagem')
         prova_id = data.get('prova_id')
         aluno_id = data.get('aluno_id')
+        # ✨ modo: 'foto' | 'scanner' | 'auto' (padrão 'foto')
+        modo = (data.get('modo') or 'foto').lower()
+        if modo not in ('foto', 'scanner', 'auto'):
+            modo = 'foto'
+
         if not imagem_base64: return jsonify({'erro': 'Imagem é obrigatória'}), 400
         if not prova_id: return jsonify({'erro': 'Prova ID é obrigatório'}), 400
         if not aluno_id: return jsonify({'erro': 'Aluno ID é obrigatório'}), 400
 
         imagem_hash = hashlib.md5(imagem_base64.encode()).hexdigest()
-        cache_key = get_cache_key(imagem_hash, prova_id, aluno_id)
+        cache_key = get_cache_key(imagem_hash, prova_id, aluno_id, modo)
         cached = get_cache_correcao(cache_key)
         if cached:
+            logging.info(f"💾 Cache HIT (modo={modo})")
             return jsonify(cached)
 
         conn = get_db_connection()
@@ -115,7 +114,8 @@ def corrigir_com_ia():
             resultado = corrigir_com_gemini_com_padrao(
                 imagem_base64, padrao_gabarito, nome_aluno,
                 serie, tipo_questoes, disciplina, bncc=bncc_gabarito,
-                prova_id=prova_id, aluno_id=aluno_id
+                prova_id=prova_id, aluno_id=aluno_id,
+                modo=modo  # ✨
             )
             if resultado.get('erro'):
                 return jsonify(resultado), 400
@@ -223,7 +223,6 @@ def corrigir_manual():
         serie = dados.get('turma_serie') or serie_prova or '1º Ano'
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
 
-        # ⚠️ CORRIGIDO: detecta e reporta MÚLTIPLA MARCAÇÃO explicitamente
         questoes_status = []
         for i in range(total):
             resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
@@ -393,12 +392,16 @@ def salvar_nota_producao():
 
 @bp.route('/corrigir-automatico', methods=['POST'])
 def corrigir_automatico():
+    """QR Code auto — usa modo='auto' (detecta automaticamente)."""
     try:
         data = request.json
         if not data: return jsonify({'erro': 'Nenhum dado recebido'}), 400
         imagem_base64 = data.get('imagem')
         if not imagem_base64: return jsonify({'erro': 'Imagem é obrigatória'}), 400
         salvar_auto = data.get('salvar_auto', True)
+        modo = (data.get('modo') or 'auto').lower()
+        if modo not in ('foto', 'scanner', 'auto'):
+            modo = 'auto'
 
         from services.evalbee import extrair_dados_qrcode
         info_qr = extrair_dados_qrcode(imagem_base64)
@@ -473,7 +476,8 @@ def corrigir_automatico():
         resultado = corrigir_com_gemini_com_padrao(
             imagem_base64, padrao_gabarito, nome_aluno,
             serie, tipo_questoes, disciplina, bncc=bncc_gabarito,
-            prova_id=prova_id, aluno_id=aluno_id
+            prova_id=prova_id, aluno_id=aluno_id,
+            modo=modo
         )
         if resultado.get('erro'):
             return jsonify({'sucesso': False, 'erro': resultado.get('erro'),
@@ -538,6 +542,7 @@ def corrigir_automatico():
         resultado['escola_id'] = escola_id
         resultado['turma_id'] = turma_id
         resultado['serie'] = serie
+        resultado['modo_usado'] = modo
         return jsonify(resultado)
 
     except Exception as e:
