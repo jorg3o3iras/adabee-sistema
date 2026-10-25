@@ -1,7 +1,10 @@
 /* ============================================
-   CSS COMPLETO OTIMIZADO - VERSÃO CORRIGIDA v4.1
-   + Layout diferenciado de Gabarito para Produção de Texto
-   + Bloco de Nota Manual de Produção de Texto
+   CSS COMPLETO OTIMIZADO - VERSÃO CORRIGIDA v5.0
+   + Múltipla marcação integrada (sem remendos)
+   + Modal Ver Cartão Original com animações
+   + Painel de detalhes (#ia-detalhes)
+   + Botões responsivos para celular
+   + Fluxo contínuo de correção
    ============================================ */
 :root {
     --bg: #0f172a;
@@ -406,7 +409,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 
 .cam-video-wrap video { width:100%; display:block; border-radius:12px; }
 
-/* ═══ RETÂNGULO DA CÂMERA — LARGO (paisagem) — FORÇA APROXIMAÇÃO ═══ */
+/* ═══ RETÂNGULO DA CÂMERA — LARGO (paisagem) ═══ */
 .cam-frame {
     position: absolute;
     top: 50%;
@@ -486,6 +489,201 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .multi-status.error { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); color:var(--red); }
 .multi-status.info { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2); color:var(--blue); }
 
+/* ============================================
+   ✨ NOVO: MODAL "VER CARTÃO ORIGINAL"
+   ============================================ */
+#m-ver-cartao {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInCartao 0.2s ease;
+}
+
+#m-ver-cartao .ver-cartao-toolbar {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 10001;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#m-ver-cartao .ver-cartao-btn {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+#m-ver-cartao .ver-cartao-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+#m-ver-cartao .ver-cartao-btn.btn-fechar {
+    background: rgba(239, 68, 68, 0.75);
+}
+
+#m-ver-cartao .ver-cartao-btn.btn-fechar:hover {
+    background: rgba(239, 68, 68, 0.9);
+}
+
+#m-ver-cartao img {
+    max-width: 95vw;
+    max-height: 92vh;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    object-fit: contain;
+    animation: zoomCartao 0.25s ease;
+}
+
+#m-ver-cartao .ver-cartao-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 6px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    max-width: calc(100vw - 32px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#m-ver-cartao .ver-cartao-hint strong {
+    color: #fff;
+}
+
+@keyframes fadeInCartao {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes zoomCartao {
+    from { transform: scale(0.95); opacity: 0.6; }
+    to   { transform: scale(1);    opacity: 1;   }
+}
+
+/* ============================================
+   📋 NOVO: PAINEL DE DETALHES (#ia-detalhes)
+   ============================================ */
+#ia-detalhes {
+    margin-top: 14px;
+}
+
+#ia-detalhes > div {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+#ia-detalhes .ia-detalhes-titulo {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+/* ============================================
+   📱 NOVO: BOTÕES RESPONSIVOS DO RESULTADO
+   ============================================ */
+.botoes-resultado {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.botoes-resultado .btn {
+    flex: 1 1 auto;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.btn-ver-cartao {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: #a78bfa;
+}
+
+.btn-ver-cartao:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: #a78bfa;
+    color: #c4b5fd;
+}
+
+/* ============================================
+   📷 NOVO: BOTÕES DE CAPTURA (HOME CORREÇÃO)
+   ============================================ */
+.btn-captura-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.btn-corrigir-auto {
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+}
+
+/* ============================================
+   🔥 NOVO: MÚLTIPLA MARCAÇÃO (INTEGRADO)
+   ============================================ */
+.q-status.multipla,
+.q-select.multipla {
+    color: var(--orange) !important;
+    border-color: var(--orange) !important;
+}
+
+.q-status.multipla {
+    background: rgba(245, 158, 11, 0.12) !important;
+}
+
+.q-select.multipla {
+    border-color: var(--orange) !important;
+    background: rgba(245, 158, 11, 0.12) !important;
+}
+
+.questao-item.multipla {
+    border-color: var(--orange) !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+}
+
+.questao-item.multipla .q-resp {
+    color: var(--orange) !important;
+}
+
+.questao-item.multipla .q-status-text,
+.q-status-text.multipla {
+    color: var(--orange) !important;
+    background: rgba(245, 158, 11, 0.12) !important;
+}
+
 /* CORREÇÃO MANUAL (DENTRO DA IA) */
 .correcao-manual-grid {
     display: grid;
@@ -556,6 +754,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .cm-item-standalone .q-select-manual:focus { border-color: var(--blue); }
 .cm-item-standalone .q-select-manual.correta { border-color: var(--green); background: rgba(16, 185, 129, 0.15); color: var(--green); }
 .cm-item-standalone .q-select-manual.errada { border-color: var(--red); background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.cm-item-standalone .q-select-manual.multipla { border-color: var(--orange); background: rgba(245, 158, 11, 0.15); color: var(--orange); }
 .cm-item-standalone .q-status-icon { font-size: 11px; min-height: 16px; }
 .cm-item-standalone .q-resposta-texto { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 4px; font-size: 11px; }
 .cm-item-standalone .q-gabarito-texto { font-size: 7px; color: var(--text3); }
@@ -668,6 +867,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .habilidade-card .resumo-habilidade .acertos { color: var(--green); font-weight: 700; }
 .habilidade-card .resumo-habilidade .erros { color: var(--red); font-weight: 700; }
 .habilidade-card .resumo-habilidade .nota { color: var(--blue); font-weight: 700; }
+
 /* DESEMPENHO DO ALUNO */
 .desempenho-resumo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
 .desempenho-resumo .item { background: var(--bg2); border-radius: 10px; padding: 14px 16px; text-align: center; border: 1px solid var(--border); }
@@ -678,10 +878,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .desempenho-resumo .item .valor.blue { color: var(--blue); }
 .desempenho-resumo .item .valor.purple { color: var(--purple); }
 
-/* ═══════════════════════════════════════════════════════════════
-   ═══ MODO PRODUÇÃO DE TEXTO: apenas 2 cards (Conceito + NOTA) ═══
-   ═══ Centralizados e ocupando 100% da largura do container     ═══
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══ MODO PRODUÇÃO DE TEXTO: apenas 2 cards (Conceito + NOTA) ═══ */
 .desempenho-resumo.duplo {
     grid-template-columns: 1fr 1fr !important;
     width: 100%;
@@ -715,7 +912,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     margin-top: 4px;
 }
 
-/* Mobile — mantém os 2 cards lado a lado proporcionalmente */
 @media (max-width: 900px) {
     .desempenho-resumo.duplo {
         grid-template-columns: 1fr 1fr !important;
@@ -747,7 +943,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         font-size: 10px;
     }
 }
-/* ═══ FIM DO MODO PRODUÇÃO ═══ */
 
 .questao-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 2px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 1px; transition: border-color 0.2s; }
 .questao-item .q-num { font-size: 7px; color: var(--text3); font-weight: 700; }
@@ -766,7 +961,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .desempenho-info strong { color: var(--text); }
 
 /* ============================================
-   RESPONSIVIDADE
+   RESPONSIVIDADE GERAL
    ============================================ */
 @media (max-width:900px) {
     .menu-toggle { display:flex; align-items:center; justify-content:center; }
@@ -807,6 +1002,38 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .gab-header-title { font-size: 16px !important; flex-wrap: wrap; }
     .gab-header-title .prova-nome { font-size: 16px !important; }
 }
+
+@media (max-width:600px) {
+    /* Garante que botões não estourem no celular */
+    .btn, button {
+        white-space: normal !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    .btn-group {
+        flex-wrap: wrap !important;
+        width: 100% !important;
+    }
+    .modal {
+        max-width: 95vw !important;
+    }
+    /* Botões de resultado ocupam largura toda */
+    .botoes-resultado .btn {
+        flex: 1 1 100%;
+    }
+    /* Modal ver cartão: toolbar em coluna no celular */
+    #m-ver-cartao .ver-cartao-toolbar {
+        flex-direction: row;
+        justify-content: center;
+    }
+    #m-ver-cartao .ver-cartao-btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+}
+
 @media (max-width:480px) {
     .stats-grid { grid-template-columns:1fr; }
     .login-card { padding:24px 18px; margin:10px; }
@@ -837,6 +1064,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .questao-item .q-status-text { font-size: 6px; }
     .gab-header-title { font-size: 14px !important; flex-direction: column; align-items: flex-start; }
     .gab-header-title .prova-nome { font-size: 14px !important; }
+    /* Modal ver cartão: botões empilhados no celular pequeno */
+    #m-ver-cartao .ver-cartao-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    #m-ver-cartao .ver-cartao-btn {
+        width: 100%;
+        padding: 10px;
+    }
+    #m-ver-cartao .ver-cartao-hint {
+        font-size: 10px;
+        padding: 5px 10px;
+        white-space: normal;
+        text-align: center;
+    }
 }
 
 /* ============================================
@@ -852,7 +1094,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .modal-overlay, .del-modal, .toast-container, .cam-modal,
     .upload-zone, .tab-nav, .tab-c .btn, .btn-full, .btn-lg,
     .ai-feature-btn, .ai-hero-actions, .afb-blue, .afb-green, .afb-purple, .afb-red,
-    #menuToggle, #menuOverlay, .login-screen {
+    #menuToggle, #menuOverlay, .login-screen,
+    #m-ver-cartao, .botoes-resultado, #ia-detalhes {
         display: none !important;
     }
     .page { display: none !important; }
@@ -906,8 +1149,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .conceito-graficos { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
     #conceito-barras .progress { height: 12px !important; }
     #conceito-barras .progress-fill { height: 12px !important; border-radius: 4px !important; }
-    #donut-container { transform: scale(0.8) !important; }
-    #donut-container canvas { max-width: 140px !important; max-height: 140px !important; }
     .page-header { margin-bottom: 12px !important; padding-bottom: 8px !important; border-bottom: 2px solid #333333 !important; }
     .page-title { font-size: 14pt !important; color: #000000 !important; }
     .page-sub { color: #555555 !important; font-size: 9pt !important; }
@@ -1244,14 +1485,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 }
 
 /* ============================================================
-   ═══ NOVO: GABARITO DE PRODUÇÃO DE TEXTO ═══
-   Layout diferenciado com:
-   - Título editável por questão
-   - Cabeçalho/tema por questão
-   - Alternativas A / B / C / ... com auto-abertura
-   - Situação de Correção (A até I)
+   ═══ GABARITO DE PRODUÇÃO DE TEXTO ═══
    ============================================================ */
-
 .gab-producao-questao {
     background: var(--bg2);
     border: 2px solid var(--border2);
@@ -1265,19 +1500,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     transition: all 0.3s ease;
     box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
-
 .gab-producao-questao:hover {
     border-color: var(--purple);
     box-shadow: 0 4px 20px rgba(139,92,246,0.15);
 }
-
 .gab-producao-header {
     display: flex;
     gap: 10px;
     align-items: flex-start;
     flex-wrap: wrap;
 }
-
 .gab-titulo-editavel {
     flex: 0 0 110px;
     min-width: 90px;
@@ -1297,7 +1529,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
     background: rgba(139,92,246,0.18);
 }
-
 .gab-cabecalho {
     flex: 1;
     min-width: 200px;
@@ -1322,14 +1553,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     color: var(--text3);
     font-style: italic;
 }
-
 .gab-alternativas-lista {
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 4px 0;
 }
-
 .gab-alternativa-item {
     display: flex;
     align-items: flex-start;
@@ -1345,7 +1574,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     border-color: var(--green);
     box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
 }
-
 .gab-alternativa-item .alt-letra {
     flex: 0 0 32px;
     height: 32px;
@@ -1360,7 +1588,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     letter-spacing: 0.3px;
     box-shadow: 0 2px 8px rgba(16,185,129,0.3);
 }
-
 .gab-alternativa-item .alt-texto {
     flex: 1;
     min-height: 36px;
@@ -1384,7 +1611,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     color: var(--text3);
     font-style: italic;
 }
-
 .gab-alternativa-item .btn-remover-alt {
     flex: 0 0 auto;
     background: transparent;
@@ -1402,7 +1628,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     background: rgba(239,68,68,0.12);
     transform: scale(1.1);
 }
-
 .gab-situacao-wrapper {
     display: flex;
     align-items: center;
@@ -1412,7 +1637,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     margin-top: 4px;
     flex-wrap: wrap;
 }
-
 .gab-situacao-label {
     font-size: 12px;
     font-weight: 700;
@@ -1420,7 +1644,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     text-transform: uppercase;
     letter-spacing: 0.4px;
 }
-
 .gab-situacao {
     flex: 1;
     max-width: 220px;
@@ -1440,13 +1663,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(245,158,11,0.18);
 }
-
 @keyframes fadeInAlt {
     from { opacity: 0; transform: translateY(-6px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* RESPONSIVO DO GABARITO PRODUÇÃO */
 @media (max-width: 768px) {
     .gab-producao-questao { padding: 12px 14px; }
     .gab-titulo-editavel { flex: 0 0 90px; font-size: 13px; padding: 6px 10px; }
@@ -1456,7 +1677,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     .gab-alternativa-item .alt-texto { font-size: 12px; padding: 5px 8px; }
     .gab-situacao { max-width: 100%; font-size: 13px; }
 }
-
 @media (max-width: 480px) {
     .gab-producao-questao { padding: 10px 12px; margin-bottom: 12px; }
     .gab-producao-header { flex-direction: column; }
@@ -1468,55 +1688,47 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 }
 
 /* ============================================================
-   ═══ NOVO: BLOCO DE NOTA MANUAL DE PRODUÇÃO ═══
+   ═══ BLOCO DE NOTA MANUAL DE PRODUÇÃO ═══
    ============================================================ */
-
 #gab-nota-manual-container {
     animation: fadeUp 0.4s ease;
 }
-
 #gab-nota-manual-container .form-control[type="number"] {
     font-size: 18px;
     font-weight: 700;
     text-align: center;
     color: var(--orange);
 }
-
 #gab-nota-manual-container .form-control[type="number"]:focus {
     border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
 }
-
 #nota-producao-status {
     animation: fadeInStatus 0.3s ease;
 }
-
 #nota-producao-status.sucesso {
     background: rgba(16,185,129,0.12);
     border: 1.5px solid rgba(16,185,129,0.3);
     color: var(--green);
 }
-
 #nota-producao-status.erro {
     background: rgba(239,68,68,0.12);
     border: 1.5px solid rgba(239,68,68,0.3);
     color: var(--red);
 }
-
 #nota-producao-status.info {
     background: rgba(59,130,246,0.12);
     border: 1.5px solid rgba(59,130,246,0.3);
     color: var(--blue);
 }
-
 @keyframes fadeInStatus {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: translateY(0); }
 }
-/* ============================================================
-   ═══ NOVO: BLOCO DE NOTA MANUAL DENTRO DO MODAL DE CORREÇÃO ═══
-   ============================================================ */
 
+/* ============================================================
+   ═══ BLOCO DE NOTA MANUAL DENTRO DO MODAL DE CORREÇÃO ═══
+   ============================================================ */
 #cm-nota-manual-container {
     display: none;
     margin-top: 20px;
@@ -1526,7 +1738,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     border-radius: 12px;
     animation: fadeUp 0.4s ease;
 }
-
 #cm-nota-manual-container .cm-nota-titulo {
     font-size: 15px;
     font-weight: 800;
@@ -1536,14 +1747,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     align-items: center;
     gap: 8px;
 }
-
 #cm-nota-manual-container .cm-nota-sub {
     font-size: 11px;
     color: var(--text3);
     margin-bottom: 14px;
     line-height: 1.5;
 }
-
 #cm-nota-manual-container .cm-nota-fields {
     display: grid;
     grid-template-columns: 130px 1fr;
@@ -1551,37 +1760,31 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     align-items: end;
     margin-bottom: 12px;
 }
-
 #cm-nota-manual-container .cm-nota-fields .form-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
-
 #cm-nota-manual-container .cm-nota-fields .form-control {
     font-size: 14px;
     padding: 9px 12px;
 }
-
 #cm-nota-manual-container .cm-nota-fields input[type="number"] {
     font-size: 20px;
     font-weight: 800;
     text-align: center;
     color: var(--orange);
 }
-
 #cm-nota-manual-container .cm-nota-fields input[type="number"]:focus {
     border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
 }
-
 #cm-nota-manual-container .cm-nota-actions {
     display: flex;
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
 }
-
 #cm-nota-manual-container .btn-salvar-nota-cm {
     padding: 12px 32px;
     background: linear-gradient(135deg, var(--orange), #d97706);
@@ -1597,24 +1800,20 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     align-items: center;
     gap: 8px;
 }
-
 #cm-nota-manual-container .btn-salvar-nota-cm:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(245,158,11,0.5);
 }
-
 #cm-nota-manual-container .btn-salvar-nota-cm:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
 }
-
 #cm-nota-manual-container .cm-nota-hint {
     font-size: 11px;
     color: var(--text3);
     font-style: italic;
 }
-
 #cm-nota-status {
     display: none;
     padding: 10px 14px;
@@ -1624,14 +1823,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     margin-top: 10px;
     animation: fadeInStatus 0.3s ease;
 }
-
 #cm-nota-status.sucesso {
     background: rgba(16,185,129,0.12);
     border: 1.5px solid rgba(16,185,129,0.3);
     color: var(--green);
     display: block;
 }
-
 #cm-nota-status.erro {
     background: rgba(239,68,68,0.12);
     border: 1.5px solid rgba(239,68,68,0.3);
@@ -1655,15 +1852,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     max-height: 220px;
     overflow-y: auto;
 }
-
 .cm-gabarito-formatado .alt-bloco {
     margin-bottom: 8px;
 }
-
 .cm-gabarito-formatado .alt-bloco:last-child {
     margin-bottom: 0;
 }
-
 .cm-gabarito-formatado .alt-letra-gab {
     display: inline-block;
     background: linear-gradient(135deg, var(--green), #059669);
@@ -1675,7 +1869,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     margin-right: 6px;
     letter-spacing: 0.3px;
 }
-
 .cm-gabarito-formatado .alt-texto-gab {
     display: inline;
     white-space: pre-wrap;
@@ -1695,11 +1888,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     gap: 10px;
     transition: border-color 0.2s;
 }
-
 .cm-item-producao:hover {
     border-color: var(--purple);
 }
-
 .cm-item-producao .cm-q-header {
     display: flex;
     justify-content: space-between;
@@ -1709,20 +1900,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     padding-bottom: 6px;
     border-bottom: 1px dashed var(--border);
 }
-
 .cm-item-producao .cm-q-titulo {
     font-size: 14px;
     font-weight: 800;
     color: var(--purple);
 }
-
 .cm-item-producao .cm-q-cabecalho {
     font-size: 12px;
     color: var(--text2);
     font-style: italic;
     margin-top: -4px;
 }
-
 .cm-item-producao .cm-q-resposta-label {
     font-size: 11px;
     font-weight: 700;
@@ -1731,7 +1919,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     letter-spacing: 0.3px;
     margin-bottom: 4px;
 }
-
 .cm-item-producao .cm-q-resposta-texto {
     width: 100%;
     min-height: 70px;
@@ -1747,18 +1934,15 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     transition: all 0.2s;
     line-height: 1.5;
 }
-
 .cm-item-producao .cm-q-resposta-texto:focus {
     border-color: var(--green);
     box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
 }
-
 @media (max-width: 600px) {
     #cm-nota-manual-container .cm-nota-fields {
         grid-template-columns: 1fr;
     }
 }
-/* ═══ CABEÇALHO INLINE DA PRODUÇÃO (Q1 - TEXTO) ═══ */
 .cm-q-cabecalho-inline {
     font-size: 14px;
     font-weight: 800;
@@ -1772,12 +1956,11 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     word-wrap: break-word;
     display: block;
 }
+
 /* ═══════════════════════════════════════════════════════════════
    ✅ CORREÇÃO: remove bolinha duplicada nas badges de conceito
    O emoji (🔴🟠🔵🟢) já está no texto do HTML, não precisa de outro.
    ═══════════════════════════════════════════════════════════════ */
-
-/* Remove ::before e ::marker de qualquer badge de conceito */
 .badge-conceito-inicial::before,
 .badge-conceito-basico::before,
 .badge-conceito-proficiente::before,
@@ -1791,7 +1974,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     content: none !important;
     display: none !important;
 }
-
 .badge-conceito-inicial,
 .badge-conceito-basico,
 .badge-conceito-proficiente,
@@ -1799,12 +1981,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 #legenda-conceitos .badge {
     list-style: none !important;
 }
-
 .badge-conceito-inicial::marker,
 .badge-conceito-basico::marker,
 .badge-conceito-proficiente::marker,
 .badge-conceito-avancado::marker {
     content: none !important;
 }
-.q-status.multipla, .q-select.multipla, .questao-item.multipla { color: var(--orange); border-color: var(--orange); }
-.q-status-text.multipla { color: var(--orange); }
