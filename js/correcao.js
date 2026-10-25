@@ -4,7 +4,7 @@
 // ⚠️ CORRIGIDO: preserva sentinel 'MULTIPLA' (dupla marcação = errada)
 // ✨ NOVO: painel detalhado (#ia-detalhes) + modal "Ver cartão original"
 // 🚀 NOVO: fluxo contínuo ao salvar (limpa tela e abre seletor)
-// 📱 NOVO: botões responsivos para celular
+// 📱 NOVO: classes CSS para botões responsivos
 // ============================================================
 
 let correcaoManualData = {
@@ -577,7 +577,7 @@ function atualizarInterfaceCorrecao(dados) {
             linhas.push(`<div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(100,116,139,0.08); border-radius:8px; border-left:3px solid var(--text3);"><span style="font-size:18px; flex-shrink:0;">—</span><span style="font-size:13px; color:var(--text);"><strong style="color:var(--text2);">${totalBrancos} ${totalBrancos === 1 ? 'questão EM BRANCO' : 'questões EM BRANCO'}</strong><span style="color:var(--text3); font-size:11px;"> — não respondidas, contam como erro</span></span></div>`);
         }
 
-        containerDetalhes.innerHTML = `<div style="margin-top:14px; padding:12px; background:var(--surface2); border-radius:10px; border:1px solid var(--border);"><div style="font-size:11px; font-weight:800; color:var(--text); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.6px;">📋 Detalhes da correção</div><div style="display:flex; flex-direction:column; gap:6px;">${linhas.join('')}</div></div>`;
+        containerDetalhes.innerHTML = `<div style="margin-top:14px; padding:12px; background:var(--surface2); border-radius:10px; border:1px solid var(--border);"><div class="ia-detalhes-titulo">📋 Detalhes da correção</div><div style="display:flex; flex-direction:column; gap:6px;">${linhas.join('')}</div></div>`;
     }
 
     const rd = document.getElementById('ia-resp');
@@ -2001,7 +2001,7 @@ function mostrarResultadoAutomatico(dados) {
 
     let painelResumo = `
         <div style="margin-top:14px; padding:12px; background:var(--surface2); border-radius:10px; border:1px solid var(--border);">
-            <div style="font-size:11px; font-weight:800; color:var(--text); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.6px;">📋 Detalhes da correção</div>
+            <div class="ia-detalhes-titulo">📋 Detalhes da correção</div>
             <div style="display:flex; flex-direction:column; gap:6px;">
                 ${linhasResumo.join('')}
             </div>
@@ -2035,14 +2035,14 @@ function mostrarResultadoAutomatico(dados) {
             <div style="text-align:center; margin-bottom:10px;"><span style="background:${cor}20; color:${cor}; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:800;">${conceitoLabel}</span></div>
             ${questoesHtml}
             ${alertaHtml}
-            <!-- ✅ BOTOES RESPONSIVOS -->
-            <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center; align-items:center; width:100%;">
-                <button class="btn btn-outline btn-sm no-print" onclick="verCartaoOriginal()" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.4); color:#a78bfa; flex: 1 1 auto; min-width: 140px;">🖼️ Ver cartão original</button>
-                <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()" style="flex: 1 1 auto; min-width: 140px;">✏️ Correção Manual</button>
-                <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()" style="flex: 1 1 auto; min-width: 140px;">💾 Salvar</button>
-                <button class="btn btn-green btn-sm" onclick="go('resultados')" style="flex: 1 1 auto; min-width: 140px;">📊 Ver em Resultados</button>
-                <button class="btn btn-outline btn-sm" onclick="limparResultadoAutomatico()" style="flex: 1 1 auto; min-width: 140px;">🔄 Nova Correção</button>
-                <button class="btn btn-primary btn-sm" onclick="go('desempenho')" style="flex: 1 1 auto; min-width: 140px;">📈 Desempenho do Aluno</button>
+            <!-- ✅ BOTOES RESPONSIVOS COM CLASSES CSS -->
+            <div class="botoes-resultado">
+                <button class="btn btn-outline btn-sm no-print btn-ver-cartao" onclick="verCartaoOriginal()">🖼️ Ver cartão original</button>
+                <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()">✏️ Correção Manual</button>
+                <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()">💾 Salvar</button>
+                <button class="btn btn-green btn-sm" onclick="go('resultados')">📊 Ver em Resultados</button>
+                <button class="btn btn-outline btn-sm" onclick="limparResultadoAutomatico()">🔄 Nova Correção</button>
+                <button class="btn btn-primary btn-sm" onclick="go('desempenho')">📈 Desempenho do Aluno</button>
             </div>
         </div>
     `;
@@ -2167,4 +2167,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-console.log('✅ js/correcao.js carregado (com MULTIPLA + modal Ver Cartão Original + Fluxo Contínuo)');
+console.log('✅ js/correcao.js carregado (com MULTIPLA + modal Ver Cartão Original + Fluxo Contínuo + Classes CSS)');
