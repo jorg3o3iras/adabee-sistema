@@ -5,6 +5,7 @@
 #    - EM BRANCO = errada (não é "suspeita")
 #    - requer_revisao_manual só conta questões RESPONDIDAS com baixa conf.
 # ✨ NOVO: propaga debug (imagens base64) para o frontend
+# ✨ NOVO: aceita e repassa `modo` ('foto' | 'scanner' | 'auto')
 # ============================================================
 
 import logging
@@ -93,10 +94,16 @@ def _pos_processar_resultado(resultado):
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                      tipo_questoes=4, disciplina='', bncc=None,
-                                     mapa_template=None, prova_id=None, aluno_id=None):
+                                     mapa_template=None, prova_id=None, aluno_id=None,
+                                     modo='auto'):
     """
     Correção usando EvalBee v4 (template + fill ratio) como método PRINCIPAL,
     com fallback para IA quando necessário.
+
+    modo: 'foto' | 'scanner' | 'auto'
+      - 'foto'    → adaptive threshold, sem calibração, TARGET_H=1800
+      - 'scanner' → Otsu + calibração Hough, TARGET_H=2400
+      - 'auto'    → detecta automaticamente (compatibilidade com chamadas antigas)
     """
     gabarito = padrao_gabarito['gabarito_oficial']
     if not gabarito or len(gabarito) == 0:
@@ -105,7 +112,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
     total_questoes = len(gabarito)
 
     logging.info("=" * 60)
-    logging.info(f"📌 CORREÇÃO EVALBEE v4 - {total_questoes}Q "
+    logging.info(f"📌 CORREÇÃO EVALBEE v4 [MODO={modo.upper()}] - {total_questoes}Q "
                  f"({','.join(padrao_gabarito['alternativas'])})")
     logging.info("=" * 60)
 
@@ -125,7 +132,8 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         resultado_template = corrigir_com_template_mapping(
             imagem_base64, padrao_gabarito, aluno_nome, serie,
             tipo_questoes, disciplina, bncc, mapa_template,
-            prova_id=prova_id, aluno_id=aluno_id
+            prova_id=prova_id, aluno_id=aluno_id,
+            modo=modo  # ✨ repassa o modo ('foto' | 'scanner' | 'auto')
         )
 
         if not resultado_template:
@@ -213,6 +221,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         if resultado_template.get('debug_depois'):
             resultado['debug_depois'] = resultado_template['debug_depois']
         resultado['tipo_entrada'] = resultado_template.get('tipo_entrada', 'desconhecido')
+        resultado['modo_usado'] = modo
 
         # Repassa também o método real usado (para UI mostrar "EvalBee" ou "EvalBee+Calibração")
         if resultado_template.get('metodo'):
