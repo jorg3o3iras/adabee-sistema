@@ -486,7 +486,16 @@ function atualizarInterfaceCorrecao(dados) {
         metodoBadge.className = `badge ${classe}`;
     }
 
-    const confiancaMedia = dados.confiancas.reduce((a, b) => a + b, 0) / dados.confiancas.length || 0;
+    // ⚠️ Confiança média APENAS das questões RESPONDIDAS
+    // (em branco é 100% de certeza que está em branco — não distorce a média)
+    const paresRespondidos = dados.resultadoQuestoes
+        .map((q, i) => ({ q, i }))
+        .filter(({ q }) => q.respondida);
+    const confiancasRespondidas = paresRespondidos.map(({ i }) => dados.confiancas[i] || 0);
+    const confiancaMedia = confiancasRespondidas.length > 0
+        ? confiancasRespondidas.reduce((a, b) => a + b, 0) / confiancasRespondidas.length
+        : 100;
+
     const badgeConfianca = document.getElementById('confianca-badge');
     if (badgeConfianca) {
         badgeConfianca.textContent = `${confiancaMedia.toFixed(1)}% conf.`;
@@ -495,8 +504,15 @@ function atualizarInterfaceCorrecao(dados) {
 
     const resumoConfianca = document.getElementById('ia-resumo-confianca');
     if (resumoConfianca) {
-        const totalDuvidosas = dados.questoesSuspeitas.length || dados.confiancas.filter(c => c < 70).length;
+        // ⚠️ Só conta como "duvidosa" se for RESPONDIDA, não-múltipla e conf < 70
+        const respondidasBaixaConf = dados.resultadoQuestoes.filter((q, i) => {
+            return q.respondida && !q.multipla && (dados.confiancas[i] || 0) < 70;
+        }).length;
+
         const totalMultiplas = dados.resultadoQuestoes.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
+        const totalEmBranco = dados.resultadoQuestoes.filter(q => !q.respondida).length;
+        const totalRespondidas = dados.totalQuestoes - totalEmBranco;
+
         resumoConfianca.style.display = 'flex';
         let alertaRevisao = '';
         if (dados.requerRevisao) {
@@ -504,14 +520,30 @@ function atualizarInterfaceCorrecao(dados) {
         }
         let alertaMultipla = '';
         if (totalMultiplas > 0) {
-            alertaMultipla = `<span style="color:var(--orange);font-weight:700;">⚠️ ${totalMultiplas} questão(ões) com MÚLTIPLA MARCAÇÃO</span>`;
+            alertaMultipla = `<span style="color:var(--orange);font-weight:700;">⚠️ ${totalMultiplas} MÚLTIPLA MARCAÇÃO</span>`;
         }
+        let alertaBranco = '';
+        if (totalEmBranco > 0) {
+            alertaBranco = `<span style="color:var(--text2);font-weight:700;">— ${totalEmBranco} EM BRANCO (contam como erradas)</span>`;
+        }
+
+        // Só exibe "todas alta confiança" se NÃO houver múltiplas nem em branco
+        let statusConfianca = '';
+        if (respondidasBaixaConf > 0) {
+            statusConfianca = `<span>⚠️ ${respondidasBaixaConf} questões com baixa confiança (<70%)</span>`;
+        } else if (totalMultiplas === 0 && totalEmBranco === 0) {
+            statusConfianca = `<span>✅ Todas as questões têm alta confiança!</span>`;
+        } else {
+            statusConfianca = `<span>✅ Nenhuma questão respondida com baixa confiança</span>`;
+        }
+
         resumoConfianca.innerHTML = `
             <span>📊 Confiança média: <strong style="color:${confiancaMedia >= 70 ? 'var(--green)' : confiancaMedia >= 50 ? 'var(--orange)' : 'var(--red)'};">${confiancaMedia.toFixed(1)}%</strong></span>
-            ${totalDuvidosas > 0 ? `<span>⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)</span>` : '<span>✅ Todas as questões têm alta confiança!</span>'}
+            ${statusConfianca}
             <span>🎯 Acertos: <strong style="color:var(--green);">${dados.acertos}</strong> / ${dados.totalQuestoes}</span>
             <span>📌 Método: <strong>${metodo}</strong></span>
             ${alertaMultipla}
+            ${alertaBranco}
             ${alertaRevisao}
         `;
     }
@@ -520,16 +552,22 @@ function atualizarInterfaceCorrecao(dados) {
     if (rd) {
         rd.innerHTML = dados.resultadoQuestoes.map(q => {
             const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+            const isBranco = !q.respondida;
             const cor = q.acertou ? 'rgba(16,185,129,.2)'
                       : isMultipla ? 'rgba(245,158,11,.2)'
+                      : isBranco ? 'rgba(100,116,139,.15)'
                       : 'rgba(239,68,68,.2)';
             const corTexto = q.acertou ? 'var(--green)'
                             : isMultipla ? 'var(--orange)'
+                            : isBranco ? 'var(--text3)'
                             : 'var(--red)';
-            const icone = q.acertou ? '✅' : isMultipla ? '⚠️' : (q.respondida ? '❌' : '—');
-            const respostaExibida = isMultipla ? 'MÚLT' : (q.resposta || '—');
+            const icone = q.acertou ? '✅' : isMultipla ? '⚠️' : (isBranco ? '—' : '❌');
+            const respostaExibida = isMultipla ? 'MÚLT' : (isBranco ? 'BRANCO' : (q.resposta || '—'));
             const confColor = q.confianca < 70 ? 'var(--orange)' : 'var(--text2)';
-            const borderColor = q.acertou ? 'rgba(16,185,129,.4)' : isMultipla ? 'rgba(245,158,11,.4)' : 'rgba(239,68,68,.4)';
+            const borderColor = q.acertou ? 'rgba(16,185,129,.4)'
+                              : isMultipla ? 'rgba(245,158,11,.4)'
+                              : isBranco ? 'rgba(100,116,139,.3)'
+                              : 'rgba(239,68,68,.4)';
             return `<span style="background:${cor};border:1px solid ${borderColor};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${escapeHtml(respostaExibida)} ${icone}<span style="font-size:8px;color:${confColor};">${q.confianca}%</span></span>`;
         }).join('');
     }
@@ -578,19 +616,17 @@ function atualizarInterfaceCorrecao(dados) {
         dados.resultadoQuestoes.forEach((q) => {
             const acertou = q.acertou;
             const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
-            const resposta = isMultipla ? '⚠️' : (q.resposta || '—');
+            const isBranco = !q.respondida;
+            const resposta = isMultipla ? '⚠️' : (isBranco ? '—' : (q.resposta || '—'));
             const confianca = q.confianca || 100;
-            let corBg, corTexto, icone;
-            if (acertou) { corBg = 'rgba(16,185,129,0.10)'; corTexto = 'var(--green)'; icone = '✅'; }
-            else if (isMultipla) { corBg = 'rgba(245,158,11,0.12)'; corTexto = 'var(--orange)'; icone = '⚠️'; }
-            else if (q.respondida) { corBg = 'rgba(239,68,68,0.10)'; corTexto = 'var(--red)'; icone = '❌'; }
-            else { corBg = 'rgba(100,116,139,0.05)'; corTexto = 'var(--text3)'; icone = '—'; }
+            let corBg, corTexto, icone, borderC;
+            if (acertou) { corBg = 'rgba(16,185,129,0.10)'; corTexto = 'var(--green)'; icone = '✅'; borderC = 'rgba(16,185,129,0.20)'; }
+            else if (isMultipla) { corBg = 'rgba(245,158,11,0.12)'; corTexto = 'var(--orange)'; icone = '⚠️'; borderC = 'rgba(245,158,11,0.3)'; }
+            else if (isBranco) { corBg = 'rgba(100,116,139,0.06)'; corTexto = 'var(--text3)'; icone = '—'; borderC = 'rgba(100,116,139,0.15)'; }
+            else { corBg = 'rgba(239,68,68,0.10)'; corTexto = 'var(--red)'; icone = '❌'; borderC = 'rgba(239,68,68,0.20)'; }
             const confColor = confianca < 70 ? 'var(--orange)' : 'var(--text3)';
-            const borderColor = acertou ? 'rgba(16,185,129,0.20)'
-                              : isMultipla ? 'rgba(245,158,11,0.3)'
-                              : (q.respondida ? 'rgba(239,68,68,0.20)' : 'rgba(100,116,139,0.10)');
             const div = document.createElement('div');
-            div.style.cssText = `background: ${corBg}; border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid ${borderColor}; display: flex; flex-direction: column; align-items: center; gap: 1px;`;
+            div.style.cssText = `background: ${corBg}; border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid ${borderC}; display: flex; flex-direction: column; align-items: center; gap: 1px;`;
             div.innerHTML = `
                 <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
                 <div style="font-size:16px;font-weight:900;color:${corTexto};line-height:1.1;">${escapeHtml(resposta)}</div>
@@ -602,11 +638,11 @@ function atualizarInterfaceCorrecao(dados) {
         grid.appendChild(gridAluno);
 
         const divComparacao = document.createElement('div');
-        divComparacao.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border);`;
+        divComparacao.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border);`;
         const acertos = dados.acertos;
         const multiplas = dados.resultadoQuestoes.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
-        const naoRespondidas = dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length;
-        const erros = dados.totalQuestoes - acertos - naoRespondidas - multiplas;
+        const brancos = dados.resultadoQuestoes.filter(q => !q.respondida).length;
+        const errosMarcados = dados.totalQuestoes - acertos - brancos - multiplas;
         const porcentagem = dados.porcentagem;
         divComparacao.innerHTML = `
             <div style="text-align:center;padding:4px;background:rgba(16,185,129,0.06);border-radius:4px;border:1px solid rgba(16,185,129,0.10);">
@@ -614,20 +650,24 @@ function atualizarInterfaceCorrecao(dados) {
                 <div style="font-size:8px;color:var(--text2);font-weight:600;">✅ ACERTOS</div>
             </div>
             <div style="text-align:center;padding:4px;background:rgba(239,68,68,0.06);border-radius:4px;border:1px solid rgba(239,68,68,0.10);">
-                <div style="font-size:18px;font-weight:900;color:var(--red);">${erros}</div>
+                <div style="font-size:18px;font-weight:900;color:var(--red);">${errosMarcados}</div>
                 <div style="font-size:8px;color:var(--text2);font-weight:600;">❌ ERROS</div>
             </div>
             <div style="text-align:center;padding:4px;background:rgba(245,158,11,0.08);border-radius:4px;border:1px solid rgba(245,158,11,0.15);">
                 <div style="font-size:18px;font-weight:900;color:var(--orange);">${multiplas}</div>
                 <div style="font-size:8px;color:var(--text2);font-weight:600;">⚠️ MÚLTIPLAS</div>
             </div>
-            <div style="text-align:center;padding:4px;background:rgba(100,116,139,0.06);border-radius:4px;border:1px solid rgba(100,116,139,0.10);">
-                <div style="font-size:18px;font-weight:900;color:var(--text3);">${naoRespondidas}</div>
-                <div style="font-size:8px;color:var(--text2);font-weight:600;">— NÃO RESP.</div>
+            <div style="text-align:center;padding:4px;background:rgba(100,116,139,0.08);border-radius:4px;border:1px solid rgba(100,116,139,0.15);">
+                <div style="font-size:18px;font-weight:900;color:var(--text3);">${brancos}</div>
+                <div style="font-size:8px;color:var(--text2);font-weight:600;">— EM BRANCO</div>
             </div>
             <div style="text-align:center;padding:4px;background:rgba(59,130,246,0.06);border-radius:4px;border:1px solid rgba(59,130,246,0.10);">
                 <div style="font-size:18px;font-weight:900;color:var(--blue);">${porcentagem}%</div>
                 <div style="font-size:8px;color:var(--text2);font-weight:600;">📊 APROV.</div>
+            </div>
+            <div style="text-align:center;padding:4px;background:rgba(139,92,246,0.06);border-radius:4px;border:1px solid rgba(139,92,246,0.10);">
+                <div style="font-size:14px;font-weight:900;color:var(--purple);line-height:1.3;">${dados.nota.toFixed(1)}</div>
+                <div style="font-size:8px;color:var(--text2);font-weight:600;">⭐ NOTA</div>
             </div>
         `;
         grid.appendChild(divComparacao);
