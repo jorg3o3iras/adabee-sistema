@@ -1859,31 +1859,105 @@ function mostrarResultadoAutomatico(dados) {
     const cor = conceitoCores[conceito] || '#94a3b8';
     const conceitoLabel = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' }[conceito] || conceito;
 
+    // ═══════════════════════════════════════════════════════════════
+    // Contadores por estado: multiplas, brancos, erros marcados
+    // ═══════════════════════════════════════════════════════════════
+    const questoesStatus = Array.isArray(dados.questoes_status) ? dados.questoes_status : [];
+
+    function isQuestaoBranco(q) {
+        const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+        if (isMultipla) return false;
+        if (q.respondida === false) return true;
+        const resp = (q.resposta || '').toString().trim();
+        return !resp || resp === '—' || resp === '-';
+    }
+
+    const totalMultiplas = questoesStatus.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
+    const totalBrancos = questoesStatus.filter(isQuestaoBranco).length;
+    const totalErrosMarcados = Math.max(0, total - acertos - totalMultiplas - totalBrancos);
+
     let questoesHtml = '';
-    let totalMultiplas = 0;
-    if (dados.questoes_status && Array.isArray(dados.questoes_status)) {
+    if (questoesStatus.length > 0) {
         questoesHtml = '<div style="display:grid; grid-template-columns:repeat(10,1fr); gap:4px; margin-top:12px;">';
-        dados.questoes_status.forEach(q => {
+        questoesStatus.forEach(q => {
             const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
-            if (isMultipla) totalMultiplas++;
+            const isBranco = isQuestaoBranco(q);
             const acertou = q.acertou;
-            const resp = isMultipla ? '⚠️' : (q.resposta || '—');
+            const resp = isMultipla ? '⚠️' : (isBranco ? '—' : (q.resposta || '—'));
             let corQ, corTexto, icone;
             if (acertou) { corQ = 'rgba(16,185,129,0.15)'; corTexto = 'var(--green)'; icone = '✅'; }
             else if (isMultipla) { corQ = 'rgba(245,158,11,0.15)'; corTexto = 'var(--orange)'; icone = '⚠️'; }
-            else if (q.resposta && q.resposta !== '—') { corQ = 'rgba(239,68,68,0.15)'; corTexto = 'var(--red)'; icone = '❌'; }
-            else { corQ = 'rgba(100,116,139,0.1)'; corTexto = 'var(--text3)'; icone = '—'; }
+            else if (isBranco) { corQ = 'rgba(100,116,139,0.1)'; corTexto = 'var(--text3)'; icone = '—'; }
+            else { corQ = 'rgba(239,68,68,0.15)'; corTexto = 'var(--red)'; icone = '❌'; }
             questoesHtml += `<div style="background:${corQ}; border-radius:6px; padding:5px 2px; text-align:center;"><div style="font-size:8px; font-weight:700; color:var(--text3);">Q${q.numero}</div><div style="font-size:13px; font-weight:800; color:${corTexto};">${escapeHtml(resp)}</div><div style="font-size:8px;">${icone}</div></div>`;
         });
         questoesHtml += '</div>';
     }
 
-    let alertaHtml = '';
-    if (dados.requer_revisao_manual) {
-        alertaHtml = '<div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.12); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">⚠️ <strong>Revisão manual recomendada</strong> — algumas questões tiveram baixa confiança.</div>';
+    // ═══════════════════════════════════════════════════════════════
+    // PAINEL DETALHADO — os 4 estados com explicação
+    // ═══════════════════════════════════════════════════════════════
+    const linhasResumo = [];
+
+    linhasResumo.push(`
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(16,185,129,0.08); border-radius:8px; border-left:3px solid var(--green);">
+            <span style="font-size:18px; flex-shrink:0;">✅</span>
+            <span style="font-size:13px; color:var(--text);">
+                <strong style="color:var(--green);">${acertos} ${acertos === 1 ? 'questão marcada' : 'questões marcadas'} CORRETAMENTE</strong>
+                <span style="color:var(--text3); font-size:11px;"> — contam como acerto</span>
+            </span>
+        </div>
+    `);
+
+    if (totalErrosMarcados > 0) {
+        linhasResumo.push(`
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(239,68,68,0.06); border-radius:8px; border-left:3px solid var(--red);">
+                <span style="font-size:18px; flex-shrink:0;">❌</span>
+                <span style="font-size:13px; color:var(--text);">
+                    <strong style="color:var(--red);">${totalErrosMarcados} ${totalErrosMarcados === 1 ? 'questão marcada' : 'questões marcadas'} INCORRETAMENTE</strong>
+                    <span style="color:var(--text3); font-size:11px;"> — contam como erro</span>
+                </span>
+            </div>
+        `);
     }
+
     if (totalMultiplas > 0) {
-        alertaHtml += `<div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.15); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">⚠️ <strong>${totalMultiplas} questão(ões) com MÚLTIPLA MARCAÇÃO</strong> — contabilizadas como erradas.</div>`;
+        linhasResumo.push(`
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(245,158,11,0.08); border-radius:8px; border-left:3px solid var(--orange);">
+                <span style="font-size:18px; flex-shrink:0;">⚠️</span>
+                <span style="font-size:13px; color:var(--text);">
+                    <strong style="color:var(--orange);">${totalMultiplas} ${totalMultiplas === 1 ? 'questão com MÚLTIPLA MARCAÇÃO' : 'questões com MÚLTIPLA MARCAÇÃO'}</strong>
+                    <span style="color:var(--text3); font-size:11px;"> — mais de uma bolha preenchida, contam como erro</span>
+                </span>
+            </div>
+        `);
+    }
+
+    if (totalBrancos > 0) {
+        linhasResumo.push(`
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(100,116,139,0.08); border-radius:8px; border-left:3px solid var(--text3);">
+                <span style="font-size:18px; flex-shrink:0;">—</span>
+                <span style="font-size:13px; color:var(--text);">
+                    <strong style="color:var(--text2);">${totalBrancos} ${totalBrancos === 1 ? 'questão EM BRANCO' : 'questões EM BRANCO'}</strong>
+                    <span style="color:var(--text3); font-size:11px;"> — não respondidas, contam como erro</span>
+                </span>
+            </div>
+        `);
+    }
+
+    let painelResumo = `
+        <div style="margin-top:14px; padding:12px; background:var(--surface2); border-radius:10px; border:1px solid var(--border);">
+            <div style="font-size:11px; font-weight:800; color:var(--text); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.6px;">📋 Detalhes da correção</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                ${linhasResumo.join('')}
+            </div>
+        </div>
+    `;
+
+    let alertaHtml = painelResumo;
+
+    if (dados.requer_revisao_manual) {
+        alertaHtml += '<div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.12); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">⚠️ <strong>Revisão manual recomendada</strong> — algumas questões respondidas tiveram baixa confiança de leitura.</div>';
     }
 
     conteudoDiv.innerHTML = `
@@ -1900,7 +1974,7 @@ function mostrarResultadoAutomatico(dados) {
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
                 <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--green);">${acertos}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">✅ ACERTOS</div></div>
-                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--red);">${total - acertos}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">❌ ERROS</div></div>
+                <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--red);">${total - acertos}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">❌ NÃO ACERTOS</div></div>
                 <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:var(--blue);">${porcentagem}%</div><div style="font-size:10px; color:var(--text3); font-weight:700;">📊 APROVEIT.</div></div>
                 <div style="background:var(--surface2); border-radius:8px; padding:10px; text-align:center;"><div style="font-size:26px; font-weight:900; color:${cor};">${nota.toFixed(1)}</div><div style="font-size:10px; color:var(--text3); font-weight:700;">⭐ NOTA</div></div>
             </div>
