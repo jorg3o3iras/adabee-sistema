@@ -1109,10 +1109,11 @@
               Não precisa selecionar nada — só tirar a foto.
             </p>
 
+            <!-- ✅ CORRIGIDO PARA CELULAR: auto-fit substitui 1fr 1fr -->
             <div
               style="
                 display: grid;
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
                 gap: 14px;
                 margin-bottom: 16px;
               "
@@ -1182,10 +1183,11 @@
                 alt="Preview"
               />
               <div style="margin-top: 12px">
+                <!-- ✅ CORRIGIDO PARA CELULAR: width 100% max 320px -->
                 <button
                   class="btn btn-green btn-lg"
                   onclick="corrigirAutomatico()"
-                  style="padding: 14px 32px; font-size: 15px; font-weight: 700"
+                  style="padding: 14px 16px; font-size: 15px; font-weight: 700; width: 100%; max-width: 320px;"
                 >
                   🚀 CORRIGIR AUTOMATICAMENTE
                 </button>
@@ -1452,7 +1454,7 @@
                 "
               ></div>
 
-              <!-- ✅ NOVO: painel auto-explicativo (preenchido via JS em atualizarInterfaceCorrecao) -->
+              <!-- ✅ NOVO: painel auto-explicativo -->
               <div id="ia-detalhes"></div>
 
               <div class="g2" style="margin-bottom: 14px">
@@ -1560,46 +1562,23 @@
                     id="ia-status"
                     >AGUARDANDO</span
                   >
-                  <div
-                    style="
-                      display: flex;
-                      gap: 8px;
-                      margin-top: 12px;
-                      flex-wrap: wrap;
-                      justify-content: center;
-                    "
-                  >
-                    <!-- ✅ NOVO: botão "Ver cartão original" -->
-                    <button
-                      class="btn btn-outline btn-sm no-print"
-                      onclick="verCartaoOriginal()"
-                      style="
-                        background: rgba(139, 92, 246, 0.1);
-                        border-color: rgba(139, 92, 246, 0.4);
-                        color: #a78bfa;
-                      "
-                    >
-                      🖼️ Ver cartão original
+                  
+                  <!-- ✅ Botões com largura responsiva -->
+                  <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; width: 100%;">
+                    <button class="btn btn-outline btn-sm no-print" onclick="verCartaoOriginal()" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.4); color: #a78bfa; flex: 1 1 auto; min-width: 140px;">
+                        🖼️ Ver cartão original
                     </button>
-                    <button
-                      class="btn btn-orange btn-sm no-print"
-                      onclick="abrirCorrecaoManual()"
-                    >
-                      ✏️ Correção Manual
+                    <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManual()" style="flex: 1 1 auto; min-width: 140px;">
+                        ✏️ Correção Manual
                     </button>
-                    <button
-                      class="btn btn-green btn-sm no-print"
-                      onclick="salvarCorrecao()"
-                    >
-                      💾 Salvar
+                    <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecao()" style="flex: 1 1 auto; min-width: 140px;">
+                        💾 Salvar
                     </button>
-                    <button
-                      class="btn btn-primary btn-sm no-print"
-                      onclick="go('resultados')"
-                    >
-                      📊 Resultados
+                    <button class="btn btn-primary btn-sm no-print" onclick="go('resultados')" style="flex: 1 1 auto; min-width: 140px;">
+                        📊 Resultados
                     </button>
                   </div>
+
                 </div>
               </div>
               <div
@@ -4726,14 +4705,18 @@
           justify-content: center;
         "
       >
+        <!-- ✅ CORRIGIDO PARA CELULAR: flex-wrap e justify-content flex-end -->
         <div
           style="
             position: absolute;
             top: 16px;
             right: 16px;
+            left: 16px;
             display: flex;
             gap: 8px;
             z-index: 10001;
+            flex-wrap: wrap;
+            justify-content: flex-end;
           "
         >
           <button
@@ -4811,6 +4794,7 @@
             background: rgba(0, 0, 0, 0.55);
             padding: 6px 14px;
             border-radius: 20px;
+            white-space: nowrap;
           "
         >
           💡 Compare o cartão com o resultado. Pressione <strong>Esc</strong> para fechar.
