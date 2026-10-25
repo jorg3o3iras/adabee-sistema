@@ -2,6 +2,7 @@
 // JS/CORRECAO.JS — Câmera, IA, correção manual, correção auto QR
 // Com apiFetch (header X-Usuario-Username)
 // ⚠️ CORRIGIDO: preserva sentinel 'MULTIPLA' (dupla marcação = errada)
+// ✨ NOVO: painel detalhado (#ia-detalhes) + modal "Ver cartão original"
 // ============================================================
 
 let correcaoManualData = {
@@ -232,6 +233,9 @@ function processarArq(input) {
 // CORREÇÃO COM IA
 // ═══════════════════════════════════════════════════════════════════
 async function processarComIA(imagemBase64) {
+    // ✨ NOVO: guarda a imagem para o botão "Ver cartão original"
+    window._ultimaImagemCorrigida = imagemBase64;
+
     const escolaId = document.getElementById('corrigir-escola')?.value;
     const turmaId = document.getElementById('corrigir-turma')?.value;
     const provaId = document.getElementById('corrigir-prova')?.value;
@@ -546,6 +550,38 @@ function atualizarInterfaceCorrecao(dados) {
             ${alertaBranco}
             ${alertaRevisao}
         `;
+    }
+
+    // ✨ NOVO: painel detalhado dos 4 estados (só aparece na tela IA)
+    const containerDetalhes = document.getElementById('ia-detalhes');
+    if (containerDetalhes) {
+        const questoesList = dados.resultadoQuestoes || [];
+
+        function isBrancoIA(q) {
+            const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+            if (isMultipla) return false;
+            if (q.respondida === false) return true;
+            const r = (q.resposta || '').toString().trim();
+            return !r || r === '—' || r === '-';
+        }
+
+        const totalMultiplas = questoesList.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
+        const totalBrancos = questoesList.filter(isBrancoIA).length;
+        const totalErros = Math.max(0, dados.totalQuestoes - dados.acertos - totalMultiplas - totalBrancos);
+
+        const linhas = [];
+        linhas.push(`<div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(16,185,129,0.08); border-radius:8px; border-left:3px solid var(--green);"><span style="font-size:18px; flex-shrink:0;">✅</span><span style="font-size:13px; color:var(--text);"><strong style="color:var(--green);">${dados.acertos} ${dados.acertos === 1 ? 'questão marcada' : 'questões marcadas'} CORRETAMENTE</strong><span style="color:var(--text3); font-size:11px;"> — contam como acerto</span></span></div>`);
+        if (totalErros > 0) {
+            linhas.push(`<div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(239,68,68,0.06); border-radius:8px; border-left:3px solid var(--red);"><span style="font-size:18px; flex-shrink:0;">❌</span><span style="font-size:13px; color:var(--text);"><strong style="color:var(--red);">${totalErros} ${totalErros === 1 ? 'questão marcada' : 'questões marcadas'} INCORRETAMENTE</strong><span style="color:var(--text3); font-size:11px;"> — contam como erro</span></span></div>`);
+        }
+        if (totalMultiplas > 0) {
+            linhas.push(`<div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(245,158,11,0.08); border-radius:8px; border-left:3px solid var(--orange);"><span style="font-size:18px; flex-shrink:0;">⚠️</span><span style="font-size:13px; color:var(--text);"><strong style="color:var(--orange);">${totalMultiplas} ${totalMultiplas === 1 ? 'questão com MÚLTIPLA MARCAÇÃO' : 'questões com MÚLTIPLA MARCAÇÃO'}</strong><span style="color:var(--text3); font-size:11px;"> — mais de uma bolha preenchida, contam como erro</span></span></div>`);
+        }
+        if (totalBrancos > 0) {
+            linhas.push(`<div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(100,116,139,0.08); border-radius:8px; border-left:3px solid var(--text3);"><span style="font-size:18px; flex-shrink:0;">—</span><span style="font-size:13px; color:var(--text);"><strong style="color:var(--text2);">${totalBrancos} ${totalBrancos === 1 ? 'questão EM BRANCO' : 'questões EM BRANCO'}</strong><span style="color:var(--text3); font-size:11px;"> — não respondidas, contam como erro</span></span></div>`);
+        }
+
+        containerDetalhes.innerHTML = `<div style="margin-top:14px; padding:12px; background:var(--surface2); border-radius:10px; border:1px solid var(--border);"><div style="font-size:11px; font-weight:800; color:var(--text); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.6px;">📋 Detalhes da correção</div><div style="display:flex; flex-direction:column; gap:6px;">${linhas.join('')}</div></div>`;
     }
 
     const rd = document.getElementById('ia-resp');
@@ -1766,6 +1802,10 @@ function processarArqAutomatico(input) {
 async function corrigirAutomatico() {
     const imagem = window._autoImagem;
     if (!imagem) { showToast('❌ Nenhuma imagem carregada', 'error'); return; }
+
+    // ✨ NOVO: guarda a imagem para o botão "Ver cartão original" (QR auto)
+    window._ultimaImagemCorrigida = imagem;
+
     const resultadoDiv = document.getElementById('auto-resultado');
     const conteudoDiv = document.getElementById('auto-resultado-conteudo');
     if (resultadoDiv) resultadoDiv.style.display = 'block';
@@ -1982,6 +2022,7 @@ function mostrarResultadoAutomatico(dados) {
             ${questoesHtml}
             ${alertaHtml}
             <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center;">
+                <button class="btn btn-outline btn-sm no-print" onclick="verCartaoOriginal()" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.4); color:#a78bfa;">🖼️ Ver cartão original</button>
                 <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()">✏️ Correção Manual</button>
                 <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()">💾 Salvar</button>
                 <button class="btn btn-green btn-sm" onclick="go('resultados')">📊 Ver em Resultados</button>
@@ -2027,4 +2068,88 @@ async function salvarCorrecaoAuto() {
     await salvarCorrecao();
 }
 
-console.log('✅ js/correcao.js carregado (com suporte a MULTIPLA)');
+// ═══════════════════════════════════════════════════════════════════
+// ✨ NOVO: MODAL "VER CARTÃO ORIGINAL"
+// Abre a foto do cartão em tela cheia para o professor comparar
+// ═══════════════════════════════════════════════════════════════════
+
+function verCartaoOriginal() {
+    const imagem = window._ultimaImagemCorrigida;
+    if (!imagem) {
+        showToast('⚠️ Foto do cartão não disponível. Faça uma nova correção para visualizar.', 'warning');
+        return;
+    }
+    const modal = document.getElementById('m-ver-cartao');
+    const img = document.getElementById('ver-cartao-img');
+    if (!modal || !img) {
+        showToast('❌ Modal não encontrado. Adicione <div id="m-ver-cartao"> ao index.html', 'error');
+        console.error('[verCartaoOriginal] Elemento #m-ver-cartao não existe no DOM');
+        return;
+    }
+    img.src = imagem;
+    modal.style.display = 'flex';
+    document.addEventListener('keydown', _fecharCartaoComEsc);
+}
+
+function _fecharCartaoComEsc(e) {
+    if (e.key === 'Escape') {
+        fecharCartaoOriginal();
+    }
+}
+
+function fecharCartaoOriginal() {
+    const modal = document.getElementById('m-ver-cartao');
+    const img = document.getElementById('ver-cartao-img');
+    if (modal) modal.style.display = 'none';
+    if (img) img.src = '';
+    document.removeEventListener('keydown', _fecharCartaoComEsc);
+}
+
+function abrirCartaoNovaAba() {
+    const imagem = window._ultimaImagemCorrigida;
+    if (!imagem) return;
+    const w = window.open('', '_blank');
+    if (w) {
+        w.document.write(`<!DOCTYPE html><html><head><title>Cartão resposta — CorrigePro</title>
+        <style>body{margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;font-family:system-ui,sans-serif;}
+        img{max-width:100%;max-height:95vh;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,0.6);}
+        .bar{position:fixed;top:12px;right:12px;display:flex;gap:8px;}
+        .bar button{background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+        .bar button:hover{background:rgba(255,255,255,0.25);}
+        </style></head><body>
+        <div class="bar"><button onclick="window.print()">🖨️ Imprimir</button></div>
+        <img src="${imagem}" alt="Cartão original">
+        </body></html>`);
+        w.document.close();
+    } else {
+        showToast('⚠️ Bloqueador de pop-up impediu abrir a nova aba', 'warning');
+    }
+}
+
+function baixarCartaoOriginal() {
+    const imagem = window._ultimaImagemCorrigida;
+    if (!imagem) return;
+    const a = document.createElement('a');
+    a.href = imagem;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.download = `cartao_${timestamp}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✅ Download iniciado!', 'success');
+}
+
+// Fechar ao clicar fora da imagem (no fundo preto)
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('m-ver-cartao');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            // Só fecha se clicou no overlay (não na imagem nem nos botões)
+            if (e.target.id === 'm-ver-cartao') {
+                fecharCartaoOriginal();
+            }
+        });
+    }
+});
+
+console.log('✅ js/correcao.js carregado (com MULTIPLA + modal Ver Cartão Original)');
