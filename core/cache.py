@@ -1,5 +1,6 @@
 # ============================================================
 # CORE/CACHE.PY — Cache persistente de correções (PostgreSQL)
+# ⚠️ CORRIGIDO: CACHE_VERSION força invalidação de cache antigo
 # ============================================================
 
 import json
@@ -9,6 +10,11 @@ from psycopg2.extras import RealDictCursor
 
 from core.db import get_db_connection
 from config import CORRECOES_CACHE_TTL_HORAS
+
+
+# ⚠️ Incrementar SEMPRE que a lógica de correção mudar.
+# v2 = correção de MÚLTIPLA MARCAÇÃO (bug de dupla marcação = acerto)
+CACHE_VERSION = 2
 
 
 def init_cache_table():
@@ -36,13 +42,14 @@ def init_cache_table():
         conn.commit()
         cur.close()
         conn.close()
-        logging.info("✅ Tabela de cache de correções pronta")
+        logging.info(f"✅ Tabela de cache de correções pronta (v{CACHE_VERSION})")
     except Exception as e:
         logging.warning(f"⚠️ Erro ao criar tabela de cache: {e}")
 
 
 def get_cache_key(imagem_hash, prova_id, aluno_id):
-    return f"{imagem_hash}_{prova_id}_{aluno_id}"
+    # Prefixo vN_ invalida automaticamente caches de versões anteriores
+    return f"v{CACHE_VERSION}_{imagem_hash}_{prova_id}_{aluno_id}"
 
 
 def get_cache_correcao(chave):
