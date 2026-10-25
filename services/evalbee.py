@@ -304,8 +304,10 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
     Correção estilo EvalBee: para cada bolha esperada do template,
     mede a fração de pixels pretos dentro do círculo correspondente.
 
+    ⚠️ CORRIGIDO: detecta MÚLTIPLA MARCAÇÃO (2+ bolhas preenchidas).
     Retorna UMA letra por questão OU o sentinel 'MULTIPLA' quando 2+ bolhas
-    estão realmente marcadas (detecta dupla marcação = questão errada).
+    estão realmente marcadas — 'MULTIPLA' nunca coincide com o gabarito,
+    então a questão é automaticamente contada como errada.
     """
     try:
         h, w = img_corrigida.shape[:2]
@@ -328,7 +330,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
 
         num_alts = len(alternativas)
         # Limiares ajustados conforme qtd de alternativas
-        LIMIAR_MIN     = 0.30 if num_alts == 4 else 0.28   # bolha "marcada"
+        LIMIAR_MIN      = 0.30 if num_alts == 4 else 0.28   # bolha "marcada"
         LIMIAR_CONFIRMA = 0.45 if num_alts == 4 else 0.40
         # 2ª bolha só conta como dupla marcação se for >= 60% da maior
         # (evita falso positivo por ruído/sombra do scanner)
