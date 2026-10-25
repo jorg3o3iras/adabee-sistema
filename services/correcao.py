@@ -4,6 +4,7 @@
 #    - MULTIPLA MARCAÇÃO = errada
 #    - EM BRANCO = errada (não é "suspeita")
 #    - requer_revisao_manual só conta questões RESPONDIDAS com baixa conf.
+# ✨ NOVO: propaga debug (imagens base64) para o frontend
 # ============================================================
 
 import logging
@@ -203,6 +204,20 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             disciplina, tipo_questoes, 'template_evalbee_v4',
             bncc=bncc, confiancas=confiancas
         )
+
+        # ═══════════════════════════════════════════════════════════
+        # ✨ NOVO: propaga campos de debug do template para o resultado
+        # ═══════════════════════════════════════════════════════════
+        if resultado_template.get('debug_antes'):
+            resultado['debug_antes'] = resultado_template['debug_antes']
+        if resultado_template.get('debug_depois'):
+            resultado['debug_depois'] = resultado_template['debug_depois']
+        resultado['tipo_entrada'] = resultado_template.get('tipo_entrada', 'desconhecido')
+
+        # Repassa também o método real usado (para UI mostrar "EvalBee" ou "EvalBee+Calibração")
+        if resultado_template.get('metodo'):
+            resultado['metodo_usado'] = resultado_template['metodo']
+
         return _pos_processar_resultado(resultado)
 
     except Exception as e:
