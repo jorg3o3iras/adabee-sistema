@@ -1,0 +1,1 @@
+# Pacote routes — blueprints por domínio
