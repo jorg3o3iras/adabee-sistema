@@ -1,6 +1,6 @@
 # ============================================================
 # CORE/CACHE.PY — Cache persistente de correções (PostgreSQL)
-# ⚠️ CORRIGIDO: CACHE_VERSION força invalidação de cache antigo
+# ⚠️ v3: cache versionado por MODO (foto / scanner / auto)
 # ============================================================
 
 import json
@@ -12,9 +12,9 @@ from core.db import get_db_connection
 from config import CORRECOES_CACHE_TTL_HORAS
 
 
-# ⚠️ Incrementar SEMPRE que a lógica de correção mudar.
-# v2 = correção de MÚLTIPLA MARCAÇÃO (bug de dupla marcação = acerto)
-CACHE_VERSION = 2
+# Incrementar SEMPRE que a lógica de correção mudar.
+# v3 = suporte a modo explícito (foto/scanner/auto) + calibração Hough
+CACHE_VERSION = 3
 
 
 def init_cache_table():
@@ -47,9 +47,13 @@ def init_cache_table():
         logging.warning(f"⚠️ Erro ao criar tabela de cache: {e}")
 
 
-def get_cache_key(imagem_hash, prova_id, aluno_id):
-    # Prefixo vN_ invalida automaticamente caches de versões anteriores
-    return f"v{CACHE_VERSION}_{imagem_hash}_{prova_id}_{aluno_id}"
+def get_cache_key(imagem_hash, prova_id, aluno_id, modo='auto'):
+    """
+    Cache key inclui o modo para evitar que uma correção feita em 'scanner'
+    seja reutilizada em 'foto' (e vice-versa).
+    """
+    modo_seguro = (modo or 'auto').lower().replace(' ', '_')
+    return f"v{CACHE_VERSION}_{modo_seguro}_{imagem_hash}_{prova_id}_{aluno_id}"
 
 
 def get_cache_correcao(chave):
