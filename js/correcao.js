@@ -711,6 +711,7 @@ function atualizarInterfaceCorrecao(dados) {
 }
 
 // ═══ SALVAR CORREÇÃO ═══
+// ═══ SALVAR CORREÇÃO (COM FLUXO CONTÍNUO) ═══
 async function salvarCorrecao() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
         showToast('❌ Nenhuma correção para salvar!', 'error'); return;
@@ -731,6 +732,7 @@ async function salvarCorrecao() {
         if (resp && resp !== 'MULTIPLA' && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
     const nota = Math.min(acertos * (correcaoManualData.valorPorQuestao || (10/total)), 10);
+    
     try {
         showToast('💾 Salvando correção...', 'info');
         const response = await apiFetch(`${API_URL}/api/corrigir_manual`, {
@@ -742,12 +744,48 @@ async function salvarCorrecao() {
             })
         });
         const data = await response.json();
+        
         if (data.sucesso) {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             limparCache();
+            
+            // Atualiza os painéis de fundo
             if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
             if (typeof carregarDashboard === 'function') carregarDashboard();
             if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
+
+            // 🚀 NOVO: FLUXO CONTÍNUO
+            // Aguarda 1.2 segundos para o professor ler o "Sucesso" e limpa a tela
+            setTimeout(() => {
+                // 1. Se estiver no fluxo de QR Code (Automático)
+                const autoResult = document.getElementById('auto-resultado');
+                if (autoResult && autoResult.style.display === 'block') {
+                    limparResultadoAutomatico(); // Limpa foto, preview e resultados
+                    
+                    // Abre o seletor de arquivo automaticamente para o próximo cartão
+                    setTimeout(() => {
+                        const inputArq = document.getElementById('inp-arq-auto');
+                        if (inputArq) {
+                            inputArq.value = ''; // Limpa o cache do input
+                            inputArq.click();    // Abre a janela de arquivos
+                        }
+                    }, 300);
+                }
+
+                // 2. Se estiver no fluxo de IA Normal (Selecionando aluno)
+                const iaResult = document.getElementById('ia-result');
+                if (iaResult && iaResult.style.display === 'block') {
+                    iaResult.style.display = 'none';
+                    
+                    // Limpa o aluno selecionado para o professor escolher o próximo
+                    const selectAluno = document.getElementById('corrigir-aluno');
+                    if (selectAluno) selectAluno.value = '';
+                    
+                    // Opcional: Scroll para o topo para ver o botão de câmera
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 1200);
+
         } else {
             showToast('❌ Erro ao salvar: ' + (data.erro || 'Erro desconhecido'), 'error');
         }
