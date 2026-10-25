@@ -4,6 +4,8 @@
 # ✨ NOVO: calibração automática por HoughCircles
 # ✨ NOVO: debug visual via base64 (funciona no Render)
 # 🔧 AJUSTE: limiar foto 0.30→0.22 (imagens comprimidas com ratios baixos)
+# 🔧 FIX: parâmetros proporcionais ao tamanho da imagem (funciona em qualquer DPI:
+#         96, 200, 300, 400, 600 — sem normalizar a imagem)
 # ============================================================
 
 import cv2
@@ -21,6 +23,25 @@ from psycopg2.extras import RealDictCursor
 from collections import defaultdict
 
 from core.db import get_db_connection
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 🔧 FIX 1: Referência para cálculo de escala proporcional
+# Cartão A4 a 96 DPI = 1448×2048. Todos os parâmetros do pipeline
+# são calibrados nessa referência e escalados para qualquer outro DPI.
+# ═══════════════════════════════════════════════════════════════════
+REFERENCIA_W = 1448
+REFERENCIA_H = 2048
+
+
+def calcular_escala(w, h):
+    """
+    Calcula o fator de escala em relação a um cartão A4 a 96 DPI.
+    Ex: 300 DPI (2480×3508) → escala ≈ 1.71
+        96 DPI (1448×2048) → escala = 1.0
+        200 DPI (1654×2339) → escala ≈ 1.14
+    """
+    return min(w / REFERENCIA_W, h / REFERENCIA_H)
 
 
 def detectar_tipo_entrada(gray):
@@ -52,12 +73,21 @@ def detectar_tipo_entrada(gray):
 def detectar_marcadores_fiduciais_v4(gray):
     try:
         h, w = gray.shape
+
+        # 🔧 FIX 2: blockSize proporcional ao tamanho da imagem
+        escala = calcular_escala(w, h)
+        block_size = max(11, int(41 * escala))
+        if block_size % 2 == 0:
+            block_size += 1
+
+        logging.info(f"🔍 Fiducial: imagem {w}x{h}, escala={escala:.2f}, blockSize={block_size}")
+
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         binaria = cv2.adaptiveThreshold(
             blurred, 255,
             cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV,
-            41, 10
+            block_size, 10
         )
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
         binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
@@ -317,16 +347,21 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
             cy = int(b['y'] * h)
             cv2.circle(debug_img, (cx, cy), 6, (0, 255, 255), 1)
 
+        # 🔧 FIX 3: HoughCircles com parâmetros proporcionais
+        escala = calcular_escala(w, h)
+        min_r = int(10 * escala)
+        max_r = int(25 * escala)
+        min_dist = int(18 * escala)
+        param2 = int(28 * max(1.0, escala))
+
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
         gray_blur = cv2.GaussianBlur(gray, (5, 5), 1)
-        min_r = int(min(w, h) * 0.010)
-        max_r = int(min(w, h) * 0.025)
 
         circulos = cv2.HoughCircles(
             gray_blur, cv2.HOUGH_GRADIENT,
             dp=1,
-            minDist=int(min(w, h) * 0.018),
-            param1=80, param2=28,
+            minDist=min_dist,
+            param1=80, param2=param2,
             minRadius=min_r, maxRadius=max_r
         )
 
@@ -360,17 +395,24 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
 def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num_colunas):
     try:
         h, w = img_corrigida.shape[:2]
+
+        # 🔧 FIX 3: HoughCircles com parâmetros proporcionais
+        escala = calcular_escala(w, h)
+        min_r = int(10 * escala)
+        max_r = int(25 * escala)
+        min_dist = int(18 * escala)
+        param2 = int(28 * max(1.0, escala))
+
+        logging.info(f"🔧 Hough: escala={escala:.2f}, min_r={min_r}, max_r={max_r}, param2={param2}")
+
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
         gray_blur = cv2.GaussianBlur(gray, (5, 5), 1)
-
-        min_r = int(min(w, h) * 0.010)
-        max_r = int(min(w, h) * 0.025)
 
         circulos = cv2.HoughCircles(
             gray_blur, cv2.HOUGH_GRADIENT,
             dp=1,
-            minDist=int(min(w, h) * 0.018),
-            param1=80, param2=28,
+            minDist=min_dist,
+            param1=80, param2=param2,
             minRadius=min_r, maxRadius=max_r
         )
 
