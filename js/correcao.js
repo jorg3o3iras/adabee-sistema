@@ -3,6 +3,8 @@
 // Com apiFetch (header X-Usuario-Username)
 // ⚠️ CORRIGIDO: preserva sentinel 'MULTIPLA' (dupla marcação = errada)
 // ✨ NOVO: painel detalhado (#ia-detalhes) + modal "Ver cartão original"
+// 🚀 NOVO: fluxo contínuo ao salvar (limpa tela e abre seletor)
+// 📱 NOVO: botões responsivos para celular
 // ============================================================
 
 let correcaoManualData = {
@@ -233,7 +235,6 @@ function processarArq(input) {
 // CORREÇÃO COM IA
 // ═══════════════════════════════════════════════════════════════════
 async function processarComIA(imagemBase64) {
-    // ✨ NOVO: guarda a imagem para o botão "Ver cartão original"
     window._ultimaImagemCorrigida = imagemBase64;
 
     const escolaId = document.getElementById('corrigir-escola')?.value;
@@ -491,7 +492,6 @@ function atualizarInterfaceCorrecao(dados) {
     }
 
     // ⚠️ Confiança média APENAS das questões RESPONDIDAS
-    // (em branco é 100% de certeza que está em branco — não distorce a média)
     const paresRespondidos = dados.resultadoQuestoes
         .map((q, i) => ({ q, i }))
         .filter(({ q }) => q.respondida);
@@ -508,15 +508,13 @@ function atualizarInterfaceCorrecao(dados) {
 
     const resumoConfianca = document.getElementById('ia-resumo-confianca');
     if (resumoConfianca) {
-        // ⚠️ Só conta como "duvidosa" se for RESPONDIDA, não-múltipla e conf < 70
         const respondidasBaixaConf = dados.resultadoQuestoes.filter((q, i) => {
             return q.respondida && !q.multipla && (dados.confiancas[i] || 0) < 70;
         }).length;
 
         const totalMultiplas = dados.resultadoQuestoes.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
         const totalEmBranco = dados.resultadoQuestoes.filter(q => !q.respondida).length;
-        const totalRespondidas = dados.totalQuestoes - totalEmBranco;
-
+        
         resumoConfianca.style.display = 'flex';
         let alertaRevisao = '';
         if (dados.requerRevisao) {
@@ -531,7 +529,6 @@ function atualizarInterfaceCorrecao(dados) {
             alertaBranco = `<span style="color:var(--text2);font-weight:700;">— ${totalEmBranco} EM BRANCO (contam como erradas)</span>`;
         }
 
-        // Só exibe "todas alta confiança" se NÃO houver múltiplas nem em branco
         let statusConfianca = '';
         if (respondidasBaixaConf > 0) {
             statusConfianca = `<span>⚠️ ${respondidasBaixaConf} questões com baixa confiança (<70%)</span>`;
@@ -552,7 +549,6 @@ function atualizarInterfaceCorrecao(dados) {
         `;
     }
 
-    // ✨ NOVO: painel detalhado dos 4 estados (só aparece na tela IA)
     const containerDetalhes = document.getElementById('ia-detalhes');
     if (containerDetalhes) {
         const questoesList = dados.resultadoQuestoes || [];
@@ -710,7 +706,6 @@ function atualizarInterfaceCorrecao(dados) {
     }
 }
 
-// ═══ SALVAR CORREÇÃO ═══
 // ═══ SALVAR CORREÇÃO (COM FLUXO CONTÍNUO) ═══
 async function salvarCorrecao() {
     if (!correcaoManualData || !correcaoManualData.respostasAluno) {
@@ -728,7 +723,6 @@ async function salvarCorrecao() {
     for (let i = 0; i < total; i++) {
         const resp = (i < respostas.length) ? (respostas[i] || '') : '';
         const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
-        // ⚠️ MULTIPLA nunca é acerto, e vazio também não
         if (resp && resp !== 'MULTIPLA' && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
     const nota = Math.min(acertos * (correcaoManualData.valorPorQuestao || (10/total)), 10);
@@ -749,39 +743,29 @@ async function salvarCorrecao() {
             showToast(`✅ Correção salva! Nota: ${nota.toFixed(1)}`, 'success');
             limparCache();
             
-            // Atualiza os painéis de fundo
             if (typeof carregarResultadosComFiltros === 'function') carregarResultadosComFiltros();
             if (typeof carregarDashboard === 'function') carregarDashboard();
             if (typeof carregarUltimasCorrecoes === 'function') carregarUltimasCorrecoes();
 
             // 🚀 NOVO: FLUXO CONTÍNUO
-            // Aguarda 1.2 segundos para o professor ler o "Sucesso" e limpa a tela
             setTimeout(() => {
-                // 1. Se estiver no fluxo de QR Code (Automático)
                 const autoResult = document.getElementById('auto-resultado');
                 if (autoResult && autoResult.style.display === 'block') {
-                    limparResultadoAutomatico(); // Limpa foto, preview e resultados
-                    
-                    // Abre o seletor de arquivo automaticamente para o próximo cartão
+                    limparResultadoAutomatico();
                     setTimeout(() => {
                         const inputArq = document.getElementById('inp-arq-auto');
                         if (inputArq) {
-                            inputArq.value = ''; // Limpa o cache do input
-                            inputArq.click();    // Abre a janela de arquivos
+                            inputArq.value = '';
+                            inputArq.click();
                         }
                     }, 300);
                 }
 
-                // 2. Se estiver no fluxo de IA Normal (Selecionando aluno)
                 const iaResult = document.getElementById('ia-result');
                 if (iaResult && iaResult.style.display === 'block') {
                     iaResult.style.display = 'none';
-                    
-                    // Limpa o aluno selecionado para o professor escolher o próximo
                     const selectAluno = document.getElementById('corrigir-aluno');
                     if (selectAluno) selectAluno.value = '';
-                    
-                    // Opcional: Scroll para o topo para ver o botão de câmera
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             }, 1200);
@@ -933,7 +917,6 @@ function gerarGridCorrecaoManual() {
                 const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
                 options += `<option value="${alt}" ${selected}>${alt}</option>`;
             });
-            // Adiciona opção MÚLTIPLA
             if (isMultipla) {
                 options += `<option value="MULTIPLA" selected>⚠️ MÚLTIPLA</option>`;
             } else {
@@ -1841,7 +1824,6 @@ async function corrigirAutomatico() {
     const imagem = window._autoImagem;
     if (!imagem) { showToast('❌ Nenhuma imagem carregada', 'error'); return; }
 
-    // ✨ NOVO: guarda a imagem para o botão "Ver cartão original" (QR auto)
     window._ultimaImagemCorrigida = imagem;
 
     const resultadoDiv = document.getElementById('auto-resultado');
@@ -1937,9 +1919,6 @@ function mostrarResultadoAutomatico(dados) {
     const cor = conceitoCores[conceito] || '#94a3b8';
     const conceitoLabel = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' }[conceito] || conceito;
 
-    // ═══════════════════════════════════════════════════════════════
-    // Contadores por estado: multiplas, brancos, erros marcados
-    // ═══════════════════════════════════════════════════════════════
     const questoesStatus = Array.isArray(dados.questoes_status) ? dados.questoes_status : [];
 
     function isQuestaoBranco(q) {
@@ -1972,9 +1951,6 @@ function mostrarResultadoAutomatico(dados) {
         questoesHtml += '</div>';
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // PAINEL DETALHADO — os 4 estados com explicação
-    // ═══════════════════════════════════════════════════════════════
     const linhasResumo = [];
 
     linhasResumo.push(`
@@ -2059,13 +2035,14 @@ function mostrarResultadoAutomatico(dados) {
             <div style="text-align:center; margin-bottom:10px;"><span style="background:${cor}20; color:${cor}; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:800;">${conceitoLabel}</span></div>
             ${questoesHtml}
             ${alertaHtml}
-            <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center;">
-                <button class="btn btn-outline btn-sm no-print" onclick="verCartaoOriginal()" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.4); color:#a78bfa;">🖼️ Ver cartão original</button>
-                <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()">✏️ Correção Manual</button>
-                <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()">💾 Salvar</button>
-                <button class="btn btn-green btn-sm" onclick="go('resultados')">📊 Ver em Resultados</button>
-                <button class="btn btn-outline btn-sm" onclick="limparResultadoAutomatico()">🔄 Nova Correção</button>
-                <button class="btn btn-primary btn-sm" onclick="go('desempenho')">📈 Desempenho do Aluno</button>
+            <!-- ✅ BOTOES RESPONSIVOS -->
+            <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center; align-items:center; width:100%;">
+                <button class="btn btn-outline btn-sm no-print" onclick="verCartaoOriginal()" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.4); color:#a78bfa; flex: 1 1 auto; min-width: 140px;">🖼️ Ver cartão original</button>
+                <button class="btn btn-orange btn-sm no-print" onclick="abrirCorrecaoManualAuto()" style="flex: 1 1 auto; min-width: 140px;">✏️ Correção Manual</button>
+                <button class="btn btn-green btn-sm no-print" onclick="salvarCorrecaoAuto()" style="flex: 1 1 auto; min-width: 140px;">💾 Salvar</button>
+                <button class="btn btn-green btn-sm" onclick="go('resultados')" style="flex: 1 1 auto; min-width: 140px;">📊 Ver em Resultados</button>
+                <button class="btn btn-outline btn-sm" onclick="limparResultadoAutomatico()" style="flex: 1 1 auto; min-width: 140px;">🔄 Nova Correção</button>
+                <button class="btn btn-primary btn-sm" onclick="go('desempenho')" style="flex: 1 1 auto; min-width: 140px;">📈 Desempenho do Aluno</button>
             </div>
         </div>
     `;
@@ -2190,4 +2167,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-console.log('✅ js/correcao.js carregado (com MULTIPLA + modal Ver Cartão Original)');
+console.log('✅ js/correcao.js carregado (com MULTIPLA + modal Ver Cartão Original + Fluxo Contínuo)');
