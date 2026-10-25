@@ -1,6 +1,7 @@
 // ============================================================
 // JS/CORRECAO.JS — Câmera, IA, correção manual, correção auto QR
 // Com apiFetch (header X-Usuario-Username)
+// ⚠️ CORRIGIDO: preserva sentinel 'MULTIPLA' (dupla marcação = errada)
 // ============================================================
 
 let correcaoManualData = {
@@ -287,6 +288,8 @@ async function processarComIA(imagemBase64) {
             const confianca = confiancasNormalizadas[i] || 0;
             let isCorreto = false;
             let statusMsg = 'NÃO RESPONDEU';
+            let isMultipla = false;
+
             if (isProducao) {
                 if (resp && gab) {
                     const respLimpa = resp.trim().toLowerCase();
@@ -294,6 +297,11 @@ async function processarComIA(imagemBase64) {
                     isCorreto = respLimpa === gabLimpo || respLimpa.includes(gabLimpo) || gabLimpo.includes(respLimpa);
                     statusMsg = isCorreto ? '✅ ACERTOU' : '❌ ERROU';
                 }
+            } else if (resp === 'MULTIPLA') {
+                // ⚠️ Dupla marcação NUNCA é acerto
+                isMultipla = true;
+                isCorreto = false;
+                statusMsg = '⚠️ MÚLTIPLA MARCAÇÃO';
             } else {
                 const respNormalizada = resp.toString().toUpperCase().trim();
                 const gabNormalizado = gab.toString().toUpperCase().trim();
@@ -309,7 +317,8 @@ async function processarComIA(imagemBase64) {
             if (isCorreto) acertos++;
             resultadoQuestoes.push({
                 numero: i + 1, resposta: resp || '—', gabarito: gab || '—',
-                acertou: isCorreto, status: statusMsg, confianca: confianca, respondida: !!resp
+                acertou: isCorreto, status: statusMsg, confianca: confianca,
+                respondida: !!resp, multipla: isMultipla
             });
         }
         const valorPorQuestao = 10 / totalQuestoes;
@@ -406,6 +415,14 @@ function normalizarRespostas(respostas, confiancas, totalQuestoes, isProducao, t
             resp = resp.toString().trim();
         } else {
             let s = resp.toString().trim().toUpperCase();
+
+            // ⚠️ Sentinel de dupla marcação: PRESERVAR antes de qualquer strip
+            if (s === 'MULTIPLA' || s === 'MÚLTIPLA' || s === 'MULTIPLE' || s === 'MULTI' || s === 'ANULADA') {
+                respostasNormalizadas.push('MULTIPLA');
+                confiancasNormalizadas.push(Math.min(Math.max(conf, 0), 100));
+                continue;
+            }
+
             s = s.replace(/^[\(\[]*/, '').replace(/[\)\]\.\,\;\:\-]*$/, '');
             let encontrou = '';
             if (alternativasValidas.includes(s)) encontrou = s;
@@ -458,11 +475,13 @@ function atualizarInterfaceCorrecao(dados) {
             'template': '🎯 Template', 'template+cv': '🎯 Template+CV',
             'ia': '🤖 IA', 'ia+circulos': '🤖 IA + Círculos',
             'ia_parcial': '🤖 IA (Parcial)', 'circulos': '⭕ Círculos',
-            'circulos_parcial': '⭕ Círculos (Parcial)', 'manual': '✏️ Manual'
+            'circulos_parcial': '⭕ Círculos (Parcial)', 'manual': '✏️ Manual',
+            'template_evalbee_v4': '🎯 Template v4', 'evalbee_v4': '🎯 EvalBee v4',
+            'ia_fallback': '🤖 IA (Fallback)'
         };
         metodoBadge.textContent = metodoLabels[metodo] || `📌 ${metodo}`;
-        const classe = metodo === 'template' || metodo === 'template+cv' ? 'badge-green' :
-                       metodo === 'ia' ? 'badge-purple' :
+        const classe = metodo === 'template' || metodo === 'template+cv' || metodo.includes('evalbee') ? 'badge-green' :
+                       metodo === 'ia' || metodo === 'ia_fallback' ? 'badge-purple' :
                        metodo.includes('circulos') ? 'badge-orange' : 'badge-gray';
         metodoBadge.className = `badge ${classe}`;
     }
@@ -477,16 +496,22 @@ function atualizarInterfaceCorrecao(dados) {
     const resumoConfianca = document.getElementById('ia-resumo-confianca');
     if (resumoConfianca) {
         const totalDuvidosas = dados.questoesSuspeitas.length || dados.confiancas.filter(c => c < 70).length;
+        const totalMultiplas = dados.resultadoQuestoes.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
         resumoConfianca.style.display = 'flex';
         let alertaRevisao = '';
         if (dados.requerRevisao) {
             alertaRevisao = `<span style="color:var(--orange);font-weight:700;">⚠️ REVISÃO MANUAL RECOMENDADA</span>`;
+        }
+        let alertaMultipla = '';
+        if (totalMultiplas > 0) {
+            alertaMultipla = `<span style="color:var(--orange);font-weight:700;">⚠️ ${totalMultiplas} questão(ões) com MÚLTIPLA MARCAÇÃO</span>`;
         }
         resumoConfianca.innerHTML = `
             <span>📊 Confiança média: <strong style="color:${confiancaMedia >= 70 ? 'var(--green)' : confiancaMedia >= 50 ? 'var(--orange)' : 'var(--red)'};">${confiancaMedia.toFixed(1)}%</strong></span>
             ${totalDuvidosas > 0 ? `<span>⚠️ ${totalDuvidosas} questões com baixa confiança (<70%)</span>` : '<span>✅ Todas as questões têm alta confiança!</span>'}
             <span>🎯 Acertos: <strong style="color:var(--green);">${dados.acertos}</strong> / ${dados.totalQuestoes}</span>
             <span>📌 Método: <strong>${metodo}</strong></span>
+            ${alertaMultipla}
             ${alertaRevisao}
         `;
     }
@@ -494,11 +519,18 @@ function atualizarInterfaceCorrecao(dados) {
     const rd = document.getElementById('ia-resp');
     if (rd) {
         rd.innerHTML = dados.resultadoQuestoes.map(q => {
-            const cor = q.acertou ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)';
-            const corTexto = q.acertou ? 'var(--green)' : 'var(--red)';
-            const icone = q.acertou ? '✅' : (q.respondida ? '❌' : '—');
+            const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+            const cor = q.acertou ? 'rgba(16,185,129,.2)'
+                      : isMultipla ? 'rgba(245,158,11,.2)'
+                      : 'rgba(239,68,68,.2)';
+            const corTexto = q.acertou ? 'var(--green)'
+                            : isMultipla ? 'var(--orange)'
+                            : 'var(--red)';
+            const icone = q.acertou ? '✅' : isMultipla ? '⚠️' : (q.respondida ? '❌' : '—');
+            const respostaExibida = isMultipla ? 'MÚLT' : (q.resposta || '—');
             const confColor = q.confianca < 70 ? 'var(--orange)' : 'var(--text2)';
-            return `<span style="background:${cor};border:1px solid ${q.acertou ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${escapeHtml(q.resposta || '—')} ${icone}<span style="font-size:8px;color:${confColor};">${q.confianca}%</span></span>`;
+            const borderColor = q.acertou ? 'rgba(16,185,129,.4)' : isMultipla ? 'rgba(245,158,11,.4)' : 'rgba(239,68,68,.4)';
+            return `<span style="background:${cor};border:1px solid ${borderColor};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;color:${corTexto};">Q${q.numero}:${escapeHtml(respostaExibida)} ${icone}<span style="font-size:8px;color:${confColor};">${q.confianca}%</span></span>`;
         }).join('');
     }
 
@@ -545,15 +577,20 @@ function atualizarInterfaceCorrecao(dados) {
 
         dados.resultadoQuestoes.forEach((q) => {
             const acertou = q.acertou;
-            const resposta = q.resposta || '—';
+            const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+            const resposta = isMultipla ? '⚠️' : (q.resposta || '—');
             const confianca = q.confianca || 100;
             let corBg, corTexto, icone;
             if (acertou) { corBg = 'rgba(16,185,129,0.10)'; corTexto = 'var(--green)'; icone = '✅'; }
+            else if (isMultipla) { corBg = 'rgba(245,158,11,0.12)'; corTexto = 'var(--orange)'; icone = '⚠️'; }
             else if (q.respondida) { corBg = 'rgba(239,68,68,0.10)'; corTexto = 'var(--red)'; icone = '❌'; }
             else { corBg = 'rgba(100,116,139,0.05)'; corTexto = 'var(--text3)'; icone = '—'; }
             const confColor = confianca < 70 ? 'var(--orange)' : 'var(--text3)';
+            const borderColor = acertou ? 'rgba(16,185,129,0.20)'
+                              : isMultipla ? 'rgba(245,158,11,0.3)'
+                              : (q.respondida ? 'rgba(239,68,68,0.20)' : 'rgba(100,116,139,0.10)');
             const div = document.createElement('div');
-            div.style.cssText = `background: ${corBg}; border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid ${acertou ? 'rgba(16,185,129,0.20)' : (q.respondida ? 'rgba(239,68,68,0.20)' : 'rgba(100,116,139,0.10)')}; display: flex; flex-direction: column; align-items: center; gap: 1px;`;
+            div.style.cssText = `background: ${corBg}; border-radius: 4px; padding: 3px 2px; text-align: center; border: 1px solid ${borderColor}; display: flex; flex-direction: column; align-items: center; gap: 1px;`;
             div.innerHTML = `
                 <div style="font-size:6px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;">Q${q.numero}</div>
                 <div style="font-size:16px;font-weight:900;color:${corTexto};line-height:1.1;">${escapeHtml(resposta)}</div>
@@ -565,10 +602,11 @@ function atualizarInterfaceCorrecao(dados) {
         grid.appendChild(gridAluno);
 
         const divComparacao = document.createElement('div');
-        divComparacao.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border);`;
+        divComparacao.style.cssText = `grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; margin-top: 8px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border);`;
         const acertos = dados.acertos;
+        const multiplas = dados.resultadoQuestoes.filter(q => q.multipla || q.resposta === 'MULTIPLA').length;
         const naoRespondidas = dados.totalQuestoes - dados.resultadoQuestoes.filter(q => q.respondida).length;
-        const erros = dados.totalQuestoes - acertos - naoRespondidas;
+        const erros = dados.totalQuestoes - acertos - naoRespondidas - multiplas;
         const porcentagem = dados.porcentagem;
         divComparacao.innerHTML = `
             <div style="text-align:center;padding:4px;background:rgba(16,185,129,0.06);border-radius:4px;border:1px solid rgba(16,185,129,0.10);">
@@ -578,6 +616,10 @@ function atualizarInterfaceCorrecao(dados) {
             <div style="text-align:center;padding:4px;background:rgba(239,68,68,0.06);border-radius:4px;border:1px solid rgba(239,68,68,0.10);">
                 <div style="font-size:18px;font-weight:900;color:var(--red);">${erros}</div>
                 <div style="font-size:8px;color:var(--text2);font-weight:600;">❌ ERROS</div>
+            </div>
+            <div style="text-align:center;padding:4px;background:rgba(245,158,11,0.08);border-radius:4px;border:1px solid rgba(245,158,11,0.15);">
+                <div style="font-size:18px;font-weight:900;color:var(--orange);">${multiplas}</div>
+                <div style="font-size:8px;color:var(--text2);font-weight:600;">⚠️ MÚLTIPLAS</div>
             </div>
             <div style="text-align:center;padding:4px;background:rgba(100,116,139,0.06);border-radius:4px;border:1px solid rgba(100,116,139,0.10);">
                 <div style="font-size:18px;font-weight:900;color:var(--text3);">${naoRespondidas}</div>
@@ -609,7 +651,8 @@ async function salvarCorrecao() {
     for (let i = 0; i < total; i++) {
         const resp = (i < respostas.length) ? (respostas[i] || '') : '';
         const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
-        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+        // ⚠️ MULTIPLA nunca é acerto, e vazio também não
+        if (resp && resp !== 'MULTIPLA' && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
     const nota = Math.min(acertos * (correcaoManualData.valorPorQuestao || (10/total)), 10);
     try {
@@ -743,7 +786,8 @@ function gerarGridCorrecaoManual() {
         div.className = 'correcao-manual-item';
         const respostaAluno = (i < respostas.length) ? respostas[i] : '';
         const respostaGabarito = (i < gabarito.length) ? gabarito[i] : '';
-        const isCorreto = respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
+        const isMultipla = (respostaAluno === 'MULTIPLA');
+        const isCorreto = !isMultipla && respostaAluno && respostaGabarito && respostaAluno.toUpperCase() === respostaGabarito.toUpperCase();
 
         if (isProducao) {
             div.style.background = 'var(--bg2)'; div.style.border = '1px solid var(--border)';
@@ -775,20 +819,30 @@ function gerarGridCorrecaoManual() {
                 const selected = respostaAluno && respostaAluno.toUpperCase() === alt ? 'selected' : '';
                 options += `<option value="${alt}" ${selected}>${alt}</option>`;
             });
+            // Adiciona opção MÚLTIPLA
+            if (isMultipla) {
+                options += `<option value="MULTIPLA" selected>⚠️ MÚLTIPLA</option>`;
+            } else {
+                options += `<option value="MULTIPLA">⚠️ MÚLTIPLA</option>`;
+            }
             let statusClass = ''; let statusText = '';
             if (respostaAluno) {
-                if (isCorreto) { statusClass = 'correta'; statusText = '✅'; }
+                if (isMultipla) { statusClass = 'multipla'; statusText = '⚠️'; }
+                else if (isCorreto) { statusClass = 'correta'; statusText = '✅'; }
                 else { statusClass = 'errada'; statusText = '❌'; }
             }
+            const respTexto = isMultipla ? '⚠️ MÚLT' : (respostaAluno || '—');
+            const respColor = isMultipla ? 'var(--orange)' : (isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)'));
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
-                <div class="q-resposta" style="color:${isCorreto ? 'var(--green)' : (respostaAluno ? 'var(--red)' : 'var(--text3)')}">${escapeHtml(respostaAluno || '—')}</div>
+                <div class="q-resposta" style="color:${respColor}">${escapeHtml(respTexto)}</div>
                 <select class="q-select" data-questao="${i}" onchange="atualizarRespostaManual(this)">${options}</select>
                 <div class="q-status ${statusClass}">${statusText}</div>
             `;
             const select = div.querySelector('.q-select');
             if (select) {
-                if (respostaAluno && isCorreto) select.className = 'q-select correta';
+                if (isMultipla) select.className = 'q-select multipla';
+                else if (respostaAluno && isCorreto) select.className = 'q-select correta';
                 else if (respostaAluno) select.className = 'q-select errada';
             }
         }
@@ -799,19 +853,21 @@ function gerarGridCorrecaoManual() {
 function atualizarRespostaManual(select) {
     const questaoIndex = parseInt(select.dataset.questao);
     const novaResposta = select.value;
-    if (novaResposta) correcaoManualData.respostasAluno[questaoIndex] = novaResposta.toUpperCase();
-    else correcaoManualData.respostasAluno[questaoIndex] = '';
+    correcaoManualData.respostasAluno[questaoIndex] = novaResposta ? novaResposta.toUpperCase() : '';
 
     const item = select.closest('.correcao-manual-item');
     const qResposta = item.querySelector('.q-resposta');
     const qStatus = item.querySelector('.q-status');
     const gabarito = correcaoManualData.gabarito[questaoIndex] || '';
     const resposta = correcaoManualData.respostasAluno[questaoIndex] || '';
-    const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+    const isMultipla = (resposta === 'MULTIPLA');
+    const isCorreto = !isMultipla && resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
 
-    qResposta.textContent = resposta || '—';
-    qResposta.style.color = isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)');
-    if (resposta) {
+    qResposta.textContent = isMultipla ? '⚠️ MÚLT' : (resposta || '—');
+    qResposta.style.color = isMultipla ? 'var(--orange)' : (isCorreto ? 'var(--green)' : (resposta ? 'var(--red)' : 'var(--text3)'));
+    if (isMultipla) {
+        qStatus.textContent = '⚠️'; qStatus.className = 'q-status multipla'; select.className = 'q-select multipla';
+    } else if (resposta) {
         if (isCorreto) { qStatus.textContent = '✅'; qStatus.className = 'q-status correta'; select.className = 'q-select correta'; }
         else { qStatus.textContent = '❌'; qStatus.className = 'q-status errada'; select.className = 'q-select errada'; }
     } else {
@@ -834,7 +890,7 @@ function atualizarResumoCorrecaoManual() {
             if (isProducao) {
                 if (resp.trim().toLowerCase() === gab.trim().toLowerCase()) acertos++;
             } else {
-                if (resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                if (resp !== 'MULTIPLA' && resp.toUpperCase() === gab.toUpperCase()) acertos++;
             }
         }
     }
@@ -906,7 +962,7 @@ function salvarCorrecaoManual() {
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
-        if (resp && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+        if (resp && resp !== 'MULTIPLA' && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
     const nota = Math.min((acertos * correcaoManualData.valorPorQuestao), correcaoManualData.notaMaxima || 10);
 
@@ -1252,16 +1308,22 @@ function gerarGridCorrecaoManualSA() {
             });
         } else {
             div.className = 'cm-item-standalone';
+            const isMultipla = (resp === 'MULTIPLA');
             let options = '<option value="">—</option>';
             alternativas.forEach(alt => {
                 const selected = resp && resp.toUpperCase() === alt ? 'selected' : '';
                 options += `<option value="${alt}" ${selected}>${alt}</option>`;
             });
-            const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
+            if (isMultipla) {
+                options += `<option value="MULTIPLA" selected>⚠️ MÚLTIPLA</option>`;
+            } else {
+                options += `<option value="MULTIPLA">⚠️ MÚLTIPLA</option>`;
+            }
+            const isCorreto = !isMultipla && resp && gab && resp.toUpperCase() === gab.toUpperCase();
             let statusIcon = '';
-            if (resp) statusIcon = isCorreto ? '✅' : '❌';
+            if (resp) statusIcon = isMultipla ? '⚠️' : (isCorreto ? '✅' : '❌');
             let selectClass = 'q-select-manual';
-            if (resp) selectClass += isCorreto ? ' correta' : ' errada';
+            if (resp) selectClass += isMultipla ? ' multipla' : (isCorreto ? ' correta' : ' errada');
             div.innerHTML = `
                 <div class="q-num">Q${i+1}</div>
                 <div class="q-gabarito">${escapeHtml(gab || '—')}</div>
@@ -1284,16 +1346,21 @@ function atualizarSituacaoCM(select) {
 function atualizarRespostaManualSA(select) {
     const questaoIndex = parseInt(select.dataset.questao);
     const novaResposta = select.value;
-    if (novaResposta) cmStandaloneData.respostas[questaoIndex] = novaResposta.toUpperCase();
-    else cmStandaloneData.respostas[questaoIndex] = '';
+    cmStandaloneData.respostas[questaoIndex] = novaResposta ? novaResposta.toUpperCase() : '';
     const item = select.closest('.cm-item-standalone');
     const statusIcon = item.querySelector('.q-status-icon');
     const gabarito = cmStandaloneData.gabarito[questaoIndex] || '';
     const resposta = cmStandaloneData.respostas[questaoIndex] || '';
-    const isCorreto = resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
+    const isMultipla = (resposta === 'MULTIPLA');
+    const isCorreto = !isMultipla && resposta && gabarito && resposta.toUpperCase() === gabarito.toUpperCase();
     select.className = 'q-select-manual';
-    if (resposta) select.className += isCorreto ? ' correta' : ' errada';
-    statusIcon.textContent = resposta ? (isCorreto ? '✅' : '❌') : '';
+    if (resposta) {
+        if (isMultipla) select.className += ' multipla';
+        else select.className += isCorreto ? ' correta' : ' errada';
+    }
+    if (isMultipla) statusIcon.textContent = '⚠️';
+    else if (resposta) statusIcon.textContent = isCorreto ? '✅' : '❌';
+    else statusIcon.textContent = '';
     atualizarResumoCorrecaoManualSA();
 }
 
@@ -1311,7 +1378,7 @@ function atualizarResumoCorrecaoManualSA() {
             if (isProducao) {
                 if (resp.trim().toLowerCase() === gab.trim().toLowerCase()) acertos++;
             } else {
-                if (resp.toUpperCase() === gab.toUpperCase()) acertos++;
+                if (resp !== 'MULTIPLA' && resp.toUpperCase() === gab.toUpperCase()) acertos++;
             }
         }
     }
@@ -1412,7 +1479,7 @@ function salvarCorrecaoManualStandalone() {
     for (let i = 0; i < qtd; i++) {
         const resp = i < respostas.length ? respostas[i] : '';
         const gab = i < gabarito.length ? gabarito[i] : '';
-        if (resp && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
+        if (resp && resp !== 'MULTIPLA' && gab && resp.toUpperCase() === gab.toUpperCase()) acertos++;
     }
     const valorPorQuestao = cmStandaloneData.valorPorQuestao || (10 / qtd);
     const nota = Math.min((acertos * valorPorQuestao), cmStandaloneData.notaMaxima || 10);
@@ -1753,14 +1820,19 @@ function mostrarResultadoAutomatico(dados) {
     const conceitoLabel = { 'inicial': '🔴 Inicial', 'basico': '🟠 Básico', 'proficiente': '🔵 Proficiente', 'avancado': '🟢 Avançado' }[conceito] || conceito;
 
     let questoesHtml = '';
+    let totalMultiplas = 0;
     if (dados.questoes_status && Array.isArray(dados.questoes_status)) {
         questoesHtml = '<div style="display:grid; grid-template-columns:repeat(10,1fr); gap:4px; margin-top:12px;">';
         dados.questoes_status.forEach(q => {
+            const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+            if (isMultipla) totalMultiplas++;
             const acertou = q.acertou;
-            const resp = q.resposta || '—';
-            const corQ = acertou ? 'rgba(16,185,129,0.15)' : (q.resposta !== '—' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.1)');
-            const corTexto = acertou ? 'var(--green)' : (q.resposta !== '—' ? 'var(--red)' : 'var(--text3)');
-            const icone = acertou ? '✅' : (q.resposta !== '—' ? '❌' : '—');
+            const resp = isMultipla ? '⚠️' : (q.resposta || '—');
+            let corQ, corTexto, icone;
+            if (acertou) { corQ = 'rgba(16,185,129,0.15)'; corTexto = 'var(--green)'; icone = '✅'; }
+            else if (isMultipla) { corQ = 'rgba(245,158,11,0.15)'; corTexto = 'var(--orange)'; icone = '⚠️'; }
+            else if (q.resposta && q.resposta !== '—') { corQ = 'rgba(239,68,68,0.15)'; corTexto = 'var(--red)'; icone = '❌'; }
+            else { corQ = 'rgba(100,116,139,0.1)'; corTexto = 'var(--text3)'; icone = '—'; }
             questoesHtml += `<div style="background:${corQ}; border-radius:6px; padding:5px 2px; text-align:center;"><div style="font-size:8px; font-weight:700; color:var(--text3);">Q${q.numero}</div><div style="font-size:13px; font-weight:800; color:${corTexto};">${escapeHtml(resp)}</div><div style="font-size:8px;">${icone}</div></div>`;
         });
         questoesHtml += '</div>';
@@ -1769,6 +1841,9 @@ function mostrarResultadoAutomatico(dados) {
     let alertaHtml = '';
     if (dados.requer_revisao_manual) {
         alertaHtml = '<div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.12); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">⚠️ <strong>Revisão manual recomendada</strong> — algumas questões tiveram baixa confiança.</div>';
+    }
+    if (totalMultiplas > 0) {
+        alertaHtml += `<div style="margin-top:12px; padding:10px; background:rgba(245,158,11,0.15); border-radius:8px; border-left:3px solid var(--orange); font-size:12px; color:var(--orange);">⚠️ <strong>${totalMultiplas} questão(ões) com MÚLTIPLA MARCAÇÃO</strong> — contabilizadas como erradas.</div>`;
     }
 
     conteudoDiv.innerHTML = `
@@ -1838,4 +1913,4 @@ async function salvarCorrecaoAuto() {
     await salvarCorrecao();
 }
 
-console.log('✅ js/correcao.js carregado');
+console.log('✅ js/correcao.js carregado (com suporte a MULTIPLA)');
