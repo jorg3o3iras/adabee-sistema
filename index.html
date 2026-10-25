@@ -1451,6 +1451,10 @@
                   font-size: 12px;
                 "
               ></div>
+
+              <!-- ✅ NOVO: painel auto-explicativo (preenchido via JS em atualizarInterfaceCorrecao) -->
+              <div id="ia-detalhes"></div>
+
               <div class="g2" style="margin-bottom: 14px">
                 <div>
                   <div
@@ -1565,6 +1569,18 @@
                       justify-content: center;
                     "
                   >
+                    <!-- ✅ NOVO: botão "Ver cartão original" -->
+                    <button
+                      class="btn btn-outline btn-sm no-print"
+                      onclick="verCartaoOriginal()"
+                      style="
+                        background: rgba(139, 92, 246, 0.1);
+                        border-color: rgba(139, 92, 246, 0.4);
+                        color: #a78bfa;
+                      "
+                    >
+                      🖼️ Ver cartão original
+                    </button>
                     <button
                       class="btn btn-orange btn-sm no-print"
                       onclick="abrirCorrecaoManual()"
@@ -4691,6 +4707,113 @@
               💾 Salvar Correção
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- ✅ NOVO: MODAL VER CARTÃO ORIGINAL -->
+      <div
+        id="m-ver-cartao"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.92);
+          z-index: 10000;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 10001;
+          "
+        >
+          <button
+            onclick="abrirCartaoNovaAba()"
+            title="Abrir em nova aba"
+            style="
+              background: rgba(255, 255, 255, 0.15);
+              color: #fff;
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              border-radius: 8px;
+              padding: 8px 14px;
+              font-size: 13px;
+              font-weight: 700;
+              cursor: pointer;
+              backdrop-filter: blur(10px);
+            "
+          >
+            🔍 Nova aba
+          </button>
+          <button
+            onclick="baixarCartaoOriginal()"
+            title="Baixar imagem"
+            style="
+              background: rgba(255, 255, 255, 0.15);
+              color: #fff;
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              border-radius: 8px;
+              padding: 8px 14px;
+              font-size: 13px;
+              font-weight: 700;
+              cursor: pointer;
+              backdrop-filter: blur(10px);
+            "
+          >
+            ⬇️ Baixar
+          </button>
+          <button
+            onclick="fecharCartaoOriginal()"
+            title="Fechar (Esc)"
+            style="
+              background: rgba(239, 68, 68, 0.75);
+              color: #fff;
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              border-radius: 8px;
+              padding: 8px 14px;
+              font-size: 13px;
+              font-weight: 700;
+              cursor: pointer;
+              backdrop-filter: blur(10px);
+            "
+          >
+            ✕ Fechar
+          </button>
+        </div>
+        <img
+          id="ver-cartao-img"
+          src=""
+          alt="Cartão resposta original"
+          style="
+            max-width: 95vw;
+            max-height: 92vh;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            object-fit: contain;
+          "
+        />
+        <div
+          style="
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.55);
+            padding: 6px 14px;
+            border-radius: 20px;
+          "
+        >
+          💡 Compare o cartão com o resultado. Pressione <strong>Esc</strong> para fechar.
         </div>
       </div>
 
