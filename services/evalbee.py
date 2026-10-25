@@ -4,6 +4,9 @@
 # ✨ NOVO: calibração automática por HoughCircles
 # ✨ NOVO: debug visual via base64 (funciona no Render)
 # 🔧 AJUSTE: limiar foto 0.30→0.22 (imagens comprimidas com ratios baixos)
+# ✨ NOVO: aceita `modo` ('foto' | 'scanner' | 'auto') e força pipeline
+# ✨ NOVO: detector de marcadores testa Otsu + adaptive (JPEG-friendly)
+# ✨ NOVO: NUNCA faz upscale (evita destruir marcadores em imagens pequenas)
 # ============================================================
 
 import cv2
@@ -49,86 +52,112 @@ def detectar_tipo_entrada(gray):
         return 'foto'
 
 
+def _binarizar_marcadores(gray):
+    """Tenta Otsu primeiro (funciona em JPEG), adaptive como fallback."""
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Tentativa 1: Otsu global (melhor para fundo branco limpo, mesmo JPEG)
+    _, binaria_otsu = cv2.threshold(
+        blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+    )
+
+    # Tentativa 2: adaptive (melhor para fotos com sombra)
+    binaria_adapt = cv2.adaptiveThreshold(
+        blurred, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        41, 10
+    )
+
+    # Testa qual binária tem mais chance de detectar os 4 marcadores
+    return [binaria_otsu, binaria_adapt]
+
+
 def detectar_marcadores_fiduciais_v4(gray):
+    """Detecta 4 marcadores quadrados pretos nos cantos.
+    Tenta OTSU primeiro (funciona em JPEG comprimido), depois adaptive (fotos).
+    """
     try:
         h, w = gray.shape
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        binaria = cv2.adaptiveThreshold(
-            blurred, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV,
-            41, 10
-        )
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-        binaria = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, kernel)
-        contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
         area_img = w * h
-        candidatos = []
 
-        for c in contornos:
-            area = cv2.contourArea(c)
-            if not (area_img * 0.0005 < area < area_img * 0.03):
+        binarias = _binarizar_marcadores(gray)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+
+        for idx_bin, binaria_base in enumerate(binarias):
+            nome = 'OTSU' if idx_bin == 0 else 'ADAPTIVE'
+            binaria = cv2.morphologyEx(binaria_base, cv2.MORPH_CLOSE, kernel)
+            contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            candidatos = []
+            for c in contornos:
+                area = cv2.contourArea(c)
+                if not (area_img * 0.0005 < area < area_img * 0.03):
+                    continue
+                peri = cv2.arcLength(c, True)
+                approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+                if len(approx) != 4:
+                    continue
+                x, y, bw, bh = cv2.boundingRect(approx)
+                ar = bw / float(bh) if bh > 0 else 0
+                if not (0.75 < ar < 1.35):
+                    continue
+                hull = cv2.convexHull(c)
+                solidez = area / (cv2.contourArea(hull) + 1e-6)
+                if solidez < 0.80:
+                    continue
+                candidatos.append((x, y, bw, bh, area, approx))
+
+            if len(candidatos) < 4:
+                logging.info(f"🔍 Marcadores [{nome}]: apenas {len(candidatos)} candidatos")
                 continue
-            peri = cv2.arcLength(c, True)
-            approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-            if len(approx) != 4:
+
+            cx, cy = w / 2, h / 2
+
+            def score_dist(c, canto):
+                x, y, bw, bh, _, _ = c
+                ccx = x + bw // 2
+                ccy = y + bh // 2
+                if canto == 'tl': return ccx + ccy
+                if canto == 'tr': return (w - ccx) + ccy
+                if canto == 'bl': return ccx + (h - ccy)
+                if canto == 'br': return (w - ccx) + (h - ccy)
+                return 0
+
+            quadrantes = {'tl': [], 'tr': [], 'bl': [], 'br': []}
+            for c in candidatos:
+                x, y, bw, bh, _, _ = c
+                ccx = x + bw // 2
+                ccy = y + bh // 2
+                if ccx < cx and ccy < cy:
+                    quadrantes['tl'].append(c)
+                elif ccx >= cx and ccy < cy:
+                    quadrantes['tr'].append(c)
+                elif ccx < cx and ccy >= cy:
+                    quadrantes['bl'].append(c)
+                else:
+                    quadrantes['br'].append(c)
+
+            if not all(quadrantes[k] for k in ['tl', 'tr', 'bl', 'br']):
+                faltando = [k for k in ['tl','tr','bl','br'] if not quadrantes[k]]
+                logging.info(f"🔍 Marcadores [{nome}]: faltam quadrantes {faltando}")
                 continue
-            x, y, bw, bh = cv2.boundingRect(approx)
-            ar = bw / float(bh) if bh > 0 else 0
-            if not (0.75 < ar < 1.35):
-                continue
-            hull = cv2.convexHull(c)
-            solidez = area / (cv2.contourArea(hull) + 1e-6)
-            if solidez < 0.80:
-                continue
-            candidatos.append((x, y, bw, bh, area, approx))
 
-        if len(candidatos) < 4:
-            logging.warning(f"⚠️ Fiducial v4: apenas {len(candidatos)} candidatos válidos")
-            return None
+            melhor = {}
+            for k in ['tl', 'tr', 'bl', 'br']:
+                quadrantes[k].sort(key=lambda c: score_dist(c, k))
+                melhor[k] = quadrantes[k][0]
 
-        cx, cy = w / 2, h / 2
+            tl = (melhor['tl'][0] + melhor['tl'][2] // 2, melhor['tl'][1] + melhor['tl'][3] // 2)
+            tr = (melhor['tr'][0] + melhor['tr'][2] // 2, melhor['tr'][1] + melhor['tr'][3] // 2)
+            bl = (melhor['bl'][0] + melhor['bl'][2] // 2, melhor['bl'][1] + melhor['bl'][3] // 2)
+            br = (melhor['br'][0] + melhor['br'][2] // 2, melhor['br'][1] + melhor['br'][3] // 2)
 
-        def score_dist(c, canto):
-            x, y, bw, bh, _, _ = c
-            ccx = x + bw // 2
-            ccy = y + bh // 2
-            if canto == 'tl': return ccx + ccy
-            if canto == 'tr': return (w - ccx) + ccy
-            if canto == 'bl': return ccx + (h - ccy)
-            if canto == 'br': return (w - ccx) + (h - ccy)
-            return 0
+            logging.info(f"✅ Fiducial v4 [{nome}]: TL={tl} TR={tr} BL={bl} BR={br}")
+            return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
 
-        quadrantes = {'tl': [], 'tr': [], 'bl': [], 'br': []}
-        for c in candidatos:
-            x, y, bw, bh, _, _ = c
-            ccx = x + bw // 2
-            ccy = y + bh // 2
-            if ccx < cx and ccy < cy:
-                quadrantes['tl'].append(c)
-            elif ccx >= cx and ccy < cy:
-                quadrantes['tr'].append(c)
-            elif ccx < cx and ccy >= cy:
-                quadrantes['bl'].append(c)
-            else:
-                quadrantes['br'].append(c)
-
-        melhor = {}
-        for k in ['tl', 'tr', 'bl', 'br']:
-            if not quadrantes[k]:
-                logging.warning(f"⚠️ Fiducial v4: nenhum candidato no quadrante {k.upper()}")
-                return None
-            quadrantes[k].sort(key=lambda c: score_dist(c, k))
-            melhor[k] = quadrantes[k][0]
-
-        tl = (melhor['tl'][0] + melhor['tl'][2] // 2, melhor['tl'][1] + melhor['tl'][3] // 2)
-        tr = (melhor['tr'][0] + melhor['tr'][2] // 2, melhor['tr'][1] + melhor['tr'][3] // 2)
-        bl = (melhor['bl'][0] + melhor['bl'][2] // 2, melhor['bl'][1] + melhor['bl'][3] // 2)
-        br = (melhor['br'][0] + melhor['br'][2] // 2, melhor['br'][1] + melhor['br'][3] // 2)
-
-        logging.info(f"✅ Fiducial v4 OK: TL={tl} TR={tr} BL={bl} BR={br}")
-        return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
+        logging.warning("⚠️ Fiducial v4: nenhuma binarização encontrou os 4 marcadores")
+        return None
 
     except Exception as e:
         logging.error(f"❌ Fiducial v4 erro: {e}")
@@ -474,17 +503,23 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 🔧 CORREÇÃO PRINCIPAL — limiar foto ajustado para 0.22
+# 🔧 CORREÇÃO PRINCIPAL — agora aceita `modo` forçado
 # ═══════════════════════════════════════════════════════════════════
-def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas, debug=False):
+def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
+                                      modo=None, debug=False):
+    """modo: 'foto' | 'scanner' | None (auto)"""
     try:
         h, w = img_corrigida.shape[:2]
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-        tipo = detectar_tipo_entrada(gray)
-        logging.info(f"📷 Tipo de imagem: {tipo.upper()} ({w}x{h})")
+
+        if modo in ('foto', 'scanner'):
+            tipo = modo
+            logging.info(f"📷 Pipeline FORÇADO: {tipo.upper()} ({w}x{h})")
+        else:
+            tipo = detectar_tipo_entrada(gray)
+            logging.info(f"📷 Pipeline AUTO: {tipo.upper()} ({w}x{h})")
 
         if tipo == 'scanner':
-            # Scanner limpo (300 DPI+): Otsu, ratios altos (0.6-0.9)
             _, binaria = cv2.threshold(
                 gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
             )
@@ -493,8 +528,6 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             limiar_confirma = 0.55
             relative_multi = 0.70
         else:
-            # 🔧 FOTO (inclui JPEG comprimido / celular / scan baixa res)
-            # Ratios típicos: 0.22-0.32 nas marcadas, 0.14-0.20 nas vazias
             binaria = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -502,9 +535,9 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
                 25, 12
             )
             radius_factor = 0.018
-            limiar_min = 0.22          # ← era 0.30 (não pegava as respostas)
-            limiar_confirma = 0.30     # ← era 0.45 (não confirmava nada)
-            relative_multi = 0.85      # ← era 0.60 (filtra ruído melhor)
+            limiar_min = 0.22
+            limiar_confirma = 0.30
+            relative_multi = 0.85
 
         por_questao = defaultdict(list)
         for b in mapa_template:
@@ -571,15 +604,24 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             sorted_r = sorted(ratios, reverse=True)
             separacao = (sorted_r[0] - sorted_r[1]) if len(sorted_r) > 1 else 1.0
 
-            # Confiança adaptada para ratios baixos (foto comprimida)
-            if max_ratio >= 0.30 and separacao >= 0.10:
-                conf = 96
-            elif max_ratio >= 0.25 and separacao >= 0.04:
-                conf = 82
-            elif max_ratio >= 0.21:
-                conf = 68
+            if tipo == 'scanner':
+                if max_ratio > limiar_confirma and separacao > 0.25:
+                    conf = 96
+                elif max_ratio > 0.35 and separacao > 0.15:
+                    conf = 82
+                elif separacao > 0.08:
+                    conf = 68
+                else:
+                    conf = 50
             else:
-                conf = 50
+                if max_ratio >= 0.30 and separacao >= 0.10:
+                    conf = 96
+                elif max_ratio >= 0.25 and separacao >= 0.04:
+                    conf = 82
+                elif max_ratio >= 0.21:
+                    conf = 68
+                else:
+                    conf = 50
             confiancas.append(conf)
 
         if debug or logging.getLogger().level <= logging.INFO:
@@ -596,7 +638,10 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
         return [], []
 
 
-def preparar_imagem_para_template(imagem_base64):
+def preparar_imagem_para_template(imagem_base64, modo=None):
+    """Prepara imagem. modo: 'foto' | 'scanner' | None (auto).
+    NUNCA faz upscale (evita destruir marcadores em imagens pequenas).
+    """
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -619,7 +664,13 @@ def preparar_imagem_para_template(imagem_base64):
             return None, False
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        tipo = detectar_tipo_entrada(gray)
+
+        if modo in ('foto', 'scanner'):
+            tipo = modo
+            modo_label = 'FORÇADO'
+        else:
+            tipo = detectar_tipo_entrada(gray)
+            modo_label = 'AUTO'
 
         marcadores = detectar_marcadores_fiduciais_v4(gray)
         if not marcadores:
@@ -629,24 +680,31 @@ def preparar_imagem_para_template(imagem_base64):
         img_corr = corrigir_perspectiva(img, marcadores)
 
         h, w = img_corr.shape[:2]
+        # ⚠️ Só reduz, NUNCA aumenta. Upscale destrói marcadores.
         TARGET_H = 2400 if tipo == 'scanner' else 1800
         if h > TARGET_H:
             scale = TARGET_H / h
             img_corr = cv2.resize(img_corr, (int(w * scale), TARGET_H),
                                   interpolation=cv2.INTER_AREA)
+            logging.info(f"📐 Imagem reduzida de {h}→{TARGET_H}px")
+        else:
+            logging.info(f"📐 Imagem mantida em {h}px (≤{TARGET_H}px, sem upscale)")
 
         logging.info(f"✅ Template: {tipo} {img_corr.shape[1]}x{img_corr.shape[0]} "
-                     f"(TARGET_H={TARGET_H})")
+                     f"(TARGET_H={TARGET_H}, modo={modo_label})")
         return img_corr, True
 
     except Exception as e:
         logging.error(f"❌ Prepara imagem: {e}")
+        traceback.print_exc()
         return None, False
 
 
 def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                    tipo_questoes=4, disciplina='', bncc=None,
-                                   mapa_template=None, prova_id=None, aluno_id=None):
+                                   mapa_template=None, prova_id=None, aluno_id=None,
+                                   modo='auto'):
+    """modo: 'foto' | 'scanner' | 'auto' — repassa para o pipeline"""
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     num_colunas = 1 if total_questoes <= 12 else 2
@@ -657,42 +715,56 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     if not mapa_template:
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
 
-    img_corr, ok = preparar_imagem_para_template(imagem_base64)
+    img_corr, ok = preparar_imagem_para_template(imagem_base64, modo=modo)
     if not ok:
         return None
 
     debug_b64_antes = salvar_debug_overlay(img_corr, mapa_template, pasta_saida='debug')
     debug_b64_depois = None
 
-    gray_cal = cv2.cvtColor(img_corr, cv2.COLOR_BGR2GRAY)
-    tipo = detectar_tipo_entrada(gray_cal)
+    # Tipo efetivo
+    if modo in ('foto', 'scanner'):
+        tipo = modo
+        logging.info(f"🖨️ MODO FORÇADO: {tipo.upper()}")
+    else:
+        gray_cal = cv2.cvtColor(img_corr, cv2.COLOR_BGR2GRAY)
+        tipo = detectar_tipo_entrada(gray_cal)
+        logging.info(f"📷 MODO AUTO — detectado: {tipo.upper()}")
 
     if tipo == 'scanner':
-        logging.info("🔧 Scanner detectado — tentando calibrar template por HoughCircles...")
+        logging.info("🔧 Scanner — tentando calibrar template por HoughCircles...")
         template_calibrado = calibrar_template_por_hough(
             img_corr, total_questoes, alternativas, num_colunas
         )
 
         if template_calibrado:
-            logging.info(f"✅ Usando template CALIBRADO ({len(template_calibrado)} bolhas)")
-            mapa_template = template_calibrado
-            debug_b64_depois = salvar_debug_overlay(img_corr, template_calibrado, pasta_saida='debug')
+            # Validação: mínimo de bolhas
+            bolhas_esperadas = total_questoes * len(alternativas)
+            if len(template_calibrado) < bolhas_esperadas * 0.9:
+                logging.warning(
+                    f"⚠️ Template calibrado incompleto: {len(template_calibrado)}/{bolhas_esperadas}. "
+                    f"Mantendo template padrão."
+                )
+            else:
+                logging.info(f"✅ Usando template CALIBRADO ({len(template_calibrado)} bolhas)")
+                mapa_template = template_calibrado
+                debug_b64_depois = salvar_debug_overlay(img_corr, template_calibrado, pasta_saida='debug')
 
-            if prova_id and aluno_id:
-                try:
-                    salvar_mapa_template(
-                        prova_id, aluno_id, tipo_questoes,
-                        total_questoes, num_colunas, template_calibrado
-                    )
-                except Exception:
-                    pass
+                if prova_id and aluno_id:
+                    try:
+                        salvar_mapa_template(
+                            prova_id, aluno_id, tipo_questoes,
+                            total_questoes, num_colunas, template_calibrado
+                        )
+                    except Exception:
+                        pass
         else:
             logging.warning("⚠️ Calibração falhou — usando template matemático padrão")
     else:
-        logging.info("📷 Foto detectada — usando template salvo/padrão (sem calibração)")
+        logging.info("📱 Modo foto — sem calibração (usa template salvo/padrão)")
 
     respostas, confiancas = corrigir_por_template_evalbee_v2(
-        img_corr, mapa_template, alternativas
+        img_corr, mapa_template, alternativas, modo=tipo
     )
 
     if not respostas:
@@ -701,7 +773,7 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     return {
         'respostas': respostas,
         'confiancas': confiancas if confiancas else [70] * len(respostas),
-        'metodo': 'evalbee_v4',
+        'metodo': f'evalbee_v4_{tipo}',
         'debug_antes': debug_b64_antes,
         'debug_depois': debug_b64_depois,
         'tipo_entrada': tipo
