@@ -1,0 +1,1 @@
+# Pacote core — conexão, utils, cache
